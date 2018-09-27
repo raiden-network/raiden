@@ -66,12 +66,13 @@ class ContractProxy:
         self.jsonrpc_client = jsonrpc_client
         self.contract = contract
 
-    def transact(self, function_name: str, *args, **kargs):
+    def transact(self, function_name: str, startgas: int, *args, **kargs):
         data = ContractProxy.get_transaction_data(self.contract.abi, function_name, args)
 
         try:
             txhash = self.jsonrpc_client.send_transaction(
                 to=self.contract.address,
+                startgas=startgas,
                 value=kargs.pop('value', 0),
                 data=decode_hex(data),
                 **kargs,

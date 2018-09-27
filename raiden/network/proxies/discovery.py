@@ -1,9 +1,14 @@
 import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 
-from raiden.constants import NULL_ADDRESS
-from raiden.exceptions import TransactionThrew, UnknownAddress
 from raiden.network.proxies.utils import compare_contract_versions
+from raiden.constants import GAS_FACTOR, GAS_REQUIRED_FOR_ENDPOINT_REGISTER, NULL_ADDRESS
+from raiden.exceptions import (
+    AddressWrongContract,
+    ContractVersionMismatch,
+    TransactionThrew,
+    UnknownAddress,
+)
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -63,6 +68,7 @@ class Discovery:
 
         transaction_hash = self.proxy.transact(
             'registerEndpoint',
+            int(GAS_REQUIRED_FOR_ENDPOINT_REGISTER * GAS_FACTOR),
             endpoint,
         )
 

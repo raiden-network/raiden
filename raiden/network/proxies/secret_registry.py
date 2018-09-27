@@ -4,9 +4,14 @@ import structlog
 from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_normalized_address
 from gevent.event import AsyncResult
 
-from raiden.constants import GENESIS_BLOCK_NUMBER
-from raiden.exceptions import InvalidAddress, TransactionThrew
 from raiden.network.proxies.utils import compare_contract_versions
+from raiden.constants import GAS_FACTOR, GAS_REQUIRED_PER_SECRET_IN_BATCH, GENESIS_BLOCK_NUMBER
+from raiden.exceptions import (
+    AddressWrongContract,
+    ContractVersionMismatch,
+    InvalidAddress,
+    TransactionThrew,
+)
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, privatekey_to_address, sha3, typing
@@ -98,7 +103,12 @@ class SecretRegistry:
                 self.open_secret_transactions.pop(secret, None)
 
     def _register_secret_batch(self, secrets):
-        transaction_hash = self.proxy.transact('registerSecretBatch', secrets)
+        gas_limit = self.proxy.estimate_gas('registerSecretBatch', secrets)
+        gas_limit = max(
+            gas_limit,
+            int(len(secrets) * GAS_REQUIRED_PER_SECRET_IN_BATCH * GAS_FACTOR),
+        )
+        transaction_hash = self.proxy.transact('registerSecretBatch', gas_limit, secrets)
         self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
