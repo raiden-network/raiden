@@ -6,11 +6,10 @@ from enum import Enum
 from operator import attrgetter, itemgetter
 from random import Random
 from urllib.parse import urlparse
-from weakref import WeakKeyDictionary, WeakValueDictionary
 
 import gevent
 import structlog
-from cachetools import TTLCache, cachedmethod
+from cachetools import LRUCache, TTLCache, cached, cachedmethod
 from eth_utils import (
     decode_hex,
     encode_hex,
@@ -19,6 +18,7 @@ from eth_utils import (
     to_checksum_address,
     to_normalized_address,
 )
+from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
 
@@ -63,13 +63,10 @@ from raiden.utils.typing import (
     Dict,
     Iterable,
     List,
-    Mapping,
     NewType,
     Optional,
     Set,
     Tuple,
-    Type,
-    TypeVar,
     Union,
 )
 from raiden_libs.exceptions import InvalidSignature
@@ -78,38 +75,7 @@ from raiden_libs.utils.signing import eth_recover, eth_sign
 
 log = structlog.get_logger(__name__)
 
-_CT = TypeVar('CT')  # class type
-_CIT = Union[_CT, Type[_CT]]  # class or instance type
-_RT = TypeVar('RT')  # return type
-_CacheT = Mapping[Tuple, _RT]  # cache type (mapping)
 _RoomID = NewType('RoomID', str)
-
-
-def _cachegetter(
-        attr: str,
-        cachefactory: Callable[[], _CacheT] = WeakKeyDictionary,  # WeakKeyDict best for properties
-) -> Callable[[_CIT], _CacheT]:
-    """Returns a safer attrgetter which constructs the missing object with cachefactory
-
-    May be used for normal methods, classmethods and properties, as default
-    factory is a WeakKeyDictionary (good for storing weak-refs for self or cls).
-    It may also safely be used with staticmethods, if first parameter is an object
-    on which the cache will be stored.
-    Better when used with key getter. If it's a tuple, you should use e.g. cachefactory=dict
-    Example usage with cachetools.cachedmethod:
-    class Foo:
-        @property
-        @cachedmethod(_cachegetter("__bar_cache"))
-        def bar(self) -> _RT:
-            return 2+3
-    """
-    def cachegetter(cls_or_obj: _CIT) -> _CacheT:
-        cache = getattr(cls_or_obj, attr, None)
-        if cache is None:
-            cache = cachefactory()
-            setattr(cls_or_obj, attr, cache)
-        return cache
-    return cachegetter
 
 
 class UserPresence(Enum):
@@ -126,6 +92,8 @@ class MatrixTransport(Runnable):
     _room_prefix = 'raiden'
     _room_sep = '_'
     _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
+    _addresses_cache = LRUCache(512)  # deterministic thus shared
+    log = log
 
     def __init__(self, config: dict):
         super().__init__()
@@ -180,10 +148,13 @@ class MatrixTransport(Runnable):
 
         self._stop_event = gevent.event.Event()
         self._stop_event.set()
-        self._health_semaphore = gevent.lock.Semaphore()
 
         self._client.add_invite_listener(self._handle_invite)
         self._client.add_presence_listener(self._handle_presence_change)
+
+        self._messages_cache = TTLCache(32, 4)
+        self._health_lock = Semaphore()
+        self._getroom_lock = Semaphore()
 
     def start(
         self,
@@ -195,6 +166,8 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
 
         self._login_or_register()
+        self.log = log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
+
         if self._client._handle_thread:
             # wait on _handle_thread for initial sync
             # this is needed so the rooms are populated before we _inventory_rooms
@@ -242,6 +215,7 @@ class MatrixTransport(Runnable):
         # wait own greenlets, no need to get on them, exceptions should be raised in _run()
         gevent.wait(self.greenlets)
         self._client.logout()
+        del self.log
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
 
@@ -262,7 +236,7 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return
 
-        with self._health_semaphore:
+        with self._health_lock:
             if node_address in self._address_to_userids:
                 return  # already healthchecked
 
@@ -336,13 +310,6 @@ class MatrixTransport(Runnable):
     @property
     def _user_id(self) -> Optional[str]:
         return getattr(self, '_client', None) and getattr(self._client, 'user_id', None)
-
-    @property
-    @cachedmethod(_cachegetter('__log_cache', dict), key=attrgetter('_user_id'))
-    def log(self):
-        if not self._user_id:
-            return log
-        return log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
 
     @property
     def _network_name(self) -> str:
@@ -556,7 +523,7 @@ class MatrixTransport(Runnable):
         )
 
     @cachedmethod(
-        _cachegetter('__messages_cache', lambda: TTLCache(32, 4)),
+        attrgetter('_messages_cache'),
         key=lambda _, room, event: (room.room_id, event['type'], event['content'].get('body')),
     )
     def _handle_message(self, room, event) -> bool:
@@ -828,8 +795,9 @@ class MatrixTransport(Runnable):
 
         self._send_raw(receiver_address, data)
 
-    def _send_raw(self, receiver_address, data):
-        room = self._get_room_for_address(receiver_address)
+    def _send_raw(self, receiver_address: Address, data: str):
+        with self._getroom_lock:
+            room = self._get_room_for_address(receiver_address)
         if not room:
             return
         self.log.debug('SEND', receiver=pex(receiver_address), room=room, data=data)
@@ -851,9 +819,6 @@ class MatrixTransport(Runnable):
         if room_ids:  # if we know any room for this user, use the first one
             return self._client.rooms[room_ids[0]]
 
-        # The addresses are being sorted to ensure the same channel is used for both directions
-        # of communication.
-        # e.g.: raiden_ropsten_0xaaaa_0xbbbb
         address_pair = sorted([
             to_normalized_address(address)
             for address in [address, self._raiden_service.address]
@@ -1126,19 +1091,20 @@ class MatrixTransport(Runnable):
             signature=signature,
         ))
 
-    @staticmethod
-    @cachedmethod(_cachegetter('__address_cache', dict), key=attrgetter('user_id', 'displayname'))
-    def _validate_userid_signature(user: User) -> Optional[Address]:
+    @cached(_addresses_cache, key=lambda _, user: (user.user_id, user.displayname))
+    def _validate_userid_signature(self, user: User) -> Optional[Address]:
         """ Validate a userId format and signature on displayName, and return its address"""
         # display_name should be an address in the self._userid_re format
-        match = MatrixTransport._userid_re.match(user.user_id)
+        match = self._userid_re.match(user.user_id)
         if not match:
             return None
-        encoded_address: str = match.group(1)
+
+        encoded_address: AddressHex = match.group(1)
         address: Address = to_canonical_address(encoded_address)
+
         try:
             displayname = user.get_display_name()
-            recovered = MatrixTransport._recover(
+            recovered = self._recover(
                 user.user_id.encode(),
                 decode_hex(displayname),
             )
@@ -1154,14 +1120,19 @@ class MatrixTransport(Runnable):
             return None
         return address
 
-    @cachedmethod(
-        _cachegetter('__users_cache', WeakValueDictionary),
-        key=lambda _, user: user.user_id if isinstance(user, User) else user,
-    )
     def _get_user(self, user: Union[User, str]) -> User:
-        """ Creates an User from an user_id, if none, or fetch a cached User """
-        if not isinstance(user, User):
-            user = self._client.get_user(user)
+        """Creates an User from an user_id, if none, or fetch a cached User
+
+        As all users are supposed to be in discovery room, its members dict is used for caching"""
+        user_id: str = getattr(user, 'user_id', user)
+        if self._discovery_room and user_id in self._discovery_room._members:
+            duser = self._discovery_room._members[user_id]
+            # if handed a User instance with displayname set, update the discovery room cache
+            if getattr(user, 'displayname', None):
+                duser.displayname = user.displayname
+            user = duser
+        elif not isinstance(user, User):
+            user = self._client.get_user(user_id)
         return user
 
     def _set_room_id_for_address(self, address: Address, room_id: Optional[_RoomID]):
