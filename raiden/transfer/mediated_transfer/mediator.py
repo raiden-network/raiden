@@ -348,7 +348,7 @@ def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
         )
 
 
-def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash):
+def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash, block_number):
     """ Set the secret to all mediated transfers.
 
     The secret should have been learned from the secret registry.
@@ -363,15 +363,17 @@ def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash
             payer_channel,
             secret,
             secrethash,
+            block_number,
         )
 
         payee_channel = channelidentifiers_to_channels[
             pair.payee_transfer.balance_proof.channel_identifier
         ]
         channel.register_onchain_secret(
-            payee_channel,
-            secret,
-            secrethash,
+            channel_state=payee_channel,
+            secret=secret,
+            secrethash=secrethash,
+            secret_reveal_block_number=block_number,
         )
 
 
@@ -747,6 +749,7 @@ def secret_learned(
                 channelidentifiers_to_channels,
                 secret,
                 secrethash,
+                block_number,
             )
         else:
             set_secret(
@@ -1015,6 +1018,9 @@ def handle_secretreveal(
     is_valid_reveal = mediator_state_change.secrethash == mediator_state.secrethash
 
     if is_secret_unknown and is_valid_reveal:
+        if isinstance(mediator_state_change, ContractReceiveSecretReveal):
+            block_number = mediator_state_change.block_number
+
         iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,

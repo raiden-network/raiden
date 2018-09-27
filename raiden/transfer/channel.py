@@ -459,6 +459,14 @@ def is_valid_lock_expired(
     secrethash = state_change.secrethash
     received_balance_proof = state_change.balance_proof
     lock = channel_state.partner_state.secrethashes_to_lockedlocks.get(secrethash)
+
+    # If the lock was not found in locked locks, this means that we've received
+    # the secret for the locked transfer but we haven't unlocked it yet. Lock
+    # expiry in this case could still happen which means that we have to make
+    # sure that we check for "unclaimed" locks in our check.
+    if not lock:
+        lock = channel_state.partner_state.secrethashes_to_unlockedlocks.get(secrethash)
+
     lock_registered_on_chain = (
         secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
     )
@@ -1457,6 +1465,7 @@ def register_onchain_secret_endstate(
         end_state: NettingChannelEndState,
         secret: typing.Secret,
         secrethash: typing.SecretHash,
+        secret_reveal_block_number: typing.BlockNumber,
         delete_lock: bool = True,
 ) -> None:
     # the lock might be in end_state.secrethashes_to_lockedlocks or
@@ -1465,12 +1474,18 @@ def register_onchain_secret_endstate(
     pending_lock = None
 
     if is_lock_locked(end_state, secrethash):
-        pending_lock = end_state.secrethashes_to_lockedlocks[secrethash]
+        pending_lock: HashTimeLockState = end_state.secrethashes_to_lockedlocks[secrethash]
 
     if secrethash in end_state.secrethashes_to_unlockedlocks:
-        pending_lock = end_state.secrethashes_to_unlockedlocks[secrethash].lock
+        pending_lock: HashTimeLockState = end_state.secrethashes_to_unlockedlocks[secrethash].lock
 
     if pending_lock:
+        # If pending lock is still locked or unlocked but unclaimed
+        # And has expired before the on-chain secret reveal was mined,
+        # Then we simply reject on-chain secret reveal
+        if pending_lock.expiration < secret_reveal_block_number:
+            return
+
         if delete_lock:
             _del_lock(end_state, secrethash)
 
@@ -1501,6 +1516,7 @@ def register_onchain_secret(
         channel_state: NettingChannelState,
         secret: typing.Secret,
         secrethash: typing.SecretHash,
+        secret_reveal_block_number: typing.BlockNumber,
         delete_lock: bool = True,
 ) -> None:
     """This will register the onchain secret and set the lock to the unlocked stated.
@@ -1511,8 +1527,20 @@ def register_onchain_secret(
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
 
-    register_onchain_secret_endstate(our_state, secret, secrethash, delete_lock)
-    register_onchain_secret_endstate(partner_state, secret, secrethash, delete_lock)
+    register_onchain_secret_endstate(
+        our_state,
+        secret,
+        secrethash,
+        secret_reveal_block_number,
+        delete_lock,
+    )
+    register_onchain_secret_endstate(
+        partner_state,
+        secret,
+        secrethash,
+        secret_reveal_block_number,
+        delete_lock,
+    )
 
 
 def handle_send_directtransfer(
