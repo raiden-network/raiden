@@ -1,5 +1,6 @@
 import pytest
 
+from raiden.constants import GAS_REQUIRED_FOR_ENDPOINT_REGISTER
 from raiden.exceptions import UnknownAddress
 from raiden.network.discovery import ContractDiscovery
 from raiden.tests.utils.factories import make_address
@@ -46,15 +47,20 @@ def test_endpointregistry(private_keys, blockchain_services, contract_manager):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 def test_endpointregistry_gas(endpoint_discovery_services):
-    """ GAS_REQUIRED_FOR_ENDPOINT_REGISTER value must be equal to the gas required to call
+    """ GAS_REQUIRED_FOR_ENDPOINT_REGISTER value must be equal to the gas requried to call
     registerEndpoint.
     """
     contract_discovery = endpoint_discovery_services[0]
     discovery_proxy = contract_discovery.discovery_proxy
     endpoint = host_port_to_endpoint('127.0.0.1', 44444)
 
-    transaction_hash = discovery_proxy.proxy.transact('registerEndpoint', endpoint)
+    transaction_hash = discovery_proxy.proxy.transact(
+        'registerEndpoint',
+        GAS_REQUIRED_FOR_ENDPOINT_REGISTER,
+        endpoint,
+    )
     discovery_proxy.client.poll(transaction_hash)
 
     receipt = discovery_proxy.client.get_transaction_receipt(transaction_hash)
-    assert receipt['gasUsed'] <= GAS_REQUIRED_FOR_ENDPOINT_REGISTER
+    msg = 'the transaction failed, check if it was because of the gas being too low'
+    assert receipt['status'] != 0, msg

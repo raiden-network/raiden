@@ -131,11 +131,11 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
         contract_proxy.contract_address,
     )
 
-    gas = contract_proxy.estimate_gas('ret') * 2
+    startgas = contract_proxy.estimate_gas('ret') * 2
 
     with pytest.raises(TransactionAlreadyPending):
-        second_proxy.transact('ret', startgas=gas)
-        contract_proxy.transact('ret', startgas=gas)
+        second_proxy.transact('ret', startgas)
+        contract_proxy.transact('ret', startgas)
 
 
 def test_duplicated_transaction_different_gas_price_raises(deploy_client):
@@ -157,11 +157,11 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
         contract_proxy.contract_address,
     )
 
-    gas = contract_proxy.estimate_gas('ret') * 2
+    startgas = contract_proxy.estimate_gas('ret') * 2
 
     with pytest.raises(ReplacementTransactionUnderpriced):
-        second_proxy.transact('ret', startgas=gas)
-        contract_proxy.transact('ret', startgas=gas)
+        second_proxy.transact('ret', startgas)
+        contract_proxy.transact('ret', startgas)
 
 
 def test_transact_opcode(deploy_client):
@@ -171,9 +171,9 @@ def test_transact_opcode(deploy_client):
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    gas = contract_proxy.estimate_gas('ret') * 2
+    startgas = contract_proxy.estimate_gas('ret') * 2
 
-    transaction = contract_proxy.transact('ret', startgas=gas)
+    transaction = contract_proxy.transact('ret', startgas)
     deploy_client.poll(transaction)
 
     assert check_transaction_threw(deploy_client, transaction) is None, 'must be empty'
@@ -186,9 +186,9 @@ def test_transact_throws_opcode(deploy_client):
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    gas = deploy_client.gaslimit()
+    startgas = deploy_client.gaslimit()
 
-    transaction = contract_proxy.transact('fail', startgas=gas)
+    transaction = contract_proxy.transact('fail', startgas)
     deploy_client.poll(transaction)
 
     assert check_transaction_threw(deploy_client, transaction), 'must not be empty'
@@ -201,9 +201,9 @@ def test_transact_opcode_oog(deploy_client):
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    gas = min(contract_proxy.estimate_gas('loop', 1000) // 2, deploy_client.gaslimit())
+    startgas = min(contract_proxy.estimate_gas('loop', 1000) // 2, deploy_client.gaslimit())
 
-    transaction = contract_proxy.transact('loop', 1000, startgas=gas)
+    transaction = contract_proxy.transact('loop', 1000, startgas)
     deploy_client.poll(transaction)
 
     assert check_transaction_threw(deploy_client, transaction), 'must not be empty'
@@ -214,10 +214,10 @@ def test_filter_start_block_inclusive(deploy_client):
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     # call the create event function twice and wait for confirmation each time
-    gas = contract_proxy.estimate_gas('createEvent', 1) * 2
-    transaction_1 = contract_proxy.transact('createEvent', 1, startgas=gas)
+    startgas = contract_proxy.estimate_gas('createEvent', 1) * 2
+    transaction_1 = contract_proxy.transact('createEvent', 1, startgas)
     deploy_client.poll(transaction_1)
-    transaction_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
+    transaction_2 = contract_proxy.transact('createEvent', 2, startgas)
     deploy_client.poll(transaction_2)
 
     result_1 = deploy_client.get_filter_events(contract_proxy.contract_address)
@@ -246,10 +246,10 @@ def test_filter_end_block_inclusive(deploy_client):
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     # call the create event function twice and wait for confirmation each time
-    gas = contract_proxy.estimate_gas('createEvent', 1) * 2
-    transaction_1 = contract_proxy.transact('createEvent', 1, startgas=gas)
+    startgas = contract_proxy.estimate_gas('createEvent', 1) * 2
+    transaction_1 = contract_proxy.transact('createEvent', 1, startgas)
     deploy_client.poll(transaction_1)
-    transaction_2 = contract_proxy.transact('createEvent', 2, startgas=gas)
+    transaction_2 = contract_proxy.transact('createEvent', 2, startgas)
     deploy_client.poll(transaction_2)
 
     result_1 = deploy_client.get_filter_events(contract_proxy.contract_address)

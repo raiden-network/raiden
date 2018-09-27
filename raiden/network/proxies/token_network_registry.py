@@ -11,9 +11,15 @@ from eth_utils import (
     to_normalized_address,
 )
 
-from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
-from raiden.exceptions import InvalidAddress, RaidenRecoverableError, TransactionThrew
 from raiden.network.proxies.utils import compare_contract_versions
+from raiden.constants import GAS_FACTOR, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK, NULL_ADDRESS, GENESIS_BLOCK_NUMBER
+from raiden.exceptions import (
+    AddressWrongContract,
+    ContractVersionMismatch,
+    InvalidAddress,
+    RaidenRecoverableError,
+    TransactionThrew,
+)
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, privatekey_to_address, typing
@@ -83,6 +89,7 @@ class TokenNetworkRegistry:
 
         transaction_hash = self.proxy.transact(
             'createERC20TokenNetwork',
+            int(GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK * GAS_FACTOR),
             token_address,
         )
 

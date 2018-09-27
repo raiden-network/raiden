@@ -195,8 +195,17 @@ class TokenNetwork:
         if self.channel_exists_and_not_settled(self.node_address, partner):
             raise DuplicatedChannelError('Channel with given partner address already exists')
 
+        gas_limit = self.proxy.estimate_gas(
+            'openChannel',
+            self.node_address,
+            partner,
+            settle_timeout,
+        )
+        gas_limit = max(gas_limit or 0, GAS_REQUIRED_FOR_OPEN_CHANNEL)
+
         transaction_hash = self.proxy.transact(
             'openChannel',
+            int(gas_limit * GAS_FACTOR),
             self.node_address,
             partner,
             settle_timeout,
@@ -589,8 +598,18 @@ class TokenNetwork:
             #  making the second deposit fail.
             token.approve(self.address, amount_to_deposit)
 
+            gas_limit = self.proxy.estimate_gas(
+                'setTotalDeposit',
+                channel_identifier,
+                self.node_address,
+                total_deposit,
+                partner,
+            )
+            gas_limit = max(gas_limit or 0, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
+
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
+                int(gas_limit * GAS_FACTOR),
                 channel_identifier,
                 self.node_address,
                 total_deposit,
@@ -601,6 +620,12 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
             if receipt_or_none:
+                latest_deposit = self.detail_participant(
+                    channel_identifier,
+                    self.node_address,
+                    partner,
+                ).deposit
+
                 if token.allowance(self.node_address, self.address) < amount_to_deposit:
                     log_msg = (
                         'setTotalDeposit failed. The allowance is insufficient, '
@@ -609,6 +634,8 @@ class TokenNetwork:
                     )
                 elif token.balance_of(self.node_address) < amount_to_deposit:
                     log_msg = 'setTotalDeposit failed. The address doesnt have funds'
+                elif latest_deposit < total_deposit:
+                    log_msg = 'setTotalDeposit failed. The tokens were not transferred'
                 else:
                     log_msg = 'setTotalDeposit failed'
 
@@ -668,6 +695,7 @@ class TokenNetwork:
         with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
                 'closeChannel',
+                int(GAS_REQUIRED_FOR_CLOSE_CHANNEL * GAS_FACTOR),
                 channel_identifier,
                 partner,
                 balance_hash,
@@ -771,6 +799,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
+            int(GAS_REQUIRED_FOR_UPDATE_TRANSFER * GAS_FACTOR),
             channel_identifier,
             partner,
             self.node_address,
@@ -856,8 +885,13 @@ class TokenNetwork:
             raise ValueError(msg)
 
         with self.channel_operations_lock[partner]:
+            # gaslimit below must be defined
+            raise NotImplementedError('feature temporarily disabled')
+
+            gaslimit = None
             transaction_hash = self.proxy.transact(
                 'setTotalWithdraw',
+                gaslimit,
                 channel_identifier,
                 self.node_address,
                 total_withdraw,
@@ -902,8 +936,18 @@ class TokenNetwork:
 
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
+        gas_limit = self.proxy.estimate_gas(
+            'unlock',
+            channel_identifier,
+            self.node_address,
+            partner,
+            leaves_packed,
+        )
+        gas_limit = max(gas_limit or 0, UNLOCK_TX_GAS_LIMIT)
+
         transaction_hash = self.proxy.transact(
             'unlock',
+            int(gas_limit * GAS_FACTOR),
             channel_identifier,
             self.node_address,
             partner,
@@ -974,7 +1018,7 @@ class TokenNetwork:
             our_bp_is_larger = our_maximum > partner_maximum
 
             if our_bp_is_larger:
-                transaction_hash = self.proxy.transact(
+                gas_limit = self.proxy.estimate_gas(
                     'settleChannel',
                     channel_identifier,
                     partner,
@@ -986,9 +1030,39 @@ class TokenNetwork:
                     locked_amount,
                     locksroot,
                 )
-            else:
+                gas_limit = max(gas_limit or 0, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
+
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
+                    int(gas_limit * GAS_FACTOR),
+                    channel_identifier,
+                    partner,
+                    partner_transferred_amount,
+                    partner_locked_amount,
+                    partner_locksroot,
+                    self.node_address,
+                    transferred_amount,
+                    locked_amount,
+                    locksroot,
+                )
+            else:
+                gas_limit = self.proxy.estimate_gas(
+                    'settleChannel',
+                    channel_identifier,
+                    self.node_address,
+                    transferred_amount,
+                    locked_amount,
+                    locksroot,
+                    partner,
+                    partner_transferred_amount,
+                    partner_locked_amount,
+                    partner_locksroot,
+                )
+                gas_limit = max(gas_limit or 0, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
+
+                transaction_hash = self.proxy.transact(
+                    'settleChannel',
+                    int(gas_limit * GAS_FACTOR),
                     channel_identifier,
                     self.node_address,
                     transferred_amount,
