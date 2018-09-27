@@ -195,7 +195,6 @@ class JSONRPCClient:
         self.sender = sender
         self.web3 = web3
 
-        self._gaslimit_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
         self._gasprice_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
         self._available_nonce = _available_nonce
         self._nonce_lock = Semaphore()
@@ -218,7 +217,6 @@ class JSONRPCClient:
         """ Return the balance of the account of given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
-    @cachedmethod(attrgetter('_gaslimit_cache'))
     def gaslimit(self, location='latest') -> int:
         gas_limit = self.web3.eth.getBlock(location)['gasLimit']
         return gas_limit * 8 // 10

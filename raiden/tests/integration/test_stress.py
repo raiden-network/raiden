@@ -347,7 +347,6 @@ def assert_channels(raiden_network, token_network_identifier, deposit):
 @pytest.mark.parametrize('deposit', [5])
 @pytest.mark.parametrize('reveal_timeout', [15])
 @pytest.mark.parametrize('settle_timeout', [120])
-@pytest.mark.skip(reason='Issue 2492')
 def test_stress(
         request,
         raiden_network,
