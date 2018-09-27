@@ -78,13 +78,14 @@ def test_write_read_log():
     partner = factories.make_address()
     locksroot = sha3(b'test_write_read_log')
     contract_receive_unlock = ContractReceiveChannelBatchUnlock(
-        factories.make_transaction_hash(),
-        factories.make_address(),
-        participant,
-        partner,
-        locksroot,
-        unlocked_amount,
-        returned_amount,
+        transaction_hash=factories.make_transaction_hash(),
+        token_network_identifier=factories.make_address(),
+        participant=participant,
+        partner=partner,
+        locksroot=locksroot,
+        unlocked_amount=unlocked_amount,
+        returned_tokens=returned_amount,
+        block_number=block_number,
     )
 
     state_changes1 = wal.storage.get_statechanges_by_identifier(

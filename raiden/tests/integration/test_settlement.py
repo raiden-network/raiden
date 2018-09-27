@@ -119,7 +119,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
         'token_network_identifier': token_network_identifier,
         'channel_identifier': channel_identifier,
         'transaction_from': app1.raiden.address,
-        'closed_block_number': channel_state.close_transaction.finished_block_number,
+        'block_number': channel_state.close_transaction.finished_block_number,
     })
 
     assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
