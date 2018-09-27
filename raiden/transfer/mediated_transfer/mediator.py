@@ -1018,6 +1018,8 @@ def handle_secretreveal(
     is_valid_reveal = mediator_state_change.secrethash == mediator_state.secrethash
 
     if is_secret_unknown and is_valid_reveal:
+        # If secret reveal was triggered on-chain, we would compare against
+        # the block number at which the event was emitted.
         if isinstance(mediator_state_change, ContractReceiveSecretReveal):
             block_number = mediator_state_change.block_number
 
