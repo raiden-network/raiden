@@ -233,17 +233,19 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
             transaction_hash: typing.TransactionHash,
             token_network_identifier: typing.TokenNetworkID,
             channel_state: NettingChannelState,
+            block_number: typing.BlockNumber,
     ):
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.token_network_identifier = token_network_identifier
         self.channel_state = channel_state
         self.channel_identifier = channel_state.identifier
 
     def __repr__(self):
-        return '<ContractReceiveChannelNew token_network:{} state:{}>'.format(
+        return '<ContractReceiveChannelNew token_network:{} state:{} block:{}>'.format(
             pex(self.token_network_identifier),
             self.channel_state,
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -262,6 +264,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_state': self.channel_state,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -282,17 +285,13 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             transaction_from: typing.Address,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
-            closed_block_number: typing.BlockNumber,
+            block_number: typing.BlockNumber,
     ):
-        if not isinstance(closed_block_number, typing.T_BlockNumber):
-            raise ValueError('closed_block_number must be of type block_number')
-
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.transaction_from = transaction_from
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.closed_block_number = closed_block_number
 
     def __repr__(self):
         return (
@@ -303,7 +302,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             pex(self.token_network_identifier),
             self.channel_identifier,
             pex(self.transaction_from),
-            self.closed_block_number,
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -312,7 +311,6 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             self.transaction_from == other.transaction_from and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.closed_block_number == other.closed_block_number and
             super().__eq__(other)
         )
 
@@ -325,7 +323,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             'transaction_from': to_checksum_address(self.transaction_from),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
-            'closed_block_number': self.closed_block_number,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -335,7 +333,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             transaction_from=to_canonical_address(data['transaction_from']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
-            closed_block_number=data['closed_block_number'],
+            block_number=data['block_number'],
         )
 
 
@@ -451,8 +449,9 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             deposit_transaction: TransactionChannelNewBalance,
+            block_number: typing.BlockNumber,
     ):
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
@@ -460,11 +459,14 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
 
     def __repr__(self):
         return (
-            '<ContractReceiveChannelNewBalance token_network:{} channel:{} transaction:{}>'.format(
-                pex(self.token_network_identifier),
-                self.channel_identifier,
-                self.deposit_transaction,
-            )
+            '<ContractReceiveChannelNewBalance'
+            ' token_network:{} channel:{} transaction:{} block:{}'
+            '>'
+        ).format(
+            pex(self.token_network_identifier),
+            self.channel_identifier,
+            self.deposit_transaction,
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -485,6 +487,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
             'deposit_transaction': self.deposit_transaction,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -494,6 +497,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
             deposit_transaction=data['deposit_transaction'],
+            block_number=data['block_number'],
         )
 
 
@@ -505,16 +509,12 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
             transaction_hash: typing.TransactionHash,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
-            settle_block_number: typing.BlockNumber,
+            block_number: typing.BlockNumber,
     ):
-        if not isinstance(settle_block_number, int):
-            raise ValueError('settle_block_number must be of type int')
-
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
-        self.settle_block_number = settle_block_number
 
     def __repr__(self):
         return (
@@ -522,7 +522,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
         ).format(
             pex(self.token_network_identifier),
             self.channel_identifier,
-            self.settle_block_number,
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -530,7 +530,6 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
             isinstance(other, ContractReceiveChannelSettled) and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.settle_block_number == other.settle_block_number and
             super().__eq__(other)
         )
 
@@ -542,7 +541,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
-            'settle_block_number': self.settle_block_number,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -551,7 +550,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
-            settle_block_number=data['settle_block_number'],
+            block_number=data['block_number'],
         )
 
 
@@ -625,17 +624,19 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
             self,
             transaction_hash: typing.TransactionHash,
             payment_network: PaymentNetworkState,
+            block_number: typing.BlockNumber,
     ):
         if not isinstance(payment_network, PaymentNetworkState):
             raise ValueError('payment_network must be a PaymentNetworkState instance')
 
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.payment_network = payment_network
 
     def __repr__(self):
-        return '<ContractReceiveNewPaymentNetwork network:{}>'.format(
+        return '<ContractReceiveNewPaymentNetwork network:{} block:{}>'.format(
             self.payment_network,
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -652,6 +653,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'payment_network': self.payment_network,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -659,6 +661,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             payment_network=data['payment_network'],
+            block_number=data['block_number'],
         )
 
 
@@ -670,19 +673,21 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
             transaction_hash: typing.TransactionHash,
             payment_network_identifier: typing.PaymentNetworkID,
             token_network: TokenNetworkState,
+            block_number: typing.BlockNumber,
     ):
         if not isinstance(token_network, TokenNetworkState):
             raise ValueError('token_network must be a TokenNetworkState instance')
 
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.payment_network_identifier = payment_network_identifier
         self.token_network = token_network
 
     def __repr__(self):
-        return '<ContractReceiveNewTokenNetwork payment_network:{} network:{}>'.format(
+        return '<ContractReceiveNewTokenNetwork payment_network:{} network:{} block:{}>'.format(
             pex(self.payment_network_identifier),
             self.token_network,
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -701,6 +706,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network': self.token_network,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -709,6 +715,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network=data['token_network'],
+            block_number=data['block_number'],
         )
 
 
@@ -721,6 +728,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
             secret_registry_address: typing.SecretRegistryAddress,
             secrethash: typing.SecretHash,
             secret: typing.Secret,
+            block_number: typing.BlockNumber,
     ):
         if not isinstance(secret_registry_address, typing.T_SecretRegistryAddress):
             raise ValueError('secret_registry_address must be of type SecretRegistryAddress')
@@ -729,17 +737,22 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
         if not isinstance(secret, typing.T_Secret):
             raise ValueError('secret must be of type Secret')
 
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.secret_registry_address = secret_registry_address
         self.secrethash = secrethash
         self.secret = secret
 
     def __repr__(self):
-        return '<ContractReceiveSecretReveal secret_registry:{} secrethash:{} secret:{}>'.format(
+        return (
+            '<ContractReceiveSecretReveal'
+            ' secret_registry:{} secrethash:{} secret:{} block:{}'
+            '>'
+        ).format(
             pex(self.secret_registry_address),
             pex(self.secrethash),
             pex(self.secret),
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -760,6 +773,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
             'secret_registry_address': to_checksum_address(self.secret_registry_address),
             'secrethash': serialize_bytes(self.secrethash),
             'secret': serialize_bytes(self.secret),
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -769,6 +783,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
             secret_registry_address=to_canonical_address(data['secret_registry_address']),
             secrethash=deserialize_bytes(data['secrethash']),
             secret=deserialize_bytes(data['secret']),
+            block_number=data['block_number'],
         )
 
 
@@ -792,6 +807,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             locksroot: typing.Locksroot,
             unlocked_amount: typing.TokenAmount,
             returned_tokens: typing.TokenAmount,
+            block_number: typing.BlockNumber,
     ):
 
         if not isinstance(token_network_identifier, typing.T_TokenNetworkID):
@@ -803,7 +819,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
         if not isinstance(partner, typing.T_Address):
             raise ValueError('partner must be of type address')
 
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.token_network_identifier = token_network_identifier
         self.participant = participant
@@ -814,8 +830,9 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
 
     def __repr__(self):
         return (
-            '<ContractReceiveChannelBatchUnlock'
-            'token_network:{} participant:{} partner:{} locksroot:{} unlocked:{} returned:{}'
+            '<ContractReceiveChannelBatchUnlock '
+            ' token_network:{} participant:{} partner:{}'
+            ' locksroot:{} unlocked:{} returned:{} block:{}'
             '>'
         ).format(
             self.token_network_identifier,
@@ -824,6 +841,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             self.locksroot,
             self.unlocked_amount,
             self.returned_tokens,
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -850,6 +868,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             'locksroot': serialize_bytes(self.locksroot),
             'unlocked_amount': self.unlocked_amount,
             'returned_tokens': self.returned_tokens,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -862,6 +881,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             locksroot=deserialize_bytes(data['locksroot']),
             unlocked_amount=data['unlocked_amount'],
             returned_tokens=data['returned_tokens'],
+            block_number=data['block_number'],
         )
 
 
@@ -875,6 +895,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
             channel_identifier: typing.ChannelID,
             participant1: typing.Address,
             participant2: typing.Address,
+            block_number: typing.BlockNumber,
     ):
 
         if not isinstance(participant1, typing.T_Address):
@@ -883,7 +904,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         if not isinstance(participant2, typing.T_Address):
             raise ValueError('participant2 must be of type address')
 
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
@@ -891,11 +912,16 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         self.participant2 = participant2
 
     def __repr__(self):
-        return '<ContractReceiveRouteNew token_network:{} id:{} node1:{} node2:{}>'.format(
+        return (
+            '<ContractReceiveRouteNew'
+            ' token_network:{} id:{} node1:{}'
+            ' node2:{} block:{}>'
+        ).format(
             pex(self.token_network_identifier),
             self.channel_identifier,
             pex(self.participant1),
             pex(self.participant2),
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -918,6 +944,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
             'channel_identifier': self.channel_identifier,
             'participant1': to_checksum_address(self.participant1),
             'participant2': to_checksum_address(self.participant2),
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -928,6 +955,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
             channel_identifier=data['channel_identifier'],
             participant1=to_canonical_address(data['participant1']),
             participant2=to_canonical_address(data['participant2']),
+            block_number=data['block_number'],
         )
 
 
@@ -939,16 +967,18 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
             transaction_hash: typing.TransactionHash,
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
+            block_number: typing.BlockNumber,
     ):
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
 
     def __repr__(self):
-        return '<ContractReceiveRouteClosed token_network:{} id:{}>'.format(
+        return '<ContractReceiveRouteClosed token_network:{} id:{} block:{}>'.format(
             pex(self.token_network_identifier),
             self.channel_identifier,
+            self.block_number,
         )
 
     def __eq__(self, other):
@@ -967,6 +997,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -975,6 +1006,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
+            block_number=data['block_number'],
         )
 
 
@@ -985,15 +1017,16 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             nonce: typing.Nonce,
+            block_number: typing.block_number,
     ):
-        super().__init__(transaction_hash)
+        super().__init__(transaction_hash, block_number)
 
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
         self.nonce = nonce
 
     def __repr__(self):
-        return f'<ContractReceiveUpdateTransfer nonce:{self.nonce}>'
+        return f'<ContractReceiveUpdateTransfer nonce:{self.nonce} block:{self.block_number}>'
 
     def __eq__(self, other):
         return (
@@ -1013,6 +1046,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
             'nonce': self.nonce,
+            'block_number': self.block_number,
         }
 
     @classmethod
@@ -1022,6 +1056,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=data['channel_identifier'],
             nonce=data['nonce'],
+            block_number=data['block_number'],
         )
 
 
