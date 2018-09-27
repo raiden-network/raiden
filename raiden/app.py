@@ -95,7 +95,7 @@ class App:  # pylint: disable=too-few-public-methods
             log.warning(
                 'Older versions of the database exist in '
                 f'{db_base_path}. Since a newer breaking version is introduced, '
-                'it is advised that you leave all token networks before upgrading and ',
+                'it is advised that you leave all token networks before upgrading and '
                 'then proceed with the upgrade.',
             )
 
