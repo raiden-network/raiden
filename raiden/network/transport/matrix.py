@@ -60,6 +60,7 @@ from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     Address,
     AddressHex,
+    Any,
     Callable,
     Dict,
     Iterable,
@@ -68,8 +69,6 @@ from raiden.utils.typing import (
     Optional,
     Set,
     Tuple,
-    Type,
-    TypeVar,
     Union,
 )
 from raiden_libs.exceptions import InvalidSignature
@@ -78,16 +77,13 @@ from raiden_libs.utils.signing import eth_recover, eth_sign
 
 log = structlog.get_logger(__name__)
 
-_T = TypeVar('T')  # type
-_CIT = Union[_T, Type[_T]]  # class or instance
-_RT = TypeVar('RT')  # return type
 _RoomID = NewType('RoomID', str)
 
 
 def _factorygetter(
         attr: str,
-        factory: Callable[[], _RT],
-) -> Callable[[_CIT], _RT]:
+        factory: Callable,
+) -> Callable:
     """Safer attrgetter which constructs the missing object with factory if not present
 
     May be used for normal methods, classmethods and properties.
@@ -100,7 +96,7 @@ def _factorygetter(
         def bar(self) -> int:
             return 2+3
     """
-    def _attrgetter(cls_or_self: _CIT) -> _RT:
+    def _attrgetter(cls_or_self):
         value = getattr(cls_or_self, attr, None)
         if value is None:
             value = factory()
@@ -110,12 +106,12 @@ def _factorygetter(
 
 
 def _lockedmethod(
-        lock: Union[Semaphore, Callable[[_CIT], Semaphore]],
-) -> Callable[[Callable], Callable]:
-    """Serialize access to a method through a lock or lock attrgetter
+        lock: Union[Semaphore, Callable[[Any], Semaphore]],
+) -> Callable:
+    """Decorator which serializes access to a method through a lock or lock attrgetter
 
-    lock parameter may be a Semaphore instance or a callable which, called with
-    the class or instance object as only parameter, will return a Semaphore instance
+    lock parameter may be a Semaphore instance or a callable which returns a Semaphore instance
+    when called with the class or instance object as only parameter
     Example usage:
     class Foo:
         def __init__(self):
@@ -127,11 +123,11 @@ def _lockedmethod(
     """
     def wrapper(func: Callable) -> Callable:
         @wraps(func)
-        def wrapped(cls_or_self: _CIT, *args, **kwargs):
+        def lockedfunc(cls_or_self, *args, **kwargs):
             _lock = lock(cls_or_self) if callable(lock) else lock
             with _lock:
                 return func(cls_or_self, *args, **kwargs)
-        return wrapped
+        return lockedfunc
     return wrapper
 
 
