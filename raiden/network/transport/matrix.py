@@ -199,7 +199,6 @@ class MatrixTransport(Runnable):
 
         self._stop_event = gevent.event.Event()
         self._stop_event.set()
-        self._health_semaphore = Semaphore()
 
         self._client.add_invite_listener(self._handle_invite)
         self._client.add_presence_listener(self._handle_presence_change)
@@ -277,31 +276,31 @@ class MatrixTransport(Runnable):
         self.greenlets.append(greenlet)
         return greenlet
 
+    @_lockedmethod(_factorygetter('__health_lock', Semaphore))
     def start_health_check(self, node_address):
         if self._stop_event.ready():
             return
 
-        with self._health_semaphore:
-            if node_address in self._address_to_userids:
-                return  # already healthchecked
+        if node_address in self._address_to_userids:
+            return  # already healthchecked
 
-            node_address_hex = to_normalized_address(node_address)
-            self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
+        node_address_hex = to_normalized_address(node_address)
+        self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
 
-            candidates = [
-                self._get_user(user)
-                for user in self._client.search_user_directory(node_address_hex)
-            ]
-            user_ids = {
-                user.user_id
-                for user in candidates
-                if self._validate_userid_signature(user) == node_address
-            }
-            self._address_to_userids[node_address].update(user_ids)
+        candidates = [
+            self._get_user(user)
+            for user in self._client.search_user_directory(node_address_hex)
+        ]
+        user_ids = {
+            user.user_id
+            for user in candidates
+            if self._validate_userid_signature(user) == node_address
+        }
+        self._address_to_userids[node_address].update(user_ids)
 
-            # Ensure network state is updated in case we already know about the user presences
-            # representing the target node
-            self._update_address_presence(node_address)
+        # Ensure network state is updated in case we already know about the user presences
+        # representing the target node
+        self._update_address_presence(node_address)
 
     def send_async(
         self,
