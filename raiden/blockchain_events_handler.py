@@ -294,7 +294,7 @@ def handle_secret_revealed(raiden, event: Event):
 def on_blockchain_event(raiden: 'RaidenService', event: Event):
     data = event.event_data
     log.debug(
-        'BLOCKCHAIN EVENT',
+        'Blockchain event',
         node=pex(raiden.address),
         contract=pex(to_canonical_address(data['address'])),
         chain_event=event,

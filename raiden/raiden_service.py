@@ -436,7 +436,7 @@ class RaidenService(Runnable):
 
     def handle_state_change(self, state_change):
         log.debug(
-            'STATE CHANGE',
+            'State change',
             node=pex(self.address),
             state_change=_redact_secret(serialize.JSONSerializer.serialize(state_change)),
         )
@@ -448,7 +448,7 @@ class RaidenService(Runnable):
 
         for event in event_list:
             log.debug(
-                'RAIDEN EVENT',
+                'Raiden event',
                 node=pex(self.address),
                 raiden_event=_redact_secret(serialize.JSONSerializer.serialize(event)),
             )

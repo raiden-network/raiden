@@ -400,7 +400,7 @@ class UDPTransport(Runnable):
             assert queue.is_set()
 
             log.debug(
-                'MESSAGE QUEUED',
+                'Message queued',
                 node=pex(self.raiden.address),
                 queue_identifier=queue_identifier,
                 queue_size=len(queue),
@@ -468,7 +468,7 @@ class UDPTransport(Runnable):
 
         if len(messagedata) > self.UDP_MAX_MESSAGE_SIZE:
             log.warning(
-                'INVALID MESSAGE: Packet larger than maximum size',
+                'Invalid message: Packet larger than maximum size',
                 node=pex(self.raiden.address),
                 message=hexlify(messagedata),
                 length=len(messagedata),
@@ -479,7 +479,7 @@ class UDPTransport(Runnable):
             message = decode(messagedata)
         except InvalidProtocolMessage as e:
             log.warning(
-                'INVALID PROTOCOL MESSAGE',
+                'Invalid protocol message',
                 error=str(e),
                 node=pex(self.raiden.address),
                 message=hexlify(messagedata),
@@ -496,7 +496,7 @@ class UDPTransport(Runnable):
             self.receive_message(message)
         else:
             log.warning(
-                'INVALID MESSAGE: Unknown cmdid',
+                'Invalid message: Unknown cmdid',
                 node=pex(self.raiden.address),
                 message=hexlify(messagedata),
             )
@@ -555,7 +555,7 @@ class UDPTransport(Runnable):
             async_result.set()
         else:
             log.warn(
-                'UNKNOWN DELIVERED MESSAGE RECEIVED',
+                'Unknown delivered message received',
                 message_id=message_id,
             )
 
@@ -566,7 +566,7 @@ class UDPTransport(Runnable):
         """ Handle a Ping message by answering with a Pong. """
 
         log_healthcheck.debug(
-            'PING RECEIVED',
+            'Ping received',
             node=pex(self.raiden.address),
             message_id=ping.nonce,
             message=ping,
@@ -589,7 +589,7 @@ class UDPTransport(Runnable):
 
         if async_result is not None:
             log_healthcheck.debug(
-                'PONG RECEIVED',
+                'Pong received',
                 node=pex(self.raiden.address),
                 sender=pex(pong.sender),
                 message_id=pong.nonce,
@@ -599,7 +599,7 @@ class UDPTransport(Runnable):
 
         else:
             log_healthcheck.warn(
-                'UNKNOWN PONG RECEIVED',
+                'Unknown pong received',
                 message_id=message_id,
             )
 
