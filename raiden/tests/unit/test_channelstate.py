@@ -1312,6 +1312,72 @@ def test_channel_must_accept_expired_locks():
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
 
 
+def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
+    """ Ensure that on-chain secret registration becomes a noop
+    if the lock has already expired.
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    # On-Chain secret registration happens between
+    # Lock expiration & Lock expiration + required confirmation
+    block_number = 100
+    lock_expiration = block_number - 10
+    secret_reveal_block_number = block_number - 5
+
+    lock_amount = 10
+    lock_secret = b'test_channel_must_accept_expired_locks'
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        amount=lock_amount,
+        expiration=lock_expiration,
+        secrethash=lock_secrethash,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        lock=lock,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state=channel_state,
+        mediated_transfer=receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
+
+    # If secret registration happens after the lock has expired, then NOOP
+    channel.register_onchain_secret(
+        channel_state=channel_state,
+        secret=lock_secret,
+        secrethash=lock_secrethash,
+        secret_reveal_block_number=secret_reveal_block_number,
+        delete_lock=False,
+    )
+
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
+    assert {} == channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
+
+    # If it happens before, the lockedlock is unlocked
+    channel.register_onchain_secret(
+        channel_state=channel_state,
+        secret=lock_secret,
+        secrethash=lock_secrethash,
+        secret_reveal_block_number=lock_expiration - 1,
+        delete_lock=True,
+    )
+
+    assert lock.secrethash not in channel_state.partner_state.secrethashes_to_lockedlocks
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
+
+
 def test_receive_lockedtransfer_before_deposit():
     """Regression test that ensures we accept incoming mediated transfers, even if we don't have
     any balance on the channel.
