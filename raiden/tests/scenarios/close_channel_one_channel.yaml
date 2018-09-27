@@ -1,0 +1,65 @@
+settings:
+  gas_price: "fast"
+
+token:
+
+nodes:
+  commands:
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 3
+    template: "localhost:50{:02d}"
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 10}
+            - open_channel: {from: 1, to: 2, total_deposit: 10}
+      - parallel:
+          name: "Deposit to channels"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 10}
+            - deposit: {from: 2, to: 1, total_deposit: 10}
+      - parallel:
+          name: "Assert after deposits"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 10, balance: 10, state: "opened"}
+      - parallel:
+          name: "Transfers"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1}
+            - transfer: {from: 1, to: 2, amount: 1}
+      - wait: 2
+      - parallel:
+          name: "Assert after transfers"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 9,  state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 10, balance: 11, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 10, balance: 9,  state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 10, balance: 11, state: "opened"}
+      - close_channel: {from: 0, to: 1}
+      - parallel:
+          name: "Assert after closing one channel"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 9, state: "closed"}
+            - assert: {from: 1, to: 0, total_deposit: 10, balance: 11, state: "closed"}
+            - assert: {from: 1, to: 2, total_deposit: 10, balance: 9, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 10, balance: 11, state: "opened"}
+      # check that closing again returns proper http error code
+      - close_channel: {from: 0, to: 1, expected_http_status: 409}
+      - parallel:
+          name: "Assert after closing one channel again"
+          tasks:
+          - assert: {from: 0, to: 1, total_deposit: 10, balance: 9, state: "closed"}
+          - assert: {from: 1, to: 0, total_deposit: 10, balance: 11, state: "closed"}
+          - assert: {from: 1, to: 2, total_deposit: 10, balance: 9, state: "opened"}
+          - assert: {from: 2, to: 1, total_deposit: 10, balance: 11, state: "opened"}
