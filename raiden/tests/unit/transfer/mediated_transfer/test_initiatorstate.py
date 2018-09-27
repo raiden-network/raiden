@@ -842,6 +842,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
         payment_state=current_state,
         state_change=state_change,
         channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
     )
 
     assert events.must_contain_entry(iteration.events, SendBalanceProof, {

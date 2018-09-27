@@ -268,6 +268,7 @@ def handle_onchain_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
         channelidentifiers_to_channels: typing.ChannelMap,
+        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
@@ -275,6 +276,7 @@ def handle_onchain_secretreveal(
         initiator_state=payment_state.initiator,
         state_change=state_change,
         channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
     )
     iteration = iteration_from_sub(payment_state, sub_iteration)
     return iteration
@@ -348,6 +350,7 @@ def state_transition(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
+            pseudo_random_generator,
         )
     else:
         iteration = TransitionResult(payment_state, list())

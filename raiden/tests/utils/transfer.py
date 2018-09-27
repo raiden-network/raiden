@@ -3,6 +3,7 @@ import random
 
 import gevent
 from coincurve import PrivateKey
+from gevent.event import AsyncResult
 
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import on_message
@@ -150,6 +151,10 @@ def pending_mediated_transfer(app_chain, token_network_identifier, amount, ident
         token_network_identifier,
         target,
     )
+
+    init_initiator_identifier = init_initiator_statechange.transfer.payment_identifier
+    initiator_app.raiden.identifier_to_results[init_initiator_identifier] = AsyncResult()
+
     events = initiator_app.raiden.wal.log_and_dispatch(
         init_initiator_statechange,
     )
@@ -159,6 +164,10 @@ def pending_mediated_transfer(app_chain, token_network_identifier, amount, ident
 
     for mediator_app in app_chain[1:-1]:
         mediator_init_statechange = mediator_init(mediator_app.raiden, transfermessage)
+
+        mediator_init_identifier = init_initiator_statechange.transfer.payment_identifier
+        mediator_app.raiden.identifier_to_results[mediator_init_identifier] = AsyncResult()
+
         events = mediator_app.raiden.wal.log_and_dispatch(
             mediator_init_statechange,
         )
