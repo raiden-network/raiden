@@ -7,11 +7,10 @@ from functools import wraps
 from operator import attrgetter, itemgetter
 from random import Random
 from urllib.parse import urlparse
-from weakref import WeakValueDictionary
 
 import gevent
 import structlog
-from cachetools import TTLCache, cachedmethod
+from cachetools import LRUCache, TTLCache, cachedmethod
 from eth_utils import (
     decode_hex,
     encode_hex,
@@ -1183,8 +1182,8 @@ class MatrixTransport(Runnable):
         return address
 
     @cachedmethod(
-        _factorygetter('__users_cache', WeakValueDictionary),
-        key=lambda _, user: user.user_id if isinstance(user, User) else user,
+        _factorygetter('__users_cache', lambda: LRUCache(128)),
+        key=lambda _, user: getattr(user, 'user_id', user),
     )
     def _get_user(self, user: Union[User, str]) -> User:
         """ Creates an User from an user_id, if none, or fetch a cached User """
