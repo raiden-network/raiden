@@ -176,9 +176,10 @@ def handle_secretreveal(
             )
         elif isinstance(state_change, ContractReceiveSecretReveal):
             channel.register_onchain_secret(
-                channel_state,
-                state_change.secret,
-                state_change.secrethash,
+                channel_state=channel_state,
+                secret=state_change.secret,
+                secrethash=state_change.secrethash,
+                secret_reveal_block_number=state_change.block_number,
             )
         else:
             assert False, 'Got unexpected StateChange'

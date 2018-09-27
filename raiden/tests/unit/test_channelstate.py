@@ -1174,6 +1174,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
         channel_state=channel_state,
         secret=lock_secret,
         secrethash=lock.secrethash,
+        secret_reveal_block_number=lock_expiration - 1,
         delete_lock=True,
     )
 
@@ -1223,6 +1224,7 @@ def test_channel_must_never_expire_locks_with_onchain_secret():
         channel_state=channel_state,
         secret=lock_secret,
         secrethash=lock_secrethash,
+        secret_reveal_block_number=1,
         delete_lock=False,
     )
 
