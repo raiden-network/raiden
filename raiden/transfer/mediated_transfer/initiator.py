@@ -29,11 +29,11 @@ from raiden.utils import typing
 
 
 def events_for_unlock_lock(
-        initiator_state,
-        channel_state,
-        secret,
-        secrethash,
-        pseudo_random_generator,
+        initiator_state: InitiatorTransferState,
+        channel_state: NettingChannelState,
+        secret: typing.Secret,
+        secrethash: typing.SecretHash,
+        pseudo_random_generator: random.Random,
 ):
     # next hop learned the secret, unlock the token locally and send the
     # lock claim message to next hop
@@ -326,6 +326,7 @@ def handle_onchain_secretreveal(
         initiator_state: InitiatorTransferState,
         state_change: ContractReceiveSecretReveal,
         channel_state: NettingChannelState,
+        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     """ When a secret is revealed on-chain all nodes learn the secret.
 
