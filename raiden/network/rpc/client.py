@@ -369,7 +369,8 @@ class JSONRPCClient:
                 dependency_contract['bin'] = bytecode
 
                 transaction_hash = self.send_transaction(
-                    to=typing.Address(b''),
+                    to=Address(b''),
+                    startgas=int(self.gaslimit() * 0.8),
                     data=bytecode,
                 )
 
@@ -426,10 +427,10 @@ class JSONRPCClient:
 
     def send_transaction(
             self,
-            to: typing.Address,
+            to: Address,
+            startgas: int,
             value: int = 0,
             data: bytes = b'',
-            startgas: int = None,
     ) -> bytes:
         """ Helper to send signed messages.
 
@@ -442,7 +443,6 @@ class JSONRPCClient:
 
         with self._nonce_lock:
             nonce = self._available_nonce
-            startgas = self.check_startgas(startgas)
             gas_price = self.gas_price()
 
             transaction = {
