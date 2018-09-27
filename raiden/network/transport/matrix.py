@@ -210,7 +210,7 @@ class MatrixTransport(Runnable):
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
-        self.log.debug('TRANSPORT STARTED', config=self._config)
+        self.log.debug('Transport started', config=self._config)
 
         super().start()  # start greenlet
 
@@ -267,7 +267,7 @@ class MatrixTransport(Runnable):
                 return  # already healthchecked
 
             node_address_hex = to_normalized_address(node_address)
-            self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
+            self.log.debug('Healthcheck', peer_address=node_address_hex)
 
             candidates = [
                 self._get_user(user)
@@ -317,7 +317,7 @@ class MatrixTransport(Runnable):
             )
 
         self.log.debug(
-            'SEND ASYNC',
+            'Send async',
             receiver_address=pex(receiver_address),
             message=message,
             queue_identifier=queue_identifier,
@@ -372,7 +372,7 @@ class MatrixTransport(Runnable):
                 self._client.sync_token = None
                 self._client.login(username, password)
                 self.log.debug(
-                    'LOGIN',
+                    'Login',
                     homeserver=self._server_name,
                     server_url=self._server_url,
                     username=username,
@@ -390,7 +390,7 @@ class MatrixTransport(Runnable):
                 try:
                     self._client.register_with_password(username, password)
                     self.log.debug(
-                        'REGISTER',
+                        'Register',
                         homeserver=self._server_name,
                         server_url=self._server_url,
                         username=username,
@@ -463,7 +463,7 @@ class MatrixTransport(Runnable):
         self._discovery_room = discovery_room
 
     def _inventory_rooms(self):
-        self.log.debug('INVENTORY ROOMS', rooms=self._client.rooms)
+        self.log.debug('Inventory rooms', rooms=self._client.rooms)
         for room in self._client.rooms.values():
             if any(self._discovery_room_alias in alias for alias in room.aliases):
                 continue
@@ -472,7 +472,7 @@ class MatrixTransport(Runnable):
             if not room.listeners:
                 room.add_listener(self._handle_message, 'm.room.message')
             self.log.debug(
-                'ROOM',
+                'Room',
                 room=room,
                 aliases=room.aliases,
             )
@@ -579,7 +579,7 @@ class MatrixTransport(Runnable):
         peer_address = self._validate_userid_signature(user)
         if not peer_address:
             self.log.debug(
-                'message from invalid user displayName signature',
+                'Message from invalid user displayName signature',
                 peer_user=user.user_id,
                 room=room,
             )
@@ -589,7 +589,7 @@ class MatrixTransport(Runnable):
         if peer_address not in self._address_to_userids:
             # user not start_health_check'ed
             self.log.debug(
-                'message from non-healthchecked peer - ignoring',
+                'Message from non-healthchecked peer - ignoring',
                 sender=user,
                 sender_address=pex(peer_address),
                 room=room,
@@ -606,7 +606,7 @@ class MatrixTransport(Runnable):
             else:
                 reason = 'unknown room for user'
             self.log.debug(
-                'received peer message in an invalid room - ignoring',
+                'Received peer message in an invalid room - ignoring',
                 peer_user=user.user_id,
                 peer_address=pex(peer_address),
                 room=room,
@@ -616,7 +616,7 @@ class MatrixTransport(Runnable):
 
         if not room_ids or room.room_id != room_ids[0]:
             self.log.debug(
-                'received message triggered new comms room for peer',
+                'Received message triggered new comms room for peer',
                 peer_user=user.user_id,
                 peer_address=pex(peer_address),
                 known_user_rooms=room_ids,
@@ -723,7 +723,7 @@ class MatrixTransport(Runnable):
                 break
         else:
             self.log.debug(
-                'DELIVERED MESSAGE UNKNOWN',
+                'Delivered message unknown',
                 sender=pex(delivered.sender),
                 message=delivered,
             )
@@ -734,14 +734,14 @@ class MatrixTransport(Runnable):
         )
 
         self.log.debug(
-            'DELIVERED MESSAGE RECEIVED',
+            'Delivered message received',
             sender=pex(delivered.sender),
             message=delivered,
         )
 
     def _receive_message(self, message: SignedMessage):
         self.log.debug(
-            'MESSAGE RECEIVED',
+            'Message received',
             node=pex(self._raiden_service.address),
             message=message,
             sender=pex(message.sender),
@@ -789,7 +789,7 @@ class MatrixTransport(Runnable):
                     self._send_raw(receiver_address, data)
                 else:
                     self.log.debug(
-                        'Skipping SEND to unreachable node',
+                        'Skipping send to unreachable node',
                         receiver=pex(receiver_address),
                         status=status,
                         message=message,
@@ -888,7 +888,7 @@ class MatrixTransport(Runnable):
             room.add_listener(self._handle_message, 'm.room.message')
 
         self.log.debug(
-            'CHANNEL ROOM',
+            'Channel room',
             peer_address=to_normalized_address(address),
             room=room,
         )
