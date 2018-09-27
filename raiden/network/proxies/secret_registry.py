@@ -63,6 +63,7 @@ class SecretRegistry:
 
         for secret in secrets:
             secrethash = sha3(secret)
+            secrethash_hex = encode_hex(secrethash)
 
             is_register_needed = (
                 not self.check_registered(secrethash) and
@@ -70,16 +71,16 @@ class SecretRegistry:
             )
             if is_register_needed:
                 secrets_to_register.append(secret)
-                secrethashes_to_register.append(secrethash)
+                secrethashes_to_register.append(secrethash_hex)
                 self.open_secret_transactions[secret] = secret_registry_transaction
             else:
-                secrethashes_not_sent.append(secrethash)
+                secrethashes_not_sent.append(secrethash_hex)
 
         log_details = {
             'node': pex(self.node_address),
             'contract': pex(self.address),
-            'secrets': secrethashes_to_register,
-            'secrets_not_sent': secrethashes_not_sent,
+            'secrethashes': secrethashes_to_register,
+            'secrethashes_not_sent': secrethashes_not_sent,
         }
 
         if not secrets_to_register:
