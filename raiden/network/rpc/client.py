@@ -370,7 +370,7 @@ class JSONRPCClient:
 
                 transaction_hash = self.send_transaction(
                     to=Address(b''),
-                    startgas=int(self.gaslimit() * 0.8),
+                    startgas=self.gaslimit(),
                     data=bytecode,
                 )
 
