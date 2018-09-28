@@ -54,6 +54,9 @@ If it does not exist in the list, it is desired to :ref:`register the token <add
 
 Registering a token
 --------------------
+.. note::
+   For the Raiden Red Eyes release, it will not be possible to register more than one token, due to security reasons in order to minimise possible loss of funds in the case of bugs.
+
 In order to register a token, only its address is needed. When a new token is registered a Token Network contract is deployed. This is quite expensive in terms of gas usage (costs about 3.5 million gas). Luckily, this only has to be done once per token.
 
 To register a token simply use the endpoint listed below:
@@ -97,6 +100,9 @@ To open a channel with another Raiden node four things are needed: the address o
        "settle_timeout": 500
    }
 
+.. note::
+   For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of ETH. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
+
 At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <depositing-to-a-channel>` to a channel if need be.
 
 Successfully opening a channel returns the following information:
@@ -135,6 +141,9 @@ A payment channel is now open between the user's node and a counterparty. Howeve
    {
         "total_deposit": 7331
    }
+
+.. note::
+   For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of ETH. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
 
 To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events. The ``from_block`` parameter in the request represents the block number to query from. (in general the default value should be fine):
 
@@ -196,6 +205,9 @@ Connecting to an already existing token network is quite simple. All that is nee
     {
         "funds": 2000
     }
+
+.. note::
+   For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of ETH. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
 
 This automatically opens channels with three random peers in the token network, with 20% of the funds deposited to each channel. Furthermore it leaves 40% of the funds initially unassigned. This allows new nodes joining the network to open payment channels with this node in the same way that it just opened channels with random nodes in the network.
 

@@ -105,6 +105,8 @@ Querying Information About Your Raiden Node
 
 Deploying
 =========
+.. note::
+   For the Raiden Red Eyes release, it will not be possible to register more than one token, due to security reasons in order to minimise possible loss of funds in the case of bugs.
 
 .. http:put:: /api/(version)/tokens/(token_address)
 
@@ -302,6 +304,9 @@ Channel Management
 
    The request to the endpoint will later return the fully created channel object.
 
+.. note::
+   For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of ETH. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
+
    **Example Response**:
 
    .. sourcecode:: http
@@ -359,6 +364,9 @@ Channel Management
 
    :reqjson string state: Desired new state; the only valid choice is ``"closed"``
    :reqjson int total_deposit: The increased total deposit
+
+.. note::
+   For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of ETH. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
 
    **Example Response**:
 
