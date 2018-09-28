@@ -217,35 +217,34 @@ def handle_unlock(
     iteration = TransitionResult(target_state, list())
     balance_proof_sender = state_change.balance_proof.sender
 
-    if balance_proof_sender == target_state.route.node_address:
-        is_valid, events, _ = channel.handle_unlock(
-            channel_state,
-            state_change,
+    is_valid, events, _ = channel.handle_unlock(
+        channel_state,
+        state_change,
+    )
+
+    if is_valid:
+        transfer = target_state.transfer
+        payment_received_success = EventPaymentReceivedSuccess(
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            identifier=transfer.payment_identifier,
+            amount=transfer.lock.amount,
+            initiator=transfer.initiator,
         )
 
-        if is_valid:
-            transfer = target_state.transfer
-            payment_received_success = EventPaymentReceivedSuccess(
-                payment_network_identifier=channel_state.payment_network_identifier,
-                token_network_identifier=channel_state.token_network_identifier,
-                identifier=transfer.payment_identifier,
-                amount=transfer.lock.amount,
-                initiator=transfer.initiator,
-            )
+        unlock_success = EventUnlockClaimSuccess(
+            transfer.payment_identifier,
+            transfer.lock.secrethash,
+        )
 
-            unlock_success = EventUnlockClaimSuccess(
-                transfer.payment_identifier,
-                transfer.lock.secrethash,
-            )
+        send_processed = SendProcessed(
+            recipient=balance_proof_sender,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            message_identifier=state_change.message_identifier,
+        )
 
-            send_processed = SendProcessed(
-                recipient=balance_proof_sender,
-                channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-                message_identifier=state_change.message_identifier,
-            )
-
-            events.extend([payment_received_success, unlock_success, send_processed])
-            iteration = TransitionResult(None, events)
+        events.extend([payment_received_success, unlock_success, send_processed])
+        iteration = TransitionResult(None, events)
 
     return iteration
 
