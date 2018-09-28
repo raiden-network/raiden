@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.11.0 <2018-09-28>`
 * :bug:`2631` Prevent excessive state replay on restart
 * :bug:`2566` Warn the user about older existing database versions
 * :bug:`2609` Allow numeric network ids in the config file
