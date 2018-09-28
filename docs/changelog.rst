@@ -8,6 +8,7 @@ Changelog
 * :bug:`2602` On-chain secret reveal forces off-chain reveal
 * :feature:`2600` Improve logging for on-chain transactions
 * :bug:`2577` Small logging improvements
+* :bug:`2535` Registering a secret on-chain for a locked transfer is now checked if it was received before the lock has expired.
 
 * :release:`0.10.0 <2018-09-21>`
 * :bug:`2515` Adds validation for settle timeout against reveal timeout when opening a channel from the webui.
