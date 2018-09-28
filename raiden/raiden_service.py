@@ -474,7 +474,7 @@ class RaidenService(Runnable):
         # capturing a snapshot should take place
         new_snapshot_group = self.wal.storage.count_state_changes() // SNAPSHOT_STATE_CHANGES_COUNT
         if new_snapshot_group > self.snapshot_group:
-            log.debug(f'Storing snapshot: {new_snapshot_group}')
+            log.debug('Storing snapshot', snapshot_id=new_snapshot_group)
             self.wal.snapshot()
             self.snapshot_group = new_snapshot_group
 
