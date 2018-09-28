@@ -58,7 +58,12 @@ class Token:
         }
         log.debug('approve called', **log_details)
 
-        startgas = 100000
+        startgas = self.proxy.estimate_gas(
+            'approve',
+            to_checksum_address(allowed_address),
+            allowance,
+        )
+
         transaction_hash = self.proxy.transact(
             'approve',
             startgas,
