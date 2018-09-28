@@ -441,7 +441,7 @@ class JSONRPCClient:
             tx_hash = self.web3.eth.sendRawTransaction(signed_txn.rawTransaction)
             self._available_nonce += 1
 
-            log.debug('send_raw_transaction returned', tx_hash=tx_hash, **log_details)
+            log.debug('send_raw_transaction returned', tx_hash=encode_hex(tx_hash), **log_details)
             return tx_hash
 
     def poll(self, transaction_hash: bytes, confirmations: int = None):
