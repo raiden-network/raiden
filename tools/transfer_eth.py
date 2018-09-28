@@ -44,10 +44,9 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file):
     print("Sending {} eth to:".format(eth_amount))
     for target in targets:
         print("  - {}".format(target))
-        startgas = 100000
         client.send_transaction(
             to=target,
-            startgas=startgas,
+            startgas=21000,
             value=eth_amount * WEI_TO_ETH,
         )
 
