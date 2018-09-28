@@ -106,7 +106,7 @@ Querying Information About Your Raiden Node
 Deploying
 =========
 .. note::
-   For the Raiden Red Eyes release, it will not be possible to register more than one token, due to security reasons and Red Eyes being an alpha release on the mainnet.
+   For the Raiden Red Eyes release, it will not be possible to register more than one token, due to security reasons in order to minimise possible loss of funds in the case of bugs.
 
 .. http:put:: /api/(version)/tokens/(token_address)
 
