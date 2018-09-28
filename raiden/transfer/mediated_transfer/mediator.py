@@ -67,8 +67,8 @@ def is_lock_valid(expiration, block_number):
 
 
 def is_safe_to_wait(lock_expiration, reveal_timeout, block_number):
-    """ True if there are more than enough blocks to safely unlock on chain,
-    making waiting is safe.
+    """ True if waiting safe, i.e. there are more than enough blocks to safely
+    unlock on chain.
     """
     # reveal timeout will not ever be larger than the lock_expiration otherwise
     # the expected block_number is negative
@@ -216,8 +216,6 @@ def clear_if_finalized(iteration):
     if state is None:
         return iteration
 
-    # TODO: clear the expired transfer, this will need some sort of
-    # synchronization among the nodes
     all_finalized = all(
         pair.payee_state in STATE_TRANSFER_FINAL and pair.payer_state in STATE_TRANSFER_FINAL
         for pair in state.transfers_pair
