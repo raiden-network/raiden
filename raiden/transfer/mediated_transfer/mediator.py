@@ -40,7 +40,6 @@ STATE_SECRET_KNOWN = (
     'payee_balance_proof',
 
     'payer_secret_revealed',
-    'payer_waiting_close',
     'payer_waiting_unlock',
     'payer_balance_proof',
 )

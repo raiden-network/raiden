@@ -244,7 +244,6 @@ class TargetTransferState(State):
     valid_states = (
         'secret_request',
         'reveal_secret',
-        'waiting_close',
         'expired',
     )
 
@@ -629,7 +628,6 @@ class MediationPairState(State):
     valid_payer_states = (
         'payer_pending',
         'payer_secret_revealed',  # SendSecretReveal was sent
-        'payer_waiting_close',    # ContractSendChannelClose was sent
         'payer_waiting_unlock',   # ContractSendChannelBatchUnlock was sent
         'payer_balance_proof',    # ReceiveUnlock was received
         'payer_expired',          # None of the above happened and the lock expired

@@ -22,33 +22,6 @@ from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, Rec
 from raiden.utils import typing
 
 
-def events_for_close(
-        target_state: TargetTransferState,
-        channel_state: NettingChannelState,
-        block_number: typing.BlockNumber,
-):
-    """ Emits the event for closing the netting channel if the transfer needs
-    to be settled on-chain.
-    """
-    transfer = target_state.transfer
-
-    safe_to_wait, _ = is_safe_to_wait(
-        transfer.lock.expiration,
-        channel_state.reveal_timeout,
-        block_number,
-    )
-    secret_known = channel.is_secret_known(
-        channel_state.partner_state,
-        transfer.lock.secrethash,
-    )
-
-    if not safe_to_wait and secret_known:
-        target_state.state = 'waiting_close'
-        return channel.events_for_close(channel_state, block_number)
-
-    return list()
-
-
 def events_for_onchain_secretreveal(
         target_state: TargetTransferState,
         channel_state: NettingChannelState,
@@ -258,29 +231,33 @@ def handle_block(
     handle expiration of the hash time lock.
     """
     transfer = target_state.transfer
+    events = list()
+
     secret_known = channel.is_secret_known(
         channel_state.partner_state,
         transfer.lock.secrethash,
     )
+    is_lock_expired = (
+        not secret_known and
+        block_number > transfer.lock.expiration
+    )
 
-    if not secret_known and block_number > transfer.lock.expiration:
-        if target_state.state != 'expired':
-            failed = EventUnlockClaimFailed(
-                identifier=transfer.payment_identifier,
-                secrethash=transfer.lock.secrethash,
-                reason='lock expired',
-            )
-            target_state.state = 'expired'
-            events = [failed]
-        else:
-            events = list()
-    elif target_state.state != 'waiting_close':  # only emit the close event once
-        events = events_for_onchain_secretreveal(target_state, channel_state, block_number)
-    else:
-        events = list()
+    if secret_known:
+        events = events_for_onchain_secretreveal(
+            target_state,
+            channel_state,
+            block_number,
+        )
+    elif is_lock_expired and target_state.state != 'expired':
+        failed = EventUnlockClaimFailed(
+            identifier=transfer.payment_identifier,
+            secrethash=transfer.lock.secrethash,
+            reason='lock expired',
+        )
+        target_state.state = 'expired'
+        events = [failed]
 
-    iteration = TransitionResult(target_state, events)
-    return iteration
+    return TransitionResult(target_state, events)
 
 
 def handle_lock_expired(
