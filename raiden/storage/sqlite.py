@@ -169,14 +169,16 @@ class SQLiteStorage:
             cursor.execute(
                 'SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1',
             )
-            if cursor.rowcount > 0:
-                state_change_id = cursor.fetchone()[0]
+            result = cursor.fetchone()
+
+            if result:
+                state_change_id = result[0]
             else:
                 state_change_id = 0
 
         cursor = self.conn.execute(
             'SELECT statechange_id, data FROM state_snapshot '
-            'WHERE statechange_id <= ?'
+            'WHERE statechange_id <= ? '
             'ORDER BY identifier DESC LIMIT 1',
             (state_change_id, ),
         )
