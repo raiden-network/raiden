@@ -18,6 +18,12 @@ The main goal of this release is to get the smart contracts and the core protoco
 As part of ensuring this, a `bug bounty <LINK TO BUG BOUNTY POST>`_ has been created for the release.
 Furthermore this release shows a slightly simplified version of the Raiden API, but it should suffice to get people started doing payment using the Raiden Network.
 
+The restrictions made to the Red Eyes release in order to mitigate risk in case of unexpected security issues are the following:
+
+- A user cannot create a token network. (There will only be a single token network)
+- The combined deposit of one channel is limited to 0.15 ETH. So 0.075 ETH worth of tokens per node.
+- The total combined deposit of all channels across the whole network is limited to 250 ETH.
+
 Below is a list of features included in the Red Eyes release along with a list of things that are scheduled for future releases and limitations of the release.
 
 The Red Eyes release supports
@@ -29,6 +35,7 @@ The Red Eyes release supports
 - A :doc:`REST API <rest_api>` with endpoints for all functionalities.
 - Possibility to create token networks for all ERC20 tokens.
 - Restartability in case of a proper shutdown of the Raiden node.
+- Topping up open channels
 
 Along with above functionality some other considerable improvements have been made since the :doc:`Developer Preview Release<what_is_the_dev_preview>`:
 
@@ -45,6 +52,7 @@ The Red Eyes release is not
 - Supporting atomic swaps.
 - Supporting the functionality that allows for third party services to monitor channels on behalf of nodes.
 - Supporting that third party services can do path finding on behalf of nodes.
+- Supporting registration of more than one token network.
 
 
 Other restrictions
