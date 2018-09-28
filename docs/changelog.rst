@@ -2,6 +2,13 @@
 Changelog
 =========
 
+* :bug:`2566` Warn the user about older existing database versions
+* :bug:`2609` Allow numeric network ids in the config file
+* :bug:`2603` Prevent crash in case of invalid Matrix server response
+* :bug:`2602` On-chain secret reveal forces off-chain reveal
+* :feature:`2600` Improve logging for on-chain transactions
+* :bug:`2577` Small logging improvements
+
 * :release:`0.10.0 <2018-09-21>`
 * :bug:`2515` Adds validation for settle timeout against reveal timeout when opening a channel from the webui.
 * :feature:`2517` Increase the time a notification stays visible on the webui.
