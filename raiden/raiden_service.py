@@ -79,6 +79,8 @@ def _redact_secret(data):
                 if isinstance(value, dict)
             )
 
+    return data
+
 
 def initiator_init(
         raiden,
