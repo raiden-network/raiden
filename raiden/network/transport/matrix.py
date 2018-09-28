@@ -3,14 +3,14 @@ import re
 from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
+from functools import wraps
 from operator import attrgetter, itemgetter
 from random import Random
 from urllib.parse import urlparse
-from weakref import WeakKeyDictionary, WeakValueDictionary
 
 import gevent
 import structlog
-from cachetools import TTLCache, cachedmethod
+from cachetools import LRUCache, TTLCache, cachedmethod
 from eth_utils import (
     decode_hex,
     encode_hex,
@@ -19,6 +19,7 @@ from eth_utils import (
     to_checksum_address,
     to_normalized_address,
 )
+from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
 
@@ -59,17 +60,15 @@ from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     Address,
     AddressHex,
+    Any,
     Callable,
     Dict,
     Iterable,
     List,
-    Mapping,
     NewType,
     Optional,
     Set,
     Tuple,
-    Type,
-    TypeVar,
     Union,
 )
 from raiden_libs.exceptions import InvalidSignature
@@ -78,38 +77,58 @@ from raiden_libs.utils.signing import eth_recover, eth_sign
 
 log = structlog.get_logger(__name__)
 
-_CT = TypeVar('CT')  # class type
-_CIT = Union[_CT, Type[_CT]]  # class or instance type
-_RT = TypeVar('RT')  # return type
-_CacheT = Mapping[Tuple, _RT]  # cache type (mapping)
 _RoomID = NewType('RoomID', str)
 
 
-def _cachegetter(
+def _factorygetter(
         attr: str,
-        cachefactory: Callable[[], _CacheT] = WeakKeyDictionary,  # WeakKeyDict best for properties
-) -> Callable[[_CIT], _CacheT]:
-    """Returns a safer attrgetter which constructs the missing object with cachefactory
+        factory: Callable,
+) -> Callable:
+    """Safer attrgetter which constructs the missing object with factory if not present
 
-    May be used for normal methods, classmethods and properties, as default
-    factory is a WeakKeyDictionary (good for storing weak-refs for self or cls).
+    May be used for normal methods, classmethods and properties.
     It may also safely be used with staticmethods, if first parameter is an object
-    on which the cache will be stored.
-    Better when used with key getter. If it's a tuple, you should use e.g. cachefactory=dict
+    on which the value should be stored.
     Example usage with cachetools.cachedmethod:
     class Foo:
         @property
-        @cachedmethod(_cachegetter("__bar_cache"))
-        def bar(self) -> _RT:
+        @cachedmethod(_factorygetter("__bar_cache"), factory=WeakKeyDictionary)
+        def bar(self) -> int:
             return 2+3
     """
-    def cachegetter(cls_or_obj: _CIT) -> _CacheT:
-        cache = getattr(cls_or_obj, attr, None)
-        if cache is None:
-            cache = cachefactory()
-            setattr(cls_or_obj, attr, cache)
-        return cache
-    return cachegetter
+    def _attrgetter(cls_or_self):
+        value = getattr(cls_or_self, attr, None)
+        if value is None:
+            value = factory()
+            setattr(cls_or_self, attr, value)
+        return value
+    return _attrgetter
+
+
+def _lockedmethod(
+        lock: Union[Semaphore, Callable[[Any], Semaphore]],
+) -> Callable:
+    """Decorator which serializes access to a method through a lock or lock attrgetter
+
+    lock parameter may be a Semaphore instance or a callable which returns a Semaphore instance
+    when called with the class or instance object as only parameter
+    Example usage:
+    class Foo:
+        def __init__(self):
+            self._barlock = Semaphore()
+
+        @_lockedmethod(attrgetter('_barlock'))
+        def bar(self):  # access to self.bar() will be serialized with self._barlock
+            return 4+5
+    """
+    def wrapper(func: Callable) -> Callable:
+        @wraps(func)
+        def lockedfunc(cls_or_self, *args, **kwargs):
+            _lock = lock(cls_or_self) if callable(lock) else lock
+            with _lock:
+                return func(cls_or_self, *args, **kwargs)
+        return lockedfunc
+    return wrapper
 
 
 class UserPresence(Enum):
@@ -180,7 +199,6 @@ class MatrixTransport(Runnable):
 
         self._stop_event = gevent.event.Event()
         self._stop_event.set()
-        self._health_semaphore = gevent.lock.Semaphore()
 
         self._client.add_invite_listener(self._handle_invite)
         self._client.add_presence_listener(self._handle_presence_change)
@@ -258,31 +276,31 @@ class MatrixTransport(Runnable):
         self.greenlets.append(greenlet)
         return greenlet
 
+    @_lockedmethod(_factorygetter('__health_lock', Semaphore))
     def start_health_check(self, node_address):
         if self._stop_event.ready():
             return
 
-        with self._health_semaphore:
-            if node_address in self._address_to_userids:
-                return  # already healthchecked
+        if node_address in self._address_to_userids:
+            return  # already healthchecked
 
-            node_address_hex = to_normalized_address(node_address)
-            self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
+        node_address_hex = to_normalized_address(node_address)
+        self.log.debug('HEALTHCHECK', peer_address=node_address_hex)
 
-            candidates = [
-                self._get_user(user)
-                for user in self._client.search_user_directory(node_address_hex)
-            ]
-            user_ids = {
-                user.user_id
-                for user in candidates
-                if self._validate_userid_signature(user) == node_address
-            }
-            self._address_to_userids[node_address].update(user_ids)
+        candidates = [
+            self._get_user(user)
+            for user in self._client.search_user_directory(node_address_hex)
+        ]
+        user_ids = {
+            user.user_id
+            for user in candidates
+            if self._validate_userid_signature(user) == node_address
+        }
+        self._address_to_userids[node_address].update(user_ids)
 
-            # Ensure network state is updated in case we already know about the user presences
-            # representing the target node
-            self._update_address_presence(node_address)
+        # Ensure network state is updated in case we already know about the user presences
+        # representing the target node
+        self._update_address_presence(node_address)
 
     def send_async(
         self,
@@ -338,7 +356,7 @@ class MatrixTransport(Runnable):
         return getattr(self, '_client', None) and getattr(self._client, 'user_id', None)
 
     @property
-    @cachedmethod(_cachegetter('__log_cache', dict), key=attrgetter('_user_id'))
+    @cachedmethod(_factorygetter('__log_cache', dict), key=attrgetter('_user_id'))
     def log(self):
         if not self._user_id:
             return log
@@ -556,7 +574,7 @@ class MatrixTransport(Runnable):
         )
 
     @cachedmethod(
-        _cachegetter('__messages_cache', lambda: TTLCache(32, 4)),
+        _factorygetter('__messages_cache', lambda: TTLCache(32, 4)),
         key=lambda _, room, event: (room.room_id, event['type'], event['content'].get('body')),
     )
     def _handle_message(self, room, event) -> bool:
@@ -835,6 +853,7 @@ class MatrixTransport(Runnable):
         self.log.debug('SEND', receiver=pex(receiver_address), room=room, data=data)
         room.send_text(data)
 
+    @_lockedmethod(_factorygetter('__getroom_lock', Semaphore))
     def _get_room_for_address(
         self,
         address: Address,
@@ -1127,7 +1146,10 @@ class MatrixTransport(Runnable):
         ))
 
     @staticmethod
-    @cachedmethod(_cachegetter('__address_cache', dict), key=attrgetter('user_id', 'displayname'))
+    @cachedmethod(
+        _factorygetter('__address_cache', dict),
+        key=attrgetter('user_id', 'displayname'),
+    )
     def _validate_userid_signature(user: User) -> Optional[Address]:
         """ Validate a userId format and signature on displayName, and return its address"""
         # display_name should be an address in the self._userid_re format
@@ -1155,8 +1177,8 @@ class MatrixTransport(Runnable):
         return address
 
     @cachedmethod(
-        _cachegetter('__users_cache', WeakValueDictionary),
-        key=lambda _, user: user.user_id if isinstance(user, User) else user,
+        _factorygetter('__users_cache', lambda: LRUCache(128)),
+        key=lambda _, user: getattr(user, 'user_id', user),
     )
     def _get_user(self, user: Union[User, str]) -> User:
         """ Creates an User from an user_id, if none, or fetch a cached User """
