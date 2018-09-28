@@ -55,7 +55,7 @@ If it does not exist in the list, it is desired to :ref:`register the token <add
 Registering a token
 --------------------
 .. note::
-   For the Raiden Red Eyes release, it will not be possible to register more than one token, due to security reasons and Red Eyes being an alpha release on the mainnet.
+   For the Raiden Red Eyes release, it will not be possible to register more than one token, due to security reasons in order to minimise possible loss of funds in the case of bugs.
 
 In order to register a token, only its address is needed. When a new token is registered a Token Network contract is deployed. This is quite expensive in terms of gas usage (costs about 3.5 million gas). Luckily, this only has to be done once per token.
 
