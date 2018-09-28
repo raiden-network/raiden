@@ -359,7 +359,7 @@ def test_stress(
 
     config_converter = LogLevelConfigType()
     logging_levels = config_converter.convert(
-        value=request.config.option.log_config,
+        value=request.config.option.log_config or '',
         param=None,
         ctx=None,
     )
