@@ -28,6 +28,12 @@ class AccState(State):
             'state_changes': self.state_changes,
         }
 
+    @classmethod
+    def from_dict(cls, data):
+        result = cls()
+        result.state_changes = data['state_changes']
+        return result
+
 
 def state_transtion_acc(state, state_change):
     state = state or AccState()
@@ -35,11 +41,11 @@ def state_transtion_acc(state, state_change):
     return TransitionResult(state, list())
 
 
-def new_wal():
+def new_wal(state_transition):
     state = None
     serializer = JSONSerializer
 
-    state_manager = StateManager(state_transition_noop, state)
+    state_manager = StateManager(state_transition, state)
     storage = SQLiteStorage(':memory:', serializer)
     wal = WriteAheadLog(state_manager, storage)
     return wal
@@ -56,7 +62,7 @@ def test_connect_to_corrupt_db(tmpdir):
 
 
 def test_wal_has_version():
-    wal = new_wal()
+    wal = new_wal(state_transition_noop)
     assert wal.version == RAIDEN_DB_VERSION
     # Let's make sure that nobody makes a setter for this attribute
     with pytest.raises(AttributeError):
@@ -64,7 +70,7 @@ def test_wal_has_version():
 
 
 def test_write_read_log():
-    wal = new_wal()
+    wal = new_wal(state_transition_noop)
 
     block_number = 1337
     block = Block(
@@ -154,7 +160,7 @@ def test_timestamped_event():
 
 
 def test_write_read_events():
-    wal = new_wal()
+    wal = new_wal(state_transition_noop)
 
     event = EventPaymentSentFailed(
         factories.make_payment_network_identifier(),
@@ -193,7 +199,7 @@ def test_write_read_events():
 
 
 def test_restore_without_snapshot():
-    wal = new_wal()
+    wal = new_wal(state_transition_noop)
 
     block1 = Block(
         block_number=5,
@@ -224,3 +230,34 @@ def test_restore_without_snapshot():
 
     aggregate = newwal.state_manager.current_state
     assert aggregate.state_changes == [block1, block2, block3]
+
+
+def test_get_snapshot_closest_to_state_change():
+    wal = new_wal(state_transtion_acc)
+
+    block1 = Block(
+        block_number=5,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    wal.log_and_dispatch(block1)
+    wal.snapshot()
+
+    block2 = Block(
+        block_number=7,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    wal.log_and_dispatch(block2)
+    wal.snapshot()
+
+    block3 = Block(
+        block_number=8,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    wal.log_and_dispatch(block3)
+    wal.snapshot()
+
+    _, snapshot = wal.storage.get_snapshot_closest_to_state_change('latest')
+    assert snapshot.state_changes == [block1, block2, block3]
