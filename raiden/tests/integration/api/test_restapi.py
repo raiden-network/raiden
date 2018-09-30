@@ -401,7 +401,7 @@ def test_api_open_and_deposit_channel(
             test_api_server,
             'channelsresourcebytokenandpartneraddress',
             token_address=token_address,
-            partner_address=first_partner_address,
+            partner_address=second_partner_address,
         ),
         json={'total_deposit': 99},
     )
