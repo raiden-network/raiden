@@ -395,6 +395,19 @@ def test_api_open_and_deposit_channel(
     expected_response['total_deposit'] = total_deposit
     assert_dicts_are_equal(response, expected_response)
 
+    # assert depositing again with less than the initial deposit returns 409
+    request = grequests.patch(
+        api_url_for(
+            test_api_server,
+            'channelsresourcebytokenandpartneraddress',
+            token_address=token_address,
+            partner_address=first_partner_address,
+        ),
+        json={'total_deposit': 99},
+    )
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.CONFLICT)
+
     # assert depositing negative amount fails
     request = grequests.patch(
         api_url_for(
@@ -407,6 +420,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
     assert_proper_response(response, HTTPStatus.CONFLICT)
+
     # let's deposit on the first channel
     request = grequests.patch(
         api_url_for(
