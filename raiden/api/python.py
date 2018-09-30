@@ -396,10 +396,6 @@ class RaidenAPI:
                     ),
                 )
 
-        if total_deposit <= channel_state.our_state.contract_balance:
-            # no action required
-            return
-
         addendum = total_deposit - channel_state.our_state.contract_balance
 
         # If this check succeeds it does not imply the the `deposit` will
