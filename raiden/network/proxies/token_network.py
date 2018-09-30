@@ -520,7 +520,7 @@ class TokenNetwork:
             }
             log.debug('setTotalDeposit called', **log_details)
 
-            # These two scenarions can happen if two calls to deposit happen
+            # These two scenarios can happen if two calls to deposit happen
             # and then we get here on the second call
             if total_deposit < current_deposit:
                 msg = (
