@@ -2,6 +2,7 @@ import pytest
 from eth_utils import is_same_address, to_normalized_address
 
 from raiden.api.python import RaidenAPI
+from raiden.exceptions import DepositMismatch
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.transfer import get_channelstate
@@ -87,13 +88,14 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
         deposit,
     )
 
-    # let's make sure it's idempotent
-    api1.set_total_channel_deposit(
-        registry_address,
-        token_address,
-        api2.address,
-        deposit,
-    )
+    # let's make sure it's idempotent. Same deposit should raise deposit mismatch limit
+    with pytest.raises(DepositMismatch):
+        api1.set_total_channel_deposit(
+            registry_address,
+            token_address,
+            api2.address,
+            deposit,
+        )
 
     channel12 = get_channelstate(node1, node2, token_network_identifier)
 
