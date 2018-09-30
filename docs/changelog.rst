@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`2630` If a smaller deposit than ``total_deposit`` is given to the deposit RPC call then return 409 Conflict and not 200 OK.
+
 * :release:`0.11.0 <2018-09-28>`
 * :bug:`2631` Prevent excessive state replay on restart
 * :bug:`2566` Warn the user about older existing database versions
