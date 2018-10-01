@@ -228,8 +228,6 @@ class UDPTransport(Runnable):
         self.log.debug('UDP started')
         super().start()
 
-        log.debug('UDP transport started')
-
     def _run(self):  # pylint: disable=method-hidden
         """ Runnable main method, perform wait on long-running subtasks """
         try:
@@ -273,7 +271,7 @@ class UDPTransport(Runnable):
         for async_result in self.messageids_to_asyncresults.values():
             async_result.set(False)
 
-        log.debug('UDP stopped', node=pex(self.raiden.address))
+        self.log.debug('UDP stopped')
         del self.log_healthcheck
         del self.log
 
