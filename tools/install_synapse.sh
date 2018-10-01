@@ -9,7 +9,7 @@ if [[ ${PYTHON2_VERSION} != "2.7" ]]; then
     exit 1
 fi
 
-SYNAPSE_URL="${SYNAPSE_URL:-https://github.com/matrix-org/synapse/archive/v0.33.2.tar.gz#egg=matrix-synapse}"
+SYNAPSE_URL="${SYNAPSE_URL:-https://github.com/matrix-org/synapse/archive/v0.33.6.tar.gz#egg=matrix-synapse}"
 SYNAPSE_SERVER_NAME="${SYNAPSE_SERVER_NAME:-matrix.local.raiden}"
 BASEDIR=$(python3 -c 'import sys; from pathlib import Path; print(Path(sys.argv[1]).parent.parent.absolute())' "$0")
 
@@ -36,7 +36,7 @@ if [[ ! -x ${SYNAPSE} ]]; then
 
     virtualenv -p "$(which python2)" venv
     ./venv/bin/pip install --upgrade pip pyinstaller
-    ./venv/bin/pip install pysaml2==4.6.1 dis3 coincurve pycryptodome
+    ./venv/bin/pip install pysaml2==4.6.2 dis3 coincurve pycryptodome
     ./venv/bin/pip install "${SYNAPSE_URL}"
     SITE="$( ./venv/bin/python -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())' )"
     cp "${BASEDIR}/tools/eth_auth_provider.py2" "${SITE}/eth_auth_provider.py"
@@ -50,7 +50,7 @@ if [[ ! -x ${SYNAPSE} ]]; then
         --add-data="${SITE}/Crypto/__init__.py:Crypto/" \
         --add-data="${SITE}/Crypto/Util:Crypto/Util" \
         --add-data="${SITE}/Crypto/Hash:Crypto/Hash" \
-        --add-data="${SITE}/pysaml2-4.6.1.dist-info:pysaml2-4.6.1.dist-info" \
+        --add-data="${SITE}/pysaml2-4.6.2.dist-info:pysaml2-4.6.2.dist-info" \
         "${SITE}/synapse/app/homeserver.py"
     rm -f ${DESTDIR}/synapse.*
     cp dist/synapse "${SYNAPSE}"
@@ -67,15 +67,16 @@ cp "${BASEDIR}/tools/synapse-config.yaml" "${DESTDIR}/"
 
 cat > "${DESTDIR}/run_synapse.sh" << EOF
 #!/usr/bin/env bash
+SYNAPSEDIR=\$( dirname "\$0" )
 # redirect synapse stderr logs to stdout
 if [[ -n "\${STDOUT_SYNAPSE}" ]]; then
   exec 2>&1
 else
-  exec &> /dev/null
+  mv -vf \${SYNAPSEDIR}/homeserver.log{,.1}
+  exec &> \${SYNAPSEDIR}/homeserver.log
 fi
-SYNAPSEDIR=\$( dirname "\$0" )
 exec "\${SYNAPSEDIR}/synapse" \
   --server-name="\${SYNAPSE_SERVER_NAME:-${SYNAPSE_SERVER_NAME}}" \
   --config-path="\${SYNAPSEDIR}/synapse-config.yaml" \$@
 EOF
-chmod 775 "${DESTDIR}/run_synapse.sh"
+chmod 755 "${DESTDIR}/run_synapse.sh"
