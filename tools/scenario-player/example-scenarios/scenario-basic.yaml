@@ -54,6 +54,8 @@ nodes:
 ## - start_node
 ## - assert
 ## - wait
+## - join_network
+## - leave_network
 
 scenario:
   serial:
@@ -104,6 +106,7 @@ scenario:
             - assert: {from: 2, to: 1, total_deposit: 10, balance: 12, state: "opened"}
 
 # More examples:
+#      - join_network: {funds: 10, initial_channel_target: 3, joinable_funds_target: 0.5}
 #      - parallel:
 #          tasks:
 #            # Need to use actual offsets here as they are formatted directly into the commands
