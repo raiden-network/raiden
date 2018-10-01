@@ -19,8 +19,10 @@ from raiden.network.transport.udp.udp_utils import (
 )
 from raiden.raiden_service import RaidenService
 from raiden.settings import CACHE_TTL
+from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
+from raiden.transfer.state import QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
 from raiden.utils import pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -543,7 +545,20 @@ class UDPTransport(Runnable):
         protocol, but it's required by this transport to provide the required
         properties.
         """
-        processed = ReceiveDelivered(delivered.delivered_message_identifier)
+        for queue_identifier, events in self._queueids_to_queues.items():
+            if delivered.sender != queue_identifier.recipient:
+                continue
+            if any(delivered.sender == event.recipient for event in events):
+                break
+        else:
+            self.log.debug(
+                'Delivered message unknown',
+                sender=pex(delivered.sender),
+                message=delivered,
+            )
+            return
+
+        processed = ReceiveDelivered(delivered.sender, delivered.delivered_message_identifier)
         self.raiden.handle_state_change(processed)
 
         message_id = delivered.delivered_message_identifier
@@ -618,3 +633,8 @@ class UDPTransport(Runnable):
     def set_node_network_state(self, node_address: typing.Address, node_state):
         state_change = ActionChangeNodeNetworkState(node_address, node_state)
         self.raiden.handle_state_change(state_change)
+
+    @property
+    def _queueids_to_queues(self) -> QueueIdsToQueues:
+        chain_state = views.state_from_raiden(self._raiden_service)
+        return views.get_all_messagequeues(chain_state)

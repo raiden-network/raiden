@@ -43,7 +43,7 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     )
 
     chain_state.queueids_to_queues[queue_identifier] = [first_message, second_message]
-    delivered_message = state_change.ReceiveDelivered(message_identifier)
+    delivered_message = state_change.ReceiveDelivered(recipient, message_identifier)
 
     iteration = node.handle_delivered(chain_state, delivered_message)
     new_queue = iteration.new_state.queueids_to_queues.get(queue_identifier, [])

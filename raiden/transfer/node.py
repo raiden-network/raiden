@@ -482,7 +482,8 @@ def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) ->
             filtered_queue = [
                 message
                 for message in queue
-                if message.message_identifier != state_change.message_identifier
+                if message.message_identifier != state_change.message_identifier and
+                message.recipient != state_change.sender
             ]
 
             if not filtered_queue:

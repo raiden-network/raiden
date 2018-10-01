@@ -681,8 +681,6 @@ class MatrixTransport(Runnable):
         return True
 
     def _receive_delivered(self, delivered: Delivered):
-        # FIXME: check if UDPTransport also checks Delivered sender and message presence
-        # checks there's a respective message on sender's queue
         for queue_identifier, events in self._queueids_to_queues.items():
             if delivered.sender != queue_identifier.recipient:
                 continue
@@ -697,7 +695,7 @@ class MatrixTransport(Runnable):
             return
 
         self._raiden_service.handle_state_change(
-            ReceiveDelivered(delivered.delivered_message_identifier),
+            ReceiveDelivered(delivered.sender, delivered.delivered_message_identifier),
         )
 
         self.log.debug(
