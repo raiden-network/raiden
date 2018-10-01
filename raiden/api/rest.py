@@ -471,9 +471,10 @@ class APIServer(Runnable):
 
     def start(self):
         log.debug(
-            'Starting rest api',
+            'REST API starting',
             host=self.config['host'],
             port=self.config['port'],
+            node=pex(self.rest_api.raiden_api.address),
         )
 
         # WSGI expects an stdlib logger. With structlog there's conflict of
@@ -500,22 +501,33 @@ class APIServer(Runnable):
 
         self.wsgiserver = wsgiserver
 
-        log.debug('REST API started', node=pex(self.rest_api.raiden_api.address))
+        log.debug(
+            'REST API started',
+            host=self.config['host'],
+            port=self.config['port'],
+            node=pex(self.rest_api.raiden_api.address),
+        )
 
         super().start()
 
     def stop(self):
         log.debug(
-            'Stopping rest api',
+            'REST API stoping',
             host=self.config['host'],
             port=self.config['port'],
+            node=pex(self.rest_api.raiden_api.address),
         )
 
         if self.wsgiserver is not None:
             self.wsgiserver.stop()
             self.wsgiserver = None
 
-        log.debug('REST API stopped', node=pex(self.rest_api.raiden_api.address))
+        log.debug(
+            'REST API stopped',
+            host=self.config['host'],
+            port=self.config['port'],
+            node=pex(self.rest_api.raiden_api.address),
+        )
 
     def unhandled_exception(self, exception: Exception):
         """ Flask.errorhandler when an exception wasn't correctly handled """
