@@ -616,7 +616,7 @@ def run_app(
 
     if not assert_sqlite_version():
         log.error('SQLite3 should be at least version {}'.format(
-            '.'.join(SQLITE_MIN_REQUIRED_VERSION),
+            '{}.{}.{}'.format(*SQLITE_MIN_REQUIRED_VERSION),
         ))
         sys.exit(1)
 
