@@ -35,7 +35,7 @@ def test_cli_version():
 
 def expect_cli_until_acknowledgment(child):
     child.expect('Welcome to Raiden')
-    child.expect('Have you read and acknowledge the above disclaimer')
+    child.expect('Have you read and acknowledged the above disclaimer')
     child.sendline('y')
 
 

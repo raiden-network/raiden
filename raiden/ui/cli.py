@@ -985,7 +985,7 @@ class NodeRunner:
             fg='yellow',
         )
         if not self._options['accept_disclaimer']:
-            click.confirm('\nHave you read and acknowledge the above disclaimer?', abort=True)
+            click.confirm('\nHave you read and acknowledged the above disclaimer?', abort=True)
 
         configure_logging(
             self._options['log_config'],
