@@ -676,9 +676,11 @@ def handle_processed(
     for queueid, queue in chain_state.queueids_to_queues.items():
         remove = []
 
-        # TODO: ensure Processed message came from the correct peer
         for pos, message in enumerate(queue):
-            if message.message_identifier == state_change.message_identifier:
+            if (
+                    message.message_identifier == state_change.message_identifier and
+                    message.recipient == state_change.sender
+            ):
                 if type(message) == SendDirectTransfer:
                     channel_state = views.get_channelstate_by_token_network_and_partner(
                         chain_state,
