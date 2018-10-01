@@ -1174,50 +1174,70 @@ class ReceiveUnlock(StateChange):
 
 
 class ReceiveDelivered(StateChange):
-    def __init__(self, message_identifier: typing.MessageID):
+    def __init__(self, sender: typing.Address, message_identifier: typing.MessageID):
+        self.sender = sender
         self.message_identifier = message_identifier
 
     def __repr__(self):
-        return '<ReceiveDelivered msgid:{}>'.format(
+        return '<ReceiveDelivered msgid:{} sender:{}>'.format(
             self.message_identifier,
+            pex(self.sender),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveDelivered) and
-            self.message_identifier == other.message_identifier
+            self.message_identifier == other.message_identifier and
+            self.sender == other.sender
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'sender': to_checksum_address(self.sender),
+            'message_identifier': self.message_identifier,
+        }
+
     @classmethod
     def from_dict(cls, data) -> 'ReceiveDelivered':
         return cls(
+            sender=to_canonical_address(data['sender']),
             message_identifier=data['message_identifier'],
         )
 
 
 class ReceiveProcessed(StateChange):
-    def __init__(self, message_identifier: typing.MessageID):
+    def __init__(self, sender: typing.Address, message_identifier: typing.MessageID):
+        self.sender = sender
         self.message_identifier = message_identifier
 
     def __repr__(self):
-        return '<ReceiveProcessed msgid:{}>'.format(
+        return '<ReceiveProcessed msgid:{} sender:{}>'.format(
             self.message_identifier,
+            pex(self.sender),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveProcessed) and
-            self.message_identifier == other.message_identifier
+            self.message_identifier == other.message_identifier and
+            self.sender == other.sender
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def to_dict(self):
+        return {
+            'sender': to_checksum_address(self.sender),
+            'message_identifier': self.message_identifier,
+        }
+
     @classmethod
     def from_dict(cls, data) -> 'ReceiveProcessed':
         return cls(
+            sender=to_canonical_address(data['sender']),
             message_identifier=data['message_identifier'],
         )
