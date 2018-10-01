@@ -551,7 +551,7 @@ class UDPTransport(Runnable):
             if any(delivered.sender == event.recipient for event in events):
                 break
         else:
-            self.log.debug(
+            log.debug(
                 'Delivered message unknown',
                 sender=pex(delivered.sender),
                 message=delivered,
@@ -636,5 +636,5 @@ class UDPTransport(Runnable):
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
-        chain_state = views.state_from_raiden(self._raiden_service)
+        chain_state = views.state_from_raiden(self.raiden)
         return views.get_all_messagequeues(chain_state)
