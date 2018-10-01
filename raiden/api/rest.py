@@ -436,7 +436,10 @@ class APIServer(Runnable):
 
     def _run(self):
         try:
-            self.wsgiserver.serve_forever()
+            # stop may have been executed before _run was scheduled, in this
+            # case wsgiserver will be None
+            if self.wsgiserver is not None:
+                self.wsgiserver.serve_forever()
         except gevent.GreenletExit:  # pylint: disable=try-except-raise
             raise
         except Exception:
