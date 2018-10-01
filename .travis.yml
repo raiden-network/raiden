@@ -187,17 +187,17 @@ jobs:
           repo: raiden-network/raiden
           branch: master
 
-## Disabled until automated release account is reactivated
-#      - provider: pypi
-#        user: raiden_pypi_automated
-#        password:
-#            secure: pGSz00xatE6rLdmEvyHW2wM6VJvDeTY8s/huZzPLdAxX30UHZZACugdDNBCYgLmBpKN4pRrw5hXZ+09/6+MUpXHwFZ7tExJftUkHdLt9kY6bD/orFeHLU0hGzXJHSvCmGv2sTJ018j6MoKPiF+AzLaqExbHoOJZxtOf3O9a5LjP7M0uMDmUuCkBu2Y59Ozf3K5/uHio4pFDKTVg/jT5UzQ183LDvSPyfm/n0vbpvGyhfkThE+Nyk2Qs9Lu6WJjWj/Z96TZmnfqTfk9HIzePbkQSc1GLW2emCCYg5J8sGhKKShZ+1fGdhzN2nZQ2ccqnpLn+VJOumBQC+7fNlk7iKGBf10kESNlua/ccmD/jksdvYPlRQe12M0MqMh3cLRZU5EzEBMh/eIjQKj3MMPCk+YtSbXn6dITvZD/tkLXwQljNXHZvj4JEfdkP2dxORhMJ+TFwmvMgWyKhoSKTrZnN17qK2X9Agsr3taJ6RyzBMSzXDeSglNoYh/0mChLARjIXyz3WcoiIzpaRL8wPot1aRe4np/Rg+6c6PLMNvIAjgvNAvRFHCwKWzYwFaHjmi7bgDS6dirWdFd+TjAXCb8HFq+m670a0GY7u5JgHrU30QcfbeXhFJBUaBFkvDpJw53JogURlL+Et9So5xcJjYsYocUtrZi6YZ58UUu8A7ZWF0DNk=
-#        python: 3.6
-#        on:
-#          tags: true
-#          distributions: sdist bdist_wheel
-#          repo: raiden-network/raiden
-#          branch: master
+      - provider: pypi
+        skip_cleanup: true
+        user: raiden_pypi_automated
+        password:
+          secure: "OmiPc1z0Vx/ABOe78U9sfReVMrktJVzsC2/vi3yIQkCkocdihibLyS+yFXNww7+Sf8+SBWLg3OgvgbKkhX9jQADmeA7ZGJYrci+wIyu4YNHPyWpj7liDngJhjo7uCUoOgf9HrwjzfrOWYVh2H6+I4ylgRZ+Av9kj7MNzYlzhWhgqvQ1QJvTmJ7FlKBdINSr7ic7iu5I1S5pAJGMsKXcitXigJMlKk4XWqjuO1etLqalW1XYD005ueOg0r6dt3YmHYoo1S/CeTbPCj5lNcfHstRBSGbKU6Z61FfK7lSWPOgE2lZiDSnuIJQR130d7xtw5a8e31XvTsoQz2QuYJtxvjgXwRGdZnuMgs3F+APCJZobtS3Tt5A4jw/Rf2yKOimobWgNHSEOcspteTEn0VMeNIGuVWheDHLAMARU+sxjtCSbERi36UJFfVYwxVfayC0s1dlrUHZ7nqvo6OFIa1khtyPUFzAVjzU6FLlcvKuRQRwREyLrN/CeDL75xQecQj4fYq8BJ4qkcai6ZYQr6cCq3weL+dhl68lrfO48csJ9KG7hOHeKuYLIUgq4hfHkS1ZsptQpESzq79sIfGeRoHtpZCdM7yn9xgL+P7svEHhqVVExGS+zI5SZ6gtZMI8JTgMODTqktrhRmKvyk/jU20GfUhOG6SDQKOrHr45iLUJ5TSq8="
+        python: 3.6
+        distributions: sdist bdist_wheel
+        on:
+          tags: true
+          repo: raiden-network/raiden
+          branch: master
 
       - provider: script
         skip_cleanup: true
