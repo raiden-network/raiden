@@ -132,7 +132,7 @@ class SendMessageEvent(Event):
         return not self.__eq__(other)
 
 
-class VerifiedSenderStateChange(StateChange):
+class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
     pass
 
