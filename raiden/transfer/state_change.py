@@ -2,9 +2,9 @@
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.transfer.architecture import (
+    AuthenticatedSenderStateChange,
     ContractReceiveStateChange,
     StateChange,
-    VerifiedSenderStateChange,
 )
 from raiden.transfer.state import (
     BalanceProofSignedState,
@@ -1065,7 +1065,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
         )
 
 
-class ReceiveTransferDirect(VerifiedSenderStateChange):
+class ReceiveTransferDirect(AuthenticatedSenderStateChange):
     def __init__(
             self,
             token_network_identifier: typing.TokenNetworkID,
@@ -1124,7 +1124,7 @@ class ReceiveTransferDirect(VerifiedSenderStateChange):
         )
 
 
-class ReceiveUnlock(VerifiedSenderStateChange):
+class ReceiveUnlock(AuthenticatedSenderStateChange):
     def __init__(
             self,
             message_identifier: typing.MessageID,
@@ -1177,7 +1177,7 @@ class ReceiveUnlock(VerifiedSenderStateChange):
         )
 
 
-class ReceiveDelivered(VerifiedSenderStateChange):
+class ReceiveDelivered(AuthenticatedSenderStateChange):
     def __init__(self, sender: typing.Address, message_identifier: typing.MessageID):
         self.sender = sender
         self.message_identifier = message_identifier
@@ -1212,7 +1212,7 @@ class ReceiveDelivered(VerifiedSenderStateChange):
         )
 
 
-class ReceiveProcessed(VerifiedSenderStateChange):
+class ReceiveProcessed(AuthenticatedSenderStateChange):
     def __init__(self, sender: typing.Address, message_identifier: typing.MessageID):
         self.sender = sender
         self.message_identifier = message_identifier

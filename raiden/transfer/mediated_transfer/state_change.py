@@ -3,7 +3,7 @@ from typing import List
 
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.transfer.architecture import StateChange
+from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
@@ -237,7 +237,7 @@ class ActionCancelRoute(StateChange):
         )
 
 
-class ReceiveLockExpired(StateChange):
+class ReceiveLockExpired(AuthenticatedSenderStateChange):
     """ A LockExpired message received. """
 
     def __init__(
@@ -289,7 +289,7 @@ class ReceiveLockExpired(StateChange):
         )
 
 
-class ReceiveSecretRequest(StateChange):
+class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     """ A SecretRequest message received. """
 
     def __init__(
@@ -351,7 +351,7 @@ class ReceiveSecretRequest(StateChange):
         return instance
 
 
-class ReceiveSecretReveal(StateChange):
+class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     """ A SecretReveal message received. """
 
     def __init__(
@@ -399,7 +399,7 @@ class ReceiveSecretReveal(StateChange):
         return instance
 
 
-class ReceiveTransferRefundCancelRoute(StateChange):
+class ReceiveTransferRefundCancelRoute(AuthenticatedSenderStateChange):
     """ A RefundTransfer message received by the initiator will cancel the current
     route.
     """
@@ -460,7 +460,7 @@ class ReceiveTransferRefundCancelRoute(StateChange):
         return instance
 
 
-class ReceiveTransferRefund(StateChange):
+class ReceiveTransferRefund(AuthenticatedSenderStateChange):
     """ A RefundTransfer message received. """
 
     def __init__(
