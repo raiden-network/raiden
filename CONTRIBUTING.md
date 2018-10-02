@@ -472,6 +472,12 @@ against master. You will be given feedback from the core developers of raiden
 and you should try to incorporate that feedback into your branch. Once you do
 so and all tests pass your feature/fix will be merged.
 
+#### Updating documentation/spec
+
+If a PR you are working on is updating something in the REST API, then make sure to also update the respective [documentation](https://github.com/raiden-network/raiden/blob/master/docs/rest_api.rst). The documentation update can also be in a different PR but should be taken care of and linked to the initial PR.
+
+If a PR you are working on is making a protocol change then make sure to also update the [specification](https://github.com/raiden-network/spec). The spec update can also be introduced in a different PR but should be taken care of and linked to the initial PR.
+
 #### Contributing to other people's PRs
 
 If you are a core developer of Raiden with write privileges to the repository
