@@ -67,7 +67,7 @@ class ScenarioRunner(object):
         self.client = JSONRPCClient(
             Web3(HTTPProvider(rpc_url)),
             privkey=account.privkey,
-            gas_price_strategy=get_gas_price_strategy(settings.get('gas_price')),
+            gas_price_strategy=get_gas_price_strategy(settings.get('gas_price', 'fast')),
         )
 
         self.session = Session()
