@@ -978,8 +978,20 @@ class NodeRunner:
                 | intended purposes and its compliance with applicable law and       |
                 | regulations. It is up to the user to determine the software´s      |
                 | quality and suitability and whether its use is compliant with its  |
-                | respective regulatory regime, especially in the case that you are  |
-                | operating in a commercial context.                                 |
+                | respective regulatory regime.                                      |
+                |                                                                    |
+                | Privacy notice: Please be aware, that by using the Raiden Client,  |
+                | your Ethereum address, channels, channel deposits, settlements and |
+                | the Ethereum address of your settlement counterparty will be       |
+                | stored on the Ethereum chain, i.e. on servers of Ethereum node     |
+                | operators and ergo made publicly available. The same will also be  |
+                | stored on systems of parties running other Raiden nodes connected  |
+                | to the same token network.                                         |
+                |                                                                    |
+                | Also be aware, that data on individual Raiden token transfers will |
+                | be made available via the Matrix protocol to the recipient,        |
+                | intermediating nodes of a specific transfer as well as to the      |
+                | Matrix server operators.                                           |
                 ----------------------------------------------------------------------''',
             ),
             fg='yellow',
