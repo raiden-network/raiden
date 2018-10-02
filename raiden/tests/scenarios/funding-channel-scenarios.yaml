@@ -1,0 +1,226 @@
+settings:
+  ###either `fast`, `medium` or an integer (in wei)
+  gas_price: `fast`
+
+token:
+  ## To re-use an existing token give an address
+  #address: "0x9CBA8b93C3A61F9417332B0e58E613f0F1168C2c"
+
+  decimals: 18
+  balance_min: 99_999_000_000_000_000_000
+
+
+nodes:
+  commands:
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 2
+    template: "localhost:50{:02d}"
+
+
+## Fund / Top up channel
+scenario:
+  serial:
+    tasks:
+      - serial:
+          name: Scenario F1 and F2 (Opening a channel and funding 0, then funding 1)
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 0}
+            - deposit: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, expected_http_status: 200}
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+
+     - serial:
+          name: Scenario F3 (Topping up 10 * 10)
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - deposit: {from: 0, to: 1, total_deposit: 2_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 3_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 4_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 5_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 6_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 7_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 8_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 9_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 10_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 11_000_000_000_000_000_000}
+            - assert: {from: 0, to: 1, total_deposit: 11_000_000_000_000_000_000, balance: 11_000_000_000_000_000_000, state: "opened"}
+
+      - serial:
+          name: Scenario F4 (Topping up 100 * 10)
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1_000_000_000_000_000_000, balance: 1_000_000_000_000_000_000, state: "opened"}
+            - deposit: {from: 0, to: 1, total_deposit: 12_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 13_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 14_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 15_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 16_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 17_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 18_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 19_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 20_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 21_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 22_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 23_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 24_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 25_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 26_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 27_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 28_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 29_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 30_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 31_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 32_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 33_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 34_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 35_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 36_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 37_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 38_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 39_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 40_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 41_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 42_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 43_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 44_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 45_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 46_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 47_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 48_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 49_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 50_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 51_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 52_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 53_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 54_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 55_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 56_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 57_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 58_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 59_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 60_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 61_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 62_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 63_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 64_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 65_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 66_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 67_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 68_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 69_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 70_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 71_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 72_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 73_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 74_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 75_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 76_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 77_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 78_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 79_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 80_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 81_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 82_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 83_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 84_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 85_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 86_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 87_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 88_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 89_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 90_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 91_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 92_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 93_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 94_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 95_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 96_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 97_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 98_000_000_000_000_000_000}
+            - deposit: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000}
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, balance: 99_000_000_000_000_000_000, state: "opened"}
+
+      - serial:
+          name: Scenario F9 (Depositing 0 tokens)
+          tasks:
+            - deposit: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, expected_http_status: 409}
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, balance: 99_000_000_000_000_000_000, state: "opened"}
+
+      - serial:
+          name: Scenario F10 (Depositing negative amount I)
+          tasks:
+            - deposit: {from: 0, to: 1, total_deposit: -1, expected_http_status: 409}
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, balance: 99_000_000_000_000_000_000, state: "opened"}
+
+      - serial:
+          name: Scenario F11 (Depositing negative amount II)
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, balance: 99_000_000_000_000_000_000, state: "opened"}
+            - deposit: {from: 0, to: 1, total_deposit: 98_000_000_000_000_000_000, expected_http_status: 409}
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, balance: 99_000_000_000_000_000_000, state: "opened"}
+
+      - serial:
+          name: Scenario F12 (Depositing incredibly huge number)
+          tasks:
+           - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, balance: 99_000_000_000_000_000_000, state: "opened"}
+           - deposit: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000, expected_http_status: 402}
+           - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, balance: 99_000_000_000_000_000_000, state: "opened"}
+
+      - serial:
+          name: Scenario F13 (Depositing smallest possible number)
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_000, balance: 99_000_000_000_000_000_000, state: "opened"}
+            - deposit: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_001, expected_http_status: 200}
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_001, balance: 99_000_000_000_000_000_001, state: "opened"}
+
+      - serial:
+          name: Scenario F16 (Depositing more than available on-chain balance of node 1)
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_001, balance: 99_000_000_000_000_000_001, state: "opened"}
+            - deposit: {from: 0, to: 1, total_deposit: 100_99_999_000_000_000_000_001, expected_http_status: 402}
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_001, balance: 99_000_000_000_000_000_001, state: "opened"}
+
+      - parallel:
+          name: Scenario F20 (Deposit and then kill node before the transaction was submitted to the blockchain)
+          tasks:
+            - serial:
+                tasks:
+                  - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_001, balance: 99_000_000_000_000_000_001, state: "opened"}
+                  - deposit: {from: 0, to: 1, total_deposit: 99_100_000_000_000_000_000, expected_http_status: 500}
+                tasks:
+                  - wait: 1
+                  - stop_node: 1
+                  - wait: 600
+                  - start_node: 1
+                  - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_001, balance: 99_000_000_000_000_000_001, state: "opened"}
+
+      - parallel:
+          name: Scenario F21 (Deposit and then kill node after the transaction is submitted to the blockchain)
+          tasks:
+            - serial:
+                tasks:
+                  - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_001, balance: 99_000_000_000_000_000_001, state: "opened"}
+                  - deposit: {from: 0, to: 1, total_deposit: 99_100_000_000_000_000_000, expected_http_status: 200}
+            - serial:
+                tasks:
+                  - wait: 500
+                  - stop_node: 1
+                  - wait: 600
+                  - start_node: 1
+                  - assert: {from: 0, to: 1, total_deposit: 99_100_000_000_000_000_000, balance: 99_999_000_000_000_000_000, state: "opened"}
+
+      - serial:
+          name: Scenario F24 (Depositing all available on-chain balance of node 1)
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 99_000_000_000_000_000_001, balance: 99_000_000_000_000_000_001, state: "opened"}
+            - deposit: {from: 0, to: 1, total_deposit: 99_999_000_000_000_000_000, expected_http_status: 200}
+            - assert: {from: 0, to: 1, total_deposit: 99_999_000_000_000_000_000, balance: 99_999_000_000_000_000_000, state: "opened"}
+
+      - serial:
+          name: Scenario F25 (Depositing to a closed channel - put to the end because of channel closing)
+          tasks:
+            - close_channel: {from: 0, to: 1}
+            - deposit: {from: 0, to: 1, total_deposit: 99_999_000_000_000_000_000, expected_http_status: 409}
+            - assert: {from: 0, to: 1, total_deposit: 99_999_000_000_000_000_000, balance: 99_999_000_000_000_000_000, state: "closed"}
