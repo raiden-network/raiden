@@ -6,6 +6,7 @@ from http import HTTPStatus
 from typing import Dict
 
 import gevent
+import gevent.pool
 import structlog
 from eth_utils import encode_hex, to_checksum_address
 from flask import Flask, make_response, request, send_from_directory, url_for
@@ -456,11 +457,16 @@ class APIServer(Runnable):
         # WSGI expects an stdlib logger. With structlog there's conflict of
         # method names. Rest unhandled exception will be re-raised here:
         wsgi_log = logging.getLogger(__name__ + '.pywsgi')
+
+        # server.stop() clears the handle and the pool, this is okay since a
+        # new WSGIServer is created on each start
+        pool = gevent.pool.Pool()
         wsgiserver = WSGIServer(
             (self.config['host'], self.config['port']),
             self.flask_app,
             log=wsgi_log,
             error_log=wsgi_log,
+            spawn=pool,
         )
 
         try:
