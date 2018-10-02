@@ -132,6 +132,11 @@ class SendMessageEvent(Event):
         return not self.__eq__(other)
 
 
+class VerifiedSenderStateChange(StateChange):
+    """ Marker used for state changes for which the sender has been verified. """
+    pass
+
+
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
     pass

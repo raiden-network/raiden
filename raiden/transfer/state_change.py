@@ -1,7 +1,11 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.transfer.architecture import ContractReceiveStateChange, StateChange
+from raiden.transfer.architecture import (
+    ContractReceiveStateChange,
+    StateChange,
+    VerifiedSenderStateChange,
+)
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
@@ -1061,7 +1065,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
         )
 
 
-class ReceiveTransferDirect(StateChange):
+class ReceiveTransferDirect(VerifiedSenderStateChange):
     def __init__(
             self,
             token_network_identifier: typing.TokenNetworkID,
@@ -1120,7 +1124,7 @@ class ReceiveTransferDirect(StateChange):
         )
 
 
-class ReceiveUnlock(StateChange):
+class ReceiveUnlock(VerifiedSenderStateChange):
     def __init__(
             self,
             message_identifier: typing.MessageID,
@@ -1173,7 +1177,7 @@ class ReceiveUnlock(StateChange):
         )
 
 
-class ReceiveDelivered(StateChange):
+class ReceiveDelivered(VerifiedSenderStateChange):
     def __init__(self, sender: typing.Address, message_identifier: typing.MessageID):
         self.sender = sender
         self.message_identifier = message_identifier
@@ -1208,7 +1212,7 @@ class ReceiveDelivered(StateChange):
         )
 
 
-class ReceiveProcessed(StateChange):
+class ReceiveProcessed(VerifiedSenderStateChange):
     def __init__(self, sender: typing.Address, message_identifier: typing.MessageID):
         self.sender = sender
         self.message_identifier = message_identifier
