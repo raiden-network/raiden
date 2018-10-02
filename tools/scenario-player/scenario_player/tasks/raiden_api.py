@@ -58,7 +58,12 @@ class RaidenAPIActionTask(Task):
                 f'Expected {self._expected_http_status}: {resp.text}',
             )
         try:
-            return self._process_response(resp.json())
+            if resp.content == b'':
+                # Allow empty responses
+                response_dict = {}
+            else:
+                response_dict = resp.json()
+            return self._process_response(response_dict)
         except (ValueError, UnicodeDecodeError) as ex:
             raise RESTAPIError(
                 f'Error decoding response for url {url}: {resp.status_code} {resp.text}',
