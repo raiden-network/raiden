@@ -11,9 +11,6 @@ token:
 
 nodes:
   commands:
-    #start: "docker start raiden_{:02d}"
-    #stop: "docker stop raiden_{:02d}"
-    #kill: "docker kill raiden_{:02d}"
     stop: "pkill -f '127.0.0.1:50{:02d}'"
     kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
     start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
@@ -21,19 +18,6 @@ nodes:
     first: 1
     last: 2
     template: "raiden-0{:03d}.testnet.raiden.network"
-
-## Available task types:
-## - serial
-## - parallel
-## - open_channel
-## - close_channel
-## - deposit
-## - transfer
-## - stop_node
-## - kill_node
-## - start_node
-## - assert
-## - wait
 
 scenario:
   serial:

@@ -1,0 +1,84 @@
+settings:
+
+  ## Gas price to use, either `fast`, `medium` or an integer (in gwei)
+  gas_price: "fast"
+
+  ## Protocol to use to connect to the Raiden nodes, default: "http"
+  protocol: "https"
+
+token:
+  decimals: 18
+
+nodes:
+  commands:
+    start: "ssh ubuntu@testnet.raiden.network ssh raiden-0{:03d} docker start raiden"
+    stop: "ssh ubuntu@testnet.raiden.network ssh raiden-0{:03d} docker stop raiden"
+    #kill: "docker kill raiden_{:02d}"
+    #stop: "pkill -f '127.0.0.1:50{:02d}'"
+    #kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    #start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 2
+    template: "raiden-0{:03d}.testnet.raiden.network"
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channel"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 10}
+      - parallel:
+          name: "Assert after open"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
+      - serial:
+          name: "Make transfer and restart node"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 200}
+            - stop_node: 1
+            - wait: 1
+            - start_node: 1
+      - parallel:
+          name: "Assert after one transfer and restart"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 9, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 1, state: "opened"}
+      - serial:
+          name: "Make transfer and restart other node"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 200}
+            - stop_node: 2
+            - wait: 1
+            - start_node: 2
+      - parallel:
+          name: "Assert after one transfer and restart of other node"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 8, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 2, state: "opened"}
+      - serial:
+          name: "Make transfer to offline node"
+          tasks:
+            - stop_node: 2
+            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 409}
+            - wait: 1
+            - start_node: 2
+      - parallel:
+          name: "Assert after one transfer to offline node"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 8, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 2, state: "opened"}
+      - serial:
+          name: "Make transfer from offline node"
+          tasks:
+            - stop_node: 1
+            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 409}
+            - wait: 1
+            - start_node: 1
+      - parallel:
+          name: "Assert after offline node making transfer"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 8, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 2, state: "opened"}
