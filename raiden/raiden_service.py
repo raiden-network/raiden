@@ -521,8 +521,13 @@ class RaidenService(Runnable):
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         with self.event_poll_lock:
             latest_block_number = latest_block['number']
+            confirmation_blocks = self.config['blockchain']['confirmation_blocks']
+            confirmed_block_number = latest_block_number - confirmation_blocks
 
-            for event in self.blockchain_events.poll_blockchain_events(latest_block_number):
+            # handle testing private chains
+            confirmed_block_number = max(1, confirmed_block_number)
+
+            for event in self.blockchain_events.poll_blockchain_events(confirmed_block_number):
                 # These state changes will be procesed with a block_number
                 # which is /larger/ than the ChainState's block_number.
                 on_blockchain_event(self, event)
