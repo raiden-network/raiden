@@ -73,6 +73,7 @@ Additional dependencies for development installations
 
 - You need to make sure that your system has ``solc``, the ethereum solidity compiler installed. Refer to `its documentation`_ for the installation steps.
 - You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
+- For running ``raiden smoketest``, you will need to have ``synapse`` installed. Run ``./tools/install_synapse.sh`` (synapse needs ``tk`` as a dependency).
 
 .. _its documentation: http://solidity.readthedocs.io/en/latest/installing-solidity.html
 
