@@ -580,7 +580,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                     },
                 }
                 success = _run_smoketest()
-        except (PermissionError, ProcessExitedWithError):
+        except (PermissionError, ProcessExitedWithError, FileNotFoundError):
             append_report('Matrix server start exception', traceback.format_exc())
             print_step(
                 f'Error during smoketest setup, report was written to {report_file}',
