@@ -1,4 +1,6 @@
 import os
+import shlex
+import shutil
 import socket
 import subprocess
 
@@ -45,6 +47,12 @@ class HTTPExecutor(MiHTTPExecutor):
                 stdin = stdout = stderr = self.stdio
             env = os.environ.copy()
             env[ENV_UUID] = self._uuid
+
+            executable = shlex.split(command)[0]
+            if shutil.which(executable) is None:
+                raise FileNotFoundError(f'Can not execute {executable}, '
+                                        'check that the executable exists.')
+
             self.process = subprocess.Popen(
                 command,
                 shell=self._shell,
