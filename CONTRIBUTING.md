@@ -499,7 +499,9 @@ coordinate to avoid any conflicts and always warn people beforehand if you are
 to work on their branch. Once you are done:
 
 ```
-git commit -m "your additions"
+git commit -m 'Add my contribution
+
+The PR was missing something. I added it.'
 git push hackaugusto travis_build
 ```
 
