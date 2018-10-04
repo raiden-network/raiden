@@ -2,7 +2,6 @@ from eth_utils import denoms, to_hex
 
 INITIAL_PORT = 38647
 
-RPC_CACHE_TTL = 600
 CACHE_TTL = 60
 GAS_LIMIT = 10 * 10**6
 GAS_LIMIT_HEX = to_hex(GAS_LIMIT)
