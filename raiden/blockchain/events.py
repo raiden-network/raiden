@@ -227,7 +227,9 @@ class BlockchainEvents:
     def __init__(self):
         self.event_listeners = list()
 
-    def poll_blockchain_events(self, block_number: int = None):
+    def poll_blockchain_events(self, block_number: int):
+        """ Poll for new blockchain events up to `block_number`. """
+
         for event_listener in self.event_listeners:
             assert isinstance(event_listener.filter, StatelessFilter)
 
