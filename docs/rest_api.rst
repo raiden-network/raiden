@@ -448,6 +448,8 @@ Connection Management
 
    The request's payload has ``initial_channel_target`` and ``joinable_funds_target`` as optional arguments. If not provided they default to ``initial_channel_target = 3`` and ``joinable_funds_target = 0.4``.
 
+   If the ``initial_channel_target`` is bigger than the current number of participants of the token network then the funds will still be split according to the ``initial_channel_target`` but the number of channels made will be equal to the number of participants in the network. So eventually you will end up with less channels, but each channel will have the expected number of funds allocated to it. The remaining channels will be opened once more peers become available.
+
    **Example Request**:
 
    .. http:example:: curl wget httpie python-requests
