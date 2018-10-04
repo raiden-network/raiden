@@ -55,7 +55,6 @@ from raiden.exceptions import (
     DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
-    EthNodeCommunicationError,
     InsufficientFunds,
     InsufficientGasReserve,
     InvalidAddress,
@@ -514,11 +513,6 @@ class RestAPI:
                 registry_address,
                 token_address,
             )
-        except EthNodeCommunicationError:
-            return api_response(
-                result='',
-                status_code=HTTPStatus.ACCEPTED,
-            )
         except (InvalidAddress, AlreadyRegisteredTokenAddress, TransactionThrew) as e:
             return api_error(
                 errors=str(e),
@@ -557,11 +551,6 @@ class RestAPI:
                 partner_address,
                 settle_timeout,
             )
-        except EthNodeCommunicationError:
-            return api_response(
-                result='',
-                status_code=HTTPStatus.ACCEPTED,
-            )
         except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
                 AddressWithoutCode, DuplicatedChannelError, TokenNotRegistered) as e:
             return api_error(
@@ -589,11 +578,6 @@ class RestAPI:
                     token_address=token_address,
                     partner_address=partner_address,
                     total_deposit=total_deposit,
-                )
-            except EthNodeCommunicationError:
-                return api_response(
-                    result='',
-                    status_code=HTTPStatus.ACCEPTED,
                 )
             except InsufficientFunds as e:
                 return api_error(
@@ -643,11 +627,6 @@ class RestAPI:
                 funds,
                 initial_channel_target,
                 joinable_funds_target,
-            )
-        except EthNodeCommunicationError:
-            return api_response(
-                result='',
-                status_code=HTTPStatus.ACCEPTED,
             )
         except (InsufficientFunds, InsufficientGasReserve) as e:
             return api_error(
@@ -1028,11 +1007,6 @@ class RestAPI:
                 channel_state.partner_state.address,
                 total_deposit,
             )
-        except EthNodeCommunicationError:
-            return api_response(
-                result='',
-                status_code=HTTPStatus.ACCEPTED,
-            )
         except InsufficientFunds as e:
             return api_error(
                 errors=str(e),
@@ -1080,11 +1054,6 @@ class RestAPI:
                 registry_address,
                 channel_state.token_address,
                 channel_state.partner_state.address,
-            )
-        except EthNodeCommunicationError:
-            return api_response(
-                result='',
-                status_code=HTTPStatus.ACCEPTED,
             )
         except InsufficientFunds as e:
             return api_error(
