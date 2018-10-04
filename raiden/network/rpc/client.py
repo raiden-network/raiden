@@ -2,13 +2,9 @@ import copy
 import os
 import warnings
 from binascii import unhexlify
-from json.decoder import JSONDecodeError
-from operator import attrgetter
 
 import gevent
 import structlog
-import web3.middleware as middleware
-from cachetools import TTLCache, cachedmethod
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
 from gevent.lock import Semaphore
 from pkg_resources import DistributionNotFound
@@ -19,8 +15,8 @@ from web3.middleware import geth_poa_middleware
 
 from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
+from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.settings import RPC_CACHE_TTL
 from raiden.utils import is_supported_client, pex, privatekey_to_address
 from raiden.utils.filters import StatelessFilter
 from raiden.utils.solc import (
@@ -38,26 +34,6 @@ except (ModuleNotFoundError, DistributionNotFound):
 
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
-
-def make_connection_test_middleware():
-    def connection_test_middleware(make_request, web3):
-        """ Creates middleware that checks if the provider is connected. """
-
-        def middleware(method, params):
-            try:
-                if web3.isConnected():
-                    return make_request(method, params)
-                else:
-                    raise EthNodeCommunicationError('Web3 provider not connected')
-
-            # the isConnected check doesn't currently catch JSON errors
-            # see https://github.com/ethereum/web3.py/issues/866
-            except JSONDecodeError:
-                raise EthNodeCommunicationError('Web3 provider not connected')
-
-        return middleware
-    return connection_test_middleware
 
 
 def check_address_has_code(
@@ -135,10 +111,10 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
-def monkey_patch_web3(web3, client, gas_price_strategy):
+def monkey_patch_web3(web3, gas_price_strategy):
     try:
         # install caching middleware
-        web3.middleware_stack.add(middleware.time_based_cache_middleware)
+        web3.middleware_stack.add(block_hash_cache_middleware)
 
         # set gas price strategy
         web3.eth.setGasPriceStrategy(gas_price_strategy)
@@ -153,8 +129,7 @@ def monkey_patch_web3(web3, client, gas_price_strategy):
 
     # create the connection test middleware (but only for non-tester chain)
     if not hasattr(web3, 'testing'):
-        connection_test = make_connection_test_middleware()
-        web3.middleware_stack.inject(connection_test, layer=0)
+        web3.middleware_stack.inject(connection_test_middleware, layer=0)
 
 
 class JSONRPCClient:
@@ -177,7 +152,7 @@ class JSONRPCClient:
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')
 
-        monkey_patch_web3(web3, self, gas_price_strategy)
+        monkey_patch_web3(web3, gas_price_strategy)
 
         try:
             version = web3.version.node
@@ -195,7 +170,6 @@ class JSONRPCClient:
         self.sender = sender
         self.web3 = web3
 
-        self._gasprice_cache = TTLCache(maxsize=16, ttl=RPC_CACHE_TTL)
         self._available_nonce = _available_nonce
         self._nonce_lock = Semaphore()
         self._nonce_offset = nonce_offset
@@ -221,7 +195,6 @@ class JSONRPCClient:
         gas_limit = self.web3.eth.getBlock(location)['gasLimit']
         return gas_limit * 8 // 10
 
-    @cachedmethod(attrgetter('_gasprice_cache'))
     def gas_price(self) -> int:
         # generateGasPrice takes the transaction to be send as an optional argument
         # but both strategies that we are using (time-based and rpc-based) don't make
