@@ -384,7 +384,7 @@ class RaidenService(Runnable):
 
         super().start()
 
-    def _run(self):
+    def _run(self, *args, **kwargs):  # pylint: disable=method-hidden
         """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
         try:
             self.stop_event.wait()
