@@ -102,7 +102,7 @@ Then install the required packages:
 
 ### Create the virtual env
 
-It's highly recommended to use a virtual environment for development, this will
+It's highly recommended to use a virtual environment for development. This will
 isolate the python dependencies used by Raiden from your system:
 
     virtualenv env
@@ -127,8 +127,8 @@ To run the tests use pytest
 
     pytest raiden
 
-Tests are split in unit and integration, the first are faster to execute while
-the later tests the whole system but are slower to run. To choose which type of
+Tests are split in unit tests and integration tests. The first are faster to execute while
+the latter test the whole system but are slower to run. To choose which type of
 tests to run, just use the appropriate folder
 
     pytest raiden/tests/<integration|unit>
