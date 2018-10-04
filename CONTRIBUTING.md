@@ -7,6 +7,7 @@ and what are the requirements for a Pull Request to be opened against Raiden.
 - [Contributing](#contributing)
     - [Creating an Issue](#creating-an-issue)
     - [Creating a Pull Request](#creating-a-pull-request)
+- [Development environment setup](#development-environment-setup)
 - [Development Guidelines](#development-guidelines)
     - [Coding Style](#coding-style)
     - [Workflow](#workflow)
@@ -53,72 +54,84 @@ Agreement). Our CLA bot will help you with that after you created a pull
 request. If you or your employer do not hold the whole copyright of the
 authorship submitted we can not accept your contribution.
 
-## Setup
+## Development environment setup
 
-### System dependencies
-
-#### Debian/Ubuntu
-
-Raiden requires Python >=3.6, Geth (Ethereum client), and the Solidity compiler
-`solc`. The easiest way to get the last two is to add the official Ethereum ppa
-to your repositories:
-
-    sudo add-apt-repository -y ppa:ethereum/ethereum
-    sudo apt-get update
-
-Then simply install all required packages:
-
-    sudo apt-get install build-essential git libffi-dev libgmp-dev libssl-dev \
-      libtool pkg-config python-dev python-pip ethereum solc
-
-For other ways to install `solc` or Geth see the official docs:
-
-* http://solidity.readthedocs.io/en/latest/installing-solidity.html
-* https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum
-
-#### Alternative setup with nix
+### Nix
 
 See [nix.rst](docs/nix.rst).
 
-### Raiden
+### Development external dependencies
 
-#### Get the code
+These are the required external dependencies for development:
+
+- Python >=3.6.
+- Ethereum client (Geth recommended).
+- Solidity compiler >=0.4.23.
+- A matrix capable server (Synapse recommended).
+- A compiler tool chain to compile the eliptic curve library.
+- Git for version control.
+
+### Get the code
+
+Start by getting the source code
 
     git clone https://github.com/raiden-network/raiden.git
     cd raiden
 
-#### Setup
+#### Install system wide dependencies
 
-First, create a `virtualenv` to keep your `pip` packages clean. If you haven't
-already, install `virtualenv`:
+##### Archlinux
 
-    sudo pip install virtualenv
+All the required packages are available in community or extra:
 
-Create the virtual environment:
+    sudo pacman -Sy go-ethereum python python-pip python-virtualenv solidity \
+    base-devel git
+
+##### Debian/Ubuntu
+
+To get the Geth client and solidity compiler add Ethereum's PPA repository:
+
+    sudo add-apt-repository -y ppa:ethereum/ethereum
+    sudo apt-get update
+
+Then install the required packages:
+
+    sudo apt-get install build-essential git libffi-dev libgmp-dev libssl-dev \
+    libtool pkg-config python3 python3-pip python3-dev python3-virtualenv \
+    ethereum solc git
+
+### Create the virtual env
+
+It's highly recommended to use a virtual environment for development, this will
+isolate the python dependencies used by Raiden from your system:
 
     virtualenv env
+    source ./env/bin/activate
 
-Install required packages:
+#### Development dependencies
 
-    env/bin/pip install -r requirements-dev.txt -e .
+Install the development dependencies:
 
-#### Testing
-
-Run the tests using
-
-    env/bin/pytest raiden
-
-Tests, especially integration tests, will take some time. If you want to run
-single tests simply specify them on the command line, like so:
-
-    env/bin/pytest raiden/tests/<path-to-test(s)>
-
+    pip install -r requirements-dev.txt -c constraints.txt
+    ./tools/install_synapse.sh
 
 ## Development Guidelines
 
 In this section we are going to describe the coding rules for contributing to
 the raiden repository. All code you write should strive to comply with these
 rules.
+
+### Testing
+
+To run the tests use pytest
+
+    pytest raiden
+
+Tests are split in unit and integration, the first are faster to execute while
+the later tests the whole system but are slower to run. To choose which type of
+tests to run, just use the appropriate folder
+
+    pytest raiden/tests/<integration|unit>
 
 ### Commiting Rules
 
@@ -289,7 +302,7 @@ function_call_with_many_arguments(
     argument4,
     argument5,
     argument6,
-    argument7
+    argument7,
 )
 ```
 
