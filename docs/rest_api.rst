@@ -131,7 +131,6 @@ Deploying
       }
 
    :statuscode 201: A token network for the token has been successfully created.
-   :statuscode 202: Creation of the token network for the token has been started but did not finish yet. Please check again once the related transaction has been mined.
    :statuscode 402: Insufficient ETH to pay for the gas of the register on-chain transaction
    :statuscode 404: The given token address is invalid.
    :statuscode 409:
@@ -327,7 +326,6 @@ Channel Management
       }
 
    :statuscode 201: Channel created successfully
-   :statuscode 202: Creation of the channel has been started but did not finish yet. Please check again once the related transaction has been mined.
    :statuscode 400: Provided JSON is in some way malformed
    :statuscode 402: Insufficient ETH to pay for the gas of the channel open on-chain transaction
    :statuscode 408: Deposit event was not read in time by the Ethereum node
@@ -388,7 +386,6 @@ Channel Management
       }
 
    :statuscode 200: Success
-   :statuscode 202: The requested action has been started but did not finish yet. Please check again once the related transaction has been mined.
    :statuscode 400:
     - The provided JSON is in some way malformed, or
     - there is nothing to do since neither ``state`` nor ``total_deposit`` have been given, or
@@ -463,7 +460,6 @@ Connection Management
           "funds": 1337
       }
 
-   :statuscode 202: The joining of the token network for the token has been started but did not finish yet. Please check again once the related transaction has been mined.
    :statuscode 204: For a successful connection creation.
    :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance to pay for the gas of the on-chain transactions.
    :statuscode 408: If a timeout happened during any of the transactions.
