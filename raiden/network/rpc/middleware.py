@@ -1,7 +1,7 @@
 import functools
 from json.decoder import JSONDecodeError
 
-import lru
+from cachetools import LRUCache
 from web3.middleware.cache import construct_simple_cache_middleware
 
 from raiden.exceptions import EthNodeCommunicationError
@@ -35,19 +35,8 @@ BLOCK_HASH_CACHE_RPC_WHITELIST = {
 }
 
 
-def _should_cache(_method, _params, response):
-    if 'error' in response:
-        return False
-    elif 'result' not in response:
-        return False
-
-    if response['result'] is None:
-        return False
-    return True
-
-
 block_hash_cache_middleware = construct_simple_cache_middleware(
     # default sample size of gas price strategies is 120
-    cache_class=functools.partial(lru.LRU, 150),
+    cache_class=functools.partial(LRUCache, 150),
     rpc_whitelist=BLOCK_HASH_CACHE_RPC_WHITELIST,
 )
