@@ -1,0 +1,39 @@
+settings:
+  gas_price: "fast"
+
+token:
+
+nodes:
+  commands:
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 4
+    template: "localhost:50{:02d}"
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Setting up a network"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 10, expected_http_status: 201}
+            - open_channel: {from: 0, to: 2, total_deposit: 10, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 10, expected_http_status: 201}
+
+      - serial:
+          name: "Checking the network"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 0, to: 2, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 10, balance: 10, state: "opened"}
+
+      - serial:
+          name: "Node Nr. 4 joins a network with less than 5 tokens and default values"
+          tasks:
+            - join_network: {from: 3, funds: 5, expected_http_status: 204}
+            - assert: {from: 3, to: 0, total_deposit: 1, balance: 1, state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 1, balance: 1, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1, balance: 1, state: "opened"}
