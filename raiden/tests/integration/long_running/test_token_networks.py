@@ -3,6 +3,7 @@ import pytest
 
 from raiden import routing, waiting
 from raiden.api.python import RaidenAPI
+from raiden.exceptions import InvalidAmount
 from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
@@ -83,10 +84,32 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
 
     # connect the first node (will register the token if necessary)
     RaidenAPI(raiden_network[0].raiden).token_network_connect(
-        registry_address,
-        token_address,
-        100,
+        registry_address=registry_address,
+        token_address=token_address,
+        funds=100,
     )
+
+    # Test invalid argument values
+    with pytest.raises(InvalidAmount):
+        RaidenAPI(raiden_network[0].raiden).token_network_connect(
+            registry_address=registry_address,
+            token_address=token_address,
+            funds=-1,
+        )
+    with pytest.raises(InvalidAmount):
+        RaidenAPI(raiden_network[0].raiden).token_network_connect(
+            registry_address=registry_address,
+            token_address=token_address,
+            funds=100,
+            joinable_funds_target=2
+        )
+    with pytest.raises(InvalidAmount):
+        RaidenAPI(raiden_network[0].raiden).token_network_connect(
+            registry_address=registry_address,
+            token_address=token_address,
+            funds=100,
+            joinable_funds_target=-1
+        )
 
     # connect the other nodes
     connect_greenlets = [
