@@ -81,6 +81,7 @@ if True:
         get_system_spec,
         is_supported_client,
         merge_dict,
+        networkid_is_known,
         pex,
         split_endpoint,
         typing,
@@ -127,25 +128,26 @@ ETHEREUM_NODE_COMMUNICATION_ERROR = (
 )
 
 
-def check_synced(blockchain_service: BlockChainService) -> None:
+def check_synced(blockchain_service: BlockChainService, network_id_is_known: bool) -> None:
     net_id = blockchain_service.network_id
+    if not network_id_is_known:
+        click.secho(
+            f'Your ethereum client is connected to a non-recognized private \n'
+            f'network with network-ID {net_id}. Since we can not check if the client \n'
+            f'is synced please restart raiden with the --no-sync-check argument.'
+            f'\n',
+            fg='red',
+        )
+        sys.exit(1)
+
     try:
-        network = ID_TO_NETWORKNAME[net_id]
+        network = ID_TO_NETWORKNAME[ChainId(net_id)]
     except (EthNodeCommunicationError, RequestException):
         click.secho(
             'Could not determine the network the ethereum node is connected.\n'
             'Because of this there is no way to determine the latest\n'
             'block with an oracle, and the events from the ethereum\n'
             'node cannot be trusted. Giving up.\n',
-            fg='red',
-        )
-        sys.exit(1)
-    except KeyError:
-        click.secho(
-            f'Your ethereum client is connected to a non-recognized private \n'
-            f'network with network-ID {net_id}. Since we can not check if the client \n'
-            f'is synced please restart raiden with the --no-sync-check argument.'
-            f'\n',
             fg='red',
         )
         sys.exit(1)
@@ -689,8 +691,8 @@ def run_app(
 
     given_numeric_network_id = network_id.value if isinstance(network_id, ChainId) else network_id
     node_numeric_network_id = blockchain_service.network_id
-    known_given_network_id = given_numeric_network_id in [item.value for item in ChainId]
-    known_node_network_id = node_numeric_network_id in [item.value for item in ChainId]
+    known_given_network_id = networkid_is_known(given_numeric_network_id)
+    known_node_network_id = networkid_is_known(node_numeric_network_id)
     if known_given_network_id:
         given_network_id = ChainId(given_numeric_network_id)
     if known_node_network_id:
@@ -748,7 +750,7 @@ def run_app(
             contract_addresses_known = True
 
     if sync_check:
-        check_synced(blockchain_service)
+        check_synced(blockchain_service, known_node_network_id)
 
     contract_addresses_given = (
         registry_contract_address is not None and
