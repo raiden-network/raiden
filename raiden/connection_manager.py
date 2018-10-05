@@ -125,6 +125,11 @@ class ConnectionManager:
                 'The funds to use in the connection need to be a positive integer',
             )
 
+        if joinable_funds_target < 0 or joinable_funds_target > 1:
+            raise InvalidAmount(
+                f'joinable_funds_target should be between 0 and 1. Given: {joinable_funds_target}',
+            )
+
         with self.lock:
             self.funds = funds
             self.initial_channel_target = initial_channel_target
@@ -220,7 +225,7 @@ class ConnectionManager:
                 )
             except RaidenRecoverableError:
                 log.exception('connection manager join: channel not in opened state')
-            except InvalidDBData as e:
+            except InvalidDBData:
                 raise
             except RaidenUnrecoverableError as e:
                 if self.raiden.config['network_type'] == NetworkType.MAIN:
