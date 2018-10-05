@@ -247,7 +247,7 @@ class ReceiveLockExpired(AuthenticatedSenderStateChange):
             secrethash: typing.SecretHash,
             message_identifier: typing.MessageID,
     ):
-        self.sender = sender
+        super().__init__(sender)
         self.balance_proof = balance_proof
         self.secrethash = secrethash
         self.message_identifier = message_identifier
@@ -261,10 +261,10 @@ class ReceiveLockExpired(AuthenticatedSenderStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveLockExpired) and
-            self.sender == other.sender and
             self.balance_proof == other.balance_proof and
             self.secrethash == other.secrethash and
-            self.message_identifier == other.message_identifier
+            self.message_identifier == other.message_identifier and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -300,11 +300,11 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
             secrethash: typing.SecretHash,
             sender: typing.Address,
     ):
+        super().__init__(sender)
         self.payment_identifier = payment_identifier
         self.amount = amount
         self.expiration = expiration
         self.secrethash = secrethash
-        self.sender = sender
         self.revealsecret = None
 
     def __repr__(self):
@@ -322,7 +322,8 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
             self.amount == other.amount and
             self.secrethash == other.secrethash and
             self.sender == other.sender and
-            self.revealsecret == other.revealsecret
+            self.revealsecret == other.revealsecret and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -359,11 +360,11 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
             secret: typing.Secret,
             sender: typing.Address,
     ):
+        super().__init__(sender)
         secrethash = sha3(secret)
 
         self.secret = secret
         self.secrethash = secrethash
-        self.sender = sender
 
     def __repr__(self):
         return '<ReceiveSecretReveal secrethash:{} sender:{}>'.format(
@@ -376,7 +377,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
             isinstance(other, ReceiveSecretReveal) and
             self.secret == other.secret and
             self.secrethash == other.secrethash and
-            self.sender == other.sender
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -411,12 +412,12 @@ class ReceiveTransferRefundCancelRoute(AuthenticatedSenderStateChange):
             transfer: LockedTransferSignedState,
             secret: typing.Secret,
     ):
+        super().__init__(sender)
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
         secrethash = sha3(secret)
 
-        self.sender = sender
         self.transfer = transfer
         self.routes = routes
         self.secrethash = secrethash
@@ -435,7 +436,8 @@ class ReceiveTransferRefundCancelRoute(AuthenticatedSenderStateChange):
             self.transfer == other.transfer and
             self.routes == other.routes and
             self.secret == other.secret and
-            self.secrethash == other.secrethash
+            self.secrethash == other.secrethash and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -469,10 +471,11 @@ class ReceiveTransferRefund(AuthenticatedSenderStateChange):
             transfer: LockedTransferSignedState,
             routes: List[RouteState],
     ):
+        super().__init__(sender)
+
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
-        self.sender = sender
         self.transfer = transfer
         self.routes = routes
 
@@ -485,9 +488,9 @@ class ReceiveTransferRefund(AuthenticatedSenderStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveTransferRefund) and
-            self.sender == other.sender and
             self.transfer == other.transfer and
-            self.routes == other.routes
+            self.routes == other.routes and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
