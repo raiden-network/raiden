@@ -22,7 +22,6 @@ from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 from matrix_client.user import User
 
-from raiden.constants import ID_TO_NETWORKNAME
 from raiden.exceptions import (
     InvalidAddress,
     InvalidProtocolMessage,
@@ -68,7 +67,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
 )
-from raiden_contracts.constants import ChainId
+from raiden_contracts.constants import ID_TO_NETWORKNAME, ChainId
 from raiden_libs.exceptions import InvalidSignature
 from raiden_libs.network.matrix import GMatrixClient, Room
 from raiden_libs.utils.signing import eth_recover, eth_sign

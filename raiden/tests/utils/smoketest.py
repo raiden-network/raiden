@@ -14,7 +14,6 @@ from web3.middleware import geth_poa_middleware
 
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import RAIDENTEST_CHAINID
 from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
@@ -39,6 +38,7 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
+    ChainId,
 )
 
 # the smoketest will assert that a different endpoint got successfully registered
@@ -230,7 +230,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,
         genesis_file=os.path.join(get_project_root(), 'smoketest_genesis.json'),
-        chain_id=RAIDENTEST_CHAINID,
+        chain_id=ChainId.SMOKETEST.value,
         verbosity=0,
         logdir=logdir,
     )
@@ -256,7 +256,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     print_step('Deploying Raiden contracts')
 
     client = JSONRPCClient(web3, get_private_key(keystore))
-    contract_addresses = deploy_smoketest_contracts(client, RAIDENTEST_CHAINID)
+    contract_addresses = deploy_smoketest_contracts(client, ChainId.SMOKETEST.value)
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
     registry = TokenNetworkRegistry(client, contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
@@ -285,7 +285,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
             'gas_price': 'fast',
             'keystore_path': keystore,
             'matrix_server': matrix_server,
-            'network_id': str(RAIDENTEST_CHAINID),
+            'network_id': str(ChainId.SMOKETEST.value),
             'password_file': click.File()(os.path.join(base_datadir, 'pw')),
             'registry_contract_address': registry_contract_address,
             'secret_registry_contract_address': secret_registry_contract_address,
