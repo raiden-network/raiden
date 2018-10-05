@@ -3,12 +3,13 @@ import pytest
 
 from raiden.tests.utils.network import (
     CHAIN,
+    create_all_channels_for_network,
     create_apps,
     create_network_channels,
     create_sequential_channels,
-    payment_channel_open_and_deposit,
     wait_for_alarm_start,
     wait_for_channels,
+    wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 
@@ -36,6 +37,7 @@ def raiden_chain(
         network_type,
         local_matrix_server,
         private_rooms,
+        retry_timeout,
 ):
 
     if len(token_addresses) != 1:
@@ -79,23 +81,27 @@ def raiden_chain(
             from_block,
         )
 
+    exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
+    with gevent.Timeout(seconds=30, exception=exception):
+        wait_for_token_networks(
+            raiden_apps=raiden_apps,
+            token_network_registry_address=token_network_registry_address,
+            token_addresses=token_addresses,
+        )
+
     app_channels = create_sequential_channels(
         raiden_apps,
         channels_per_node,
     )
 
-    channel_greenlets = []
-    for token_address in token_addresses:
-        for app_pair in app_channels:
-            channel_greenlets.append(gevent.spawn(
-                payment_channel_open_and_deposit,
-                app_pair[0],
-                app_pair[1],
-                token_address,
-                deposit,
-                settle_timeout,
-            ))
-    gevent.joinall(channel_greenlets, raise_error=True)
+    create_all_channels_for_network(
+        app_channels=app_channels,
+        token_addresses=token_addresses,
+        channel_individual_deposit=deposit,
+        channel_settle_timeout=settle_timeout,
+        token_network_registry_address=token_network_registry_address,
+        retry_timeout=retry_timeout,
+    )
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
@@ -134,6 +140,7 @@ def raiden_network(
         network_type,
         local_matrix_server,
         private_rooms,
+        retry_timeout,
 ):
 
     raiden_apps = create_apps(
@@ -161,23 +168,27 @@ def raiden_network(
     start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
     gevent.joinall(start_tasks, raise_error=True)
 
+    exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
+    with gevent.Timeout(seconds=30, exception=exception):
+        wait_for_token_networks(
+            raiden_apps=raiden_apps,
+            token_network_registry_address=token_network_registry_address,
+            token_addresses=token_addresses,
+        )
+
     app_channels = create_network_channels(
         raiden_apps,
         channels_per_node,
     )
 
-    greenlets = []
-    for token_address in token_addresses:
-        for app_pair in app_channels:
-            greenlets.append(gevent.spawn(
-                payment_channel_open_and_deposit,
-                app_pair[0],
-                app_pair[1],
-                token_address,
-                deposit,
-                settle_timeout,
-            ))
-    gevent.joinall(greenlets, raise_error=True)
+    create_all_channels_for_network(
+        app_channels=app_channels,
+        token_addresses=token_addresses,
+        channel_individual_deposit=deposit,
+        channel_settle_timeout=settle_timeout,
+        token_network_registry_address=token_network_registry_address,
+        retry_timeout=retry_timeout,
+    )
 
     exception = RuntimeError('`raiden_network` fixture setup failed, nodes are unreachable')
     with gevent.Timeout(seconds=30, exception=exception):
