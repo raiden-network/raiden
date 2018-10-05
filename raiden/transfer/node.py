@@ -1,4 +1,3 @@
-from raiden.messages import Message
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
@@ -419,7 +418,7 @@ def inplace_delete_message_queue(
 
 
 def inplace_delete_message(
-        message_queue: typing.List[Message],
+        message_queue: typing.List[SendMessageEvent],
         state_change: StateChange,
 ):
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
