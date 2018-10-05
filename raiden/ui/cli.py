@@ -72,6 +72,7 @@ if True:
     from raiden.network.utils import get_free_port
     from raiden.raiden_event_handler import RaidenEventHandler
     from raiden.settings import (
+        DEFAULT_MATRIX_KNOWN_SERVERS,
         DEFAULT_NAT_KEEPALIVE_RETRIES,
         DEFAULT_SHUTDOWN_TIMEOUT,
         ETHERSCAN_API,
@@ -97,6 +98,7 @@ if True:
         NetworkChoiceType,
         PathRelativePath,
         apply_config_file,
+        get_matrix_servers,
         group,
         option,
         option_group,
@@ -821,6 +823,12 @@ def run_app(
             config['transport']['udp'],
         )
     elif transport == 'matrix':
+        if config['transport']['matrix'].get('available_servers') is None:
+            # fetch list of known servers from raiden-network/raiden-tranport repo
+            available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['network_type']]
+            available_servers = get_matrix_servers(available_servers_url)
+            config['transport']['matrix']['available_servers'] = available_servers
+
         try:
             transport = MatrixTransport(config['transport']['matrix'])
         except RaidenError as ex:

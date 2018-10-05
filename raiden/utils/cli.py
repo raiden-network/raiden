@@ -1,6 +1,7 @@
 import errno
 import os
 import re
+import string
 import sys
 from ipaddress import AddressValueError, IPv4Address
 from itertools import groupby
@@ -9,6 +10,7 @@ from string import Template
 from typing import Any, Callable, Dict, List, Union
 
 import click
+import requests
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
@@ -403,6 +405,28 @@ def apply_config_file(
         # Use the config file value if the value from the command line is the default
         if cli_params[config_name_int] == paramname_to_param[config_name_int].get_default(ctx):
             cli_params[config_name_int] = config_value
+
+
+def get_matrix_servers(url: str) -> List[str]:
+    """Fetch a list of matrix servers from a text url
+
+    '-' prefixex (YAML list) are cleaned. Comment lines /^\s*#/ are ignored
+
+    url: url of a text file
+    returns: list of urls, default schema is https
+    """
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise RuntimeError(f'Could not fetch the list of servers: {url!r} => {response!r}')
+    available_servers = []
+    for line in response.text.splitlines():
+        line = line.strip(string.whitespace + '-')
+        if line.startswith('#') or not line:
+            continue
+        if not line.startswith('http'):
+            line = 'https://' + line  # default schema
+        available_servers.append(line)
+    return available_servers
 
 
 ADDRESS_TYPE = AddressType()
