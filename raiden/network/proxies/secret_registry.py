@@ -16,7 +16,7 @@ from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.utils import compare_versions, pex, privatekey_to_address, sha3, typing
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -30,10 +30,11 @@ class SecretRegistry:
         if not is_binary_address(secret_registry_address):
             raise InvalidAddress('Expected binary address format for secret registry')
 
+        self.contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
         check_address_has_code(jsonrpc_client, secret_registry_address, CONTRACT_SECRET_REGISTRY)
 
         proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_SECRET_REGISTRY),
+            self.contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
             to_normalized_address(secret_registry_address),
         )
 
@@ -122,7 +123,7 @@ class SecretRegistry:
             from_block: typing.BlockSpecification = 0,
             to_block: typing.BlockSpecification = 'latest',
     ) -> StatelessFilter:
-        event_abi = CONTRACT_MANAGER.get_event_abi(
+        event_abi = self.contract_manager.get_event_abi(
             CONTRACT_SECRET_REGISTRY,
             EVENT_SECRET_REVEALED,
         )

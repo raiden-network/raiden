@@ -15,7 +15,7 @@ from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_p
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
 from scenario_player.exceptions import ScenarioTxError
 
 log = structlog.get_logger(__name__)
@@ -87,7 +87,8 @@ def wait_for_txs(client, txhashes, timeout=360):
 
 def get_or_deploy_token(client: JSONRPCClient, scenario: dict) -> ContractProxy:
     """ Deploy or reuse  """
-    token_contract = CONTRACT_MANAGER.get_contract(CONTRACT_CUSTOM_TOKEN)
+    contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
+    token_contract = contract_manager.get_contract(CONTRACT_CUSTOM_TOKEN)
 
     token_config = scenario.get('token', {})
     if not token_config:
@@ -115,7 +116,7 @@ def get_or_deploy_token(client: JSONRPCClient, scenario: dict) -> ContractProxy:
 
     token_ctr = client.deploy_solidity_contract(
         'CustomToken',
-        CONTRACT_MANAGER._contracts,
+        contract_manager._contracts,
         constructor_parameters=(0, decimals, name, symbol),
         confirmations=1,
 

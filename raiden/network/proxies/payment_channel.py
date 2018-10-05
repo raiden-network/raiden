@@ -10,7 +10,7 @@ from raiden.network.proxies.token_network import ChannelDetails
 from raiden.utils import typing
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
 
 
 class PaymentChannel:
@@ -20,6 +20,7 @@ class PaymentChannel:
             channel_identifier: typing.ChannelID,
     ):
 
+        self.contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
         if channel_identifier < 0 or channel_identifier > UINT256_MAX:
             raise ValueError('channel_identifier {} is not a uint256'.format(channel_identifier))
 
@@ -33,7 +34,10 @@ class PaymentChannel:
         if not len(events) > 0:
             raise ValueError('Channel is non-existing.')
 
-        event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
+        event = decode_event(
+            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            events[-1],
+        )
         participant1 = decode_hex(event['args']['participant1'])
         participant2 = decode_hex(event['args']['participant2'])
 
@@ -81,7 +85,10 @@ class PaymentChannel:
         assert len(events) > 0, 'No matching ChannelOpen event found.'
 
         # we want the latest event here, there might have been multiple channels
-        event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
+        event = decode_event(
+            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            events[-1],
+        )
         return event['args']['settle_timeout']
 
     def close_block_number(self) -> typing.Optional[int]:
@@ -100,7 +107,10 @@ class PaymentChannel:
             return None
 
         assert len(events) == 1
-        event = decode_event(CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[0])
+        event = decode_event(
+            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            events[0],
+        )
         return event['blockNumber']
 
     def opened(self) -> bool:
