@@ -313,6 +313,7 @@ def create_apps(
                             'retry_interval': retry_interval,
                             'server': local_matrix_url,
                             'server_name': 'matrix.local.raiden',
+                            'available_servers': [],
                             'private_rooms': private_rooms,
                         },
                     },

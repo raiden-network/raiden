@@ -50,11 +50,7 @@ class App:  # pylint: disable=too-few-public-methods
                 'throttle_fill_rate': DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
             },
             'matrix': {
-                'available_servers': [
-                    'https://transport01.raiden.network',
-                    'https://transport02.raiden.network',
-                    'https://transport03.raiden.network',
-                ],
+                'available_servers': None,
                 'discovery_room': 'discovery',
                 'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
                 'retry_interval': DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
