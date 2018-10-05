@@ -95,3 +95,57 @@ class AssertTask(ChannelActionTask):
                     f'Is: "{response_dict[field]}" '
                     f'Channel: {response_dict}',
                 )
+
+
+class AssertAllTask(ChannelActionTask):
+    _name = 'assert_all'
+    _url_template = '{protocol}://{target_host}/api/1/channels/{token_address}'
+    _method = 'get'
+
+    @property
+    def _url_params(self):
+        return dict(token_address=self._runner.token_address)
+
+    def _process_response(self, response_dict: dict):
+        response_dict = super()._process_response(response_dict)
+        channel_count = len(response_dict)
+        for field in ['balance', 'total_deposit', 'state']:
+            # The task parameter field names are the plural of the channel field names
+            assert_field = f'{field}s'
+            if assert_field not in self._config:
+                continue
+            try:
+                channel_field_values = [channel[field] for channel in response_dict]
+            except KeyError:
+                raise ScenarioAssertionError(
+                    f'Field "{field}" is missing in at least one channel: {response_dict}',
+                )
+            assert_field_value_count = len(self._config[assert_field])
+            if assert_field_value_count != channel_count:
+                direction = ['many', 'few'][assert_field_value_count < channel_count]
+                raise ScenarioAssertionError(
+                    f'Assertion field "{field}" has too {direction} values. '
+                    f'Have {channel_count} channels but {assert_field_value_count} values.',
+                )
+            channel_field_values_all = channel_field_values[:]
+            for value in self._config[assert_field]:
+                try:
+                    channel_field_values.remove(value)
+                except ValueError:
+                    channel_field_values_str = ", ".join(
+                        str(val) for val in channel_field_values_all,
+                    )
+                    assert_field_values_str = ', '.join(
+                        str(val) for val in self._config[assert_field],
+                    )
+                    raise ScenarioAssertionError(
+                        f'Expected value "{value}" for field "{field}" not found in any channel. '
+                        f'Existing values: {channel_field_values_str} '
+                        f'Expected values: {assert_field_values_str}'
+                        f'Channels: {response_dict}',
+                    ) from None
+            if len(channel_field_values) != 0:
+                raise ScenarioAssertionError(
+                    f'Value mismatch for field "{field}". '
+                    f'Not all values consumed, remaining: {channel_field_values}',
+                )
