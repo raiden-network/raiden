@@ -415,9 +415,13 @@ def get_matrix_servers(url: str) -> List[str]:
     url: url of a text file
     returns: list of urls, default schema is https
     """
-    response = requests.get(url)
-    if response.status_code != 200:
-        raise RuntimeError(f'Could not fetch the list of servers: {url!r} => {response!r}')
+    try:
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise requests.RequestException('Response: {response!r}')
+    except requests.RequestException as ex:
+        raise RuntimeError(f'Could not fetch matrix servers list: {url!r} => {ex!r}') from ex
+
     available_servers = []
     for line in response.text.splitlines():
         line = line.strip(string.whitespace + '-')
