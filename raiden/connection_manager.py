@@ -8,7 +8,6 @@ from gevent.lock import Semaphore
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import NetworkType
 from raiden.exceptions import (
     DepositMismatch,
     DepositOverLimit,
@@ -23,6 +22,7 @@ from raiden.exceptions import (
 from raiden.transfer import views
 from raiden.utils import pex, typing
 from raiden.utils.typing import Address
+from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

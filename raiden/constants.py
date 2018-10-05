@@ -21,11 +21,6 @@ class EthClient(Enum):
     TESTER = 3
 
 
-class NetworkType(Enum):
-    MAIN = 1
-    TEST = 2
-
-
 DISCOVERY_TX_GAS_LIMIT = 76000
 
 

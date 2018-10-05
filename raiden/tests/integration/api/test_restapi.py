@@ -7,7 +7,6 @@ from eth_utils import is_checksum_address, to_canonical_address, to_checksum_add
 from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
-from raiden.constants import NetworkType
 from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import assert_dicts_are_equal
@@ -20,6 +19,7 @@ from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
+    NetworkType,
 )
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines

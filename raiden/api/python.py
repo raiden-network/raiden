@@ -5,7 +5,6 @@ from eth_utils import is_binary_address, to_checksum_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
-from raiden.constants import NetworkType
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
@@ -30,6 +29,7 @@ from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
+from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
