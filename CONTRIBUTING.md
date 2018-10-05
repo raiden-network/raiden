@@ -206,46 +206,30 @@ Flake8 will warn you for 99 characters which is the hard limit on the max
 length. Try not to go above it. We also have a soft limit on 80 characters but
 that is not enforced and is there just to encourage short lines.
 
-**Breaking function definitions when line is above 99 characters**
+**Function definitions formatting**
 
-Always put each argument into its own line. Look at the following examples to
-understand:
+The line length must be [smaller than 100 characters](#line-length), so the
+function definition must be splitted when this limited is reached. When
+splitting the function arguments, each must go into its own line, followed by
+the argument type and a comma, and indented with 8 spaces.
 
-The following should be avoided
+The following is not allowed:
+
 ```python
 
-def function_with_many_args(argument1, argument2, argument3, argument4, argument5, argument6, argument7):
+def function_with_many_args(argument1: Type1, argument2: Type2, argument3: Type3) -> ReturnType:
     pass
 ```
 
-and instead you should
+This must be used instead:
 
 ```python
 
 def function_with_many_args(
-        argument1,
-        argument2,
-        argument3,
-        argument4,
-        argument5,
-        argument6,
-        argument7,
-):
-    pass
-```
-
-That means 8 spaces (double indentation after the opening parentheses of the function.
-
-**Functions with type annotations**
-
-When using type annotations the function should be just like in the above section but also include
-the types of the arguments and the return type.
-
-```python
-def a(
-        b: B,
-        c: C,
-) -> D:
+        argument1: Type1,
+        argument2: Type2,
+        argument3: Type3,
+) -> ReturnType:
     pass
 ```
 
@@ -279,33 +263,6 @@ def a(
 ```
 
 The closing quotes should be on their own line. If in doubt consult the PEP.
-
-**Breaking function calls when line is above 99 characters**
-
-Much like in the above example the following should be avoided
-
-```python
-
-function_call_with_many_arguments(argument1, argument2, argument3, argument4, argument5, argument6, argument7)
-
-```
-
-and instead you should
-
-```python
-
-function_call_with_many_arguments(
-    argument1,
-    argument2,
-    argument3,
-    argument4,
-    argument5,
-    argument6,
-    argument7,
-)
-```
-
-Difference being that you can place the closing parentheses in the next line.
 
 **Usage of single and double quotes**
 
