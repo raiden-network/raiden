@@ -10,13 +10,17 @@ class OpenChannelTask(RaidenAPIActionTask):
 
     @property
     def _request_params(self):
-        params = dict(
-            token_address=self._runner.token_address,
-            partner_address=self._runner.node_to_address[
+        if isinstance(self._config['to'], str) and len(self._config['to']) == 42:
+            partner_address = self._config['to']
+        else:
+            partner_address = self._runner.node_to_address[
                 self._runner.raiden_nodes[
                     self._config['to']
                 ]
-            ],
+            ]
+        params = dict(
+            token_address=self._runner.token_address,
+            partner_address=partner_address,
         )
         total_deposit = self._config.get('total_deposit')
         if total_deposit is not None:
@@ -30,13 +34,18 @@ class ChannelActionTask(RaidenAPIActionTask):
 
     @property
     def _url_params(self):
-        return dict(
-            token_address=self._runner.token_address,
-            partner_address=self._runner.node_to_address[
+        if isinstance(self._config['to'], str) and len(self._config['to']) == 42:
+            partner_address = self._config['to']
+        else:
+            partner_address = self._runner.node_to_address[
                 self._runner.raiden_nodes[
                     self._config['to']
                 ]
-            ],
+            ]
+
+        return dict(
+            token_address=self._runner.token_address,
+            partner_address=partner_address,
         )
 
 
