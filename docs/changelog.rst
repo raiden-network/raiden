@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`2568` Validate the state changes for the Delivered and Processed sender.
 * :bug:`2676` Return an error if an invalid ``joinable_funds_target`` value is provided to the connect endpoint.
 * :bug:`2655` Raiden node will now properly crash if communication with the ethereum node is lost.
 * :bug:`2630` If a smaller deposit than ``total_deposit`` is given to the deposit RPC call then return 409 Conflict and not 200 OK.
