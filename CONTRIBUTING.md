@@ -197,10 +197,9 @@ instead it should be:
 
 Raiden is written in Python and we follow the official Python style guide
 [PEP8](https://www.python.org/dev/peps/pep-0008/). It is highly recommended to
-use the [flake8](https://pypi.python.org/pypi/flake8) tool in order to
-automatically determine any and all style violations. The customizeable part of
-flake can be seen in the [configuration file](setup.cfg). For all the rest
-which are not configurable here is some general guidelines.
+use the [linting tools](requirements-lint.txt) in order to automatically
+determine any and all style violations. The customizable part of pylint is at
+[.pylint.rc](.pylint.rc).
 
 **Line Length**
 Flake8 will warn you for 99 characters which is the hard limit on the max
