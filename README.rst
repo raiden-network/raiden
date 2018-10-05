@@ -22,16 +22,9 @@ Please refer to the `Installation section`_ in the official docs.
 
 .. _Installation section: https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html#installation
 
-
-Ropsten testnet
+Smart Contracts
 ---------------
 
-These are the currently deployed raiden contract addresses for the Ropsten testnet:
+The smart contracts are available in the `raiden-contracts`_ repo.
 
-* Token Network Registry Contract: 0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584_
-* Secret Registry Contract: 0xD1B506A716B50069Ac3C990e86253C645b61633D_
-* Endpoint Registry Contract: 0x81F7cC4F76Bf16a21a5d1ABfDfD1FB503E430368_
-
-.. _0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584: https://ropsten.etherscan.io/address/0xDfD10bAe9CCC5EBf11bc6309A0645eFe9f979584#code
-.. _0x81F7cC4F76Bf16a21a5d1ABfDfD1FB503E430368: https://ropsten.etherscan.io/address/0x81F7cC4F76Bf16a21a5d1ABfDfD1FB503E430368#code
-.. _0xD1B506A716B50069Ac3C990e86253C645b61633D: https://ropsten.etherscan.io/address/0xD1B506A716B50069Ac3C990e86253C645b61633D#code
+.. _raiden-contracts: https://github.com/raiden-network/raiden-contracts/
