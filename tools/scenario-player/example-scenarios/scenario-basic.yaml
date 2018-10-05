@@ -106,6 +106,8 @@ scenario:
             - assert: {from: 2, to: 1, total_deposit: 10, balance: 12, state: "opened"}
 
 # More examples:
+#      ## Open channel to arbitrary address
+#      - open_channel: {from: 0, to: '0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa', total_deposit: 10}
 #      - join_network: {funds: 10, initial_channel_target: 3, joinable_funds_target: 0.5}
 #      - parallel:
 #          tasks:
