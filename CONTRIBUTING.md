@@ -214,7 +214,7 @@ that is not enforced and is there just to encourage short lines.
 **Function definitions formatting**
 
 The line length must be [smaller than 100 characters](#python), so the
-function definition must be splitted when this limited is reached. When
+function definition must be split when this limit is reached. When
 splitting the function arguments, each must go into its own line, followed by
 the argument type and a comma, and indented with 8 spaces.
 
@@ -377,7 +377,7 @@ Address = NewType('Address', bytes)
 ```
 
 These type definitions can not be used for type comparisons. To make this
-possible always define a associated alias, which must start with `T_`.
+possible always define an associated alias, which must start with `T_`.
 
 ```python
 T_Address = bytes
