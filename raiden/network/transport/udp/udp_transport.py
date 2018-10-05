@@ -23,7 +23,7 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import QueueIdsToQueues
-from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
+from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils import pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.runnable import Runnable
@@ -545,21 +545,7 @@ class UDPTransport(Runnable):
         protocol, but it's required by this transport to provide the required
         properties.
         """
-        for queue_identifier, events in self._queueids_to_queues.items():
-            if delivered.sender != queue_identifier.recipient:
-                continue
-            if any(delivered.sender == event.recipient for event in events):
-                break
-        else:
-            log.debug(
-                'Delivered message unknown',
-                sender=pex(delivered.sender),
-                message=delivered,
-            )
-            return
-
-        processed = ReceiveDelivered(delivered.sender, delivered.delivered_message_identifier)
-        self.raiden.handle_state_change(processed)
+        on_message(self.raiden, delivered)
 
         message_id = delivered.delivered_message_identifier
         async_result = self.raiden.transport.messageids_to_asyncresults.get(message_id)
