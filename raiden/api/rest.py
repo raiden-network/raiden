@@ -36,6 +36,7 @@ from raiden.api.v1.resources import (
     BlockchainEventsTokenResource,
     ChannelBlockchainEventsResource,
     ChannelsResource,
+    ChannelsResourceByTokenAddress,
     ChannelsResourceByTokenAndPartnerAddress,
     ConnectionsInfoResource,
     ConnectionsResource,
@@ -103,6 +104,10 @@ URLS_V1 = [
     (
         '/channels',
         ChannelsResource,
+    ),
+    (
+        '/channels/<hexaddress:token_address>',
+        ChannelsResourceByTokenAddress,
     ),
     (
         '/channels/<hexaddress:token_address>/<hexaddress:partner_address>',
