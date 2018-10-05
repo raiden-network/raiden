@@ -43,10 +43,6 @@ if True:
 
     from raiden.constants import (
         DISCOVERY_TX_GAS_LIMIT,
-        ID_TO_NETWORKNAME,
-        ID_TO_NETWORK_CONFIG,
-        NetworkType,
-        START_QUERY_BLOCK_KEY,
         SQLITE_MIN_REQUIRED_VERSION,
     )
     from raiden.accounts import AccountManager
@@ -107,6 +103,11 @@ if True:
     from raiden.utils.http import HTTPExecutor
     from raiden.utils.runnable import Runnable
     from raiden_contracts.constants import (
+        ID_TO_NETWORKNAME,
+        ID_TO_NETWORK_CONFIG,
+        ChainId,
+        NetworkType,
+        START_QUERY_BLOCK_KEY,
         CONTRACT_ENDPOINT_REGISTRY,
         CONTRACT_SECRET_REGISTRY,
         CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -686,25 +687,33 @@ def run_app(
 
     blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
-    net_id = blockchain_service.network_id
-    if net_id != network_id:
-        if network_id in ID_TO_NETWORKNAME and net_id in ID_TO_NETWORKNAME:
+    given_numeric_network_id = network_id.value if isinstance(network_id, ChainId) else network_id
+    node_numeric_network_id = blockchain_service.network_id
+    known_given_network_id = given_numeric_network_id in [item.value for item in ChainId]
+    known_node_network_id = node_numeric_network_id in [item.value for item in ChainId]
+    if known_given_network_id:
+        given_network_id = ChainId(given_numeric_network_id)
+    if known_node_network_id:
+        node_network_id = ChainId(node_numeric_network_id)
+
+    if node_numeric_network_id != given_numeric_network_id:
+        if known_given_network_id and known_node_network_id:
             click.secho(
-                f"The chosen ethereum network '{ID_TO_NETWORKNAME[network_id]}' "
-                f"differs from the ethereum client '{ID_TO_NETWORKNAME[net_id]}'. "
+                f"The chosen ethereum network '{ID_TO_NETWORKNAME[given_network_id]}' "
+                f"differs from the ethereum client '{ID_TO_NETWORKNAME[node_network_id]}'. "
                 "Please update your settings.",
                 fg='red',
             )
         else:
             click.secho(
-                f"The chosen ethereum network id '{network_id}' differs from the "
-                f"ethereum client '{net_id}'. "
+                f"The chosen ethereum network id '{given_numeric_network_id}' differs "
+                f"from the ethereum client '{node_numeric_network_id}'. "
                 "Please update your settings.",
                 fg='red',
             )
         sys.exit(1)
 
-    config['chain_id'] = network_id
+    config['chain_id'] = given_numeric_network_id
 
     if network_type == 'main':
         config['network_type'] = NetworkType.MAIN
@@ -717,8 +726,8 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contract_addresses = dict()
-    if net_id in ID_TO_NETWORK_CONFIG:
-        network_config = ID_TO_NETWORK_CONFIG[net_id]
+    if known_node_network_id:
+        network_config = ID_TO_NETWORK_CONFIG[node_network_id]
         not_allowed = (
             NetworkType.TEST not in network_config and
             network_type == NetworkType.TEST
@@ -727,7 +736,7 @@ def run_app(
             click.secho(
                 'The chosen network {} has no test configuration but a test network type '
                 'was given. This is not allowed.'.format(
-                    ID_TO_NETWORKNAME[network_id],
+                    ID_TO_NETWORKNAME[node_network_id],
                 ),
                 fg='red',
             )
@@ -749,7 +758,7 @@ def run_app(
 
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
-            f"There are no known contract addresses for network id '{net_id}'. "
+            f"There are no known contract addresses for network id '{given_numeric_network_id}'. "
             "Please provide them in the command line or in the configuration file.",
             fg='red',
         )
@@ -780,7 +789,7 @@ def run_app(
     database_path = os.path.join(
         datadir,
         f'node_{pex(address)}',
-        f'netid_{net_id}',
+        f'netid_{given_numeric_network_id}',
         f'network_{pex(token_network_registry.address)}',
         f'v{RAIDEN_DB_VERSION}_log.db',
     )
@@ -788,7 +797,7 @@ def run_app(
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(net_id) or net_id,
+            ID_TO_NETWORKNAME.get(given_network_id) or given_numeric_network_id,
             database_path,
         ),
     )
@@ -861,7 +870,7 @@ def run_app(
         click.secho(f'FATAL: {e}', fg='red')
         sys.exit(1)
     except filelock.Timeout:
-        name_or_id = ID_TO_NETWORKNAME.get(network_id, network_id)
+        name_or_id = ID_TO_NETWORKNAME.get(given_network_id, given_numeric_network_id)
         click.secho(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
             f'network id {name_or_id}',
