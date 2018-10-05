@@ -138,7 +138,7 @@ tests to run, just use the appropriate folder
 
 ### Commiting Rules
 
-For an exchaustive guide read [this](http://chris.beams.io/posts/git-commit/)
+For an exhaustive guide read [this](http://chris.beams.io/posts/git-commit/)
 guide. It's all really good advice. Some rules that you should always follow though are:
 
 - A commit title not exceeding 50 characters
