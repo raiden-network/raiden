@@ -1,6 +1,7 @@
 import structlog
 
 from raiden.messages import (
+    Delivered,
     DirectTransfer,
     LockedTransfer,
     LockExpired,
@@ -23,7 +24,12 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import balanceproof_from_envelope
-from raiden.transfer.state_change import ReceiveProcessed, ReceiveTransferDirect, ReceiveUnlock
+from raiden.transfer.state_change import (
+    ReceiveDelivered,
+    ReceiveProcessed,
+    ReceiveTransferDirect,
+    ReceiveUnlock,
+)
 from raiden.utils import random_secret
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -132,6 +138,11 @@ def handle_message_processed(raiden: RaidenService, message: Processed):
     raiden.handle_state_change(processed)
 
 
+def handle_message_delivered(raiden: RaidenService, message: Delivered):
+    processed = ReceiveDelivered(message.sender, message.delivered_message_identifier)
+    raiden.handle_state_change(processed)
+
+
 def on_message(raiden: RaidenService, message: Message):
     """ Return True if the message is known. """
     # pylint: disable=unidiomatic-typecheck
@@ -149,6 +160,8 @@ def on_message(raiden: RaidenService, message: Message):
         handle_message_refundtransfer(raiden, message)
     elif type(message) == LockedTransfer:
         handle_message_lockedtransfer(raiden, message)
+    elif type(message) == Delivered:
+        handle_message_delivered(raiden, message)
     elif type(message) == Processed:
         handle_message_processed(raiden, message)
     else:

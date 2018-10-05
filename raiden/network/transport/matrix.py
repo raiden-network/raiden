@@ -53,7 +53,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNREACHABLE,
     QueueIdsToQueues,
 )
-from raiden.transfer.state_change import ActionChangeNodeNetworkState, ReceiveDelivered
+from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils import pex
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
@@ -681,28 +681,13 @@ class MatrixTransport(Runnable):
         return True
 
     def _receive_delivered(self, delivered: Delivered):
-        for queue_identifier, events in self._queueids_to_queues.items():
-            if delivered.sender != queue_identifier.recipient:
-                continue
-            if any(delivered.sender == event.recipient for event in events):
-                break
-        else:
-            self.log.debug(
-                'Delivered message unknown',
-                sender=pex(delivered.sender),
-                message=delivered,
-            )
-            return
-
-        self._raiden_service.handle_state_change(
-            ReceiveDelivered(delivered.sender, delivered.delivered_message_identifier),
-        )
-
         self.log.debug(
             'Delivered message received',
             sender=pex(delivered.sender),
             message=delivered,
         )
+
+        on_message(self._raiden_service, delivered)
 
     def _receive_message(self, message: SignedMessage):
         self.log.debug(
