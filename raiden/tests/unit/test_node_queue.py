@@ -1,6 +1,8 @@
 import random
 
+from raiden.constants import EMPTY_HASH
 from raiden.tests.utils import factories
+from raiden.tests.utils.messages import make_direct_transfer
 from raiden.transfer import node, state, state_change
 from raiden.transfer.mediated_transfer import events
 from raiden.transfer.queue_identifier import QueueIdentifier
@@ -94,3 +96,49 @@ def test_delivered_processed_message_cleanup():
     msg = 'message must be cleared when a valid delivered is received'
     assert first_message not in message_queue, msg
     assert second_message in message_queue, msg
+
+
+def test_channel_closed_must_clear_ordered_messages(
+        chain_id,
+        chain_state,
+        payment_network_state,
+        token_network_state,
+        netting_channel_state,
+):
+    recipient = netting_channel_state.partner_state.address
+    channel_identifier = netting_channel_state.identifier
+    message_identifier = random.randint(0, 2 ** 16)
+    amount = 10
+
+    queue_identifier = QueueIdentifier(
+        recipient,
+        channel_identifier,
+    )
+
+    # Regression test:
+    # The code delivered_message handler worked only with a queue of one
+    # element
+    message = make_direct_transfer(
+        message_identifier=message_identifier,
+        registry_address=payment_network_state.address,
+        token=token_network_state.token_address,
+        channel_identifier=channel_identifier,
+        transferred_amount=amount,
+        recipient=recipient,
+    )
+
+    chain_state.queueids_to_queues[queue_identifier] = [message]
+
+    closed = state_change.ContractReceiveChannelClosed(
+        transaction_hash=EMPTY_HASH,
+        transaction_from=recipient,
+        token_network_identifier=token_network_state.address,
+        channel_identifier=channel_identifier,
+        block_number=1,
+    )
+
+    iteration = node.handle_state_change(
+        chain_state,
+        closed,
+    )
+    assert queue_identifier not in iteration.new_state.queueids_to_queues
