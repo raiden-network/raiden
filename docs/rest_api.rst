@@ -515,6 +515,9 @@ Connection Management
    :reqjson int initial_channel_target: Number of channels to open proactively.
    :reqjson float joinable_funds_target: Fraction of funds that will be used to join channels opened by other participants.
 
+   ..note::
+   Currently it is possible to join a network several times through the API in the period before the first join is finalized. This is due to the fact that it takes some time to carry out blockchain transactions associated with opening several channels. Please be aware of this when using this endpoint since interrupting a long running API call can result in the initial API call not being completed.
+
 .. http:delete:: /api/(version)/connections/(token_address)
 
    Leave a token network. The request will only return once all blockchain calls for closing/settling a channel have completed.
@@ -545,6 +548,9 @@ Connection Management
    :statuscode 200: For successfully leaving a token network
    :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
+
+   ..note::
+   Currently it is possible to leave a network several times through the API in the period before the initial leave action is finalized. This is due to the fact that it takes some time to carry out blockchain transactions associated with closing and settling several channels. Please be aware of this when using this endpoint since interrupting a long running API call can result in the initial API call not being completed.
 
 Payments
 ========
