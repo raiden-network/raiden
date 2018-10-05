@@ -1,0 +1,46 @@
+settings:
+  gas_price: "fast"
+
+
+token:
+
+nodes:
+  commands:
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 4
+    template: "localhost:50{:02d}"
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Setting up a network"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 10, expected_http_status: 201}
+            - open_channel: {from: 0, to: 2, total_deposit: 10, expected_http_status: 201}
+            - open_channel: {from: 1, to: 2, total_deposit: 10, expected_http_status: 201}
+
+      - serial:
+          name: "Checking the network"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 0, to: 2, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 10, balance: 10, state: "opened"}
+
+      - serial:
+          name: "Node Nr. 4 joins a network after having left it and after settlement of all channels took place"
+          tasks:
+            - join_network: {from: 3, funds: 100, initial_channel_target: 3, joinable_funds_target: 0.4, expected_http_status: 204}
+            - wait: 10
+            - leave_network: {from: 3}
+            - assert: {from: 3, to: 0, expected_http_status: 404}
+            - assert: {from: 3, to: 1, expected_http_status: 404}
+            - assert: {from: 3, to: 2, expected_http_status: 404}
+            - join_network: {from: 3, funds: 100, initial_channel_target: 3, joinable_funds_target: 0.4, expected_http_status: 204}
+            - assert: {from: 3, to: 0, total_deposit: 20, balance: 20, state: "opened"} #this should be different channels with different channel identifier than above?!
+            - assert: {from: 3, to: 1, total_deposit: 20, balance: 20, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 20, balance: 20, state: "opened"}
