@@ -728,7 +728,7 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contract_addresses = dict()
-    if known_node_network_id:
+    if node_network_id in ID_TO_NETWORK_CONFIG:
         network_config = ID_TO_NETWORK_CONFIG[node_network_id]
         not_allowed = (
             NetworkType.TEST not in network_config and

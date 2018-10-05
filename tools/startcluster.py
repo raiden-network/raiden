@@ -6,9 +6,9 @@ import tempfile
 from eth_utils import remove_0x_prefix
 from web3 import HTTPProvider, Web3
 
-from raiden.constants import RAIDENTEST_CHAINID
 from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockchain
 from raiden.utils import privatekey_to_address, sha3
+from raiden_contracts.constants import ChainId
 
 NUM_GETH_NODES = 3
 NUM_RAIDEN_ACCOUNTS = 10
@@ -59,7 +59,7 @@ def main():
         DEFAULT_ACCOUNTS,
         geth_nodes,
         tmpdir,
-        RAIDENTEST_CHAINID,
+        ChainId.SMOKETEST.value,
         verbosity,
         random_marker,
     )
