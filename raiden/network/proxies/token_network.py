@@ -29,6 +29,7 @@ from raiden.network.proxies import Token
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
+from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.utils import compare_versions, pex, privatekey_to_address, typing
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -37,6 +38,7 @@ from raiden_contracts.constants import (
     ParticipantInfoIndex,
 )
 from raiden_contracts.contract_manager import ContractManager
+from raiden_libs.utils.signing import eth_recover
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -130,7 +132,7 @@ class TokenNetwork:
 
         Args:
             partner: The peer to open the channel with.
-            settle_timeout: The settle timout to use for this channel.
+            settle_timeout: The settle timeout to use for this channel.
 
         Returns:
             The ChannelID of the new netting channel.
@@ -711,11 +713,53 @@ class TokenNetwork:
         }
         log.debug('updateNonClosingBalanceProof called', **log_details)
 
+        data_that_was_signed = pack_balance_proof(
+            nonce=nonce,
+            balance_hash=balance_hash,
+            additional_hash=additional_hash,
+            channel_identifier=channel_identifier,
+            token_network_identifier=self.address,
+            chain_id=self.proxy.contract.functions.chain_id().call(),
+        )
+
+        try:
+            signer_address = to_canonical_address(eth_recover(
+                data=data_that_was_signed,
+                signature=closing_signature,
+            ))
+
+            # InvalidSignature is raised by eth_utils.eth_recover if signature
+            # is not bytes or has the incorrect length
+            #
+            # ValueError is raised if the PublicKey instantiation failed, let it
+            # propagate because it's a memory pressure problem.
+            #
+            # Exception is raised if the public key recovery failed.
+        except Exception:  # pylint: disable=broad-except
+            msg = "Couldn't verify the balance proof signature"
+            log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
+            raise RaidenUnrecoverableError(msg)
+
+        if signer_address != partner:
+            msg = 'Invalid balance proof signature'
+            log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
+            raise RaidenUnrecoverableError(msg)
+
         self._check_for_outdated_channel(
             self.node_address,
             partner,
             channel_identifier,
         )
+
+        channel_closed = self.channel_is_closed(
+            participant1=self.node_address,
+            participant2=partner,
+            channel_identifier=channel_identifier,
+        )
+        if channel_closed is False:
+            msg = 'Channel is not in a closed state'
+            log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
+            raise RaidenUnrecoverableError(msg)
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
@@ -733,15 +777,18 @@ class TokenNetwork:
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            channel_closed = self.channel_is_closed(
+
+            # This should never happen if the settlement window and gas price
+            # estimation is done properly
+            channel_settled = self.channel_is_settled(
                 participant1=self.node_address,
                 participant2=partner,
                 channel_identifier=channel_identifier,
             )
-            if channel_closed is False:
-                msg = 'Channel is not in a closed state'
+            if channel_settled is True:
+                msg = 'Channel is settled'
                 log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-                raise RaidenUnrecoverableError(msg)
+                raise RaidenRecoverableError(msg)
 
             msg = 'Update NonClosing balance proof'
             log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
