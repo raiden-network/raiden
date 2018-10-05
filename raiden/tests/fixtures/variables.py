@@ -5,7 +5,6 @@ import random
 import pytest
 from eth_utils import denoms, remove_0x_prefix, to_normalized_address
 
-from raiden.constants import NetworkType
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_RETRY_TIMEOUT,
@@ -14,7 +13,11 @@ from raiden.settings import (
 )
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import privatekey_to_address, sha3
-from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
+from raiden_contracts.constants import (
+    TEST_SETTLE_TIMEOUT_MAX,
+    TEST_SETTLE_TIMEOUT_MIN,
+    NetworkType,
+)
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)

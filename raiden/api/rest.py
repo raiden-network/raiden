@@ -47,7 +47,6 @@ from raiden.api.v1.resources import (
     TokensResource,
     create_blueprint,
 )
-from raiden.constants import NetworkType
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -83,6 +82,7 @@ from raiden.utils import (
     typing,
 )
 from raiden.utils.runnable import Runnable
+from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)
 

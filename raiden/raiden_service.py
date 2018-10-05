@@ -14,7 +14,7 @@ from raiden import constants, routing, waiting
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT, NetworkType
+from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
 from raiden.exceptions import (
     InvalidAddress,
     InvalidDBData,
@@ -55,6 +55,7 @@ from raiden.utils import (
     typing,
 )
 from raiden.utils.runnable import Runnable
+from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
