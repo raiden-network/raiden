@@ -15,7 +15,7 @@ from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.utils import compare_versions, pex, privatekey_to_address
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -31,8 +31,9 @@ class Discovery:
             jsonrpc_client,
             discovery_address,
     ):
+        contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
         contract = jsonrpc_client.new_contract(
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
+            contract_manager.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
             to_normalized_address(discovery_address),
         )
         proxy = ContractProxy(jsonrpc_client, contract)

@@ -36,7 +36,7 @@ from raiden_contracts.constants import (
     ChannelState,
     ParticipantInfoIndex,
 )
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -80,8 +80,9 @@ class TokenNetwork:
 
         check_address_has_code(jsonrpc_client, manager_address, CONTRACT_TOKEN_NETWORK)
 
+        contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
         proxy = jsonrpc_client.new_contract_proxy(
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
             to_normalized_address(manager_address),
         )
 
