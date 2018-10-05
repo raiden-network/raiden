@@ -525,3 +525,94 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
         app0, deposit - amount, [],
         app1, deposit + amount, [],
     )
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_clear_closed_queue(raiden_network, token_addresses, deposit):
+    """ Closing a channel clears the respective message queue. """
+    app0, app1 = raiden_network
+    registry_address = app0.raiden.default_registry.address
+    token_address = token_addresses[0]
+    chain_state0 = views.state_from_app(app0)
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        chain_state0,
+        app0.raiden.default_registry.address,
+        token_address,
+    )
+    token_network = views.get_token_network_by_identifier(
+        chain_state0,
+        token_network_identifier,
+    )
+
+    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+
+    assert channel_identifier in token_network.partneraddresses_to_channels[
+        app1.raiden.address
+    ]
+
+    app1.raiden.transport.stop()
+    app1.raiden.transport.get()
+
+    # make a direct transfer to ensure the nodes have communicated
+    amount = 10
+    payment_identifier = 1337
+    app0.raiden.direct_transfer_async(
+        token_network_identifier,
+        amount,
+        app1.raiden.address,
+        identifier=payment_identifier,
+    )
+
+    # assert the specific queue is present
+    chain_state0 = views.state_from_app(app0)
+    queues0 = views.get_all_messagequeues(chain_state=chain_state0)
+    assert [
+        (queue_id, queue)
+        for queue_id, queue in queues0.items()
+        if queue_id.recipient == app1.raiden.address and
+        queue_id.channel_identifier == channel_identifier and queue
+    ]
+
+    app1.raiden.transport.start(app1.raiden)
+    exception = ValueError('Waiting for transfer received success in the WAL timed out')
+    with gevent.Timeout(seconds=30, exception=exception):
+        waiting.wait_for_transfer_success(
+            app1.raiden,
+            payment_identifier,
+            amount,
+            app1.raiden.alarm.sleep_time,
+        )
+
+    # A ChannelClose event will be generated, this will be polled by both apps
+    RaidenAPI(app1.raiden).channel_close(
+        registry_address,
+        token_address,
+        app0.raiden.address,
+    )
+
+    exception = ValueError('Could not get close event')
+    with gevent.Timeout(seconds=30, exception=exception):
+        waiting.wait_for_close(
+            app1.raiden,
+            registry_address,
+            token_address,
+            [channel_identifier],
+            app1.raiden.alarm.sleep_time,
+        )
+
+    # assert all queues with this partner are gone or empty
+    chain_state0 = views.state_from_app(app0)
+    queues0 = views.get_all_messagequeues(chain_state=chain_state0)
+    assert not [
+        (queue_id, queue)
+        for queue_id, queue in queues0.items()
+        if queue_id.recipient == app1.raiden.address and queue
+    ]
+
+    chain_state1 = views.state_from_app(app1)
+    queues1 = views.get_all_messagequeues(chain_state=chain_state1)
+    assert not [
+        (queue_id, queue)
+        for queue_id, queue in queues1.items()
+        if queue_id.recipient == app0.raiden.address and queue
+    ]
