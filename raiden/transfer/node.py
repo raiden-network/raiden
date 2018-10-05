@@ -507,6 +507,21 @@ def handle_token_network_action(
 
         events = iteration.events
 
+        if type(state_change) == ContractReceiveChannelClosed:
+            # cleanup queue for channel
+            channel_state = views.get_channelstate_by_token_network_identifier(
+                chain_state=chain_state,
+                token_network_id=state_change.token_network_identifier,
+                channel_id=state_change.channel_identifier,
+            )
+            if channel_state:
+                queue_id = QueueIdentifier(
+                    recipient=channel_state.partner_state.address,
+                    channel_identifier=state_change.channel_identifier,
+                )
+                if queue_id in chain_state.queueids_to_queues:
+                    chain_state.queueids_to_queues.pop(queue_id)
+
     return TransitionResult(chain_state, events)
 
 
