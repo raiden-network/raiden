@@ -19,10 +19,8 @@ from raiden.network.transport.udp.udp_utils import (
 )
 from raiden.raiden_service import RaidenService
 from raiden.settings import CACHE_TTL
-from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
-from raiden.transfer.state import QueueIdsToQueues
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils import pex, typing
 from raiden.utils.notifying_queue import NotifyingQueue
@@ -619,8 +617,3 @@ class UDPTransport(Runnable):
     def set_node_network_state(self, node_address: typing.Address, node_state):
         state_change = ActionChangeNodeNetworkState(node_address, node_state)
         self.raiden.handle_state_change(state_change)
-
-    @property
-    def _queueids_to_queues(self) -> QueueIdsToQueues:
-        chain_state = views.state_from_raiden(self.raiden)
-        return views.get_all_messagequeues(chain_state)
