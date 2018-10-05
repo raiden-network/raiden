@@ -50,6 +50,7 @@ class App:  # pylint: disable=too-few-public-methods
                 'throttle_fill_rate': DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
             },
             'matrix': {
+                # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
                 'available_servers': None,
                 'discovery_room': 'discovery',
                 'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
