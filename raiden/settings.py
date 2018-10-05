@@ -1,5 +1,6 @@
 from eth_utils import denoms, to_hex
-from raiden.constants import NetworkType
+
+from raiden_contracts.constants import NetworkType
 
 INITIAL_PORT = 38647
 
