@@ -573,31 +573,21 @@ def test_clear_closed_queue(raiden_network, token_addresses, deposit):
         queue_id.channel_identifier == channel_identifier and queue
     ]
 
-    app1.raiden.transport.start(app1.raiden)
-    exception = ValueError('Waiting for transfer received success in the WAL timed out')
-    with gevent.Timeout(seconds=30, exception=exception):
-        waiting.wait_for_transfer_success(
-            app1.raiden,
-            payment_identifier,
-            amount,
-            app1.raiden.alarm.sleep_time,
-        )
-
     # A ChannelClose event will be generated, this will be polled by both apps
-    RaidenAPI(app1.raiden).channel_close(
+    RaidenAPI(app0.raiden).channel_close(
         registry_address,
         token_address,
-        app0.raiden.address,
+        app1.raiden.address,
     )
 
     exception = ValueError('Could not get close event')
     with gevent.Timeout(seconds=30, exception=exception):
         waiting.wait_for_close(
-            app1.raiden,
+            app0.raiden,
             registry_address,
             token_address,
             [channel_identifier],
-            app1.raiden.alarm.sleep_time,
+            app0.raiden.alarm.sleep_time,
         )
 
     # assert all queues with this partner are gone or empty
