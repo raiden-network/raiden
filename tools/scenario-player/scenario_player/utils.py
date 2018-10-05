@@ -1,5 +1,6 @@
 import time
 import uuid
+from binascii import hexlify
 from collections import deque
 from datetime import datetime
 from itertools import islice
@@ -58,7 +59,7 @@ class DummyStream:
         pass
 
 
-def wait_for_txs(client, txhashes, timeout=180):
+def wait_for_txs(client, txhashes, timeout=360):
     start = time.monotonic()
     outstanding = False
     txhashes = txhashes[:]
@@ -78,7 +79,10 @@ def wait_for_txs(client, txhashes, timeout=180):
             time.sleep(.1)
         time.sleep(.5)
     if len(txhashes):
-        raise ScenarioTxError(f"Timeout waiting for txhashes: {', '.join(txhashes)}")
+        txhashes_str = ', '.join(hexlify(txhash).decode() for txhash in txhashes)
+        raise ScenarioTxError(
+            f"Timeout waiting for txhashes: {txhashes_str}",
+        )
 
 
 def get_or_deploy_token(client: JSONRPCClient, scenario: dict) -> ContractProxy:

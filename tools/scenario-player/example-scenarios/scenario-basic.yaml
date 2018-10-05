@@ -106,6 +106,8 @@ scenario:
             - assert: {from: 2, to: 1, total_deposit: 10, balance: 12, state: "opened"}
 
 # More examples:
+#      ## Assert on multiple channels without knowing the explicit peers
+#      - assert_all: {from: 0, count: 2, balances: [10, 10], total_deposits: [10, 10], states: ['opened', 'opened']}
 #      ## Open channel to arbitrary address
 #      - open_channel: {from: 0, to: '0xaAaAaAaaAaAaAaaAaAAAAAAAAaaaAaAaAaaAaaAa', total_deposit: 10}
 #      - join_network: {funds: 10, initial_channel_target: 3, joinable_funds_target: 0.5}
