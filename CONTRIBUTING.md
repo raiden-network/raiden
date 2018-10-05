@@ -12,7 +12,6 @@ and what are the requirements for a Pull Request to be opened against Raiden.
     - [Coding Style](#coding-style)
     - [Workflow](#workflow)
 
-
 ## Contributing
 
 There are two ways you can contribute to the development. You can either open
@@ -25,14 +24,17 @@ then you should open an issue against the repository. All issues should
 contain:
 
 **For Feature Requests:**
-- A description of what you would like to see implemented
-- An explanation of why you believe this would make a good addition to Raiden
+
+- A description of what you would like to see implemented.
+- An explanation of why you believe this would make a good addition to Raiden.
 
 **For Bugs:**
-- A short description of the problem
-- Detailed description of your system, raiden version, geth version, solidity version e.t.c.
-- What was the exact unexpected thing that occured
-- What you were expecting to happen instead
+
+- A short description of the problem.
+- Detailed description of your system, raiden version, geth version, solidity
+  version e.t.c.
+- What was the exact unexpected thing that occured.
+- What you were expecting to happen instead.
 
 ### Creating a Pull Request
 
@@ -40,7 +42,8 @@ If you have some coding abilities and would like to contribute to the actual
 codebase of Raiden then you can open a Pull Request(PR) against the repository.
 
 All PRs should be:
-- Self-contained
+
+- Self-contained.
 - As short as possible and address a single issue or even a part of an issue.
   Consider breaking long PRs into smaller ones.
 
@@ -171,7 +174,8 @@ In this section we are going to see style rules that should be followed across a
 
 **Line breaks after operators**
 
-For long expressions where we break the expression at the operators the line break should come **after** the operator and not before.
+For long expressions where we break the expression at the operators the line
+break should come **after** the operator and not before.
 
 The following should be avoided:
 
@@ -202,13 +206,14 @@ determine any and all style violations. The customizable part of pylint is at
 [.pylint.rc](.pylint.rc).
 
 **Line Length**
+
 Flake8 will warn you for 99 characters which is the hard limit on the max
 length. Try not to go above it. We also have a soft limit on 80 characters but
 that is not enforced and is there just to encourage short lines.
 
 **Function definitions formatting**
 
-The line length must be [smaller than 100 characters](#line-length), so the
+The line length must be [smaller than 100 characters](#python), so the
 function definition must be splitted when this limited is reached. When
 splitting the function arguments, each must go into its own line, followed by
 the argument type and a comma, and indented with 8 spaces.
@@ -291,8 +296,8 @@ s = "Augusto's computer is awesome"
 
 Use descriptive variable names and avoid short abbreviations.
 
-
 The following is bad:
+
 ```python
 mgr = Manager()
 a = AccountBalanceHolder()
@@ -342,9 +347,11 @@ a tiny change in performance.
 
 Class attributes and functions:
 
-All class members should be private by default and they should start with a leading `_`. Whatever is part of the interface of
-the class should not have the leading underscore. The public interface of the class is what we should be testing in our tests
-and it should be the only way other parts of the code use the class through.
+All class members should be private by default and they should start with a
+leading `_`. Whatever is part of the interface of the class should not have the
+leading underscore. The public interface of the class is what we should be
+testing in our tests and it should be the only way other parts of the code use
+the class through.
 
 Minimal Example:
 
@@ -362,22 +369,24 @@ class Diary(object):
 
 **NewTypes and type comparisons**
 
-For often used types it makes sense to define new types using the `typing.NewType` function.
-New type names should be capitalized.
+For often used types it makes sense to define new types using the
+`typing.NewType` function.  New type names should be capitalized.
+
 ```python
 Address = NewType('Address', bytes)
 ```
 
-These type definitions can not be used for type comparisons. To make this possible always
-define a associated alias, which must start with `T_`.
+These type definitions can not be used for type comparisons. To make this
+possible always define a associated alias, which must start with `T_`.
+
 ```python
 T_Address = bytes
 ```
 
 **typing.Optional convention**
 
-For typing.Optional we follow the convention that if the argument has a default value of `None` then we should omit
-the use of `typing.Optional[]`
+For typing.Optional we follow the convention that if the argument has a default
+value of `None` then we should omit the use of `typing.Optional[]`.
 
 Good Example:
 
@@ -392,7 +401,6 @@ Bad Example:
 
 def foo(a: typing.Optional[int] = None)
 ```
-
 
 #### Solidity
 
@@ -414,13 +422,11 @@ function iDoSomething(uint awesome_argument) {
 }
 ```
 
-
 **Documentation**
 
 Code should be documented. For docstrings the [Google
 conventions](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
 are used.
-
 
 ### Workflow
 
@@ -436,9 +442,16 @@ so and all tests pass your feature/fix will be merged.
 
 #### Updating documentation/spec
 
-If a PR you are working on is updating something in the REST API, then make sure to also update the respective [documentation](https://github.com/raiden-network/raiden/blob/master/docs/rest_api.rst). The documentation update can also be in a different PR but should be taken care of and linked to the initial PR.
+If a PR you are working on is updating something in the REST API, then make
+sure to also update the respective
+[documentation](https://github.com/raiden-network/raiden/blob/master/docs/rest_api.rst).
+The documentation update can also be in a different PR but should be taken care
+of and linked to the initial PR.
 
-If a PR you are working on is making a protocol change then make sure to also update the [specification](https://github.com/raiden-network/spec). The spec update can also be introduced in a different PR but should be taken care of and linked to the initial PR.
+If a PR you are working on is making a protocol change then make sure to also
+update the [specification](https://github.com/raiden-network/spec). The spec
+update can also be introduced in a different PR but should be taken care of and
+linked to the initial PR.
 
 #### Contributing to other people's PRs
 
@@ -471,8 +484,20 @@ Congratulations, you have added to someone else's PR!
 
 #### Integrating Pull Requests
 
-When integrating a succesfull Pull Request into the codebase we have the option of using either a "Rebase and Merge" or to "Create a Merge commit". Unfortunately in Github the default option is to "Create a Merge commit". This is not our preferred option as
-in this way we can't be sure that the result of the merge will also have all tests passing, since there may be other patches merged since the PR opened. But there are many PRs which we definitely know won't have any conflicts and for which enforcing rebase would make no sense and only waste our time. As such we provide the option to use both at our own discretion. So the general guidelines are:
+When integrating a succesfull Pull Request into the codebase we have the option
+of using either a "Rebase and Merge" or to "Create a Merge commit".
+Unfortunately in Github the default option is to "Create a Merge commit". This
+is not our preferred option as in this way we can't be sure that the result of
+the merge will also have all tests passing, since there may be other patches
+merged since the PR opened. But there are many PRs which we definitely know
+won't have any conflicts and for which enforcing rebase would make no sense and
+only waste our time. As such we provide the option to use both at our own
+discretion. So the general guidelines are:
 
-- If there are patches that have been merged to master since the PR was opened, on top of which our current PR may have different behaviour then use **Rebase and Merge**.
-- If there are patches that have been merged to master since the PR was opened which touch documentation, infrastucture or completely unrelated parts of the code then you can freely use **Create a Merge Commit** and save the time of rebasing.
+- If there are patches that have been merged to master since the PR was opened,
+  on top of which our current PR may have different behaviour then use **Rebase
+  and Merge**.
+- If there are patches that have been merged to master since the PR was opened
+  which touch documentation, infrastucture or completely unrelated parts of the
+  code then you can freely use **Create a Merge Commit** and save the time of
+  rebasing.
