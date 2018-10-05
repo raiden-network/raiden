@@ -52,14 +52,11 @@ def test_delivered_message_must_clean_unordered_messages(chain_id):
     assert first_message not in new_queue
 
 
-def test_delivered_processed_message_cleanup(chain_id):
+def test_delivered_processed_message_cleanup():
     recipient = factories.make_address()
     channel_identifier = 1
     secret = factories.random_secret()
 
-    # Regression test:
-    # The code delivered_message handler worked only with a queue of one
-    # element
     first_message = events.SendSecretReveal(
         recipient,
         channel_identifier,
@@ -72,73 +69,28 @@ def test_delivered_processed_message_cleanup(chain_id):
         random.randint(0, 2 ** 16),
         secret,
     )
-
-    # Register 2 messages into the queue
     message_queue = [first_message, second_message]
 
-    # Generate a random message_identifier
     fake_message_identifier = random.randint(0, 2 ** 16)
     node.inplace_delete_message(
         message_queue,
         state_change.ReceiveDelivered(recipient, fake_message_identifier),
     )
+    assert first_message in message_queue, 'invalid message id must be ignored'
+    assert second_message in message_queue, 'invalid message id must be ignored'
 
-    # The queue should have the original 2 messages and
-    # our fake delivered should have been ignored
-    assert first_message in message_queue
-    assert second_message in message_queue
-
-    # Now try to handle delivered with a wrong sender
-    # Generate a random message_identifier
+    invalid_sender_address = factories.make_address()
     node.inplace_delete_message(
         message_queue,
-        state_change.ReceiveDelivered(factories.make_address(), first_message.message_identifier),
+        state_change.ReceiveDelivered(invalid_sender_address, first_message.message_identifier),
     )
-
-    # The queue should have the original 2 messages and
-    # our delivered messages don't match the state change sender
-    assert first_message in message_queue
-    assert second_message in message_queue
-
-    node.inplace_delete_message(
-        message_queue,
-        state_change.ReceiveDelivered(recipient, first_message.message_identifier),
-    )
-
-    assert first_message not in message_queue
-    assert second_message in message_queue
-
-    # Register 2 messages into the queue
-    message_queue = [first_message, second_message]
-
-    # Generate a random message_identifier
-    fake_message_identifier = random.randint(0, 2 ** 16)
-    node.inplace_delete_message(
-        message_queue,
-        state_change.ReceiveProcessed(recipient, fake_message_identifier),
-    )
-
-    # The queue should have the original 2 messages and
-    # our fake delivered should have been ignored
-    assert first_message in message_queue
-    assert second_message in message_queue
-
-    # Now try to handle delivered with a wrong sender
-    # Generate a random message_identifier
-    node.inplace_delete_message(
-        message_queue,
-        state_change.ReceiveProcessed(factories.make_address(), first_message.message_identifier),
-    )
-
-    # The queue should have the original 2 messages and
-    # our delivered messages don't match the state change sender
-    assert first_message in message_queue
-    assert second_message in message_queue
+    assert first_message in message_queue, 'invalid sender id must be ignored'
+    assert second_message in message_queue, 'invalid sender id must be ignored'
 
     node.inplace_delete_message(
         message_queue,
         state_change.ReceiveProcessed(recipient, first_message.message_identifier),
     )
-
-    assert first_message not in message_queue
-    assert second_message in message_queue
+    msg = 'message must be cleared when a valid delivered is received'
+    assert first_message not in message_queue, msg
+    assert second_message in message_queue, msg
