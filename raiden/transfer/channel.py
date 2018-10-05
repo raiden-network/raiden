@@ -74,7 +74,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import pex, typing
-from raiden_libs.exceptions import InvalidSignature
 from raiden_libs.utils.signing import eth_recover
 
 # This should be changed to `Union[str, MerkleTreeState]`
@@ -242,13 +241,18 @@ def is_valid_signature(
     )
 
     try:
-        # ValueError is raised if the PublicKey instantiation failed, let it
-        # propagate because it's a memory pressure problem
         signer_address = to_canonical_address(eth_recover(
             data=data_that_was_signed,
             signature=balance_proof.signature,
         ))
-    except InvalidSignature:
+        # InvalidSignature is raised by eth_utils.eth_recover if signature
+        # is not bytes or has the incorrect length
+        #
+        # ValueError is raised if the PublicKey instantiation failed, let it
+        # propagate because it's a memory pressure problem.
+        #
+        # Exception is raised if the public key recovery failed.
+    except Exception:
         msg = 'Signature invalid, could not be recovered.'
         return (False, msg)
 
