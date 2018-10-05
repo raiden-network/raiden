@@ -20,9 +20,9 @@ Furthermore this release shows a slightly simplified version of the Raiden API, 
 
 The restrictions made to the Red Eyes release in order to mitigate risk in case of unexpected security issues are the following:
 
-- A user cannot create a token network. (There will only be a single token network)
-- The combined deposit of one channel is limited to 0.15 ETH. So 0.075 ETH worth of tokens per node.
-- The total combined deposit of all channels across the whole network is limited to 250 ETH.
+- A user cannot create a token network. `W-ETH <https://weth.io/>`_ will be the only registered token.
+- The combined deposit of one channel is limited to 0.15 W-ETH. So 0.075 W-ETH worth of tokens per node.
+- The total combined deposit of all channels across the whole network is limited to 250 W-ETH.
 
 Below is a list of features included in the Red Eyes release along with a list of things that are scheduled for future releases and limitations of the release.
 
@@ -33,7 +33,7 @@ The Red Eyes release supports
 - Direct and mediated (multi hop) transfers.
 - Automatically joining a token network and connecting to peers.
 - A :doc:`REST API <rest_api>` with endpoints for all functionalities.
-- Possibility to create token networks for all ERC20 tokens.
+- Only a token network for the `W-ETH <https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2>`_ token.
 - Restartability in case of a proper shutdown of the Raiden node.
 - Topping up open channels
 
