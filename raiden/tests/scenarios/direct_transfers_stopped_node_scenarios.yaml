@@ -11,8 +11,8 @@ token:
 
 nodes:
   commands:
-    start: "ssh ubuntu@testnet.raiden.network ssh raiden-0{:03d} docker start raiden"
-    stop: "ssh ubuntu@testnet.raiden.network ssh raiden-0{:03d} docker stop raiden"
+    start: "ssh ubuntu@testnet.raiden.network ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no raiden_0{:03d} docker start -t 99999 raiden"
+    stop: "ssh ubuntu@testnet.raiden.network ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no raiden_0{:03d} docker stop -t 99999 raiden"
     #kill: "docker kill raiden_{:02d}"
     #stop: "pkill -f '127.0.0.1:50{:02d}'"
     #kill: "pkill -9 -f '127.0.0.1:50{:02d}'"

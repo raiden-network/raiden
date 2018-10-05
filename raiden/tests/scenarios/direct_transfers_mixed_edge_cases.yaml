@@ -9,7 +9,6 @@ settings:
 token:
   decimals: 18
 
-
 nodes:
   commands:
     #start: "docker start raiden_{:02d}"
@@ -22,19 +21,6 @@ nodes:
     first: 1
     last: 3
     template: "raiden-0{:03d}.testnet.raiden.network"
-
-## Available task types:
-## - serial
-## - parallel
-## - open_channel
-## - close_channel
-## - deposit
-## - transfer
-## - stop_node
-## - kill_node
-## - start_node
-## - assert
-## - wait
 
 scenario:
   serial:
@@ -72,6 +58,12 @@ scenario:
           name: "Make transfer to node with no path"
           tasks:
             - transfer: {from: 0, to: 2, amount: 1, expected_http_status: 409}
+      - serial:
+          name: "Make transfers to node with invalid address"
+          tasks:
+            - transfer: {from: 0, to: '0x02f4b6bc65561a792836212ebc54434db0ab759a', amount: 1, expected_http_status: 400}
+            - transfer: {from: 0, to: '0x02f4b6bc65561a792836212ebc54434db0ab759a13', amount: 1, expected_http_status: 400}
+            - transfer: {from: 0, to: '0x02f4b6bc65561a792836212ebc54434db0', amount: 1, expected_http_status: 400}
       - serial:
           name: "Make transfer with entire balance"
           tasks:
