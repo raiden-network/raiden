@@ -31,9 +31,9 @@ scenario:
             - assert: {from: 1, to: 2, total_deposit: 10, balance: 10, state: "opened"}
 
       - serial:
-          name: "Node Nr. 4 joins a network with 100 funds and joinable_funds_target set to 1"
+          name: "Node Nr. 4 joins with a prime number funds and default arguments"
           tasks:
-            - join_network: {from: 3, funds: 100, joinable_funds_target: 1, expected_http_status: 204}
-            - assert: {from: 3, to: 0, total_deposit: 0, balance: 0, state: "opened"}
-            - assert: {from: 3, to: 1, total_deposit: 0, balance: 0, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+            - join_network: {from: 3, funds: 97, expected_http_status: 204} #it gets rounded as expected 19 each, since 0.6 * 97 / 3 = 19.4
+            - assert: {from: 3, to: 0, total_deposit: 19, balance: 19, state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 19, balance: 19, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 19, balance: 19, state: "opened"}

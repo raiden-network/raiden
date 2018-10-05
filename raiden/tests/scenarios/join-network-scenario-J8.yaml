@@ -13,6 +13,7 @@ nodes:
     last: 4
     template: "localhost:50{:02d}"
 
+
 scenario:
   serial:
     tasks:
@@ -31,9 +32,10 @@ scenario:
             - assert: {from: 1, to: 2, total_deposit: 10, balance: 10, state: "opened"}
 
       - serial:
-          name: "Node Nr. 4 joins a network with 100 funds and joinable_funds_target set to 1"
+          name: "Node Nr. 4 joins with initial_channel_target set to 0"
           tasks:
-            - join_network: {from: 3, funds: 100, joinable_funds_target: 1, expected_http_status: 204}
-            - assert: {from: 3, to: 0, total_deposit: 0, balance: 0, state: "opened"}
-            - assert: {from: 3, to: 1, total_deposit: 0, balance: 0, state: "opened"}
-            - assert: {from: 3, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+            - join_network: {from: 3, funds: 100, initial_channel_target: 0, expected_http_status: 204} # It opens with default values
+            - assert: {from: 3, to: 0, total_deposit: 20, balance: 20, state: "opened"}
+            - assert: {from: 3, to: 1, total_deposit: 20, balance: 20, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 20, balance: 20, state: "opened"}
+              #TODO: write new test when bug #2675 is fixed

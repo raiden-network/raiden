@@ -5,9 +5,6 @@ token:
 
 nodes:
   commands:
-    #start: "docker start raiden_{:02d}"
-    #stop: "docker stop raiden_{:02d}"
-    #kill: "docker kill raiden_{:02d}"
     stop: "pkill -f '127.0.0.1:50{:02d}'"
     kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
     start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
