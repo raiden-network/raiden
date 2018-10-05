@@ -2,8 +2,6 @@ from enum import Enum
 
 from eth_utils import to_checksum_address
 
-from raiden_contracts.constants import ID_TO_NETWORKNAME
-
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 
 UINT64_MAX = 2 ** 64 - 1
@@ -41,11 +39,6 @@ EMPTY_HASH = bytes(32)
 EMPTY_SIGNATURE = bytes(65)
 
 START_QUERY_BLOCK_KEY = 'DefaultStartBlock'
-
-NETWORKNAME_TO_ID = {
-    name: id
-    for id, name in ID_TO_NETWORKNAME.items()
-}
 
 MIN_REQUIRED_SOLC = 'v0.4.23'
 NULL_ADDRESS_BYTES = bytes(20)

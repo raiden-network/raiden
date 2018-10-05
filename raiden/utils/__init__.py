@@ -1,21 +1,22 @@
-from binascii import hexlify, unhexlify
 import collections
 import os
+import random
 import re
 import sys
 import time
-import random
-from typing import Tuple, Union, List, Iterable
+from binascii import hexlify, unhexlify
 from itertools import zip_longest
+from typing import Iterable, List, Tuple, Union
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import remove_0x_prefix, is_checksum_address, to_checksum_address
+from eth_utils import is_checksum_address, remove_0x_prefix, to_checksum_address
 
 import raiden
 from raiden import constants
 from raiden.exceptions import InvalidAddress
 from raiden.utils import typing
+from raiden_contracts.constants import ChainId
 from raiden_libs.utils.signing import sha3
 
 
@@ -288,3 +289,7 @@ def optional_address_to_string(address: typing.Address = None) -> typing.Optiona
         return None
 
     return to_checksum_address(address)
+
+
+def networkid_is_known(netid: int) -> bool:
+    return netid in [item.value for item in ChainId]
