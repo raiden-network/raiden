@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`2699` Add ``/channels/<token_address>`` REST-API endpoint to query all node's channels for a specific token
 * :feature:`2568` Validate the state changes for the Delivered and Processed sender.
 * :bug:`2567` Increase default channel reveal timeout to 50 blocks.
 * :bug:`2676` Return an error if an invalid ``joinable_funds_target`` value is provided to the connect endpoint.

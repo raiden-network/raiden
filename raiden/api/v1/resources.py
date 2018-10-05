@@ -53,6 +53,18 @@ class ChannelsResource(BaseResource):
         )
 
 
+class ChannelsResourceByTokenAddress(BaseResource):
+
+    def get(self, **kwargs):
+        """
+        this translates to 'get all channels the node is connected to for the given token address'
+        """
+        return self.rest_api.get_channel_list(
+            registry_address=self.rest_api.raiden_api.raiden.default_registry.address,
+            **kwargs,
+        )
+
+
 class ChannelsResourceByTokenAndPartnerAddress(BaseResource):
 
     patch_schema = ChannelPatchSchema
