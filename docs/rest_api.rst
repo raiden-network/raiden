@@ -177,6 +177,42 @@ Querying Information About Channels and Tokens
    :statuscode 200: Successful query
    :statuscode 500: Internal Raiden node error
 
+.. http:get:: /api/(version)/channels/(token_address)
+
+   Get a list of all unsettled channels for the given token address.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      [
+          {
+              "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
+              "channel_identifier": 20,
+              "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
+              "token_address": "0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8",
+              "balance": 25000000,
+              "total_deposit": 35000000,
+              "state": "opened",
+              "settle_timeout": 100,
+              "reveal_timeout": 30
+          }
+      ]
+
+   :statuscode 200: Successful query
+   :statuscode 400: The given token address is not valid eip55-encoded Ethereum address
+   :statuscode 500: Internal Raiden node error
+
 .. http:get:: /api/(version)/channels/(token_address)/(partner_address)
 
    Query information about one of your channels. The channel is specified by the address of the token and the partner's address.
@@ -208,9 +244,8 @@ Querying Information About Channels and Tokens
       }
 
    :statuscode 200: Successful query
-   :statuscode 404:
-    - The given token and partner addresses are not valid eip55-encoded Ethereum addresses or
-    - Channel does not exist
+   :statuscode 400: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
+   :statuscode 404: Channel does not exist
    :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/tokens
