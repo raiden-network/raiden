@@ -101,14 +101,14 @@ def test_participant_selection(raiden_network, token_addresses, skip_if_tester):
             registry_address=registry_address,
             token_address=token_address,
             funds=100,
-            joinable_funds_target=2
+            joinable_funds_target=2,
         )
     with pytest.raises(InvalidAmount):
         RaidenAPI(raiden_network[0].raiden).token_network_connect(
             registry_address=registry_address,
             token_address=token_address,
             funds=100,
-            joinable_funds_target=-1
+            joinable_funds_target=-1,
         )
 
     # connect the other nodes
