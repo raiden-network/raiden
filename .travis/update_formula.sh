@@ -9,7 +9,7 @@ clone_repo() {
 }
 
 setup_git() {
-    openssl aes-256-cbc -K $encrypted_d89a2734327d_key -iv $encrypted_d89a2734327d_iv -in ../.travis/homebrew-raiden_github_deploy.enc -out ${HOME}/homebrew-raiden_github_deploy -d
+    openssl aes-256-cbc -K $encrypted_d89a2734327d_key -iv $encrypted_d89a2734327d_iv -in .travis/homebrew-raiden_github_deploy.enc -out ${HOME}/homebrew-raiden_github_deploy -d
     # Configure SSH key and disable host key checking to avoid hanging at the prompt
     git config --global core.sshCommand "ssh -i ~/homebrew-raiden_github_deploy -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
     git config --global user.email "contact@raiden.network"
