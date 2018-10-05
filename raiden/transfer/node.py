@@ -507,22 +507,28 @@ def handle_token_network_action(
 
         events = iteration.events
 
-        if type(state_change) == ContractReceiveChannelClosed:
-            # cleanup queue for channel
-            channel_state = views.get_channelstate_by_token_network_identifier(
-                chain_state=chain_state,
-                token_network_id=state_change.token_network_identifier,
-                channel_id=state_change.channel_identifier,
-            )
-            if channel_state:
-                queue_id = QueueIdentifier(
-                    recipient=channel_state.partner_state.address,
-                    channel_identifier=state_change.channel_identifier,
-                )
-                if queue_id in chain_state.queueids_to_queues:
-                    chain_state.queueids_to_queues.pop(queue_id)
-
     return TransitionResult(chain_state, events)
+
+
+def handle_contract_receive_channel_closed(
+        chain_state: ChainState,
+        state_change: StateChange,
+) -> TransitionResult:
+    # cleanup queue for channel
+    channel_state = views.get_channelstate_by_token_network_identifier(
+        chain_state=chain_state,
+        token_network_id=state_change.token_network_identifier,
+        channel_id=state_change.channel_identifier,
+    )
+    if channel_state:
+        queue_id = QueueIdentifier(
+            recipient=channel_state.partner_state.address,
+            channel_identifier=state_change.channel_identifier,
+        )
+        if queue_id in chain_state.queueids_to_queues:
+            chain_state.queueids_to_queues.pop(queue_id)
+
+    return handle_token_network_action(chain_state=chain_state, state_change=state_change)
 
 
 def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) -> TransitionResult:
@@ -815,7 +821,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             state_change,
         )
     elif type(state_change) == ContractReceiveChannelClosed:
-        iteration = handle_token_network_action(
+        iteration = handle_contract_receive_channel_closed(
             chain_state,
             state_change,
         )
