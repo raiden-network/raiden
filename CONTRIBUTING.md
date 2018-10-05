@@ -120,10 +120,6 @@ Install the development dependencies:
 
 ## Development Guidelines
 
-In this section we are going to describe the coding rules for contributing to
-the raiden repository. All code you write should strive to comply with these
-rules.
-
 ### Testing
 
 To run the tests use pytest
@@ -167,6 +163,10 @@ Thus we setup the following rules:
   places are stdout, communication with the ethereum node e.t.c.
 
 ### Coding Style
+
+In this section we are going to describe the coding rules for contributing to
+the raiden repository. All code you write should strive to comply with these
+rules.
 
 #### General Style
 
