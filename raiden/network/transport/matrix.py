@@ -36,7 +36,6 @@ from raiden.messages import (
     Message,
     Ping,
     Pong,
-    Processed,
     SignedMessage,
     decode as message_from_bytes,
     from_dict as message_from_dict,
@@ -297,10 +296,7 @@ class MatrixTransport(Runnable):
             queue_identifier=queue_identifier,
         )
 
-        if isinstance(message, Processed):
-            self._send_immediate(queue_identifier, message)
-        else:
-            self._send_with_retry(queue_identifier, message)
+        self._send_with_retry(queue_identifier, message)
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
@@ -708,9 +704,7 @@ class MatrixTransport(Runnable):
             #       which means that message order is important which isn't guaranteed between
             #       federated servers.
             #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
-            if not isinstance(message, Processed):
-                self._spawn(send_delivered_for, message)
-
+            self._spawn(send_delivered_for, message)
             on_message(self._raiden_service, message)
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
