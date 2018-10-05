@@ -701,8 +701,8 @@ def run_app(
     if node_numeric_network_id != given_numeric_network_id:
         if known_given_network_id and known_node_network_id:
             click.secho(
-                f"The chosen ethereum network '{ID_TO_NETWORKNAME[given_network_id]}' "
-                f"differs from the ethereum client '{ID_TO_NETWORKNAME[node_network_id]}'. "
+                f"The chosen ethereum network '{given_network_id.name.lower()}' "
+                f"differs from the ethereum client '{node_network_id.name.lower()}'. "
                 "Please update your settings.",
                 fg='red',
             )
@@ -761,7 +761,7 @@ def run_app(
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
             f"There are no known contract addresses for network id '{given_numeric_network_id}'. "
-            "Please provide them in the command line or in the configuration file.",
+            "Please provide them on the command line or in the configuration file.",
             fg='red',
         )
         sys.exit(1)
@@ -799,7 +799,7 @@ def run_app(
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(given_network_id) or given_numeric_network_id,
+            ID_TO_NETWORKNAME.get(given_network_id, given_numeric_network_id),
             database_path,
         ),
     )
