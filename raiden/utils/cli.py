@@ -16,9 +16,9 @@ from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
-from raiden.constants import NETWORKNAME_TO_ID
 from raiden.exceptions import InvalidAddress
 from raiden.utils import address_checksum_and_decode
+from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 LOG_CONFIG_OPTION_NAME = 'log_config'
 

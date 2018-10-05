@@ -53,7 +53,7 @@ from raiden.transfer.state import (
     QueueIdsToQueues,
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
-from raiden.utils import pex
+from raiden.utils import networkid_is_known, pex
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     Address,
@@ -68,6 +68,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
 )
+from raiden_contracts.constants import ChainId
 from raiden_libs.exceptions import InvalidSignature
 from raiden_libs.network.matrix import GMatrixClient, Room
 from raiden_libs.utils.signing import eth_recover, eth_sign
@@ -309,10 +310,9 @@ class MatrixTransport(Runnable):
 
     @property
     def _network_name(self) -> str:
-        return ID_TO_NETWORKNAME.get(
-            self._raiden_service.chain.network_id,
-            str(self._raiden_service.chain.network_id),
-        )
+        netid = self._raiden_service.chain.network_id
+        netid_known = networkid_is_known(netid)
+        return ID_TO_NETWORKNAME[ChainId(netid)] if netid_known else str(netid)
 
     @property
     def _private_rooms(self) -> bool:
