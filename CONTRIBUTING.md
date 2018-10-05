@@ -287,13 +287,6 @@ string. So this is okay:
 s = "Augusto's computer is awesome"
 ```
 
-
-**Naming Style**
-
-Use [Snake Case](https://en.wikipedia.org/wiki/Snake_case) for variable and
-function names and [Camel Case](https://en.wikipedia.org/wiki/Camel_case) for
-class names.
-
 **Naming Convention**
 
 Use descriptive variable names and avoid short abbreviations.
