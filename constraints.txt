@@ -65,7 +65,7 @@ pystun-patched-for-raiden==0.1.0
 pytest==3.8.0
 pytoml==0.1.19
 pytz==2018.5
-raiden-contracts==0.4.0
+raiden-contracts==0.4.1
 raiden-libs==0.1.6
 requests==2.19.1
 rlp==1.0.2
