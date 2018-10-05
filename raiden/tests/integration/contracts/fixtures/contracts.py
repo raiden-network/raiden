@@ -12,7 +12,9 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
+
+CONTRACT_MANAGER = ContractManager(CONTRACTS_PRECOMPILED_PATH)
 
 
 @pytest.fixture

@@ -8,7 +8,7 @@ from web3.utils.filters import LogFilter, construct_event_filter_params
 
 from raiden.utils.typing import Address, BlockSpecification, ChannelID, Dict
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -28,7 +28,8 @@ def get_filter_args_for_specific_event_from_channel(
     if not event_name:
         raise ValueError('Event name must be given')
 
-    event_abi = CONTRACT_MANAGER.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
+    contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
+    event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
 
     # Here the topics for a specific event are created
     # The first entry of the topics list is the event name, then the first parameter is encoded,

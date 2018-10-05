@@ -4,7 +4,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import typing
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
 
 
 def deploy_tokens_and_fund_accounts(
@@ -56,8 +56,9 @@ def deploy_contract_web3(
         num_confirmations: int = None,
         constructor_arguments: typing.Tuple[typing.Any, ...] = (),
 ) -> typing.Address:
+    contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
     compiled = {
-        contract_name: CONTRACT_MANAGER.get_contract(contract_name),
+        contract_name: contract_manager.get_contract(contract_name),
     }
     contract_proxy = deploy_client.deploy_solidity_contract(
         contract_name,

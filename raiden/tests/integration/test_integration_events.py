@@ -31,7 +31,9 @@ from raiden_contracts.constants import (
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
+
+CONTRACT_MANAGER = ContractManager(CONTRACTS_PRECOMPILED_PATH)
 
 
 def get_netting_channel_closed_events(
