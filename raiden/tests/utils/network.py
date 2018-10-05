@@ -16,6 +16,7 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import merge_dict, privatekey_to_address
+from raiden.waiting import wait_for_payment_network
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 BlockchainServices = namedtuple(
@@ -127,6 +128,28 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
         settle_timeout,
         deposit,
     )
+
+
+def create_all_channels_for_network(
+        app_channels,
+        token_addresses,
+        channel_individual_deposit,
+        channel_settle_timeout,
+        token_network_registry_address,
+        retry_timeout,
+):
+    greenlets = []
+    for token_address in token_addresses:
+        for app_pair in app_channels:
+            greenlets.append(gevent.spawn(
+                payment_channel_open_and_deposit,
+                app_pair[0],
+                app_pair[1],
+                token_address,
+                channel_individual_deposit,
+                channel_settle_timeout,
+            ))
+    gevent.joinall(greenlets, raise_error=True)
 
 
 def network_with_minimum_channels(apps, channels_per_node):
@@ -455,6 +478,22 @@ def wait_for_usable_channel(
         app1.raiden.address,
         retry_timeout,
     )
+
+
+def wait_for_token_networks(
+        raiden_apps,
+        token_network_registry_address,
+        token_addresses,
+        retry_timeout=DEFAULT_RETRY_TIMEOUT,
+):
+    for token_address in token_addresses:
+        for app in raiden_apps:
+            wait_for_payment_network(
+                app.raiden,
+                token_network_registry_address,
+                token_address,
+                retry_timeout,
+            )
 
 
 def wait_for_channels(
