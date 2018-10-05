@@ -139,8 +139,8 @@ def handle_message_processed(raiden: RaidenService, message: Processed):
 
 
 def handle_message_delivered(raiden: RaidenService, message: Delivered):
-    processed = ReceiveDelivered(message.sender, message.delivered_message_identifier)
-    raiden.handle_state_change(processed)
+    delivered = ReceiveDelivered(message.sender, message.delivered_message_identifier)
+    raiden.handle_state_change(delivered)
 
 
 def on_message(raiden: RaidenService, message: Message):

@@ -1076,6 +1076,8 @@ class ReceiveTransferDirect(AuthenticatedSenderStateChange):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be a BalanceProofSignedState instance')
 
+        super().__init__(balance_proof.sender)
+
         self.token_network_identifier = token_network_identifier
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
@@ -1099,7 +1101,8 @@ class ReceiveTransferDirect(AuthenticatedSenderStateChange):
             self.token_network_identifier == other.token_network_identifier and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
-            self.balance_proof == other.balance_proof
+            self.balance_proof == other.balance_proof and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -1134,6 +1137,8 @@ class ReceiveUnlock(AuthenticatedSenderStateChange):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
 
+        super().__init__(balance_proof.sender)
+
         secrethash: typing.SecretHash = typing.SecretHash(sha3(secret))
 
         self.message_identifier = message_identifier
@@ -1154,7 +1159,8 @@ class ReceiveUnlock(AuthenticatedSenderStateChange):
             self.message_identifier == other.message_identifier and
             self.secret == other.secret and
             self.secrethash == other.secrethash and
-            self.balance_proof == other.balance_proof
+            self.balance_proof == other.balance_proof and
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -1179,7 +1185,8 @@ class ReceiveUnlock(AuthenticatedSenderStateChange):
 
 class ReceiveDelivered(AuthenticatedSenderStateChange):
     def __init__(self, sender: typing.Address, message_identifier: typing.MessageID):
-        self.sender = sender
+        super().__init__(sender)
+
         self.message_identifier = message_identifier
 
     def __repr__(self):
@@ -1192,7 +1199,7 @@ class ReceiveDelivered(AuthenticatedSenderStateChange):
         return (
             isinstance(other, ReceiveDelivered) and
             self.message_identifier == other.message_identifier and
-            self.sender == other.sender
+            super().__eq__(other)
         )
 
     def __ne__(self, other):
@@ -1214,7 +1221,7 @@ class ReceiveDelivered(AuthenticatedSenderStateChange):
 
 class ReceiveProcessed(AuthenticatedSenderStateChange):
     def __init__(self, sender: typing.Address, message_identifier: typing.MessageID):
-        self.sender = sender
+        super().__init__(sender)
         self.message_identifier = message_identifier
 
     def __repr__(self):
@@ -1227,7 +1234,7 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
         return (
             isinstance(other, ReceiveProcessed) and
             self.message_identifier == other.message_identifier and
-            self.sender == other.sender
+            super().__eq__(other)
         )
 
     def __ne__(self, other):

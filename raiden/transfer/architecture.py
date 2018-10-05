@@ -134,7 +134,14 @@ class SendMessageEvent(Event):
 
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
-    pass
+    def __init__(self, sender):
+        self.sender = sender
+
+    def __eq__(self, other):
+        return self.sender == other.sender
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ContractSendEvent(Event):

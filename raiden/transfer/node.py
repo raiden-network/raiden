@@ -1,3 +1,4 @@
+from raiden.messages import Message
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
@@ -396,27 +397,39 @@ def sanity_check(iteration: TransitionResult):
     assert isinstance(iteration.new_state, ChainState)
 
 
-def inplace_delete_message(
+def inplace_delete_message_queue(
         chain_state: ChainState,
         state_change: StateChange,
         queueid: QueueIdentifier,
 ):
-    """ Check if the message exists in queue with ID `queueid` and delete if found."""
+    """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
     queue = chain_state.queueids_to_queues.get(queueid)
     if not queue:
         return
 
-    filtered_queue = [
-        message
-        for message in queue
-        if message.message_identifier != state_change.message_identifier or
-        message.recipient != state_change.sender
-    ]
+    inplace_delete_message(
+        queue,
+        state_change,
+    )
 
-    if not filtered_queue:
+    if not queue:
         del chain_state.queueids_to_queues[queueid]
     else:
-        chain_state.queueids_to_queues[queueid] = filtered_queue
+        chain_state.queueids_to_queues[queueid] = queue
+
+
+def inplace_delete_message(
+        message_queue: typing.List[Message],
+        state_change: StateChange,
+):
+    """ Check if the message exists in queue with ID `queueid` and exclude if found."""
+    for message in list(message_queue):
+        message_found = (
+            message.message_identifier == state_change.message_identifier and
+            message.recipient == state_change.sender
+        )
+        if message_found:
+            message_queue.remove(message)
 
 
 def handle_block(
@@ -502,7 +515,7 @@ def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) ->
     """ Check if the "Delivered" message exists in the global queue and delete if found."""
     # Find the QueueIdentifier with channel_identifier == CHANNEL_IDENTIFIER_GLOBAL_QUEUE
     queueid = QueueIdentifier(state_change.sender, CHANNEL_IDENTIFIER_GLOBAL_QUEUE)
-    inplace_delete_message(chain_state, state_change, queueid)
+    inplace_delete_message_queue(chain_state, state_change, queueid)
     return TransitionResult(chain_state, [])
 
 
@@ -683,10 +696,11 @@ def handle_processed(
 
     for queue in chain_state.queueids_to_queues.values():
         for message in queue:
-            if (
-                    message.message_identifier == state_change.message_identifier and
-                    message.recipient == state_change.sender
-            ):
+            message_found = (
+                message.message_identifier == state_change.message_identifier and
+                message.recipient == state_change.sender
+            )
+            if message_found:
                 if type(message) == SendDirectTransfer:
                     channel_state = views.get_channelstate_by_token_network_and_partner(
                         chain_state,
@@ -703,7 +717,7 @@ def handle_processed(
 
     # Clean up message queue
     for queueid in list(chain_state.queueids_to_queues.keys()):
-        inplace_delete_message(chain_state, state_change, queueid)
+        inplace_delete_message_queue(chain_state, state_change, queueid)
 
     return TransitionResult(chain_state, events)
 
