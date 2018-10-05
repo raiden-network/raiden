@@ -501,14 +501,8 @@ def handle_token_network_action(
 def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) -> TransitionResult:
     """ Check if the "Delivered" message exists in the global queue and delete if found."""
     # Find the QueueIdentifier with channel_identifier == CHANNEL_IDENTIFIER_GLOBAL_QUEUE
-    queueid = list(filter(
-        lambda i: i.channel_identifier == CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-        chain_state.queueids_to_queues,
-    ))
-    if not queueid:
-        return TransitionResult(chain_state, [])
-
-    inplace_delete_message(chain_state, state_change, queueid[0])
+    queueid = QueueIdentifier(state_change.sender, CHANNEL_IDENTIFIER_GLOBAL_QUEUE)
+    inplace_delete_message(chain_state, state_change, queueid)
     return TransitionResult(chain_state, [])
 
 
