@@ -83,7 +83,7 @@ A :term:`DirectTransfer` does not rely on locks to complete. It is automatically
 
 - The sender must assume the transfer is completed once the message is sent to the network, there is no workaround. The acknowledgement in this case is only used as a synchronization primitive, the payer will only know about the transfer once the message is received.
 
-A succesfull direct transfer involves only 2 messages. The direct transfer message and an ``PROCESSED``. For an Alice - Bob example:
+A successful direct transfer involves only 2 messages. The direct transfer message and an ``PROCESSED``. For an Alice - Bob example:
 
 * Alice wants to transfer ``n`` tokens to Bob.
 * Alice creates a new transfer with.

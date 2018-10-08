@@ -1938,7 +1938,7 @@ def handle_channel_settled(
                 None,
             )
         else:
-            # we don't need to wait for the unlock to be successfull, the
+            # we don't need to wait for the unlock to be successful, the
             # channel can be cleaned now
             channel_state = None
 
