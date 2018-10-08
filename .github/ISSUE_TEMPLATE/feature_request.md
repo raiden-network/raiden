@@ -13,7 +13,7 @@ In this section please describe how you propose to address the problem you descr
 
 ## Specification
 
-If the feature is techical in nature please write as detailed as possible a specification of what needs to be built.
+If the feature is technical in nature please write as detailed as possible a specification of what needs to be built.
 
 ## Backwards Compatibility
 
