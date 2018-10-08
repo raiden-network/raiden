@@ -195,6 +195,20 @@ jobs:
           repo: raiden-network/raiden
           branch: master
 
+      - provider: script
+        skip_cleanup: true
+        script: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ raiden-nightlies ams3.digitaloceanspaces.com
+        on:
+          repo: raiden-network/raiden
+          all_branches: true
+
+      - provider: script
+        skip_cleanup: true
+        script: rm -rf dist/archive
+        on:
+          repo: raiden-network/raiden
+          all_branches: true
+
       - provider: pypi
         skip_cleanup: true
         user: raiden_pypi_automated
@@ -206,13 +220,6 @@ jobs:
           tags: true
           repo: raiden-network/raiden
           branch: master
-
-      - provider: script
-        skip_cleanup: true
-        script: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ raiden-nightlies ams3.digitaloceanspaces.com
-        on:
-          repo: raiden-network/raiden
-          all_branches: true
 
     - stage: deploy
       os: osx
