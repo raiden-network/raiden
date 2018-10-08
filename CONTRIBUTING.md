@@ -484,7 +484,7 @@ Congratulations, you have added to someone else's PR!
 
 #### Integrating Pull Requests
 
-When integrating a succesfull Pull Request into the codebase we have the option
+When integrating a successful Pull Request into the codebase we have the option
 of using either a "Rebase and Merge" or to "Create a Merge commit".
 Unfortunately in Github the default option is to "Create a Merge commit". This
 is not our preferred option as in this way we can't be sure that the result of

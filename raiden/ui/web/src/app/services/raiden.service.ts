@@ -276,7 +276,7 @@ export class RaidenService {
             tap(() => {
                 this.sharedService.success({
                     title: 'Joined Token Network',
-                    description: `You have successfully Joined the Network of Token ${tokenAddress}`
+                    description: `You have successfully joined the Network of Token ${tokenAddress}`
                 });
             }),
             catchError((error) => this.handleError(error)),

@@ -567,7 +567,7 @@ def events_for_balanceproof(
         # The mediator must not send to the payee a balance proof if the lock
         # is in the danger zone, because the payer may not do the same and the
         # on-chain unlock may fail. If the lock is nearing it's expiration
-        # block, then on-chain unlock should be done, and if successfull it can
+        # block, then on-chain unlock should be done, and if successful it can
         # be unlocked off-chain.
         is_safe_to_send_balanceproof, _ = is_safe_to_wait(
             pair.payer_transfer.lock.expiration,
