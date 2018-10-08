@@ -177,8 +177,8 @@ jobs:
       script:
         - source .travis/set_tag.sh
         - REPO=${TRAVIS_REPO_SLUG} RAIDENVERSION=${TRAVIS_COMMIT} make bundle-docker
-        - tar -C dist -xvzf dist/archive/raiden-${ARCHIVE_TAG}-linux.tar.gz
-        - echo raiden-${ARCHIVE_TAG}-linux.tar.gz > dist/archive/_LATEST-linux.txt
+        - tar -C build -xvzf build/archive/raiden-${ARCHIVE_TAG}-linux.tar.gz
+        - echo raiden-${ARCHIVE_TAG}-linux.tar.gz > build/archive/_LATEST-linux.txt
         # Make sure the produced binary works
         # Skip smoketest until raiden-network/raiden#2384 is fixed
         #- dist/raiden-${ARCHIVE_TAG}-macOS smoketest
@@ -187,7 +187,7 @@ jobs:
       - provider: releases
         api_key:
           secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
-        file: dist/archive/raiden-*-linux.tar.gz
+        file: build/archive/raiden-*-linux.tar.gz
         file_glob: true
         skip_cleanup: true
         on:
@@ -197,14 +197,14 @@ jobs:
 
       - provider: script
         skip_cleanup: true
-        script: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ raiden-nightlies ams3.digitaloceanspaces.com
+        script: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY build/archive/ raiden-nightlies ams3.digitaloceanspaces.com
         on:
           repo: raiden-network/raiden
           all_branches: true
 
       - provider: script
         skip_cleanup: true
-        script: rm -rf dist/archive
+        script: rm -rf build
         on:
           repo: raiden-network/raiden
           all_branches: true
