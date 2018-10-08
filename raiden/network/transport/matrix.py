@@ -640,7 +640,7 @@ class MatrixTransport(Runnable):
                 return False
 
         self.log.debug(
-            'MESSAGE_DATA',
+            'Message data',
             data=data,
             sender=pex(peer_address),
             sender_user=user,
@@ -776,7 +776,7 @@ class MatrixTransport(Runnable):
             room = self._get_room_for_address(receiver_address)
         if not room:
             return
-        self.log.debug('SEND', receiver=pex(receiver_address), room=room, data=data)
+        self.log.debug('Send', receiver=pex(receiver_address), room=room, data=data)
         room.send_text(data)
 
     def _get_room_for_address(
