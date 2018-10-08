@@ -15,7 +15,6 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
-    claim_lock,
     direct_transfer,
     get_channelstate,
 )
@@ -160,7 +159,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     transfer_1_secret = sha3(target + b'1')
     transfer_1_secrethash = sha3(transfer_1_secret)
 
-    hold_event_handler.hold_secret_for(secrethash=transfer_1_secrethash)
+    hold_event_handler.hold_secretrequest_for(secrethash=transfer_1_secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
@@ -221,7 +220,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     transfer_2_secret = sha3(target + b'2')
     transfer_2_secrethash = sha3(transfer_2_secret)
 
-    hold_event_handler.hold_secret_for(secrethash=transfer_2_secrethash)
+    hold_event_handler.hold_secretrequest_for(secrethash=transfer_2_secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
@@ -283,7 +282,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     secret = sha3(target)
     secrethash = sha3(secret)
 
-    hold_event_handler.hold_secret_for(secrethash=secrethash)
+    hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
@@ -419,7 +418,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     secret = sha3(target)
     secrethash = sha3(secret)
 
-    hold_event_handler.hold_secret_for(secrethash=secrethash)
+    secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
@@ -429,17 +428,26 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         secret,
     )
 
-    gevent.sleep(1)  # wait for the messages to be exchanged
+    secret_available.wait()  # wait for the messages to be exchanged
 
     # Save the merkle tree leaves from the pending transfer, used to test the unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_network_identifier)
     batch_unlock = channel.get_batch_unlock(channelstate_0_1.our_state)
     assert batch_unlock
 
-    claim_lock(raiden_network, identifier, token_network_identifier, secret)
+    hold_event_handler.release_secretrequest_for(
+        app1.raiden,
+        secrethash,
+    )
 
-    # Make a new transfer
-    direct_transfer(app0, app1, token_network_identifier, amount, identifier=2)
+    direct_transfer(
+        app0,
+        app1,
+        token_network_identifier,
+        amount,
+        identifier=2,
+    )
+
     RaidenAPI(app1.raiden).channel_close(
         registry_address,
         token_address,
@@ -495,7 +503,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     secret = sha3(target)
     secrethash = sha3(secret)
 
-    hold_event_handler.hold_secret_for(secrethash=secrethash)
+    hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
@@ -560,7 +568,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     secret = sha3(target)
     secrethash = sha3(secret)
 
-    hold_event_handler.hold_secret_for(secrethash=secrethash)
+    hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,

@@ -490,7 +490,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     secret = sha3(target)
     secrethash = sha3(secret)
 
-    hold_event_handler.hold_secret_for(secret)
+    hold_event_handler.hold_secretrequest_for(secret)
 
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
