@@ -30,6 +30,7 @@ nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
 payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64_MAX))
 chain_id = make_field('chain_id', 32, '32s', integer(0, UINT256_MAX))
 message_identifier = make_field('message_identifier', 8, '8s', integer(0, UINT64_MAX))
+current_protocol_version = make_field('current_protocol_version', 1, '1s', integer(0, 256))
 delivered_message_identifier = make_field(
     'delivered_message_identifier',
     8,
@@ -81,6 +82,7 @@ Ping = namedbuffer(
         cmdid(PING),
         pad(3),
         nonce,
+        current_protocol_version,
         signature,
     ],
 )
