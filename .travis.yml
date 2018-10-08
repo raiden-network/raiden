@@ -3,17 +3,17 @@ stages:
   - name: lint
   - name: test
   - name: integration-general
-    if: (type = cron OR NOT commit_message =~ /\[no ci integration\]/ OR tag IS present) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-general\]/)
-    name: integration-transfer
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/ OR tag IS present) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-transfer\]/)
-    name: integration-long-running
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/ OR tag IS present) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-long-running\]/)
-    name: integration-contracts
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/ OR tag IS present) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-contracts\]/)
-    name: integration-api
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/ OR tag IS present) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-api\]/)
-    name: integration-cli
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/ OR tag IS present) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-cli\]/)
+    if: (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-general\]/) AND tag IS NOT present
+  - name: integration-transfer
+    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-transfer\]/) AND tag IS NOT present
+  - name: integration-long-running
+    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-long-running\]/) AND tag IS NOT present
+  - name: integration-contracts
+    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-contracts\]/) AND tag IS NOT present
+  - name: integration-api
+    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-api\]/) AND tag IS NOT present
+  - name: integration-cli
+    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-cli\]/) AND tag IS NOT present
   - name: deploy
     if: type = cron OR commit_message =~ /\[ci nightly\]/ OR tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
 
