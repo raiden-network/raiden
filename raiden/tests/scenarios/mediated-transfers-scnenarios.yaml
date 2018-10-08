@@ -1,0 +1,109 @@
+settings:
+  gas_price: "fast"
+
+token:
+  decimals: 3
+
+nodes:
+  commands:
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 4
+    template: "localhost:50{:02d}"
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: Create A -> B -> C with 10 capacity
+          tasks:
+          - open_channel: {from: 0, to: 1, total_deposit: 10000}
+          - open_channel: {from: 1, to: 2, total_deposit: 10000}
+
+      - parallel:
+          name: assert A -> B -> C
+          tasks:
+          - assert: {from: 0, to: 1, total_deposit: 10000, balance: 10000, state: "opened"}
+          - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
+          - assert: {from: 1, to: 2, total_deposit: 10000, balance: 10000, state: "opened"}
+          - assert: {from: 2, to: 1, total_deposit: 0,  balance: 0,  state: "opened"}
+      - serial:
+          name: Send one mediated transfer to a node that there is a path to and enough capacity
+          tasks:
+          - transfer: {from: 0, to: 2, amount: 1, expected_http_status: 200}
+      - serial:
+          name: In A-B-C with 10 token capacity, try to send payment of 11 from A to C
+          tasks:
+          - transfer: {from: 0, to: 2, amount: 11000, expected_http_status: 409}
+          - wait: 5
+      - parallel:
+          name: assert post transfer state 1
+          tasks:
+          - assert: {from: 0, to: 1, total_deposit: 10000, balance: 9999, state: "opened"}
+          - assert: {from: 1, to: 0, total_deposit: 0,  balance: 1,  state: "opened"}
+          - assert: {from: 1, to: 2, total_deposit: 10000, balance: 9999, state: "opened"}
+          - assert: {from: 2, to: 1, total_deposit: 0,  balance: 1,  state: "opened"}
+      - serial:
+          repeat: 10
+          name: Node sends 10 transfers
+          tasks:
+          - transfer: {from: 0, to: 2, amount: 1, expected_http_status: 200}
+      - wait: 5
+      - parallel:
+          name: assert post transfer state 2
+          tasks:
+          - assert: {from: 0, to: 1, total_deposit: 10000, balance: 9989, state: "opened"}
+          - assert: {from: 1, to: 0, total_deposit: 0,  balance: 11,  state: "opened"}
+          - assert: {from: 1, to: 2, total_deposit: 10000, balance: 9989, state: "opened"}
+          - assert: {from: 2, to: 1, total_deposit: 0,  balance: 11,  state: "opened"}
+      - serial:
+          repeat: 1000
+          name: Node sends 1000 transfers
+          tasks:
+          - transfer: {from: 0, to: 2, amount: 1, expected_http_status: 200}
+      - wait: 20
+      - parallel:
+          name: assert post transfer state 3
+          tasks:
+          - assert: {from: 0, to: 1, total_deposit: 10000, balance: 8989, state: "opened"}
+          - assert: {from: 1, to: 0, total_deposit: 0,  balance: 1011,  state: "opened"}
+          - assert: {from: 1, to: 2, total_deposit: 10000, balance: 8989, state: "opened"}
+          - assert: {from: 2, to: 1, total_deposit: 0,  balance: 1011,  state: "opened"}
+      - parallel:
+          name: Add A -> D -> C path with 20 capacity
+          tasks:
+          - open_channel: {from: 0, to: 3, total_deposit: 20000}
+          - open_channel: {from: 3, to: 2, total_deposit: 20000}
+      - parallel:
+          name: assert A -> D -> C
+          tasks:
+          - assert: {from: 0, to: 3, total_deposit: 20000, balance: 20000, state: "opened"}
+          - assert: {from: 3, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
+          - assert: {from: 3, to: 2, total_deposit: 20000, balance: 20000, state: "opened"}
+          - assert: {from: 2, to: 3, total_deposit: 0,  balance: 0,  state: "opened"}
+      - serial:
+          name: In A-D-C with 20 tokens in each channel, and A-B-C path also existing, try to send 5 tokens from A to C
+          tasks:
+          - transfer: {from: 0, to: 2, amount: 5000, expected_http_status: 200}
+      - serial:
+          name: In same scenario as above, try to send 11 tokens from A to C
+          tasks:
+          - transfer: {from: 0, to: 2, amount: 11000, expected_http_status: 200}
+      - serial:
+          name: Extend A -> B -> C  to A -> B -> C -> D
+          tasks:
+          - deposit: {from: 2, to: 3, amount: 10000, expected_http_status: 200}
+      - parallel:
+          name: assert A -> D -> C - > D
+          tasks:
+          - assert: {from: 0, to: 1, total_deposit: 10000, balance: 8889, state: "opened"}
+          - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
+          - assert: {from: 1, to: 2, total_deposit: 10000, balance: 8889, state: "opened"}
+          - assert: {from: 2, to: 3, total_deposit: 10000,  balance: 10000,  state: "opened"}
+      - serial:
+          name: Make payment with 2 mediators
+          tasks:
+          - transfer: {from: 0, to: 3, amount: 1, expected_http_status: 200}
