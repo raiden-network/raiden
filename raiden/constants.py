@@ -12,6 +12,8 @@ INT64_MIN = -(2 ** 63)
 
 UINT256_MAX = 2 ** 256 - 1
 
+PROTOCOL_VERSION = 1
+
 
 class EthClient(Enum):
     GETH = 1

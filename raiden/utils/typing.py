@@ -70,6 +70,9 @@ PaymentAmount = NewType('PaymentAmount', T_PaymentAmount)
 T_PaymentNetworkID = bytes
 PaymentNetworkID = NewType('PaymentNetworkID', T_PaymentNetworkID)
 
+T_RaidenProtocolVersion = int
+RaidenProtocolVersion = NewType('RaidenProtocolVersion', T_RaidenProtocolVersion)
+
 T_ChainID = int
 ChainID = NewType('ChainID', T_ChainID)
 

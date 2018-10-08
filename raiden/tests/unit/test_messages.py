@@ -16,7 +16,7 @@ PRIVKEY, ADDRESS = make_privkey_address()
 
 
 def test_signature():
-    ping = Ping(nonce=0)
+    ping = Ping(nonce=0, current_protocol_version=0)
     ping.sign(PRIVKEY)
     assert ping.sender == ADDRESS
 

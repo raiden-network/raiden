@@ -8,6 +8,7 @@ from eth_utils import is_binary_address
 from gevent.event import AsyncResult, Event
 from gevent.server import DatagramServer
 
+from raiden import constants
 from raiden.exceptions import InvalidAddress, InvalidProtocolMessage, UnknownAddress
 from raiden.message_handler import on_message
 from raiden.messages import Delivered, Message, Ping, Pong, decode
@@ -608,7 +609,10 @@ class UDPTransport(Runnable):
         Note: Ping messages don't have an enforced ordering, so a Ping message
         with a higher nonce may be acknowledged first.
         """
-        message = Ping(nonce)
+        message = Ping(
+            nonce=nonce,
+            current_protocol_version=constants.PROTOCOL_VERSION,
+        )
         self.raiden.sign(message)
         message_data = message.encode()
 

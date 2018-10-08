@@ -8,7 +8,7 @@ from raiden.transfer import state, views
 def test_udp_ping_pong(raiden_network, skip_if_not_udp):
     app0, app1 = raiden_network
 
-    ping_message = Ping(nonce=0)
+    ping_message = Ping(nonce=0, current_protocol_version=0)
     app0.raiden.sign(ping_message)
     ping_encoded = ping_message.encode()
 
@@ -33,7 +33,7 @@ def test_udp_ping_pong_unreachable_node(raiden_network, skip_if_not_udp):
 
     app1.raiden.transport.stop()
 
-    ping_message = Ping(nonce=0)
+    ping_message = Ping(nonce=0, current_protocol_version=0)
     app0.raiden.sign(ping_message)
     ping_encoded = ping_message.encode()
 
