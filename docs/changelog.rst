@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`2713` Added the protocol version in the Ping message.
+
 * :release:`0.12.0 <2018-10-05>`
 * :feature:`2699` Add ``/channels/<token_address>`` REST-API endpoint to query all node's channels for a specific token.
 * :feature:`2568` Validate the state changes for the Delivered and Processed sender.
