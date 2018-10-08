@@ -2,18 +2,8 @@ conditions: v1
 stages:
   - name: lint
   - name: test
-  - name: integration-general
-    if: (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-general\]/) AND tag IS NOT present
-  - name: integration-transfer
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-transfer\]/) AND tag IS NOT present
-  - name: integration-long-running
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-long-running\]/) AND tag IS NOT present
-  - name: integration-contracts
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-contracts\]/) AND tag IS NOT present
-  - name: integration-api
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-api\]/) AND tag IS NOT present
-  - name: integration-cli
-    if:  (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND (NOT commit_message =~ /\[ci nightly\]/) AND (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-cli\]/) AND tag IS NOT present
+  - name: integration
+    if: (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND NOT commit_message =~ /\[ci nightly\]/ AND tag IS NOT present
   - name: deploy
     if: type = cron OR commit_message =~ /\[ci nightly\]/ OR tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
 
@@ -95,71 +85,82 @@ jobs:
         - BLOCKCHAIN_TYPE='tester'
         - TEST='raiden/tests/unit raiden/tests/integration/contracts'
 
-    - stage: integration-general
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-general\]/) 
       env:
         - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts --ignore=raiden/tests/integration/cli'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration-general
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-general\]/) 
       env:
         - TEST='raiden/tests/integration --ignore=raiden/tests/integration/transfer --ignore=raiden/tests/integration/long_running --ignore=raiden/tests/integration/api --ignore=raiden/tests/integration/contracts --ignore=raiden/tests/integration/cli'
         - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
         - RUN_SYNAPSE=1
 
-    - stage: integration-transfer
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-transfer\]/)       
       env:
         - TEST='raiden/tests/integration/transfer'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration-transfer
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-transfer\]/) 
       env:
         - TEST='raiden/tests/integration/transfer'
         - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
         - RUN_SYNAPSE=1
 
-    - stage: integration-long-running
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-long-running\]/) 
       env:
         - TEST='raiden/tests/integration/long_running'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration-long-running
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-long-running\]/) 
       env:
         - TEST='raiden/tests/integration/long_running'
         - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
         - RUN_SYNAPSE=1
 
-    - stage: integration-contracts
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-contracts\]/) 
       env:
         - TEST='raiden/tests/integration/contracts'
 
-    - stage: integration-api
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-api\]/) 
       env:
         - TEST='raiden/tests/integration/api'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration-api
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-api\]/) 
       env:
         - TEST='raiden/tests/integration/api'
         - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
         - RUN_SYNAPSE=1
 
-    - stage: integration-cli
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-cli\]/) 
       env:
         - TEST='raiden/tests/integration/cli'
         - TRANSPORT_OPTIONS='--transport=udp'
 
-    - stage: integration-cli
+    - stage: integration
       <<: *job-template-integration
+      if: (NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-cli\]/) 
       env:
         - TEST='raiden/tests/integration/cli'
         - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
