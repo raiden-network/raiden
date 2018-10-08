@@ -717,6 +717,7 @@ def run_app(
 
     config['chain_id'] = given_numeric_network_id
 
+    log.debug('Network type', type=network_type)
     if network_type == 'main':
         config['network_type'] = NetworkType.MAIN
         # Forcing private rooms to true for the mainnet
