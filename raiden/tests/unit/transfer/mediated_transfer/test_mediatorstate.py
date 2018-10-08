@@ -1874,14 +1874,24 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         1,
     )
 
+    block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK - 1
     iteration = mediator.state_transition(
         iteration.new_state,
         lock_expired_state_change,
         channel_map,
         pseudo_random_generator,
-        10,
+        block_before_confirmed_expiration,
     )
+    assert not must_contain_entry(iteration.events, SendProcessed, {})
 
+    block_lock_expired = block_before_confirmed_expiration + 1
+    iteration = mediator.state_transition(
+        iteration.new_state,
+        lock_expired_state_change,
+        channel_map,
+        pseudo_random_generator,
+        block_lock_expired,
+    )
     assert must_contain_entry(iteration.events, SendProcessed, {})
 
     assert iteration.new_state

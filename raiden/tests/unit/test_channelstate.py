@@ -1236,17 +1236,19 @@ def test_channel_must_never_expire_locks_with_onchain_secret():
     )
 
     is_valid, _, _ = channel.is_valid_lock_expired(
-        lock_expired,
-        channel_state,
-        channel_state.partner_state,
-        channel_state.our_state,
+        state_change=lock_expired,
+        channel_state=channel_state,
+        sender_state=channel_state.partner_state,
+        receiver_state=channel_state.our_state,
+        block_number=block_number,
     )
 
     assert not is_valid
 
     channel.handle_receive_lock_expired(
-        channel_state,
-        lock_expired,
+        channel_state=channel_state,
+        state_change=lock_expired,
+        block_number=block_number,
     )
 
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks

@@ -232,30 +232,32 @@ def handle_block(
     """
     transfer = target_state.transfer
     events = list()
+    lock = transfer.lock
 
     secret_known = channel.is_secret_known(
         channel_state.partner_state,
-        transfer.lock.secrethash,
+        lock.secrethash,
     )
-    is_lock_expired = (
-        not secret_known and
-        block_number > transfer.lock.expiration
+    lock_has_expired, lock_expired_msg = channel.is_lock_expired(
+        end_state=channel_state.our_state,
+        lock=lock,
+        block_number=block_number,
     )
 
-    if secret_known:
+    if lock_has_expired and target_state.state != 'expired':
+        failed = EventUnlockClaimFailed(
+            identifier=transfer.payment_identifier,
+            secrethash=transfer.lock.secrethash,
+            reason=f'lock expired {lock_expired_msg}',
+        )
+        target_state.state = 'expired'
+        events = [failed]
+    elif secret_known:
         events = events_for_onchain_secretreveal(
             target_state,
             channel_state,
             block_number,
         )
-    elif is_lock_expired and target_state.state != 'expired':
-        failed = EventUnlockClaimFailed(
-            identifier=transfer.payment_identifier,
-            secrethash=transfer.lock.secrethash,
-            reason='lock expired',
-        )
-        target_state.state = 'expired'
-        events = [failed]
 
     return TransitionResult(target_state, events)
 
@@ -264,9 +266,15 @@ def handle_lock_expired(
         target_state: TargetTransferState,
         state_change: ReceiveLockExpired,
         channel_state: NettingChannelState,
+        block_number: typing.BlockNumber,
 ):
     """Remove expired locks from channel states."""
-    result = channel.handle_receive_lock_expired(channel_state, state_change)
+    result = channel.handle_receive_lock_expired(
+        channel_state=channel_state,
+        state_change=state_change,
+        block_number=block_number,
+    )
+
     if not channel.get_lock(result.new_state.partner_state, target_state.transfer.lock.secrethash):
         return TransitionResult(None, result.events)
 
@@ -325,6 +333,7 @@ def state_transition(
             target_state,
             state_change,
             channel_state,
+            block_number,
         )
 
     return iteration

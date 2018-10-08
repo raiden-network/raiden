@@ -4,6 +4,7 @@ import random
 import pytest
 
 from raiden.constants import UINT64_MAX
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
@@ -456,12 +457,12 @@ def test_target_receive_lock_expired():
     expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
 
     from_transfer = factories.make_signed_transfer_for(
-        from_channel,
-        lock_amount,
-        initiator,
-        our_address,
-        expiration,
-        UNIT_SECRET,
+        channel_state=from_channel,
+        amount=lock_amount,
+        initiator=initiator,
+        target=our_address,
+        expiration=expiration,
+        secret=UNIT_SECRET,
     )
 
     init = ActionInitTarget(
@@ -499,16 +500,86 @@ def test_target_receive_lock_expired():
         1,
     )
 
+    block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK - 1
     iteration = target.state_transition(
         init_transition.new_state,
         lock_expired_state_change,
         from_channel,
         pseudo_random_generator,
-        10,
+        block_before_confirmed_expiration,
+    )
+    assert not must_contain_entry(iteration.events, SendProcessed, {})
+
+    block_lock_expired = block_before_confirmed_expiration + 1
+    iteration = target.state_transition(
+        init_transition.new_state,
+        lock_expired_state_change,
+        from_channel,
+        pseudo_random_generator,
+        block_lock_expired,
+    )
+    assert must_contain_entry(iteration.events, SendProcessed, {})
+
+
+def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
+    lock_amount = 7
+    block_number = 1
+    initiator = factories.HOP6
+    pseudo_random_generator = random.Random()
+
+    our_balance = 100
+    our_address = factories.make_address()
+    partner_balance = 130
+
+    from_channel = factories.make_channel(
+        our_address=our_address,
+        our_balance=our_balance,
+        partner_address=UNIT_TRANSFER_SENDER,
+        partner_balance=partner_balance,
+    )
+    from_route = factories.route_from_channel(from_channel)
+    expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
+
+    from_transfer = factories.make_signed_transfer_for(
+        from_channel,
+        lock_amount,
+        initiator,
+        our_address,
+        expiration,
+        UNIT_SECRET,
     )
 
-    assert must_contain_entry(iteration.events, SendProcessed, {})
-    assert iteration.new_state is None
+    init = ActionInitTarget(
+        from_route,
+        from_transfer,
+    )
+
+    init_transition = target.state_transition(
+        None,
+        init,
+        from_channel,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert init_transition.new_state is not None
+
+    secret_reveal_iteration = target.state_transition(
+        target_state=init_transition.new_state,
+        state_change=ReceiveSecretReveal(UNIT_SECRET, from_channel.partner_state.address),
+        channel_state=from_channel,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+
+    expired_block_number = from_transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    iteration = target.state_transition(
+        target_state=secret_reveal_iteration.new_state,
+        state_change=Block(expired_block_number, None, None),
+        channel_state=from_channel,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=expired_block_number,
+    )
+    assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {})
 
 
 def test_target_transfer_invalid_if_lock_registered_onchain():

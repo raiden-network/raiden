@@ -73,14 +73,12 @@ def handle_block(
     secrethash = initiator_state.transfer.lock.secrethash
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
-    lock_expired = channel.is_lock_expired(
+    lock_has_expired, _ = locked_lock and channel.is_lock_expired(
         end_state=channel_state.our_state,
-        locked_lock=locked_lock,
-        secrethash=secrethash,
+        lock=locked_lock,
         block_number=state_change.block_number,
     )
-    if locked_lock and lock_expired:
-        # Lock has expired, cleanup...
+    if lock_has_expired:
         expired_lock_events = channel.events_for_expired_lock(
             channel_state,
             secrethash,

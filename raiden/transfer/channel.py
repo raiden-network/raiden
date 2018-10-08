@@ -82,7 +82,12 @@ from raiden_libs.utils.signing import eth_recover
 # This should be changed to `Union[str, MerkleTreeState]`
 MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Any]
 EventsOrError = typing.Tuple[bool, typing.List[Event], typing.Any]
-BalanceProofData = typing.Tuple[typing.Locksroot, typing.Nonce, typing.TokenAmount, typing.TokenAmount]  # noqa
+BalanceProofData = typing.Tuple[
+    typing.Locksroot,
+    typing.Nonce,
+    typing.TokenAmount,
+    typing.TokenAmount,
+]
 SendUnlockAndMerkleTree = typing.Tuple[SendBalanceProof, MerkleTreeState]
 
 
@@ -123,24 +128,30 @@ def is_lock_locked(
 
 def is_lock_expired(
         end_state: NettingChannelEndState,
-        locked_lock: typing.Optional[LockedTransferSignedState],
-        secrethash: typing.SecretHash,
+        lock: HashTimeLockState,
         block_number: typing.BlockNumber,
-):
-    """ Determine whether a lock is expired based on certain conditions. """
+) -> typing.SuccessOrError:
+    """ Determine whether a lock has expired.
 
-    # If secret is registered on-chain, the lock never expires.
-    secret_registered_on_chain = secrethash in end_state.secrethashes_to_onchain_unlockedlocks
+    The lock has expired if both:
+
+        - The secret was not registered on-chain in time.
+        - The current block exceeds lock's expiration + confirmation blocks.
+    """
+
+    secret_registered_on_chain = lock.secrethash in end_state.secrethashes_to_onchain_unlockedlocks
     if secret_registered_on_chain:
-        return False
+        return (False, 'lock has been unlocked on-chain')
 
-    # If the current block exceeds lock's expiration + confirmation time then the lock has expired.
-    if locked_lock:
-        lock_expiration_threshold = locked_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
-        if block_number < lock_expiration_threshold:
-            return False
+    expiration = lock_expiration_threshold(lock)
+    if block_number < expiration:
+        msg = (
+            f'current block number ({block_number}) is not larger than '
+            f'lock.expiration + confirmation blocks ({expiration})'
+        )
+        return (False, msg)
 
-    return True
+    return (True, None)
 
 
 def is_secret_known(
@@ -455,6 +466,7 @@ def is_valid_lock_expired(
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
         receiver_state: NettingChannelEndState,
+        block_number: typing.BlockNumber,
 ) -> MerkletreeOrError:
     secrethash = state_change.secrethash
     received_balance_proof = state_change.balance_proof
@@ -504,8 +516,17 @@ def is_valid_lock_expired(
 
     else:
         locksroot_without_lock = merkleroot(merkletree)
+        has_expired, lock_expired_message = is_lock_expired(
+            end_state=receiver_state,
+            lock=lock,
+            block_number=block_number,
+        )
 
-        if received_balance_proof.locksroot != locksroot_without_lock:
+        if not has_expired:
+            msg = f'Invalid LockExpired message. {lock_expired_message}'
+            result = (False, msg, None)
+
+        elif received_balance_proof.locksroot != locksroot_without_lock:
             # The locksroot must be updated, and the expired lock must be *removed*
             msg = (
                 "Invalid LockExpired message. "
@@ -827,6 +848,10 @@ def get_balance(
     )
 
 
+def lock_expiration_threshold(lock):
+    return lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+
+
 def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofData:
     balance_proof = end_state.balance_proof
 
@@ -876,7 +901,7 @@ def get_batch_unlock(
     network contract to verify the secret expiry and calculate the token amounts to transfer.
     """
 
-    if len(end_state.merkletree.layers[LEAVES]) == 0:
+    if len(end_state.merkletree.layers[LEAVES]) == 0:  # pylint: disable=len-as-condition
         return None
 
     lockhashes_to_locks = dict()
@@ -1728,13 +1753,15 @@ def handle_refundtransfer(
 def handle_receive_lock_expired(
         channel_state: NettingChannelState,
         state_change: ReceiveLockExpired,
+        block_number: typing.BlockNumber,
 ) -> TransitionResult:
     """Remove expired locks from channel states."""
-    is_valid, _, merkletree = is_valid_lock_expired(
-        state_change,
-        channel_state,
-        channel_state.partner_state,
-        channel_state.our_state,
+    is_valid, _, _ = is_valid_lock_expired(
+        state_change=state_change,
+        channel_state=channel_state,
+        sender_state=channel_state.partner_state,
+        receiver_state=channel_state.our_state,
+        block_number=block_number,
     )
 
     events = list()
