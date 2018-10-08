@@ -445,18 +445,23 @@ class Ping(SignedMessage):
     """ Healthcheck message. """
     cmdid = messages.PING
 
-    def __init__(self, nonce: int):
+    def __init__(self, nonce: int, current_protocol_version: typing.RaidenProtocolVersion):
         super().__init__()
         self.nonce = nonce
+        self.current_protocol_version = current_protocol_version
 
     @classmethod
     def unpack(cls, packed):
-        ping = cls(nonce=packed.nonce)
+        ping = cls(
+            nonce=packed.nonce,
+            current_protocol_version=packed.current_protocol_version,
+        )
         ping.signature = packed.signature
         return ping
 
     def pack(self, packed):
         packed.nonce = self.nonce
+        packed.current_protocol_version = self.current_protocol_version
         packed.signature = self.signature
 
 

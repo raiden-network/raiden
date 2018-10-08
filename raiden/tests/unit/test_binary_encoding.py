@@ -2,7 +2,7 @@ import random
 
 import pytest
 
-from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden import constants
 from raiden.messages import Ping, Processed, decode
 from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.messages import (
@@ -16,13 +16,13 @@ PRIVKEY, ADDRESS = make_privkey_address()
 
 
 def test_signature():
-    ping = Ping(nonce=0)
+    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
     ping.sign(PRIVKEY)
     assert ping.sender == ADDRESS
 
 
 def test_encoding():
-    ping = Ping(nonce=0)
+    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
     ping.sign(PRIVKEY)
     decoded_ping = decode(ping.encode())
     assert isinstance(decoded_ping, Ping)
@@ -34,7 +34,7 @@ def test_encoding():
 
 
 def test_hash():
-    ping = Ping(nonce=0)
+    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
     ping.sign(PRIVKEY)
     data = ping.encode()
     msghash = sha3(data)
@@ -43,7 +43,7 @@ def test_hash():
 
 
 def test_processed():
-    message_identifier = random.randint(0, UINT64_MAX)
+    message_identifier = random.randint(0, constants.UINT64_MAX)
     processed_message = Processed(message_identifier)
     processed_message.sign(PRIVKEY)
     assert processed_message.sender == ADDRESS
@@ -59,9 +59,9 @@ def test_processed():
     assert sha3(decoded_processed_message.encode()) == sha3(data)
 
 
-@pytest.mark.parametrize('payment_identifier', [0, UINT64_MAX])
-@pytest.mark.parametrize('nonce', [1, UINT64_MAX])
-@pytest.mark.parametrize('transferred_amount', [0, UINT256_MAX])
+@pytest.mark.parametrize('payment_identifier', [0, constants.UINT64_MAX])
+@pytest.mark.parametrize('nonce', [1, constants.UINT64_MAX])
+@pytest.mark.parametrize('transferred_amount', [0, constants.UINT256_MAX])
 def test_direct_transfer_min_max(payment_identifier, nonce, transferred_amount):
     direct_transfer = make_direct_transfer(
         payment_identifier=payment_identifier,
@@ -74,11 +74,11 @@ def test_direct_transfer_min_max(payment_identifier, nonce, transferred_amount):
     assert decode(direct_transfer.encode()) == direct_transfer
 
 
-@pytest.mark.parametrize('amount', [0, UINT256_MAX])
-@pytest.mark.parametrize('payment_identifier', [0, UINT64_MAX])
-@pytest.mark.parametrize('nonce', [1, UINT64_MAX])
-@pytest.mark.parametrize('transferred_amount', [0, UINT256_MAX])
-@pytest.mark.parametrize('fee', [0, UINT256_MAX])
+@pytest.mark.parametrize('amount', [0, constants.UINT256_MAX])
+@pytest.mark.parametrize('payment_identifier', [0, constants.UINT64_MAX])
+@pytest.mark.parametrize('nonce', [1, constants.UINT64_MAX])
+@pytest.mark.parametrize('transferred_amount', [0, constants.UINT256_MAX])
+@pytest.mark.parametrize('fee', [0, constants.UINT256_MAX])
 def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, transferred_amount):
     mediated_transfer = make_mediated_transfer(
         amount=amount,
@@ -93,10 +93,10 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
     assert decode(mediated_transfer.encode()) == mediated_transfer
 
 
-@pytest.mark.parametrize('amount', [0, UINT256_MAX])
-@pytest.mark.parametrize('payment_identifier', [0, UINT64_MAX])
-@pytest.mark.parametrize('nonce', [1, UINT64_MAX])
-@pytest.mark.parametrize('transferred_amount', [0, UINT256_MAX])
+@pytest.mark.parametrize('amount', [0, constants.UINT256_MAX])
+@pytest.mark.parametrize('payment_identifier', [0, constants.UINT64_MAX])
+@pytest.mark.parametrize('nonce', [1, constants.UINT64_MAX])
+@pytest.mark.parametrize('transferred_amount', [0, constants.UINT256_MAX])
 def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_amount):
     refund_transfer = make_refund_transfer(
         amount=amount,
