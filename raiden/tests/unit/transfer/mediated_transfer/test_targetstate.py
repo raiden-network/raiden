@@ -512,7 +512,7 @@ def test_target_receive_lock_expired():
 
 
 @pytest.mark.xfail(reason='Not implemented #522')
-def test_transfer_succesful_after_secret_learned():
+def test_transfer_successful_after_secret_learned():
     # TransferCompleted event must be used only after the secret is learned and
     # there is enough time to unlock the lock on chain.
     #

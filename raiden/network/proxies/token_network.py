@@ -184,7 +184,7 @@ class TokenNetwork:
 
         channel_identifier = self.detail_channel(self.node_address, partner).channel_identifier
         log_details['channel_identifier'] = channel_identifier
-        log.info('new_netting_channel succesful', **log_details)
+        log.info('new_netting_channel successful', **log_details)
 
         return channel_identifier
 
