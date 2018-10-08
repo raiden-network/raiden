@@ -456,12 +456,13 @@ def handle_chain_init(
         chain_state: ChainState,
         state_change: ActionInitChain,
 ) -> TransitionResult:
-    chain_state = ChainState(
-        state_change.pseudo_random_generator,
-        state_change.block_number,
-        state_change.our_address,
-        state_change.chain_id,
-    )
+    if chain_state is None:
+        chain_state = ChainState(
+            state_change.pseudo_random_generator,
+            state_change.block_number,
+            state_change.our_address,
+            state_change.chain_id,
+        )
     events = list()
     return TransitionResult(chain_state, events)
 
