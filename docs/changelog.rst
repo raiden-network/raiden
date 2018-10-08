@@ -4,6 +4,7 @@ Changelog
 
 * :feature:`2713` Added the protocol version in the Ping message.
 * :feature:`2708` Add `--showconfig` CLI flag which dumps all configuration values that will control Raiden behavior.
+* :bug:`2720` A lock expired message must be considered invalid if the block in which the lock expired has not been confirmed.
 
 * :release:`0.12.0 <2018-10-05>`
 * :feature:`2699` Add ``/channels/<token_address>`` REST-API endpoint to query all node's channels for a specific token.
