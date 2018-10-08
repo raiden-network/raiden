@@ -116,7 +116,7 @@ def get_or_deploy_token(client: JSONRPCClient, scenario: dict) -> ContractProxy:
 
     token_ctr = client.deploy_solidity_contract(
         'CustomToken',
-        contract_manager._contracts,
+        contract_manager.contracts,
         constructor_parameters=(0, decimals, name, symbol),
         confirmations=1,
 
