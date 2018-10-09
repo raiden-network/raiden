@@ -161,6 +161,11 @@ def options(func):
             help='Bypass the experimental software disclaimer prompt',
             is_flag=True,
         ),
+        option(
+            '--showconfig',
+            help='Show all configuration values used to control Raiden\'s behavior',
+            is_flag=True,
+        ),
         option_group(
             'Ethereum Node Options',
             option(
