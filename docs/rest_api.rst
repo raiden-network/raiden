@@ -210,7 +210,7 @@ Querying Information About Channels and Tokens
       ]
 
    :statuscode 200: Successful query
-   :statuscode 400: The given token address is not valid eip55-encoded Ethereum address
+   :statuscode 404: The given token address is not valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/channels/(token_address)/(partner_address)
@@ -244,8 +244,9 @@ Querying Information About Channels and Tokens
       }
 
    :statuscode 200: Successful query
-   :statuscode 400: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
-   :statuscode 404: Channel does not exist
+   :statuscode 404:
+    - The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses, or
+    - The channel does not exist
    :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/tokens
@@ -301,7 +302,7 @@ Querying Information About Channels and Tokens
 
    :statuscode 200: Successful query
    :statuscode 302: If the user accesses the channel link endpoint
-   :statuscode 404: If the token does not exist/the token address is invalid
+   :statuscode 404: If the token does not exist/the token address is not valid eip55-encoded
    :statuscode 500: Internal Raiden node error
    :resjsonarr address partner_address: The partner we have a channel with
    :resjsonarr link channel: A link to the channel resource
@@ -426,6 +427,7 @@ Channel Management
     - there is nothing to do since neither ``state`` nor ``total_deposit`` have been given, or
     - the value of ``state`` is not a valid channel state.
    :statuscode 402: Insufficient balance to do a deposit, or insufficient ETH to pay for the gas of the on-chain transaction
+   :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
    :statuscode 408: Deposit event was not read in time by the Ethereum node
    :statuscode 409:
     - Provided channel does not exist or
@@ -499,6 +501,7 @@ Connection Management
 
    :statuscode 204: For a successful connection creation.
    :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance to pay for the gas of the on-chain transactions.
+   :statuscode 404: The given token and is not a valid eip55-encoded Ethereum address
    :statuscode 408: If a timeout happened during any of the transactions.
    :statuscode 409: If any of the provided input to the call is invalid.
    :statuscode 500: Internal Raiden node error.
@@ -534,6 +537,7 @@ Connection Management
    The response is a list with the addresses of all closed channels.
 
    :statuscode 200: For successfully leaving a token network
+   :statuscode 404: The given token and is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
 
 Payments
@@ -579,6 +583,7 @@ Payments
    :statuscode 200: Successful payment
    :statuscode 400: If the provided json is in some way malformed
    :statuscode 402: If the payment can't start due to insufficient balance
+   :statuscode 404: The given token and / or target addresses are not valid eip55-encoded Ethereum addresses
    :statuscode 408: If a timeout happened during the payment
    :statuscode 409: If the address or the amount is invalid or if there is no path to the target
    :statuscode 500: Internal Raiden node error
@@ -701,8 +706,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
     ]
 
    :statuscode 200: For successful query
-   :statuscode 400: If the provided query string is malformed
-   :statuscode 404: If the token at the given token_address does not exist
+   :statuscode 404: The given token and is not a valid eip55-encoded Ethereum address or does not exist
    :statuscode 409: If the given block number or token_address arguments are invalid
    :statuscode 500: Internal Raiden node error
 
@@ -776,8 +780,9 @@ The format of ``log_time`` is ISO8601 with milliseconds.
     ]
 
   :statuscode 200: For successful query
-  :statuscode 400: If the provided query string is malformed
-  :statuscode 404: If the channel does not exist
+  :statuscode 404:
+   - The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses, or
+   - The channel for the given partner does not exist
   :statuscode 409: If the given block number argument is invalid
   :statuscode 500: Internal Raiden node error
 
@@ -822,7 +827,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
      ]
 
   :statuscode 200: For successful query
-  :statuscode 400: If the provided query string is malformed
+  :statuscode 404: The given token and / or partner addresses are not valid eip55-encoded Ethereum addresses
   :statuscode 409: If the given block number or token_address arguments are invalid
   :statuscode 500: Internal Raiden node error
 
@@ -880,7 +885,4 @@ Now for the internal Raiden events:
      }, ...]
 
   :statuscode 200: For successful query
-  :statuscode 400: If the provided query string is malformed
-  :statuscode 404: If the token at the given token_address does not exist
-  :statuscode 409: If the given block number or token_address arguments are invalid
   :statuscode 500: Internal Raiden node error
