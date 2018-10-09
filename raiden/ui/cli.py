@@ -1,57 +1,40 @@
-import gevent.monkey
+import json
+import os
+import sys
+import traceback
+from pathlib import Path
+from subprocess import DEVNULL
+from tempfile import mktemp
+from urllib.parse import urljoin
 
-gevent.monkey.patch_all()
+import click
+import structlog
+from eth_utils import to_canonical_address, to_checksum_address
+from mirakuru import ProcessExitedWithError
 
-if True:
-    import json
-    import os
-    import sys
-    import traceback
-    from pathlib import Path
-    from subprocess import DEVNULL
-    from tempfile import mktemp
-    from urllib.parse import urljoin
-
-    import click
-    import gevent
-    import gevent.monkey
-    import structlog
-    from eth_utils import (
-        to_canonical_address,
-        to_checksum_address,
-    )
-    from mirakuru import ProcessExitedWithError
-    from raiden.api.rest import APIServer, RestAPI
-
-    from raiden.log_config import configure_logging
-    from raiden.network.sockfactory import SocketFactory
-    from raiden.network.utils import get_free_port
-    from raiden.settings import INITIAL_PORT
-    from raiden.utils import (
-        get_system_spec,
-        split_endpoint,
-    )
-    from raiden.utils.cli import (
-        ADDRESS_TYPE,
-        GasPriceChoiceType,
-        LOG_LEVEL_CONFIG_TYPE,
-        MatrixServerType,
-        NATChoiceType,
-        NetworkChoiceType,
-        PathRelativePath,
-        apply_config_file,
-        group,
-        option,
-        option_group,
-    )
-    from raiden.utils.http import HTTPExecutor
-    from raiden_contracts.constants import (
-        CONTRACT_ENDPOINT_REGISTRY,
-        CONTRACT_TOKEN_NETWORK_REGISTRY,
-    )
-
-    from .runners import NodeRunner, EchoNodeRunner
-    from .app import run_app
+from raiden.api.rest import APIServer, RestAPI
+from raiden.log_config import configure_logging
+from raiden.network.sockfactory import SocketFactory
+from raiden.network.utils import get_free_port
+from raiden.settings import INITIAL_PORT
+from raiden.utils import get_system_spec, split_endpoint
+from raiden.utils.cli.app import run_app
+from raiden.utils.cli.runners import EchoNodeRunner, NodeRunner
+from raiden.utils.cli.utils import (
+    ADDRESS_TYPE,
+    LOG_LEVEL_CONFIG_TYPE,
+    GasPriceChoiceType,
+    MatrixServerType,
+    NATChoiceType,
+    NetworkChoiceType,
+    PathRelativePath,
+    apply_config_file,
+    group,
+    option,
+    option_group,
+)
+from raiden.utils.http import HTTPExecutor
+from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY, CONTRACT_TOKEN_NETWORK_REGISTRY
 
 log = structlog.get_logger(__name__)
 
@@ -174,12 +157,6 @@ def options(func):
             '--accept-disclaimer',
             help='Bypass the experimental software disclaimer prompt',
             is_flag=True,
-        ),
-        option(
-            '--showconfig',
-            help='Shows all configuration values use by Raiden from various sources',
-            is_flag=True,
-            default=False,
         ),
         option_group(
             'Ethereum Node Options',

@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 import click
 import filelock
 import structlog
-from eth_utils import to_canonical_address, to_normalized_address
+from eth_utils import to_canonical_address, to_checksum_address, to_normalized_address
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
@@ -27,8 +27,14 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NAT_KEEPALIVE_RETRIES
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
-from raiden.utils import is_supported_client, merge_dict, networkid_is_known, pex, split_endpoint
-from raiden.utils.cli import get_matrix_servers
+from raiden.utils import (
+    is_supported_client,
+    merge_dict,
+    networkid_is_known,
+    pex,
+    split_endpoint,
+    typing,
+)
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -40,15 +46,37 @@ from raiden_contracts.constants import (
     NetworkType,
 )
 
-from .handlers import (
-    handle_contract_no_code,
-    handle_contract_version_mismatch,
-    handle_contract_wrong_address,
-)
 from .prompt import prompt_account
 from .sync import check_discovery_registration_gas, check_synced
+from .utils import get_matrix_servers
 
 log = structlog.get_logger(__name__)
+
+
+def handle_contract_version_mismatch(name: str, address: typing.Address) -> None:
+    hex_addr = to_checksum_address(address)
+    click.secho(
+        f'Error: Provided {name} {hex_addr} contract version mismatch. '
+        'Please update your Raiden installation.',
+        fg='red',
+    )
+    sys.exit(1)
+
+
+def handle_contract_no_code(name: str, address: typing.Address) -> None:
+    hex_addr = to_checksum_address(address)
+    click.secho(f'Error: Provided {name} {hex_addr} contract does not contain code', fg='red')
+    sys.exit(1)
+
+
+def handle_contract_wrong_address(name: str, address: typing.Address) -> None:
+    hex_addr = to_checksum_address(address)
+    click.secho(
+        f'Error: Provided address {hex_addr} for {name} contract'
+        ' does not contain expected code.',
+        fg='red',
+    )
+    sys.exit(1)
 
 
 def run_app(
