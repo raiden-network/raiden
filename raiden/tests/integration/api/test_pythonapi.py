@@ -2,7 +2,7 @@ import pytest
 from eth_utils import is_same_address, to_normalized_address
 
 from raiden.api.python import RaidenAPI
-from raiden.exceptions import DepositMismatch
+from raiden.exceptions import DepositMismatch, UnknownTokenAddress
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.transfer import get_channelstate
@@ -46,6 +46,14 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
     assert api1.get_node_network_state(api2.address) == NODE_NETWORK_UNKNOWN
     assert api2.get_node_network_state(api1.address) == NODE_NETWORK_UNKNOWN
     assert not api1.get_channel_list(registry_address, token_address, api2.address)
+
+    # Make sure invalid arguments to get_channel_list are caught
+    with pytest.raises(UnknownTokenAddress):
+        api1.get_channel_list(
+            registry_address=registry_address,
+            token_address=None,
+            partner_address=api2.address,
+        )
 
     # open is a synchronous api
     api1.channel_open(node1.raiden.default_registry.address, token_address, api2.address)
