@@ -146,7 +146,7 @@ def make_channel(
         channel_identifier=None,
         reveal_timeout=UNIT_REVEAL_TIMEOUT,
         settle_timeout=UNIT_SETTLE_TIMEOUT,
-):
+) -> NettingChannelState:
 
     our_address = our_address or make_address()
     partner_address = partner_address or make_address()
