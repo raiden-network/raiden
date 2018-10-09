@@ -19,7 +19,7 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
 from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
 from raiden.transfer import views
-from raiden.utils.cli import LogLevelConfigType
+from raiden.utils.cli.utils import LogLevelConfigType
 
 log = structlog.get_logger(__name__)
 

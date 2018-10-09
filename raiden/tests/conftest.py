@@ -12,7 +12,7 @@ if True:
     import pytest
     from raiden.log_config import configure_logging
     from raiden.tests.fixtures.variables import *  # noqa: F401,F403
-    from raiden.utils.cli import LogLevelConfigType
+    from raiden.utils.cli.utils import LogLevelConfigType
 
 
 def pytest_addoption(parser):
