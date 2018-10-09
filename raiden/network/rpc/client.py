@@ -249,7 +249,11 @@ class JSONRPCClient:
                                  to the contract is a required argument to extract
                                  the contract data from the `all_contracts` dict.
         """
-        libraries = dict(libraries) or dict()
+        if libraries:
+            libraries = dict(libraries)
+        else:
+            libraries = dict()
+
         constructor_parameters = constructor_parameters or list()
         all_contracts = copy.deepcopy(all_contracts)
 
