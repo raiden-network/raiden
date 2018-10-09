@@ -11,12 +11,9 @@ token:
 
 nodes:
   commands:
-    start: "ssh ubuntu@testnet.raiden.network ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no raiden_0{:03d} docker start -t 99999 raiden"
-    stop: "ssh ubuntu@testnet.raiden.network ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no raiden_0{:03d} docker stop -t 99999 raiden"
-    #kill: "docker kill raiden_{:02d}"
-    #stop: "pkill -f '127.0.0.1:50{:02d}'"
-    #kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
-    #start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+    # Following commands need to be adjusted for the env they are run in
+    start: "ssh ubuntu@testnet.raiden.network ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no raiden_{:04d} docker start raiden"
+    stop: "ssh ubuntu@testnet.raiden.network ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no raiden_{:04d} docker stop -t 9999 raiden"
   range:
     first: 1
     last: 2
@@ -41,6 +38,7 @@ scenario:
             - stop_node: 1
             - wait: 1
             - start_node: 1
+      - wait: 60
       - parallel:
           name: "Assert after one transfer and restart"
           tasks:
@@ -53,6 +51,7 @@ scenario:
             - stop_node: 2
             - wait: 1
             - start_node: 2
+      - wait: 60
       - parallel:
           name: "Assert after one transfer and restart of other node"
           tasks:
@@ -65,20 +64,9 @@ scenario:
             - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 409}
             - wait: 1
             - start_node: 2
+      - wait: 60
       - parallel:
           name: "Assert after one transfer to offline node"
-          tasks:
-            - assert: {from: 0, to: 1, total_deposit: 10, balance: 8, state: "opened"}
-            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 2, state: "opened"}
-      - serial:
-          name: "Make transfer from offline node"
-          tasks:
-            - stop_node: 1
-            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 409}
-            - wait: 1
-            - start_node: 1
-      - parallel:
-          name: "Assert after offline node making transfer"
           tasks:
             - assert: {from: 0, to: 1, total_deposit: 10, balance: 8, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 0,  balance: 2, state: "opened"}

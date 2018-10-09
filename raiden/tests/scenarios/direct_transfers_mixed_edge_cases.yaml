@@ -61,9 +61,7 @@ scenario:
       - serial:
           name: "Make transfers to node with invalid address"
           tasks:
-            - transfer: {from: 0, to: '0x02f4b6bc65561a792836212ebc54434db0ab759a', amount: 1, expected_http_status: 400}
-            - transfer: {from: 0, to: '0x02f4b6bc65561a792836212ebc54434db0ab759a13', amount: 1, expected_http_status: 400}
-            - transfer: {from: 0, to: '0x02f4b6bc65561a792836212ebc54434db0', amount: 1, expected_http_status: 400}
+            - transfer: {from: 0, to: '0x02f4b6bc65561a792836212ebc54434db0ab759a', amount: 1, expected_http_status: 404}
       - serial:
           name: "Make transfer with entire balance"
           tasks:
