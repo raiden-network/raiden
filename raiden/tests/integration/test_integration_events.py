@@ -18,11 +18,8 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    get_channelstate,
-    pending_mediated_transfer,
-)
+from raiden.tests.utils.protocol import HoldOffChainSecretRequest
+from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
 from raiden.transfer import channel, views
 from raiden.utils import sha3
 from raiden.utils.typing import Address, BlockSpecification, ChannelID
@@ -484,15 +481,24 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
         token_address,
     )
 
+    hold_event_handler = HoldOffChainSecretRequest()
+    app2.raiden.raiden_event_handler = hold_event_handler
+
     amount = 10
     identifier = 1
-    secret = pending_mediated_transfer(
-        raiden_chain,
+    target = app2.raiden.address
+    secret = sha3(target)
+    secrethash = sha3(secret)
+
+    hold_event_handler.hold_secret_for(secret)
+
+    app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
         amount,
+        target,
         identifier,
+        secret,
     )
-    secrethash = sha3(secret)
 
     gevent.sleep(.1)  # wait for the messages
 
