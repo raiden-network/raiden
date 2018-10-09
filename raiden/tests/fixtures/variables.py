@@ -219,12 +219,6 @@ def blockchain_type(request):
 
 
 @pytest.fixture
-def skip_if_tester(blockchain_type):
-    if blockchain_type == 'tester':
-        pytest.skip('This test does not work on tester chain')
-
-
-@pytest.fixture
 def blockchain_number_of_nodes():
     """ Number of nodes in the cluster, not the same as the number of raiden
     nodes. Used for all geth clusters.

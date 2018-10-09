@@ -1,14 +1,11 @@
 import pytest
-from eth_tester import EthereumTester, PyEVMBackend
 from web3 import HTTPProvider, Web3
-from web3.providers.eth_tester import EthereumTesterProvider
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockchain
 from raiden.tests.utils.network import jsonrpc_services
-from raiden.tests.utils.tester import Miner, fund_accounts
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils import privatekey_to_address
 
@@ -23,12 +20,6 @@ def endpoint_discovery_services(blockchain_services, endpoint_registry_address):
     ]
 
 
-@pytest.fixture(scope='session')
-def ethereum_tester(patch_genesis_gas_limit):
-    """Returns an instance of an Ethereum tester"""
-    return EthereumTester(PyEVMBackend())
-
-
 @pytest.fixture
 def web3(
         blockchain_p2p_ports,
@@ -40,7 +31,6 @@ def web3(
         random_marker,
         request,
         tmpdir,
-        ethereum_tester,
         chain_id,
 ):
     """ Starts a private chain with accounts funded. """
@@ -93,21 +83,6 @@ def web3(
             process.terminate()
 
         cleanup_tasks()
-
-    elif blockchain_type == 'tester':
-        web3 = Web3(EthereumTesterProvider(ethereum_tester))
-        snapshot = ethereum_tester.take_snapshot()
-
-        fund_accounts(web3, keys_to_fund, ethereum_tester)
-
-        miner = Miner(web3)
-        miner.start()
-
-        yield web3
-
-        miner.stop.set()
-        miner.join()
-        ethereum_tester.revert_to_snapshot(snapshot)
 
     else:
         raise ValueError(f'unknown blockchain_type {blockchain_type}')
