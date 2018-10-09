@@ -24,7 +24,7 @@ from raiden.utils.solc import (
     solidity_resolve_symbols,
     solidity_unresolved_symbols,
 )
-from raiden.utils.typing import Address, BlockSpecification, Callable, Dict, List, Optional
+from raiden.utils.typing import Address, BlockSpecification, Callable, Dict, List
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -228,14 +228,6 @@ class JSONRPCClient:
     def get_transaction_receipt(self, tx_hash: bytes):
         return self.web3.eth.getTransactionReceipt(encode_hex(tx_hash))
 
-    def get_transaction_from(self, tx_hash: bytes) -> Optional[Address]:
-        receipt = self.web3.eth.getTransaction(encode_hex(tx_hash))
-
-        if receipt:
-            return to_canonical_address(receipt['from'])
-
-        return None
-
     def deploy_solidity_contract(
             self,  # pylint: disable=too-many-locals
             contract_name,
@@ -257,11 +249,10 @@ class JSONRPCClient:
                                  to the contract is a required argument to extract
                                  the contract data from the `all_contracts` dict.
         """
-        if libraries is None:
-            libraries = dict()
-        if constructor_parameters is None:
-            constructor_parameters = []
+        libraries = dict(libraries) or dict()
+        constructor_parameters = constructor_parameters or list()
         all_contracts = copy.deepcopy(all_contracts)
+
         if contract_name in all_contracts:
             contract_key = contract_name
 
@@ -275,7 +266,6 @@ class JSONRPCClient:
                 'Unknown contract {} and no contract_path given'.format(contract_name),
             )
 
-        libraries = dict(libraries)
         contract = all_contracts[contract_key]
         contract_interface = contract['abi']
         symbols = solidity_unresolved_symbols(contract['bin'])
