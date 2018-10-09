@@ -224,8 +224,12 @@ def transfer_and_assert(post_url, identifier, amount):
         raise exception
 
     assert response is not None
-    assert response.headers['Content-Type'] == 'application/json', response.headers['Content-Type']
-    assert response.status_code == HTTPStatus.OK, response.json()
+    if response.status_code != 500:
+        is_json = response.headers['Content-Type'] == 'application/json'
+        assert is_json, response.headers['Content-Type']
+        assert response.status_code == HTTPStatus.OK, response.json()
+    else:
+        log.critical('server is in shutdown')
 
 
 def _wait_for_server(post_url, identifier, amount, port_number):
@@ -241,7 +245,7 @@ def _wait_for_server(post_url, identifier, amount, port_number):
             )
             return
         except (requests.RequestException, requests.ConnectionError):
-            wait_for_listening_port(port_number)
+            wait_for_listening_port(port_number, tries=100)
 
 
 def parallel_bounded_requests(
