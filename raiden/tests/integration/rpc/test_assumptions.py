@@ -2,24 +2,11 @@ import os
 
 import pytest
 from eth_utils import decode_hex, to_checksum_address
-from pkg_resources import DistributionNotFound
 
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils.solc import compile_files_cwd
-
-try:
-    from evm.exceptions import ValidationError
-except (ModuleNotFoundError, DistributionNotFound):
-    class ValidationError(Exception):
-        pass
-
-try:
-    from eth_tester.exceptions import TransactionFailed
-except (ModuleNotFoundError, DistributionNotFound):
-    class TransactionFailed(Exception):
-        pass
 
 # pylint: disable=unused-argument,protected-access
 
@@ -69,7 +56,7 @@ def get_list_of_block_numbers(item):
     return list()
 
 
-def test_call_invalid_selector(blockchain_type, deploy_client):
+def test_call_invalid_selector(deploy_client):
     """ A JSON RPC call to a valid address but with an invalid selector returns
     the empty string.
     """
@@ -86,11 +73,7 @@ def test_call_invalid_selector(blockchain_type, deploy_client):
         'to': to_checksum_address(address),
         'data': wrong_selector,
     }
-    if blockchain_type == 'tester':
-        with pytest.raises(TransactionFailed):
-            call(data)
-    else:
-        assert call(data) == b''
+    assert call(data) == b''
 
 
 def test_call_inexisting_address(deploy_client):
@@ -108,18 +91,14 @@ def test_call_inexisting_address(deploy_client):
     assert deploy_client.web3.eth.call(transaction) == b''
 
 
-def test_call_throws(blockchain_type, deploy_client):
+def test_call_throws(deploy_client):
     """ A JSON RPC call to a function that throws returns the empty string. """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
     call = contract_proxy.contract.functions.fail().call
-    if blockchain_type == 'tester':
-        with pytest.raises(TransactionFailed):
-            call()
-    else:
-        assert call() == []
+    assert call() == []
 
 
 def test_estimate_gas_fail(deploy_client):
