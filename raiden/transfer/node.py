@@ -411,7 +411,7 @@ def inplace_delete_message_queue(
         state_change,
     )
 
-    if not queue:
+    if len(queue) == 0:
         del chain_state.queueids_to_queues[queueid]
     else:
         chain_state.queueids_to_queues[queueid] = queue
