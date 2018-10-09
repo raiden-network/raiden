@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import textwrap
 import traceback
 from pathlib import Path
 from subprocess import DEVNULL
@@ -13,14 +14,13 @@ from eth_utils import to_canonical_address, to_checksum_address
 from mirakuru import ProcessExitedWithError
 
 from raiden.api.rest import APIServer, RestAPI
+from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.settings import INITIAL_PORT
 from raiden.utils import get_system_spec, split_endpoint
-from raiden.utils.cli.app import run_app
-from raiden.utils.cli.runners import EchoNodeRunner, NodeRunner
-from raiden.utils.cli.utils import (
+from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
     GasPriceChoiceType,
@@ -35,6 +35,9 @@ from raiden.utils.cli.utils import (
 )
 from raiden.utils.http import HTTPExecutor
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY, CONTRACT_TOKEN_NETWORK_REGISTRY
+
+from .app import run_app
+from .runners import EchoNodeRunner, MatrixRunner, UDPRunner
 
 log = structlog.get_logger(__name__)
 
@@ -338,7 +341,61 @@ def run(ctx, **kwargs):
         ctx.obj = kwargs
         return
 
-    NodeRunner(kwargs, ctx).run()
+    runner = None
+    if kwargs['transport'] == 'udp':
+        runner = UDPRunner(kwargs, ctx)
+    elif kwargs['transport'] == 'matrix':
+        runner = MatrixRunner(kwargs, ctx)
+    else:
+        # Shouldn't happen
+        raise RuntimeError(f"Invalid transport type '{kwargs['transport']}'")
+
+    click.secho(runner.welcome_string, fg='green')
+    click.secho(
+        textwrap.dedent(
+            '''\
+            ----------------------------------------------------------------------
+            | This is an Alpha version of experimental open source software      |
+            | released under the MIT license and may contain errors and/or bugs. |
+            | Use of the software is at your own risk and discretion. No         |
+            | guarantee whatsoever is made regarding its suitability for your    |
+            | intended purposes and its compliance with applicable law and       |
+            | regulations. It is up to the user to determine the software´s      |
+            | quality and suitability and whether its use is compliant with its  |
+            | respective regulatory regime.                                      |
+            |                                                                    |
+            | Privacy notice: Please be aware, that by using the Raiden Client,  |
+            | your Ethereum address, channels, channel deposits, settlements and |
+            | the Ethereum address of your settlement counterparty will be       |
+            | stored on the Ethereum chain, i.e. on servers of Ethereum node     |
+            | operators and ergo made publicly available. The same will also be  |
+            | stored on systems of parties running other Raiden nodes connected  |
+            | to the same token network.                                         |
+            |                                                                    |
+            | Also be aware, that data on individual Raiden token transfers will |
+            | be made available via the Matrix protocol to the recipient,        |
+            | intermediating nodes of a specific transfer as well as to the      |
+            | Matrix server operators.                                           |
+            ----------------------------------------------------------------------''',
+        ),
+        fg='yellow',
+    )
+    if not kwargs['accept_disclaimer']:
+        click.confirm('\nHave you read and acknowledged the above disclaimer?', abort=True)
+
+    # TODO:
+    # - Ask for confirmation to quit if there are any locked transfers that did
+    # not timeout.
+    try:
+        app = runner.run()
+        app.stop()
+    except (ReplacementTransactionUnderpriced, TransactionAlreadyPending) as e:
+        click.secho(
+            '{}. Please make sure that this Raiden node is the '
+            'only user of the selected account'.format(str(e)),
+            fg='red',
+        )
+        sys.exit(1)
 
 
 @run.command()

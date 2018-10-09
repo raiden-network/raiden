@@ -1,6 +1,5 @@
 import signal
 import sys
-import textwrap
 import traceback
 from datetime import datetime
 from tempfile import NamedTemporaryFile
@@ -19,8 +18,6 @@ from raiden.exceptions import (
     EthNodeCommunicationError,
     RaidenError,
     RaidenServicePortInUseError,
-    ReplacementTransactionUnderpriced,
-    TransactionAlreadyPending,
 )
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
@@ -53,7 +50,7 @@ class NodeRunner:
         self._raiden_api = None
 
     @property
-    def _welcome_string(self):
+    def welcome_string(self):
         return f"Welcome to Raiden, version {get_system_spec()['raiden']}!"
 
     def _startup_hook(self):
@@ -65,39 +62,6 @@ class NodeRunner:
         pass
 
     def run(self):
-        click.secho(self._welcome_string, fg='green')
-        click.secho(
-            textwrap.dedent(
-                '''\
-                ----------------------------------------------------------------------
-                | This is an Alpha version of experimental open source software      |
-                | released under the MIT license and may contain errors and/or bugs. |
-                | Use of the software is at your own risk and discretion. No         |
-                | guarantee whatsoever is made regarding its suitability for your    |
-                | intended purposes and its compliance with applicable law and       |
-                | regulations. It is up to the user to determine the software´s      |
-                | quality and suitability and whether its use is compliant with its  |
-                | respective regulatory regime.                                      |
-                |                                                                    |
-                | Privacy notice: Please be aware, that by using the Raiden Client,  |
-                | your Ethereum address, channels, channel deposits, settlements and |
-                | the Ethereum address of your settlement counterparty will be       |
-                | stored on the Ethereum chain, i.e. on servers of Ethereum node     |
-                | operators and ergo made publicly available. The same will also be  |
-                | stored on systems of parties running other Raiden nodes connected  |
-                | to the same token network.                                         |
-                |                                                                    |
-                | Also be aware, that data on individual Raiden token transfers will |
-                | be made available via the Matrix protocol to the recipient,        |
-                | intermediating nodes of a specific transfer as well as to the      |
-                | Matrix server operators.                                           |
-                ----------------------------------------------------------------------''',
-            ),
-            fg='yellow',
-        )
-        if not self._options['accept_disclaimer']:
-            click.confirm('\nHave you read and acknowledged the above disclaimer?', abort=True)
-
         configure_logging(
             self._options['log_config'],
             log_json=self._options['log_json'],
@@ -108,43 +72,7 @@ class NodeRunner:
         if self._options['config_file']:
             log.debug('Using config file', config_file=self._options['config_file'])
 
-        # TODO:
-        # - Ask for confirmation to quit if there are any locked transfers that did
-        # not timeout.
-        try:
-            if self._options['transport'] == 'udp':
-                (listen_host, listen_port) = split_endpoint(self._options['listen_address'])
-                try:
-                    with SocketFactory(
-                        listen_host, listen_port, strategy=self._options['nat'],
-                    ) as mapped_socket:
-                        self._options['mapped_socket'] = mapped_socket
-                        app = self._run_app()
-
-                except RaidenServicePortInUseError:
-                    click.secho(
-                        'ERROR: Address %s:%s is in use. '
-                        'Use --listen-address <host:port> to specify port to listen on.' %
-                        (listen_host, listen_port),
-                        fg='red',
-                    )
-                    sys.exit(1)
-            elif self._options['transport'] == 'matrix':
-                self._options['mapped_socket'] = None
-                app = self._run_app()
-            else:
-                # Shouldn't happen
-                raise RuntimeError(f"Invalid transport type '{self._options['transport']}'")
-            app.stop()
-        except (ReplacementTransactionUnderpriced, TransactionAlreadyPending) as e:
-            click.secho(
-                '{}. Please make sure that this Raiden node is the '
-                'only user of the selected account'.format(str(e)),
-                fg='red',
-            )
-            sys.exit(1)
-
-    def _run_app(self):
+    def _start_services(self):
         from raiden.ui.console import Console
         from raiden.api.python import RaidenAPI
 
@@ -269,6 +197,35 @@ class NodeRunner:
         return app_
 
 
+class MatrixRunner(NodeRunner):
+    def run(self):
+        super().run()
+
+        (listen_host, listen_port) = split_endpoint(self._options['listen_address'])
+        try:
+            with SocketFactory(
+                listen_host, listen_port, strategy=self._options['nat'],
+            ) as mapped_socket:
+                self._options['mapped_socket'] = mapped_socket
+                app = self._start_services()
+
+        except RaidenServicePortInUseError:
+            click.secho(
+                'ERROR: Address %s:%s is in use. '
+                'Use --listen-address <host:port> to specify port to listen on.' %
+                (listen_host, listen_port),
+                fg='red',
+            )
+            sys.exit(1)
+        return app
+
+
+class UDPRunner(NodeRunner):
+    def run(self):
+        self._options['mapped_socket'] = None
+        return self._start_services()
+
+
 class EchoNodeRunner(NodeRunner):
     def __init__(self, options: Dict[str, Any], ctx, token_address: typing.TokenAddress):
         super().__init__(options, ctx)
@@ -276,8 +233,8 @@ class EchoNodeRunner(NodeRunner):
         self._echo_node = None
 
     @property
-    def _welcome_string(self):
-        return '{} [ECHO NODE]'.format(super(EchoNodeRunner, self)._welcome_string)
+    def welcome_string(self):
+        return '{} [ECHO NODE]'.format(super().welcome_string)
 
     def _startup_hook(self):
         self._echo_node = EchoNode(self._raiden_api, self._token_address)
