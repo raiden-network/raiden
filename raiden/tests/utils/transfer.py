@@ -3,16 +3,12 @@ import random
 
 import gevent
 from coincurve import PrivateKey
-from gevent.event import AsyncResult
 
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import on_message
 from raiden.messages import LockedTransfer, Secret
-from raiden.raiden_service import initiator_init, mediator_init, target_init
-from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     lockedtransfersigned_from_message,
@@ -115,72 +111,6 @@ def mediated_transfer(
     )
     assert async_result.wait(timeout), f'timeout for transfer id={identifier}'
     gevent.sleep(0.3)  # let the other nodes synch
-
-
-def pending_mediated_transfer(app_chain, token_network_identifier, amount, identifier):
-    """ Nice to read shortcut to make a LockedTransfer where the secret is _not_ revealed.
-
-    While the secret is not revealed all apps will be synchronized, meaning
-    they are all going to receive the LockedTransfer message.
-    Returns:
-        The secret used to generate the LockedTransfer
-    """
-    # pylint: disable=too-many-locals
-
-    if len(app_chain) < 2:
-        raise ValueError('Cannot make a LockedTransfer with less than two apps')
-
-    target = app_chain[-1].raiden.address
-
-    # Generate a secret
-    initiator_channel = views.get_channelstate_by_token_network_and_partner(
-        views.state_from_app(app_chain[0]),
-        token_network_identifier,
-        app_chain[1].raiden.address,
-    )
-    nonce_int = channel.get_next_nonce(initiator_channel.our_state)
-    nonce_bytes = nonce_int.to_bytes(2, 'big')
-    secret = sha3(target + nonce_bytes)
-
-    initiator_app = app_chain[0]
-    init_initiator_statechange = initiator_init(
-        initiator_app.raiden,
-        identifier,
-        amount,
-        secret,
-        token_network_identifier,
-        target,
-    )
-
-    init_initiator_identifier = init_initiator_statechange.transfer.payment_identifier
-    initiator_app.raiden.identifier_to_results[init_initiator_identifier] = AsyncResult()
-
-    events = initiator_app.raiden.wal.log_and_dispatch(
-        init_initiator_statechange,
-    )
-    send_transfermessage = must_contain_entry(events, SendLockedTransfer, {})
-    transfermessage = LockedTransfer.from_event(send_transfermessage)
-    initiator_app.raiden.sign(transfermessage)
-
-    for mediator_app in app_chain[1:-1]:
-        mediator_init_statechange = mediator_init(mediator_app.raiden, transfermessage)
-
-        mediator_init_identifier = init_initiator_statechange.transfer.payment_identifier
-        mediator_app.raiden.identifier_to_results[mediator_init_identifier] = AsyncResult()
-
-        events = mediator_app.raiden.wal.log_and_dispatch(
-            mediator_init_statechange,
-        )
-        send_transfermessage = must_contain_entry(events, SendLockedTransfer, {})
-        transfermessage = LockedTransfer.from_event(send_transfermessage)
-        mediator_app.raiden.sign(transfermessage)
-
-    target_app = app_chain[-1]
-    mediator_init_statechange = target_init(transfermessage)
-    events = target_app.raiden.wal.log_and_dispatch(
-        mediator_init_statechange,
-    )
-    return secret
 
 
 def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):

@@ -625,11 +625,13 @@ class RaidenService(Runnable):
               expire.
         """
 
-        async_result = self.start_mediated_transfer(
+        secret = random_secret()
+        async_result = self.start_mediated_transfer_with_secret(
             token_network_identifier,
             amount,
             target,
             identifier,
+            secret,
         )
 
         return async_result
@@ -673,12 +675,13 @@ class RaidenService(Runnable):
 
         self.handle_state_change(direct_transfer)
 
-    def start_mediated_transfer(
+    def start_mediated_transfer_with_secret(
             self,
             token_network_identifier: typing.TokenNetworkID,
             amount: typing.TokenAmount,
             target: typing.Address,
             identifier: typing.PaymentID,
+            secret: typing.Secret,
     ):
 
         self.start_health_check_for(target)
@@ -692,7 +695,6 @@ class RaidenService(Runnable):
         async_result = AsyncResult()
         self.identifier_to_results[identifier] = async_result
 
-        secret = random_secret()
         init_initiator_statechange = initiator_init(
             self,
             identifier,

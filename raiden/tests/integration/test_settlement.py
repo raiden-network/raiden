@@ -12,12 +12,12 @@ from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.protocol import HoldOffChainSecretRequest
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     claim_lock,
     direct_transfer,
     get_channelstate,
-    pending_mediated_transfer,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.state import UnlockProofState
@@ -47,7 +47,7 @@ def wait_for_batch_unlock(app, token_network_id, participant, partner):
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_settle_is_automatically_called(raiden_network, token_addresses, deposit):
+def test_settle_is_automatically_called(raiden_network, token_addresses):
     """Settle is automatically called by one of the nodes."""
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
@@ -129,7 +129,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses, deposit
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, deposit):
+def test_lock_expiry(raiden_network, token_addresses, deposit):
     """Test lock expiry and removal."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
@@ -138,6 +138,9 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
         alice_app.raiden.default_registry.address,
         token_address,
     )
+
+    hold_event_handler = HoldOffChainSecretRequest()
+    bob_app.raiden.raiden_event_handler = hold_event_handler
 
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(alice_app),
@@ -153,13 +156,21 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
 
     alice_to_bob_amount = 10
     identifier = 1
-    transfer_1_secret = pending_mediated_transfer(
-        raiden_network,
+    target = bob_app.raiden.address
+    transfer_1_secret = sha3(target + b'1')
+    transfer_1_secrethash = sha3(transfer_1_secret)
+
+    hold_event_handler.hold_secret_for(secrethash=transfer_1_secrethash)
+
+    alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
         alice_to_bob_amount,
+        target,
         identifier,
+        transfer_1_secret,
     )
-    transfer_1_secrethash = sha3(transfer_1_secret)
+
+    gevent.sleep(1)  # wait for the messages to be exchanged
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     lock = channel.get_lock(alice_bob_channel_state.our_state, transfer_1_secrethash)
@@ -206,13 +217,21 @@ def test_lock_expiry(raiden_network, token_addresses, secret_registry_address, d
     # Make another transfer
     alice_to_bob_amount = 10
     identifier = 2
-    transfer_2_secret = pending_mediated_transfer(
-        raiden_network,
+
+    transfer_2_secret = sha3(target + b'2')
+    transfer_2_secrethash = sha3(transfer_2_secret)
+
+    hold_event_handler.hold_secret_for(secrethash=transfer_2_secrethash)
+
+    alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
         alice_to_bob_amount,
+        target,
         identifier,
+        transfer_2_secret,
     )
-    transfer_2_secrethash = sha3(transfer_2_secret)
+
+    gevent.sleep(1)  # wait for the messages to be exchanged
 
     # Make sure the other transfer still exists
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
@@ -234,6 +253,9 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         alice_app.raiden.default_registry.address,
         token_address,
     )
+
+    hold_event_handler = HoldOffChainSecretRequest()
+    bob_app.raiden.raiden_event_handler = hold_event_handler
 
     # Take a snapshot early on
     alice_app.raiden.wal.snapshot()
@@ -257,14 +279,21 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
     alice_to_bob_amount = 10
     identifier = 1
-    secret = pending_mediated_transfer(
-        raiden_network,
+    target = bob_app.raiden.address
+    secret = sha3(target)
+    secrethash = sha3(secret)
+
+    hold_event_handler.hold_secret_for(secrethash=secrethash)
+
+    alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
         alice_to_bob_amount,
+        target,
         identifier,
+        secret,
     )
 
-    secrethash = sha3(secret)
+    gevent.sleep(1)  # wait for the messages to be exchanged
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
@@ -360,8 +389,9 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_settled_lock(token_addresses, raiden_network, deposit):
-    """ Any transfer following a secret revealed must update the locksroot, so
-    hat an attacker cannot reuse a secret to double claim a lock."""
+    """ Any transfer following a secret reveal must update the locksroot, so
+    that an attacker cannot reuse a secret to double claim a lock.
+    """
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -372,6 +402,9 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         token_address,
     )
 
+    hold_event_handler = HoldOffChainSecretRequest()
+    app1.raiden.raiden_event_handler = hold_event_handler
+
     address0 = app0.raiden.address
     address1 = app1.raiden.address
 
@@ -381,16 +414,22 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     token_proxy = app0.raiden.chain.token(token_address)
     initial_balance0 = token_proxy.balance_of(address0)
     initial_balance1 = token_proxy.balance_of(address1)
-
-    # Using a pending mediated transfer because this allows us to compute the
-    # merkle proof
     identifier = 1
-    secret = pending_mediated_transfer(
-        raiden_network,
+    target = app1.raiden.address
+    secret = sha3(target)
+    secrethash = sha3(secret)
+
+    hold_event_handler.hold_secret_for(secrethash=secrethash)
+
+    app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
         amount,
+        target,
         identifier,
+        secret,
     )
+
+    gevent.sleep(1)  # wait for the messages to be exchanged
 
     # Save the merkle tree leaves from the pending transfer, used to test the unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_network_identifier)
@@ -437,7 +476,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-def test_automatic_secret_registration(raiden_chain, deposit, token_addresses, reveal_timeout):
+def test_automatic_secret_registration(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -448,12 +487,25 @@ def test_automatic_secret_registration(raiden_chain, deposit, token_addresses, r
 
     amount = 100
     identifier = 1
-    secret = pending_mediated_transfer(
-        raiden_chain,
+
+    hold_event_handler = HoldOffChainSecretRequest()
+    app1.raiden.raiden_event_handler = hold_event_handler
+
+    target = app1.raiden.address
+    secret = sha3(target)
+    secrethash = sha3(secret)
+
+    hold_event_handler.hold_secret_for(secrethash=secrethash)
+
+    app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
         amount,
+        target,
         identifier,
+        secret,
     )
+
+    gevent.sleep(1)  # wait for the messages to be exchanged
 
     # Stop app0 to avoid sending the unlock
     app0.raiden.transport.stop()
@@ -499,15 +551,26 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
         token,
     )
 
+    hold_event_handler = HoldOffChainSecretRequest()
+    app2.raiden.raiden_event_handler = hold_event_handler
+
     # the attacker owns app0 and app2 and creates a transfer through app1
     identifier = 1
-    secret = pending_mediated_transfer(
-        raiden_chain,
+    target = app2.raiden.address
+    secret = sha3(target)
+    secrethash = sha3(secret)
+
+    hold_event_handler.hold_secret_for(secrethash=secrethash)
+
+    app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
         amount,
+        target,
         identifier,
+        secret,
     )
-    secrethash = sha3(secret)
+
+    gevent.sleep(1)  # wait for the messages to be exchanged
 
     attack_channel = get_channelstate(app2, app1, token_network_identifier)
     attack_transfer = None  # TODO
