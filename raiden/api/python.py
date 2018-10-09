@@ -540,8 +540,13 @@ class RaidenAPI:
         if token_address and not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token in get_channel_list')
 
-        if partner_address and not is_binary_address(partner_address):
-            raise InvalidAddress('Expected binary address format for partner in get_channel_list')
+        if partner_address:
+            if not is_binary_address(partner_address):
+                raise InvalidAddress(
+                    'Expected binary address format for partner in get_channel_list',
+                )
+            if not token_address:
+                raise UnknownTokenAddress('Provided a partner address but no token address')
 
         if token_address and partner_address:
             channel_state = views.get_channelstate_for(
@@ -558,21 +563,14 @@ class RaidenAPI:
 
         elif token_address:
             result = views.list_channelstate_for_tokennetwork(
-                views.state_from_raiden(self.raiden),
-                registry_address,
-                token_address,
-            )
-
-        elif partner_address:
-            result = views.list_channelstate_for_tokennetwork(
-                views.state_from_raiden(self.raiden),
-                registry_address,
-                partner_address,
+                chain_state=views.state_from_raiden(self.raiden),
+                payment_network_id=registry_address,
+                token_address=token_address,
             )
 
         else:
             result = views.list_all_channelstate(
-                views.state_from_raiden(self.raiden),
+                chain_state=views.state_from_raiden(self.raiden),
             )
 
         return result
