@@ -1,6 +1,7 @@
 import signal
 import sys
 import traceback
+from copy import deepcopy
 from datetime import datetime
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict
@@ -12,7 +13,9 @@ import structlog
 from gevent.event import AsyncResult
 from requests.exceptions import ConnectionError as RequestsConnectionError
 
+from raiden import constants, settings
 from raiden.api.rest import APIServer, RestAPI
+from raiden.app import App
 from raiden.exceptions import (
     APIServerPortInUseError,
     EthNodeCommunicationError,
@@ -21,13 +24,13 @@ from raiden.exceptions import (
 )
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
-from raiden.settings import DEFAULT_SHUTDOWN_TIMEOUT
 from raiden.tasks import check_gas_reserve, check_version
-from raiden.utils import get_system_spec, split_endpoint, typing
+from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.runnable import Runnable
 
 from .app import run_app
+from .config import dump_cmd_options, dump_config, dump_module
 
 log = structlog.get_logger(__name__)
 
@@ -75,6 +78,19 @@ class NodeRunner:
     def _start_services(self):
         from raiden.ui.console import Console
         from raiden.api.python import RaidenAPI
+
+        config = deepcopy(App.DEFAULT_CONFIG)
+        if self._options.get('extra_config', dict()):
+            merge_dict(config, self._options['extra_config'])
+            del self._options['extra_config']
+        self._options['config'] = config
+
+        if self._options['showconfig']:
+            print('Configuration Dump:')
+            dump_config(config)
+            dump_cmd_options(self._options)
+            dump_module('cettings', settings)
+            dump_module('constants', constants)
 
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
@@ -190,7 +206,7 @@ class NodeRunner:
 
             gevent.joinall(
                 [gevent.spawn(stop_task, task) for task in tasks],
-                app_.config.get('shutdown_timeout', DEFAULT_SHUTDOWN_TIMEOUT),
+                app_.config.get('shutdown_timeout', settings.DEFAULT_SHUTDOWN_TIMEOUT),
                 raise_error=True,
             )
 

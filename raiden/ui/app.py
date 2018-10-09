@@ -1,7 +1,6 @@
 import os
 import sys
 from binascii import hexlify
-from copy import deepcopy
 from urllib.parse import urlparse
 
 import click
@@ -27,15 +26,7 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NAT_KEEPALIVE_RETRIES
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
-from raiden.utils import (
-    is_supported_client,
-    merge_dict,
-    networkid_is_known,
-    pex,
-    split_endpoint,
-    typing,
-)
-from raiden.utils.cli import get_matrix_servers
+from raiden.utils import is_supported_client, networkid_is_known, pex, split_endpoint, typing
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -160,6 +151,7 @@ def _setup_matrix(config):
 
 
 def run_app(
+        config,
         address,
         keystore_path,
         gas_price,
@@ -195,10 +187,6 @@ def run_app(
 
     if datadir is None:
         datadir = os.path.join(os.path.expanduser('~'), '.raiden')
-
-    config = deepcopy(App.DEFAULT_CONFIG)
-    if extra_config:
-        merge_dict(config, extra_config)
 
     address_hex = to_normalized_address(address) if address else None
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
