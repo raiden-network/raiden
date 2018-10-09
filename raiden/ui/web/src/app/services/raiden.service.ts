@@ -74,7 +74,7 @@ export class RaidenService {
         return this.http.get<Array<Channel>>(`${this.raidenConfig.api}/channels`).pipe(
             flatMap((channels: Array<Channel>) => from(channels)),
             flatMap((channel: Channel) => {
-                return this.getUserToken(channel.token_address, false).pipe(
+                return this.getUserToken(channel.token_address).pipe(
                     map((token: UserToken | null) => {
                         channel.userToken = token;
                         return channel;
@@ -357,7 +357,7 @@ export class RaidenService {
 
     public getUserToken(
         tokenAddress: string,
-        refresh: boolean = true,
+        refresh: boolean = false,
     ): Observable<UserToken | null> {
 
         const tokenContractInstance = this.tokenContract.at(tokenAddress);

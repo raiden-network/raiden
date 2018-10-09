@@ -43,7 +43,7 @@ export class TokenNetworkSelectorComponent implements OnInit, ControlValueAccess
     }
 
     ngOnInit() {
-        this.tokens$ = this.raidenService.getTokens(true).pipe(
+        this.tokens$ = this.raidenService.getTokens().pipe(
             map(value => value.sort(this._compareTokens)),
             share()
         );
