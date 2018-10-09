@@ -210,7 +210,7 @@ Querying Information About Channels and Tokens
       ]
 
    :statuscode 200: Successful query
-   :statuscode 404: The given token address is not valid eip55-encoded Ethereum address
+   :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
 
 .. http:get:: /api/(version)/channels/(token_address)/(partner_address)
@@ -302,7 +302,9 @@ Querying Information About Channels and Tokens
 
    :statuscode 200: Successful query
    :statuscode 302: If the user accesses the channel link endpoint
-   :statuscode 404: If the token does not exist/the token address is not valid eip55-encoded
+   :statuscode 404:
+    - The token does not exist
+    - The token address is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
    :resjsonarr address partner_address: The partner we have a channel with
    :resjsonarr link channel: A link to the channel resource
@@ -501,7 +503,7 @@ Connection Management
 
    :statuscode 204: For a successful connection creation.
    :statuscode 402: If any of the channel deposits fail due to insufficient ETH balance to pay for the gas of the on-chain transactions.
-   :statuscode 404: The given token and is not a valid eip55-encoded Ethereum address
+   :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
    :statuscode 408: If a timeout happened during any of the transactions.
    :statuscode 409: If any of the provided input to the call is invalid.
    :statuscode 500: Internal Raiden node error.
@@ -537,7 +539,7 @@ Connection Management
    The response is a list with the addresses of all closed channels.
 
    :statuscode 200: For successfully leaving a token network
-   :statuscode 404: The given token and is not a valid eip55-encoded Ethereum address
+   :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
 
 Payments
@@ -706,7 +708,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
     ]
 
    :statuscode 200: For successful query
-   :statuscode 404: The given token and is not a valid eip55-encoded Ethereum address or does not exist
+   :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address or does not exist
    :statuscode 409: If the given block number or token_address arguments are invalid
    :statuscode 500: Internal Raiden node error
 
