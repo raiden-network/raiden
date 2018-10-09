@@ -82,8 +82,7 @@ jobs:
     - stage: test
       <<: *job-template-test
       env:
-        - BLOCKCHAIN_TYPE='tester'
-        - TEST='raiden/tests/unit raiden/tests/integration/contracts'
+        - TEST='raiden/tests/unit'
 
     - stage: integration
       <<: *job-template-integration
