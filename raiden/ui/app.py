@@ -35,6 +35,7 @@ from raiden.utils import (
     split_endpoint,
     typing,
 )
+from raiden.utils.cli import get_matrix_servers
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -48,7 +49,6 @@ from raiden_contracts.constants import (
 
 from .prompt import prompt_account
 from .sync import check_discovery_registration_gas, check_synced
-from .utils import get_matrix_servers
 
 log = structlog.get_logger(__name__)
 
@@ -77,6 +77,86 @@ def handle_contract_wrong_address(name: str, address: typing.Address) -> None:
         fg='red',
     )
     sys.exit(1)
+
+
+def _assert_sql_version():
+    if not assert_sqlite_version():
+        log.error('SQLite3 should be at least version {}'.format(
+            '{}.{}.{}'.format(*SQLITE_MIN_REQUIRED_VERSION),
+        ))
+        sys.exit(1)
+
+
+def _setup_web3(eth_rpc_endpoint):
+    web3 = Web3(HTTPProvider(eth_rpc_endpoint))
+
+    try:
+        node_version = web3.version.node  # pylint: disable=no-member
+    except ConnectTimeout:
+        raise EthNodeCommunicationError("Couldn't connect to the ethereum node")
+
+    supported, _ = is_supported_client(node_version)
+    if not supported:
+        click.secho(
+            'You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2',
+            fg='red',
+        )
+        sys.exit(1)
+    return web3
+
+
+def _setup_udp(
+        config,
+        blockchain_service,
+        address,
+        contract_addresses,
+        discovery_contract_address,
+):
+    check_discovery_registration_gas(blockchain_service, address)
+    try:
+        dicovery_proxy = blockchain_service.discovery(
+            discovery_contract_address or contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+        )
+        discovery = ContractDiscovery(
+            blockchain_service.node_address,
+            dicovery_proxy,
+        )
+    except ContractVersionMismatch:
+        handle_contract_version_mismatch('discovery', discovery_contract_address)
+    except AddressWithoutCode:
+        handle_contract_no_code('discovery', discovery_contract_address)
+    except AddressWrongContract:
+        handle_contract_wrong_address('discovery', discovery_contract_address)
+
+    throttle_policy = TokenBucket(
+        config['transport']['udp']['throttle_capacity'],
+        config['transport']['udp']['throttle_fill_rate'],
+    )
+
+    transport = UDPTransport(
+        discovery,
+        config['socket'],
+        throttle_policy,
+        config['transport']['udp'],
+    )
+
+    return transport, discovery
+
+
+def _setup_matrix(config):
+    if config['transport']['matrix'].get('available_servers') is None:
+        # fetch list of known servers from raiden-network/raiden-tranport repo
+        available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['network_type']]
+        available_servers = get_matrix_servers(available_servers_url)
+        config['transport']['matrix']['available_servers'] = available_servers
+
+    try:
+        transport = MatrixTransport(config['transport']['matrix'])
+    except RaidenError as ex:
+        click.secho(f'FATAL: {ex}', fg='red')
+        sys.exit(1)
+
+    return transport
 
 
 def run_app(
@@ -108,21 +188,10 @@ def run_app(
 
     from raiden.app import App
 
-    if not assert_sqlite_version():
-        log.error('SQLite3 should be at least version {}'.format(
-            '{}.{}.{}'.format(*SQLITE_MIN_REQUIRED_VERSION),
-        ))
-        sys.exit(1)
+    _assert_sql_version()
 
     if transport == 'udp' and not mapped_socket:
         raise RuntimeError('Missing socket')
-
-    address_hex = to_normalized_address(address) if address else None
-    address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
-    address = to_canonical_address(address_hex)
-
-    (listen_host, listen_port) = split_endpoint(listen_address)
-    (api_host, api_port) = split_endpoint(api_address)
 
     if datadir is None:
         datadir = os.path.join(os.path.expanduser('~'), '.raiden')
@@ -130,6 +199,13 @@ def run_app(
     config = deepcopy(App.DEFAULT_CONFIG)
     if extra_config:
         merge_dict(config, extra_config)
+
+    address_hex = to_normalized_address(address) if address else None
+    address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
+    address = to_canonical_address(address_hex)
+
+    (listen_host, listen_port) = split_endpoint(listen_address)
+    (api_host, api_port) = split_endpoint(api_address)
 
     config['transport']['udp']['host'] = listen_host
     config['transport']['udp']['port'] = listen_port
@@ -155,20 +231,7 @@ def run_app(
     if not parsed_eth_rpc_endpoint.scheme:
         eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
 
-    web3 = Web3(HTTPProvider(eth_rpc_endpoint))
-
-    try:
-        node_version = web3.version.node  # pylint: disable=no-member
-    except ConnectTimeout:
-        raise EthNodeCommunicationError("Couldn't connect to the ethereum node")
-
-    supported, _ = is_supported_client(node_version)
-    if not supported:
-        click.secho(
-            'You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2',
-            fg='red',
-        )
-        sys.exit(1)
+    web3 = _setup_web3(eth_rpc_endpoint)
 
     rpc_client = JSONRPCClient(
         web3,
@@ -296,45 +359,15 @@ def run_app(
 
     discovery = None
     if transport == 'udp':
-        check_discovery_registration_gas(blockchain_service, address)
-        try:
-            dicovery_proxy = blockchain_service.discovery(
-                discovery_contract_address or contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
-            )
-            discovery = ContractDiscovery(
-                blockchain_service.node_address,
-                dicovery_proxy,
-            )
-        except ContractVersionMismatch:
-            handle_contract_version_mismatch('discovery', discovery_contract_address)
-        except AddressWithoutCode:
-            handle_contract_no_code('discovery', discovery_contract_address)
-        except AddressWrongContract:
-            handle_contract_wrong_address('discovery', discovery_contract_address)
-
-        throttle_policy = TokenBucket(
-            config['transport']['udp']['throttle_capacity'],
-            config['transport']['udp']['throttle_fill_rate'],
-        )
-
-        transport = UDPTransport(
-            discovery,
-            mapped_socket.socket,
-            throttle_policy,
-            config['transport']['udp'],
+        transport, discovery = _setup_udp(
+            config,
+            blockchain_service,
+            address,
+            contract_addresses,
+            discovery_contract_address,
         )
     elif transport == 'matrix':
-        if config['transport']['matrix'].get('available_servers') is None:
-            # fetch list of known servers from raiden-network/raiden-tranport repo
-            available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['network_type']]
-            available_servers = get_matrix_servers(available_servers_url)
-            config['transport']['matrix']['available_servers'] = available_servers
-
-        try:
-            transport = MatrixTransport(config['transport']['matrix'])
-        except RaidenError as ex:
-            click.secho(f'FATAL: {ex}', fg='red')
-            sys.exit(1)
+        transport = _setup_matrix(config)
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
