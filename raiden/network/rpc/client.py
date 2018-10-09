@@ -21,6 +21,7 @@ from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
 from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import is_supported_client, pex, privatekey_to_address
 from raiden.utils.filters import StatelessFilter
 from raiden.utils.solc import (
@@ -233,7 +234,7 @@ class JSONRPCClient:
             libraries=None,
             constructor_parameters=None,
             contract_path=None,
-            confirmations=None,
+            confirmations=DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
     ):
         """
         Deploy a solidity contract.
@@ -410,7 +411,11 @@ class JSONRPCClient:
             log.debug('send_raw_transaction returned', tx_hash=encode_hex(tx_hash), **log_details)
             return tx_hash
 
-    def poll(self, transaction_hash: bytes, confirmations: int = None):
+    def poll(
+            self,
+            transaction_hash: bytes,
+            confirmations: int = DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+    ):
         """ Wait until the `transaction_hash` is applied or rejected.
 
         Args:
