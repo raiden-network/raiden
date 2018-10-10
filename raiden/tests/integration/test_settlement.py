@@ -439,7 +439,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     claim_lock(raiden_network, identifier, token_network_identifier, secret)
 
     # Make a new transfer
-    direct_transfer(app0, app1, token_network_identifier, amount, identifier=1)
+    direct_transfer(app0, app1, token_network_identifier, amount, identifier=2)
     RaidenAPI(app1.raiden).channel_close(
         registry_address,
         token_address,
