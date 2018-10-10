@@ -30,7 +30,7 @@ from raiden.transfer.state_change import (
     ReceiveTransferDirect,
     ReceiveUnlock,
 )
-from raiden.utils import random_secret
+from raiden.utils import pex, random_secret
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -151,8 +151,8 @@ class MessageHandler:
         secret_hash = message.lock.secrethash
         if raiden.default_secret_registry.check_registered(secret_hash):
             log.warning(
-                f'Ignoring received locked transfer with secrethash {secret_hash} '
-                f'since it is already registered in the secret registry'
+                f'Ignoring received locked transfer with secrethash {pex(secret_hash)} '
+                f'since it is already registered in the secret registry',
             )
             return
 
