@@ -89,7 +89,7 @@ class NodeRunner:
             print('Configuration Dump:')
             dump_config(config)
             dump_cmd_options(self._options)
-            dump_module('cettings', settings)
+            dump_module('settings', settings)
             dump_module('constants', constants)
 
         # this catches exceptions raised when waiting for the stalecheck to complete
