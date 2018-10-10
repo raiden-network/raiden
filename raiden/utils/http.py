@@ -79,3 +79,7 @@ class HTTPExecutor(MiHTTPExecutor):
                 ) from e
             raise
         return self
+
+    def running(self) -> bool:
+        """ Include pre_start_check in running, so stop will wait for the underlying listener """
+        return super().running() or self.pre_start_check()
