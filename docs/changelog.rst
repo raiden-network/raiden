@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2730` Refuse to send a transfer and ignore it during receiving, if its secret is already registered on-chain.
 * :feature:`2713` Added the protocol version in the Ping message.
 * :feature:`2708` Add `--showconfig` CLI flag which dumps all configuration values that will control Raiden behavior.
 
