@@ -3,6 +3,7 @@ import os
 import sys
 import textwrap
 import traceback
+from copy import deepcopy
 from pathlib import Path
 from subprocess import DEVNULL
 from tempfile import mktemp
@@ -14,12 +15,13 @@ from eth_utils import to_canonical_address, to_checksum_address
 from mirakuru import ProcessExitedWithError
 
 from raiden.api.rest import APIServer, RestAPI
+from raiden.app import App
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.settings import INITIAL_PORT
-from raiden.utils import get_system_spec, split_endpoint
+from raiden.utils import get_system_spec, merge_dict, split_endpoint
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
@@ -496,6 +498,12 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     def _run_smoketest():
         print_step('Starting Raiden')
+
+        config = deepcopy(App.DEFAULT_CONFIG)
+        if args.get('extra_config', dict()):
+            merge_dict(config, args['extra_config'])
+            del args['extra_config']
+        args['config'] = config
 
         # invoke the raiden app
         app = run_app(**args)
