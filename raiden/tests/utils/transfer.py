@@ -6,7 +6,7 @@ from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, Secret
+from raiden.messages import LockedTransfer
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.state import (
@@ -21,7 +21,6 @@ from raiden.transfer.state import (
     NettingChannelState,
     balanceproof_from_envelope,
 )
-from raiden.transfer.state_change import ReceiveUnlock
 from raiden.utils import privatekey_to_address, sha3
 
 
@@ -111,49 +110,6 @@ def mediated_transfer(
     )
     assert async_result.wait(timeout), f'timeout for transfer id={identifier}'
     gevent.sleep(0.3)  # let the other nodes synch
-
-
-def claim_lock(app_chain, payment_identifier, token_network_identifier, secret):
-    """ Unlock a pending transfer. """
-    secrethash = sha3(secret)
-    for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
-        from_channel = get_channelstate(from_, to_, token_network_identifier)
-        partner_channel = get_channelstate(to_, from_, token_network_identifier)
-
-        unlock_lock = channel.send_unlock(
-            from_channel,
-            random.randint(0, UINT64_MAX),
-            payment_identifier,
-            secret,
-            secrethash,
-        )
-
-        secret_message = Secret(
-            chain_id=unlock_lock.balance_proof.chain_id,
-            message_identifier=unlock_lock.message_identifier,
-            payment_identifier=unlock_lock.payment_identifier,
-            nonce=unlock_lock.balance_proof.nonce,
-            token_network_address=partner_channel.token_network_identifier,
-            channel_identifier=unlock_lock.balance_proof.channel_identifier,
-            transferred_amount=unlock_lock.balance_proof.transferred_amount,
-            locked_amount=unlock_lock.balance_proof.locked_amount,
-            locksroot=unlock_lock.balance_proof.locksroot,
-            secret=unlock_lock.secret,
-        )
-        from_.raiden.sign(secret_message)
-
-        balance_proof = balanceproof_from_envelope(secret_message)
-        receive_unlock = ReceiveUnlock(
-            message_identifier=random.randint(0, UINT64_MAX),
-            secret=unlock_lock.secret,
-            balance_proof=balance_proof,
-        )
-
-        is_valid, _, msg = channel.handle_unlock(
-            partner_channel,
-            receive_unlock,
-        )
-        assert is_valid, msg
 
 
 def assert_synced_channel_state(
