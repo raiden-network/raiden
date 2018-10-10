@@ -207,13 +207,43 @@ class ConnectionManager:
 
         If the connection manager has no funds, this is a noop.
         """
-        with self.lock:
+
+        # Consider this race condition:
+        #
+        # - Partner opens the channel and starts the deposit.
+        # - This nodes learns about the new channel starts ConnectionManager's
+        #   retry_connect, which will start a deposit for this half of the
+        #   channel.
+        # - This node learns about the partner's deposit before its own,
+        #   join_channel is called which will try to deposit again.
+        #
+        # To fix this race, first the node must wait for the pending operations
+        # to finish, because the it could be a deposit, and then deposit must
+        # be called only if the channel is still not funded.
+        token_network_proxy = self.raiden.chain.token_network(self.token_network_identifier)
+
+        # Wait for any pending operation in the channel to complete, before
+        # deciding on the deposit
+        with self.lock, token_network_proxy.channel_operations_lock[partner_address]:
+            channel_state = views.get_channelstate_for(
+                views.state_from_raiden(self.raiden),
+                self.token_network_identifier,
+                self.token_address,
+                partner_address,
+            )
+
+            if not channel_state:
+                return
+
             joining_funds = min(
                 partner_deposit,
                 self._funds_remaining,
                 self._initial_funding_per_partner,
             )
             if joining_funds <= 0 or self._leaving_state:
+                return
+
+            if joining_funds <= channel_state.our_state.contract_balance:
                 return
 
             try:
