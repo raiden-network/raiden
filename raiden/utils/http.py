@@ -49,6 +49,8 @@ class HTTPExecutor(MiHTTPExecutor):
             env[ENV_UUID] = self._uuid
 
             executable = shlex.split(command)[0]
+            executable = os.path.expanduser(executable)
+            executable = os.path.expandvars(executable)
             if shutil.which(executable) is None:
                 raise FileNotFoundError(f'Can not execute {executable}, '
                                         'check that the executable exists.')
