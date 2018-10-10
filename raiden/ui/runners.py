@@ -197,7 +197,7 @@ class NodeRunner:
         return app_
 
 
-class MatrixRunner(NodeRunner):
+class UDPRunner(NodeRunner):
     def run(self):
         super().run()
 
@@ -220,7 +220,7 @@ class MatrixRunner(NodeRunner):
         return app
 
 
-class UDPRunner(NodeRunner):
+class MatrixRunner(NodeRunner):
     def run(self):
         self._options['mapped_socket'] = None
         return self._start_services()
