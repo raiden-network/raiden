@@ -55,6 +55,7 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
     random_secret,
+    sha3,
     typing,
 )
 from raiden.utils.runnable import Runnable
@@ -738,6 +739,13 @@ class RaidenService(Runnable):
             identifier: typing.PaymentID,
             secret: typing.Secret,
     ):
+
+        secret_hash = sha3(secret)
+        if self.default_secret_registry.check_registered(secret_hash):
+            raise RaidenUnrecoverableError(
+                f'Attempted to initiate a locked transfer with secrethash {pex(secret_hash)}.'
+                f' That secret is already registered onchain.',
+            )
 
         self.start_health_check_for(target)
 
