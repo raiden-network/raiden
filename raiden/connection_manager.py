@@ -211,14 +211,14 @@ class ConnectionManager:
         # Consider this race condition:
         #
         # - Partner opens the channel and starts the deposit.
-        # - This nodes learns about the new channel starts ConnectionManager's
+        # - This nodes learns about the new channel, starts ConnectionManager's
         #   retry_connect, which will start a deposit for this half of the
         #   channel.
-        # - This node learns about the partner's deposit before its own,
+        # - This node learns about the partner's deposit before its own.
         #   join_channel is called which will try to deposit again.
         #
         # To fix this race, first the node must wait for the pending operations
-        # to finish, because the it could be a deposit, and then deposit must
+        # to finish, because in them could be a deposit, and then deposit must
         # be called only if the channel is still not funded.
         token_network_proxy = self.raiden.chain.token_network(self.token_network_identifier)
 
