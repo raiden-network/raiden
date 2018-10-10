@@ -2,11 +2,17 @@ import copy
 import random
 
 from raiden.constants import UINT64_MAX
+from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
 from raiden.transfer import channel, node, token_network
 from raiden.transfer.mediated_transfer.state_change import ActionInitTarget
-from raiden.transfer.state import HashTimeLockState, TokenNetworkState
+from raiden.transfer.state import (
+    NODE_NETWORK_REACHABLE,
+    NODE_NETWORK_UNREACHABLE,
+    HashTimeLockState,
+    TokenNetworkState,
+)
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -550,3 +556,224 @@ def test_routing_updates(
     assert new_channel_identifier not in graph_state.channel_identifier_to_participants
     assert len(graph_state.channel_identifier_to_participants) == 0
     assert len(graph_state.network.edges()) == 0
+
+
+def test_routeing_issue2663(
+        chain_state,
+        payment_network_state,
+        token_network_state,
+        our_address,
+):
+    open_block_number = 10
+    pseudo_random_generator = random.Random()
+    pkey1, address1 = factories.make_privkey_address()
+    pkey2, address2 = factories.make_privkey_address()
+    pkey3, address3 = factories.make_privkey_address()
+
+    # Create a newtwork with the following topology
+    #
+    # our  ----- 50 ---->  (1)
+    #  |                    ^
+    #  |                    |
+    # 100                  100
+    #  |                    |
+    #  v                    |
+    # (2)  ----- 100 --->  (3)
+
+    channel_state1 = factories.make_channel(
+        our_balance=50,
+        our_address=our_address,
+        partner_balance=0,
+        partner_address=address1,
+    )
+    channel_state2 = factories.make_channel(
+        our_balance=100,
+        our_address=our_address,
+        partner_balance=0,
+        partner_address=address2,
+    )
+
+    # create new channels as participant
+    channel_new_state_change1 = ContractReceiveChannelNew(
+        transaction_hash=factories.make_transaction_hash(),
+        token_network_identifier=token_network_state.address,
+        channel_state=channel_state1,
+        block_number=open_block_number,
+    )
+    channel_new_state_change2 = ContractReceiveChannelNew(
+        transaction_hash=factories.make_transaction_hash(),
+        token_network_identifier=token_network_state.address,
+        channel_state=channel_state2,
+        block_number=open_block_number,
+    )
+
+    channel_new_iteration1 = token_network.state_transition(
+        payment_network_identifier=payment_network_state.address,
+        token_network_state=token_network_state,
+        state_change=channel_new_state_change1,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=open_block_number,
+    )
+
+    channel_new_iteration2 = token_network.state_transition(
+        payment_network_identifier=payment_network_state.address,
+        token_network_state=channel_new_iteration1.new_state,
+        state_change=channel_new_state_change2,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=open_block_number,
+    )
+
+    graph_state = channel_new_iteration2.new_state.network_graph
+    assert len(graph_state.channel_identifier_to_participants) == 2
+    assert len(graph_state.network.edges()) == 2
+
+    # create new channels without being participant
+    channel_new_state_change3 = ContractReceiveRouteNew(
+        transaction_hash=factories.make_transaction_hash(),
+        token_network_identifier=token_network_state.address,
+        channel_identifier=3,
+        participant1=address2,
+        participant2=address3,
+        block_number=open_block_number,
+    )
+
+    channel_new_iteration3 = token_network.state_transition(
+        payment_network_identifier=payment_network_state.address,
+        token_network_state=channel_new_iteration2.new_state,
+        state_change=channel_new_state_change3,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=open_block_number + 10,
+    )
+
+    graph_state = channel_new_iteration3.new_state.network_graph
+    assert len(graph_state.channel_identifier_to_participants) == 3
+    assert len(graph_state.network.edges()) == 3
+
+    channel_new_state_change4 = ContractReceiveRouteNew(
+        transaction_hash=factories.make_transaction_hash(),
+        token_network_identifier=token_network_state.address,
+        channel_identifier=4,
+        participant1=address3,
+        participant2=address1,
+        block_number=open_block_number,
+    )
+    channel_new_iteration4 = token_network.state_transition(
+        payment_network_identifier=payment_network_state.address,
+        token_network_state=channel_new_iteration3.new_state,
+        state_change=channel_new_state_change4,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=open_block_number + 10,
+    )
+
+    graph_state = channel_new_iteration4.new_state.network_graph
+    assert len(graph_state.channel_identifier_to_participants) == 4
+    assert len(graph_state.network.edges()) == 4
+
+    # test routing with all nodes available
+    chain_state.nodeaddresses_to_networkstates = {
+        address1: NODE_NETWORK_REACHABLE,
+        address2: NODE_NETWORK_REACHABLE,
+        address3: NODE_NETWORK_REACHABLE,
+    }
+
+    route1 = get_best_routes(
+        chain_state=chain_state,
+        token_network_id=token_network_state.address,
+        from_address=our_address,
+        to_address=address1,
+        amount=50,
+        previous_address=None,
+    )
+    assert len(route1) == 2
+
+    route2 = get_best_routes(
+        chain_state=chain_state,
+        token_network_id=token_network_state.address,
+        from_address=our_address,
+        to_address=address1,
+        amount=51,
+        previous_address=None,
+    )
+    assert len(route2) == 1
+
+    # test routing with node 2 offline
+    chain_state.nodeaddresses_to_networkstates = {
+        address1: NODE_NETWORK_REACHABLE,
+        address2: NODE_NETWORK_UNREACHABLE,
+        address3: NODE_NETWORK_REACHABLE,
+    }
+
+    route1 = get_best_routes(
+        chain_state=chain_state,
+        token_network_id=token_network_state.address,
+        from_address=our_address,
+        to_address=address1,
+        amount=50,
+        previous_address=None,
+    )
+    assert len(route1) == 1
+
+    route2 = get_best_routes(
+        chain_state=chain_state,
+        token_network_id=token_network_state.address,
+        from_address=our_address,
+        to_address=address1,
+        amount=51,
+        previous_address=None,
+    )
+    assert len(route2) == 0
+
+    # test routing with node 3 offline
+    # the routing doesn't care as node 3 is not directly connected
+    chain_state.nodeaddresses_to_networkstates = {
+        address1: NODE_NETWORK_REACHABLE,
+        address2: NODE_NETWORK_REACHABLE,
+        address3: NODE_NETWORK_UNREACHABLE,
+    }
+
+    route1 = get_best_routes(
+        chain_state=chain_state,
+        token_network_id=token_network_state.address,
+        from_address=our_address,
+        to_address=address1,
+        amount=50,
+        previous_address=None,
+    )
+    assert len(route1) == 2
+
+    route2 = get_best_routes(
+        chain_state=chain_state,
+        token_network_id=token_network_state.address,
+        from_address=our_address,
+        to_address=address1,
+        amount=51,
+        previous_address=None,
+    )
+    assert len(route2) == 1
+
+    # test routing with node 1 offline
+    chain_state.nodeaddresses_to_networkstates = {
+        address1: NODE_NETWORK_UNREACHABLE,
+        address2: NODE_NETWORK_REACHABLE,
+        address3: NODE_NETWORK_REACHABLE,
+    }
+
+    route1 = get_best_routes(
+        chain_state=chain_state,
+        token_network_id=token_network_state.address,
+        from_address=our_address,
+        to_address=address1,
+        amount=50,
+        previous_address=None,
+    )
+    assert len(route1) == 1  # right now the channel to 2 gets filtered out as it is offline
+
+    route2 = get_best_routes(
+        chain_state=chain_state,
+        token_network_id=token_network_state.address,
+        from_address=our_address,
+        to_address=address1,
+        amount=51,
+        previous_address=None,
+    )
+    assert len(route2) == 1
