@@ -504,28 +504,28 @@ class TokenNetwork:
             # This check is serialized with the channel_operations_lock to avoid
             # sending invalid transactions on-chain (decreasing total deposit).
             #
-            current_deposit = self.detail_participant(
+            previous_total_deposit = self.detail_participant(
                 channel_identifier,
                 self.node_address,
                 partner,
             ).deposit
-            amount_to_deposit = total_deposit - current_deposit
+            amount_to_deposit = total_deposit - previous_total_deposit
 
             log_details = {
                 'token_network': pex(self.address),
+                'channel_identifier': channel_identifier,
                 'node': pex(self.node_address),
                 'partner': pex(partner),
-                'total_deposit': total_deposit,
-                'amount_to_deposit': amount_to_deposit,
-                'id': id(self),
+                'new_total_deposit': total_deposit,
+                'previous_total_deposit': previous_total_deposit,
             }
             log.debug('setTotalDeposit called', **log_details)
 
             # These two scenarios can happen if two calls to deposit happen
             # and then we get here on the second call
-            if total_deposit < current_deposit:
+            if total_deposit < previous_total_deposit:
                 msg = (
-                    f'Current deposit ({current_deposit}) is already larger '
+                    f'Current total deposit ({previous_total_deposit}) is already larger '
                     f'than the requested total deposit amount ({total_deposit})'
                 )
                 log.info(f'setTotalDeposit failed, {msg}', **log_details)
@@ -533,8 +533,9 @@ class TokenNetwork:
 
             if amount_to_deposit <= 0:
                 msg = (
-                    f'total_deposit - current_deposit =  '
-                    f'{amount_to_deposit} must be greater than 0.',
+                    f'new_total_deposit - previous_total_deposit must be greater than 0. '
+                    f'new_total_deposit={total_deposit} '
+                    f'previous_total_deposit={previous_total_deposit}'
                 )
                 log.info(f'setTotalDeposit failed, {msg}', **log_details)
                 raise DepositMismatch(msg)
@@ -554,7 +555,7 @@ class TokenNetwork:
             current_balance = token.balance_of(self.node_address)
             if current_balance < amount_to_deposit:
                 msg = (
-                    f'total_deposit - current_deposit =  {amount_to_deposit} can not '
+                    f'new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not '
                     f'be larger than the available balance {current_balance}, '
                     f'for token at address {pex(token_address)}'
                 )
