@@ -1,4 +1,5 @@
 # pylint: disable=too-many-lines
+import enum
 import os
 import random
 
@@ -18,6 +19,7 @@ from raiden.constants import SNAPSHOT_STATE_CHANGES_COUNT
 from raiden.exceptions import (
     InvalidAddress,
     InvalidDBData,
+    PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -28,6 +30,7 @@ from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
 from raiden.transfer.events import SendDirectTransfer
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     lockedtransfersigned_from_message,
@@ -152,6 +155,17 @@ def target_init(transfer: LockedTransfer):
     return init_target_statechange
 
 
+class PaymentType(enum.Enum):
+    DIRECT = 1
+    MEDIATED = 2
+
+
+class PaymentStatus(typing.NamedTuple):
+    payment_type: PaymentType
+    payment_identifier: typing.PaymentID
+    payment_done: AsyncResult
+
+
 class RaidenService(Runnable):
     """ A Raiden node. """
 
@@ -172,9 +186,9 @@ class RaidenService(Runnable):
             raise ValueError('invalid private_key')
 
         self.tokennetworkids_to_connectionmanagers = dict()
-        self.identifier_to_results: typing.Dict[
+        self.identifiers_to_statuses: typing.Dict[
             typing.PaymentID,
-            AsyncResult,
+            PaymentStatus,
         ] = dict()
 
         self.chain: BlockChainService = chain
@@ -360,18 +374,7 @@ class RaidenService(Runnable):
 
         # after transport and alarm is started, send queued messages
         events_queues = views.get_all_messagequeues(chain_state)
-
-        for queue_identifier, event_queue in events_queues.items():
-            self.start_health_check_for(queue_identifier.recipient)
-
-            # repopulate identifier_to_results for pending transfers
-            for event in event_queue:
-                if type(event) == SendDirectTransfer:
-                    self.identifier_to_results[event.payment_identifier] = AsyncResult()
-
-                message = message_from_sendevent(event, self.address)
-                self.sign(message)
-                self.transport.send_async(queue_identifier, message)
+        self._initialize_queues(events_queues)
 
         # exceptions on these subtasks should crash the app and bubble up
         self.alarm.link_exception(self.on_error)
@@ -534,6 +537,37 @@ class RaidenService(Runnable):
             )
             self.handle_state_change(state_change)
 
+    def _initialize_queues(self, events_queues):
+        """ Push the queues to the transport and populate
+        identifiers_to_statuses.
+        """
+
+        for queue_identifier, event_queue in events_queues.items():
+            self.start_health_check_for(queue_identifier.recipient)
+
+            for event in event_queue:
+                is_initiator = (
+                    type(event) == SendLockedTransfer and
+                    event.transfer.initiator == self.address
+                )
+
+                if type(event) == SendDirectTransfer:
+                    self.identifiers_to_statuses[event.payment_identifier] = PaymentStatus(
+                        payment_type=PaymentType.DIRECT,
+                        payment_identifier=event.payment_identifier,
+                        payment_done=AsyncResult(),
+                    )
+                elif is_initiator:
+                    self.identifiers_to_statuses[event.payment_identifier] = PaymentStatus(
+                        payment_type=PaymentType.MEDIATED,
+                        payment_identifier=event.payment_identifier,
+                        payment_done=AsyncResult(),
+                    )
+
+                message = message_from_sendevent(event, self.address)
+                self.sign(message)
+                self.transport.send_async(queue_identifier, message)
+
     def sign(self, message):
         """ Sign message inplace. """
         if not isinstance(message, SignedMessage):
@@ -663,6 +697,15 @@ class RaidenService(Runnable):
         if identifier is None:
             identifier = create_default_identifier()
 
+        payment_status = self.identifiers_to_statuses.get(identifier)
+        if payment_status:
+            if payment_status.payment_type != PaymentType.DIRECT:
+                raise PaymentConflict(
+                    'Another payment with the same id is in flight',
+                )
+
+            return payment_status.payment_done
+
         direct_transfer = ActionTransferDirect(
             token_network_identifier,
             target,
@@ -670,10 +713,16 @@ class RaidenService(Runnable):
             amount,
         )
 
-        async_result = AsyncResult()
-        self.identifier_to_results[identifier] = async_result
+        payment_status = PaymentStatus(
+            payment_type=PaymentType.DIRECT,
+            payment_identifier=identifier,
+            payment_done=AsyncResult(),
+        )
+        self.identifiers_to_statuses[identifier] = payment_status
 
         self.handle_state_change(direct_transfer)
+
+        return payment_status.payment_done
 
     def start_mediated_transfer_with_secret(
             self,
@@ -689,11 +738,21 @@ class RaidenService(Runnable):
         if identifier is None:
             identifier = create_default_identifier()
 
-        if identifier in self.identifier_to_results:
-            return self.identifier_to_results[identifier]
+        payment_status = self.identifiers_to_statuses.get(identifier)
+        if payment_status:
+            if payment_status.payment_type != PaymentType.MEDIATED:
+                raise PaymentConflict(
+                    'Another payment with the same id is in flight',
+                )
 
-        async_result = AsyncResult()
-        self.identifier_to_results[identifier] = async_result
+            return payment_status.payment_done
+
+        payment_status = PaymentStatus(
+            payment_type=PaymentType.MEDIATED,
+            payment_identifier=identifier,
+            payment_done=AsyncResult(),
+        )
+        self.identifiers_to_statuses[identifier] = payment_status
 
         init_initiator_statechange = initiator_init(
             self,
@@ -708,7 +767,7 @@ class RaidenService(Runnable):
         # wal entry.
         self.handle_state_change(init_initiator_statechange)
 
-        return async_result
+        return payment_status.payment_done
 
     def mediate_mediated_transfer(self, transfer: LockedTransfer):
         init_mediator_statechange = mediator_init(self, transfer)

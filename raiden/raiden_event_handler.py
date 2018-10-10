@@ -56,6 +56,8 @@ UNEVENTFUL_EVENTS = (
 
 
 class RaidenEventHandler:
+    # pylint: disable=no-self-use
+
     def on_raiden_event(self, raiden: RaidenService, event: Event):
         # pylint: disable=too-many-branches
 
@@ -94,7 +96,11 @@ class RaidenEventHandler:
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
-            log.error('Unknown event {}'.format(type(event)))
+            log.error(
+                'Unknown event',
+                event_type=str(type(event)),
+                node=pex(raiden.address),
+            )
 
     def handle_send_lockexpired(
             self,
@@ -197,22 +203,24 @@ class RaidenEventHandler:
             raiden: RaidenService,
             payment_sent_success_event: EventPaymentSentSuccess,
     ):
-        assert payment_sent_success_event.identifier in raiden.identifier_to_results
-
-        result = raiden.identifier_to_results[payment_sent_success_event.identifier]
-        result.set(True)
-        del raiden.identifier_to_results[payment_sent_success_event.identifier]
+        payment_status = raiden.identifiers_to_statuses.pop(
+            payment_sent_success_event.identifier,
+            None,
+        )
+        assert payment_status is not None
+        payment_status.payment_done.set(True)
 
     def handle_paymentsentfailed(
             self,
             raiden: RaidenService,
             payment_sent_failed_event: EventPaymentSentFailed,
     ):
-        assert payment_sent_failed_event.identifier in raiden.identifier_to_results
-
-        result = raiden.identifier_to_results[payment_sent_failed_event.identifier]
-        result.set(False)
-        del raiden.identifier_to_results[payment_sent_failed_event.identifier]
+        payment_status = raiden.identifiers_to_statuses.pop(
+            payment_sent_failed_event.identifier,
+            None,
+        )
+        assert payment_status is not None
+        payment_status.payment_done.set(False)
 
     def handle_unlockfailed(
             self,
@@ -224,6 +232,7 @@ class RaidenEventHandler:
             'UnlockFailed!',
             secrethash=pex(unlock_failed_event.secrethash),
             reason=unlock_failed_event.reason,
+            node=pex(raiden.address),
         )
 
     def handle_contract_send_secretreveal(
@@ -297,7 +306,10 @@ class RaidenEventHandler:
                     our_signature,
                 )
             except ChannelOutdatedError as e:
-                log.error(str(e))
+                log.error(
+                    str(e),
+                    node=pex(raiden.address),
+                )
 
     def handle_contract_send_channelunlock(
             self,
@@ -323,9 +335,16 @@ class RaidenEventHandler:
         partner_details = participants_details.partner_details
         partner_locksroot = partner_details.locksroot
 
-        if (partner_details.address == channel_unlock_event.participant and
-                partner_locksroot != EMPTY_HASH):
-            # Partner account
+        is_partner_unlock = (
+            partner_details.address == channel_unlock_event.participant and
+            partner_locksroot != EMPTY_HASH
+        )
+        is_our_unlock = (
+            our_details.address == channel_unlock_event.participant and
+            our_locksroot != EMPTY_HASH
+        )
+
+        if is_partner_unlock:
             record = raiden.wal.storage.get_latest_state_change_by_data_field({
                 'balance_proof.chain_id': raiden.chain.network_id,
                 'balance_proof.token_network_identifier': to_checksum_address(
@@ -337,9 +356,7 @@ class RaidenEventHandler:
                 ),
                 'balance_proof.locksroot': serialize_bytes(partner_locksroot),
             })
-        elif (our_details.address == channel_unlock_event.participant and
-                our_locksroot != EMPTY_HASH):
-            # Our account
+        elif is_our_unlock:
             record = raiden.wal.storage.get_latest_event_by_data_field({
                 'balance_proof.chain_id': raiden.chain.network_id,
                 'balance_proof.token_network_identifier': to_checksum_address(
@@ -350,7 +367,7 @@ class RaidenEventHandler:
             })
         else:
             raise RaidenUnrecoverableError(
-                "Failed to find state/event that match current channel locksroots",
+                'Failed to find state/event that match current channel locksroots',
             )
 
         # Replay state changes until a channel state is reached where
@@ -374,7 +391,10 @@ class RaidenEventHandler:
         try:
             payment_channel.unlock(merkle_tree_leaves)
         except ChannelOutdatedError as e:
-            log.error(str(e))
+            log.error(
+                str(e),
+                node=pex(raiden.address),
+            )
 
     def handle_contract_send_channelsettle(
             self,
