@@ -538,7 +538,7 @@ def test_target_transfer_invalid_if_lock_registered_onchain():
         expiration,
         UNIT_SECRET,
         identifier=1,
-        nonce=1
+        nonce=1,
     )
 
     init = ActionInitTarget(
