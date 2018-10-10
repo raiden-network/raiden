@@ -202,13 +202,6 @@ jobs:
           repo: raiden-network/raiden
           all_branches: true
 
-      - provider: script
-        skip_cleanup: true
-        script: rm -rf build
-        on:
-          repo: raiden-network/raiden
-          all_branches: true
-
       - provider: pypi
         skip_cleanup: true
         user: raiden_pypi_automated
