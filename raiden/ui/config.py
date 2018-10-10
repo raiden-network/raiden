@@ -1,12 +1,11 @@
 import inspect
 from enum import Enum
 
-import toml
+import pytoml
 
 from raiden.utils.serialization import serialize_bytes
 
-HEADER_PREFIX = ' ' * 2
-CONFIG_PREFIX = HEADER_PREFIX * 2
+builtin_types = (int, str, bool, tuple)
 
 
 def _clean_non_serializables(data):
@@ -33,17 +32,23 @@ def _clean_non_serializables(data):
         if isinstance(value, Enum):
             value = value.value
 
+        if value and not isinstance(value, builtin_types):
+            try:
+                pytoml.dumps({key: value})
+            except RuntimeError:
+                continue
+
         copy[key] = value
     return copy
 
 
 def dump_config(config):
-    print(toml.dumps({'configs': config}))
+    print(pytoml.dumps({'configs': config}))
     print()
 
 
 def dump_cmd_options(options):
-    print(toml.dumps({
+    print(pytoml.dumps({
         'options': _clean_non_serializables(options),
     }))
     print()
@@ -57,5 +62,5 @@ def dump_module(header, module):
 
     attribs = _clean_non_serializables(attribs)
 
-    print(toml.dumps({header: attribs}))
+    print(pytoml.dumps({header: attribs}))
     print()
