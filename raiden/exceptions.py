@@ -30,6 +30,13 @@ class ChannelNotFound(RaidenError):
     pass
 
 
+class PaymentConflict(RaidenRecoverableError):
+    """ Raised when there is another payment with the same identifier but the
+    attributes of the payment don't match.
+    """
+    pass
+
+
 class InsufficientFunds(RaidenError):
     """ Raised when provided account doesn't have token funds to complete the
     requested deposit.
