@@ -148,6 +148,14 @@ class MessageHandler:
         raiden.handle_state_change(direct_transfer)
 
     def handle_message_lockedtransfer(self, raiden: RaidenService, message: LockedTransfer):
+        secret_hash = message.lock.secrethash
+        if raiden.default_secret_registry.check_registered(secret_hash):
+            log.warning(
+                f'Ignoring received locked transfer with secrethash {secret_hash} '
+                f'since it is already registered in the secret registry'
+            )
+            return
+
         if message.target == raiden.address:
             raiden.target_mediated_transfer(message)
         else:
