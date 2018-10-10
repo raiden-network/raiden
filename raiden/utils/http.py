@@ -1,10 +1,10 @@
 import os
-import shlex
-import shutil
+import platform
 import socket
 import subprocess
 
 from mirakuru.base import ENV_UUID
+from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError
 from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPExecutor
 
 
@@ -32,39 +32,50 @@ class HTTPExecutor(MiHTTPExecutor):
             return False
 
     def start(self):
-        """ Reimplements SimpleExecutor.start by setting stdin/out to None instead of PIPE
+        """ Reimplements Executor and SimpleExecutor start by allowing setting stdin/stdout/stderr
 
         It may break input/output/communicate, but will ensure child output redirects won't
-        break parent process
+        break parent process by filling the PIPE.
+        Also, catches ProcessExitedWithError and raise FileNotFoundError if exitcode was 127
         """
+        if self.pre_start_check():
+            # Some other executor (or process) is running with same config:
+            raise AlreadyRunning(self)
+
         if self.process is None:
             command = self.command
             if not self._shell:
                 command = self.command_parts
+
             if isinstance(self.stdio, (list, tuple)):
                 stdin, stdout, stderr = self.stdio
             else:
                 stdin = stdout = stderr = self.stdio
             env = os.environ.copy()
             env[ENV_UUID] = self._uuid
-
-            executable = shlex.split(command)[0]
-            executable = os.path.expanduser(executable)
-            executable = os.path.expandvars(executable)
-            if shutil.which(executable) is None:
-                raise FileNotFoundError(f'Can not execute {executable}, '
-                                        'check that the executable exists.')
-
+            popen_kwargs = {
+                'shell': self._shell,
+                'stdin': stdin,
+                'stdout': stdout,
+                'stderr': stderr,
+                'universal_newlines': True,
+                'env': env,
+            }
+            if platform.system() != 'Windows':
+                popen_kwargs['preexec_fn'] = os.setsid
             self.process = subprocess.Popen(
                 command,
-                shell=self._shell,
-                stdin=stdin,
-                stdout=stdout,
-                stderr=stderr,
-                universal_newlines=True,
-                preexec_fn=os.setsid,
-                env=env,
+                **popen_kwargs,
             )
 
         self._set_timeout()
+
+        try:
+            self.wait_for(self.check_subprocess)
+        except ProcessExitedWithError as e:
+            if e.exit_code == 127:
+                raise FileNotFoundError(
+                    f'Can not execute {command!r}, check that the executable exists.',
+                ) from e
+            raise
         return self
