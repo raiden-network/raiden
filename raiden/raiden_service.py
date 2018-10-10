@@ -558,9 +558,10 @@ class RaidenService(Runnable):
                         payment_done=AsyncResult(),
                     )
                 elif is_initiator:
-                    self.identifiers_to_statuses[event.payment_identifier] = PaymentStatus(
+                    payment_identifier = event.transfer.payment_identifier
+                    self.identifiers_to_statuses[payment_identifier] = PaymentStatus(
                         payment_type=PaymentType.MEDIATED,
-                        payment_identifier=event.payment_identifier,
+                        payment_identifier=payment_identifier,
                         payment_done=AsyncResult(),
                     )
 
