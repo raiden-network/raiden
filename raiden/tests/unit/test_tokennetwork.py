@@ -684,7 +684,8 @@ def test_routeing_issue2663(
         amount=50,
         previous_address=None,
     )
-    assert len(route1) == 2
+    assert route1[0].node_address == address1
+    assert route1[1].node_address == address2
 
     route2 = get_best_routes(
         chain_state=chain_state,
@@ -694,7 +695,7 @@ def test_routeing_issue2663(
         amount=51,
         previous_address=None,
     )
-    assert len(route2) == 1
+    assert route2[0].node_address == address2
 
     # test routing with node 2 offline
     chain_state.nodeaddresses_to_networkstates = {
@@ -711,7 +712,7 @@ def test_routeing_issue2663(
         amount=50,
         previous_address=None,
     )
-    assert len(route1) == 1
+    assert route1[0].node_address == address1
 
     route2 = get_best_routes(
         chain_state=chain_state,
@@ -721,7 +722,7 @@ def test_routeing_issue2663(
         amount=51,
         previous_address=None,
     )
-    assert len(route2) == 0
+    assert route2 == []
 
     # test routing with node 3 offline
     # the routing doesn't care as node 3 is not directly connected
@@ -739,7 +740,8 @@ def test_routeing_issue2663(
         amount=50,
         previous_address=None,
     )
-    assert len(route1) == 2
+    assert route1[0].node_address == address1
+    assert route1[1].node_address == address2
 
     route2 = get_best_routes(
         chain_state=chain_state,
@@ -749,7 +751,7 @@ def test_routeing_issue2663(
         amount=51,
         previous_address=None,
     )
-    assert len(route2) == 1
+    assert route2[0].node_address == address2
 
     # test routing with node 1 offline
     chain_state.nodeaddresses_to_networkstates = {
@@ -766,7 +768,8 @@ def test_routeing_issue2663(
         amount=50,
         previous_address=None,
     )
-    assert len(route1) == 1  # right now the channel to 2 gets filtered out as it is offline
+    # right now the channel to 1 gets filtered out as it is offline
+    assert route1[0].node_address == address2
 
     route2 = get_best_routes(
         chain_state=chain_state,
@@ -776,4 +779,4 @@ def test_routeing_issue2663(
         amount=51,
         previous_address=None,
     )
-    assert len(route2) == 1
+    assert route2[0].node_address == address2
