@@ -72,6 +72,7 @@ class App:  # pylint: disable=too-few-public-methods
             default_secret_registry: SecretRegistry,
             transport,
             raiden_event_handler,
+            message_handler,
             discovery: Discovery = None,
     ):
         raiden = RaidenService(
@@ -82,6 +83,7 @@ class App:  # pylint: disable=too-few-public-methods
             private_key_bin=unhexlify(config['privatekey_hex']),
             transport=transport,
             raiden_event_handler=raiden_event_handler,
+            message_handler=message_handler,
             config=config,
             discovery=discovery,
         )

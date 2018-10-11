@@ -14,6 +14,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
+from raiden.message_handler import MessageHandler
 from raiden.network.transport import UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
@@ -122,6 +123,7 @@ def restart_app(app):
         default_secret_registry=app.raiden.default_secret_registry,
         transport=new_transport,
         raiden_event_handler=RaidenEventHandler(),
+        message_handler=MessageHandler(),
         discovery=app.raiden.discovery,
     )
 

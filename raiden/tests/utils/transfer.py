@@ -5,7 +5,7 @@ import gevent
 from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
-from raiden.message_handler import on_message
+from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, Secret
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
@@ -28,7 +28,7 @@ from raiden.utils import privatekey_to_address, sha3
 def sign_and_inject(message, key, address, app):
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(key)
-    on_message(app.raiden, message)
+    MessageHandler().on_message(app.raiden, message)
 
 
 def get_channelstate(app0, app1, token_network_identifier) -> NettingChannelState:

@@ -10,7 +10,7 @@ from gevent.server import DatagramServer
 
 from raiden import constants
 from raiden.exceptions import InvalidAddress, InvalidProtocolMessage, UnknownAddress
-from raiden.message_handler import on_message
+from raiden.message_handler import MessageHandler
 from raiden.messages import Delivered, Message, Ping, Pong, decode
 from raiden.network.transport.udp import healthcheck
 from raiden.network.transport.udp.udp_utils import (
@@ -200,12 +200,14 @@ class UDPTransport(Runnable):
     def start(
             self,
             raiden: RaidenService,
+            message_handler: MessageHandler,
     ):
         if not self.event_stop.ready():
             raise RuntimeError('UDPTransport started while running')
 
         self.event_stop.clear()
         self.raiden = raiden
+        self.message_handler = message_handler
         self.queueids_to_queues = dict()
 
         # server.stop() clears the handle. Since this may be a restart the
@@ -514,27 +516,25 @@ class UDPTransport(Runnable):
         durability is confirmed, which is a stronger property than what is
         required of any transport.
         """
-        # pylint: disable=unidiomatic-typecheck
+        self.message_handler.on_message(self.raiden, message)
 
-        if on_message(self.raiden, message):
+        # Sending Delivered after the message is decoded and *processed*
+        # gives a stronger guarantee than what is required from a
+        # transport.
+        #
+        # Alternatives are, from weakest to strongest options:
+        # - Just save it on disk and asynchronously process the messages
+        # - Decode it, save to the WAL, and asynchronously process the
+        #   state change
+        # - Decode it, save to the WAL, and process it (the current
+        #   implementation)
+        delivered_message = Delivered(message.message_identifier)
+        self.raiden.sign(delivered_message)
 
-            # Sending Delivered after the message is decoded and *processed*
-            # gives a stronger guarantee than what is required from a
-            # transport.
-            #
-            # Alternatives are, from weakest to strongest options:
-            # - Just save it on disk and asynchronously process the messages
-            # - Decode it, save to the WAL, and asynchronously process the
-            #   state change
-            # - Decode it, save to the WAL, and process it (the current
-            #   implementation)
-            delivered_message = Delivered(message.message_identifier)
-            self.raiden.sign(delivered_message)
-
-            self.maybe_send(
-                message.sender,
-                delivered_message,
-            )
+        self.maybe_send(
+            message.sender,
+            delivered_message,
+        )
 
     def receive_delivered(self, delivered: Delivered):
         """ Handle a Delivered message.
@@ -544,7 +544,7 @@ class UDPTransport(Runnable):
         protocol, but it's required by this transport to provide the required
         properties.
         """
-        on_message(self.raiden, delivered)
+        self.message_handler.on_message(self.raiden, delivered)
 
         message_id = delivered.delivered_message_identifier
         async_result = self.raiden.transport.messageids_to_asyncresults.get(message_id)

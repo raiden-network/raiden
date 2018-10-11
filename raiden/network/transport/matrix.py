@@ -29,7 +29,7 @@ from raiden.exceptions import (
     UnknownAddress,
     UnknownTokenAddress,
 )
-from raiden.message_handler import on_message
+from raiden.message_handler import MessageHandler
 from raiden.messages import (
     Delivered,
     Message,
@@ -158,11 +158,13 @@ class MatrixTransport(Runnable):
     def start(
         self,
         raiden_service: RaidenService,
+        message_handler: MessageHandler,
     ):
         if not self._stop_event.ready():
             raise RuntimeError(f'{self!r} already started')
         self._stop_event.clear()
         self._raiden_service = raiden_service
+        self._message_handler = message_handler
 
         self._login_or_register()
         self.log = log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
@@ -682,7 +684,7 @@ class MatrixTransport(Runnable):
             message=delivered,
         )
 
-        on_message(self._raiden_service, delivered)
+        self._message_handler.on_message(self._raiden_service, delivered)
 
     def _receive_message(self, message: SignedMessage):
         self.log.debug(
@@ -704,7 +706,7 @@ class MatrixTransport(Runnable):
             #       federated servers.
             #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
             self._spawn(send_delivered_for, message)
-            on_message(self._raiden_service, message)
+            self._message_handler.on_message(self._raiden_service, message)
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
             self.log.warning('Exception while processing message', exc_info=True)

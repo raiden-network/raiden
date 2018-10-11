@@ -7,6 +7,7 @@ from gevent import server
 
 from raiden import waiting
 from raiden.app import App
+from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
@@ -342,6 +343,7 @@ def create_apps(
             )
 
         raiden_event_handler = RaidenEventHandler()
+        message_handler = MessageHandler()
 
         app = App(
             config=config_copy,
@@ -351,6 +353,7 @@ def create_apps(
             default_secret_registry=secret_registry,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
+            message_handler=message_handler,
             discovery=discovery,
         )
         apps.append(app)

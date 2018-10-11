@@ -4,6 +4,7 @@ from gevent import server
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
+from raiden.message_handler import MessageHandler
 from raiden.network.transport import UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import must_contain_entry
@@ -64,6 +65,7 @@ def test_recovery_happy_case(
     )
 
     raiden_event_handler = RaidenEventHandler()
+    message_handler = MessageHandler()
 
     app0_restart = App(
         config=app0.config,
@@ -73,6 +75,7 @@ def test_recovery_happy_case(
         default_secret_registry=app0.raiden.default_secret_registry,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
+        message_handler=message_handler,
         discovery=app0.raiden.discovery,
     )
 
@@ -203,6 +206,7 @@ def test_recovery_unhappy_case(
     )
 
     raiden_event_handler = RaidenEventHandler()
+    message_handler = MessageHandler()
 
     app0_restart = App(
         config=app0.config,
@@ -212,6 +216,7 @@ def test_recovery_unhappy_case(
         default_secret_registry=app0.raiden.default_secret_registry,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
+        message_handler=message_handler,
         discovery=app0.raiden.discovery,
     )
     del app0  # from here on the app0_restart should be used
@@ -273,6 +278,7 @@ def test_recovery_blockchain_events(
     gevent.sleep(1)
 
     raiden_event_handler = RaidenEventHandler()
+    message_handler = MessageHandler()
 
     app0_restart = App(
         config=app0.config,
@@ -282,6 +288,7 @@ def test_recovery_blockchain_events(
         default_secret_registry=app0.raiden.default_secret_registry,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
+        message_handler=message_handler,
         discovery=app0.raiden.discovery,
     )
 
