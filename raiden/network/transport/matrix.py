@@ -52,7 +52,7 @@ from raiden.transfer.state import (
     QueueIdsToQueues,
 )
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
-from raiden.utils import networkid_is_known, pex
+from raiden.utils import pex
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     Address,

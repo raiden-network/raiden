@@ -298,7 +298,7 @@ def run_app(
 
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
-            f"There are no known contract addresses for network id '{given_numeric_network_id}'. "
+            f"There are no known contract addresses for network id '{given_network_id}'. "
             "Please provide them on the command line or in the configuration file.",
             fg='red',
         )
@@ -329,7 +329,7 @@ def run_app(
     database_path = os.path.join(
         datadir,
         f'node_{pex(address)}',
-        f'netid_{given_numeric_network_id}',
+        f'netid_{given_network_id}',
         f'network_{pex(token_network_registry.address)}',
         f'v{RAIDEN_DB_VERSION}_log.db',
     )
@@ -337,7 +337,7 @@ def run_app(
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(given_network_id, given_numeric_network_id),
+            ID_TO_NETWORKNAME.get(given_network_id, given_network_id),
             database_path,
         ),
     )
@@ -382,7 +382,7 @@ def run_app(
         click.secho(f'FATAL: {e}', fg='red')
         sys.exit(1)
     except filelock.Timeout:
-        name_or_id = ID_TO_NETWORKNAME.get(given_network_id, given_numeric_network_id)
+        name_or_id = ID_TO_NETWORKNAME.get(given_network_id, given_network_id)
         click.secho(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
             f'network id {name_or_id}',
