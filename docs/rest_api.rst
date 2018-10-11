@@ -591,7 +591,7 @@ Payments
    :statuscode 402: If the payment can't start due to insufficient balance
    :statuscode 404: The given token and / or target addresses are not valid eip55-encoded Ethereum addresses
    :statuscode 408: If a timeout happened during the payment
-   :statuscode 409: If the address or the amount is invalid or if there is no path to the target
+   :statuscode 409: If the address or the amount is invalid or if there is no path to the target, or if the identifier is already in use for a different payment.
    :statuscode 500: Internal Raiden node error
 
 Querying Events

@@ -62,6 +62,7 @@ from raiden.exceptions import (
     InvalidBlockNumberInput,
     InvalidNumberInput,
     InvalidSettleTimeout,
+    PaymentConflict,
     SamePeerAddress,
     TokenNotRegistered,
     TransactionThrew,
@@ -957,7 +958,7 @@ class RestAPI:
                 amount=amount,
                 identifier=identifier,
             )
-        except (InvalidAmount, InvalidAddress, UnknownTokenAddress) as e:
+        except (InvalidAmount, InvalidAddress, PaymentConflict, UnknownTokenAddress) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
