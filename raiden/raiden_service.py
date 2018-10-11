@@ -23,7 +23,7 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.messages import LockedTransfer, SignedMessage, message_from_sendevent
+from raiden.messages import LockedTransfer, Message, SignedMessage, message_from_sendevent
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
@@ -444,6 +444,9 @@ class RaidenService(Runnable):
 
     def get_block_number(self):
         return views.block_number(self.wal.state_manager.current_state)
+
+    def on_message(self, message: Message):
+        self.message_handler.on_message(self, message)
 
     def handle_state_change(self, state_change):
         log.debug(

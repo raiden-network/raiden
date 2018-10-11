@@ -6,13 +6,12 @@ import pytest
 from raiden import message_handler, waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
-from raiden.messages import RevealSecret
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK, DEFAULT_RETRY_TIMEOUT
+from raiden.messages import LockExpired, RevealSecret
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldOffChainSecretRequest
+from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     direct_transfer,
@@ -139,6 +138,8 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     )
 
     hold_event_handler = HoldOffChainSecretRequest()
+    wait_message_handler = WaitForMessage()
+    bob_app.raiden.message_handler = wait_message_handler
     bob_app.raiden.raiden_event_handler = hold_event_handler
 
     token_network = views.get_token_network_by_identifier(
@@ -160,6 +161,10 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     transfer_1_secrethash = sha3(transfer_1_secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_1_secrethash)
+    remove_expired_lock = wait_message_handler.wait_for_message(
+        LockExpired,
+        {'secrethash': transfer_1_secrethash},
+    )
 
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
@@ -195,13 +200,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
     assert transfer_1_secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
 
-    # Wait for the expiration to trigger with some additional buffer
-    # time for processing (+2) blocks.
-    waiting.wait_for_block(
-        alice_app.raiden,
-        lock.expiration + (DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 2),
-        DEFAULT_RETRY_TIMEOUT,
-    )
+    remove_expired_lock.wait()
 
     alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     assert transfer_1_secrethash not in alice_channel_state.our_state.secrethashes_to_lockedlocks

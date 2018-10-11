@@ -516,7 +516,7 @@ class UDPTransport(Runnable):
         durability is confirmed, which is a stronger property than what is
         required of any transport.
         """
-        self.message_handler.on_message(self.raiden, message)
+        self.raiden.on_message(message)
 
         # Sending Delivered after the message is decoded and *processed*
         # gives a stronger guarantee than what is required from a
@@ -544,7 +544,7 @@ class UDPTransport(Runnable):
         protocol, but it's required by this transport to provide the required
         properties.
         """
-        self.message_handler.on_message(self.raiden, delivered)
+        self.raiden.on_message(delivered)
 
         message_id = delivered.delivered_message_identifier
         async_result = self.raiden.transport.messageids_to_asyncresults.get(message_id)
