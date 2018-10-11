@@ -3,6 +3,7 @@ import pytest
 
 from raiden import waiting
 from raiden.app import App
+from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.network import CHAIN
@@ -55,6 +56,7 @@ def test_send_queued_messages(
     )
 
     raiden_event_handler = RaidenEventHandler()
+    message_handler = MessageHandler()
 
     app0_restart = App(
         config=app0.config,
@@ -64,6 +66,7 @@ def test_send_queued_messages(
         default_secret_registry=app0.raiden.default_secret_registry,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
+        message_handler=message_handler,
         discovery=app0.raiden.discovery,
     )
 
