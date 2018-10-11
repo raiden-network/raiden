@@ -8,7 +8,7 @@ from web3 import HTTPProvider, Web3
 
 from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockchain
 from raiden.utils import privatekey_to_address, sha3
-from raiden_contracts.constants import ChainId
+from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 NUM_GETH_NODES = 3
 NUM_RAIDEN_ACCOUNTS = 10
@@ -59,7 +59,7 @@ def main():
         DEFAULT_ACCOUNTS,
         geth_nodes,
         tmpdir,
-        ChainId.SMOKETEST.value,
+        NETWORKNAME_TO_ID['smoketest'],
         verbosity,
         random_marker,
     )

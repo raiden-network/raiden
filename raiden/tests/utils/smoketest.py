@@ -36,9 +36,9 @@ from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
+    NETWORKNAME_TO_ID,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
-    ChainId,
 )
 
 # the smoketest will assert that a different endpoint got successfully registered
@@ -230,7 +230,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,
         genesis_file=os.path.join(get_project_root(), 'smoketest_genesis.json'),
-        chain_id=ChainId.SMOKETEST.value,
+        chain_id=NETWORKNAME_TO_ID['smoketest'],
         verbosity=0,
         logdir=logdir,
     )
@@ -256,7 +256,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     print_step('Deploying Raiden contracts')
 
     client = JSONRPCClient(web3, get_private_key(keystore))
-    contract_addresses = deploy_smoketest_contracts(client, ChainId.SMOKETEST.value)
+    contract_addresses = deploy_smoketest_contracts(client, NETWORKNAME_TO_ID['smoketest'])
     token_contract = deploy_token(client)
     token = token_contract(1000, 0, 'TKN', 'TKN')
     registry = TokenNetworkRegistry(client, contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
@@ -285,7 +285,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
             'gas_price': 'fast',
             'keystore_path': keystore,
             'matrix_server': matrix_server,
-            'network_id': str(ChainId.SMOKETEST.value),
+            'network_id': str(NETWORKNAME_TO_ID['smoketest']),
             'password_file': click.File()(os.path.join(base_datadir, 'pw')),
             'registry_contract_address': registry_contract_address,
             'secret_registry_contract_address': secret_registry_contract_address,
