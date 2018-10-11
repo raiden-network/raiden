@@ -684,7 +684,7 @@ class MatrixTransport(Runnable):
             message=delivered,
         )
 
-        self._message_handler.on_message(self._raiden_service, delivered)
+        self._raiden_service.on_message(delivered)
 
     def _receive_message(self, message: SignedMessage):
         self.log.debug(
@@ -706,7 +706,7 @@ class MatrixTransport(Runnable):
             #       federated servers.
             #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
             self._spawn(send_delivered_for, message)
-            self._message_handler.on_message(self._raiden_service, message)
+            self._raiden_service.on_message(message)
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
             self.log.warning('Exception while processing message', exc_info=True)
