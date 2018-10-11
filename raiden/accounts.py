@@ -4,6 +4,7 @@ import os
 import sys
 from typing import Dict, Optional
 
+import click
 import structlog
 from eth_keyfile import decode_keyfile_json
 from eth_utils import add_0x_prefix, decode_hex, encode_hex, remove_0x_prefix, to_checksum_address
@@ -88,7 +89,7 @@ class AccountManager:
                 files = os.listdir(self.keystore_path)
             except OSError as ex:
                 msg = 'Unable to list the specified directory'
-                log.error('OsError', msg=msg, path=self.keystore_path, ex=ex)
+                click.secho(msg, fg='red')
                 return
 
             for f in files:
@@ -114,7 +115,7 @@ class AccountManager:
                                 msg = 'Can not read account file (errno=%s)' % ex.errno
                             if isinstance(ex, json.decoder.JSONDecodeError):
                                 msg = 'The account file is not valid JSON format'
-                            log.warning(msg, path=fullpath, ex=ex)
+                            click.secho(msg, fg='red')
 
     def address_in_keystore(self, address: Optional[AddressHex]) -> bool:
         if address is None:

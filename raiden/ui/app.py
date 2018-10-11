@@ -18,6 +18,7 @@ from raiden.exceptions import (
     EthNodeInterfaceError,
     RaidenError,
 )
+from raiden.log_config import configure_logging
 from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
@@ -367,9 +368,16 @@ def run_app(
         f'node_{pex(address)}',
         f'netid_{given_network_id}',
         f'network_{pex(token_network_registry.address)}',
-        f'v{RAIDEN_DB_VERSION}_log.db',
     )
-    config['database_path'] = database_path
+
+    config['database_path'] = os.path.join(database_path, f'v{RAIDEN_DB_VERSION}_log.db')
+
+    configure_logging(
+        kwargs.get('log_config'),
+        log_json=kwargs.get('log_json'),
+        log_file=database_path,
+        disable_debug_logfile=kwargs.get('disable_debug_logfile'),
+    )
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(

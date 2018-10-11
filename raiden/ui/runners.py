@@ -23,7 +23,6 @@ from raiden.exceptions import (
     RaidenError,
     RaidenServicePortInUseError,
 )
-from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
 from raiden.tasks import check_gas_reserve, check_version
 from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
@@ -62,17 +61,7 @@ class NodeRunner:
         pass
 
     def run(self):
-        configure_logging(
-            self._options['log_config'],
-            log_json=self._options['log_json'],
-            log_file=self._options['log_file'],
-            disable_debug_logfile=self._options['disable_debug_logfile'],
-        )
-
         log.info('Starting Raiden', **get_system_spec())
-
-        if self._options['config_file']:
-            log.debug('Using config file', config_file=self._options['config_file'])
 
     def _start_services(self):
         from raiden.ui.console import Console
