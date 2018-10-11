@@ -340,8 +340,8 @@ class UDPTransport(Runnable):
         and initialize it with `items`.
         """
         recipient = queue_identifier.recipient
-        queue = self.queueids_to_queues.get(queue_identifier)
-        assert queue is None
+        previous_queue = self.queueids_to_queues.get(queue_identifier)
+        assert previous_queue is None
 
         queue = NotifyingQueue(items=items)
         self.queueids_to_queues[queue_identifier] = queue
