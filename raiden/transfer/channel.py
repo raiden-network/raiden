@@ -130,6 +130,7 @@ def is_lock_expired(
         end_state: NettingChannelEndState,
         lock: HashTimeLockState,
         block_number: typing.BlockNumber,
+        lock_expiration_threshold: typing.BlockNumber,
 ) -> typing.SuccessOrError:
     """ Determine whether a lock has expired.
 
@@ -143,11 +144,10 @@ def is_lock_expired(
     if secret_registered_on_chain:
         return (False, 'lock has been unlocked on-chain')
 
-    expiration = lock_expiration_threshold(lock)
-    if block_number < expiration:
+    if block_number < lock_expiration_threshold:
         msg = (
             f'current block number ({block_number}) is not larger than '
-            f'lock.expiration + confirmation blocks ({expiration})'
+            f'lock.expiration + confirmation blocks ({lock_expiration_threshold})'
         )
         return (False, msg)
 
@@ -520,6 +520,7 @@ def is_valid_lock_expired(
             end_state=receiver_state,
             lock=lock,
             block_number=block_number,
+            lock_expiration_threshold=lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
         )
 
         if not has_expired:
@@ -849,7 +850,7 @@ def get_balance(
 
 
 def lock_expiration_threshold(lock):
-    return lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    return
 
 
 def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofData:

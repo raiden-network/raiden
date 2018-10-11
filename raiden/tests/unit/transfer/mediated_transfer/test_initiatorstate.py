@@ -721,7 +721,7 @@ def test_initiator_lock_expired():
 
     # Trigger lock expiry
     state_change = Block(
-        block_number=transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+        block_number=transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK * 2,
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
@@ -770,7 +770,7 @@ def test_initiator_lock_expired():
 
     assert transfer2_lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
 
-    expiration_block_number = transfer2_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    expiration_block_number = transfer2_lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK * 2
 
     block = Block(
         block_number=expiration_block_number,
