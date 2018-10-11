@@ -31,9 +31,14 @@ log = structlog.get_logger(__name__)
 
 
 class RandomCrashEventHandler(RaidenEventHandler):
+    def __init__(self, raiden, api):
+        self.raiden = raiden
+        self.api = api
+
     def on_raiden_event(self, raiden, event):
         if random.random() < 0.2:
-            raiden.stop()
+            self.raiden.stop()
+            self.api.stop()
         else:
             super().on_raiden_event(raiden, event)
 
@@ -126,7 +131,6 @@ def _monitor(app, api_server):
     while True:
         # wait for a failure to happen and then stop the rest api
         app.raiden.stop_event.wait()
-        api_server.stop()
 
         # wait for both services to stop
         app.raiden.get()
@@ -245,7 +249,7 @@ def _wait_for_server(post_url, identifier, amount, port_number):
             )
             return
         except (requests.RequestException, requests.ConnectionError):
-            wait_for_listening_port(port_number, tries=100)
+            wait_for_listening_port(port_number, tries=300)
 
 
 def parallel_bounded_requests(
@@ -265,6 +269,7 @@ def parallel_bounded_requests(
             amount=1,
             port_number=port_number,
         )
+    throttled_pool.join()
 
 
 def sequential_transfers(
@@ -525,16 +530,9 @@ def test_stress_unhappy_case(
         deposit,
         token_addresses,
         port_generator,
+        network_wait,
 ):
-    random_crash_handler = RandomCrashEventHandler()
     initiator, mediator, target = raiden_chain
-
-    initiator.raiden.raiden_event_handler = random_crash_handler
-    mediator.raiden.raiden_event_handler = random_crash_handler
-    target.raiden.raiden_event_handler = random_crash_handler
-
-    token_address = token_addresses[0]
-    identifier_generator = count()
 
     initiator_api_port = next(port_generator)
 
@@ -542,9 +540,27 @@ def test_stress_unhappy_case(
     mediator_api = start_apiserver(mediator, next(port_generator))
     target_api = start_apiserver(target, next(port_generator))
 
-    initiator_monitor = gevent.spawn(_monitor, initiator, initiator_api)
-    mediator_monitor = gevent.spawn(_monitor, mediator, mediator_api)
-    target_monitor = gevent.spawn(_monitor, target, target_api)
+    initiator.raiden.raiden_event_handler = RandomCrashEventHandler(
+        initiator.raiden,
+        initiator_api,
+    )
+
+    mediator.raiden.raiden_event_handler = RandomCrashEventHandler(
+        mediator.raiden,
+        mediator_api,
+    )
+
+    target.raiden.raiden_event_handler = RandomCrashEventHandler(
+        target.raiden,
+        target_api,
+    )
+
+    gevent.spawn(_monitor, initiator, initiator_api)
+    gevent.spawn(_monitor, mediator, mediator_api)
+    gevent.spawn(_monitor, target, target_api)
+
+    token_address = token_addresses[0]
+    identifier_generator = count()
 
     post_url = _url_for(
         initiator_api,
@@ -553,7 +569,7 @@ def test_stress_unhappy_case(
         target_address=to_checksum_address(target.raiden.address),
     )
 
-    runner = gevent.spawn(
+    gevent.spawn(
         parallel_bounded_requests,
         post_url=post_url,
         identifier_generator=identifier_generator,
@@ -561,10 +577,21 @@ def test_stress_unhappy_case(
         number_of_requests=deposit,
         port_number=initiator_api_port,
     )
-
-    gevent.wait([
-        initiator_monitor,
-        mediator_monitor,
-        target_monitor,
-        runner,
-    ])
+    waiting.wait_for_participant_newbalance(
+        initiator.raiden,
+        initiator.raiden.default_registry.address,
+        token_address,
+        mediator.raiden.address,
+        initiator.raiden.address,
+        0,
+        network_wait,
+    )
+    waiting.wait_for_participant_newbalance(
+        target.raiden,
+        target.raiden.default_registry.address,
+        token_address,
+        mediator.raiden.address,
+        target.raiden.address,
+        deposit + deposit,
+        network_wait,
+    )
