@@ -93,7 +93,65 @@ scenario:
             - wait: 10
             - deposit: {from: 2, to: 4, total_deposit: 100}
             - wait: 10
-            - deposit: 
+            # Try to make a deposit smaller the the amount that was deposited
+            - deposit: {from: 2, to: 4, total_deposit: 30, expected_http_status: 409}
+            # Make a deposit bigger then the depsited amount
+            - deposit: {from: 2, to: 4, total_deposit: 150}
+      - parallel:
+          name: "Verify the channels"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 100, balance: 100, state: "opened"}
+            # New channel
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 150, state: "opened"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 0, state: "opened"}
+      - serial:
+          name: "Open a channel with a deposit bigger then the Red Eyes limit"
+          tasks:
+            - open_channel: {from: 0, to: 4, total_deposit: 1000000000000, expected_http_status: 409}
+      - serial:
+          name: "Continue building the network"
+          tasks:
+            # A opens a channel with E
+            - open_channel: {from: 0, to: 4, total_deposit: 10, expected_http_status: 201}
+            - assert: {from: 0, to: 4, total_deposit: 10, balance: 10, state: "opened"}
+            # E deposits 25 tokens onto the A - E channel
+            - deposit: {from: 4, to: 0, total_deposit: 25}
+            # A performs a payment to E of 50 tokens (path A<->B<->C<->E)
+            - transfer: {from: 0, to: 4, amount: 50, expected_http_status: 200}
+            - wait: 5
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 50, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 150, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 50, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 150, state: "opened"}
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "opened"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "opened"}
+            # C sends all of its tokens to B (one transfer)
+            - transfer: {from: 2, to: 1, amount: 150, eexpected_http_status: 200}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 200, state: "opened"}
+            # C tries to send another > 25 tokens payment to B (fail no route with enough capacity)
+            - transfer: {from: 2, to: 1, amount: 150, eexpected_http_status: 409}
+      - serial:
+          name: "Multiple multi hop payments"
+          repeat: 10
+          tasks:
+            # C sends 10 payments of 1 token to B by using the C <-> E <-> A <-> B route
+            - transfer: {from: 2, to: 1, amount: 1}
+            - wait: 1
+      - parallel:
+          name: "Verify state of the network"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 100, balance: 40, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 100, balance: 160, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 100, balance: 50, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 100, balance: 150, state: "opened"}
+            - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "opened"}
+            - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "opened"}
 
 
 
