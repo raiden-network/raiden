@@ -1766,7 +1766,7 @@ def test_mediator_lock_expired_with_new_block():
 
     transfer = send_transfer.transfer
 
-    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK * 2
     block = Block(
         block_number=block_expiration_number,
         gas_limit=1,
