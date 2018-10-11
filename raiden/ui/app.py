@@ -18,6 +18,7 @@ from raiden.exceptions import (
     EthNodeCommunicationError,
     RaidenError,
 )
+from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
@@ -361,6 +362,7 @@ def run_app(
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     raiden_event_handler = RaidenEventHandler()
+    message_handler = MessageHandler()
 
     try:
         start_block = chain_config.get(START_QUERY_BLOCK_KEY, 0)
@@ -372,6 +374,7 @@ def run_app(
             default_secret_registry=secret_registry,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
+            message_handler=message_handler,
             discovery=discovery,
         )
     except RaidenError as e:

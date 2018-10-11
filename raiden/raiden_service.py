@@ -178,6 +178,7 @@ class RaidenService(Runnable):
             private_key_bin,
             transport,
             raiden_event_handler,
+            message_handler,
             config,
             discovery=None,
     ):
@@ -207,6 +208,7 @@ class RaidenService(Runnable):
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
         self.raiden_event_handler = raiden_event_handler
+        self.message_handler = message_handler
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
@@ -342,7 +344,10 @@ class RaidenService(Runnable):
 
         # alarm.first_run may process some new channel, which would start_health_check_for
         # a partner, that's why transport needs to be already started at this point
-        self.transport.start(self)
+        self.transport.start(
+            self,
+            self.message_handler,
+        )
 
         self.alarm.first_run()
 
