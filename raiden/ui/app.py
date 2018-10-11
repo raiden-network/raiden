@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from binascii import hexlify
@@ -33,11 +34,10 @@ from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
-    ID_TO_NETWORK_CONFIG,
     ID_TO_NETWORKNAME,
-    START_QUERY_BLOCK_KEY,
     NetworkType,
 )
+from raiden_contracts.contract_manager import contracts_deployed_path
 
 from .prompt import prompt_account
 from .sync import check_discovery_registration_gas, check_synced
@@ -101,13 +101,13 @@ def _setup_udp(
         config,
         blockchain_service,
         address,
-        contract_addresses,
+        contracts,
         discovery_contract_address,
 ):
     check_discovery_registration_gas(blockchain_service, address)
     try:
         dicovery_proxy = blockchain_service.discovery(
-            discovery_contract_address or contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+            discovery_contract_address or contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
         )
         discovery = ContractDiscovery(
             blockchain_service.node_address,
@@ -265,11 +265,14 @@ def run_app(
     network_type = config['network_type']
     chain_config = {}
     contract_addresses_known = False
-    contract_addresses = dict()
-    if node_network_id in ID_TO_NETWORK_CONFIG:
-        network_config = ID_TO_NETWORK_CONFIG[node_network_id]
-        not_allowed = (
-            NetworkType.TEST not in network_config and
+    contracts = dict()
+    config['contracts_version'] = None  # None means latest
+    if node_network_id in ID_TO_NETWORKNAME:
+        contracts_version = 'pre_limit' if network_type == NetworkType.TEST else None
+        config['contracts_version'] = contracts_version
+        network_contracts_path = contracts_deployed_path(node_network_id, contracts_version)
+        not_allowed = (  # for now we only disallow mainnet with test configuration
+            network_id == 1 and
             network_type == NetworkType.TEST
         )
         if not_allowed:
@@ -282,9 +285,9 @@ def run_app(
             )
             sys.exit(1)
 
-        if network_type in network_config:
-            chain_config = network_config[network_type]
-            contract_addresses = chain_config['contract_addresses']
+        with open(network_contracts_path) as f:
+            chain_config = json.load(f)
+            contracts = chain_config['contracts']
             contract_addresses_known = True
 
     if sync_check:
@@ -306,7 +309,7 @@ def run_app(
 
     try:
         token_network_registry = blockchain_service.token_network_registry(
-            registry_contract_address or contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+            registry_contract_address or contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
         )
     except ContractVersionMismatch:
         handle_contract_version_mismatch('token network registry', registry_contract_address)
@@ -317,7 +320,7 @@ def run_app(
 
     try:
         secret_registry = blockchain_service.secret_registry(
-            secret_registry_contract_address or contract_addresses[CONTRACT_SECRET_REGISTRY],
+            secret_registry_contract_address or contracts[CONTRACT_SECRET_REGISTRY]['address'],
         )
     except ContractVersionMismatch:
         handle_contract_version_mismatch('secret registry', secret_registry_contract_address)
@@ -348,7 +351,7 @@ def run_app(
             config,
             blockchain_service,
             address,
-            contract_addresses,
+            contracts,
             discovery_contract_address,
         )
     elif transport == 'matrix':
@@ -360,7 +363,11 @@ def run_app(
     message_handler = MessageHandler()
 
     try:
-        start_block = chain_config.get(START_QUERY_BLOCK_KEY, 0)
+        if 'contracts' in chain_config:
+            start_block = chain_config['contracts']['TokenNetworkRegistry']['block_number']
+        else:
+            start_block = 0
+
         raiden_app = App(
             config=config,
             chain=blockchain_service,
