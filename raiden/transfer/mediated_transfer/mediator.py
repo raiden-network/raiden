@@ -3,6 +3,7 @@ import random
 from typing import Dict, List
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.events import ContractSendChannelBatchUnlock, SendProcessed
@@ -703,10 +704,15 @@ def events_for_expired_locks(
         locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
         if locked_lock:
+            lock_expiration_threshold = (
+                locked_lock.expiration +
+                DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK * 2
+            )
             has_lock_expired, _ = channel.is_lock_expired(
                 end_state=channel_state.our_state,
                 lock=locked_lock,
                 block_number=block_number,
+                lock_expiration_threshold=lock_expiration_threshold,
             )
 
             if has_lock_expired:
