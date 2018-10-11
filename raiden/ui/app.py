@@ -27,7 +27,7 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NAT_KEEPALIVE_RETRIES
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
-from raiden.utils import is_supported_client, networkid_is_known, pex, split_endpoint, typing
+from raiden.utils import is_supported_client, pex, split_endpoint, typing
 from raiden.utils.cli import get_matrix_servers
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -36,7 +36,6 @@ from raiden_contracts.constants import (
     ID_TO_NETWORK_CONFIG,
     ID_TO_NETWORKNAME,
     START_QUERY_BLOCK_KEY,
-    ChainId,
     NetworkType,
 )
 
@@ -231,33 +230,29 @@ def run_app(
 
     blockchain_service = BlockChainService(privatekey_bin, rpc_client)
 
-    given_numeric_network_id = network_id.value if isinstance(network_id, ChainId) else network_id
-    node_numeric_network_id = blockchain_service.network_id
-    known_given_network_id = networkid_is_known(given_numeric_network_id)
-    known_node_network_id = networkid_is_known(node_numeric_network_id)
-    if known_given_network_id:
-        given_network_id = ChainId(given_numeric_network_id)
-    if known_node_network_id:
-        node_network_id = ChainId(node_numeric_network_id)
+    given_network_id = network_id
+    node_network_id = blockchain_service.network_id
+    known_given_network_id = given_network_id in ID_TO_NETWORKNAME
+    known_node_network_id = node_network_id in ID_TO_NETWORKNAME
 
-    if node_numeric_network_id != given_numeric_network_id:
+    if node_network_id != given_network_id:
         if known_given_network_id and known_node_network_id:
             click.secho(
-                f"The chosen ethereum network '{given_network_id.name.lower()}' "
-                f"differs from the ethereum client '{node_network_id.name.lower()}'. "
+                f"The chosen ethereum network '{ID_TO_NETWORKNAME[given_network_id]}' "
+                f"differs from the ethereum client '{ID_TO_NETWORKNAME[node_network_id]}'. "
                 "Please update your settings.",
                 fg='red',
             )
         else:
             click.secho(
-                f"The chosen ethereum network id '{given_numeric_network_id}' differs "
-                f"from the ethereum client '{node_numeric_network_id}'. "
+                f"The chosen ethereum network id '{given_network_id}' differs "
+                f"from the ethereum client '{node_network_id}'. "
                 "Please update your settings.",
                 fg='red',
             )
         sys.exit(1)
 
-    config['chain_id'] = given_numeric_network_id
+    config['chain_id'] = given_network_id
 
     log.debug('Network type', type=network_type)
     if network_type == 'main':

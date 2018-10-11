@@ -67,7 +67,7 @@ from raiden.utils.typing import (
     Tuple,
     Union,
 )
-from raiden_contracts.constants import ID_TO_NETWORKNAME, ChainId
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_libs.exceptions import InvalidSignature
 from raiden_libs.network.matrix import GMatrixClient, Room
 from raiden_libs.utils.signing import eth_recover, eth_sign
@@ -312,8 +312,7 @@ class MatrixTransport(Runnable):
     @property
     def _network_name(self) -> str:
         netid = self._raiden_service.chain.network_id
-        netid_known = networkid_is_known(netid)
-        return ID_TO_NETWORKNAME[ChainId(netid)] if netid_known else str(netid)
+        return ID_TO_NETWORKNAME.get(netid, str(netid))
 
     @property
     def _private_rooms(self) -> bool:
