@@ -418,9 +418,10 @@ class APIServer(Runnable):
         # that the actions are valid, e.g. deposit in a channel that has closed
         # while the node was offline.
         if not self.rest_api.raiden_api.raiden:
-            raise RuntimeError(
+            log.critical(
                 'The RaidenService must be started before the API can be used',
             )
+            return api_error(['Raiden Service not running'], HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def _serve_webui(self, file_name='index.html'):  # pylint: disable=redefined-builtin
         try:
