@@ -751,15 +751,23 @@ class TokenNetwork:
             channel_identifier,
         )
 
-        channel_closed = self.channel_is_closed(
+        detail = self.detail_channel(
             participant1=self.node_address,
             participant2=partner,
             channel_identifier=channel_identifier,
         )
-        if channel_closed is False:
+        if detail.state != ChannelState.CLOSED:
             msg = 'Channel is not in a closed state'
             log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
             raise RaidenUnrecoverableError(msg)
+
+        if detail.settle_block_number < self.client.block_number():
+            msg = (
+                'updateNonClosingBalanceProof cannot be called '
+                'because the settlement period is over'
+            )
+            log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
+            raise RaidenRecoverableError(msg)
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
@@ -777,6 +785,13 @@ class TokenNetwork:
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
+            if detail.settle_block_number < receipt_or_none['blockNumber']:
+                msg = (
+                    'updateNonClosingBalanceProof transaction '
+                    'was mined after settlement finished'
+                )
+                log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
+                raise RaidenRecoverableError(msg)
 
             # This should never happen if the settlement window and gas price
             # estimation is done properly
