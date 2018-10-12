@@ -35,6 +35,8 @@ def test_payment_channel_proxy_basics(
         contract_manager=contract_manager,
     )
 
+    start_block = web3.eth.blockNumber
+
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         c2_client.sender,
@@ -55,7 +57,7 @@ def test_payment_channel_proxy_basics(
     )
 
     channel_filter = channel_proxy_1.all_events_filter(
-        from_block=web3.eth.blockNumber,
+        from_block=start_block,
         to_block='latest',
     )
 
@@ -156,6 +158,7 @@ def test_payment_channel_outdated_channel_close(
         manager_address=token_network_address,
         contract_manager=contract_manager,
     )
+    start_block = web3.eth.blockNumber
 
     # create a channel
     channel_identifier = token_network_proxy.new_netting_channel(
@@ -172,7 +175,7 @@ def test_payment_channel_outdated_channel_close(
     )
 
     channel_filter = channel_proxy_1.all_events_filter(
-        from_block=web3.eth.blockNumber,
+        from_block=start_block,
         to_block='latest',
     )
 

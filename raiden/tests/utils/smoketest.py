@@ -155,21 +155,18 @@ def deploy_smoketest_contracts(client, chain_id, contract_manager):
         contract_name=CONTRACT_ENDPOINT_REGISTRY,
         deploy_client=client,
         contract_manager=contract_manager,
-        num_confirmations=None,
     )
 
     secret_registry_address = deploy_contract_web3(
         contract_name=CONTRACT_SECRET_REGISTRY,
         deploy_client=client,
         contract_manager=contract_manager,
-        num_confirmations=1,
     )
 
     token_network_registry_address = deploy_contract_web3(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
         deploy_client=client,
         contract_manager=contract_manager,
-        num_confirmations=None,
         constructor_arguments=(
             to_checksum_address(secret_registry_address),
             chain_id,
