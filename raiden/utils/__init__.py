@@ -26,10 +26,6 @@ from raiden.utils import typing
 from raiden_libs.utils.signing import sha3
 
 
-def safe_address_decode(address):
-    return decode_hex(address)
-
-
 def random_secret():
     return os.urandom(32)
 
