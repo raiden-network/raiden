@@ -8,15 +8,10 @@ import pytest
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 from flask import url_for
-from gevent import server
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
-from raiden.app import App
-from raiden.message_handler import MessageHandler
-from raiden.network.transport import UDPTransport
-from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
 from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
 from raiden.transfer import views
@@ -104,60 +99,26 @@ def start_apiserver_for_network(raiden_network, port_generator):
 
 
 def restart_app(app):
-    host_port = (
-        app.raiden.config['transport']['udp']['host'],
-        app.raiden.config['transport']['udp']['port'],
-    )
-    socket = server._udp_socket(host_port)  # pylint: disable=protected-access
-    new_transport = UDPTransport(
-        app.raiden.address,
-        app.discovery,
-        socket,
-        app.raiden.transport.throttle_policy,
-        app.raiden.config['transport']['udp'],
-    )
-    app = App(
-        config=app.config,
-        chain=app.raiden.chain,
-        query_start_block=0,
-        default_registry=app.raiden.default_registry,
-        default_secret_registry=app.raiden.default_secret_registry,
-        transport=new_transport,
-        raiden_event_handler=RaidenEventHandler(),
-        message_handler=MessageHandler(),
-        discovery=app.raiden.discovery,
-    )
-
+    app.stop()
+    app.get()
     app.start()
-
-    return app
 
 
 def restart_network(raiden_network, retry_timeout):
-    for app in raiden_network:
-        app.stop()
-
-    wait_network = [
+    gevent.wait([
         gevent.spawn(restart_app, app)
         for app in raiden_network
-    ]
-
-    gevent.wait(wait_network)
-
-    new_network = [
-        greenlet.get()
-        for greenlet in wait_network
-    ]
+    ])
 
     # The tests assume the nodes are available to transfer
-    for app0, app1 in combinations(new_network, 2):
+    for app0, app1 in combinations(raiden_network, 2):
         waiting.wait_for_healthy(
             app0.raiden,
             app1.raiden.address,
             retry_timeout,
         )
 
-    return new_network
+    return raiden_network
 
 
 def restart_network_and_apiservers(raiden_network, api_servers, port_generator, retry_timeout):
