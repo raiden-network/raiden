@@ -8,7 +8,7 @@ from web3.utils.filters import LogFilter, construct_event_filter_params
 
 from raiden.utils.typing import Address, BlockSpecification, ChannelID, Dict
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
+from raiden_contracts.contract_manager import ContractManager
 
 try:
     from eth_tester.exceptions import BlockNotFound
@@ -21,6 +21,7 @@ def get_filter_args_for_specific_event_from_channel(
         token_network_address: Address,
         channel_identifier: ChannelID,
         event_name: str,
+        contract_manager: ContractManager,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ):
@@ -28,7 +29,6 @@ def get_filter_args_for_specific_event_from_channel(
     if not event_name:
         raise ValueError('Event name must be given')
 
-    contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
     event_abi = contract_manager.get_event_abi(CONTRACT_TOKEN_NETWORK, event_name)
 
     # Here the topics for a specific event are created
@@ -50,6 +50,7 @@ def get_filter_args_for_specific_event_from_channel(
 def get_filter_args_for_all_events_from_channel(
         token_network_address: Address,
         channel_identifier: ChannelID,
+        contract_manager: ContractManager,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> Dict:
@@ -59,6 +60,7 @@ def get_filter_args_for_all_events_from_channel(
         token_network_address=token_network_address,
         channel_identifier=channel_identifier,
         event_name=ChannelEvent.OPENED,
+        contract_manager=contract_manager,
         from_block=from_block,
         to_block=to_block,
     )

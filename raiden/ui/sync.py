@@ -12,7 +12,7 @@ from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.utils import typing
-from raiden_contracts.constants import ID_TO_NETWORKNAME, ChainId
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 
 def check_synced(blockchain_service: BlockChainService, network_id_is_known: bool) -> None:
@@ -28,7 +28,7 @@ def check_synced(blockchain_service: BlockChainService, network_id_is_known: boo
         sys.exit(1)
 
     try:
-        network = ID_TO_NETWORKNAME[ChainId(net_id)]
+        network = ID_TO_NETWORKNAME[net_id]
     except (EthNodeCommunicationError, RequestException):
         click.secho(
             'Could not determine the network the ethereum node is connected.\n'

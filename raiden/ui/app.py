@@ -27,17 +27,20 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NAT_KEEPALIVE_RETRIES
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
-from raiden.utils import is_supported_client, networkid_is_known, pex, split_endpoint, typing
+from raiden.utils import is_supported_client, pex, split_endpoint, typing
 from raiden.utils.cli import get_matrix_servers
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
-    ID_TO_NETWORK_CONFIG,
     ID_TO_NETWORKNAME,
-    START_QUERY_BLOCK_KEY,
-    ChainId,
     NetworkType,
+)
+from raiden_contracts.contract_manager import (
+    ContractManager,
+    contracts_deployed_path,
+    contracts_precompiled_path,
+    get_contracts_deployed,
 )
 
 from .prompt import prompt_account
@@ -102,13 +105,13 @@ def _setup_udp(
         config,
         blockchain_service,
         address,
-        contract_addresses,
+        contracts,
         discovery_contract_address,
 ):
     check_discovery_registration_gas(blockchain_service, address)
     try:
         dicovery_proxy = blockchain_service.discovery(
-            discovery_contract_address or contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+            discovery_contract_address or contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
         )
         discovery = ContractDiscovery(
             blockchain_service.node_address,
@@ -229,35 +232,36 @@ def run_app(
         gas_price_strategy=gas_price,
     )
 
-    blockchain_service = BlockChainService(privatekey_bin, rpc_client)
+    blockchain_service = BlockChainService(
+        privatekey_bin=privatekey_bin,
+        jsonrpc_client=rpc_client,
+        # Not giving the contract manager here, but injecting it later
+        # since we first need blockchain service to calculate the network id
+    )
 
-    given_numeric_network_id = network_id.value if isinstance(network_id, ChainId) else network_id
-    node_numeric_network_id = blockchain_service.network_id
-    known_given_network_id = networkid_is_known(given_numeric_network_id)
-    known_node_network_id = networkid_is_known(node_numeric_network_id)
-    if known_given_network_id:
-        given_network_id = ChainId(given_numeric_network_id)
-    if known_node_network_id:
-        node_network_id = ChainId(node_numeric_network_id)
+    given_network_id = network_id
+    node_network_id = blockchain_service.network_id
+    known_given_network_id = given_network_id in ID_TO_NETWORKNAME
+    known_node_network_id = node_network_id in ID_TO_NETWORKNAME
 
-    if node_numeric_network_id != given_numeric_network_id:
+    if node_network_id != given_network_id:
         if known_given_network_id and known_node_network_id:
             click.secho(
-                f"The chosen ethereum network '{given_network_id.name.lower()}' "
-                f"differs from the ethereum client '{node_network_id.name.lower()}'. "
+                f"The chosen ethereum network '{ID_TO_NETWORKNAME[given_network_id]}' "
+                f"differs from the ethereum client '{ID_TO_NETWORKNAME[node_network_id]}'. "
                 "Please update your settings.",
                 fg='red',
             )
         else:
             click.secho(
-                f"The chosen ethereum network id '{given_numeric_network_id}' differs "
-                f"from the ethereum client '{node_numeric_network_id}'. "
+                f"The chosen ethereum network id '{given_network_id}' differs "
+                f"from the ethereum client '{node_network_id}'. "
                 "Please update your settings.",
                 fg='red',
             )
         sys.exit(1)
 
-    config['chain_id'] = given_numeric_network_id
+    config['chain_id'] = given_network_id
 
     log.debug('Network type', type=network_type)
     if network_type == 'main':
@@ -270,11 +274,14 @@ def run_app(
     network_type = config['network_type']
     chain_config = {}
     contract_addresses_known = False
-    contract_addresses = dict()
-    if node_network_id in ID_TO_NETWORK_CONFIG:
-        network_config = ID_TO_NETWORK_CONFIG[node_network_id]
-        not_allowed = (
-            NetworkType.TEST not in network_config and
+    contracts = dict()
+    config['contracts_path'] = contracts_precompiled_path()
+    if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
+        contracts_version = 'pre_limit' if network_type == NetworkType.TEST else None
+        deployment_data = get_contracts_deployed(node_network_id, contracts_version)
+        config['contracts_path'] = contracts_deployed_path(node_network_id, contracts_version)
+        not_allowed = (  # for now we only disallow mainnet with test configuration
+            network_id == 1 and
             network_type == NetworkType.TEST
         )
         if not_allowed:
@@ -287,10 +294,10 @@ def run_app(
             )
             sys.exit(1)
 
-        if network_type in network_config:
-            chain_config = network_config[network_type]
-            contract_addresses = chain_config['contract_addresses']
+            contracts = deployment_data['contracts']
             contract_addresses_known = True
+
+    blockchain_service.inject_contract_manager(ContractManager(config['contracts_path']))
 
     if sync_check:
         check_synced(blockchain_service, known_node_network_id)
@@ -303,7 +310,7 @@ def run_app(
 
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
-            f"There are no known contract addresses for network id '{given_numeric_network_id}'. "
+            f"There are no known contract addresses for network id '{given_network_id}'. "
             "Please provide them on the command line or in the configuration file.",
             fg='red',
         )
@@ -311,7 +318,7 @@ def run_app(
 
     try:
         token_network_registry = blockchain_service.token_network_registry(
-            registry_contract_address or contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+            registry_contract_address or contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
         )
     except ContractVersionMismatch:
         handle_contract_version_mismatch('token network registry', registry_contract_address)
@@ -322,7 +329,7 @@ def run_app(
 
     try:
         secret_registry = blockchain_service.secret_registry(
-            secret_registry_contract_address or contract_addresses[CONTRACT_SECRET_REGISTRY],
+            secret_registry_contract_address or contracts[CONTRACT_SECRET_REGISTRY]['address'],
         )
     except ContractVersionMismatch:
         handle_contract_version_mismatch('secret registry', secret_registry_contract_address)
@@ -334,7 +341,7 @@ def run_app(
     database_path = os.path.join(
         datadir,
         f'node_{pex(address)}',
-        f'netid_{given_numeric_network_id}',
+        f'netid_{given_network_id}',
         f'network_{pex(token_network_registry.address)}',
         f'v{RAIDEN_DB_VERSION}_log.db',
     )
@@ -342,7 +349,7 @@ def run_app(
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(given_network_id, given_numeric_network_id),
+            ID_TO_NETWORKNAME.get(given_network_id, given_network_id),
             database_path,
         ),
     )
@@ -353,7 +360,7 @@ def run_app(
             config,
             blockchain_service,
             address,
-            contract_addresses,
+            contracts,
             discovery_contract_address,
         )
     elif transport == 'matrix':
@@ -365,7 +372,11 @@ def run_app(
     message_handler = MessageHandler()
 
     try:
-        start_block = chain_config.get(START_QUERY_BLOCK_KEY, 0)
+        if 'contracts' in chain_config:
+            start_block = chain_config['contracts']['TokenNetworkRegistry']['block_number']
+        else:
+            start_block = 0
+
         raiden_app = App(
             config=config,
             chain=blockchain_service,
@@ -387,7 +398,7 @@ def run_app(
         click.secho(f'FATAL: {e}', fg='red')
         sys.exit(1)
     except filelock.Timeout:
-        name_or_id = ID_TO_NETWORKNAME.get(given_network_id, given_numeric_network_id)
+        name_or_id = ID_TO_NETWORKNAME.get(given_network_id, given_network_id)
         click.secho(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
             f'network id {name_or_id}',

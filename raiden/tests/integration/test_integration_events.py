@@ -28,19 +28,18 @@ from raiden_contracts.constants import (
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
-
-CONTRACT_MANAGER = ContractManager(CONTRACTS_PRECOMPILED_PATH)
+from raiden_contracts.contract_manager import ContractManager
 
 
 def get_netting_channel_closed_events(
         chain: BlockChainService,
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
+        contract_manager: ContractManager,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
-    closed_event_abi = CONTRACT_MANAGER.get_event_abi(
+    closed_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK,
         ChannelEvent.CLOSED,
     )
@@ -57,7 +56,7 @@ def get_netting_channel_closed_events(
 
     return get_contract_events(
         chain=chain,
-        abi=CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         contract_address=token_network_address,
         topics=topics,
         from_block=from_block,
@@ -69,10 +68,11 @@ def get_netting_channel_deposit_events(
         chain: BlockChainService,
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
+        contract_manager: ContractManager,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
-    deposit_event_abi = CONTRACT_MANAGER.get_event_abi(
+    deposit_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK,
         ChannelEvent.DEPOSIT,
     )
@@ -88,7 +88,7 @@ def get_netting_channel_deposit_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         token_network_address,
         topics,
         from_block,
@@ -100,10 +100,11 @@ def get_netting_channel_settled_events(
         chain: BlockChainService,
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
+        contract_manager: ContractManager,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
-    settled_event_abi = CONTRACT_MANAGER.get_event_abi(
+    settled_event_abi = contract_manager.get_event_abi(
         CONTRACT_TOKEN_NETWORK,
         ChannelEvent.SETTLED,
     )
@@ -119,7 +120,7 @@ def get_netting_channel_settled_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         token_network_address,
         topics,
         from_block,
@@ -289,7 +290,14 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, retry_timeout):
+def test_query_events(
+        raiden_chain,
+        token_addresses,
+        deposit,
+        settle_timeout,
+        retry_timeout,
+        contract_manager,
+):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
@@ -309,8 +317,9 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     events = get_token_network_registry_events(
-        app0.raiden.chain,
-        registry_address,
+        chain=app0.raiden.chain,
+        token_network_registry_address=registry_address,
+        contract_manager=contract_manager,
         events=ALL_EVENTS,
     )
 
@@ -326,8 +335,9 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     events = get_token_network_registry_events(
-        app0.raiden.chain,
-        app0.raiden.default_registry.address,
+        chain=app0.raiden.chain,
+        token_network_registry_address=app0.raiden.default_registry.address,
+        contract_manager=contract_manager,
         events=ALL_EVENTS,
         from_block=999999998,
         to_block=999999999,
@@ -343,8 +353,9 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
     events = get_token_network_events(
-        app0.raiden.chain,
-        manager0.address,
+        chain=app0.raiden.chain,
+        token_network_address=manager0.address,
+        contract_manager=contract_manager,
         events=ALL_EVENTS,
     )
 
@@ -363,8 +374,9 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     channel_id = _event['args']['channel_identifier']
 
     events = get_token_network_events(
-        app0.raiden.chain,
-        manager0.address,
+        chain=app0.raiden.chain,
+        token_network_address=manager0.address,
+        contract_manager=contract_manager,
         events=ALL_EVENTS,
         from_block=999999998,
         to_block=999999999,
@@ -393,15 +405,17 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     all_netting_channel_events = get_all_netting_channel_events(
-        app0.raiden.chain,
-        token_network_identifier,
-        channel_id,
+        chain=app0.raiden.chain,
+        token_network_address=token_network_identifier,
+        netting_channel_identifier=channel_id,
+        contract_manager=app0.raiden.contract_manager,
     )
 
     deposit_events = get_netting_channel_deposit_events(
-        app0.raiden.chain,
-        token_network_identifier,
-        channel_id,
+        chain=app0.raiden.chain,
+        token_network_address=token_network_identifier,
+        netting_channel_identifier=channel_id,
+        contract_manager=contract_manager,
     )
 
     total_deposit_event = {
@@ -422,15 +436,17 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     )
 
     all_netting_channel_events = get_all_netting_channel_events(
-        app0.raiden.chain,
-        token_network_identifier,
-        channel_id,
+        chain=app0.raiden.chain,
+        token_network_address=token_network_identifier,
+        netting_channel_identifier=channel_id,
+        contract_manager=app0.raiden.contract_manager,
     )
 
     closed_events = get_netting_channel_closed_events(
-        app0.raiden.chain,
-        token_network_identifier,
-        channel_id,
+        chain=app0.raiden.chain,
+        token_network_address=token_network_identifier,
+        netting_channel_identifier=channel_id,
+        contract_manager=contract_manager,
     )
 
     closed_event = {
@@ -447,15 +463,17 @@ def test_query_events(raiden_chain, token_addresses, deposit, settle_timeout, re
     wait_until_block(app0.raiden.chain, settle_expiration)
 
     all_netting_channel_events = get_all_netting_channel_events(
-        app0.raiden.chain,
-        token_network_identifier,
-        channel_id,
+        chain=app0.raiden.chain,
+        token_network_address=token_network_identifier,
+        netting_channel_identifier=channel_id,
+        contract_manager=app0.raiden.contract_manager,
     )
 
     settled_events = get_netting_channel_settled_events(
-        app0.raiden.chain,
-        token_network_identifier,
-        channel_id,
+        chain=app0.raiden.chain,
+        token_network_address=token_network_identifier,
+        netting_channel_identifier=channel_id,
+        contract_manager=contract_manager,
     )
 
     settled_event = {
