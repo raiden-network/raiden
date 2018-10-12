@@ -203,7 +203,8 @@ class RaidenEventHandler:
             raiden: RaidenService,
             payment_sent_success_event: EventPaymentSentSuccess,
     ):
-        payment_status = raiden.identifiers_to_statuses.pop(
+        target = payment_sent_success_event.target
+        payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
             payment_sent_success_event.identifier,
             None,
         )
@@ -215,7 +216,8 @@ class RaidenEventHandler:
             raiden: RaidenService,
             payment_sent_failed_event: EventPaymentSentFailed,
     ):
-        payment_status = raiden.identifiers_to_statuses.pop(
+        target = payment_sent_failed_event.target
+        payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
             payment_sent_failed_event.identifier,
             None,
         )
