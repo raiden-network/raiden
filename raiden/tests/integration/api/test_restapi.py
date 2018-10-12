@@ -914,6 +914,15 @@ def test_api_payments(test_api_server, raiden_network, token_addresses):
     assert response == payment
 
 
+def assert_payment_conflict(responses):
+    assert all(response is not None for response in responses)
+    assert any(
+        response.status_code == HTTPStatus.CONFLICT and
+        response.json()['errors'] == 'Another payment with the same id is in flight'
+        for response in responses
+    )
+
+
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses):
     app0, app1 = raiden_network
@@ -927,6 +936,22 @@ def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses
         target_address=to_checksum_address(target_address),
     )
 
+    # two different transfers (different amounts) with same identifier at the same time:
+    # payment conflict
+    responses = grequests.map([
+        grequests.post(payment_url, json={'amount': 10, 'identifier': 11}),
+        grequests.post(payment_url, json={'amount': 11, 'identifier': 11}),
+    ])
+    assert_payment_conflict(responses)
+
+    # same request sent twice, e. g. when it is retried: no conflict
+    responses = grequests.map([
+        grequests.post(payment_url, json={'amount': 10, 'identifier': 73}),
+        grequests.post(payment_url, json={'amount': 10, 'identifier': 73}),
+    ])
+    assert all(response.status_code == HTTPStatus.OK for response in responses)
+
+    # two transfers of different type (direct/mediated) with same identifier: payment conflict
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
@@ -937,10 +962,7 @@ def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses
     direct_transfer(app0, app1, token_network_identifier, amount=80, identifier=42, timeout=.1)
 
     request = grequests.post(payment_url, json={'amount': 80, 'identifier': 42})
-    response = request.send().response
-    assert_proper_response(response, HTTPStatus.CONFLICT)
-    response = response.json()
-    assert response['errors'] == 'Another payment with the same id is in flight'
+    assert_payment_conflict([request.send().response])
 
 
 @pytest.mark.parametrize('number_of_tokens', [0])
