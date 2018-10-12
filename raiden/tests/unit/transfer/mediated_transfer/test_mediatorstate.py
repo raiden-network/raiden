@@ -4,7 +4,7 @@ import random
 import pytest
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
@@ -1766,7 +1766,7 @@ def test_mediator_lock_expired_with_new_block():
 
     transfer = send_transfer.transfer
 
-    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK * 2
+    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
     block = Block(
         block_number=block_expiration_number,
         gas_limit=1,
@@ -1874,7 +1874,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         1,
     )
 
-    block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK - 1
+    block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS - 1
     iteration = mediator.state_transition(
         iteration.new_state,
         lock_expired_state_change,
