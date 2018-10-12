@@ -25,7 +25,7 @@ from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.utils import compare_versions, pex, privatekey_to_address, typing
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
+from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -35,13 +35,14 @@ class TokenNetworkRegistry:
             self,
             jsonrpc_client,
             registry_address,
+            contract_manager: ContractManager,
     ):
         if not is_binary_address(registry_address):
             raise InvalidAddress('Expected binary address format for token network registry')
 
         check_address_has_code(jsonrpc_client, registry_address, CONTRACT_TOKEN_NETWORK_REGISTRY)
 
-        self.contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
+        self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
             to_normalized_address(registry_address),

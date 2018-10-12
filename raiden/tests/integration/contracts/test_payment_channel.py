@@ -18,18 +18,21 @@ def test_payment_channel_proxy_basics(
         token_proxy,
         chain_id,
         web3,
+        contract_manager,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
-        c1_client,
-        token_network_address,
+        jsonrpc_client=c1_client,
+        manager_address=token_network_address,
+        contract_manager=contract_manager,
     )
     c2_token_network_proxy = TokenNetwork(
-        c2_client,
-        token_network_address,
+        jsonrpc_client=c2_client,
+        manager_address=token_network_address,
+        contract_manager=contract_manager,
     )
 
     # create a channel
@@ -40,8 +43,16 @@ def test_payment_channel_proxy_basics(
     assert channel_identifier is not None
 
     # create channel proxies
-    channel_proxy_1 = PaymentChannel(c1_token_network_proxy, channel_identifier)
-    channel_proxy_2 = PaymentChannel(c2_token_network_proxy, channel_identifier)
+    channel_proxy_1 = PaymentChannel(
+        token_network=c1_token_network_proxy,
+        channel_identifier=channel_identifier,
+        contract_manager=contract_manager,
+    )
+    channel_proxy_2 = PaymentChannel(
+        token_network=c2_token_network_proxy,
+        channel_identifier=channel_identifier,
+        contract_manager=contract_manager,
+    )
 
     channel_filter = channel_proxy_1.all_events_filter(
         from_block=web3.eth.blockNumber,
@@ -133,6 +144,7 @@ def test_payment_channel_outdated_channel_close(
         private_keys,
         chain_id,
         web3,
+        contract_manager,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
@@ -140,8 +152,9 @@ def test_payment_channel_outdated_channel_close(
 
     client = JSONRPCClient(web3, private_keys[1])
     token_network_proxy = TokenNetwork(
-        client,
-        token_network_address,
+        jsonrpc_client=client,
+        manager_address=token_network_address,
+        contract_manager=contract_manager,
     )
 
     # create a channel
@@ -152,7 +165,11 @@ def test_payment_channel_outdated_channel_close(
     assert channel_identifier is not None
 
     # create channel proxies
-    channel_proxy_1 = PaymentChannel(token_network_proxy, channel_identifier)
+    channel_proxy_1 = PaymentChannel(
+        token_network=token_network_proxy,
+        channel_identifier=channel_identifier,
+        contract_manager=contract_manager,
+    )
 
     channel_filter = channel_proxy_1.all_events_filter(
         from_block=web3.eth.blockNumber,
@@ -219,7 +236,11 @@ def test_payment_channel_outdated_channel_close(
     )
     assert new_channel_identifier is not None
     # create channel proxies
-    channel_proxy_2 = PaymentChannel(token_network_proxy, new_channel_identifier)
+    channel_proxy_2 = PaymentChannel(
+        token_network=token_network_proxy,
+        channel_identifier=new_channel_identifier,
+        contract_manager=contract_manager,
+    )
 
     assert channel_proxy_2.channel_identifier == new_channel_identifier
     assert channel_proxy_2.opened() is True

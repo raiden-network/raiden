@@ -29,14 +29,15 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.skip('token registration not working in red eyes')
-def test_register_token(raiden_network, token_amount):
+def test_register_token(raiden_network, token_amount, contract_manager):
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
 
     token_address = deploy_contract_web3(
-        CONTRACT_HUMAN_STANDARD_TOKEN,
-        app1.raiden.chain.client,
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        deploy_client=app1.raiden.chain.client,
+        contract_manager=contract_manager,
         num_confirmations=None,
         constructor_arguments=(
             token_amount,
@@ -61,14 +62,15 @@ def test_register_token(raiden_network, token_amount):
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_register_token_insufficient_eth(raiden_network, token_amount):
+def test_register_token_insufficient_eth(raiden_network, token_amount, contract_manager):
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
 
     token_address = deploy_contract_web3(
-        CONTRACT_HUMAN_STANDARD_TOKEN,
-        app1.raiden.chain.client,
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        deploy_client=app1.raiden.chain.client,
+        contract_manager=contract_manager,
         num_confirmations=None,
         constructor_arguments=(
             token_amount,
@@ -93,7 +95,7 @@ def test_register_token_insufficient_eth(raiden_network, token_amount):
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.skip('token registration not working in red eyes')
-def test_token_registered_race(raiden_chain, token_amount, retry_timeout):
+def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contract_manager):
     """If a token is registered it must appear on the token list.
 
     If two nodes register the same token one of the transactions will fail. The
@@ -111,8 +113,9 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout):
     app1.raiden.blockchain_events.event_listeners = list()
 
     token_address = deploy_contract_web3(
-        CONTRACT_HUMAN_STANDARD_TOKEN,
-        app1.raiden.chain.client,
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        deploy_client=app1.raiden.chain.client,
+        contract_manager=contract_manager,
         num_confirmations=None,
         constructor_arguments=(
             token_amount,

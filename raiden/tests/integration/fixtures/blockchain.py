@@ -8,6 +8,7 @@ from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockc
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils import privatekey_to_address
+from raiden_contracts.contract_manager import ContractManager, contracts_deployed_path
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
@@ -94,8 +95,28 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3):
 
 
 @pytest.fixture
-def deploy_service(deploy_key, deploy_client):
-    return BlockChainService(deploy_key, deploy_client)
+def testing_network_id():
+    return 1
+
+
+@pytest.fixture
+def testing_contracts_version():
+    return None
+
+
+@pytest.fixture
+def contract_manager(testing_network_id, testing_contracts_version):
+    contracts_path = contracts_deployed_path(testing_network_id, testing_contracts_version)
+    return ContractManager(contracts_path)
+
+
+@pytest.fixture
+def deploy_service(deploy_key, deploy_client, contract_manager):
+    return BlockChainService(
+        privatekey_bin=deploy_key,
+        jsonrpc_client=deploy_client,
+        contract_manager=contract_manager,
+    )
 
 
 @pytest.fixture
@@ -105,6 +126,7 @@ def blockchain_services(
         secret_registry_address,
         token_network_registry_address,
         web3,
+        contract_manager,
 ):
     return jsonrpc_services(
         deploy_service,
@@ -112,4 +134,5 @@ def blockchain_services(
         secret_registry_address,
         token_network_registry_address,
         web3=web3,
+        contract_manager=contract_manager,
     )

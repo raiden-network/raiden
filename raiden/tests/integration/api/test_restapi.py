@@ -916,11 +916,18 @@ def test_api_payments(test_api_server, raiden_network, token_addresses):
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('network_type', [NetworkType.MAIN])
-def test_register_token_mainnet(test_api_server, token_amount, token_addresses, raiden_network):
+def test_register_token_mainnet(
+        test_api_server,
+        token_amount,
+        token_addresses,
+        raiden_network,
+        contract_manager,
+):
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app0.raiden.chain.client,
+        contract_manager=contract_manager,
         num_confirmations=None,
         constructor_arguments=(
             token_amount,
@@ -945,11 +952,18 @@ def test_register_token_mainnet(test_api_server, token_amount, token_addresses, 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.skip('registration not working in red eyes')
-def test_register_token(test_api_server, token_amount, token_addresses, raiden_network):
+def test_register_token(
+        test_api_server,
+        token_amount,
+        token_addresses,
+        raiden_network,
+        contract_manager,
+):
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app0.raiden.chain.client,
+        contract_manager=contract_manager,
         num_confirmations=None,
         constructor_arguments=(
             token_amount,
@@ -961,6 +975,7 @@ def test_register_token(test_api_server, token_amount, token_addresses, raiden_n
     other_token_address = deploy_contract_web3(
         CONTRACT_HUMAN_STANDARD_TOKEN,
         app0.raiden.chain.client,
+        contract_manager=contract_manager,
         num_confirmations=None,
         constructor_arguments=(
             token_amount,

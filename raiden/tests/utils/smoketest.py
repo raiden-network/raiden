@@ -40,6 +40,7 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
+from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -139,27 +140,30 @@ def run_smoketests(
     return None
 
 
-def deploy_smoketest_contracts(client, chain_id):
+def deploy_smoketest_contracts(client, chain_id, contract_manager):
     client.web3.personal.unlockAccount(
         client.web3.eth.accounts[0],
         DEFAULT_PASSPHRASE,
     )
 
     endpoint_registry_address = deploy_contract_web3(
-        CONTRACT_ENDPOINT_REGISTRY,
-        client,
+        contract_name=CONTRACT_ENDPOINT_REGISTRY,
+        deploy_client=client,
+        contract_manager=contract_manager,
         num_confirmations=None,
     )
 
     secret_registry_address = deploy_contract_web3(
-        CONTRACT_SECRET_REGISTRY,
-        client,
+        contract_name=CONTRACT_SECRET_REGISTRY,
+        deploy_client=client,
+        contract_manager=contract_manager,
         num_confirmations=1,
     )
 
     token_network_registry_address = deploy_contract_web3(
-        CONTRACT_TOKEN_NETWORK_REGISTRY,
-        client,
+        contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
+        deploy_client=client,
+        contract_manager=contract_manager,
         num_confirmations=None,
         constructor_arguments=(
             to_checksum_address(secret_registry_address),
@@ -256,10 +260,21 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     print_step('Deploying Raiden contracts')
 
     client = JSONRPCClient(web3, get_private_key(keystore))
-    contract_addresses = deploy_smoketest_contracts(client, NETWORKNAME_TO_ID['smoketest'])
-    token_contract = deploy_token(client)
+    # for smoketest use the precompiled contracts
+    contract_manager = ContractManager(contracts_precompiled_path())
+
+    contract_addresses = deploy_smoketest_contracts(
+        client=client,
+        chain_id=NETWORKNAME_TO_ID['smoketest'],
+        contract_manager=contract_manager,
+    )
+    token_contract = deploy_token(client, contract_manager)
     token = token_contract(1000, 0, 'TKN', 'TKN')
-    registry = TokenNetworkRegistry(client, contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY])
+    registry = TokenNetworkRegistry(
+        jsonrpc_client=client,
+        registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+        contract_manager=contract_manager,
+    )
     registry.add_token(to_canonical_address(token.contract.address))
 
     print_step('Setting up Raiden')
