@@ -326,6 +326,9 @@ def run_app(
         disable_debug_logfile=kwargs.get('disable_debug_logfile'),
     )
 
+    if kwargs.get('config_file'):
+        log.debug('Using config file', config_file=kwargs.get('config_file'))
+
     rpc_client = JSONRPCClient(
         web3,
         privatekey_bin,

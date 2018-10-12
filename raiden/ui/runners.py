@@ -9,7 +9,6 @@ from typing import Any, Dict
 import click
 import gevent
 import gevent.monkey
-import structlog
 from gevent.event import AsyncResult
 from requests.exceptions import ConnectionError as RequestsConnectionError
 
@@ -31,8 +30,6 @@ from raiden.utils.runnable import Runnable
 
 from .app import run_app
 from .config import dump_cmd_options, dump_config, dump_module
-
-log = structlog.get_logger(__name__)
 
 
 ETHEREUM_NODE_COMMUNICATION_ERROR = (
