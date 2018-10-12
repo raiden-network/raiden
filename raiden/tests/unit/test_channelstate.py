@@ -8,7 +8,7 @@ import pytest
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import DirectTransfer, Secret
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
@@ -250,7 +250,7 @@ def test_channelstate_update_contract_balance():
     participants balance.
     """
     deposit_block_number = 10
-    block_number = deposit_block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 1
+    block_number = deposit_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
 
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -297,7 +297,7 @@ def test_channelstate_decreasing_contract_balance():
     ignored.
     """
     deposit_block_number = 10
-    block_number = deposit_block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 1
+    block_number = deposit_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
 
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -337,7 +337,7 @@ def test_channelstate_repeated_contract_balance():
     balance only once.
     """
     deposit_block_number = 10
-    block_number = deposit_block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 1
+    block_number = deposit_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
 
     our_model1, _ = create_model(70)
     partner_model1, _ = create_model(100)
@@ -382,7 +382,7 @@ def test_channelstate_repeated_contract_balance():
 
 def test_deposit_must_wait_for_confirmation():
     block_number = 10
-    confirmed_deposit_block_number = block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK + 1
+    confirmed_deposit_block_number = block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
 
     our_model1, _ = create_model(0)
     partner_model1, _ = create_model(0)
