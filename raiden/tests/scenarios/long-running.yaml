@@ -1,22 +1,16 @@
+version: 2
+
 settings:
   gas_price: "fast"
-
+  chain: rinkeby
 token:
   decimals: 3
 
 nodes:
-  commands:
-    #start: "docker start raiden_{:02d}"
-    #stop: "docker stop raiden_{:02d}"
-    #kill: "docker kill raiden_{:02d}"
-    stop: "pkill -f '127.0.0.1:50{:02d}'"
-    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
-    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
-  range:
-    first: 1
-    last: 4
-    template: "127.0.0.1:50{:02d}"
-
+  mode: managed
+  count: 5
+  default_options:
+    gas-price: fast
 
 # This implements the scenario writen here:
 # https://github.com/raiden-network/raiden/issues/2756
@@ -131,18 +125,20 @@ scenario:
             - assert: {from: 2, to: 4, total_deposit: 150, balance: 100, state: "opened"}
             - assert: {from: 4, to: 2, total_deposit: 0, balance: 50, state: "opened"}
             # C sends all of its tokens to B (one transfer)
-            - transfer: {from: 2, to: 1, amount: 150, eexpected_http_status: 200}
+            - transfer: {from: 2, to: 1, amount: 150, expected_http_status: 200}
+            - wait: 5
             - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
             - assert: {from: 1, to: 2, total_deposit: 100, balance: 200, state: "opened"}
             # C tries to send another > 25 tokens payment to B (fail no route with enough capacity)
-            - transfer: {from: 2, to: 1, amount: 150, eexpected_http_status: 409}
+            - transfer: {from: 2, to: 1, amount: 150, expected_http_status: 409}
+            - wait: 5
       - serial:
           name: "Multiple multi hop payments"
           repeat: 10
           tasks:
             # C sends 10 payments of 1 token to B by using the C <-> E <-> A <-> B route
             - transfer: {from: 2, to: 1, amount: 1}
-            - wait: 1
+            - wait: 5
       - serial:
           name: "Allow nodes to process the payments"
           tasks:
@@ -163,19 +159,19 @@ scenario:
       - serial:
           name:
           tasks:
-            # stop node B, I added 2 because node B is gonna run on port 5002
-            - stop: 2
+            # stop node B
+            - stop_node: 1
             # give it time to shutdown
-            - wait: 5
+            - wait: 10
       - serial:
           name: "Multi hop payment 2"
           tasks:
             # A sends 10 tokens to C (using the A <-> E <-> C route)
             - transfer: {from: 0, to: 2, amount: 10}
+            - wait: 5
       - parallel:
           name: "Assert transfer was executed correctly"
           tasks:
-            - assert: {from: 1, to: 2, total_deposit: 100, balance: 200, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
             - assert: {from: 4, to: 0, total_deposit: 25, balance: 25, state: "opened"}
             - assert: {from: 0, to: 4, total_deposit: 10, balance: 10, state: "opened"}
@@ -191,13 +187,27 @@ scenario:
       - serial:
           name: "Restarting node B"
           tasks:
-            - start: 2
+            - start_node: 1
+      - parallel:
+          name: "Checking for the D <-> C channel state"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 100, balance: 100, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 100, balance: 100, state: "opened"}
       - serial:
-          name: "100 payments from D to C in a direct channel"
-          repeat: 10
+          name: "99 payments from D to C in a direct channel"
+          repeat: 99
           tasks:
             - transfer: {from: 3, to: 2, amount: 1}
-            - wait: 1
+            - wait: 5
+      - parallel:
+          name: "Checking for the D <-> C channel state after the transfers"
+          tasks:
+            - assert: {from: 2, to: 3, total_deposit: 100, balance: 199, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 100, balance: 1, state: "opened"}
+      - serial:
+          name: "Try to perform one more transfer to C with the locked token"
+          tasks:
+            - transfer: {from: 3, to: 2, amount: 1}
       - parallel:
           name: "Checking if payments were made successful"
           tasks:
@@ -216,10 +226,10 @@ scenario:
             - assert: {from: 2, to: 1, total_deposit: 100, balance: 0, state: "opened"}
       - serial:
           name: "200 payments from A to D in a channel"
-          repeat: 10
+          repeat: 200
           tasks:
             - transfer: {from: 3, to: 2, amount: 1}
-            - wait: 1
+            - wait: 5
       - serial:
           name: "Let the node get into a stable state"
           tasks:
@@ -245,17 +255,17 @@ scenario:
             - deposit: {from: 2, to: 4, total_deposit: 200, expected_http_status: 409}
             # C sends 10 tokens to B
             - transfer: {from: 2, to: 1, amount: 10}
-            - wait: 3
+            - wait: 5
             - assert: {from: 1, to: 2, total_deposit: 100, balance: 10, state: "opened"}
             - assert: {from: 2, to: 1, total_deposit: 100, balance: 190, state: "opened"}
             # B sends 10 tokens to A
             - transfer: {from: 1, to: 0, amount: 10}
-            - wait: 3
+            - wait: 5
             - assert: {from: 0, to: 1, total_deposit: 260, balance: 10, state: "opened"}
             - assert: {from: 1, to: 0, total_deposit: 100, balance: 350, state: "opened"}
             # E sends 10 tokens to C (A -> B-> C)
             - transfer: {from: 4, to: 2, amount: 10}
-            - wait: 3
+            - wait: 5
       - parallel:
           name: "Assert for the channel states after mediated transfers were completed"
           tasks:
@@ -269,7 +279,7 @@ scenario:
           name: "E Closes his channel with A"
           tasks:
             - close_channel: {from: 4, to: 0}
-            - wait: 4
+            - wait: 5
       - parallel:
           name: "Check if channel was closed"
           tasks:
@@ -287,7 +297,7 @@ scenario:
           tasks:
             - leave_network: {from: 0}
             - leave_network: {from: 1}
-            - wait: 10
+            - wait: 20
       - serial:
           name: "Check if the only channel open is C <-> D"
           tasks:
@@ -297,7 +307,7 @@ scenario:
           name: "C closes the channel with D"
           tasks:
             - close_channel: {from: 2, to: 3}
-            - wait: 4
+            - wait: 10
       - parallel:
           name: "Check final state of the channels"
           tasks:
