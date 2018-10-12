@@ -7,7 +7,7 @@ import requests
 from eth_utils import denoms, to_int
 from requests.exceptions import RequestException
 
-from raiden.constants import DISCOVERY_TX_GAS_LIMIT
+from raiden.constants import GAS_REQUIRED_FOR_DISCOVERY_REGISTER
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
@@ -55,7 +55,7 @@ def check_discovery_registration_gas(
         blockchain_service: BlockChainService,
         account_address: typing.Address,
 ) -> None:
-    discovery_tx_cost = blockchain_service.client.gas_price() * DISCOVERY_TX_GAS_LIMIT
+    discovery_tx_cost = blockchain_service.client.gas_price() * GAS_REQUIRED_FOR_DISCOVERY_REGISTER
     account_balance = blockchain_service.client.balance(account_address)
 
     # pylint: disable=no-member
