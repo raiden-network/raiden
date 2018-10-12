@@ -13,11 +13,7 @@ class OpenChannelTask(RaidenAPIActionTask):
         if isinstance(self._config['to'], str) and len(self._config['to']) == 42:
             partner_address = self._config['to']
         else:
-            partner_address = self._runner.node_to_address[
-                self._runner.raiden_nodes[
-                    self._config['to']
-                ]
-            ]
+            partner_address = self._runner.get_node_address(self._config['to'])
         params = dict(
             token_address=self._runner.token_address,
             partner_address=partner_address,
@@ -37,11 +33,7 @@ class ChannelActionTask(RaidenAPIActionTask):
         if isinstance(self._config['to'], str) and len(self._config['to']) == 42:
             partner_address = self._config['to']
         else:
-            partner_address = self._runner.node_to_address[
-                self._runner.raiden_nodes[
-                    self._config['to']
-                ]
-            ]
+            partner_address = self._runner.get_node_address(self._config['to'])
 
         return dict(
             token_address=self._runner.token_address,
