@@ -125,10 +125,10 @@ class AssertAllTask(ChannelActionTask):
                     channel_field_values.remove(value)
                 except ValueError:
                     channel_field_values_str = ", ".join(
-                        str(val) for val in channel_field_values_all,
+                        str(val) for val in channel_field_values_all
                     )
                     assert_field_values_str = ', '.join(
-                        str(val) for val in self._config[assert_field],
+                        str(val) for val in self._config[assert_field]
                     )
                     raise ScenarioAssertionError(
                         f'Expected value "{value}" for field "{field}" not found in any channel. '
