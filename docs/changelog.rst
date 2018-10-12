@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2746` Refuse to process a payment with an identifier already in use for another payment, and return a 409 Conflict in that case.
 * :bug:`2662` Fix wrong deserialization of snapshots in special cases.
 * :bug:`2730` Refuse to send a transfer and ignore it during receiving, if its secret is already registered on-chain.
 * :feature:`2713` Added the protocol version in the Ping message.
