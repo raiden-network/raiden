@@ -1,0 +1,86 @@
+settings:
+
+  ## Gas price to use, either `fast`, `medium` or an integer (in gwei)
+  gas_price: "fast"
+
+  ## Protocol to use to connect to the Raiden nodes, default: "http"
+  protocol: "https"
+
+token:
+  decimals: 18
+
+nodes:
+  commands:
+    #start: "docker start raiden_{:02d}"
+    #stop: "docker stop raiden_{:02d}"
+    #kill: "docker kill raiden_{:02d}"
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 3
+    template: "raiden-0{:03d}.testnet.raiden.network"
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channel"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 10}
+      - parallel:
+          name: "Assert after open"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
+      - serial:
+          name: "Make transfer with negative value"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: -1, expected_http_status: 409}
+      - wait: 2
+      - parallel:
+          name: "Assert after one failing transfer"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
+      - serial:
+          name: "Make transfer with amount higher than current balance"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 11, expected_http_status: 409}
+      - wait: 2
+      - parallel:
+          name: "Assert after one failing transfer"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 10, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
+      - serial:
+          name: "Make transfer to node with no path"
+          tasks:
+            - transfer: {from: 0, to: 2, amount: 1, expected_http_status: 409}
+      - serial:
+          name: "Make transfers to node with invalid address"
+          tasks:
+            - transfer: {from: 0, to: '0x02f4b6bc65561a792836212ebc54434db0ab759a', amount: 1, expected_http_status: 404}
+      - serial:
+          name: "Make transfer with entire balance"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 10, expected_http_status: 200}
+      - wait: 2
+      - parallel:
+          name: "Assert after transferring entire balance"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 0, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10, state: "opened"}
+      - wait: 2
+      - serial:
+          name: "Close channel and try to make transfer after"
+          tasks:
+            - close_channel: {from: 0, to: 1}
+            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 409}
+      - wait: 2
+      - parallel:
+          name: "Assert after closing"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 10, balance: 0, state: "closed"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 10, state: "closed"}

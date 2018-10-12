@@ -1,0 +1,99 @@
+settings:
+
+  ## Gas price to use, either `fast`, `medium` or an integer (in gwei)
+  gas_price: "fast"
+
+  ## Protocol to use to connect to the Raiden nodes, default: "http"
+  protocol: "https"
+
+token:
+  decimals: 18
+
+nodes:
+  commands:
+    stop: "pkill -f '127.0.0.1:50{:02d}'"
+    kill: "pkill -9 -f '127.0.0.1:50{:02d}'"
+    start: "raiden --config-file raiden_{0:02d}.toml --api-address 127.0.0.1:50{0:02d}"
+  range:
+    first: 1
+    last: 2
+    template: "raiden-0{:03d}.testnet.raiden.network"
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channel"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1101}
+      - parallel:
+          name: "assert after open"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1101, balance: 1101, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
+      - serial:
+          name: "Make one transfer"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1}
+      - wait: 2
+      - parallel:
+          name: "Assert after one transfer"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1101, balance: 1100, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 1,  state: "opened"}
+      - serial:
+          name: "Make 100 transfers"
+          repeat: 100
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1}
+      - wait: 2
+      - parallel:
+          name: "Assert after 100 txs"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1101, balance: 1000,  state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 101, state: "opened"}
+      - wait: 2
+      - serial:
+          name: "Make 1000 transfers"
+          repeat: 1000
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1}
+      - wait: 5
+      - parallel:
+          name: "Assert after 1000 txs"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1101, balance: 0,  state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0, balance: 1101, state: "opened"}
+      - wait: 2
+      - serial:
+          name: "Make one transfer in other direction"
+          tasks:
+            - transfer: {from: 1, to: 0, amount: 1}
+      - wait: 2
+      - parallel:
+          name: "Assert after one transfer in other direction"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1101, balance: 1, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 1100,  state: "opened"}
+      - serial:
+          name: "Make 100 transfers in other direction"
+          repeat: 100
+          tasks:
+            - transfer: {from: 1, to: 0, amount: 1}
+      - wait: 2
+      - parallel:
+          name: "Assert after 100 transfers in other direction"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1101, balance: 101, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 1000,  state: "opened"}
+      - serial:
+          name: "Make 1000 transfers in other direction"
+          repeat: 1000
+          tasks:
+            - transfer: {from: 1, to: 0, amount: 1}
+      - wait: 5
+      - parallel:
+          name: "Assert after 1000 transfers in other direction"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1101, balance: 1101, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 0,  balance: 0,  state: "opened"}
