@@ -1,5 +1,3 @@
-import shlex
-import subprocess
 from typing import Any
 
 import click
@@ -8,7 +6,6 @@ import structlog
 from gevent import Greenlet
 from gevent.pool import Group
 
-from scenario_player.exceptions import ScenarioError
 from scenario_player.runner import ScenarioRunner
 
 from .base import Task, get_task_class_for_type
@@ -50,6 +47,15 @@ class SerialTask(Task):
         tasks = "\n".join(str(t) for t in self._tasks)
         return f'{name}\n{tasks}'
 
+    @property
+    def _urwid_details(self):
+        if not self._name:
+            return []
+        return [
+            ' - ',
+            ('task_name', self._name),
+        ]
+
 
 class ParallelTask(SerialTask):
     _name = 'parallel'
@@ -66,25 +72,3 @@ class WaitTask(Task):
 
     def _run(self, *args, **kwargs):
         gevent.sleep(self._config)
-
-
-class ProcessTask(Task):
-    _name = 'process'
-    _command = ''
-
-    def _run(self, *args, **kwargs):
-        command = self._runner.node_commands.get(self._command)
-        if not command:
-            raise ScenarioError(
-                'Invalid scenario definition. '
-                f'The {self._command}_node task requires '
-                f'nodes.commands.{self._command} to be set.',
-            )
-        command = command.format(self._config)
-        log.debug('Command', type_=self._command, command=command)
-        greenlet = gevent.spawn(subprocess.run, shlex.split(command), check=True)
-        self._handle_process(greenlet)
-
-    def _handle_process(self, greenlet):
-        greenlet.join()
-        greenlet.get()
