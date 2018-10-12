@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.constants import DISCOVERY_TX_GAS_LIMIT
+from raiden.constants import GAS_REQUIRED_FOR_DISCOVERY_REGISTER
 from raiden.exceptions import UnknownAddress
 from raiden.network.discovery import ContractDiscovery
 from raiden.tests.utils.factories import make_address
@@ -44,7 +44,7 @@ def test_endpointregistry(private_keys, blockchain_services):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 def test_endpointregistry_gas(endpoint_discovery_services):
-    """ DISCOVERY_TX_GAS_LIMIT value must be equal to the gas requried to call
+    """ GAS_REQUIRED_FOR_DISCOVERY_REGISTER value must be equal to the gas requried to call
     registerEndpoint.
     """
     contract_discovery = endpoint_discovery_services[0]
@@ -55,4 +55,4 @@ def test_endpointregistry_gas(endpoint_discovery_services):
     discovery_proxy.client.poll(transaction_hash)
 
     receipt = discovery_proxy.client.get_transaction_receipt(transaction_hash)
-    assert receipt['gasUsed'] <= DISCOVERY_TX_GAS_LIMIT
+    assert receipt['gasUsed'] <= GAS_REQUIRED_FOR_DISCOVERY_REGISTER

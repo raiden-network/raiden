@@ -7,7 +7,7 @@ from coincurve import PrivateKey
 from eth_tester import EthereumTester, PyEVMBackend
 from web3 import EthereumTesterProvider, Web3
 
-from raiden.constants import UNLOCK_TX_GAS_LIMIT
+from raiden.constants import TRANSACTION_GAS_LIMIT
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.utils import hash_balance_data
 from raiden_contracts.contract_manager import CONTRACTS_SOURCE_DIRS, ContractManager
@@ -219,4 +219,4 @@ def find_max_pending_transfers(gas_limit):
 
 
 if __name__ == '__main__':
-    find_max_pending_transfers(UNLOCK_TX_GAS_LIMIT)
+    find_max_pending_transfers(TRANSACTION_GAS_LIMIT)
