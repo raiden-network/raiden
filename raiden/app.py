@@ -24,6 +24,7 @@ from raiden.settings import (
 )
 from raiden.storage.versions import older_db_files_exist
 from raiden.utils import pex, typing
+from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -33,6 +34,7 @@ class App:  # pylint: disable=too-few-public-methods
         'privatekey_hex': '',
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
+        'contracts_path': contracts_precompiled_path(),
         'database_path': '',
         'transport_type': 'udp',
         'transport': {
