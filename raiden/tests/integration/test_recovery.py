@@ -1,5 +1,4 @@
 import pytest
-from gevent import server
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -29,7 +28,7 @@ def test_recovery_happy_case(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
+        skip_if_not_udp,  # pylint: disable=unused-argument
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -57,44 +56,13 @@ def test_recovery_happy_case(
             timeout=network_wait * number_of_nodes,
         )
 
-    app0.raiden.stop()
-    host_port = (
-        app0.raiden.config['transport']['udp']['host'],
-        app0.raiden.config['transport']['udp']['port'],
-    )
-    socket = server._udp_socket(host_port)
-
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport']['udp'],
-    )
-
-    raiden_event_handler = RaidenEventHandler()
-    message_handler = MessageHandler()
-
-    app0_restart = App(
-        config=app0.config,
-        chain=app0.raiden.chain,
-        query_start_block=0,
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
-        transport=new_transport,
-        raiden_event_handler=raiden_event_handler,
-        message_handler=message_handler,
-        discovery=app0.raiden.discovery,
-    )
-
     app0.stop()
-    del app0  # from here on the app0_restart should be used
-
-    app0_restart.start()
+    app0.get()
+    app0.start()
 
     assert_synced_channel_state(
         token_network_identifier,
-        app0_restart, deposit - spent_amount, [],
+        app0, deposit - spent_amount, [],
         app1, deposit + spent_amount, [],
     )
     assert_synced_channel_state(
@@ -105,13 +73,13 @@ def test_recovery_happy_case(
 
     # wait for the nodes' healthcheck to update the network statuses
     waiting.wait_for_healthy(
-        app0_restart.raiden,
+        app0.raiden,
         app1.raiden.address,
         network_wait,
     )
     waiting.wait_for_healthy(
         app1.raiden,
-        app0_restart.raiden.address,
+        app0.raiden.address,
         network_wait,
     )
 
@@ -120,13 +88,13 @@ def test_recovery_happy_case(
 
     mediated_transfer(
         app2,
-        app0_restart,
+        app0,
         token_network_identifier,
         amount,
         timeout=network_wait * number_of_nodes * 2,
     )
     mediated_transfer(
-        initiator_app=app0_restart,
+        initiator_app=app0,
         target_app=app2,
         token_network_identifier=token_network_identifier,
         amount=amount,
@@ -136,7 +104,7 @@ def test_recovery_happy_case(
 
     assert_synced_channel_state(
         token_network_identifier,
-        app0_restart, deposit - spent_amount, [],
+        app0, deposit - spent_amount, [],
         app1, deposit + spent_amount, [],
     )
 
@@ -157,7 +125,7 @@ def test_recovery_unhappy_case(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
+        skip_if_not_udp,  # pylint: disable=unused-argument
         retry_timeout,
 ):
     app0, app1, app2 = raiden_network
@@ -182,22 +150,8 @@ def test_recovery_unhappy_case(
             timeout=network_wait * number_of_nodes,
         )
 
-    app0.raiden.stop()
-    host_port = (
-        app0.raiden.config['transport']['udp']['host'],
-        app0.raiden.config['transport']['udp']['port'],
-    )
-    socket = server._udp_socket(host_port)
-
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport']['udp'],
-    )
-
     app0.stop()
+    app0.get()
 
     RaidenAPI(app1.raiden).channel_close(
         app1.raiden.default_registry.address,
@@ -220,24 +174,11 @@ def test_recovery_unhappy_case(
         retry_timeout,
     )
 
-    raiden_event_handler = RaidenEventHandler()
-    message_handler = MessageHandler()
+    app0.stop()
+    app0.get()
+    app0.start()
 
-    app0_restart = App(
-        config=app0.config,
-        chain=app0.raiden.chain,
-        query_start_block=0,
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
-        transport=new_transport,
-        raiden_event_handler=raiden_event_handler,
-        message_handler=message_handler,
-        discovery=app0.raiden.discovery,
-    )
-    del app0  # from here on the app0_restart should be used
-    app0_restart.start()
-
-    state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
+    state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
         from_identifier=0,
         to_identifier='latest',
     )
@@ -253,11 +194,9 @@ def test_recovery_unhappy_case(
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_recovery_blockchain_events(
         raiden_network,
-        number_of_nodes,
-        deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
+        skip_if_not_udp,  # pylint: disable=unused-argument
 ):
     """ Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted
@@ -266,20 +205,8 @@ def test_recovery_blockchain_events(
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
-    app0.raiden.stop()
-    host_port = (
-        app0.raiden.config['transport']['udp']['host'],
-        app0.raiden.config['transport']['udp']['port'],
-    )
-    socket = server._udp_socket(host_port)
-
-    new_transport = UDPTransport(
-        app0.raiden.address,
-        app0.discovery,
-        socket,
-        app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport']['udp'],
-    )
+    app0.stop()
+    app0.get()
 
     app1_api = RaidenAPI(app1.raiden)
     app1_api.channel_close(
@@ -288,42 +215,20 @@ def test_recovery_blockchain_events(
         partner_address=app0.raiden.address,
     )
 
-    app0.stop()
-
-    import gevent
-    gevent.sleep(1)
-
-    raiden_event_handler = RaidenEventHandler()
-    message_handler = MessageHandler()
-
-    app0_restart = App(
-        config=app0.config,
-        chain=app0.raiden.chain,
-        query_start_block=0,
-        default_registry=app0.raiden.default_registry,
-        default_secret_registry=app0.raiden.default_secret_registry,
-        transport=new_transport,
-        raiden_event_handler=raiden_event_handler,
-        message_handler=message_handler,
-        discovery=app0.raiden.discovery,
-    )
-
-    del app0  # from here on the app0_restart should be used
-
-    app0_restart.raiden.start()
+    app0.start()
 
     # wait for the nodes' healthcheck to update the network statuses
     waiting.wait_for_healthy(
-        app0_restart.raiden,
+        app0.raiden,
         app1.raiden.address,
         network_wait,
     )
     waiting.wait_for_healthy(
         app1.raiden,
-        app0_restart.raiden.address,
+        app0.raiden.address,
         network_wait,
     )
-    restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
+    restarted_state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
         0,
         'latest',
     )

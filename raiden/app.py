@@ -155,6 +155,9 @@ class App:  # pylint: disable=too-few-public-methods
         if self.raiden.stop_event.is_set():
             self.raiden.start()
 
+    def get(self):
+        self.raiden.get()
+
     def stop(self):
         """ Stop the raiden app.
 

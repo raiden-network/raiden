@@ -56,7 +56,7 @@ def prompt_account(address_hex, keystore_path, password_file):
             password = password.splitlines()[0]
     if password is not None:
         try:
-            privatekey_bin = accmgr.get_privkey(address_hex, password)
+            private_key_bin = accmgr.get_privkey(address_hex, password)
         except ValueError:
             # ValueError exception raised if the password is incorrect
             click.secho(
@@ -68,7 +68,7 @@ def prompt_account(address_hex, keystore_path, password_file):
         unlock_tries = 3
         while True:
             try:
-                privatekey_bin = accmgr.get_privkey(address_hex)
+                private_key_bin = accmgr.get_privkey(address_hex)
                 break
             except ValueError:
                 # ValueError exception raised if the password is incorrect
@@ -86,4 +86,4 @@ def prompt_account(address_hex, keystore_path, password_file):
                 )
                 unlock_tries -= 1
 
-    return address_hex, privatekey_bin
+    return address_hex, private_key_bin
