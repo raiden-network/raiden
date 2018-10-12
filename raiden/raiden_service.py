@@ -2,6 +2,7 @@
 import enum
 import os
 import random
+from collections import defaultdict
 
 import filelock
 import gevent
@@ -163,9 +164,26 @@ class PaymentType(enum.Enum):
 
 
 class PaymentStatus(typing.NamedTuple):
+    """Value type for RaidenService.targets_to_identifiers_to_statuses.
+
+    Contains the necessary information to tell conflicting transfers from
+    retries as well as the status of a transfer that is retried.
+    """
     payment_type: PaymentType
     payment_identifier: typing.PaymentID
+    amount: typing.TokenAmount
+    token_network_identifier: typing.TokenNetworkID
     payment_done: AsyncResult
+
+    def matches(self, payment_type, token_network_identifier, amount):
+        return (
+            payment_type == self.payment_type and
+            token_network_identifier == self.token_network_identifier and
+            amount == self.amount
+        )
+
+
+StatusesDict = typing.Dict[typing.Address, typing.Dict[typing.PaymentID, PaymentStatus]]
 
 
 class RaidenService(Runnable):
@@ -189,10 +207,7 @@ class RaidenService(Runnable):
             raise ValueError('invalid private_key')
 
         self.tokennetworkids_to_connectionmanagers = dict()
-        self.identifiers_to_statuses: typing.Dict[
-            typing.PaymentID,
-            PaymentStatus,
-        ] = dict()
+        self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
         self.chain: BlockChainService = chain
         self.default_registry = default_registry
@@ -548,9 +563,18 @@ class RaidenService(Runnable):
             )
             self.handle_state_change(state_change)
 
+    def _register_payment_status(self, target, identifier, payment_type, balance_proof):
+        self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
+            payment_type=payment_type,
+            payment_identifier=identifier,
+            amount=balance_proof.transferred_amount,
+            token_network_identifier=balance_proof.token_network_identifier,
+            payment_done=AsyncResult(),
+        )
+
     def _initialize_queues(self, events_queues):
         """ Push the queues to the transport and populate
-        identifiers_to_statuses.
+        targets_to_identifiers_to_statuses.
         """
 
         for queue_identifier, event_queue in events_queues.items():
@@ -563,17 +587,18 @@ class RaidenService(Runnable):
                 )
 
                 if type(event) == SendDirectTransfer:
-                    self.identifiers_to_statuses[event.payment_identifier] = PaymentStatus(
+                    self._register_payment_status(
+                        target=event.recipient,
+                        identifier=event.payment_identifier,
                         payment_type=PaymentType.DIRECT,
-                        payment_identifier=event.payment_identifier,
-                        payment_done=AsyncResult(),
+                        balance_proof=event.balance_proof,
                     )
                 elif is_initiator:
-                    payment_identifier = event.transfer.payment_identifier
-                    self.identifiers_to_statuses[payment_identifier] = PaymentStatus(
+                    self._register_payment_status(
+                        target=event.transfer.target,
+                        identifier=event.transfer.payment_identifier,
                         payment_type=PaymentType.MEDIATED,
-                        payment_identifier=payment_identifier,
-                        payment_done=AsyncResult(),
+                        balance_proof=event.transfer.balance_proof,
                     )
 
                 message = message_from_sendevent(event, self.address)
@@ -712,9 +737,9 @@ class RaidenService(Runnable):
         if identifier is None:
             identifier = create_default_identifier()
 
-        payment_status = self.identifiers_to_statuses.get(identifier)
+        payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
         if payment_status:
-            if payment_status.payment_type != PaymentType.DIRECT:
+            if not payment_status.matches(PaymentType.DIRECT, token_network_identifier, amount):
                 raise PaymentConflict(
                     'Another payment with the same id is in flight',
                 )
@@ -731,9 +756,11 @@ class RaidenService(Runnable):
         payment_status = PaymentStatus(
             payment_type=PaymentType.DIRECT,
             payment_identifier=identifier,
+            amount=amount,
+            token_network_identifier=token_network_identifier,
             payment_done=AsyncResult(),
         )
-        self.identifiers_to_statuses[identifier] = payment_status
+        self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
         self.handle_state_change(direct_transfer)
 
@@ -760,9 +787,9 @@ class RaidenService(Runnable):
         if identifier is None:
             identifier = create_default_identifier()
 
-        payment_status = self.identifiers_to_statuses.get(identifier)
+        payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
         if payment_status:
-            if payment_status.payment_type != PaymentType.MEDIATED:
+            if not payment_status.matches(PaymentType.MEDIATED, token_network_identifier, amount):
                 raise PaymentConflict(
                     'Another payment with the same id is in flight',
                 )
@@ -772,9 +799,11 @@ class RaidenService(Runnable):
         payment_status = PaymentStatus(
             payment_type=PaymentType.MEDIATED,
             payment_identifier=identifier,
+            amount=amount,
+            token_network_identifier=token_network_identifier,
             payment_done=AsyncResult(),
         )
-        self.identifiers_to_statuses[identifier] = payment_status
+        self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
         init_initiator_statechange = initiator_init(
             self,
