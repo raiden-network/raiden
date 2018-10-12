@@ -241,23 +241,8 @@ def run_app(
 
     web3 = _setup_web3(eth_rpc_endpoint)
 
-    rpc_client = JSONRPCClient(
-        web3,
-        privatekey_bin,
-        gas_price_strategy=gas_price,
-        block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-        uses_infura='infura.io' in eth_rpc_endpoint,
-    )
-
-    blockchain_service = BlockChainService(
-        privatekey_bin=privatekey_bin,
-        jsonrpc_client=rpc_client,
-        # Not giving the contract manager here, but injecting it later
-        # since we first need blockchain service to calculate the network id
-    )
-
     given_network_id = network_id
-    node_network_id = blockchain_service.network_id
+    node_network_id = int(web3.version.network)
     known_given_network_id = given_network_id in ID_TO_NETWORKNAME
     known_node_network_id = node_network_id in ID_TO_NETWORKNAME
 
@@ -316,6 +301,40 @@ def run_app(
         contract_addresses_known = True
 
     blockchain_service.inject_contract_manager(ContractManager(config['contracts_path']))
+
+    config['chain_id'] = given_numeric_network_id
+
+    contract_address = (
+        registry_contract_address or contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY]
+    )
+
+    database_path = os.path.join(
+        datadir,
+        f'node_{pex(address)}',
+        f'netid_{given_numeric_network_id}',
+        f'network_{pex(contract_address)}',
+    )
+
+    config['database_path'] = os.path.join(database_path, f'v{RAIDEN_DB_VERSION}_log.db')
+
+    debug_log_file_path = os.path.join(database_path, 'debug.log')
+    configure_logging(
+        kwargs.get('log_config'),
+        log_json=kwargs.get('log_json'),
+        log_file=kwargs.get('log_file'),
+        debug_log_file_name=debug_log_file_path,
+        disable_debug_logfile=kwargs.get('disable_debug_logfile'),
+    )
+
+    rpc_client = JSONRPCClient(
+        web3,
+        privatekey_bin,
+        gas_price_strategy=gas_price,
+    )
+
+    blockchain_service = BlockChainService(privatekey_bin, rpc_client)
+
+    log.debug('Network type', type=network_type)
 
     if sync_check:
         check_synced(blockchain_service, known_node_network_id)
