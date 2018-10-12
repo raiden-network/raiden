@@ -37,7 +37,7 @@ class RaidenAPIActionTask(Task):
 
     @property
     def _target_host(self):
-        return self._runner.raiden_nodes[self._config['from']]
+        return self._runner.get_node_baseurl(self._config['from'])
 
     def _process_response(self, response_dict: dict):
         return response_dict

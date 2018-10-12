@@ -2,6 +2,7 @@ import importlib
 import inspect
 import pkgutil
 import time
+from datetime import timedelta
 from enum import Enum
 from typing import Any, TypeVar
 
@@ -31,6 +32,8 @@ TASK_STATE_COLOR = {
     TaskState.ERRORED: click.style('', fg='red', reset=False),
 }
 
+_TASK_ID = 0
+
 
 class Task:
     def __init__(
@@ -40,6 +43,10 @@ class Task:
         parent: 'Task' = None,
         abort_on_fail=True,
     ) -> None:
+        global _TASK_ID
+
+        _TASK_ID = _TASK_ID + 1
+        self.id = str(_TASK_ID)
         self._runner = runner
         self._config = config
         self._parent = parent
@@ -50,6 +57,7 @@ class Task:
         self._start_time = None
         self._stop_time = None
 
+        runner.task_cache[self.id] = self
         runner.task_count += 1
         log.info('Task initialized', task=self)
 
@@ -89,8 +97,30 @@ class Task:
         )
 
     @property
+    def urwid_label(self):
+        task_state_style = f'task_state_{self.state.name.lower()}'
+        duration = self._duration
+        label = [
+            ('default', '['),
+            (task_state_style, self.state.value),
+            ('default', '] '),
+            (task_state_style, self.__class__.__name__.replace("Task", "")),
+        ]
+        if duration:
+            label.append(('task_duration', self._duration))
+        label.extend(self._urwid_details)
+        return label
+
+    def __hash__(self) -> int:
+        return hash((self._config, self._parent))
+
+    @property
     def _str_details(self):
         return f': {self._config}'
+
+    @property
+    def _urwid_details(self):
+        return [': ', str(self._config)]
 
     @property
     def _duration(self):
@@ -101,8 +131,13 @@ class Task:
             else:
                 duration = time.monotonic() - self._start_time
         if duration:
-            return f' [{duration:3.0f} s]'
+            duration = str(timedelta(seconds=duration))
+            return f' ({duration})'
         return ''
+
+    @property
+    def done(self):
+        return self.state in {TaskState.FINISHED, TaskState.ERRORED}
 
 
 T_Task = TypeVar('T_Task', bound=Task)

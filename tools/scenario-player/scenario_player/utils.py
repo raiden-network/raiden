@@ -1,3 +1,4 @@
+import os
 import time
 import uuid
 from binascii import hexlify
@@ -6,17 +7,21 @@ from datetime import datetime
 from itertools import islice
 from typing import Union
 
+import click
+import mirakuru
 import requests
 import structlog
 from eth_utils import to_checksum_address
+from mirakuru import TimeoutExpired
+from mirakuru.base import IGNORED_ERROR_CODES
 from requests.adapters import HTTPAdapter
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
-from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
+from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
-from scenario_player.exceptions import ScenarioTxError
+from scenario_player.exceptions import ScenarioError, ScenarioTxError
 
 log = structlog.get_logger(__name__)
 
@@ -59,6 +64,52 @@ class DummyStream:
         pass
 
 
+class ChainConfigType(click.ParamType):
+    name = 'chain-config'
+
+    def get_metavar(self, param):
+        return '<chain-name>:<eth-node-rpc-url>'
+
+    def convert(self, value, param, ctx):
+        name, _, rpc_url = value.partition(':')
+        if name.startswith('http'):
+            self.fail(f'Invalid value: {value}. Use {self.get_metavar(None)}.')
+        return name, rpc_url
+
+
+class HTTPExecutor(mirakuru.HTTPExecutor):
+    def stop(self, sig=None, timeout=10):
+        """ Copy paste job from `SimpleExecutor.stop()` to add the `timeout` parameter. """
+        if self.process is None:
+            return self
+
+        if sig is None:
+            sig = self._sig_stop
+
+        try:
+            os.killpg(self.process.pid, sig)
+        except OSError as err:
+            if err.errno in IGNORED_ERROR_CODES:
+                pass
+            else:
+                raise
+
+        def process_stopped():
+            """Return True only only when self.process is not running."""
+            return self.running() is False
+
+        self._set_timeout(timeout)
+        try:
+            self.wait_for(process_stopped)
+        except TimeoutExpired:
+            # at this moment, process got killed,
+            pass
+
+        self._kill_all_kids(sig)
+        self._clear_process()
+        return self
+
+
 def wait_for_txs(client, txhashes, timeout=360):
     start = time.monotonic()
     outstanding = False
@@ -77,7 +128,7 @@ def wait_for_txs(client, txhashes, timeout=360):
             if tx and tx['blockNumber'] is not None:
                 txhashes.remove(txhash)
             time.sleep(.1)
-        time.sleep(.5)
+        time.sleep(1)
     if len(txhashes):
         txhashes_str = ', '.join(hexlify(txhash).decode() for txhash in txhashes)
         raise ScenarioTxError(
@@ -85,18 +136,26 @@ def wait_for_txs(client, txhashes, timeout=360):
         )
 
 
-def get_or_deploy_token(client: JSONRPCClient, scenario: dict) -> ContractProxy:
+def get_or_deploy_token(runner: 'ScenarioRunner') -> ContractProxy:
     """ Deploy or reuse  """
     contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
     token_contract = contract_manager.get_contract(CONTRACT_CUSTOM_TOKEN)
 
-    token_config = scenario.get('token', {})
+    token_config = runner.scenario.get('token', {})
     if not token_config:
         token_config = {}
     address = token_config.get('address')
+    reuse = token_config.get('reuse', False)
+
+    token_address_file = runner.data_path.joinpath('token.addr')
+    if reuse:
+        if address:
+            raise ScenarioError('Token settings "address" and "reuse" are mutually exclusive.')
+        if token_address_file.exists():
+            address = token_address_file.read_text()
     if address:
-        check_address_has_code(client, address, 'Token')
-        token_ctr = client.new_contract_proxy(token_contract['abi'], address)
+        check_address_has_code(runner.client, address, 'Token')
+        token_ctr = runner.client.new_contract_proxy(token_contract['abi'], address)
 
         log.debug(
             "Reusing token",
@@ -114,16 +173,20 @@ def get_or_deploy_token(client: JSONRPCClient, scenario: dict) -> ContractProxy:
 
     log.debug("Deploying token", name=name, symbol=symbol, decimals=decimals)
 
-    token_ctr = client.deploy_solidity_contract(
+    token_ctr = runner.client.deploy_solidity_contract(
         'CustomToken',
         contract_manager.contracts,
         constructor_parameters=(0, decimals, name, symbol),
         confirmations=1,
 
     )
+    contract_checksum_address = to_checksum_address(token_ctr.contract_address)
+    if reuse:
+        token_address_file.write_text(contract_checksum_address)
+
     log.info(
         "Deployed token",
-        address=to_checksum_address(token_ctr.contract_address),
+        address=contract_checksum_address,
         name=name,
         symbol=symbol,
     )
@@ -131,6 +194,12 @@ def get_or_deploy_token(client: JSONRPCClient, scenario: dict) -> ContractProxy:
 
 
 def send_notification_mail(target_mail, subject, message, api_key):
+    if not target_mail:
+        return
+    if not api_key:
+        log.error("Can't send notification mail. No API key provided")
+        return
+
     log.debug('Sending notification mail', subject=subject, message=message)
     res = requests.post(
         "https://api.mailgun.net/v3/notification.brainbot.com/messages",
