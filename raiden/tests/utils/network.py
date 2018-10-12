@@ -1,8 +1,8 @@
 """ Utilities to set-up a Raiden network. """
-from binascii import hexlify
 from collections import namedtuple
 
 import gevent
+from eth_utils import encode_hex
 from gevent import server
 
 from raiden import waiting
@@ -278,7 +278,7 @@ def create_apps(
         config = {
             'chain_id': chain_id,
             'network_type': network_type,
-            'privatekey_hex': hexlify(private_key),
+            'privatekey_hex': encode_hex(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],

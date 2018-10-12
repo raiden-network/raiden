@@ -1,5 +1,3 @@
-from binascii import hexlify
-
 from eth_utils import denoms, encode_hex
 
 from raiden.tests.utils.genesis import GENESIS_STUB
@@ -29,7 +27,7 @@ def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
     :return: genesis dict
     """
     genesis = GENESIS_STUB.copy()
-    genesis['extraData'] = '0x' + hexlify(CLUSTER_NAME).decode()
+    genesis['extraData'] = encode_hex(CLUSTER_NAME)
     genesis['alloc'].update({
         account: {
             'balance': str(initial_alloc),

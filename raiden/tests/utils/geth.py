@@ -6,7 +6,6 @@ import subprocess
 import sys
 import termios
 import time
-from binascii import hexlify
 from collections import namedtuple
 
 import gevent
@@ -120,7 +119,9 @@ def geth_create_account(datadir: str, privkey: bytes):
     """
     keyfile_path = os.path.join(datadir, 'keyfile')
     with open(keyfile_path, 'wb') as handler:
-        handler.write(hexlify(privkey))
+        handler.write(
+            remove_0x_prefix(encode_hex(privkey)).encode(),
+        )
 
     create = subprocess.Popen(
         ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],
@@ -164,7 +165,7 @@ def geth_generate_poa_genesis(
 
     genesis['extraData'] = geth_clique_extradata(
         random_marker,
-        to_normalized_address(seal_address)[2:],
+        remove_0x_prefix(to_normalized_address(seal_address)),
     )
 
     with open(genesis_path, 'w') as handler:

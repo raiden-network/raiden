@@ -29,11 +29,11 @@ def test_keystore():
 def test_get_accounts(test_keystore):
     account_manager = AccountManager(test_keystore)
     expected_accounts = {
-        '0d5a0e4fece4b84365b9b8dba6e6d41348c73645': os.path.join(
+        '0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645': os.path.join(
             test_keystore,
             'UTC--2016-10-26T16-55-53.551024336Z--0d5a0e4fece4b84365b9b8dba6e6d41348c73645',
         ),
-        '3593403033d18b82f7b4a0f18e1ed24623d23b20': os.path.join(
+        '0x3593403033d18b82f7b4a0f18e1ed24623d23b20': os.path.join(
             test_keystore,
             'valid_keystorefile_with_unexpected_name',
         ),
@@ -72,7 +72,9 @@ def test_get_privkey(test_keystore):
     assert 'MAC mismatch' in str(exc.value)
     with pytest.raises(ValueError) as exc:
         account_manager.get_privkey('a05934d3033d18b82f7b4adf18e1ed24e3d23b19', '123')
-    assert 'Keystore file not found for a05934d3033d18b82f7b4adf18e1ed24e3d23b19' in str(exc.value)
+    assert (
+        'Keystore file not found for 0xa05934d3033d18b82f7b4adf18e1ed24e3d23b19' in str(exc.value)
+    )
 
 
 def test_account_manager_invalid_files(test_keystore, caplog):

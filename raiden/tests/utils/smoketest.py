@@ -3,12 +3,17 @@ import shutil
 import sys
 import tempfile
 import traceback
-from binascii import hexlify, unhexlify
 from http import HTTPStatus
 
 import click
 import requests
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import (
+    decode_hex,
+    encode_hex,
+    remove_0x_prefix,
+    to_canonical_address,
+    to_checksum_address,
+)
 from web3 import HTTPProvider, Web3
 from web3.middleware import geth_poa_middleware
 
@@ -117,7 +122,7 @@ def run_smoketests(
             views.state_from_raiden(raiden_service),
             raiden_service.default_registry.address,
             token_networks[0],
-            unhexlify(TEST_PARTNER_ADDRESS),
+            decode_hex(TEST_PARTNER_ADDRESS),
         )
 
         distributable = channel.get_distributable(
@@ -241,7 +246,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
 
     try:
         # the marker is hardcoded in the genesis file
-        random_marker = hexlify(b'raiden').decode()
+        random_marker = remove_0x_prefix(encode_hex(b'raiden'))
         geth_wait_and_check(web3, [], random_marker)
 
         for process in processes_list:

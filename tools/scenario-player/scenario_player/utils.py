@@ -1,7 +1,6 @@
 import os
 import time
 import uuid
-from binascii import hexlify
 from collections import deque
 from datetime import datetime
 from itertools import islice
@@ -11,7 +10,7 @@ import click
 import mirakuru
 import requests
 import structlog
-from eth_utils import to_checksum_address
+from eth_utils import encode_hex, to_checksum_address
 from mirakuru import TimeoutExpired
 from mirakuru.base import IGNORED_ERROR_CODES
 from requests.adapters import HTTPAdapter
@@ -130,7 +129,7 @@ def wait_for_txs(client, txhashes, timeout=360):
             time.sleep(.1)
         time.sleep(1)
     if len(txhashes):
-        txhashes_str = ', '.join(hexlify(txhash).decode() for txhash in txhashes)
+        txhashes_str = ', '.join(encode_hex(txhash) for txhash in txhashes)
         raise ScenarioTxError(
             f"Timeout waiting for txhashes: {txhashes_str}",
         )

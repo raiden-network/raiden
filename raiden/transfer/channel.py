@@ -1,10 +1,9 @@
 # pylint: disable=too-many-lines
 import heapq
 import random
-from binascii import hexlify
 from typing import Union
 
-from eth_utils import to_canonical_address
+from eth_utils import encode_hex, to_canonical_address
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
@@ -392,8 +391,8 @@ def is_valid_directtransfer(
             "Invalid DirectTransfer message. "
             "Balance proof's locksroot changed, expected: {} got: {}."
         ).format(
-            hexlify(current_locksroot).decode(),
-            hexlify(received_balance_proof.locksroot).decode(),
+            encode_hex(current_locksroot),
+            encode_hex(received_balance_proof.locksroot),
         )
 
         result = (False, msg)
@@ -533,8 +532,8 @@ def is_valid_lock_expired(
                 "Invalid LockExpired message. "
                 "Balance proof's locksroot didn't match, expected: {} got: {}."
             ).format(
-                hexlify(locksroot_without_lock).decode(),
-                hexlify(received_balance_proof.locksroot).decode(),
+                encode_hex(locksroot_without_lock),
+                encode_hex(received_balance_proof.locksroot),
             )
 
             result = (False, msg, None)
@@ -624,8 +623,8 @@ def valid_lockedtransfer_check(
                 "Balance proof's locksroot didn't match, expected: {} got: {}."
             ).format(
                 message_name,
-                hexlify(locksroot_with_lock).decode(),
-                hexlify(received_balance_proof.locksroot).decode(),
+                encode_hex(locksroot_with_lock),
+                encode_hex(received_balance_proof.locksroot),
             )
 
             result = (False, msg, None)
@@ -738,7 +737,7 @@ def is_valid_unlock(
 
     if lock is None:
         msg = 'Invalid Unlock message. There is no corresponding lock for {}'.format(
-            hexlify(unlock.secrethash).decode(),
+            encode_hex(unlock.secrethash),
         )
 
         return (False, msg, None)
@@ -772,8 +771,8 @@ def is_valid_unlock(
             'Invalid Unlock message. '
             "Balance proof's locksroot didn't match, expected: {} got: {}."
         ).format(
-            hexlify(locksroot_without_lock).decode(),
-            hexlify(received_balance_proof.locksroot).decode(),
+            encode_hex(locksroot_without_lock),
+            encode_hex(received_balance_proof.locksroot),
         )
 
         result = (False, msg, None)
