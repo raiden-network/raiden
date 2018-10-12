@@ -373,7 +373,7 @@ def run_app(
     config['database_path'] = os.path.join(database_path, f'v{RAIDEN_DB_VERSION}_log.db')
 
     log_file_path = os.path.join(database_path, 'debug.log')
-    log_file_path = kwargs.get('log_file') if kwargs.get('log_file') else log_file_path
+    log_file_path = kwargs.get('log_file', log_file_path)
     configure_logging(
         kwargs.get('log_config'),
         log_json=kwargs.get('log_json'),
