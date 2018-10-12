@@ -118,7 +118,6 @@ def deploy_token(deploy_client, contract_manager):
             contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
             deploy_client=deploy_client,
             contract_manager=contract_manager,
-            num_confirmations=None,
             constructor_arguments=(
                 initial_amount,
                 decimals,

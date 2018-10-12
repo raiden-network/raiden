@@ -18,7 +18,6 @@ def test_endpointregistry(private_keys, blockchain_services, contract_manager):
         contract_name=CONTRACT_ENDPOINT_REGISTRY,
         deploy_client=chain.client,
         contract_manager=contract_manager,
-        num_confirmations=None,
     )
     discovery_proxy = chain.discovery(endpointregistry_address)
 

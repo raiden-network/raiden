@@ -168,6 +168,7 @@ class JSONRPCClient:
         self.privkey = privkey
         self.sender = sender
         self.web3 = web3
+        self.default_confirmations = DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 
         self._available_nonce = _available_nonce
         self._nonce_lock = Semaphore()
@@ -234,7 +235,6 @@ class JSONRPCClient:
             libraries=None,
             constructor_parameters=None,
             contract_path=None,
-            confirmations=DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
     ):
         """
         Deploy a solidity contract.
@@ -338,7 +338,7 @@ class JSONRPCClient:
             startgas=contract_transaction['gas'],
         )
 
-        self.poll(transaction_hash, confirmations)
+        self.poll(transaction_hash)
         receipt = self.get_transaction_receipt(transaction_hash)
         contract_address = receipt['contractAddress']
 
@@ -414,7 +414,6 @@ class JSONRPCClient:
     def poll(
             self,
             transaction_hash: bytes,
-            confirmations: int = DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
     ):
         """ Wait until the `transaction_hash` is applied or rejected.
 
@@ -426,6 +425,11 @@ class JSONRPCClient:
         if len(transaction_hash) != 32:
             raise ValueError(
                 'transaction_hash must be a 32 byte hash',
+            )
+
+        if self.default_confirmations < 0:
+            raise ValueError(
+                'Number of confirmations has to be positive',
             )
 
         transaction_hash = encode_hex(transaction_hash)
@@ -450,21 +454,18 @@ class JSONRPCClient:
 
             # the transaction was added to the pool and mined
             if transaction and transaction['blockNumber'] is not None:
-                break
+                last_result = transaction
 
-            last_result = transaction
-            gevent.sleep(.5)
+                # this will wait for both APPLIED and REVERTED transactions
+                transaction_block = transaction['blockNumber']
+                confirmation_block = transaction_block + self.default_confirmations
 
-        if confirmations:
-            # this will wait for both APPLIED and REVERTED transactions
-            transaction_block = transaction['blockNumber']
-            confirmation_block = transaction_block + confirmations
-
-            block_number = self.block_number()
-
-            while block_number < confirmation_block:
-                gevent.sleep(.5)
                 block_number = self.block_number()
+
+                if block_number >= confirmation_block:
+                    return transaction
+
+            gevent.sleep(1.0)
 
     def new_filter(
             self,
