@@ -372,17 +372,19 @@ def run_app(
 
     config['database_path'] = os.path.join(database_path, f'v{RAIDEN_DB_VERSION}_log.db')
 
+    log_file_path = os.path.join(database_path, 'debug.log')
+    log_file_path = kwargs.get('log_file') if kwargs.get('log_file') else log_file_path
     configure_logging(
         kwargs.get('log_config'),
         log_json=kwargs.get('log_json'),
-        log_file=database_path,
+        log_file=log_file_path,
         disable_debug_logfile=kwargs.get('disable_debug_logfile'),
     )
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
             ID_TO_NETWORKNAME.get(given_network_id, given_network_id),
-            database_path,
+            config['database_path'],
         ),
     )
 
