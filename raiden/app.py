@@ -11,7 +11,7 @@ from raiden.settings import (
     DEFAULT_NAT_INVITATION_TIMEOUT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     DEFAULT_NAT_KEEPALIVE_TIMEOUT,
-    DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
     DEFAULT_SHUTDOWN_TIMEOUT,
@@ -38,7 +38,7 @@ class App:  # pylint: disable=too-few-public-methods
         'database_path': '',
         'transport_type': 'udp',
         'blockchain': {
-            'confirmation_blocks': DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+            'confirmation_blocks': DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
         },
         'transport': {
             'udp': {

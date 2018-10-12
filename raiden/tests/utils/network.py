@@ -13,7 +13,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK, DEFAULT_RETRY_TIMEOUT
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import merge_dict, privatekey_to_address
 from raiden.waiting import wait_for_payment_network
@@ -307,7 +307,7 @@ def create_apps(
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],
             'blockchain': {
-                'confirmation_blocks': DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+                'confirmation_blocks': DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
             },
             'transport': {
                 'udp': {
