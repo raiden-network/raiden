@@ -38,7 +38,6 @@ def test_register_token(raiden_network, token_amount, contract_manager):
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         deploy_client=app1.raiden.chain.client,
         contract_manager=contract_manager,
-        num_confirmations=None,
         constructor_arguments=(
             token_amount,
             2,
@@ -71,7 +70,6 @@ def test_register_token_insufficient_eth(raiden_network, token_amount, contract_
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         deploy_client=app1.raiden.chain.client,
         contract_manager=contract_manager,
-        num_confirmations=None,
         constructor_arguments=(
             token_amount,
             2,
@@ -116,7 +114,6 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         deploy_client=app1.raiden.chain.client,
         contract_manager=contract_manager,
-        num_confirmations=None,
         constructor_arguments=(
             token_amount,
             2,

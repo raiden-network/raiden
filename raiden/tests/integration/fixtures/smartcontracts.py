@@ -53,7 +53,6 @@ def endpoint_registry_address(deploy_client, contract_manager) -> typing.Address
         contract_name=CONTRACT_ENDPOINT_REGISTRY,
         deploy_client=deploy_client,
         contract_manager=contract_manager,
-        num_confirmations=None,
     )
     return address
 
@@ -64,7 +63,6 @@ def secret_registry_address(deploy_client, contract_manager) -> typing.Address:
         contract_name=CONTRACT_SECRET_REGISTRY,
         deploy_client=deploy_client,
         contract_manager=contract_manager,
-        num_confirmations=None,
     )
     return address
 
@@ -82,7 +80,6 @@ def token_network_registry_address(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
         deploy_client=deploy_client,
         contract_manager=contract_manager,
-        num_confirmations=None,
         constructor_arguments=(
             to_checksum_address(secret_registry_address),
             chain_id,

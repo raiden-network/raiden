@@ -30,7 +30,6 @@ def deploy_tokens_and_fund_accounts(
             CONTRACT_HUMAN_STANDARD_TOKEN,
             deploy_service.client,
             contract_manager=contract_manager,
-            num_confirmations=None,
             constructor_arguments=(
                 token_amount,
                 2,
@@ -56,7 +55,6 @@ def deploy_contract_web3(
         contract_name: str,
         deploy_client: JSONRPCClient,
         contract_manager: ContractManager,
-        num_confirmations: int = None,
         constructor_arguments: typing.Tuple[typing.Any, ...] = (),
 ) -> typing.Address:
     compiled = {
@@ -66,6 +64,5 @@ def deploy_contract_web3(
         contract_name,
         compiled,
         constructor_parameters=constructor_arguments,
-        confirmations=num_confirmations,
     )
     return typing.Address(to_canonical_address(contract_proxy.contract.address))

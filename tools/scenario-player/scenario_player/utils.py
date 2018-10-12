@@ -176,8 +176,6 @@ def get_or_deploy_token(runner: 'ScenarioRunner') -> ContractProxy:
         'CustomToken',
         contract_manager.contracts,
         constructor_parameters=(0, decimals, name, symbol),
-        confirmations=1,
-
     )
     contract_checksum_address = to_checksum_address(token_ctr.contract_address)
     if reuse:
