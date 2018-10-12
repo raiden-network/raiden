@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 import click
 import filelock
 import structlog
-from eth_utils import encode_hex, to_canonical_address, to_checksum_address, to_normalized_address
+from eth_utils import to_canonical_address, to_checksum_address, to_normalized_address
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
@@ -207,7 +207,7 @@ def run_app(
         datadir = os.path.join(os.path.expanduser('~'), '.raiden')
 
     address_hex = to_normalized_address(address) if address else None
-    address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
+    address_hex, private_key_bin = prompt_account(address_hex, keystore_path, password_file)
     address = to_canonical_address(address_hex)
 
     (listen_host, listen_port) = split_endpoint(listen_address)
@@ -229,7 +229,6 @@ def run_app(
     config['transport']['udp']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['transport']['udp']['nat_keepalive_timeout'] = timeout
-    config['privatekey_hex'] = encode_hex(privatekey_bin)
     config['unrecoverable_error_should_crash'] = unrecoverable_error_should_crash
     config['services']['pathfinding_service_address'] = pathfinding_service_address
     config['services']['pathfinding_max_paths'] = pathfinding_max_paths
@@ -242,14 +241,14 @@ def run_app(
 
     rpc_client = JSONRPCClient(
         web3,
-        privatekey_bin,
+        private_key_bin,
         gas_price_strategy=gas_price,
         block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
         uses_infura='infura.io' in eth_rpc_endpoint,
     )
 
     blockchain_service = BlockChainService(
-        privatekey_bin=privatekey_bin,
+        private_key_bin=private_key_bin,
         jsonrpc_client=rpc_client,
         # Not giving the contract manager here, but injecting it later
         # since we first need blockchain service to calculate the network id
@@ -407,6 +406,7 @@ def run_app(
             query_start_block=start_block,
             default_registry=token_network_registry,
             default_secret_registry=secret_registry,
+            private_key_bin=private_key_bin,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,

@@ -2,7 +2,6 @@
 from collections import namedtuple
 
 import gevent
-from eth_utils import encode_hex
 from gevent import server
 
 from raiden import waiting
@@ -304,7 +303,6 @@ def create_apps(
             'chain_id': chain_id,
             'environment_type': environment_type,
             'unrecoverable_error_should_crash': unrecoverable_error_should_crash,
-            'privatekey_hex': encode_hex(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],
@@ -381,6 +379,7 @@ def create_apps(
             query_start_block=0,
             default_registry=registry,
             default_secret_registry=secret_registry,
+            private_key_bin=private_key,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
@@ -406,7 +405,7 @@ def jsonrpc_services(
     for privkey in private_keys:
         rpc_client = JSONRPCClient(web3, privkey)
         blockchain = BlockChainService(
-            privatekey_bin=privkey,
+            private_key_bin=privkey,
             jsonrpc_client=rpc_client,
             contract_manager=contract_manager,
         )

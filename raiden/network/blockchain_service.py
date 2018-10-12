@@ -29,7 +29,7 @@ class BlockChainService:
 
     def __init__(
             self,
-            privatekey_bin: bytes,
+            private_key_bin: bytes,
             jsonrpc_client: JSONRPCClient,
             contract_manager: ContractManager = None,
     ):
@@ -41,8 +41,8 @@ class BlockChainService:
         self.identifier_to_payment_channel = dict()
 
         self.client = jsonrpc_client
-        self.private_key = privatekey_bin
-        self.node_address = privatekey_to_address(privatekey_bin)
+        self.private_key = private_key_bin
+        self.node_address = privatekey_to_address(private_key_bin)
         self.contract_manager = contract_manager
 
         self._token_creation_lock = Semaphore()

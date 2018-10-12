@@ -112,7 +112,7 @@ def contract_manager(environment_type):
 @pytest.fixture
 def deploy_service(deploy_key, deploy_client, contract_manager):
     return BlockChainService(
-        privatekey_bin=deploy_key,
+        private_key_bin=deploy_key,
         jsonrpc_client=deploy_client,
         contract_manager=contract_manager,
     )
