@@ -2,11 +2,10 @@ import io
 import logging
 import sys
 import time
-from binascii import hexlify
 
 import gevent
 import IPython
-from eth_utils import to_checksum_address
+from eth_utils import encode_hex, to_checksum_address
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden import waiting
@@ -205,7 +204,7 @@ class ConsoleTools:
                 contract_path=contract_path,
             )
 
-        token_address_hex = hexlify(token_proxy.contract_address)
+        token_address_hex = encode_hex(token_proxy.contract_address)
         if auto_register:
             self.register_token(registry_address, token_address_hex)
         print("Successfully created {}the token '{}'.".format(

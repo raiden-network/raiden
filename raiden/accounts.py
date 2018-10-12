@@ -2,12 +2,11 @@ import getpass
 import json
 import os
 import sys
-from binascii import hexlify, unhexlify
 from typing import Dict, Optional
 
 import structlog
 from eth_keyfile import decode_keyfile_json
-from eth_utils import to_checksum_address
+from eth_utils import add_0x_prefix, decode_hex, encode_hex, remove_0x_prefix, to_checksum_address
 
 from raiden.utils import privatekey_to_address, privtopub
 from raiden.utils.typing import AddressHex
@@ -98,7 +97,8 @@ class AccountManager:
                     try:
                         with open(fullpath) as data_file:
                             data = json.load(data_file)
-                            self.accounts[str(data['address']).lower()] = str(fullpath)
+                            address = add_0x_prefix(str(data['address']).lower())
+                            self.accounts[address] = str(fullpath)
                     except (
                         IOError,
                         json.JSONDecodeError,
@@ -120,8 +120,7 @@ class AccountManager:
         if address is None:
             return False
 
-        if address.startswith('0x'):
-            address = address[2:]
+        address = add_0x_prefix(address)
 
         return address.lower() in self.accounts
 
@@ -137,10 +136,7 @@ class AccountManager:
             str: The private key associated with the address
         """
 
-        if address.startswith('0x'):
-            address = address[2:]
-
-        address = address.lower()
+        address = add_0x_prefix(address).lower()
 
         if not self.address_in_keystore(address):
             raise ValueError('Keystore file not found for %s' % address)
@@ -177,7 +173,7 @@ class Account:
         self._address = None
 
         try:
-            self._address = unhexlify(self.keystore['address'])
+            self._address = decode_hex(self.keystore['address'])
         except KeyError:
             pass
 
@@ -216,7 +212,7 @@ class Account:
             'version': self.keystore['version'],
         }
         if include_address and self.address is not None:
-            d['address'] = hexlify(self.address)
+            d['address'] = remove_0x_prefix(encode_hex(self.address))
         if include_id and self.uuid is not None:
             d['id'] = self.uuid
         return json.dumps(d)
@@ -268,7 +264,7 @@ class Account:
         if self._address:
             pass
         elif 'address' in self.keystore:
-            self._address = unhexlify(self.keystore['address'])
+            self._address = decode_hex(self.keystore['address'])
         elif not self.locked:
             self._address = privatekey_to_address(self.privkey)
         else:
@@ -295,7 +291,7 @@ class Account:
 
     def __repr__(self):
         if self.address is not None:
-            address = hexlify(self.address)
+            address = encode_hex(self.address)
         else:
             address = '?'
         return '<Account(address={address}, id={id})>'.format(address=address, id=self.uuid)

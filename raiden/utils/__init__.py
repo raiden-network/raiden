@@ -4,13 +4,20 @@ import random
 import re
 import sys
 import time
-from binascii import hexlify, unhexlify
 from itertools import zip_longest
 from typing import Iterable, List, Tuple, Union
 
 import gevent
 from coincurve import PrivateKey
-from eth_utils import is_checksum_address, remove_0x_prefix, to_checksum_address
+from eth_utils import (
+    add_0x_prefix,
+    decode_hex,
+    encode_hex,
+    is_0x_prefixed,
+    is_checksum_address,
+    remove_0x_prefix,
+    to_checksum_address,
+)
 
 import raiden
 from raiden import constants
@@ -20,13 +27,7 @@ from raiden_libs.utils.signing import sha3
 
 
 def safe_address_decode(address):
-    try:
-        address = safe_lstrip_hex(address)
-        address = unhexlify(address)
-    except TypeError:
-        pass
-
-    return address
+    return decode_hex(address)
 
 
 def random_secret():
@@ -68,26 +69,27 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
         Makes sure that the string address provided starts is 0x prefixed and
         checksummed according to EIP55 specification
     """
-    if addr[:2] != '0x':
+    if not is_0x_prefixed(addr):
         raise InvalidAddress('Address must be 0x prefixed')
 
     if not is_checksum_address(addr):
         raise InvalidAddress('Address must be EIP55 checksummed')
 
-    addr = unhexlify(addr[2:])
+    addr = decode_hex(addr)
     assert len(addr) in (20, 0)
     return addr
 
 
 def data_encoder(data: bytes, length: int = 0) -> str:
-    data = hexlify(data)
-    return '0x' + data.rjust(length * 2, b'0').decode()
+    data = remove_0x_prefix(encode_hex(data))
+    return add_0x_prefix(
+        data.rjust(length * 2, b'0').decode(),
+    )
 
 
 def data_decoder(data: str) -> bytes:
-    assert data[:2] == '0x'
-    data = data[2:]  # remove 0x
-    data = unhexlify(data)
+    assert is_0x_prefixed(data)
+    data = decode_hex(data)
     return data
 
 
@@ -97,7 +99,7 @@ def quantity_encoder(i: int) -> str:
 
 
 def pex(data: bytes) -> str:
-    return hexlify(data).decode()[:8]
+    return remove_0x_prefix(encode_hex(data))[:8]
 
 
 def lpex(lst: Iterable[bytes]) -> List[str]:
@@ -161,12 +163,6 @@ def get_contract_path(contract_name: str) -> str:
     )
     assert os.path.isfile(contract_path)
     return get_relative_path(contract_path)
-
-
-def safe_lstrip_hex(val):
-    if isinstance(val, str):
-        return remove_0x_prefix(val)
-    return val
 
 
 def get_system_spec():

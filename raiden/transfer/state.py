@@ -1,11 +1,10 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
-from binascii import hexlify
 from collections import defaultdict
 from functools import total_ordering
 
 import networkx
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import encode_hex, to_canonical_address, to_checksum_address
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
@@ -1118,8 +1117,8 @@ class UnlockProofState(State):
         self.secret = secret
 
     def __repr__(self):
-        full_proof = [hexlify(entry) for entry in self.merkle_proof]
-        return f'<UnlockProofState proof:{full_proof} lock:{hexlify(self.lock_encoded)}>'
+        full_proof = [encode_hex(entry) for entry in self.merkle_proof]
+        return f'<UnlockProofState proof:{full_proof} lock:{encode_hex(self.lock_encoded)}>'
 
     def __eq__(self, other):
         return (
