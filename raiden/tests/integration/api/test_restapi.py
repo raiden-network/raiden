@@ -13,6 +13,8 @@ from raiden.tests.utils import assert_dicts_are_equal
 from raiden.tests.utils.client import burn_all_eth
 from raiden.tests.utils.events import must_have_event, must_have_events
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.tests.utils.transfer import direct_transfer
+from raiden.transfer import views
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
 from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
@@ -910,6 +912,35 @@ def test_api_payments(test_api_server, raiden_network, token_addresses):
     assert_proper_response(response)
     response = response.json()
     assert response == payment
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses):
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+
+    payment_url = api_url_for(
+        test_api_server,
+        'token_target_paymentresource',
+        token_address=to_checksum_address(token_address),
+        target_address=to_checksum_address(target_address),
+    )
+
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        app0.raiden.default_registry.address,
+        token_address,
+    )
+
+    app1.stop()
+    direct_transfer(app0, app1, token_network_identifier, amount=80, identifier=42, timeout=.1)
+
+    request = grequests.post(payment_url, json={'amount': 80, 'identifier': 42})
+    response = request.send().response
+    assert_proper_response(response, HTTPStatus.CONFLICT)
+    response = response.json()
+    assert response['errors'] == 'Another payment with the same id is in flight'
 
 
 @pytest.mark.parametrize('number_of_tokens', [0])
