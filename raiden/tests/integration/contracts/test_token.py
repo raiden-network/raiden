@@ -10,14 +10,16 @@ def test_token(
         token_proxy,
         private_keys,
         web3,
+        contract_manager,
 ):
     privkey = private_keys[1]
     address = privatekey_to_address(privkey)
     address = to_canonical_address(address)
     other_client = JSONRPCClient(web3, privkey)
     other_token_proxy = Token(
-        other_client,
-        to_canonical_address(token_proxy.proxy.contract.address),
+        jsonrpc_client=other_client,
+        token_address=to_canonical_address(token_proxy.proxy.contract.address),
+        contract_manager=contract_manager,
     )
 
     # send some funds from deployer to generated address

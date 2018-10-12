@@ -10,7 +10,7 @@ from raiden.network.proxies.token_network import ChannelDetails
 from raiden.utils import typing
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
+from raiden_contracts.contract_manager import ContractManager
 
 
 class PaymentChannel:
@@ -18,9 +18,10 @@ class PaymentChannel:
             self,
             token_network: TokenNetwork,
             channel_identifier: typing.ChannelID,
+            contract_manager: ContractManager,
     ):
 
-        self.contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
+        self.contract_manager = contract_manager
         if channel_identifier < 0 or channel_identifier > UINT256_MAX:
             raise ValueError('channel_identifier {} is not a uint256'.format(channel_identifier))
 
@@ -28,6 +29,7 @@ class PaymentChannel:
             token_network_address=token_network.address,
             channel_identifier=channel_identifier,
             event_name=ChannelEvent.OPENED,
+            contract_manager=self.contract_manager,
         )
 
         events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
@@ -79,6 +81,7 @@ class PaymentChannel:
             token_network_address=self.token_network.address,
             channel_identifier=self.channel_identifier,
             event_name=ChannelEvent.OPENED,
+            contract_manager=self.contract_manager,
         )
 
         events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)
@@ -100,6 +103,7 @@ class PaymentChannel:
             token_network_address=self.token_network.address,
             channel_identifier=self.channel_identifier,
             event_name=ChannelEvent.CLOSED,
+            contract_manager=self.contract_manager,
         )
 
         events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)

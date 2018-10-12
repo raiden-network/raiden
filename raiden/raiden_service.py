@@ -60,6 +60,7 @@ from raiden.utils import (
 )
 from raiden.utils.runnable import Runnable
 from raiden_contracts.constants import NetworkType
+from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -222,6 +223,7 @@ class RaidenService(Runnable):
         # have been dispatched.
         self.dispatch_events_lock = Semaphore(1)
 
+        self.contract_manager = ContractManager(config['contracts_path'])
         self.database_path = config['database_path']
         if self.database_path != ':memory:':
             database_dir = os.path.dirname(config['database_path'])
@@ -599,19 +601,22 @@ class RaidenService(Runnable):
             )
 
             self.blockchain_events.add_token_network_registry_listener(
-                token_network_registry_proxy,
-                from_block,
+                token_network_registry_proxy=token_network_registry_proxy,
+                contract_manager=self.contract_manager,
+                from_block=from_block,
             )
             self.blockchain_events.add_secret_registry_listener(
-                secret_registry_proxy,
-                from_block,
+                secret_registry_proxy=secret_registry_proxy,
+                contract_manager=self.contract_manager,
+                from_block=from_block,
             )
 
             for token_network in token_networks:
                 token_network_proxy = self.chain.token_network(token_network)
                 self.blockchain_events.add_token_network_listener(
-                    token_network_proxy,
-                    from_block,
+                    token_network_proxy=token_network_proxy,
+                    contract_manager=self.contract_manager,
+                    from_block=from_block,
                 )
 
     def connection_manager_for_token_network(self, token_network_identifier):

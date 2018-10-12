@@ -22,9 +22,7 @@ from raiden_contracts.constants import (
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
-
-CONTRACT_MANAGER = ContractManager(CONTRACTS_PRECOMPILED_PATH)
+from raiden_contracts.contract_manager import ContractManager
 
 EventListener = namedtuple(
     'EventListener',
@@ -77,6 +75,7 @@ def get_contract_events(
 def get_token_network_registry_events(
         chain: BlockChainService,
         token_network_registry_address: Address,
+        contract_manager: ContractManager,
         events: List[str] = ALL_EVENTS,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
@@ -84,7 +83,7 @@ def get_token_network_registry_events(
     """ Helper to get all events of the Registry contract at `registry_address`. """
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+        contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
         token_network_registry_address,
         events,
         from_block,
@@ -95,6 +94,7 @@ def get_token_network_registry_events(
 def get_token_network_events(
         chain: BlockChainService,
         token_network_address: Address,
+        contract_manager: ContractManager,
         events: List[str] = ALL_EVENTS,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
@@ -103,7 +103,7 @@ def get_token_network_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         token_network_address,
         events,
         from_block,
@@ -115,6 +115,7 @@ def get_all_netting_channel_events(
         chain: BlockChainService,
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
+        contract_manager: ContractManager,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
@@ -123,13 +124,14 @@ def get_all_netting_channel_events(
     filter_args = get_filter_args_for_all_events_from_channel(
         token_network_address=token_network_address,
         channel_identifier=netting_channel_identifier,
+        contract_manager=contract_manager,
         from_block=from_block,
         to_block=to_block,
     )
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+        contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         token_network_address,
         filter_args['topics'],
         from_block,
@@ -140,6 +142,7 @@ def get_all_netting_channel_events(
 def get_all_secret_registry_events(
         chain: BlockChainService,
         secret_registry_address: Address,
+        contract_manager: ContractManager,
         from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
@@ -147,7 +150,7 @@ def get_all_secret_registry_events(
 
     return get_contract_events(
         chain,
-        CONTRACT_MANAGER.get_contract_abi(
+        contract_manager.get_contract_abi(
             CONTRACT_SECRET_REGISTRY,
         ),
         secret_registry_address,
@@ -263,6 +266,7 @@ class BlockchainEvents:
     def add_token_network_registry_listener(
             self,
             token_network_registry_proxy,
+            contract_manager,
             from_block: typing.BlockSpecification = 'latest',
     ):
         token_new_filter = token_network_registry_proxy.tokenadded_filter(from_block=from_block)
@@ -271,12 +275,13 @@ class BlockchainEvents:
         self.add_event_listener(
             'TokenNetworkRegistry {}'.format(pex(token_network_registry_address)),
             token_new_filter,
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+            contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
         )
 
     def add_token_network_listener(
             self,
             token_network_proxy,
+            contract_manager: ContractManager,
             from_block: typing.BlockSpecification = 'latest',
     ):
         token_network_filter = token_network_proxy.all_events_filter(from_block=from_block)
@@ -285,12 +290,13 @@ class BlockchainEvents:
         self.add_event_listener(
             'TokenNetwork {}'.format(pex(token_network_address)),
             token_network_filter,
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
         )
 
     def add_secret_registry_listener(
             self,
             secret_registry_proxy: SecretRegistry,
+            contract_manager: ContractManager,
             from_block: typing.BlockSpecification = 'latest',
     ):
         secret_registry_filter = secret_registry_proxy.secret_registered_filter(
@@ -300,5 +306,5 @@ class BlockchainEvents:
         self.add_event_listener(
             'SecretRegistry {}'.format(pex(secret_registry_address)),
             secret_registry_filter,
-            CONTRACT_MANAGER.get_contract_abi(CONTRACT_SECRET_REGISTRY),
+            contract_manager.get_contract_abi(CONTRACT_SECRET_REGISTRY),
         )

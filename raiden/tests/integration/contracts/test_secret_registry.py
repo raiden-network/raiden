@@ -47,10 +47,11 @@ def test_secret_registry_register_batch(secret_registry_proxy):
 
 
 @pytest.fixture
-def secret_registry_proxy_patched(secret_registry_proxy):
+def secret_registry_proxy_patched(secret_registry_proxy, contract_manager):
     secret_registry_patched = SecretRegistry(
-        secret_registry_proxy.client,
-        secret_registry_proxy.address,
+        jsonrpc_client=secret_registry_proxy.client,
+        secret_registry_address=secret_registry_proxy.address,
+        contract_manager=contract_manager,
     )
     _register_secret_batch = secret_registry_patched._register_secret_batch
 

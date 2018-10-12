@@ -4,7 +4,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import typing
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
+from raiden_contracts.contract_manager import ContractManager
 
 
 def deploy_tokens_and_fund_accounts(
@@ -12,6 +12,7 @@ def deploy_tokens_and_fund_accounts(
         number_of_tokens: int,
         deploy_service: BlockChainService,
         participants: typing.List[typing.Address],
+        contract_manager: ContractManager,
 ) -> typing.List[typing.TokenAddress]:
     """ Deploy `number_of_tokens` ERC20 token instances with `token_amount` minted and
     distributed among `blockchain_services`. Optionally the instances will be registered with
@@ -28,6 +29,7 @@ def deploy_tokens_and_fund_accounts(
         token_address = deploy_contract_web3(
             CONTRACT_HUMAN_STANDARD_TOKEN,
             deploy_service.client,
+            contract_manager=contract_manager,
             num_confirmations=None,
             constructor_arguments=(
                 token_amount,
@@ -53,10 +55,10 @@ def deploy_tokens_and_fund_accounts(
 def deploy_contract_web3(
         contract_name: str,
         deploy_client: JSONRPCClient,
+        contract_manager: ContractManager,
         num_confirmations: int = None,
         constructor_arguments: typing.Tuple[typing.Any, ...] = (),
 ) -> typing.Address:
-    contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
     compiled = {
         contract_name: contract_manager.get_contract(contract_name),
     }

@@ -7,7 +7,7 @@ from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, privatekey_to_address
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
+from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -17,8 +17,8 @@ class Token:
             self,
             jsonrpc_client,
             token_address,
+            contract_manager: ContractManager,
     ):
-        contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
         contract = jsonrpc_client.new_contract(
             contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             to_normalized_address(token_address),

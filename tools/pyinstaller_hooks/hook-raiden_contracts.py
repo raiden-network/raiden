@@ -1,5 +1,5 @@
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH
+from raiden_contracts.contract_manager import contracts_precompiled_path
 
 datas = [
-    (str(CONTRACTS_PRECOMPILED_PATH), '.'),
+    (str(contracts_precompiled_path()), '.'),
 ]

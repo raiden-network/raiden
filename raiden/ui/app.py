@@ -1,4 +1,3 @@
-import json
 import os
 import sys
 from binascii import hexlify
@@ -37,7 +36,12 @@ from raiden_contracts.constants import (
     ID_TO_NETWORKNAME,
     NetworkType,
 )
-from raiden_contracts.contract_manager import contracts_deployed_path
+from raiden_contracts.contract_manager import (
+    ContractManager,
+    contracts_deployed_path,
+    contracts_precompiled_path,
+    get_contracts_deployed,
+)
 
 from .prompt import prompt_account
 from .sync import check_discovery_registration_gas, check_synced
@@ -228,7 +232,12 @@ def run_app(
         gas_price_strategy=gas_price,
     )
 
-    blockchain_service = BlockChainService(privatekey_bin, rpc_client)
+    blockchain_service = BlockChainService(
+        privatekey_bin=privatekey_bin,
+        jsonrpc_client=rpc_client,
+        # Not giving the contract manager here, but injecting it later
+        # since we first need blockchain service to calculate the network id
+    )
 
     given_network_id = network_id
     node_network_id = blockchain_service.network_id
@@ -266,11 +275,11 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
-    config['contracts_version'] = None  # None means latest
+    config['contracts_path'] = contracts_precompiled_path()
     if node_network_id in ID_TO_NETWORKNAME:
         contracts_version = 'pre_limit' if network_type == NetworkType.TEST else None
-        config['contracts_version'] = contracts_version
-        network_contracts_path = contracts_deployed_path(node_network_id, contracts_version)
+        deployment_data = get_contracts_deployed(node_network_id, contracts_version)
+        config['contracts_path'] = contracts_deployed_path(node_network_id, contracts_version)
         not_allowed = (  # for now we only disallow mainnet with test configuration
             network_id == 1 and
             network_type == NetworkType.TEST
@@ -285,10 +294,10 @@ def run_app(
             )
             sys.exit(1)
 
-        with open(network_contracts_path) as f:
-            chain_config = json.load(f)
-            contracts = chain_config['contracts']
+            contracts = deployment_data['contracts']
             contract_addresses_known = True
+
+    blockchain_service.inject_contract_manager(ContractManager(config['contracts_path']))
 
     if sync_check:
         check_synced(blockchain_service, known_node_network_id)

@@ -736,6 +736,7 @@ class RaidenAPI:
         events = blockchain_events.get_token_network_registry_events(
             chain=self.raiden.chain,
             token_network_registry_address=registry_address,
+            contract_manager=self.raiden.contract_manager,
             events=blockchain_events.ALL_EVENTS,
             from_block=from_block,
             to_block=to_block,
@@ -770,6 +771,7 @@ class RaidenAPI:
         returned_events = blockchain_events.get_token_network_events(
             chain=self.raiden.chain,
             token_network_address=token_network_address,
+            contract_manager=self.raiden.contract_manager,
             events=blockchain_events.ALL_EVENTS,
             from_block=from_block,
             to_block=to_block,
@@ -810,6 +812,7 @@ class RaidenAPI:
                 chain=self.raiden.chain,
                 token_network_address=token_network_address,
                 netting_channel_identifier=channel.identifier,
+                contract_manager=self.raiden.contract_manager,
                 from_block=from_block,
                 to_block=to_block,
             ))

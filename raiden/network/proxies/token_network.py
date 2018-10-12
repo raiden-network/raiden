@@ -36,7 +36,7 @@ from raiden_contracts.constants import (
     ChannelState,
     ParticipantInfoIndex,
 )
-from raiden_contracts.contract_manager import CONTRACTS_PRECOMPILED_PATH, ContractManager
+from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -74,15 +74,16 @@ class TokenNetwork:
             self,
             jsonrpc_client,
             manager_address,
+            contract_manager: ContractManager,
     ):
         if not is_binary_address(manager_address):
             raise InvalidAddress('Expected binary address format for token nework')
 
         check_address_has_code(jsonrpc_client, manager_address, CONTRACT_TOKEN_NETWORK)
 
-        contract_manager = ContractManager(CONTRACTS_PRECOMPILED_PATH)
+        self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
-            contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
             to_normalized_address(manager_address),
         )
 
@@ -489,7 +490,11 @@ class TokenNetwork:
         )
 
         token_address = self.token_address()
-        token = Token(self.client, token_address)
+        token = Token(
+            jsonrpc_client=self.client,
+            token_address=token_address,
+            contract_manager=self.contract_manager,
+        )
 
         with self.channel_operations_lock[partner], self.deposit_lock:
             # setTotalDeposit requires a monotonically increasing value. This

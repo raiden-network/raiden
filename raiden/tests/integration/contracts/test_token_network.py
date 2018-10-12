@@ -28,6 +28,7 @@ def test_token_network_deposit_race(
         private_keys,
         token_proxy,
         web3,
+        contract_manager,
 ):
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
     assert token_network_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
@@ -37,8 +38,9 @@ def test_token_network_deposit_race(
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
-        c1_client,
-        token_network_address,
+        jsonrpc_client=c1_client,
+        manager_address=token_network_address,
+        contract_manager=contract_manager,
     )
     token_proxy.transfer(c1_client.sender, 10)
     channel_identifier = c1_token_network_proxy.new_netting_channel(
@@ -66,6 +68,7 @@ def test_token_network_proxy_basics(
         token_proxy,
         chain_id,
         web3,
+        contract_manager,
 ):
     # check settlement timeouts
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
@@ -76,12 +79,14 @@ def test_token_network_proxy_basics(
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
-        c1_client,
-        token_network_address,
+        jsonrpc_client=c1_client,
+        manager_address=token_network_address,
+        contract_manager=contract_manager,
     )
     c2_token_network_proxy = TokenNetwork(
-        c2_client,
-        token_network_address,
+        jsonrpc_client=c2_client,
+        manager_address=token_network_address,
+        contract_manager=contract_manager,
     )
 
     initial_token_balance = 100
@@ -356,6 +361,7 @@ def test_token_network_proxy_update_transfer(
         token_proxy,
         chain_id,
         web3,
+        contract_manager,
 ):
     """Tests channel lifecycle, with `update_transfer` before settling"""
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
@@ -363,12 +369,14 @@ def test_token_network_proxy_update_transfer(
     c1_client = JSONRPCClient(web3, private_keys[1])
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
-        c1_client,
-        token_network_address,
+        jsonrpc_client=c1_client,
+        manager_address=token_network_address,
+        contract_manager=contract_manager,
     )
     c2_token_network_proxy = TokenNetwork(
-        c2_client,
-        token_network_address,
+        jsonrpc_client=c2_client,
+        manager_address=token_network_address,
+        contract_manager=contract_manager,
     )
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(

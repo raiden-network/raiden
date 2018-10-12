@@ -10,13 +10,14 @@ from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
-def test_endpointregistry(private_keys, blockchain_services):
+def test_endpointregistry(private_keys, blockchain_services, contract_manager):
     chain = blockchain_services.blockchain_services[0]
     my_address = privatekey_to_address(private_keys[0])
 
     endpointregistry_address = deploy_contract_web3(
-        CONTRACT_ENDPOINT_REGISTRY,
-        chain.client,
+        contract_name=CONTRACT_ENDPOINT_REGISTRY,
+        deploy_client=chain.client,
+        contract_manager=contract_manager,
         num_confirmations=None,
     )
     discovery_proxy = chain.discovery(endpointregistry_address)

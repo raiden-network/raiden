@@ -14,6 +14,7 @@ from raiden.network.proxies import (
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import privatekey_to_address
 from raiden.utils.typing import Address, ChannelID, T_ChannelID
+from raiden_contracts.contract_manager import ContractManager
 
 
 class BlockChainService:
@@ -24,6 +25,7 @@ class BlockChainService:
             self,
             privatekey_bin: bytes,
             jsonrpc_client: JSONRPCClient,
+            contract_manager: ContractManager = None,
     ):
         self.address_to_discovery = dict()
         self.address_to_secret_registry = dict()
@@ -35,6 +37,7 @@ class BlockChainService:
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
         self.node_address = privatekey_to_address(privatekey_bin)
+        self.contract_manager = contract_manager
 
         self._token_creation_lock = Semaphore()
         self._discovery_creation_lock = Semaphore()
@@ -48,6 +51,9 @@ class BlockChainService:
 
     def get_block(self, block_identifier):
         return self.client.web3.eth.getBlock(block_identifier=block_identifier)
+
+    def inject_contract_manager(self, contract_manager: ContractManager):
+        self.contract_manager = contract_manager
 
     def is_synced(self) -> bool:
         result = self.client.web3.eth.syncing
@@ -107,8 +113,9 @@ class BlockChainService:
         with self._token_creation_lock:
             if token_address not in self.address_to_token:
                 self.address_to_token[token_address] = Token(
-                    self.client,
-                    token_address,
+                    jsonrpc_client=self.client,
+                    token_address=token_address,
+                    contract_manager=self.contract_manager,
                 )
 
         return self.address_to_token[token_address]
@@ -121,8 +128,9 @@ class BlockChainService:
         with self._discovery_creation_lock:
             if discovery_address not in self.address_to_discovery:
                 self.address_to_discovery[discovery_address] = Discovery(
-                    self.client,
-                    discovery_address,
+                    jsonrpc_client=self.client,
+                    discovery_address=discovery_address,
+                    contract_manager=self.contract_manager,
                 )
 
         return self.address_to_discovery[discovery_address]
@@ -134,8 +142,9 @@ class BlockChainService:
         with self._token_network_registry_creation_lock:
             if address not in self.address_to_token_network_registry:
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
-                    self.client,
-                    address,
+                    jsonrpc_client=self.client,
+                    registry_address=address,
+                    contract_manager=self.contract_manager,
                 )
 
         return self.address_to_token_network_registry[address]
@@ -147,8 +156,9 @@ class BlockChainService:
         with self._token_network_creation_lock:
             if address not in self.address_to_token_network:
                 self.address_to_token_network[address] = TokenNetwork(
-                    self.client,
-                    address,
+                    jsonrpc_client=self.client,
+                    manager_address=address,
+                    contract_manager=self.contract_manager,
                 )
 
         return self.address_to_token_network[address]
@@ -160,8 +170,9 @@ class BlockChainService:
         with self._secret_registry_creation_lock:
             if address not in self.address_to_secret_registry:
                 self.address_to_secret_registry[address] = SecretRegistry(
-                    self.client,
-                    address,
+                    jsonrpc_client=self.client,
+                    secret_registry_address=address,
+                    contract_manager=self.contract_manager,
                 )
 
         return self.address_to_secret_registry[address]
@@ -186,6 +197,7 @@ class BlockChainService:
                 self.identifier_to_payment_channel[dict_key] = PaymentChannel(
                     token_network=token_network,
                     channel_identifier=channel_id,
+                    contract_manager=self.contract_manager,
                 )
 
         return self.identifier_to_payment_channel[dict_key]
