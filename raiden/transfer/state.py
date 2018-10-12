@@ -424,7 +424,7 @@ class TokenNetworkState(State):
 
         self.address = address
         self.token_address = token_address
-        self.network_graph = TokenNetworkGraphState()
+        self.network_graph = TokenNetworkGraphState(self.address)
 
         self.channelidentifiers_to_channels = dict()
         self.partneraddresses_to_channels = defaultdict(dict)
@@ -493,11 +493,13 @@ class TokenNetworkGraphState(State):
     """
 
     __slots__ = (
+        'token_network_id',
         'network',
         'channel_identifier_to_participants',
     )
 
-    def __init__(self):
+    def __init__(self, token_network_address: typing.TokenNetworkID):
+        self.token_network_id = token_network_address
         self.network = networkx.Graph()
         self.channel_identifier_to_participants = {}
 
@@ -507,6 +509,7 @@ class TokenNetworkGraphState(State):
     def __eq__(self, other):
         return (
             isinstance(other, TokenNetworkGraphState) and
+            self.token_network_id == other.token_network_id and
             self._to_comparable_graph() == other._to_comparable_graph() and
             self.channel_identifier_to_participants == other.channel_identifier_to_participants
         )
@@ -521,6 +524,7 @@ class TokenNetworkGraphState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
+            'token_network_id': to_checksum_address(self.token_network_id),
             'network': serialization.serialize_networkx_graph(self.network),
             'channel_identifier_to_participants': map_dict(
                 str,
@@ -531,7 +535,9 @@ class TokenNetworkGraphState(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkGraphState':
-        restored = cls()
+        restored = cls(
+            token_network_address=to_canonical_address(data['token_network_id']),
+        )
         restored.network = serialization.deserialize_networkx_graph(data['network'])
         restored.channel_identifier_to_participants = map_dict(
             int,
