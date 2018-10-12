@@ -7,7 +7,7 @@ from typing import Union
 from eth_utils import to_canonical_address
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.events import (
@@ -185,7 +185,7 @@ def is_transaction_confirmed(
         transaction_block_number: typing.BlockNumber,
         blockchain_block_number: typing.BlockNumber,
 ) -> bool:
-    confirmation_block = transaction_block_number + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    confirmation_block = transaction_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     return blockchain_block_number > confirmation_block
 
 
@@ -520,7 +520,7 @@ def is_valid_lock_expired(
             end_state=receiver_state,
             lock=lock,
             block_number=block_number,
-            lock_expiration_threshold=lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK,
+            lock_expiration_threshold=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
         )
 
         if not has_expired:
@@ -847,10 +847,6 @@ def get_balance(
         sender_transferred_amount +
         receiver_transferred_amount
     )
-
-
-def lock_expiration_threshold(lock):
-    return
 
 
 def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofData:

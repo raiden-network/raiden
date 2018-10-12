@@ -4,7 +4,7 @@ import random
 import pytest
 
 from raiden.constants import UINT64_MAX
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
@@ -500,7 +500,7 @@ def test_target_receive_lock_expired():
         1,
     )
 
-    block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK - 1
+    block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS - 1
     iteration = target.state_transition(
         init_transition.new_state,
         lock_expired_state_change,
@@ -571,7 +571,7 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
         block_number=block_number,
     )
 
-    expired_block_number = from_transfer.lock.expiration + DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+    expired_block_number = from_transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     iteration = target.state_transition(
         target_state=secret_reveal_iteration.new_state,
         state_change=Block(expired_block_number, None, None),
