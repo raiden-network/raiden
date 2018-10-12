@@ -676,7 +676,7 @@ def test_routing_issue2663(
         address3: NODE_NETWORK_REACHABLE,
     }
 
-    routes = get_best_routes(
+    routes1 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -684,10 +684,10 @@ def test_routing_issue2663(
         amount=50,
         previous_address=None,
     )
-    assert routes[0].node_address == address1
-    assert routes[1].node_address == address2
+    assert routes1[0].node_address == address1
+    assert routes1[1].node_address == address2
 
-    route2 = get_best_routes(
+    routes2 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -695,7 +695,7 @@ def test_routing_issue2663(
         amount=51,
         previous_address=None,
     )
-    assert route2[0].node_address == address2
+    assert routes2[0].node_address == address2
 
     # test routing with node 2 offline
     chain_state.nodeaddresses_to_networkstates = {
@@ -704,7 +704,7 @@ def test_routing_issue2663(
         address3: NODE_NETWORK_REACHABLE,
     }
 
-    routes = get_best_routes(
+    routes1 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -712,9 +712,9 @@ def test_routing_issue2663(
         amount=50,
         previous_address=None,
     )
-    assert routes[0].node_address == address1
+    assert routes1[0].node_address == address1
 
-    route2 = get_best_routes(
+    routes2 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -722,7 +722,7 @@ def test_routing_issue2663(
         amount=51,
         previous_address=None,
     )
-    assert route2 == []
+    assert routes2 == []
 
     # test routing with node 3 offline
     # the routing doesn't care as node 3 is not directly connected
@@ -732,7 +732,7 @@ def test_routing_issue2663(
         address3: NODE_NETWORK_UNREACHABLE,
     }
 
-    routes = get_best_routes(
+    routes1 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -740,10 +740,10 @@ def test_routing_issue2663(
         amount=50,
         previous_address=None,
     )
-    assert routes[0].node_address == address1
-    assert routes[1].node_address == address2
+    assert routes1[0].node_address == address1
+    assert routes1[1].node_address == address2
 
-    route2 = get_best_routes(
+    routes2 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -751,7 +751,7 @@ def test_routing_issue2663(
         amount=51,
         previous_address=None,
     )
-    assert route2[0].node_address == address2
+    assert routes2[0].node_address == address2
 
     # test routing with node 1 offline
     chain_state.nodeaddresses_to_networkstates = {
@@ -760,7 +760,7 @@ def test_routing_issue2663(
         address3: NODE_NETWORK_REACHABLE,
     }
 
-    routes = get_best_routes(
+    routes1 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -769,9 +769,9 @@ def test_routing_issue2663(
         previous_address=None,
     )
     # right now the channel to 1 gets filtered out as it is offline
-    assert routes[0].node_address == address2
+    assert routes1[0].node_address == address2
 
-    route2 = get_best_routes(
+    routes2 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -779,7 +779,7 @@ def test_routing_issue2663(
         amount=51,
         previous_address=None,
     )
-    assert route2[0].node_address == address2
+    assert routes2[0].node_address == address2
 
 
 def test_routing_priority(
@@ -880,7 +880,8 @@ def test_routing_priority(
         participant2=address1,
         block_number=open_block_number,
     )
-    token_network.state_transition(
+
+    channel_new_iteration4 = token_network.state_transition(
         payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration3.new_state,
         state_change=channel_new_state_change4,
@@ -896,9 +897,10 @@ def test_routing_priority(
         participant2=address4,
         block_number=open_block_number,
     )
-    token_network.state_transition(
+
+    channel_new_iteration5 = token_network.state_transition(
         payment_network_identifier=payment_network_state.address,
-        token_network_state=channel_new_iteration3.new_state,
+        token_network_state=channel_new_iteration4.new_state,
         state_change=channel_new_state_change5,
         pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
@@ -912,9 +914,10 @@ def test_routing_priority(
         participant2=address4,
         block_number=open_block_number,
     )
+
     token_network.state_transition(
         payment_network_identifier=payment_network_state.address,
-        token_network_state=channel_new_iteration3.new_state,
+        token_network_state=channel_new_iteration5.new_state,
         state_change=channel_new_state_change6,
         pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
@@ -938,13 +941,12 @@ def test_routing_priority(
     assert routes[0].node_address == address1
     assert routes[1].node_address == address2
 
-    # Number of hops overwrites refunding capacity
+    # number of hops overwrites refunding capacity (route over node 2 involves less hops)
     chain_state.nodeaddresses_to_networkstates = {
         address1: NODE_NETWORK_REACHABLE,
         address2: NODE_NETWORK_REACHABLE,
         address3: NODE_NETWORK_REACHABLE,
         address4: NODE_NETWORK_REACHABLE,
-
     }
 
     routes = get_best_routes(

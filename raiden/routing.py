@@ -49,7 +49,7 @@ def get_best_routes(
     except networkx.NetworkXError:
         # If `our_address` is not in the graph, no channels opened with the
         # address
-        return []
+        return list()
 
     for partner_address in all_neighbors:
         # don't send the message backwards
@@ -122,7 +122,7 @@ def get_best_routes(
             from_address=pex(from_address),
             to_address=pex(to_address),
         )
-        return []
+        return list()
 
     while neighbors_heap:
         *_, partner_address, channel_state_id = heappop(neighbors_heap)
