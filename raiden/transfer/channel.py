@@ -577,10 +577,6 @@ def valid_lockedtransfer_check(
         lock: HashTimeLockState,
 ) -> MerkletreeOrError:
 
-    lock_registered_on_chain = (
-        lock.secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
-    )
-
     current_balance_proof = get_current_balanceproof(sender_state)
     merkletree = compute_merkletree_with(sender_state.merkletree, lock.lockhash)
 
@@ -594,11 +590,7 @@ def valid_lockedtransfer_check(
         sender_state=sender_state,
     )
 
-    if lock_registered_on_chain:
-        msg = f'Invalid {message_name} message. Secrethash is already registered on chain.'
-        result = (False, msg, None)
-
-    elif not is_balance_proof_usable:
+    if not is_balance_proof_usable:
         msg = f'Invalid {message_name} message. {invalid_balance_proof_msg}'
         result = (False, msg, None)
 
