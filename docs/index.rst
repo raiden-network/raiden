@@ -28,4 +28,5 @@ Contents
   config_file
   changelog
   glossary
+  copyrights
   Raiden Codebase Documentation <./_build/generated/modules>
