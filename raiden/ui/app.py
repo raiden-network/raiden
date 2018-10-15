@@ -274,7 +274,7 @@ def run_app(
     contracts = dict()
     config['contracts_path'] = contracts_precompiled_path()
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
-        contracts_version = 'pre_limit' if network_type == NetworkType.TEST else None
+        contracts_version = 'pre_limits' if network_type == NetworkType.TEST else None
         deployment_data = get_contracts_deployed(node_network_id, contracts_version)
         config['contracts_path'] = contracts_deployed_path(node_network_id, contracts_version)
         not_allowed = (  # for now we only disallow mainnet with test configuration
