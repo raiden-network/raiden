@@ -12,7 +12,6 @@ from eth_utils import (
     to_checksum_address,
 )
 from gevent.lock import Semaphore
-from pkg_resources import DistributionNotFound
 from requests import ConnectTimeout
 from web3 import Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
@@ -30,12 +29,6 @@ from raiden.utils.solc import (
     solidity_unresolved_symbols,
 )
 from raiden.utils.typing import Address, BlockSpecification, Callable, Dict, List
-
-try:
-    from eth_tester.exceptions import BlockNotFound
-except (ModuleNotFoundError, DistributionNotFound):
-    class BlockNotFound(Exception):
-        pass
 
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -493,12 +486,9 @@ class JSONRPCClient:
             to_block: BlockSpecification = 'latest',
     ) -> List[Dict]:
         """ Get events for the given query. """
-        try:
-            return self.web3.eth.getLogs({
-                'fromBlock': from_block,
-                'toBlock': to_block,
-                'address': to_checksum_address(contract_address),
-                'topics': topics,
-            })
-        except BlockNotFound:
-            return []
+        return self.web3.eth.getLogs({
+            'fromBlock': from_block,
+            'toBlock': to_block,
+            'address': to_checksum_address(contract_address),
+            'topics': topics,
+        })
