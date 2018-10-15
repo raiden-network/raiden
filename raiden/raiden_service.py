@@ -354,18 +354,17 @@ class RaidenService(Runnable):
         # Notes about setup order:
         # - The filters must be polled after the node state has been primed,
         # otherwise the state changes won't have effect.
-        # - The alarm must complete its first run  before the transport is started,
-        #  to avoid rejecting messages for unknown channels.
+        # - The alarm must complete its first run before the transport is started,
+        #   to reject messages for closed/settled channels.
         self.alarm.register_callback(self._callback_new_block)
-
-        # alarm.first_run may process some new channel, which would start_health_check_for
-        # a partner, that's why transport needs to be already started at this point
-        self.transport.start(
-            self,
-            self.message_handler,
-        )
-
         self.alarm.first_run()
+
+        # The transport must not ever be started before the alarm task first
+        # run, because it's this method which synchronizes the node with the
+        # blochain, including the channel's state (if the channel is closed
+        # on-chain new messages must be rejected, which will not be the case if
+        # the node is not synchronized)
+        self.transport.start(self, self.message_handler)
 
         chain_state = views.state_from_raiden(self)
 
@@ -495,7 +494,8 @@ class RaidenService(Runnable):
         self.wal.log_and_dispatch(state_change)
 
     def start_health_check_for(self, node_address):
-        self.transport.start_health_check(node_address)
+        if self.transport:
+            self.transport.start_health_check(node_address)
 
     def _callback_new_block(self, latest_block):
         """Called once a new block is detected by the alarm task.
