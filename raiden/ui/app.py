@@ -9,7 +9,7 @@ from eth_utils import encode_hex, to_canonical_address, to_checksum_address, to_
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
-from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
+from raiden.constants import SQLITE_MIN_REQUIRED_VERSION, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AddressWrongContract,
@@ -181,7 +181,7 @@ def run_app(
         transport,
         matrix_server,
         network_id,
-        network_type,
+        environment,
         config=None,
         extra_config=None,
         **kwargs,
@@ -267,10 +267,10 @@ def run_app(
 
     config['chain_id'] = given_network_id
 
-    log.debug('Network type', type=network_type)
-    if network_type == 'main':
+    log.debug('Environment setting', type=environment)
+    if environment == Environment.PRODUCTION:
+        # Safe configuration: restrictions for mainnet apply and matrix rooms have to be private
         config['network_type'] = NetworkType.MAIN
-        # Forcing private rooms to true for the mainnet
         config['transport']['matrix']['private_rooms'] = True
     else:
         config['network_type'] = NetworkType.TEST
