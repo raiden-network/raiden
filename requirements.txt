@@ -25,5 +25,5 @@ pytoml
 raiden-contracts
 raiden-libs
 structlog
-web3[tester]
+web3
 webargs
