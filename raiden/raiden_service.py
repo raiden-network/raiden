@@ -370,34 +370,14 @@ class RaidenService(Runnable):
         self.alarm.first_run()
 
         chain_state = views.state_from_raiden(self)
-        # Dispatch pending transactions
-        pending_transactions = views.get_pending_transactions(
-            chain_state,
-        )
-        log.debug(
-            'Processing pending transactions',
-            num_pending_transactions=len(pending_transactions),
-            node=pex(self.address),
-        )
-        with self.dispatch_events_lock:
-            for transaction in pending_transactions:
-                try:
-                    self.raiden_event_handler.on_raiden_event(self, transaction)
-                except RaidenRecoverableError as e:
-                    log.error(str(e))
-                except InvalidDBData as e:
-                    raise
-                except RaidenUnrecoverableError as e:
-                    if self.config['network_type'] == NetworkType.MAIN:
-                        log.error(str(e))
-                    else:
-                        raise
+
+        self._initialize_transactions_queues(chain_state)
 
         self.alarm.start()
 
         # after transport and alarm is started, send queued messages
         events_queues = views.get_all_messagequeues(chain_state)
-        self._initialize_queues(events_queues)
+        self._initialize_messages_queues(events_queues)
 
         # exceptions on these subtasks should crash the app and bubble up
         self.alarm.link_exception(self.on_error)
@@ -572,7 +552,30 @@ class RaidenService(Runnable):
             payment_done=AsyncResult(),
         )
 
-    def _initialize_queues(self, events_queues):
+    def _initialize_transactions_queues(self, chain_state):
+        pending_transactions = views.get_pending_transactions(chain_state)
+
+        log.debug(
+            'Processing pending transactions',
+            num_pending_transactions=len(pending_transactions),
+            node=pex(self.address),
+        )
+
+        with self.dispatch_events_lock:
+            for transaction in pending_transactions:
+                try:
+                    self.raiden_event_handler.on_raiden_event(self, transaction)
+                except RaidenRecoverableError as e:
+                    log.error(str(e))
+                except InvalidDBData as e:
+                    raise
+                except RaidenUnrecoverableError as e:
+                    if self.config['network_type'] == NetworkType.MAIN:
+                        log.error(str(e))
+                    else:
+                        raise
+
+    def _initialize_messages_queues(self, events_queues):
         """ Push the queues to the transport and populate
         targets_to_identifiers_to_statuses.
         """
