@@ -276,7 +276,7 @@ def run_app(
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
         contracts_version = 'pre_limits' if network_type == NetworkType.TEST else None
         deployment_data = get_contracts_deployed(node_network_id, contracts_version)
-        config['contracts_path'] = contracts_deployed_path(node_network_id, contracts_version)
+        config['contracts_path'] = contracts_precompiled_path(contracts_version)
         not_allowed = (  # for now we only disallow mainnet with test configuration
             network_id == 1 and
             network_type == NetworkType.TEST
@@ -291,8 +291,8 @@ def run_app(
             )
             sys.exit(1)
 
-            contracts = deployment_data['contracts']
-            contract_addresses_known = True
+        contracts = deployment_data['contracts']
+        contract_addresses_known = True
 
     blockchain_service.inject_contract_manager(ContractManager(config['contracts_path']))
 
