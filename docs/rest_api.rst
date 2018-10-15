@@ -74,7 +74,7 @@ Errors
 For any non-successful http status code, e.g. :http:statuscode:`409` or :http:statuscode:`400` there will be an accompanying ``errors`` field in the response json which you can check for more information on what went wrong with your request.
 However, when Raiden fails to process the incoming request and raises an exception, the returned http status code will be :http:statuscode:`500`. The caveat of this is that the response body will be just a string message which says "Internal server error".
 This is because we rely on our underlying stack to handle this while we take care of shutting down the API server preventing further incoming requests caused the exception in the first place from tampering with a state that was corrupted.
-In any way, we consider :http:statuscode:`500` errors as bugs in the Raiden client. If you encounter such errors, please report the bug `here`<https://github.com/raiden-network/raiden/issues/new?template=bug_report.md>.
+In any way, we consider :http:statuscode:`500` errors as bugs in the Raiden client. If you encounter such errors, please report the bug `here <https://github.com/raiden-network/raiden/issues/new?template=bug_report.md>`_.
 
 Endpoints
 ***********
