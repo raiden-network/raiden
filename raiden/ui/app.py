@@ -130,6 +130,7 @@ def _setup_udp(
     )
 
     transport = UDPTransport(
+        address,
         discovery,
         config['socket'],
         throttle_policy,
