@@ -282,7 +282,7 @@ def sanity_check(state: MediatorTransferState) -> None:
         (pair.payee_state for pair in state.transfers_pair),
         (pair.payer_state for pair in state.transfers_pair),
     )
-    if any(state in STATE_TRANSFER_PAID for state in all_transfers_states):
+    if any(state_ in STATE_TRANSFER_PAID for state_ in all_transfers_states):
         assert state.secret is not None
 
     # the "transitivity" for these values is checked below as part of
