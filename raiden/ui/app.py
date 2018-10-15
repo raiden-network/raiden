@@ -37,7 +37,6 @@ from raiden_contracts.constants import (
 )
 from raiden_contracts.contract_manager import (
     ContractManager,
-    contracts_deployed_path,
     contracts_precompiled_path,
     get_contracts_deployed,
 )
@@ -109,11 +108,10 @@ def _setup_udp(
 ):
     check_discovery_registration_gas(blockchain_service, address)
     try:
-        deployed_discovery_address = to_canonical_address(
-            contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
-        )
         dicovery_proxy = blockchain_service.discovery(
-            discovery_contract_address or deployed_discovery_address,
+            discovery_contract_address or to_canonical_address(
+                contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
+            ),
         )
         discovery = ContractDiscovery(
             blockchain_service.node_address,
@@ -317,11 +315,10 @@ def run_app(
         sys.exit(1)
 
     try:
-        deployed_token_network_registry_address = to_canonical_address(
-            contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
-        )
         token_network_registry = blockchain_service.token_network_registry(
-            registry_contract_address or deployed_token_network_registry_address
+            registry_contract_address or to_canonical_address(
+                contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
+            ),
         )
     except ContractVersionMismatch:
         handle_contract_version_mismatch('token network registry', registry_contract_address)
@@ -331,11 +328,10 @@ def run_app(
         handle_contract_wrong_address('token network registry', registry_contract_address)
 
     try:
-        deployed_secret_registry_address = to_canonical_address(
-            contracts[CONTRACT_SECRET_REGISTRY]['address'],
-        )
         secret_registry = blockchain_service.secret_registry(
-            secret_registry_contract_address or deployed_secret_registry_address,
+            secret_registry_contract_address or to_canonical_address(
+                contracts[CONTRACT_SECRET_REGISTRY]['address'],
+            ),
         )
     except ContractVersionMismatch:
         handle_contract_version_mismatch('secret registry', secret_registry_contract_address)
