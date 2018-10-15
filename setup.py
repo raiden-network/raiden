@@ -40,7 +40,10 @@ class CompileWebUI(Command):
             if os.environ.get('RAIDEN_NPM_MISSING_FATAL') is not None:
                 # Used in the automatic deployment scripts to prevent builds with missing web-ui
                 raise RuntimeError('NPM not found. Aborting')
-            self.announce('NPM not found. Skipping webUI compilation', level=distutils.log.WARN)
+            self.announce(
+                'NPM not found. Skipping webUI compilation',
+                level=distutils.log.WARN,  # pylint: disable=no-member
+            )
             return
         npm_run = 'build:prod'
         if self.dev is not None:
@@ -60,19 +63,28 @@ class CompileWebUI(Command):
         if not int(npm_version.split(b'.')[0]) >= 4:
             self.announce(
                 'NPM 4.x or later required. Skipping webUI compilation',
-                level=distutils.log.WARN,
+                level=distutils.log.WARN,  # pylint: disable=no-member
             )
             return
 
         command = [npm, 'install']
-        self.announce('Running %r in %r' % (command, cwd), level=distutils.log.INFO)
+        self.announce(
+            'Running %r in %r' % (command, cwd),
+            level=distutils.log.INFO,  # pylint: disable=no-member
+        )
         subprocess.check_call(command, cwd=cwd)
 
         command = [npm, 'run', npm_run]
-        self.announce('Running %r in %r' % (command, cwd), level=distutils.log.INFO)
+        self.announce(
+            'Running %r in %r' % (command, cwd),
+            level=distutils.log.INFO,  # pylint: disable=no-member
+        )
         subprocess.check_call(command, cwd=cwd)
 
-        self.announce('WebUI compiled with success!', level=distutils.log.INFO)
+        self.announce(
+            'WebUI compiled with success!',
+            level=distutils.log.INFO,  # pylint: disable=no-member
+        )
 
 
 with open('README.rst') as readme_file:
