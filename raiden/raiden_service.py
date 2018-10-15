@@ -288,11 +288,14 @@ class RaidenService(Runnable):
                 'No recoverable state available, created inital state',
                 node=pex(self.address),
             )
-            block_number = self.chain.block_number()
+            # On first run Raiden needs to fetch all events for the payment
+            # network, to reconstruct all token network graphs and find opened
+            # channels
+            last_log_block_number = self.query_start_block
 
             state_change = ActionInitChain(
                 random.Random(),
-                block_number,
+                last_log_block_number,
                 self.chain.node_address,
                 self.chain.network_id,
             )
@@ -304,14 +307,9 @@ class RaidenService(Runnable):
             state_change = ContractReceiveNewPaymentNetwork(
                 constants.EMPTY_HASH,
                 payment_network,
-                block_number,
+                last_log_block_number,
             )
             self.handle_state_change(state_change)
-
-            # On first run Raiden needs to fetch all events for the payment
-            # network, to reconstruct all token network graphs and find opened
-            # channels
-            last_log_block_number = 0
         else:
             # The `Block` state change is dispatched only after all the events
             # for that given block have been processed, filters can be safely
