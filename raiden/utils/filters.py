@@ -1,6 +1,5 @@
 from eth_utils import decode_hex, event_abi_to_log_topic, to_checksum_address
 from gevent.lock import Semaphore
-from pkg_resources import DistributionNotFound
 from web3 import Web3
 from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
@@ -9,12 +8,6 @@ from web3.utils.filters import LogFilter, construct_event_filter_params
 from raiden.utils.typing import Address, BlockSpecification, ChannelID, Dict
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
-
-try:
-    from eth_tester.exceptions import BlockNotFound
-except (ModuleNotFoundError, DistributionNotFound):
-    class BlockNotFound(Exception):
-        pass
 
 
 def get_filter_args_for_specific_event_from_channel(
@@ -120,12 +113,8 @@ class StatelessFilter(LogFilter):
             if self.filter_params.get('toBlock') in (None, 'latest', 'pending'):
                 filter_params['toBlock'] = block_number or 'latest'
 
-            try:
-                result = self.web3.eth.getLogs(filter_params)
-            except BlockNotFound:
-                result = []
-            else:
-                self._last_block = filter_params.get('toBlock') or block_number
+            result = self.web3.eth.getLogs(filter_params)
+            self._last_block = filter_params.get('toBlock') or block_number
 
             return result
 
@@ -137,11 +126,7 @@ class StatelessFilter(LogFilter):
             if self.filter_params.get('toBlock') in ('latest', 'pending'):
                 filter_params['toBlock'] = block_number
 
-            try:
-                result = self.web3.eth.getLogs(filter_params)
-            except BlockNotFound:
-                result = []
-            else:
-                self._last_block = filter_params.get('toBlock') or block_number
+            result = self.web3.eth.getLogs(filter_params)
+            self._last_block = filter_params.get('toBlock') or block_number
 
             return result
