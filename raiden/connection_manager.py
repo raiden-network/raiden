@@ -25,6 +25,13 @@ from raiden.utils.typing import Address
 from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+RECOVERABLE_ERRORS = (
+    DepositMismatch,
+    DepositOverLimit,
+    InsufficientFunds,
+    RaidenRecoverableError,
+    TransactionThrew,
+)
 
 
 def log_open_channels(raiden, registry_address, token_address, funds):
@@ -43,6 +50,7 @@ def log_open_channels(raiden, registry_address, token_address, funds):
         )
         log.debug(
             'connect() called on an already joined token network',
+            node=pex(raiden.address),
             registry_address=pex(registry_address),
             token_address=pex(token_address),
             open_channels=len(open_channels),
@@ -144,8 +152,12 @@ class ConnectionManager:
             )
 
             if not qty_network_channels:
-                log.debug('bootstrapping token network.')
-                # make ourselves visible
+                log.info(
+                    'Bootstrapping token network.',
+                    node=pex(self.raiden.address),
+                    network_id=pex(self.registry_address),
+                    token_id=pex(self.token_address),
+                )
                 self.api.channel_open(
                     self.registry_address,
                     self.token_address,
@@ -254,20 +266,26 @@ class ConnectionManager:
                     joining_funds,
                 )
             except RaidenRecoverableError:
-                log.exception('connection manager join: channel not in opened state')
+                log.info(
+                    'Channel not in opened state',
+                    node=pex(self.raiden.address),
+                )
             except InvalidDBData:
                 raise
             except RaidenUnrecoverableError as e:
-                if self.raiden.config['network_type'] == NetworkType.MAIN:
-                    log.error(str(e))
-                else:
+                if self.raiden.config['network_type'] != NetworkType.MAIN:
                     raise
+
+                log.critical(
+                    str(e),
+                    node=pex(self.raiden.address),
+                )
             else:
-                log.debug(
-                    'joined a channel!',
-                    funds=joining_funds,
-                    me=pex(self.raiden.address),
+                log.info(
+                    'Joined a channel',
+                    node=pex(self.raiden.address),
                     partner=pex(partner_address),
+                    funds=joining_funds,
                 )
 
     def retry_connect(self):
@@ -303,7 +321,11 @@ class ConnectionManager:
         shuffle(available)
         new_partners = available
 
-        log.debug('found {} partners'.format(len(available)))
+        log.debug(
+            'Found partners',
+            node=pex(self.raiden.address),
+            number_of_partners=len(available),
+        )
 
         return new_partners
 
@@ -327,19 +349,23 @@ class ConnectionManager:
                 partner,
                 self._initial_funding_per_partner,
             )
-        except TransactionThrew:
-            log.exception('connection manager: deposit failed')
-        except (DepositOverLimit, DepositMismatch, InsufficientFunds) as e:
-            log.error('connection manager: _join_partner', _exception=e, partner=pex(partner))
         except InvalidDBData:
             raise
-        except RaidenRecoverableError:
-            log.exception('connection manager: channel not in opened state')
-        except RaidenUnrecoverableError as e:
-            if self.raiden.config['network_type'] == NetworkType.MAIN:
-                log.error(str(e))
-            else:
+        except RECOVERABLE_ERRORS:
+            log.info(
+                'Deposit failed',
+                node=pex(self.raiden.address),
+                partner=pex(partner),
+            )
+        except RaidenUnrecoverableError:
+            if self.raiden.config['network_type'] != NetworkType.MAIN:
                 raise
+
+            log.critical(
+                'Deposit failed',
+                node=pex(self.raiden.address),
+                partner=pex(partner),
+            )
 
     def _open_channels(self) -> bool:
         """ Open channels until there are `self.initial_channel_target`
@@ -356,7 +382,6 @@ class ConnectionManager:
             payment_network_id=self.registry_address,
             token_address=self.token_address,
         )
-        # don't consider the bootstrap channel
         open_channels = [
             channel_state
             for channel_state in open_channels
