@@ -7,6 +7,7 @@ from web3 import HTTPProvider, Web3
 
 from raiden.accounts import Account
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 
 WEI_TO_ETH = 10 ** 18
 
@@ -22,7 +23,11 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file):
     with open(keystore_file, 'r') as keystore:
         account = Account(json.load(keystore), password, keystore_file)
         print("Using account:", to_checksum_address(account.address))
-    client = JSONRPCClient(web3, account.privkey)
+    client = JSONRPCClient(
+        web3,
+        account.privkey,
+        block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    )
 
     targets = [t.strip() for t in targets_file]
     balance = client.balance(client.sender)

@@ -21,7 +21,6 @@ from raiden.constants import NULL_ADDRESS
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
 from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.settings import DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
 from raiden.utils import is_supported_client, pex, privatekey_to_address
 from raiden.utils.filters import StatelessFilter
 from raiden.utils.solc import (
@@ -147,6 +146,7 @@ class JSONRPCClient:
             privkey: bytes,
             gas_price_strategy: Callable = rpc_gas_price_strategy,
             nonce_offset: int = 0,
+            block_num_confirmations: int = 0,
     ):
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')
@@ -168,7 +168,7 @@ class JSONRPCClient:
         self.privkey = privkey
         self.sender = sender
         self.web3 = web3
-        self.default_confirmations = DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK
+        self.default_block_num_confirmations = block_num_confirmations
 
         self._available_nonce = _available_nonce
         self._nonce_lock = Semaphore()
@@ -427,7 +427,7 @@ class JSONRPCClient:
                 'transaction_hash must be a 32 byte hash',
             )
 
-        if self.default_confirmations < 0:
+        if self.default_block_num_confirmations < 0:
             raise ValueError(
                 'Number of confirmations has to be positive',
             )
@@ -458,7 +458,7 @@ class JSONRPCClient:
 
                 # this will wait for both APPLIED and REVERTED transactions
                 transaction_block = transaction['blockNumber']
-                confirmation_block = transaction_block + self.default_confirmations
+                confirmation_block = transaction_block + self.default_block_num_confirmations
 
                 block_number = self.block_number()
 
