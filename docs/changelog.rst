@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`2776` Properly include per chain contract json data in the created binaries
+
 * :release:`0.13.0 <2018-10-12>`
 * :feature:`2764` Support pre-deployed contracts on Kovan and Rinkeby testnets
 * :bug:`2746` Refuse to process a payment with an identifier already in use for another payment, and return a 409 Conflict in that case.
