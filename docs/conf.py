@@ -65,12 +65,6 @@ def check_if_nightly(version):
 # ones.
 extensions = [
     'releases',
-    'sphinx.ext.autodoc',
-    'sphinx.ext.todo',
-    'sphinx.ext.coverage',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
     'sphinxcontrib.httpdomain',
     'sphinxcontrib.httpexample',
     'sphinxcontrib.images',
