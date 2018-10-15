@@ -958,6 +958,7 @@ class TokenNetwork:
             to_block: typing.BlockSpecification = None,
     ) -> StatelessFilter:
         """ Install a new filter for an array of topics emitted by the contract.
+
         Args:
             topics: A list of event ids to filter for. Can also be None,
                     in which case all events are queried.

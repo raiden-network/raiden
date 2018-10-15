@@ -237,6 +237,7 @@ class JSONRPCClient:
     ):
         """
         Deploy a solidity contract.
+
         Args:
             sender (address): the sender address
             contract_name (str): the name of the contract to compile
