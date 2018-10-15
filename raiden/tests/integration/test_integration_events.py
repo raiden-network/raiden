@@ -14,6 +14,7 @@ from raiden.blockchain.events import (
     get_token_network_events,
     get_token_network_registry_events,
 )
+from raiden.constants import FIRST_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.geth import wait_until_block
@@ -36,7 +37,7 @@ def get_netting_channel_closed_events(
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     closed_event_abi = contract_manager.get_event_abi(
@@ -69,7 +70,7 @@ def get_netting_channel_deposit_events(
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     deposit_event_abi = contract_manager.get_event_abi(
@@ -101,7 +102,7 @@ def get_netting_channel_settled_events(
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     settled_event_abi = contract_manager.get_event_abi(

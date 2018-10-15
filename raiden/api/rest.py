@@ -47,6 +47,7 @@ from raiden.api.v1.resources import (
     TokensResource,
     create_blueprint,
 )
+from raiden.constants import FIRST_BLOCK_NUMBER
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -749,7 +750,7 @@ class RestAPI:
     def get_blockchain_events_network(
             self,
             registry_address: typing.PaymentNetworkID,
-            from_block: typing.BlockSpecification = 0,
+            from_block: typing.BlockSpecification = FIRST_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ):
         log.debug(
@@ -772,7 +773,7 @@ class RestAPI:
     def get_blockchain_events_token_network(
             self,
             token_address: typing.TokenAddress,
-            from_block: typing.BlockSpecification = 0,
+            from_block: typing.BlockSpecification = FIRST_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ):
         log.debug(
@@ -844,7 +845,7 @@ class RestAPI:
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
-            from_block: typing.BlockSpecification = 0,
+            from_block: typing.BlockSpecification = FIRST_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ):
         log.debug(

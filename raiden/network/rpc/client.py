@@ -17,7 +17,7 @@ from web3 import Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 
-from raiden.constants import NULL_ADDRESS
+from raiden.constants import FIRST_BLOCK_NUMBER, NULL_ADDRESS
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
 from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -468,7 +468,7 @@ class JSONRPCClient:
             self,
             contract_address: Address,
             topics: List[str] = None,
-            from_block: BlockSpecification = 0,
+            from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
             to_block: BlockSpecification = 'latest',
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
@@ -486,7 +486,7 @@ class JSONRPCClient:
             self,
             contract_address: Address,
             topics: List[str] = None,
-            from_block: BlockSpecification = 0,
+            from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
             to_block: BlockSpecification = 'latest',
     ) -> List[Dict]:
         """ Get events for the given query. """
