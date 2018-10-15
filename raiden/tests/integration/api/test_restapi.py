@@ -7,6 +7,7 @@ from eth_utils import is_checksum_address, to_canonical_address, to_checksum_add
 from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
+from raiden.constants import FIRST_BLOCK_NUMBER
 from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import assert_dicts_are_equal
@@ -1188,7 +1189,7 @@ def test_network_events(test_api_server, token_addresses):
         api_url_for(
             test_api_server,
             'blockchaineventsnetworkresource',
-            from_block=0,
+            from_block=FIRST_BLOCK_NUMBER,
         ),
     )
     response = request.send().response
@@ -1224,7 +1225,7 @@ def test_token_events(test_api_server, token_addresses):
             test_api_server,
             'blockchaineventstokenresource',
             token_address=token_address,
-            from_block=0,
+            from_block=FIRST_BLOCK_NUMBER,
         ),
     )
     response = request.send().response
@@ -1261,7 +1262,7 @@ def test_channel_events(test_api_server, token_addresses):
             'tokenchanneleventsresourceblockchain',
             partner_address=partner_address,
             token_address=token_address,
-            from_block=0,
+            from_block=FIRST_BLOCK_NUMBER,
         ),
     )
     response = request.send().response

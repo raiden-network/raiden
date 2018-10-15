@@ -3,7 +3,7 @@ from typing import Dict, List
 
 from eth_utils import to_canonical_address
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import FIRST_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry
@@ -77,7 +77,7 @@ def get_token_network_registry_events(
         token_network_registry_address: Address,
         contract_manager: ContractManager,
         events: List[str] = ALL_EVENTS,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     """ Helper to get all events of the Registry contract at `registry_address`. """
@@ -96,7 +96,7 @@ def get_token_network_events(
         token_network_address: Address,
         contract_manager: ContractManager,
         events: List[str] = ALL_EVENTS,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     """ Helper to get all events of the ChannelManagerContract at `token_address`. """
@@ -116,7 +116,7 @@ def get_all_netting_channel_events(
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     """ Helper to get all events of a NettingChannelContract. """
@@ -143,7 +143,7 @@ def get_all_secret_registry_events(
         chain: BlockChainService,
         secret_registry_address: Address,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     """ Helper to get all events of a SecretRegistry. """

@@ -5,6 +5,7 @@ from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
 from web3.utils.filters import LogFilter, construct_event_filter_params
 
+from raiden.contracts import FIRST_BLOCK_NUMBER
 from raiden.utils.typing import Address, BlockSpecification, ChannelID, Dict
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
@@ -15,7 +16,7 @@ def get_filter_args_for_specific_event_from_channel(
         channel_identifier: ChannelID,
         event_name: str,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ):
     """ Return the filter params for a specific event of a given channel. """
@@ -44,7 +45,7 @@ def get_filter_args_for_all_events_from_channel(
         token_network_address: Address,
         channel_identifier: ChannelID,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = 0,
+        from_block: BlockSpecification = FIRST_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> Dict:
     """ Return the filter params for all events of a given channel. """
@@ -106,7 +107,7 @@ class StatelessFilter(LogFilter):
         with self._lock:
             filter_params = self.filter_params.copy()
             filter_params['fromBlock'] = max(
-                filter_params.get('fromBlock', 0),
+                filter_params.get('fromBlock', FIRST_BLOCK_NUMBER),
                 self._last_block + 1,
             )
 

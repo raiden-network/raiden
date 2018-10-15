@@ -12,6 +12,7 @@ from eth_utils import (
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
 
+from raiden.constants import FIRST_BLOCK_NUMBER
 from raiden.exceptions import (
     ChannelOutdatedError,
     ContractVersionMismatch,
@@ -1038,7 +1039,7 @@ class TokenNetwork:
 
     def all_events_filter(
             self,
-            from_block: typing.BlockSpecification = 0,
+            from_block: typing.BlockSpecification = FIRST_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ) -> StatelessFilter:
         """ Install a new filter for all the events emitted by the current token network contract

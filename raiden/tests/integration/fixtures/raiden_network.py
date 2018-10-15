@@ -1,6 +1,7 @@
 import gevent
 import pytest
 
+from raiden.constants import FIRST_BLOCK_NUMBER
 from raiden.tests.utils.network import (
     CHAIN,
     create_all_channels_for_network,
@@ -73,7 +74,7 @@ def raiden_chain(
     start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
     gevent.joinall(start_tasks, raise_error=True)
 
-    from_block = 0
+    from_block = FIRST_BLOCK_NUMBER
     for app in raiden_apps:
         app.raiden.install_all_blockchain_filters(
             app.raiden.default_registry,
