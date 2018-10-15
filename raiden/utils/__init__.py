@@ -53,8 +53,6 @@ def is_supported_client(
         ]
         if (major, minor, patch) >= (1, 7, 2):
             return True, constants.EthClient.GETH
-    elif client_version.startswith('EthereumTester'):
-        return True, constants.EthClient.TESTER
 
     return False, None
 

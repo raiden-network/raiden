@@ -20,7 +20,6 @@ EMPTY_SIGNATURE = bytes(65)
 class EthClient(Enum):
     GETH = 1
     PARITY = 2
-    TESTER = 3
 
 
 ETH_RPC_DEFAULT_PORT = 8545
