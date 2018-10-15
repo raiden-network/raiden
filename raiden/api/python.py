@@ -334,16 +334,16 @@ class RaidenAPI:
 
         Raises:
             InvalidAddress: If either token_address or partner_address is not
-            20 bytes long.
-            TransactionThrew: May happen for multiple reasons:
+                20 bytes long.
+                TransactionThrew: May happen for multiple reasons:
                 - If the token approval fails, e.g. the token may validate if
-                  account has enough balance for the allowance.
+                account has enough balance for the allowance.
                 - The deposit failed, e.g. the allowance did not set the token
-                  aside for use and the user spent it before deposit was called.
+                aside for use and the user spent it before deposit was called.
                 - The channel was closed/settled between the allowance call and
-                  the deposit call.
+                the deposit call.
             AddressWithoutCode: The channel was settled during the deposit
-            execution.
+                execution.
             DepositOverLimit: The total deposit amount is higher than the limit.
         """
         chain_state = views.state_from_raiden(self.raiden)

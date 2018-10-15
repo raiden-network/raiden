@@ -36,6 +36,7 @@ def valid_mappable_ipv4(address):
 
 def connect():
     """Try to connect to the router.
+
     Returns:
         u (miniupnc.UPnP): the connected upnp-instance
         router (string): the connection information
@@ -72,6 +73,7 @@ def connect():
 def open_port(upnp, internal_port, external_start_port=None):
     """Open a port for the raiden service (listening at `internal_port`) through
     UPnP.
+
     Args:
         internal_port (int): the target port of the raiden service
         external_start_port (int): query for an external port starting here
