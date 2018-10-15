@@ -1,7 +1,6 @@
 import pytest
 from web3 import HTTPProvider, Web3
 
-import raiden.network.rpc.client
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
@@ -16,11 +15,6 @@ from raiden_contracts.contract_manager import (
 )
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
-
-
-@pytest.fixture
-def patch_confirmation_blocks(monkeypatch):
-    monkeypatch.setattr(raiden.network.rpc.client, 'DEFAULT_NUMBER_OF_CONFIRMATIONS_BLOCK', 0)
 
 
 @pytest.fixture
@@ -43,7 +37,6 @@ def web3(
         request,
         tmpdir,
         chain_id,
-        patch_confirmation_blocks,
 ):
     """ Starts a private chain with accounts funded. """
     # include the deploy key in the list of funded accounts
