@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2784` Raiden node is no longer left with a partial update if it crashes during polling.
 * :bug:`2776` Properly include per chain contract json data in the created binaries
 
 * :release:`0.13.0 <2018-10-12>`
