@@ -15,7 +15,7 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils import merge_dict
+from raiden.utils import merge_dict, privatekey_to_address
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 BlockchainServices = namedtuple(
@@ -272,6 +272,7 @@ def create_apps(
     for idx, (blockchain, discovery) in enumerate(services):
         port = raiden_udp_ports[idx]
         private_key = blockchain.private_key
+        address = privatekey_to_address(private_key)
 
         host = '127.0.0.1'
 
@@ -336,6 +337,7 @@ def create_apps(
             )
 
             transport = UDPTransport(
+                address,
                 discovery,
                 server._udp_socket((host, port)),  # pylint: disable=protected-access
                 throttle_policy,

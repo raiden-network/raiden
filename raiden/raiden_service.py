@@ -494,6 +494,9 @@ class RaidenService(Runnable):
         self.wal.log_and_dispatch(state_change)
 
     def start_health_check_for(self, node_address):
+        # This function is a noop during initialiation. It can be called
+        # through the alarm task while polling for new channel events.  The
+        # healthcheck will be started by self.start_neighbours_healthcheck()
         if self.transport:
             self.transport.start_health_check(node_address)
 

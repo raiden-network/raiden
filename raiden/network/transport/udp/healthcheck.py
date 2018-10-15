@@ -42,7 +42,7 @@ def healthcheck(
 
     log.debug(
         'starting healthcheck for',
-        node=pex(transport.raiden.address),
+        node=pex(transport.address),
         to=pex(recipient),
     )
 
@@ -63,7 +63,7 @@ def healthcheck(
     except UnknownAddress:
         log.debug(
             'waiting for endpoint registration',
-            node=pex(transport.raiden.address),
+            node=pex(transport.address),
             to=pex(recipient),
         )
 
@@ -114,7 +114,7 @@ def healthcheck(
         if not acknowledged:
             log.debug(
                 'node is unresponsive',
-                node=pex(transport.raiden.address),
+                node=pex(transport.address),
                 to=pex(recipient),
                 current_state=last_state,
                 new_state=NODE_NETWORK_UNREACHABLE,

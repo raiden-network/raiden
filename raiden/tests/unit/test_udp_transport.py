@@ -7,7 +7,7 @@ from raiden.constants import UINT64_MAX
 from raiden.messages import SecretRequest
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport.udp import UDPTransport
-from raiden.tests.utils.factories import ADDR, UNIT_SECRETHASH
+from raiden.tests.utils.factories import ADDR, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.transport import MockDiscovery, MockRaidenService
 
 
@@ -25,6 +25,7 @@ def mock_udp(
     throttle_policy = TokenBucket(throttle_capacity, throttle_fill_rate)
     host = '127.0.0.1'
     port = raiden_udp_ports[0]
+    address = make_address()
 
     config = dict(
         retry_interval=retry_interval,
@@ -35,6 +36,7 @@ def mock_udp(
     )
 
     transport = UDPTransport(
+        address,
         MockDiscovery,
         server._udp_socket((host, port)),  # pylint: disable=protected-access
         throttle_policy,

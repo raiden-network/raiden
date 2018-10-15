@@ -110,6 +110,7 @@ def restart_app(app):
     )
     socket = server._udp_socket(host_port)  # pylint: disable=protected-access
     new_transport = UDPTransport(
+        app.raiden.address,
         app.discovery,
         socket,
         app.raiden.transport.throttle_policy,

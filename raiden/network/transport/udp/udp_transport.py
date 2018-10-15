@@ -159,7 +159,7 @@ def single_queue_send(
 class UDPTransport(Runnable):
     UDP_MAX_MESSAGE_SIZE = 1200
 
-    def __init__(self, discovery, udpsocket, throttle_policy, config):
+    def __init__(self, address, discovery, udpsocket, throttle_policy, config):
         super().__init__()
         # these values are initialized by the start method
         self.queueids_to_queues: typing.Dict
@@ -167,6 +167,7 @@ class UDPTransport(Runnable):
 
         self.discovery = discovery
         self.config = config
+        self.address = address
 
         self.retry_interval = config['retry_interval']
         self.retries_before_backoff = config['retries_before_backoff']
