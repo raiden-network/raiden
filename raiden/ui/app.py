@@ -24,7 +24,11 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
-from raiden.settings import DEFAULT_MATRIX_KNOWN_SERVERS, DEFAULT_NAT_KEEPALIVE_RETRIES
+from raiden.settings import (
+    DEFAULT_MATRIX_KNOWN_SERVERS,
+    DEFAULT_NAT_KEEPALIVE_RETRIES,
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+)
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
 from raiden.utils import is_supported_client, pex, split_endpoint, typing
 from raiden.utils.cli import get_matrix_servers
@@ -229,6 +233,7 @@ def run_app(
         web3,
         privatekey_bin,
         gas_price_strategy=gas_price,
+        block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     )
 
     blockchain_service = BlockChainService(
