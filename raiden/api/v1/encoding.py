@@ -1,4 +1,9 @@
-from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
+from eth_utils import (
+    is_0x_prefixed,
+    is_checksum_address,
+    to_canonical_address,
+    to_checksum_address,
+)
 from marshmallow import Schema, SchemaOpts, fields, post_dump, post_load, pre_load
 from webargs import validate
 from werkzeug.exceptions import NotFound
@@ -20,7 +25,7 @@ class InvalidEndpoint(NotFound):
 
 class HexAddressConverter(BaseConverter):
     def to_python(self, value):
-        if value[:2] != '0x':
+        if not is_0x_prefixed(value):
             raise InvalidEndpoint('Not a valid hex address, 0x prefix missing.')
 
         if not is_checksum_address(value):
@@ -49,7 +54,7 @@ class AddressField(fields.Field):
         return to_checksum_address(value)
 
     def _deserialize(self, value, attr, data):
-        if value[:2] != '0x':
+        if not is_0x_prefixed(value):
             self.fail('missing_prefix')
 
         if not is_checksum_address(value):

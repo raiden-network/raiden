@@ -2,18 +2,17 @@ import io
 import logging
 import sys
 import time
-from binascii import hexlify
 
 import gevent
 import IPython
-from eth_utils import to_checksum_address
+from eth_utils import decode_hex, encode_hex, to_checksum_address
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.network.proxies import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
-from raiden.utils import get_contract_path, safe_address_decode, typing
+from raiden.utils import get_contract_path, typing
 from raiden.utils.solc import compile_files_cwd
 
 GUI_GEVENT = 'gevent'
@@ -205,7 +204,7 @@ class ConsoleTools:
                 contract_path=contract_path,
             )
 
-        token_address_hex = hexlify(token_proxy.contract_address)
+        token_address_hex = encode_hex(token_proxy.contract_address)
         if auto_register:
             self.register_token(registry_address, token_address_hex)
         print("Successfully created {}the token '{}'.".format(
@@ -230,8 +229,8 @@ class ConsoleTools:
 
             The token network proxy.
         """
-        registry_address = safe_address_decode(registry_address_hex)
-        token_address = safe_address_decode(token_address_hex)
+        registry_address = decode_hex(registry_address_hex)
+        token_address = decode_hex(token_address_hex)
 
         registry = self._raiden.chain.token_network_registry(registry_address)
         token_network_address = registry.add_token(token_address)
@@ -267,9 +266,9 @@ class ConsoleTools:
             netting_channel: the (newly opened) netting channel object.
         """
         # Check, if peer is discoverable
-        registry_address = safe_address_decode(registry_address_hex)
-        peer_address = safe_address_decode(peer_address_hex)
-        token_address = safe_address_decode(token_address_hex)
+        registry_address = decode_hex(registry_address_hex)
+        peer_address = decode_hex(peer_address_hex)
+        token_address = decode_hex(token_address_hex)
         try:
             self._discovery.get(peer_address)
         except KeyError:
@@ -300,7 +299,7 @@ class ConsoleTools:
         Returns:
             True if the contract got mined, false otherwise
         """
-        contract_address = safe_address_decode(contract_address_hex)
+        contract_address = decode_hex(contract_address_hex)
         start_time = time.time()
         result = self._raiden.chain.client.web3.eth.getCode(
             to_checksum_address(contract_address),

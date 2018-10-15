@@ -1,10 +1,9 @@
 import socket
-from binascii import hexlify
 
 import cachetools
 import gevent
 import structlog
-from eth_utils import is_binary_address
+from eth_utils import encode_hex, is_binary_address
 from gevent.event import AsyncResult, Event
 from gevent.server import DatagramServer
 
@@ -473,7 +472,7 @@ class UDPTransport(Runnable):
             log.warning(
                 'Invalid message: Packet larger than maximum size',
                 node=pex(self.raiden.address),
-                message=hexlify(messagedata),
+                message=encode_hex(messagedata),
                 length=len(messagedata),
             )
             return False
@@ -485,7 +484,7 @@ class UDPTransport(Runnable):
                 'Invalid protocol message',
                 error=str(e),
                 node=pex(self.raiden.address),
-                message=hexlify(messagedata),
+                message=encode_hex(messagedata),
             )
             return False
 
@@ -501,7 +500,7 @@ class UDPTransport(Runnable):
             log.warning(
                 'Invalid message: Unknown cmdid',
                 node=pex(self.raiden.address),
-                message=hexlify(messagedata),
+                message=encode_hex(messagedata),
             )
             return False
 

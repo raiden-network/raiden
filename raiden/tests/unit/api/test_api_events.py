@@ -4,7 +4,6 @@ from raiden.api.v1.encoding import EventPaymentSentFailedSchema
 from raiden.blockchain.events import get_contract_events
 from raiden.exceptions import InvalidBlockNumberInput
 from raiden.storage.utils import TimestampedEvent
-
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import ADDR
 from raiden.transfer.events import EventPaymentSentFailed

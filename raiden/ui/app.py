@@ -1,12 +1,11 @@
 import os
 import sys
-from binascii import hexlify
 from urllib.parse import urlparse
 
 import click
 import filelock
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address, to_normalized_address
+from eth_utils import encode_hex, to_canonical_address, to_checksum_address, to_normalized_address
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
@@ -216,9 +215,7 @@ def run_app(
     config['transport']['udp']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['transport']['udp']['nat_keepalive_timeout'] = timeout
-
-    privatekey_hex = hexlify(privatekey_bin)
-    config['privatekey_hex'] = privatekey_hex
+    config['privatekey_hex'] = encode_hex(privatekey_bin)
 
     parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
     if not parsed_eth_rpc_endpoint.scheme:

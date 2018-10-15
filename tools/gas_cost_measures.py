@@ -1,10 +1,10 @@
-from binascii import hexlify
 from os import urandom
 
 # increase block gas limit
 import eth_tester.backends.pyevm.main as pyevm_main
 from coincurve import PrivateKey
 from eth_tester import EthereumTester, PyEVMBackend
+from eth_utils import encode_hex
 from web3 import EthereumTesterProvider, Web3
 
 from raiden.constants import TRANSACTION_GAS_LIMIT
@@ -25,7 +25,7 @@ class ContractTester:
             generated_keys = [urandom(32) for _ in range(generate_keys)]
             self.private_keys = [PrivateKey(key) for key in generated_keys]
             self.accounts = [
-                self.tester.add_account(f'0x{hexlify(key).decode()}')
+                self.tester.add_account(f'{encode_hex(key)}')
                 for key in generated_keys
             ]
             for account in self.accounts:
@@ -107,7 +107,7 @@ def find_max_pending_transfers(gas_limit):
         settle_timeout=150,
     )
 
-    channel_identifier = int(hexlify(receipt['logs'][0]['topics'][1]), 16)
+    channel_identifier = int(encode_hex(receipt['logs'][0]['topics'][1]), 16)
 
     tester.call_transaction(
         'HumanStandardToken',

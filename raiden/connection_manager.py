@@ -1,8 +1,8 @@
-from binascii import unhexlify
 from random import shuffle
 
 import gevent
 import structlog
+from eth_utils import decode_hex
 from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
@@ -61,8 +61,8 @@ class ConnectionManager:
     """
     # XXX Hack: for bootstrapping, the first node on a network opens a channel
     # with this address to become visible.
-    BOOTSTRAP_ADDR_HEX = b'2' * 40
-    BOOTSTRAP_ADDR = unhexlify(BOOTSTRAP_ADDR_HEX)
+    BOOTSTRAP_ADDR_HEX = '2' * 40
+    BOOTSTRAP_ADDR = decode_hex(BOOTSTRAP_ADDR_HEX)
 
     def __init__(self, raiden, token_network_identifier):
         chain_state = views.state_from_raiden(raiden)
