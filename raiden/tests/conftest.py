@@ -18,7 +18,7 @@ if True:
 def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
-        choices=['geth', 'tester'],
+        choices=['geth'],
         default='geth',
     )
 
