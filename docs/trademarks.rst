@@ -1,5 +1,5 @@
-Copyright Attributions
-#########################
+Trademark Attributions
+##########################
 
 .. toctree::
   :maxdepth: 2
