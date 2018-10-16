@@ -127,6 +127,7 @@ In order to use Raiden correctly and safely there are some things that need to b
 - **Raiden Always online**: Make sure that your node is always working, your network connection is stable and that the Raiden node is always online. If it crashes for whatever reason you are responsible to restart it and keep it always online. We recommend running it inside some form of monitor that will restart if for some reason the raiden node crashes.
 - **Ethereum Client Always Online**: Make sure that your ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
 - **Ethereum Client can not be changed**: Swapping the ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching ethereum clients once the Raiden node is running.
+- **Never expose the Raiden REST API to the public**: For Raiden's operation, the client needs to be able to sign transactions at any point in time. Therefore you should never expose the Raiden Rest API to the public. Be very careful when changing the --rpc and --rpccorsdomain values.
 
 
 Firing it up
