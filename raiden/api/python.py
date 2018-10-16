@@ -5,7 +5,7 @@ from eth_utils import is_binary_address, to_checksum_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
-from raiden.constants import FIRST_BLOCK_NUMBER
+from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
@@ -731,7 +731,7 @@ class RaidenAPI:
     def get_blockchain_events_network(
             self,
             registry_address: typing.PaymentNetworkID,
-            from_block: typing.BlockSpecification = FIRST_BLOCK_NUMBER,
+            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ):
         events = blockchain_events.get_token_network_registry_events(
@@ -752,7 +752,7 @@ class RaidenAPI:
     def get_blockchain_events_token_network(
             self,
             token_address: typing.TokenAddress,
-            from_block: typing.BlockSpecification = FIRST_BLOCK_NUMBER,
+            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ):
         """Returns a list of blockchain events coresponding to the token_address."""
@@ -789,7 +789,7 @@ class RaidenAPI:
             self,
             token_address: typing.TokenAddress,
             partner_address: typing.Address = None,
-            from_block: typing.BlockSpecification = FIRST_BLOCK_NUMBER,
+            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ):
         if not is_binary_address(token_address):

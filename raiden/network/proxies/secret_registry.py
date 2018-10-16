@@ -5,7 +5,7 @@ from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_
 from gevent.event import AsyncResult
 from web3.exceptions import BadFunctionCallOutput
 
-from raiden.constants import FIRST_BLOCK_NUMBER
+from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.exceptions import (
     AddressWrongContract,
     ContractVersionMismatch,
@@ -122,7 +122,7 @@ class SecretRegistry:
 
     def secret_registered_filter(
             self,
-            from_block: typing.BlockSpecification = FIRST_BLOCK_NUMBER,
+            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ) -> StatelessFilter:
         event_abi = self.contract_manager.get_event_abi(
