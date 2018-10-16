@@ -359,9 +359,9 @@ class RaidenService(Runnable):
         self.alarm.register_callback(self._callback_new_block)
         self.alarm.first_run()
 
-        # The transport must not ever be started before the alarm task first
+        # The transport must not ever be started before the alarm task's first
         # run, because it's this method which synchronizes the node with the
-        # blochain, including the channel's state (if the channel is closed
+        # blockchain, including the channel's state (if the channel is closed
         # on-chain new messages must be rejected, which will not be the case if
         # the node is not synchronized)
         self.transport.start(self, self.message_handler)
@@ -494,7 +494,7 @@ class RaidenService(Runnable):
         self.wal.log_and_dispatch(state_change)
 
     def start_health_check_for(self, node_address):
-        # This function is a noop during initialiation. It can be called
+        # This function is a noop during initialziation. It can be called
         # through the alarm task while polling for new channel events.  The
         # healthcheck will be started by self.start_neighbours_healthcheck()
         if self.transport:
