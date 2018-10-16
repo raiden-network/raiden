@@ -68,7 +68,7 @@ class RaidenEventHandler:
         elif type(event) == SendDirectTransfer:
             self.handle_send_directtransfer(raiden, event)
         elif type(event) == SendSecretReveal:
-            self.handle_send_revealsecret(raiden, event)
+            self.handle_send_secretreveal(raiden, event)
         elif type(event) == SendBalanceProof:
             self.handle_send_balanceproof(raiden, event)
         elif type(event) == SendSecretRequest:
@@ -138,7 +138,7 @@ class RaidenEventHandler:
             direct_transfer_message,
         )
 
-    def handle_send_revealsecret(
+    def handle_send_secretreveal(
             self,
             raiden: RaidenService,
             reveal_secret_event: SendSecretReveal,

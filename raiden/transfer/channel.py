@@ -162,6 +162,14 @@ def is_secret_known(
     )
 
 
+def is_secret_known_onchain(
+        end_state: NettingChannelEndState,
+        secrethash: typing.SecretHash,
+) -> bool:
+    """True if the `secrethash` is for a lock with a known secret."""
+    return secrethash in end_state.secrethashes_to_onchain_unlockedlocks
+
+
 def get_secret(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
@@ -1519,7 +1527,7 @@ def register_onchain_secret_endstate(
         )
 
 
-def register_secret(
+def register_offchain_secret(
         channel_state: NettingChannelState,
         secret: typing.Secret,
         secrethash: typing.SecretHash,

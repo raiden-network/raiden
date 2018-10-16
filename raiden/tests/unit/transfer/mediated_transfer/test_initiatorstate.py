@@ -729,7 +729,7 @@ def test_init_with_maximum_pending_transfers_exceeded():
     assert isinstance(failed_transition.events[0], EventPaymentSentFailed)
 
 
-def test_handle_secretreveal():
+def test_handle_offchain_secretreveal():
     channel1 = factories.make_channel(
         our_balance=UNIT_TRANSFER_AMOUNT,
         token_address=UNIT_TOKEN_ADDRESS,
@@ -755,7 +755,7 @@ def test_handle_secretreveal():
 
     message_identifier = message_identifier_from_prng(deepcopy(pseudo_random_generator))
 
-    iteration = initiator.handle_secretreveal(
+    iteration = initiator.handle_offchain_secretreveal(
         initiator_state=manager_state.initiator,
         state_change=secret_reveal,
         channel_state=channel1,
