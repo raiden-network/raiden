@@ -59,7 +59,7 @@ class Task:
 
         runner.task_cache[self.id] = self
         runner.task_count += 1
-        log.info('Task initialized', task=self)
+        log.debug('Task initialized', task=self)
 
     def __call__(self, *args, **kwargs):
         log.info('Starting task', task=self)
