@@ -139,7 +139,6 @@ class ScenarioRunner(object):
             Web3(HTTPProvider(chain_urls[self.chain_name][0])),
             privkey=account.privkey,
             gas_price_strategy=get_gas_price_strategy(settings.get('gas_price', 'fast')),
-            block_num_confirmations=1,
         )
 
         self.chain_id = self.client.web3.net.version
