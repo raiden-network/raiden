@@ -30,7 +30,6 @@ from raiden.utils.solc import (
 )
 from raiden.utils.typing import Address, BlockSpecification, Callable, Dict, List
 
-
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
@@ -150,6 +149,11 @@ class JSONRPCClient:
     ):
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')
+
+        if block_num_confirmations < 0:
+            raise ValueError(
+                'Number of confirmations has to be positive',
+            )
 
         monkey_patch_web3(web3, gas_price_strategy)
 
@@ -419,17 +423,10 @@ class JSONRPCClient:
 
         Args:
             transaction_hash: Transaction hash that we are waiting for.
-            confirmations: Number of block confirmations that we will
-                wait for.
         """
         if len(transaction_hash) != 32:
             raise ValueError(
                 'transaction_hash must be a 32 byte hash',
-            )
-
-        if self.default_block_num_confirmations < 0:
-            raise ValueError(
-                'Number of confirmations has to be positive',
             )
 
         transaction_hash = encode_hex(transaction_hash)
