@@ -6,9 +6,9 @@ Raiden Red Eyes Mainnet Tutorial
 
 Introduction
 =============
-In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. For this tutorial we use the Red Eyes (LINK TO RELEASE) release. More information on the Red Eyes release can be found here(INSERT LINK ONCE READY). Since the Red Eyes release is a bug bounty release(LINK TO BLOGPOST), certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
+In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. For this tutorial we use the Red Eyes (LINK TO RELEASE) release. More information on the Red Eyes release can be found here(INSERT LINK ONCE READY). Since the Red Eyes release is a `bug bounty release <https://bounty.raiden.network>`_, certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
 
-Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
+Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version. The current version is version 1.
 
 Before getting started with this tutorial, please see the :doc:`Installation Guide <overview_and_guide>`, to make sure that Raiden is correctly installed and running.
 
@@ -16,15 +16,15 @@ Before getting started with this tutorial, please see the :doc:`Installation Gui
 
 Joining a token network
 ==============================
-The first thing we need to do is to join a token network. In this case we want to join the Raiden token (`RDN <https://etherscan.io/token/0x255Aa6DF07540Cb5d3d297f0D0D4D84cb52bc8e6>`_) network.
+The first thing we need to do is to join a token network. In this case we want to join the (`W-ETH <https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2>`_) network.
 
-*Note*: 1 RDN == 2**18 Rei. For the sake of readability and simplicity all token values in this tutorial are denominated in Rei and not RDN.
+*Note*: 1 W-ETH == 2**18 wei. For the sake of readability and simplicity all token values in this tutorial are denominated in wei and not W-ETH.
 
 In order to do so, we need the address of the token and the initial amount of tokens that we want to join the network with:
 
 .. http:example:: curl wget httpie python-requests
 
-    PUT /api/1/connections/0x255Aa6DF07540Cb5d3d297f0D0D4D84cb52bc8e6 HTTP/1.1
+    PUT /api/1/connections/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -32,9 +32,9 @@ In order to do so, we need the address of the token and the initial amount of to
         "funds": 20000
     }
 
-This automatically connects our node to 3 other nodes in the network with 20000 / 5 Rei tokens in each channel.
+This automatically connects our node to 3 other nodes in the network with 20000 / 5 wei tokens in each channel.
 
-We're now ready to start sending RDN tokens using the Raiden Network.
+We're now ready to start sending W-ETH tokens using the Raiden Network.
 
 In case we know of a specific address in the network that we will do frequent payments to, we can open a channel directly to this address by doing the following:
 
@@ -46,7 +46,7 @@ In case we know of a specific address in the network that we will do frequent pa
 
    {
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-       "token_address": "0x255Aa6DF07540Cb5d3d297f0D0D4D84cb52bc8e6",
+       "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
        "balance": 2000,
        "settle_timeout": 600
    }
@@ -64,7 +64,7 @@ Successfully opening a channel returns the following information:
        "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
        "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-       "token_address": "0x255Aa6DF07540Cb5d3d297f0D0D4D84cb52bc8e6",
+       "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
        "balance": 2000,
        "state": "opened",
        "settle_timeout": 600,
@@ -76,11 +76,11 @@ TODO: update token_network_identifier once it's known
 
 Payments
 ========
-Now that we have joined a token network, we can start making payments. For this, we need the address of the RDN token and the address of the recipient of the payment:
+Now that we have joined a token network, we can start making payments. For this, we need the address of the W-ETH token and the address of the recipient of the payment:
 
 .. http:example:: curl wget httpie python-requests
 
-    POST /api/1/payments/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    POST /api/1/payments/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -92,11 +92,11 @@ In this specific case the payment goes directly to one of our channel partners, 
 
 It's as simple as that to do payments using the Raiden Network. The first payment is done after just two API calls - one to join the token network and one to do the payment. The third call to open a direct channel is optional.
 
-Let's say we know someone with the address ``0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A``, who is also part of the RDN token network. Even though we do not have a channel with this person it is as easy as above to send a payment. All we need is the address:
+Let's say we know someone with the address ``0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A``, who is also part of the W-ETH token network. Even though we do not have a channel with this person it is as easy as above to send a payment. All we need is the address:
 
 .. http:example:: curl wget httpie python-requests
 
-    POST /api/1/payments/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A HTTP/1.1
+    POST /api/1/payments/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -104,7 +104,7 @@ Let's say we know someone with the address ``0x00014853D700AE1F39BA9dbAbdeC1c868
         "amount": 73
     }
 
-Just like this we can send payments to anyone who is part of the token network for the RDN token.
+Just like this we can send payments to anyone who is part of the token network for the W-ETH token.
 
 .. _topping-up-a-channel:
 
@@ -114,7 +114,7 @@ If we are spending more tokens than we are receiving and hence depleting our cha
 
 .. http:example:: curl wget httpie python-requests
 
-   PATCH /api/1/channels/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+   PATCH /api/1/channels/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -132,7 +132,7 @@ We can at any point in time see things like how many tokens we have spent in a s
 
 .. http:example:: curl wget httpie python-requests
 
-    GET /api/1/channels/0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    GET /api/1/channels/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -147,7 +147,7 @@ This returns the following JSON response::
           "token_network_identifier": "0xE5637F0103794C7e05469A9964E4563089a5E6f2",
           "channel_identifier": "0xa24f51685de3effe829f7c2e94b9db8e9e1b17b137da59fa727a793ae2cae776",
           "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
-          "token_address": "0x255aa6df07540cb5d3d297f0d0d4d84cb52bc8e6",
+          "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
           "balance": 3958,
           "state": "open",
           "settle_timeout": 600,
