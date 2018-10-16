@@ -1,12 +1,15 @@
 import re
 from typing import Any, Union
 
+import structlog
 from requests import RequestException
 
 from scenario_player.exceptions import RESTAPIError, RESTAPIStatusMismatchError
 from scenario_player.runner import ScenarioRunner
 
 from .base import Task
+
+log = structlog.get_logger(__name__)
 
 
 class RaidenAPIActionTask(Task):
@@ -48,6 +51,7 @@ class RaidenAPIActionTask(Task):
             target_host=self._target_host,
             **self._url_params,
         )
+        log.debug('Requesting', url=url, method=self._method)
         try:
             resp = self._runner.session.request(self._method, url, json=self._request_params)
         except RequestException as ex:
