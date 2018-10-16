@@ -1,5 +1,6 @@
 import os
 import random
+from collections import defaultdict
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List
@@ -25,10 +26,11 @@ from scenario_player.utils import (
 log = structlog.get_logger(__name__)
 
 
-DEFAULT_TOKEN_BALANCE_MIN = 5 * 10 ** 4
-OWN_ACCOUNT_BALANCE_MIN = 5 * 10 ** 17    # := 0.5 Eth
-NODE_ACCOUNT_BALANCE_MIN = 2 * 10 ** 16   # := 0.01 Eth
-NODE_ACCOUNT_BALANCE_FUND = 3 * 10 ** 16  # := 0.03 Eth
+DEFAULT_TOKEN_BALANCE_MIN = 1_000
+DEFAULT_TOKEN_BALANCE_FUND = 10_000
+OWN_ACCOUNT_BALANCE_MIN = 5 * 10 ** 17    # := 2.0 Eth
+NODE_ACCOUNT_BALANCE_MIN = 15 * 10 ** 16   # := 0.15 Eth
+NODE_ACCOUNT_BALANCE_FUND = 3 * 10 ** 17  # := 0.3 Eth
 TIMEOUT = 200
 API_URL_ADDRESS = "{protocol}://{target_host}/api/1/address"
 API_URL_TOKENS = "{protocol}://{target_host}/api/1/tokens"
@@ -57,6 +59,7 @@ class ScenarioRunner(object):
         self.auth = auth
         self.release_keeper = RaidenReleaseKeeper(data_path.joinpath('raiden_releases'))
         self.task_cache = {}
+        self.task_storage = defaultdict(dict)
 
         self.scenario_name = os.path.basename(scenario_file.name).partition('.')[0]
         self.scenario = yaml.load(scenario_file)
@@ -66,12 +69,14 @@ class ScenarioRunner(object):
 
         self.data_path = data_path.joinpath('scenarios', self.scenario_name)
         self.data_path.mkdir(exist_ok=True, parents=True)
+        log.debug('Data path', path=self.data_path)
 
         self.run_number = 0
         run_number_file = self.data_path.joinpath('run_number.txt')
         if run_number_file.exists():
             self.run_number = int(run_number_file.read_text()) + 1
         run_number_file.write_text(str(self.run_number))
+        log.info('Run number', run_number=self.run_number)
 
         nodes = self.scenario['nodes']
 

@@ -1,6 +1,11 @@
+import structlog
+from toolz import first
+
 from scenario_player.exceptions import ScenarioAssertionError
 
 from .raiden_api import RaidenAPIActionTask
+
+log = structlog.get_logger(__name__)
 
 
 class OpenChannelTask(RaidenAPIActionTask):
@@ -133,11 +138,40 @@ class AssertAllTask(ChannelActionTask):
                     raise ScenarioAssertionError(
                         f'Expected value "{value}" for field "{field}" not found in any channel. '
                         f'Existing values: {channel_field_values_str} '
-                        f'Expected values: {assert_field_values_str}'
+                        f'Expected values: {assert_field_values_str} '
                         f'Channels: {response_dict}',
                     ) from None
             if len(channel_field_values) != 0:
                 raise ScenarioAssertionError(
                     f'Value mismatch for field "{field}". '
                     f'Not all values consumed, remaining: {channel_field_values}',
+                )
+
+
+class AssertSumTask(AssertAllTask):
+    _name = 'assert_sum'
+
+    def _process_response(self, response_dict: dict):
+        for field in ['balance', 'total_deposit', 'state']:
+            # The task parameter field names are the channel field names with a `_sum` suffix
+            assert_field = f'{field}_sum'
+            if assert_field not in self._config:
+                continue
+            assert_value = self._config[assert_field]
+            if field == 'state':
+                # Special case state since it's a string field
+                channel_states = {channel['state'] for channel in response_dict}
+                if len(channel_states) > 1:
+                    raise ScenarioAssertionError(
+                        f'Expected all channels to be in "{assert_value}" state. '
+                        f'Found: {channel_states}',
+                    )
+                channel_value_sum = first(channel_states)
+            else:
+                channel_value_sum = sum(channel[field] for channel in response_dict)
+            if assert_value != channel_value_sum:
+                raise ScenarioAssertionError(
+                    f'Expected sum value "{assert_value}" for channel fields "{field}". '
+                    f'Actual value: "{channel_value_sum}". '
+                    f'Channels: {response_dict}',
                 )

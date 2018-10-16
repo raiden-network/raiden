@@ -3,6 +3,7 @@ import json
 import os
 import random
 import shutil
+import stat
 import sys
 import time
 from datetime import timedelta
@@ -71,6 +72,12 @@ class RaidenReleaseKeeper:
         self._bin_path.mkdir(exist_ok=True, parents=True)
 
     def get_release(self, version: str = 'LATEST'):
+        # `version` can also be a path
+        bin_path = Path(version)
+        if bin_path.exists() and bin_path.stat().st_mode & stat.S_IXUSR == stat.S_IXUSR:
+            # File exists and is executable
+            return bin_path
+
         if version.lower() == 'latest':
             release_file_name = self._latest_release_name
         else:
@@ -164,6 +171,7 @@ class NodeRunner:
                     'Overriding managed option',
                     option_name=option_name,
                     option_value=option_value,
+                    node=self._index,
                 )
 
     def initialize(self):
@@ -173,7 +181,12 @@ class NodeRunner:
         _ = self.eth_rpc_endpoint  # noqa: F841
 
     def start(self):
-        log.info('Starting node', node=self._index)
+        log.info(
+            'Starting node',
+            node=self._index,
+            address=self.address,
+            port=self._api_address.rpartition(':')[2],
+        )
         begin = time.monotonic()
         ret = self.executor.start()
         duration = str(timedelta(seconds=time.monotonic() - begin))
@@ -316,6 +329,7 @@ class NodeController:
             )
             for index in range(node_count)
         ]
+        log.info('Using Raiden version', version=raiden_version)
 
     def __getitem__(self, item):
         return self._node_runners[item]
@@ -335,6 +349,11 @@ class NodeController:
         log.info('Stopping nodes')
         stop_tasks = [gevent.spawn(runner.stop) for runner in self._node_runners]
         gevent.joinall(stop_tasks, raise_error=True)
+
+    def kill(self):
+        log.info('Killing nodes')
+        kill_tasks = [gevent.spawn(runner.kill) for runner in self._node_runners]
+        gevent.joinall(kill_tasks, raise_error=True)
 
     def initialize_nodes(self):
         for runner in self._node_runners:
