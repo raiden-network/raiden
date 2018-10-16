@@ -16,7 +16,7 @@ from raiden import constants, routing, waiting
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import FIRST_BLOCK_NUMBER, SNAPSHOT_STATE_CHANGES_COUNT
+from raiden.constants import GENESIS_BLOCK_NUMBER, SNAPSHOT_STATE_CHANGES_COUNT
 from raiden.exceptions import (
     InvalidAddress,
     InvalidDBData,
@@ -525,7 +525,7 @@ class RaidenService(Runnable):
             confirmed_block_number = latest_block_number - confirmation_blocks
 
             # handle testing private chains
-            confirmed_block_number = max(FIRST_BLOCK_NUMBER, confirmed_block_number)
+            confirmed_block_number = max(GENESIS_BLOCK_NUMBER, confirmed_block_number)
 
             for event in self.blockchain_events.poll_blockchain_events(confirmed_block_number):
                 # These state changes will be procesed with a block_number
