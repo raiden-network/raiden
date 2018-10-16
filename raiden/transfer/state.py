@@ -1083,6 +1083,10 @@ class UnlockPartialProofState(State):
             'secret': serialization.serialize_bytes(self.secret),
         }
 
+    @property
+    def lockhash(self):
+        return self.lock.lockhash
+
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
         restored = cls(
