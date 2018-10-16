@@ -3,6 +3,7 @@ Changelog
 =========
 
 :bug:`2794` UnlockPartialProofState does no longer raise AttributeError when accessing lockhash.
+:bug:`2664` Raiden node will now wait for 5 block confirmations before processing a given transaction.
 
 * :release:`0.13.1 <2018-10-15>`
 * :bug:`2784` Raiden node is no longer left with a partial update if it crashes during polling.
