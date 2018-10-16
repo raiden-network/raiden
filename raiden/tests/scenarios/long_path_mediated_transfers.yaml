@@ -1,0 +1,392 @@
+version: 2
+
+settings:
+
+  ## Gas price to use, either `fast`, `medium` or an integer (in gwei)
+  gas_price: "fast"
+
+  ## Chain to use
+  ## Named chains given on the scenario player command line
+  ## Defaults to 'any' - use any available one
+  #chain: any
+  ## Other examples
+  #chain: ropsten
+  chain: kovan
+  #chain: rinkeby
+
+token:
+  decimals: 18
+
+nodes:
+  ## Mode, either `managed` or `external`
+  # - managed: The scenario player will manage the Raiden nodes
+  # - external: The nodes need to be managed externally (see v1 for examples)
+  mode: managed
+  count: 15
+  ## Raiden version to use, default: 'LATEST' uses the latest nightly release
+  raiden_version: LATEST
+  #raiden_version: v0.12.0
+  ## Options to apply to all nodes
+  ## Option names correspond to Raiden cli options without the leading double dash (`--`)
+  default_options:
+    gas-price: fast
+    ## Kovan contracts
+    registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
+    discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
+    secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
+    ## Rinkeby contracts
+    #registry-contract-address: "0xed50A9ad6263f5416dE956B27979eE3457557896"
+    #discovery-contract-address: "0x705F9A00aD2894555ED3ed90a2531e4D1aaDe366"
+    #secret-registry-contract-address: "0x429d427588E2ff7214c147a3C738A28bA873f8e9"
+  ## Per-node option overrides
+  node_options:
+    0:
+      matrix-server: https://transport02.raiden.network
+    1:
+      matrix-server: https://transport02.raiden.network
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open 15 channels in both directions"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1000}
+            - open_channel: {from: 1, to: 0, total_deposit: 1000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1000}
+            - open_channel: {from: 2, to: 1, total_deposit: 1000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1000}
+            - open_channel: {from: 3, to: 2, total_deposit: 1000}
+            - open_channel: {from: 3, to: 4, total_deposit: 1000}
+            - open_channel: {from: 4, to: 3, total_deposit: 1000}
+            - open_channel: {from: 4, to: 5, total_deposit: 1000}
+            - open_channel: {from: 5, to: 4, total_deposit: 1000}
+            - open_channel: {from: 5, to: 6, total_deposit: 1000}
+            - open_channel: {from: 6, to: 5, total_deposit: 1000}
+            - open_channel: {from: 6, to: 7, total_deposit: 1000}
+            - open_channel: {from: 7, to: 6, total_deposit: 1000}
+            - open_channel: {from: 7, to: 8, total_deposit: 1000}
+            - open_channel: {from: 8, to: 7, total_deposit: 1000}
+            - open_channel: {from: 8, to: 9, total_deposit: 1000}
+            - open_channel: {from: 9, to: 8, total_deposit: 1000}
+            - open_channel: {from: 9, to: 10, total_deposit: 1000}
+            - open_channel: {from: 10, to: 9, total_deposit: 1000}
+            - open_channel: {from: 10, to: 11, total_deposit: 1000}
+            - open_channel: {from: 11, to: 10, total_deposit: 1000}
+            - open_channel: {from: 11, to: 12, total_deposit: 1000}
+            - open_channel: {from: 12, to: 11, total_deposit: 1000}
+            - open_channel: {from: 12, to: 13, total_deposit: 1000}
+            - open_channel: {from: 13, to: 12, total_deposit: 1000}
+            - open_channel: {from: 13, to: 14, total_deposit: 1000}
+            - open_channel: {from: 14, to: 13, total_deposit: 1000}
+      - parallel:
+          name: "Assert after open"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 1, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 2, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 3, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 4, to: 5, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 5, to: 6, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 6, to: 5, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 6, to: 7, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 7, to: 6, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 7, to: 8, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 8, to: 7, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 8, to: 9, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 9, to: 8, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 9, to: 10, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 10, to: 9, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 10, to: 11, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 11, to: 10, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 11, to: 12, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 12, to: 11, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 12, to: 13, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 13, to: 12, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 13, to: 14, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 14, to: 13, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 1"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 1"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 1 to 0"
+          tasks:
+            - transfer: {from: 1, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 1 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 1, to: 0, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 2"
+          tasks:
+            - transfer: {from: 0, to: 2, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 2"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 2 to 0"
+          tasks:
+            - transfer: {from: 2, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 2 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 2, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 3"
+          tasks:
+            - transfer: {from: 0, to: 3, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 3"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 3 to 0"
+          tasks:
+            - transfer: {from: 3, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 3 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 3, to: 2, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 4"
+          tasks:
+            - transfer: {from: 0, to: 4, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 4"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 4 to 0"
+          tasks:
+            - transfer: {from: 4, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 4 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 4, to: 3, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 5"
+          tasks:
+            - transfer: {from: 0, to: 5, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 5"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 5 to 0"
+          tasks:
+            - transfer: {from: 5, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 5 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 5, to: 4, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 6"
+          tasks:
+            - transfer: {from: 0, to: 6, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 6"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 6, to: 5, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 6 to 0"
+          tasks:
+            - transfer: {from: 6, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 6 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 6, to: 5, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 7"
+          tasks:
+            - transfer: {from: 0, to: 7, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 7"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 7, to: 6, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 7 to 0"
+          tasks:
+            - transfer: {from: 7, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 7 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 7, to: 6, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 8"
+          tasks:
+            - transfer: {from: 0, to: 8, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 8"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 8, to: 7, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 8 to 0"
+          tasks:
+            - transfer: {from: 8, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 8 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 8, to: 7, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 9"
+          tasks:
+            - transfer: {from: 0, to: 9, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 9"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 9, to: 8, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 9 to 0"
+          tasks:
+            - transfer: {from: 9, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 9 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 9, to: 8, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 10"
+          tasks:
+            - transfer: {from: 0, to: 10, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 10"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 10, to: 9, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 10 to 0"
+          tasks:
+            - transfer: {from: 10, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 10 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 10, to: 9, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 11"
+          tasks:
+            - transfer: {from: 0, to: 11, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 11"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 11, to: 10, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 11 to 0"
+          tasks:
+            - transfer: {from: 11, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 11 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 11, to: 10, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 12"
+          tasks:
+            - transfer: {from: 0, to: 12, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 12"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 12, to: 11, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 12 to 0"
+          tasks:
+            - transfer: {from: 12, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 12 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 12, to: 11, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 13"
+          tasks:
+            - transfer: {from: 0, to: 13, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 13"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 13, to: 12, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 13 to 0"
+          tasks:
+            - transfer: {from: 13, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 13 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 13, to: 12, total_deposit: 1000, balance: 1000, state: "opened"}
+      - serial:
+          name: "Make one transfer from 0 to 14"
+          tasks:
+            - transfer: {from: 0, to: 14, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 0 to 14"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 999, state: "opened"}
+            - assert: {from: 14, to: 13, total_deposit: 1000, balance: 1001, state: "opened"}
+      - serial:
+          name: "Make one transfer from 14 to 0"
+          tasks:
+            - transfer: {from: 14, to: 0, amount: 1, expected_http_status: 200}
+      - wait: 10
+      - parallel:
+          name: "Assert after one transfer from 14 to 0"
+          tasks:
+            - assert: {from: 0, to: 1, total_deposit: 1000, balance: 1000, state: "opened"}
+            - assert: {from: 14, to: 13, total_deposit: 1000, balance: 1000, state: "opened"}
