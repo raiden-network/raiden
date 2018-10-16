@@ -588,11 +588,11 @@ def events_for_balanceproof(
 
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             unlock_lock = channel.send_unlock(
-                payee_channel,
-                pair.payee_transfer.payment_identifier,
-                message_identifier,
-                secret,
-                secrethash,
+                channel_state=payee_channel,
+                message_identifier=message_identifier,
+                payment_identifier=pair.payee_transfer.payment_identifier,
+                secret=secret,
+                secrethash=secrethash,
             )
 
             unlock_success = EventUnlockSuccess(

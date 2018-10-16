@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
+from copy import deepcopy
 
 import pytest
 
@@ -19,6 +20,7 @@ from raiden.tests.utils.factories import (
     HOP4_KEY,
     HOP5,
     HOP5_KEY,
+    UNIT_CHAIN_ID,
     UNIT_REVEAL_TIMEOUT,
     UNIT_SECRET,
     UNIT_SECRETHASH,
@@ -706,7 +708,11 @@ def test_events_for_balanceproof():
 
     # the lock is not in the danger zone yet
     payer_channel = mediator.get_payer_channel(channel_map, last_pair)
+    payee_channel = mediator.get_payee_channel(channel_map, last_pair)
     block_number = last_pair.payee_transfer.lock.expiration - payer_channel.reveal_timeout - 1
+
+    prng_copy = deepcopy(pseudo_random_generator)
+    msg_identifier = message_identifier_from_prng(prng_copy)
 
     events = mediator.events_for_balanceproof(
         channel_map,
@@ -716,13 +722,32 @@ def test_events_for_balanceproof():
         UNIT_SECRET,
         UNIT_SECRETHASH,
     )
-    assert len(events) == 2
 
-    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
     unlock = next(e for e in events if isinstance(e, EventUnlockSuccess))
+    assert must_contain_entry(
+        events,
+        SendBalanceProof,
+        {
+            'recipient': last_pair.payee_address,
+            'message_identifier': msg_identifier,
+            'payment_identifier': UNIT_TRANSFER_IDENTIFIER,
+            'queue_identifier': {
+                'recipient': last_pair.payee_address,
+                'channel_identifier': payee_channel.identifier,
+            },
+            'secret': UNIT_SECRET,
+            'balance_proof': {
+                'nonce': 2,
+                'transferred_amount': UNIT_TRANSFER_AMOUNT,
+                'locked_amount': 0,
+                # 'locksroot':  ignored here
+                'token_network_identifier': UNIT_TOKEN_NETWORK_ADDRESS,
+                'channel_identifier': payee_channel.identifier,
+                'chain_id': UNIT_CHAIN_ID,
+            },
+        },
+    )
     assert unlock
-    assert balance_proof
-    assert balance_proof.recipient == last_pair.payee_address
     assert last_pair.payee_state == 'payee_balance_proof'
 
 
