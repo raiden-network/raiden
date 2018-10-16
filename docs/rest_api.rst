@@ -516,7 +516,7 @@ Connection Management
    :reqjson float joinable_funds_target: Fraction of funds that will be used to join channels opened by other participants.
 
    ..note::
-   Currently, the API calls are blocking. This means that in the case of long running calls like ``join``, if other calls to ``join`` are made concurrently, they will block too and wait for the first call to finish. If a second call is made with different arguments, those arguments will be the final ones.
+   Currently, the API calls are blocking. This means that in the case of long running calls like ``join``, if other calls to ``join`` are made concurrently, they will block too and wait for the first call to finish. If an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
 
 .. http:delete:: /api/(version)/connections/(token_address)
 
@@ -550,7 +550,7 @@ Connection Management
    :statuscode 500: Internal Raiden node error
 
    ..note::
-   Currently, the API calls are blocking. This means that in the case of long running calls like ``leave``, if other API calls are made concurrently, they will block too and wait for the first call to finish.
+   Currently, the API calls are blocking. This means that in the case of long running calls like ``leave``, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
 
 Payments
 ========
