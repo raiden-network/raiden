@@ -28,6 +28,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state import (
+    CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
     NettingChannelState,
     message_identifier_from_prng,
@@ -126,6 +127,26 @@ def is_send_transfer_almost_equal(
         send.initiator == received.initiator and
         send.target == received.target
     )
+
+
+def has_secret_registration_started(channel_states, transfers_pair, secrethash):
+    # If it's known the secret is registered on-chain, the node should not send
+    # a new transaction. Note there is a race condition:
+    #
+    # - Node B learns the secret on-chain, sends a secret reveal to A
+    # - Node A receives the secret reveal off-chain prior to the event for the
+    #   secret registration, if the lock is in the danger zone A will try to
+    #   register the secret on-chain, because from its perspective the secret
+    #   is not there yet.
+    is_secret_registered_onchain = any(
+        channel.is_secret_known_onchain(payer_channel.partner_state, secrethash)
+        for payer_channel in channel_states
+    )
+    has_pending_transaction = any(
+        pair.payer_state == 'payer_waiting_secret_reveal'
+        for pair in transfers_pair
+    )
+    return is_secret_registered_onchain or has_pending_transaction
 
 
 def filter_used_routes(transfers_pair, routes):
@@ -319,18 +340,15 @@ def next_transfer_pair(
     )
 
 
-def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
-    """ Set the secret to all mediated transfers.
-    It doesn't matter if the secret was learned through the blockchain or a
-    secret reveal message.
-    """
+def set_offchain_secret(state, channelidentifiers_to_channels, secret, secrethash):
+    """ Set the secret to all mediated transfers. """
     state.secret = secret
 
     for pair in state.transfers_pair:
         payer_channel = channelidentifiers_to_channels[
             pair.payer_transfer.balance_proof.channel_identifier
         ]
-        channel.register_secret(
+        channel.register_offchain_secret(
             payer_channel,
             secret,
             secrethash,
@@ -339,7 +357,7 @@ def set_secret(state, channelidentifiers_to_channels, secret, secrethash):
         payee_channel = channelidentifiers_to_channels[
             pair.payee_transfer.balance_proof.channel_identifier
         ]
-        channel.register_secret(
+        channel.register_offchain_secret(
             payee_channel,
             secret,
             secrethash,
@@ -375,36 +393,12 @@ def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash
         )
 
 
-def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
-        transfers_pair,
-        payee_address,
-        new_payee_state,
-):
-    """ Set the state of a transfer *sent* to a payee and check the secret is
-    being revealed backwards.
-    Note:
-        The elements or transfers_pair are changed in place, the list must
-        contain all the known transfers to properly check reveal order.
-    """
-    assert new_payee_state in MediationPairState.valid_payee_states
-
-    wrong_reveal_order = False
-    for back in reversed(transfers_pair):
+def set_offchain_reveal_state(transfers_pair, payee_address):
+    """ Set the state of a transfer *sent* to a payee. """
+    for back in transfers_pair:
         if back.payee_address == payee_address:
-            back.payee_state = new_payee_state
+            back.payee_state = 'payee_secret_revealed'
             break
-
-        elif back.payee_state not in STATE_SECRET_KNOWN:
-            wrong_reveal_order = True
-
-    if wrong_reveal_order:
-        # TODO: Append an event for byzantine behavior.
-        # XXX: This can happen if a mediator in the middle of the chain of hops
-        # learns the secret faster than its subsequent nodes. Should a byzantine
-        # behavior notification be added or should we fix the events_for_unlock function?
-        return list()
-
-    return list()
 
 
 def set_expired_pairs(transfers_pair, block_number):
@@ -504,7 +498,11 @@ def events_for_refund_transfer(
 
 
 def events_for_revealsecret(transfers_pair, secret, pseudo_random_generator):
-    """ Reveal the secret backwards.
+    """ Reveal the secret off-chain.
+
+    The secret is revealed off-chain even if there is a pending transaction to
+    reveal it on-chain, this allows the unlock to happen off-chain, which is
+    faster.
 
     This node is named N, suppose there is a mediated transfer with two refund
     transfers, one from B and one from C:
@@ -525,11 +523,17 @@ def events_for_revealsecret(transfers_pair, secret, pseudo_random_generator):
     """
     events = list()
     for pair in reversed(transfers_pair):
-        payee_secret = pair.payee_state in STATE_SECRET_KNOWN
-        payer_secret = pair.payer_state in STATE_SECRET_KNOWN
-        should_send_secret = pair.payer_state == 'payer_pending'
+        payee_knows_secret = pair.payee_state in STATE_SECRET_KNOWN
+        payer_knows_secret = pair.payer_state in STATE_SECRET_KNOWN
+        is_transfer_pending = pair.payer_state == 'payer_pending'
 
-        if payee_secret and not payer_secret and should_send_secret:
+        should_send_secret = (
+            payee_knows_secret and
+            not payer_knows_secret and
+            is_transfer_pending
+        )
+
+        if should_send_secret:
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             pair.payer_state = 'payer_secret_revealed'
             payer_transfer = pair.payer_transfer
@@ -605,82 +609,108 @@ def events_for_balanceproof(
     return events
 
 
-def events_for_onchain_secretreveal(
-        channelidentifiers_to_channels,
+def events_for_onchain_secretreveal_if_dangerzone(
+        channelmap,
         transfers_pair,
         block_number,
 ):
-    """ Reveal the secret if a locks is in the unsafe region. """
+    """ Reveal the secret on-chain if the lock enters the unsafe region and the
+    secret is not yet on-chain.
+    """
     events = list()
-    pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
-    for pair in reversed(pending_transfers_pairs):
-        payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
-        expiration = pair.payer_transfer.lock.expiration
+    secrethash = transfers_pair[0].payer_transfer.lock.secrethash
+    all_payer_channels = [
+        get_payer_channel(channelmap, pair)
+        for pair in transfers_pair
+    ]
+    transaction_sent = has_secret_registration_started(
+        all_payer_channels,
+        transfers_pair,
+        secrethash,
+    )
+
+    for pair in get_pending_transfer_pairs(transfers_pair):
+        payer_channel = get_payer_channel(channelmap, pair)
+        lock = pair.payer_transfer.lock
 
         safe_to_wait, _ = is_safe_to_wait(
-            expiration,
+            lock.expiration,
             payer_channel.reveal_timeout,
             block_number,
         )
 
-        # We check if the secret is already known by receiving a ReceiveSecretReveal state change
         secret_known = channel.is_secret_known(
             payer_channel.partner_state,
             pair.payer_transfer.lock.secrethash,
         )
 
         if not safe_to_wait and secret_known:
-            secret = channel.get_secret(
-                payer_channel.partner_state,
-                pair.payer_transfer.lock.secrethash,
-            )
-            reveal_events = secret_registry.events_for_onchain_secretreveal(
-                payer_channel,
-                secret,
-                expiration,
-            )
-            # short circuit because the secret needs to be revealed on-chain
-            # only once
-            return reveal_events
+            pair.payer_state = 'payer_waiting_secret_reveal'
+
+            if not transaction_sent:
+                secret = channel.get_secret(
+                    payer_channel.partner_state,
+                    lock.secrethash,
+                )
+
+                reveal_events = secret_registry.events_for_onchain_secretreveal(
+                    payer_channel,
+                    secret,
+                    lock.expiration,
+                )
+                events.extend(reveal_events)
+
+                transaction_sent = True
 
     return events
 
 
-def events_for_unlock_if_closed(
-        channelidentifiers_to_channels: typing.ChannelMap,
+def events_for_onchain_secretreveal_if_closed(
+        channelmap: typing.ChannelMap,
         transfers_pair: typing.List[MediationPairState],
+        secret,
+        secrethash,
 ) -> typing.List[ContractSendChannelBatchUnlock]:
-    """ Unlock on chain if the payer channel is closed and the secret is known.
-    If a channel is closed because of another task a balance proof will not be
-    received, so there is no reason to wait for the unsafe region before
-    calling close.
-    This may break the reverse reveal order:
-        Path: A -- B -- C -- B -- D
-        B learned the secret from D and has revealed to C.
-        C has not confirmed yet.
-        channel(A, B).closed is True.
-        B will unlock on channel(A, B) before C's confirmation.
-        A may learn the secret faster than other nodes.
+    """ Register the secret on-chain if the payer channel is already closed and
+    the mediator learned the secret off-chain.
+
+    Balance proofs are not exchanged for closed channels, so there is no reason
+    to wait for the unsafe region to register secret.
+
+    Note:
+
+        If the secret is learned before the channel is closed, then the channel
+        will register the secrets in bulk, not the transfer.
     """
     events = list()
-    pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
-    for pair in pending_transfers_pairs:
-        payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
+    all_payer_channels = [
+        get_payer_channel(channelmap, pair)
+        for pair in transfers_pair
+    ]
+    transaction_sent = has_secret_registration_started(
+        all_payer_channels,
+        transfers_pair,
+        secrethash,
+    )
 
-        payer_channel_open = channel.get_status(payer_channel) == CHANNEL_STATE_OPENED
+    for pending_pair in get_pending_transfer_pairs(transfers_pair):
+        payer_channel = get_payer_channel(channelmap, pending_pair)
+        # Don't register the secret on-chain if the channel is open or settled
+        if channel.get_status(payer_channel) == CHANNEL_STATE_CLOSED:
+            pending_pair.payer_state = 'payer_waiting_secret_reveal'
 
-        # The unlock is done by the channel
-        if not payer_channel_open:
-            pair.payer_state = 'payer_waiting_unlock'
-            unlock = ContractSendChannelBatchUnlock(
-                payer_channel.token_address,
-                payer_channel.token_network_identifier,
-                payer_channel.identifier,
-                payer_channel.partner_state.address,
-            )
-            events.append(unlock)
+            if not transaction_sent:
+                partner_state = payer_channel.partner_state
+                lock = channel.get_lock(partner_state, secrethash)
+                reveal_events = secret_registry.events_for_onchain_secretreveal(
+                    payer_channel,
+                    secret,
+                    lock.expiration,
+                )
+                events.extend(reveal_events)
+                transaction_sent = True
 
     return events
 
@@ -735,51 +765,30 @@ def secret_learned(
         secret,
         secrethash,
         payee_address,
-        new_payee_state,
-        from_onchain_secretreveal,
 ):
-    """ Set the state of the `payee_address` transfer, check the secret is
-    being revealed backwards, and if necessary send out RevealSecret,
-    SendBalanceProof, and Unlocks.
+    """ Unlock the payee lock, reveal the lock to the payer, and if necessary
+    register the secret on-chain.
     """
-    assert new_payee_state in STATE_SECRET_KNOWN
-
-    # TODO: if any of the transfers is in expired state, event for byzantine behavior
-
-    if state.secret is None:
-        if from_onchain_secretreveal:
-            set_onchain_secret(
-                state,
-                channelidentifiers_to_channels,
-                secret,
-                secrethash,
-                block_number,
-            )
-        else:
-            set_secret(
-                state,
-                channelidentifiers_to_channels,
-                secret,
-                secrethash,
-            )
-
-        # This task only needs to unlock if the channel is closed when the
-        # secret is learned, otherwise the channel task will do it
-        # automatically
-        unlock = events_for_unlock_if_closed(
-            channelidentifiers_to_channels,
-            state.transfers_pair,
-        )
-    else:
-        unlock = []
-
-    wrong_order = set_payee_state_and_check_reveal_order(
-        state.transfers_pair,
-        payee_address,
-        new_payee_state,
+    set_offchain_secret(
+        state,
+        channelidentifiers_to_channels,
+        secret,
+        secrethash,
     )
 
-    secret_reveal = events_for_revealsecret(
+    set_offchain_reveal_state(
+        state.transfers_pair,
+        payee_address,
+    )
+
+    onchain_secret_reveal = events_for_onchain_secretreveal_if_closed(
+        channelidentifiers_to_channels,
+        state.transfers_pair,
+        secret,
+        secrethash,
+    )
+
+    offchain_secret_reveal = events_for_revealsecret(
         state.transfers_pair,
         secret,
         pseudo_random_generator,
@@ -796,7 +805,7 @@ def secret_learned(
 
     iteration = TransitionResult(
         state,
-        wrong_order + secret_reveal + balance_proof + unlock,
+        offchain_secret_reveal + balance_proof + onchain_secret_reveal,
     )
 
     return iteration
@@ -920,7 +929,6 @@ def handle_block(
     Return:
         TransitionResult: The resulting iteration
     """
-
     expired_locks_events = events_for_expired_locks(
         mediator_state,
         channelidentifiers_to_channels,
@@ -928,7 +936,7 @@ def handle_block(
         pseudo_random_generator,
     )
 
-    secret_reveal_events = events_for_onchain_secretreveal(
+    secret_reveal_events = events_for_onchain_secretreveal_if_dangerzone(
         channelidentifiers_to_channels,
         mediator_state.transfers_pair,
         state_change.block_number,
@@ -1005,7 +1013,7 @@ def handle_refundtransfer(
     return iteration
 
 
-def handle_secretreveal(
+def handle_offchain_secretreveal(
         mediator_state,
         mediator_state_change,
         channelidentifiers_to_channels,
@@ -1022,11 +1030,6 @@ def handle_secretreveal(
     is_valid_reveal = mediator_state_change.secrethash == mediator_state.secrethash
 
     if is_secret_unknown and is_valid_reveal:
-        # If secret reveal was triggered on-chain, we would compare against
-        # the block number at which the event was emitted.
-        if isinstance(mediator_state_change, ContractReceiveSecretReveal):
-            block_number = mediator_state_change.block_number
-
         iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,
@@ -1035,10 +1038,51 @@ def handle_secretreveal(
             mediator_state_change.secret,
             mediator_state_change.secrethash,
             mediator_state_change.sender,
-            'payee_secret_revealed',
-            isinstance(mediator_state_change, ContractReceiveSecretReveal),
         )
 
+    else:
+        iteration = TransitionResult(mediator_state, list())
+
+    return iteration
+
+
+def handle_onchain_secretreveal(
+        mediator_state,
+        onchain_secret_reveal,
+        channelidentifiers_to_channels,
+        pseudo_random_generator,
+        block_number,
+):
+    """ The secret was revealed on-chain, set the state of all transfers to
+    secret known.
+    """
+    secrethash = onchain_secret_reveal.secrethash
+
+    is_secret_unknown = mediator_state.secret is None
+    is_valid_reveal = secrethash == mediator_state.secrethash
+
+    if is_secret_unknown and is_valid_reveal:
+        secret = onchain_secret_reveal.secret
+        # Compare against the block number at which the event was emitted.
+        block_number = onchain_secret_reveal.block_number
+
+        set_onchain_secret(
+            mediator_state,
+            channelidentifiers_to_channels,
+            secret,
+            secrethash,
+            block_number,
+        )
+
+        balance_proof = events_for_balanceproof(
+            channelidentifiers_to_channels,
+            mediator_state.transfers_pair,
+            pseudo_random_generator,
+            block_number,
+            secret,
+            secrethash,
+        )
+        iteration = TransitionResult(mediator_state, balance_proof)
     else:
         iteration = TransitionResult(mediator_state, list())
 
@@ -1153,7 +1197,7 @@ def state_transition(
         )
 
     elif isinstance(state_change, ReceiveSecretReveal):
-        iteration = handle_secretreveal(
+        iteration = handle_offchain_secretreveal(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
@@ -1162,7 +1206,7 @@ def state_transition(
         )
 
     elif isinstance(state_change, ContractReceiveSecretReveal):
-        iteration = handle_secretreveal(
+        iteration = handle_onchain_secretreveal(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,

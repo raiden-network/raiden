@@ -246,7 +246,7 @@ def handle_transferrefundcancelroute(
     return iteration
 
 
-def handle_secretreveal(
+def handle_offchain_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
         channelidentifiers_to_channels: typing.ChannelMap,
@@ -254,7 +254,7 @@ def handle_secretreveal(
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
-    sub_iteration = initiator.handle_secretreveal(
+    sub_iteration = initiator.handle_offchain_secretreveal(
         payment_state.initiator,
         state_change,
         channel_state,
@@ -339,7 +339,7 @@ def state_transition(
             channel_state,
         )
     elif type(state_change) == ReceiveSecretReveal:
-        iteration = handle_secretreveal(
+        iteration = handle_offchain_secretreveal(
             payment_state,
             state_change,
             channelidentifiers_to_channels,

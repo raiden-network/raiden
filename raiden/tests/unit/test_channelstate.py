@@ -597,7 +597,7 @@ def test_channelstate_receive_lockedtransfer():
 
     # Step 2: Simulate learning the secret
     # - Registers the secret, this must not change the balance/locked amount
-    channel.register_secret(channel_state, lock_secret, lock_secrethash)
+    channel.register_offchain_secret(channel_state, lock_secret, lock_secrethash)
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
@@ -1543,7 +1543,7 @@ def test_channelstate_unlock():
     )
     assert is_valid, msg
 
-    channel.register_secret(channel_state, lock_secret, lock_secrethash)
+    channel.register_offchain_secret(channel_state, lock_secret, lock_secrethash)
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     close_state_change = ContractReceiveChannelClosed(
@@ -1657,7 +1657,7 @@ def test_settle_transaction_must_be_sent_only_once():
     )
     assert is_valid, msg
 
-    channel.register_secret(channel_state, lock_secret, lock_secrethash)
+    channel.register_offchain_secret(channel_state, lock_secret, lock_secrethash)
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     close_state_change = ContractReceiveChannelClosed(

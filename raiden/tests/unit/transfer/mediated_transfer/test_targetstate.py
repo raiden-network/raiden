@@ -89,7 +89,7 @@ def test_events_for_onchain_secretreveal():
         from_transfer,
     )
 
-    channel.register_secret(from_channel, UNIT_SECRET, UNIT_SECRETHASH)
+    channel.register_offchain_secret(from_channel, UNIT_SECRET, UNIT_SECRETHASH)
 
     safe_to_wait = expiration - from_channel.reveal_timeout - 1
     unsafe_to_wait = expiration - from_channel.reveal_timeout

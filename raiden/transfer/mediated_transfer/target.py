@@ -143,7 +143,7 @@ def handle_secretreveal(
 
     if valid_secret and waiting_for_secret:
         if isinstance(state_change, ReceiveSecretReveal):
-            channel.register_secret(
+            channel.register_offchain_secret(
                 channel_state,
                 state_change.secret,
                 state_change.secrethash,

@@ -283,7 +283,7 @@ def handle_secretrequest(
     return iteration
 
 
-def handle_secretreveal(
+def handle_offchain_secretreveal(
         initiator_state: InitiatorTransferState,
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,

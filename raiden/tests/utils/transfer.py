@@ -277,8 +277,8 @@ def make_mediated_transfer(
     if secret is not None:
         secrethash = sha3(secret)
 
-        channel.register_secret(from_channel, secret, secrethash)
-        channel.register_secret(partner_channel, secret, secrethash)
+        channel.register_offchain_secret(from_channel, secret, secrethash)
+        channel.register_offchain_secret(partner_channel, secret, secrethash)
 
     return mediated_transfer_msg
 
