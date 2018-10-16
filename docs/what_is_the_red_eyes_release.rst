@@ -15,7 +15,7 @@ Introduction
 ------------
 The Red Eyes release is the first version of the Raiden Network that is deployed on the Ethereum main net.
 The main goal of this release is to get the smart contracts and the core protocol battle tested on the main net.
-As part of ensuring this, a `bug bounty <LINK TO BUG BOUNTY POST>`_ has been created for the release.
+As part of ensuring this, a `bug bounty <https://bounty.raiden.network>`_ has been created for the release.
 Furthermore this release shows a slightly simplified version of the Raiden API, but it should suffice to get people started doing payment using the Raiden Network.
 
 The restrictions made to the Red Eyes release in order to mitigate risk in case of unexpected security issues are the following:
