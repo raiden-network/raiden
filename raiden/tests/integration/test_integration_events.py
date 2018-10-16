@@ -525,7 +525,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
     channel_state2_1 = get_channelstate(app2, app1, token_network_identifier)
     assert len(channel_state2_1.our_state.secrethashes_to_lockedlocks) == 1
 
-    channel.register_secret(channel_state2_1, secret, secrethash)
+    channel.register_offchain_secret(channel_state2_1, secret, secrethash)
 
     # Close the channel
     # This needs to register the secrets on chain

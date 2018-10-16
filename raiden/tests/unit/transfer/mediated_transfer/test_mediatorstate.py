@@ -50,7 +50,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretReveal,
 )
-from raiden.transfer.mediated_transfer.mediator import set_secret
+from raiden.transfer.mediated_transfer.mediator import set_offchain_secret
 from raiden.transfer.mediated_transfer.state import (
     MediationPairState,
     MediatorTransferState,
@@ -397,11 +397,7 @@ def test_set_payee():
     assert transfers_pair[1].payer_state == 'payer_pending'
     assert transfers_pair[1].payee_state == 'payee_pending'
 
-    mediator.set_payee_state_and_check_reveal_order(
-        transfers_pair,
-        HOP2,
-        'payee_secret_revealed',
-    )
+    mediator.set_offchain_reveal_state(transfers_pair, HOP2)
 
     # payer address was used, no payee state should change
     assert transfers_pair[0].payer_state == 'payer_pending'
@@ -410,11 +406,7 @@ def test_set_payee():
     assert transfers_pair[1].payer_state == 'payer_pending'
     assert transfers_pair[1].payee_state == 'payee_pending'
 
-    mediator.set_payee_state_and_check_reveal_order(
-        transfers_pair,
-        HOP3,
-        'payee_secret_revealed',
-    )
+    mediator.set_offchain_reveal_state(transfers_pair, HOP3)
 
     # only the transfer where the address is a payee should change
     assert transfers_pair[0].payer_state == 'payer_pending'
@@ -913,14 +905,14 @@ def test_events_for_onchain_secretreveal():
 
     # Reveal the secret off-chain
     for channel_state in channel_map.values():
-        channel.register_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
+        channel.register_offchain_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
 
     block_number = (
         pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
     )
 
     # If we are not in the unsafe region, we must NOT emit ContractSendSecretReveal
-    events = mediator.events_for_onchain_secretreveal(
+    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
         transfers_pair,
         block_number - 1,
@@ -928,7 +920,7 @@ def test_events_for_onchain_secretreveal():
     assert not events
 
     # If we are in the unsafe region, we must emit ContractSendSecretReveal
-    events = mediator.events_for_onchain_secretreveal(
+    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
         transfers_pair,
         block_number,
@@ -955,13 +947,13 @@ def test_onchain_secretreveal_must_be_emitted_only_once():
 
     # Reveal the secret off-chain
     for channel_state in channel_map.values():
-        channel.register_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
+        channel.register_offchain_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
 
     block_number = (
         pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
     )
 
-    events = mediator.events_for_onchain_secretreveal(
+    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
         transfers_pair,
         block_number,
@@ -971,7 +963,7 @@ def test_onchain_secretreveal_must_be_emitted_only_once():
         'secret': UNIT_SECRET,
     })
 
-    events = mediator.events_for_onchain_secretreveal(
+    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
         transfers_pair,
         block_number,
@@ -1035,8 +1027,6 @@ def test_secret_learned():
         UNIT_SECRET,
         UNIT_SECRETHASH,
         channel1.partner_state.address,
-        'payee_secret_revealed',
-        False,
     )
     transfer_pair = iteration.new_state.transfers_pair[0]
 
@@ -1060,7 +1050,6 @@ def test_secret_learned():
 
 
 def test_secret_learned_with_refund():
-    """ Test  """
     amount = 10
     privatekeys = [HOP2_KEY, HOP3_KEY, HOP4_KEY]
     addresses = [HOP2, HOP3, HOP4]
@@ -1623,7 +1612,7 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
     assert send_mediated.transfer.lock.expiration == payer_transfer.lock.expiration
 
 
-def test_set_secret():
+def test_set_offchain_secret():
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
 
     assert mediator_state.transfers_pair == list()
@@ -1662,7 +1651,7 @@ def test_set_secret():
     assert payee_channel_partner_state.secrethashes_to_lockedlocks == dict()
     assert payee_channel_partner_state.secrethashes_to_unlockedlocks == dict()
 
-    set_secret(mediator_state, channel_map, UNIT_SECRET, UNIT_SECRETHASH)
+    set_offchain_secret(mediator_state, channel_map, UNIT_SECRET, UNIT_SECRETHASH)
 
     assert mediator_state.secret == UNIT_SECRET
 
@@ -1806,11 +1795,9 @@ def test_mediator_lock_expired_with_new_block():
     )
 
     assert iteration.events
-    assert isinstance(iteration.events[1], SendLockExpired)
-
-    lock_expired = iteration.events[1]
-
-    assert transfer.lock.secrethash == lock_expired.secrethash
+    assert must_contain_entry(iteration.events, SendLockExpired, {
+        'secrethash': transfer.lock.secrethash,
+    })
     assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
 
 
