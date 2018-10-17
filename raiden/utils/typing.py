@@ -1,6 +1,9 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import Dict, List, NewType, Optional, Tuple, Union
 
+T_ABI = dict
+ABI = NewType('ABI', T_ABI)
+
 T_Address = bytes
 Address = NewType('Address', T_Address)
 

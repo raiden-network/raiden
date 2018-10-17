@@ -21,21 +21,20 @@ from raiden.constants import GENESIS_BLOCK_NUMBER, NULL_ADDRESS
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
 from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import is_supported_client, pex, privatekey_to_address
+from raiden.utils import is_supported_client, pex, privatekey_to_address, typing
 from raiden.utils.filters import StatelessFilter
 from raiden.utils.solc import (
     solidity_library_symbol,
     solidity_resolve_symbols,
     solidity_unresolved_symbols,
 )
-from raiden.utils.typing import Address, BlockSpecification, Callable, Dict, List
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def check_address_has_code(
         client: 'JSONRPCClient',
-        address: Address,
+        address: typing.Address,
         contract_name: str = '',
 ):
     """ Checks that the given address contains code. """
@@ -143,7 +142,7 @@ class JSONRPCClient:
             self,
             web3: Web3,
             privkey: bytes,
-            gas_price_strategy: Callable = rpc_gas_price_strategy,
+            gas_price_strategy: typing.Callable = rpc_gas_price_strategy,
             nonce_offset: int = 0,
             block_num_confirmations: int = 0,
     ):
@@ -164,13 +163,13 @@ class JSONRPCClient:
 
         _, eth_node = is_supported_client(version)
 
-        sender = privatekey_to_address(privkey)
-        transaction_count = web3.eth.getTransactionCount(to_checksum_address(sender), 'pending')
+        address = privatekey_to_address(privkey)
+        transaction_count = web3.eth.getTransactionCount(to_checksum_address(address), 'pending')
         _available_nonce = transaction_count + nonce_offset
 
         self.eth_node = eth_node
         self.privkey = privkey
-        self.sender = sender
+        self.address = address
         self.web3 = web3
         self.default_block_num_confirmations = block_num_confirmations
 
@@ -180,18 +179,18 @@ class JSONRPCClient:
 
         log.debug(
             'JSONRPCClient created',
-            sender=pex(self.sender),
+            node=pex(self.address),
             available_nonce=_available_nonce,
         )
 
     def __repr__(self):
-        return f'<JSONRPCClient node:{pex(self.sender)} nonce:{self._available_nonce}>'
+        return f'<JSONRPCClient node:{pex(self.address)} nonce:{self._available_nonce}>'
 
     def block_number(self):
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
-    def balance(self, account: Address):
+    def balance(self, account: typing.Address):
         """ Return the balance of the account of given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
@@ -211,7 +210,7 @@ class JSONRPCClient:
             return self.gaslimit()
         return startgas
 
-    def new_contract_proxy(self, contract_interface, contract_address: Address):
+    def new_contract_proxy(self, contract_interface, contract_address: typing.Address):
         """ Return a proxy for interacting with a smart contract.
 
         Args:
@@ -223,7 +222,7 @@ class JSONRPCClient:
             contract=self.new_contract(contract_interface, contract_address),
         )
 
-    def new_contract(self, contract_interface: Dict, contract_address: Address):
+    def new_contract(self, contract_interface: typing.Dict, contract_address: typing.Address):
         return self.web3.eth.contract(
             abi=contract_interface,
             address=to_checksum_address(contract_address),
@@ -234,24 +233,23 @@ class JSONRPCClient:
 
     def deploy_solidity_contract(
             self,  # pylint: disable=too-many-locals
-            contract_name,
-            all_contracts,
-            libraries=None,
-            constructor_parameters=None,
-            contract_path=None,
+            contract_name: str,
+            all_contracts: typing.Dict[str, typing.ABI],
+            libraries: typing.Dict[str, typing.Address] = None,
+            constructor_parameters: typing.Tuple[typing.Any] = None,
+            contract_path: str = None,
     ):
         """
         Deploy a solidity contract.
 
         Args:
-            sender (address): the sender address
-            contract_name (str): the name of the contract to compile
-            all_contracts (dict): the json dictionary containing the result of compiling a file
-            libraries (list): A list of libraries to use in deployment
-            constructor_parameters (tuple): A tuple of arguments to pass to the constructor
-            contract_path (str): If we are dealing with solc >= v0.4.9 then the path
-                                 to the contract is a required argument to extract
-                                 the contract data from the `all_contracts` dict.
+            contract_name: The name of the contract to compile.
+            all_contracts: The json dictionary containing the result of compiling a file.
+            libraries: A list of libraries to use in deployment.
+            constructor_parameters: A tuple of arguments to pass to the constructor.
+            contract_path: If we are dealing with solc >= v0.4.9 then the path
+                           to the contract is a required argument to extract
+                           the contract data from the `all_contracts` dict.
         """
         if libraries:
             libraries = dict(libraries)
@@ -294,7 +292,10 @@ class JSONRPCClient:
 
             deployment_order.pop()  # remove `contract_name` from the list
 
-            log.debug('Deploying dependencies: {}'.format(str(deployment_order)))
+            log.debug(
+                'Deploying dependencies: {}'.format(str(deployment_order)),
+                node=pex(self.address),
+            )
 
             for deploy_contract in deployment_order:
                 dependency_contract = all_contracts[deploy_contract]
@@ -305,7 +306,7 @@ class JSONRPCClient:
                 dependency_contract['bin'] = bytecode
 
                 transaction_hash = self.send_transaction(
-                    to=Address(b''),
+                    to=typing.Address(b''),
                     data=bytecode,
                 )
 
@@ -337,7 +338,7 @@ class JSONRPCClient:
         contract = self.web3.eth.contract(abi=contract['abi'], bytecode=contract['bin'])
         contract_transaction = contract.constructor(*constructor_parameters).buildTransaction()
         transaction_hash = self.send_transaction(
-            to=Address(b''),
+            to=typing.Address(b''),
             data=contract_transaction['data'],
             startgas=contract_transaction['gas'],
         )
@@ -362,7 +363,7 @@ class JSONRPCClient:
 
     def send_transaction(
             self,
-            to: Address,
+            to: typing.Address,
             value: int = 0,
             data: bytes = b'',
             startgas: int = None,
@@ -391,6 +392,7 @@ class JSONRPCClient:
             node_gas_price = self.web3.eth.gasPrice
             log.debug(
                 'Calculated gas price for transaction',
+                node=pex(self.address),
                 calculated_gas_price=gas_price,
                 node_gas_price=node_gas_price,
             )
@@ -402,7 +404,7 @@ class JSONRPCClient:
             signed_txn = self.web3.eth.account.signTransaction(transaction, self.privkey)
 
             log_details = {
-                'account': to_checksum_address(self.sender),
+                'node': pex(self.address),
                 'nonce': transaction['nonce'],
                 'gasLimit': transaction['gas'],
                 'gasPrice': transaction['gasPrice'],
@@ -466,10 +468,10 @@ class JSONRPCClient:
 
     def new_filter(
             self,
-            contract_address: Address,
-            topics: List[str] = None,
-            from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-            to_block: BlockSpecification = 'latest',
+            contract_address: typing.Address,
+            topics: typing.List[str] = None,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
         return StatelessFilter(
@@ -484,11 +486,11 @@ class JSONRPCClient:
 
     def get_filter_events(
             self,
-            contract_address: Address,
-            topics: List[str] = None,
-            from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-            to_block: BlockSpecification = 'latest',
-    ) -> List[Dict]:
+            contract_address: typing.Address,
+            topics: typing.List[str] = None,
+            from_block: typing.BlockSpecification = 0,
+            to_block: typing.BlockSpecification = 'latest',
+    ) -> typing.List[typing.Dict]:
         """ Get events for the given query. """
         return self.web3.eth.getLogs({
             'fromBlock': from_block,
