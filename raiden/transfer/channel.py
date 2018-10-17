@@ -77,7 +77,7 @@ from raiden.utils import pex, typing
 from raiden_libs.utils.signing import eth_recover
 
 # This should be changed to `Union[str, MerkleTreeState]`
-MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Any]
+MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Optional[typing.Any]]
 EventsOrError = typing.Tuple[bool, typing.List[Event], typing.Any]
 BalanceProofData = typing.Tuple[
     typing.Locksroot,
@@ -504,6 +504,8 @@ def is_valid_lock_expired(
         sender_state=sender_state,
     )
 
+    result: MerkletreeOrError = (False, None, None)
+
     if not is_balance_proof_usable:
         msg = 'Invalid LockExpired message. {}'.format(invalid_balance_proof_msg)
         result = (False, msg, None)
@@ -592,6 +594,8 @@ def valid_lockedtransfer_check(
         channel_state=channel_state,
         sender_state=sender_state,
     )
+
+    result: MerkletreeOrError = (False, None, None)
 
     if not is_balance_proof_usable:
         msg = f'Invalid {message_name} message. {invalid_balance_proof_msg}'
@@ -754,6 +758,8 @@ def is_valid_unlock(
         sender_state=sender_state,
     )
 
+    result: MerkletreeOrError = (False, None, None)
+
     if not is_balance_proof_usable:
         msg = 'Invalid Unlock message. {}'.format(invalid_balance_proof_msg)
         result = (False, msg, None)
@@ -804,7 +810,7 @@ def is_valid_unlock(
     return result
 
 
-def get_amount_locked(end_state: NettingChannelEndState) -> typing.Balance:
+def get_amount_locked(end_state: NettingChannelEndState) -> typing.TokenAmount:
     total_pending = sum(
         lock.amount
         for lock in end_state.secrethashes_to_lockedlocks.values()
@@ -854,8 +860,8 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
     else:
         locksroot = EMPTY_MERKLE_ROOT
         nonce = 0
-        transferred_amount = 0
-        locked_amount = 0
+        transferred_amount: typing.TokenAmount = 0
+        locked_amount: typing.Balance = 0
 
     return (locksroot, nonce, transferred_amount, locked_amount)
 
@@ -1160,7 +1166,7 @@ def create_sendlockedtransfer(
         payment_identifier: typing.PaymentID,
         expiration: typing.BlockExpiration,
         secrethash: typing.SecretHash,
-) -> SendLockedTransfer:
+) -> typing.Tuple[SendLockedTransfer, typing.Optional[MerkleTreeState]]:
     our_state = channel_state.our_state
     partner_state = channel_state.partner_state
     our_balance_proof = our_state.balance_proof
@@ -1777,7 +1783,7 @@ def handle_receive_lock_expired(
 def handle_receive_lockedtransfer(
         channel_state: NettingChannelState,
         mediated_transfer: LockedTransferSignedState,
-) -> TransitionResult:
+) -> EventsOrError:
     """Register the latest known transfer.
 
     The receiver needs to use this method to update the container with a
@@ -1814,7 +1820,7 @@ def handle_receive_lockedtransfer(
 def handle_receive_refundtransfercancelroute(
         channel_state: NettingChannelState,
         refund_transfer: ReceiveTransferRefundCancelRoute,
-) -> TransitionResult:
+) -> EventsOrError:
     return handle_receive_lockedtransfer(channel_state, refund_transfer)
 
 
