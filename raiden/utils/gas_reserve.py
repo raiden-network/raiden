@@ -116,6 +116,6 @@ def has_enough_gas_reserve(
     reserve_amount = gas_estimate * gas_price
 
     secure_reserve_estimate = round(reserve_amount * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
-    current_account_balance = raiden.chain.client.balance(raiden.chain.client.sender)
+    current_account_balance = raiden.chain.client.balance(raiden.chain.client.address)
 
     return secure_reserve_estimate <= current_account_balance, secure_reserve_estimate

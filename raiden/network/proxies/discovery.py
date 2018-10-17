@@ -60,7 +60,7 @@ class Discovery:
         self.proxy = proxy
 
     def register_endpoint(self, node_address, endpoint):
-        if node_address != self.client.sender:
+        if node_address != self.client.address:
             raise ValueError("node_address doesnt match this node's address")
 
         log_details = {

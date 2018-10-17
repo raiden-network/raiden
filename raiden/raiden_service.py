@@ -386,6 +386,7 @@ class RaidenService(Runnable):
         if self.config['transport_type'] == 'udp':
             endpoint_registration_greenlet.get()  # re-raise if exception occurred
 
+        log.debug('Raiden Service started', node=pex(self.address))
         super().start()
 
     def _run(self, *args, **kwargs):  # pylint: disable=method-hidden
@@ -425,6 +426,8 @@ class RaidenService(Runnable):
 
         if self.db_lock is not None:
             self.db_lock.release()
+
+        log.debug('Raiden Service stopped', node=pex(self.address))
 
     def add_pending_greenlet(self, greenlet: gevent.Greenlet):
         greenlet.link_exception(self.on_error)

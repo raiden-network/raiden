@@ -39,7 +39,7 @@ def test_payment_channel_proxy_basics(
 
     # create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
-        c2_client.sender,
+        c2_client.address,
         TEST_SETTLE_TIMEOUT_MIN,
     )
     assert channel_identifier is not None
@@ -76,10 +76,10 @@ def test_payment_channel_proxy_basics(
 
     # test deposits
     initial_token_balance = 100
-    token_proxy.transfer(c1_client.sender, initial_token_balance)
-    initial_balance_c1 = token_proxy.balance_of(c1_client.sender)
+    token_proxy.transfer(c1_client.address, initial_token_balance)
+    initial_balance_c1 = token_proxy.balance_of(c1_client.address)
     assert initial_balance_c1 == initial_token_balance
-    initial_balance_c2 = token_proxy.balance_of(c2_client.sender)
+    initial_balance_c2 = token_proxy.balance_of(c2_client.address)
     assert initial_balance_c2 == 0
 
     # actual deposit
@@ -104,7 +104,7 @@ def test_payment_channel_proxy_basics(
     # correct close
     c2_token_network_proxy.close(
         channel_identifier=channel_identifier,
-        partner=c1_client.sender,
+        partner=c1_client.address,
         balance_hash=decode_hex(balance_proof.balance_hash),
         nonce=balance_proof.nonce,
         additional_hash=decode_hex(balance_proof.additional_hash),
@@ -128,7 +128,7 @@ def test_payment_channel_proxy_basics(
         transferred_amount=0,
         locked_amount=0,
         locksroot=EMPTY_HASH,
-        partner=c1_client.sender,
+        partner=c1_client.address,
         partner_transferred_amount=transferred_amount,
         partner_locked_amount=0,
         partner_locksroot=EMPTY_HASH,

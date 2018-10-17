@@ -80,6 +80,7 @@ from raiden.utils import (
     create_default_identifier,
     is_frozen,
     optional_address_to_string,
+    pex,
     split_endpoint,
     typing,
 )
@@ -460,6 +461,9 @@ class APIServer(Runnable):
             raise
 
         self.wsgiserver = wsgiserver
+
+        log.debug('REST API started', node=pex(self.rest_api.raiden_api.address))
+
         super().start()
 
     def stop(self):
@@ -467,11 +471,14 @@ class APIServer(Runnable):
             self.wsgiserver.stop()
             self.wsgiserver = None
 
+        log.debug('REST API stopped', node=pex(self.rest_api.raiden_api.address))
+
     def unhandled_exception(self, exception: Exception):
         """ Flask.errorhandler when an exception wasn't correctly handled """
         log.critical(
             'Unhandled exception when processing endpoint request',
             exc_info=True,
+            node=pex(self.rest_api.raiden_api.address),
         )
         self.greenlet.kill(exception)
         return api_error([str(exception)], HTTPStatus.INTERNAL_SERVER_ERROR)
@@ -512,6 +519,7 @@ class RestAPI:
             )
         log.debug(
             'Registering token',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
         )
@@ -546,6 +554,7 @@ class RestAPI:
     ):
         log.debug(
             'Opening channel',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             partner_address=to_checksum_address(partner_address),
             token_address=to_checksum_address(token_address),
@@ -574,6 +583,7 @@ class RestAPI:
             # make initial deposit
             log.debug(
                 'Depositing to new channel',
+                node=pex(self.raiden_api.address),
                 registry_address=to_checksum_address(registry_address),
                 token_address=to_checksum_address(token_address),
                 partner_address=to_checksum_address(partner_address),
@@ -621,6 +631,7 @@ class RestAPI:
     ):
         log.debug(
             'Connecting to token network',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
             funds=funds,
@@ -658,6 +669,7 @@ class RestAPI:
     ):
         log.debug(
             'Leaving token network',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
         )
@@ -676,6 +688,7 @@ class RestAPI:
         open channels, funds of last request, sum of deposits and number of channels"""
         log.debug(
             'Getting connection managers info',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
         )
         connection_managers = dict()
@@ -720,6 +733,7 @@ class RestAPI:
     ):
         log.debug(
             'Getting channel list',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=optional_address_to_string(token_address),
             partner_address=optional_address_to_string(partner_address),
@@ -739,6 +753,7 @@ class RestAPI:
     def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
         log.debug(
             'Getting token list',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
         )
         raiden_service_result = self.raiden_api.get_tokens_list(registry_address)
@@ -755,6 +770,7 @@ class RestAPI:
     ):
         log.debug(
             'Getting network events',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             from_block=from_block,
             to_block=to_block,
@@ -778,6 +794,7 @@ class RestAPI:
     ):
         log.debug(
             'Getting token network blockchain events',
+            node=pex(self.raiden_api.address),
             token_address=to_checksum_address(token_address),
             from_block=from_block,
             to_block=to_block,
@@ -803,6 +820,7 @@ class RestAPI:
     ):
         log.debug(
             'Getting payment history',
+            node=pex(self.raiden_api.address),
             token_address=optional_address_to_string(token_address),
             target_address=optional_address_to_string(target_address),
             limit=limit,
@@ -827,7 +845,11 @@ class RestAPI:
             elif isinstance(event.wrapped_event, EventPaymentReceivedSuccess):
                 serialized_event = self.received_success_payment_schema.dump(event)
             else:
-                log.warning('Unexpected event', unexpected_event=event.wrapped_event)
+                log.warning(
+                    'Unexpected event',
+                    node=pex(self.raiden_api.address),
+                    unexpected_event=event.wrapped_event,
+                )
 
             result.append(serialized_event.data)
         return api_response(result=result)
@@ -850,6 +872,7 @@ class RestAPI:
     ):
         log.debug(
             'Getting channel blockchain events',
+            node=pex(self.raiden_api.address),
             token_address=to_checksum_address(token_address),
             partner_address=optional_address_to_string(partner_address),
             from_block=from_block,
@@ -876,6 +899,7 @@ class RestAPI:
     ):
         log.debug(
             'Getting channel',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
             partner_address=to_checksum_address(partner_address),
@@ -901,6 +925,7 @@ class RestAPI:
     ):
         log.debug(
             'Getting partners by token',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
         )
@@ -941,6 +966,7 @@ class RestAPI:
     ):
         log.debug(
             'Initiating payment',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
             target_address=to_checksum_address(target_address),
@@ -996,6 +1022,7 @@ class RestAPI:
     ):
         log.debug(
             'Depositing to channel',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
             total_deposit=total_deposit,
@@ -1046,6 +1073,7 @@ class RestAPI:
     ):
         log.debug(
             'Closing channel',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
         )
@@ -1087,6 +1115,7 @@ class RestAPI:
     ):
         log.debug(
             'Patching channel',
+            node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
             partner_address=to_checksum_address(partner_address),
