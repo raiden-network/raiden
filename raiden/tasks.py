@@ -9,7 +9,7 @@ from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
 
-from raiden.utils import gas_reserve
+from raiden.utils import gas_reserve, pex
 from raiden.utils.runnable import Runnable
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
@@ -92,6 +92,10 @@ class AlarmTask(Runnable):
         # TODO: Start with a larger sleep_time and decrease it as the
         # probability of a new block increases.
         self.sleep_time = 0.5
+
+    def start(self):
+        log.debug('Alarm task started', node=pex(self.chain.node_address))
+        super().start()
 
     def _run(self):  # pylint: disable=method-hidden
         try:
@@ -189,4 +193,5 @@ class AlarmTask(Runnable):
 
     def stop(self):
         self._stop_event.set(True)
+        log.debug('Alarm task stopped', node=pex(self.chain.node_address))
         return self.join()

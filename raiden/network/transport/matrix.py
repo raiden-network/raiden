@@ -184,7 +184,7 @@ class MatrixTransport(Runnable):
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
-        self.log.debug('Transport started', config=self._config)
+        self.log.debug('Matrix started', config=self._config)
 
         super().start()  # start greenlet
 
@@ -216,6 +216,7 @@ class MatrixTransport(Runnable):
         # wait own greenlets, no need to get on them, exceptions should be raised in _run()
         gevent.wait(self.greenlets)
         self._client.logout()
+        self.log.debug('Matrix stopped', config=self._config)
         del self.log
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
@@ -1146,7 +1147,7 @@ class MatrixTransport(Runnable):
     def _get_room_ids_for_address(
             self,
             address: Address,
-            filter_private: bool=None,
+            filter_private: bool = None,
     ) -> List[_RoomID]:
         """ Uses GMatrixClient.get_account_data to get updated mapping of address->rooms
 

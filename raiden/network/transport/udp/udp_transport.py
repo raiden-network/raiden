@@ -164,6 +164,7 @@ class UDPTransport(Runnable):
         # these values are initialized by the start method
         self.queueids_to_queues: typing.Dict
         self.raiden: RaidenService
+        self.message_handler: MessageHandler
 
         self.discovery = discovery
         self.config = config
@@ -215,6 +216,7 @@ class UDPTransport(Runnable):
         self.server.set_handle(self.receive)
 
         self.server.start()
+        log.debug('UDP started', node=pex(self.raiden.address))
         super().start()
 
     def _run(self):
@@ -259,6 +261,8 @@ class UDPTransport(Runnable):
         # Set all the pending results to False
         for async_result in self.messageids_to_asyncresults.values():
             async_result.set(False)
+
+        log.debug('UDP stopped', node=pex(self.raiden.address))
 
     def get_health_events(self, recipient):
         """ Starts a healthcheck task for `recipient` and returns a
