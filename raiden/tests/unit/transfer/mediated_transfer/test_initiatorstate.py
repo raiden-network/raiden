@@ -243,6 +243,95 @@ def test_state_wait_secretrequest_valid():
     assert isinstance(iteration.events[0], SendSecretReveal)
 
 
+def test_state_wait_secretrequest_invalid_amount():
+    amount = UNIT_TRANSFER_AMOUNT
+    block_number = 1
+    pseudo_random_generator = random.Random()
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel_map = {channel1.identifier: channel1}
+    available_routes = [factories.route_from_channel(channel1)]
+    current_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    lock = channel.get_lock(
+        channel1.our_state,
+        current_state.initiator.transfer_description.secrethash,
+    )
+
+    state_change = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        lock.amount + 1,
+        lock.expiration,
+        lock.secrethash,
+        UNIT_TRANSFER_TARGET,
+    )
+
+    iteration = initiator_manager.state_transition(
+        current_state,
+        state_change,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    assert len(iteration.events) == 1
+    assert isinstance(iteration.events[0], EventPaymentSentFailed)
+
+
+def test_state_wait_secretrequest_invalid_amount_and_sender():
+    amount = UNIT_TRANSFER_AMOUNT
+    block_number = 1
+    pseudo_random_generator = random.Random()
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel_map = {channel1.identifier: channel1}
+    available_routes = [factories.route_from_channel(channel1)]
+    current_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    lock = channel.get_lock(
+        channel1.our_state,
+        current_state.initiator.transfer_description.secrethash,
+    )
+
+    state_change = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        lock.amount + 1,
+        lock.expiration,
+        lock.secrethash,
+        UNIT_TRANSFER_INITIATOR,
+    )
+
+    iteration = initiator_manager.state_transition(
+        current_state,
+        state_change,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    assert len(iteration.events) == 0
+
+
 def test_state_wait_unlock_valid():
     block_number = 1
     pseudo_random_generator = random.Random()
