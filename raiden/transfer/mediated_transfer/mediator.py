@@ -319,14 +319,14 @@ def next_transfer_pair(
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = channel.send_lockedtransfer(
-            payee_channel,
-            payer_transfer.initiator,
-            payer_transfer.target,
-            payer_transfer.lock.amount,
-            message_identifier,
-            payer_transfer.payment_identifier,
-            payer_transfer.lock.expiration,
-            payer_transfer.lock.secrethash,
+            channel_state=payee_channel,
+            initiator=payer_transfer.initiator,
+            target=payer_transfer.target,
+            amount=payer_transfer.lock.amount,
+            message_identifier=message_identifier,
+            payment_identifier=payer_transfer.payment_identifier,
+            expiration=payer_transfer.lock.expiration,
+            secrethash=payer_transfer.lock.secrethash,
         )
         assert lockedtransfer_event
 
@@ -439,12 +439,12 @@ def set_expired_pairs(transfers_pair, block_number):
             # assert pair.payee_state == 'payee_expired'
 
             pair.payer_state = 'payer_expired'
-            unlock_failed = EventUnlockClaimFailed(
+            unlock_claim_failed = EventUnlockClaimFailed(
                 pair.payer_transfer.payment_identifier,
                 pair.payer_transfer.lock.secrethash,
                 'lock expired',
             )
-            events.append(unlock_failed)
+            events.append(unlock_claim_failed)
 
         if has_payee_transfer_expired:
             pair.payee_state = 'payee_expired'
@@ -752,10 +752,10 @@ def events_for_expired_locks(
             if has_lock_expired:
                 transfer_pair.payee_state = 'payee_expired'
                 expired_lock_events = channel.events_for_expired_lock(
-                    channel_state,
-                    secrethash,
-                    locked_lock,
-                    pseudo_random_generator,
+                    channel_state=channel_state,
+                    secrethash=secrethash,
+                    locked_lock=locked_lock,
+                    pseudo_random_generator=pseudo_random_generator,
                 )
                 events.extend(expired_lock_events)
     return events
@@ -883,7 +883,7 @@ def handle_init(
         channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
-):
+) -> TransitionResult:
     routes = state_change.routes
 
     from_route = state_change.from_route

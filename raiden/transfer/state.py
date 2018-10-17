@@ -19,6 +19,10 @@ from raiden.utils.serialization import map_dict, map_list
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
 QueueIdsToQueues = typing.Dict[QueueIdentifier, typing.List[SendMessageEvent]]
+OptionalBalanceProofState = typing.Optional[typing.Union[
+    'BalanceProofSignedState',
+    'BalanceProofUnsignedState',
+]]
 
 CHANNEL_STATE_CLOSED = 'closed'
 CHANNEL_STATE_CLOSING = 'waiting_for_close'
@@ -88,7 +92,7 @@ class InitiatorTask(State):
     def __init__(
             self,
             token_network_identifier: typing.TokenNetworkID,
-            manager_state,
+            manager_state: State,
     ):
         self.token_network_identifier = token_network_identifier
         self.manager_state = manager_state
@@ -413,7 +417,7 @@ class TokenNetworkState(State):
         'partneraddresses_to_channels',
     )
 
-    def __init__(self, address: typing.Address, token_address: typing.Address):
+    def __init__(self, address: typing.TokenNetworkID, token_address: typing.TokenAddress):
 
         if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
@@ -680,7 +684,7 @@ class BalanceProofUnsignedState(State):
             transferred_amount: typing.TokenAmount,
             locked_amount: typing.TokenAmount,
             locksroot: typing.Locksroot,
-            token_network_identifier: typing.Address,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,  # FIXME: is this used anywhere
             chain_id: typing.ChainID,
     ):
@@ -817,7 +821,7 @@ class BalanceProofSignedState(State):
             transferred_amount: typing.TokenAmount,
             locked_amount: typing.TokenAmount,
             locksroot: typing.Locksroot,
-            token_network_identifier: typing.Address,
+            token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             message_hash: typing.Keccak256,
             signature: typing.Signature,
@@ -980,9 +984,9 @@ class HashTimeLockState(State):
 
     def __init__(
             self,
-            amount: typing.TokenAmount,
-            expiration: typing.BlockNumber,
-            secrethash: typing.Keccak256,
+            amount: typing.PaymentAmount,
+            expiration: typing.BlockExpiration,
+            secrethash: typing.SecretHash,
     ):
         if not isinstance(amount, typing.T_TokenAmount):
             raise ValueError('amount must be a token_amount instance')
@@ -1220,7 +1224,7 @@ class TransactionExecutionStatus(State):
         return not self.__eq__(other)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
-        result = {}
+        result: typing.Dict[str, typing.Any] = {}
         if self.started_block_number is not None:
             result['started_block_number'] = self.started_block_number
         if self.finished_block_number is not None:
@@ -1290,7 +1294,7 @@ class NettingChannelEndState(State):
         'balance_proof',
     )
 
-    def __init__(self, address: typing.Address, balance: typing.TokenAmount):
+    def __init__(self, address: typing.Address, balance: typing.Balance):
         if not isinstance(address, typing.T_Address):
             raise ValueError('address must be an address instance')
 
@@ -1304,7 +1308,7 @@ class NettingChannelEndState(State):
         self.secrethashes_to_unlockedlocks: SecretHashToPartialUnlockProof = dict()
         self.secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = dict()
         self.merkletree = EMPTY_MERKLE_TREE
-        self.balance_proof: typing.Optional[BalanceProofSignedState] = None
+        self.balance_proof: OptionalBalanceProofState = None
 
     def __repr__(self):
         return '<NettingChannelEndState address:{} contract_balance:{} merkletree:{}>'.format(
@@ -1478,7 +1482,7 @@ class NettingChannelState(State):
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
         self.update_transaction = update_transaction
-        self.our_unlock_transaction = None
+        self.our_unlock_transaction: TransactionExecutionStatus = None
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{} updated:{}>'.format(
@@ -1699,7 +1703,7 @@ class TransactionOrder(State):
         return restored
 
 
-EMPTY_MERKLE_ROOT = bytes(32)
+EMPTY_MERKLE_ROOT: typing.Locksroot = bytes(32)
 EMPTY_MERKLE_TREE = MerkleTreeState([
     [],                   # the leaves are empty
     [EMPTY_MERKLE_ROOT],  # the root is the constant 0
