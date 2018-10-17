@@ -75,7 +75,7 @@ def handle_block(
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
     lock_expiration_threshold = locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
-    lock_has_expired, _ = locked_lock and channel.is_lock_expired(
+    lock_has_expired = locked_lock and channel.is_lock_expired(
         end_state=channel_state.our_state,
         lock=locked_lock,
         block_number=state_change.block_number,

@@ -268,7 +268,7 @@ class TransitionResult:
         'events',
     )
 
-    def __init__(self, new_state, events):
+    def __init__(self, new_state: State, events: List[Event]):
         self.new_state = new_state
         self.events = events
 

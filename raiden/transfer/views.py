@@ -511,7 +511,7 @@ def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannel
 def search_payment_network_by_token_network_id(
         chain_state: ChainState,
         token_network_id: typing.Address,
-) -> typing.Optional['TokenNetworkState']:
+) -> typing.Optional['PaymentNetworkState']:
 
     payment_network_state = None
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():

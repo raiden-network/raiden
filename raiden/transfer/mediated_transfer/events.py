@@ -11,7 +11,7 @@ from raiden.utils import pex, serialization, sha3, typing
 # channel_identifier can never be 0. We make this a requirement in the client and use this fact
 # to signify that a channel_identifier of `0` passed to the messages adds them to the
 # global queue
-CHANNEL_IDENTIFIER_GLOBAL_QUEUE = 0
+CHANNEL_IDENTIFIER_GLOBAL_QUEUE: typing.ChannelID = 0
 
 
 def refund_from_sendmediated(send_lockedtransfer_event):

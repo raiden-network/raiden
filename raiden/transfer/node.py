@@ -907,7 +907,11 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
     return iteration
 
 
-def is_transaction_effect_satisfied(chain_state, transaction, state_change) -> bool:
+def is_transaction_effect_satisfied(
+        chain_state: ChainState,
+        transaction,
+        state_change: StateChange,
+) -> bool:
     """ True if the side-effect of `transaction` is satisfied by
     `state_change`.
 
@@ -1128,7 +1132,7 @@ def is_transaction_pending(chain_state, transaction, state_change):
     )
 
 
-def update_queues(iteration: TransitionResult, state_change):
+def update_queues(iteration: TransitionResult, state_change: StateChange) -> None:
     chain_state = iteration.new_state
 
     if isinstance(state_change, ContractReceiveStateChange):
@@ -1148,7 +1152,7 @@ def update_queues(iteration: TransitionResult, state_change):
             chain_state.pending_transactions.append(event)
 
 
-def state_transition(chain_state: ChainState, state_change: StateChange):
+def state_transition(chain_state: ChainState, state_change: StateChange) -> TransitionResult:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     iteration = handle_state_change(chain_state, state_change)

@@ -169,7 +169,7 @@ class MediatorTransferState(State):
         'transfers_pair',
     )
 
-    def __init__(self, secrethash: typing.Keccak256):
+    def __init__(self, secrethash: typing.SecretHash):
         # for convenience
         self.secrethash = secrethash
         self.secret = None
@@ -233,11 +233,16 @@ class TargetTransferState(State):
         'expired',
     )
 
-    def __init__(self, route: RouteState, transfer: 'LockedTransferSignedState'):
+    def __init__(
+            self,
+            route: RouteState,
+            transfer: 'LockedTransferSignedState',
+            secret: typing.Secret = None,
+    ):
         self.route = route
         self.transfer = transfer
 
-        self.secret = None
+        self.secret = secret
         self.state = 'secret_request'
 
     def __repr__(self):
@@ -400,8 +405,8 @@ class LockedTransferSignedState(State):
             token: typing.Address,
             balance_proof: BalanceProofSignedState,
             lock: HashTimeLockState,
-            initiator: typing.Address,
-            target: typing.Address,
+            initiator: typing.InitiatorAddress,
+            target: typing.TargetAddress,
     ):
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
