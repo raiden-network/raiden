@@ -1,7 +1,6 @@
 # pylint: disable=too-many-lines
 import heapq
 import random
-from typing import Union
 
 from eth_utils import encode_hex, to_canonical_address
 
@@ -445,7 +444,7 @@ def is_valid_directtransfer(
 
 
 def is_valid_lockedtransfer(
-        transfer_state: Union[LockedTransferSignedState, ReceiveTransferRefund],
+        transfer_state: LockedTransferSignedState,
         channel_state: NettingChannelState,
         sender_state: NettingChannelEndState,
         receiver_state: NettingChannelEndState,
@@ -1417,7 +1416,7 @@ def events_for_close(
 def events_for_expired_lock(
         channel_state: NettingChannelState,
         secrethash: typing.SecretHash,
-        locked_lock: LockedTransferUnsignedState,
+        locked_lock: HashTimeLockState,
         pseudo_random_generator: random.Random,
 ) -> typing.List[SendLockExpired]:
     nonce = get_next_nonce(channel_state.our_state)
@@ -1457,7 +1456,7 @@ def events_for_expired_lock(
 def delete_secrethash_endstate(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
-        lock: LockedTransferUnsignedState,
+        lock: HashTimeLockState,
 ) -> None:
     if is_lock_locked(end_state, secrethash):
         end_state.merkletree = compute_merkletree_without(
