@@ -357,7 +357,7 @@ def test_stress(
         retry_timeout,
         token_addresses,
         port_generator,
-        skip_if_not_udp,
+        skip_if_not_udp,  # pylint: disable=unused-argument
 ):
 
     config_converter = LogLevelConfigType()
@@ -371,7 +371,6 @@ def test_stress(
     token_address = token_addresses[0]
     rest_apis = start_apiserver_for_network(raiden_network, port_generator)
     identifier_generator = count()
-    timeout = 120
 
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(raiden_network[0]),
@@ -380,20 +379,18 @@ def test_stress(
     )
 
     for _ in range(2):
-        with gevent.Timeout(timeout):
-            assert_channels(
-                raiden_network,
-                token_network_identifier,
-                deposit,
-            )
+        assert_channels(
+            raiden_network,
+            token_network_identifier,
+            deposit,
+        )
 
-        with gevent.Timeout(timeout):
-            stress_send_serial_transfers(
-                rest_apis,
-                token_address,
-                identifier_generator,
-                deposit,
-            )
+        stress_send_serial_transfers(
+            rest_apis,
+            token_address,
+            identifier_generator,
+            deposit,
+        )
 
         raiden_network, rest_apis = restart_network_and_apiservers(
             raiden_network,
@@ -402,20 +399,18 @@ def test_stress(
             retry_timeout,
         )
 
-        with gevent.Timeout(timeout):
-            assert_channels(
-                raiden_network,
-                token_network_identifier,
-                deposit,
-            )
+        assert_channels(
+            raiden_network,
+            token_network_identifier,
+            deposit,
+        )
 
-        with gevent.Timeout(timeout):
-            stress_send_parallel_transfers(
-                rest_apis,
-                token_address,
-                identifier_generator,
-                deposit,
-            )
+        stress_send_parallel_transfers(
+            rest_apis,
+            token_address,
+            identifier_generator,
+            deposit,
+        )
 
         raiden_network, rest_apis = restart_network_and_apiservers(
             raiden_network,
@@ -424,20 +419,18 @@ def test_stress(
             retry_timeout,
         )
 
-        with gevent.Timeout(timeout):
-            assert_channels(
-                raiden_network,
-                token_network_identifier,
-                deposit,
-            )
+        assert_channels(
+            raiden_network,
+            token_network_identifier,
+            deposit,
+        )
 
-        with gevent.Timeout(timeout):
-            stress_send_and_receive_parallel_transfers(
-                rest_apis,
-                token_address,
-                identifier_generator,
-                deposit,
-            )
+        stress_send_and_receive_parallel_transfers(
+            rest_apis,
+            token_address,
+            identifier_generator,
+            deposit,
+        )
 
         raiden_network, rest_apis = restart_network_and_apiservers(
             raiden_network,
