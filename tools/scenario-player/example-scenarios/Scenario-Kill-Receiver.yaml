@@ -1,0 +1,43 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: kovan
+
+token:
+  ##address: "0xabEE20bdA7476337ea051Dac011763F6D7eD8d9c"
+
+nodes:
+  mode: managed
+  count: 6
+  default_options:
+    gas-price: fast
+    registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
+    discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
+    secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
+
+
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 1, to: 2, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 2, to: 3, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 3, to: 4, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 4, to: 5, total_deposit: 10, settle_timeout: 50}
+
+              ## total overall deposit 120
+
+      - parallel:
+          name: "Send tokens to Node 5 and kill it "
+          tasks:
+            - transfer: {from: 0, to: 5, amount: 3, expected_http_status: 408}
+            - serial:
+                tasks:
+                  - wait: 2
+                  - kill_node: 5
+
