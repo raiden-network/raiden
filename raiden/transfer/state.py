@@ -1050,6 +1050,11 @@ class UnlockPartialProofState(State):
     __slots__ = (
         'lock',
         'secret',
+        'amount',
+        'expiration',
+        'secrethash',
+        'encoded',
+        'lockhash',
     )
 
     def __init__(self, lock: HashTimeLockState, secret: typing.Secret):
@@ -1061,6 +1066,11 @@ class UnlockPartialProofState(State):
 
         self.lock = lock
         self.secret = secret
+        self.amount = lock.amount
+        self.expiration = lock.expiration
+        self.secrethash = lock.secrethash
+        self.encoded = lock.encoded
+        self.lockhash = lock.lockhash
 
     def __repr__(self):
         return '<UnlockPartialProofState lock:{}>'.format(
@@ -1082,10 +1092,6 @@ class UnlockPartialProofState(State):
             'lock': self.lock,
             'secret': serialization.serialize_bytes(self.secret),
         }
-
-    @property
-    def lockhash(self):
-        return self.lock.lockhash
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
