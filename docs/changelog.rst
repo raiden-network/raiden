@@ -2,6 +2,8 @@
 Changelog
 =========
 
+:bug:`2449` Only polling events from confirmed blocks to prevent conflicts with reorgs.
+:bug:`2813` Fixed swapped message and payment id, which caused problems on node restart.
 :bug:`2813` Fixed swapped message and payment id, which caused problems on node restart.
 :bug:`2794` UnlockPartialProofState does no longer raise AttributeError when accessing lockhash.
 :bug:`2664` Raiden node will now wait for 5 block confirmations before processing a given transaction.
