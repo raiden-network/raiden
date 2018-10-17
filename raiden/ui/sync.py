@@ -7,12 +7,11 @@ import requests
 from eth_utils import denoms, to_int
 from requests.exceptions import RequestException
 
-from raiden.constants import GAS_REQUIRED_FOR_DISCOVERY_REGISTER
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.utils import typing
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden_contracts.constants import GAS_REQUIRED_FOR_DISCOVERY_REGISTER, ID_TO_NETWORKNAME
 
 
 def check_synced(blockchain_service: BlockChainService, network_id_is_known: bool) -> None:
