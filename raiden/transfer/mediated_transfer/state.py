@@ -90,7 +90,6 @@ class InitiatorTransferState(State):
         'transfer_description',
         'channel_identifier',
         'transfer',
-        'secretrequest',
         'revealsecret',
     )
 
@@ -98,6 +97,8 @@ class InitiatorTransferState(State):
             self,
             transfer_description: 'TransferDescriptionWithSecretState',
             channel_identifier: typing.ChannelID,
+            transfer: 'LockedTransferUnsignedState',
+            revealsecret: typing.Optional['SendSecretReveal'],
     ):
 
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
@@ -111,9 +112,8 @@ class InitiatorTransferState(State):
 
         # This is the channel used to satisfy the above transfer.
         self.channel_identifier = channel_identifier
-        self.transfer = None
-        self.secretrequest = None
-        self.revealsecret = None
+        self.transfer = transfer
+        self.revealsecret = revealsecret
 
     def __repr__(self):
         return '<InitiatorTransferState transfer:{} channel:{}>'.format(
@@ -127,7 +127,6 @@ class InitiatorTransferState(State):
             self.transfer_description == other.transfer_description and
             self.channel_identifier == other.channel_identifier and
             self.transfer == other.transfer and
-            self.secretrequest == other.secretrequest and
             self.revealsecret == other.revealsecret
         )
 
@@ -138,14 +137,9 @@ class InitiatorTransferState(State):
         result = {
             'transfer_description': self.transfer_description,
             'channel_identifier': self.channel_identifier,
+            'transfer': self.transfer,
+            'revealsecret': self.revealsecret,
         }
-
-        if self.transfer is not None:
-            result['transfer'] = self.transfer
-        if self.secretrequest is not None:
-            result['secretrequest'] = self.secretrequest
-        if self.revealsecret is not None:
-            result['revealsecret'] = self.revealsecret
 
         return result
 
@@ -154,17 +148,9 @@ class InitiatorTransferState(State):
         restored = cls(
             transfer_description=data['transfer_description'],
             channel_identifier=data['channel_identifier'],
+            transfer=data['transfer'],
+            revealsecret=data['revealsecret'],
         )
-
-        transfer = data.get('transfer')
-        if transfer is not None:
-            restored.transfer = transfer
-        secretrequest = data.get('secretrequest')
-        if secretrequest is not None:
-            restored.secretrequest = secretrequest
-        revealsecret = data.get('revealsecret')
-        if revealsecret is not None:
-            restored.revealsecret = revealsecret
 
         return restored
 

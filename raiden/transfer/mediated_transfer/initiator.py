@@ -172,29 +172,30 @@ def try_new_route(
         initiator_state = None
 
     else:
-        initiator_state = InitiatorTransferState(
-            transfer_description,
-            channel_state.identifier,
-        )
-
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         lockedtransfer_event = send_lockedtransfer(
-            initiator_state,
-            channel_state,
-            message_identifier,
-            block_number,
+            transfer_description=transfer_description,
+            channel_state=channel_state,
+            message_identifier=message_identifier,
+            block_number=block_number,
         )
         assert lockedtransfer_event
 
+        initiator_state = InitiatorTransferState(
+            transfer_description=transfer_description,
+            channel_identifier=channel_state.identifier,
+            transfer=lockedtransfer_event.transfer,
+            revealsecret=None,
+        )
         events.append(lockedtransfer_event)
 
     return TransitionResult(initiator_state, events)
 
 
 def send_lockedtransfer(
-        initiator_state: InitiatorTransferState,
+        transfer_description: TransferDescriptionWithSecretState,
         channel_state: NettingChannelState,
-        message_identifier,
+        message_identifier: typing.MessageID,
         block_number: typing.BlockNumber,
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel.
@@ -202,10 +203,9 @@ def send_lockedtransfer(
     Raises:
         AssertionError: If the channel does not have enough capacity.
     """
-    transfer_token_address = initiator_state.transfer_description.token_network_identifier
-    assert channel_state.token_network_identifier == transfer_token_address
+    assert channel_state.token_network_identifier == transfer_description.token_network_identifier
 
-    transfer_description = initiator_state.transfer_description
+    transfer_description = transfer_description
     lock_expiration = get_initial_lock_expiration(
         block_number,
         channel_state.reveal_timeout,
@@ -221,10 +221,6 @@ def send_lockedtransfer(
         lock_expiration,
         transfer_description.secrethash,
     )
-    assert lockedtransfer_event
-
-    initiator_state.transfer = lockedtransfer_event.transfer
-
     return lockedtransfer_event
 
 
