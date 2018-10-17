@@ -931,6 +931,58 @@ def test_events_for_onchain_secretreveal():
     })
 
 
+def test_events_for_onchain_secretreveal_once():
+    """ Secret must be registered on-chain only once. """
+    amount = 10
+    block_number = 1
+    channel_map, transfers_pair = make_transfers_pair(
+        [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
+        amount,
+        block_number,
+    )
+
+    pair = transfers_pair[0]
+    channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
+    channel_state = channel_map[channel_identifier]
+
+    for channel_state in channel_map.values():
+        channel.register_offchain_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
+
+    block_number = (
+        pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
+    )
+
+    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
+        channel_map,
+        transfers_pair,
+        block_number,
+    )
+    assert len(events) == 1
+
+    for pair in transfers_pair:
+        assert pair.payer_state == 'payer_waiting_secret_reveal'
+
+    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
+        channel_map,
+        transfers_pair,
+        block_number,
+    )
+    assert not events
+
+    for pair in transfers_pair:
+        assert pair.payer_state == 'payer_waiting_secret_reveal'
+
+    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
+        channel_map,
+        transfers_pair,
+        block_number,
+    )
+    assert not events
+
+    for pair in transfers_pair:
+        assert pair.payer_state == 'payer_waiting_secret_reveal'
+
+
 @pytest.mark.skip(reason='issue #1736')
 def test_onchain_secretreveal_must_be_emitted_only_once():
     amount = 10
