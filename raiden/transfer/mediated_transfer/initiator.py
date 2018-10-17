@@ -205,7 +205,6 @@ def send_lockedtransfer(
     """
     assert channel_state.token_network_identifier == transfer_description.token_network_identifier
 
-    transfer_description = transfer_description
     lock_expiration = get_initial_lock_expiration(
         block_number,
         channel_state.reveal_timeout,
