@@ -12,6 +12,17 @@ Raiden has a Restful API with URL endpoints corresponding to actions that users 
 
 Before getting started with this tutorial, please see the :doc:`Installation Guide <overview_and_guide>`, to make sure that Raiden is correctly installed and running.
 
+.. _about-weth:
+
+About WETH
+==========
+
+For the Red Eyes Mainnet release only WETH can be used with the Raiden Network. WETH stands for wrapped Ether, meaning that Ether is packaged to conform to
+the ERC20 token guidelines which Raiden relies on. To learn more about WETH you can read the `announcement blog post <https://blog.0xproject.com/canonical-weth-a9aa7d0279dd>`_.
+
+To create WETH fron your Ether you can either use interfaces like `0x OTC <https://0xproject.com/otc>`_ or `Radar Relay <https://radarrelay.com/>`_. You can also use the `contract <https://etherscan.io/address/0x2956356cd2a2bf3202f771f50d3d14a367b48070#code>`_ directly.
+
+
 .. _join-token-network:
 
 Joining a token network
