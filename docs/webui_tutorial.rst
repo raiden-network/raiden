@@ -14,9 +14,6 @@ Running the web application
 There are a few simple steps that needs to be carried out in order to run the Raiden web application. Firstly, Raiden needs to be installed. See :ref:`install instructions <installation>` for this.
 
 
-.. NOTE::
-      If an INFURA node is used as an ethereum rpc provider then the WebUI can't function.
-
 The only dependency needed to run the web application is `node.js <https://docs.npmjs.com/getting-started/installing-node>`_.
 
 Once Raiden and node.js has been installed, it is quite easy to install and start the web application. From the root of the Raiden directory do::
@@ -46,11 +43,15 @@ Below is a screenshot of the landing page.
 One last thing that might be interesting to note is that the address of the running Raiden node is always displayed in the top bar.
 
 
-Wallet
+Tokens
 ----------
-The ``Wallet`` view provides information about the registered token networks. Furthermore it also allows for automatically joining an existing token network along with registering a new token network.
+The ``Tokens`` view provides information about the registered token networks. Furthermore it also allows for automatically joining an existing token network along with registering a new token network.
 
 The first thing to notice in this view is the list of tokens for which a token network exists. All tokens that have been registered in Raiden will show up in this list. If the user knows the name or the address of a token, it's very easy to search for it using the ``Filter`` input. If the token the user searches for does not show up, it most likely means that it is not yet registered. Registering can however be done by pressing the ``Circular Plus`` button and provide the token address. For each token in the list of tokens some information is provided. This information includes the ``Symbol`` of the token, the ``Address`` of the token, the ``Name`` of the token and the user's ``Balance`` of a specific token. It's easy to sort the tokens, so that only tokens that a user actually holds, show up in the beginning of the list. This is done simply by selecting an entry on the ``Sort by`` dropdown menu. You can change the sorting order by pressing the arrow on the right side of the ``Sort by`` dropdown menu.
+
+.. NOTE::
+      The ``Circular Plus`` button for token registration will not be available 
+      for the `Red Eyes` release.
 
 You can access the ``Network Events`` by selecting the ``View network events`` option of the overflow menu.
 
@@ -64,10 +65,10 @@ The overflow menu provides the ``View token events`` option. This will simply re
 
 In further releases it will also be possible to perform token swaps with the ``Swap Tokens`` button. This function is not part of the Red Eyes release.
 
-.. thumbnail:: images/raiden_webui_wallet_page_screenshot.png
+.. thumbnail:: images/raiden_webui_tokens_page_screenshot.png
     :alt: Raiden web app tokens page
 
-Above is a screenshot of the ``Wallet`` view with some registered tokens.
+Above is a screenshot of the ``Tokens`` view with some registered tokens.
 
 
 Channels
