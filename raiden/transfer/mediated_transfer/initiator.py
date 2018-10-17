@@ -270,7 +270,7 @@ def handle_secretrequest(
     elif not is_valid_secretrequest and is_message_from_target:
         cancel = EventPaymentSentFailed(
             payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifier=channel_state.token_network_identifer,
+            token_network_identifier=channel_state.token_network_identifier,
             identifier=initiator_state.transfer_description.payment_identifier,
             target=initiator_state.transfer_description.target,
             reason='bad secret request message from target',
