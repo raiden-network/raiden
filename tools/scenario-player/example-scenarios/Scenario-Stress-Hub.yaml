@@ -1,0 +1,113 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: kovan
+
+token:
+  #address: "0x1c63a13d5Cd8D6214c459a9396871b623Aa5592f"
+
+nodes:
+  mode: managed
+  count: 10
+  default_options:
+    gas-price: fast
+    registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
+    discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
+    secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
+
+
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: Open channels
+          tasks:
+            - open_channel: {from: 1, to: 0, total_deposit: 80}
+            - open_channel: {from: 2, to: 0, total_deposit: 80}
+            - open_channel: {from: 3, to: 0, total_deposit: 80}
+            - open_channel: {from: 4, to: 0, total_deposit: 80}
+            - open_channel: {from: 5, to: 0, total_deposit: 80}
+            - open_channel: {from: 6, to: 0, total_deposit: 80}
+            - open_channel: {from: 7, to: 0, total_deposit: 80}
+            - open_channel: {from: 8, to: 0, total_deposit: 80}
+            - open_channel: {from: 9, to: 0, total_deposit: 80}
+
+      - parallel:
+          name: Balancing Channels
+          tasks:
+            - transfer: {from: 1, to: 0, amount: 40, expected_http_status: "(200|408)"}
+            - transfer: {from: 2, to: 0, amount: 40, expected_http_status: "(200|408)"}
+            - transfer: {from: 3, to: 0, amount: 40, expected_http_status: "(200|408)"}
+            - transfer: {from: 4, to: 0, amount: 40, expected_http_status: "(200|408)"}
+            - transfer: {from: 5, to: 0, amount: 40, expected_http_status: "(200|408)"}
+            - transfer: {from: 6, to: 0, amount: 40, expected_http_status: "(200|408)"}
+            - transfer: {from: 7, to: 0, amount: 40, expected_http_status: "(200|408)"}
+            - transfer: {from: 8, to: 0, amount: 40, expected_http_status: "(200|408)"}
+            - transfer: {from: 9, to: 0, amount: 40, expected_http_status: "(200|408)"}
+      - wait: 20
+
+      - parallel:
+          name: Every Node sends 1 payment using Node 0 as hub
+          tasks:
+            - transfer: {from: 1, to: 2, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 2, to: 9, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 3, to: 7, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 4, to: 6, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 5, to: 3, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 6, to: 9, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 7, to: 6, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 8, to: 4, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 9, to: 6, amount: 1, expected_http_status: "(200|408)"}
+      - wait: 20
+
+      - parallel:
+          name: Every Node sends 5 payment using Node 0 as hub
+          tasks:
+            - transfer: {from: 1, to: 6, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 1, to: 7, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 1, to: 5, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 1, to: 2, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 1, to: 8, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 2, to: 3, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 2, to: 4, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 2, to: 9, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 2, to: 6, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 2, to: 1, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 3, to: 1, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 3, to: 8, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 3, to: 4, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 3, to: 2, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 3, to: 9, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 4, to: 7, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 4, to: 9, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 4, to: 6, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 4, to: 3, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 4, to: 8, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 5, to: 4, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 5, to: 2, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 5, to: 1, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 5, to: 3, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 5, to: 8, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 6, to: 4, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 6, to: 7, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 6, to: 8, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 6, to: 9, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 6, to: 3, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 7, to: 5, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 7, to: 4, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 7, to: 8, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 7, to: 6, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 7, to: 2, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 8, to: 9, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 8, to: 5, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 8, to: 4, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 8, to: 3, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 8, to: 6, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 9, to: 3, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 9, to: 4, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 9, to: 2, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 9, to: 7, amount: 1, expected_http_status: "(200|408)"}
+            - transfer: {from: 9, to: 8, amount: 1, expected_http_status: "(200|408)"}
+
