@@ -1,12 +1,12 @@
 from typing import Tuple
 
+from raiden.constants import TRANSACTION_GAS_LIMIT
 from raiden.transfer import views
 from raiden_contracts.constants import (
     GAS_REQUIRED_FOR_CLOSE_CHANNEL,
     GAS_REQUIRED_FOR_OPEN_CHANNEL,
     GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT,
     GAS_REQUIRED_FOR_SETTLE_CHANNEL,
-    TRANSACTION_GAS_LIMIT,
 )
 
 GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE = (

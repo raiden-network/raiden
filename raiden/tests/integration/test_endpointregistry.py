@@ -7,7 +7,7 @@ from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.utils import host_port_to_endpoint, privatekey_to_address
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
-    GAS_REQUIRED_FOR_DISCOVERY_REGISTER,
+    GAS_REQUIRED_FOR_ENDPOINT_REGISTER,
 )
 
 
@@ -46,7 +46,7 @@ def test_endpointregistry(private_keys, blockchain_services, contract_manager):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 def test_endpointregistry_gas(endpoint_discovery_services):
-    """ GAS_REQUIRED_FOR_DISCOVERY_REGISTER value must be equal to the gas requried to call
+    """ GAS_REQUIRED_FOR_ENDPOINT_REGISTER value must be equal to the gas required to call
     registerEndpoint.
     """
     contract_discovery = endpoint_discovery_services[0]
@@ -57,4 +57,4 @@ def test_endpointregistry_gas(endpoint_discovery_services):
     discovery_proxy.client.poll(transaction_hash)
 
     receipt = discovery_proxy.client.get_transaction_receipt(transaction_hash)
-    assert receipt['gasUsed'] <= GAS_REQUIRED_FOR_DISCOVERY_REGISTER
+    assert receipt['gasUsed'] <= GAS_REQUIRED_FOR_ENDPOINT_REGISTER
