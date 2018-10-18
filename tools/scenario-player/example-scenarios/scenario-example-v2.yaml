@@ -13,7 +13,7 @@ settings:
   #chain: any
   ## Other examples
   #chain: ropsten
-  #chain: kovan
+  chain: kovan
   #chain: rinkeby
   #chain: raiden_clique
   #chain: raiden_aura
@@ -80,7 +80,7 @@ scenario:
       - parallel:
           name: "Open channels"
           tasks:
-            - open_channel: {from: 0, to: 1, total_deposit: 10, expected_http_status: "[234].."}
+            - open_channel: {from: 0, to: 1, total_deposit: 10, settle_timeout: 100}
             - open_channel: {from: 1, to: 2, total_deposit: 10, expected_http_status: "(2..|409)"}
       - parallel:
           name: "Assert after open"
