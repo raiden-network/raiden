@@ -149,7 +149,9 @@ class ContractProxy:
     def estimate_gas(self, function: str, *args):
         fn = getattr(self.contract.functions, function)
         try:
-            return fn(*args).estimateGas({'from': to_checksum_address(self.jsonrpc_client.sender)})
+            return fn(*args).estimateGas({
+                'from': to_checksum_address(self.jsonrpc_client.address),
+            })
         except ValueError as err:
             action = inspect_client_error(err, self.jsonrpc_client.eth_node)
             will_fail = action in (
