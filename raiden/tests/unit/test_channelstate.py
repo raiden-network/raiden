@@ -1838,3 +1838,110 @@ def test_update_transfer():
         finished_block_number=update_block_number,
         result=TransactionExecutionStatus.SUCCESS,
     )
+
+
+def test_get_amount_locked():
+    state = NettingChannelEndState(
+        address=factories.make_address(),
+        balance=0,
+    )
+
+    assert channel.get_amount_locked(state) == 0
+
+    secrethash = sha3(factories.make_secret(1))
+    state.secrethashes_to_lockedlocks[secrethash] = HashTimeLockState(
+        amount=23,
+        expiration=100,
+        secrethash=secrethash,
+    )
+    assert channel.get_amount_locked(state) == 23
+
+    secret = factories.make_secret(1)
+    secrethash = sha3(secret)
+    lock = HashTimeLockState(
+        amount=21,
+        expiration=100,
+        secrethash=secrethash,
+    )
+    state.secrethashes_to_unlockedlocks[secrethash] = UnlockPartialProofState(
+        lock=lock,
+        secret=secret,
+    )
+    assert channel.get_amount_locked(state) == 44
+
+    secret = factories.make_secret(2)
+    secrethash = sha3(secret)
+    lock = HashTimeLockState(
+        amount=19,
+        expiration=100,
+        secrethash=secrethash,
+    )
+    state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
+        lock=lock,
+        secret=secret,
+    )
+    assert channel.get_amount_locked(state) == 63
+
+
+def test_valid_lock_expired_for_unlocked_lock():
+    """ This tests that locked and unlocked locks hehave the same when
+    they are checked with `is_valid_lock_expired`.
+    This tests issue #2828
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    block_number = 100
+
+    lock_amount = 10
+    lock_expiration = block_number - 10
+    lock_secret = b'test_channel_must_accept_expired_locks'
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        amount=lock_amount,
+        expiration=lock_expiration,
+        secrethash=lock_secrethash,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        lock=lock,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state=channel_state,
+        mediated_transfer=receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
+
+    channel.register_secret(
+        channel_state=channel_state,
+        secret=lock_secret,
+        secrethash=lock_secrethash,
+    )
+
+    lock_expired = ReceiveLockExpired(
+        channel_state.partner_state.address,
+        receive_lockedtransfer.balance_proof,
+        lock_secrethash,
+        1,
+    )
+
+    is_valid, _, _ = channel.is_valid_lock_expired(
+        state_change=lock_expired,
+        channel_state=channel_state,
+        sender_state=channel_state.partner_state,
+        receiver_state=channel_state.our_state,
+        block_number=block_number,
+    )
+
+    assert not is_valid
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_unlockedlocks
