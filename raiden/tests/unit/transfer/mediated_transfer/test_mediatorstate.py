@@ -5,6 +5,7 @@ from copy import deepcopy
 import pytest
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.messages import message_from_sendevent
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
@@ -66,9 +67,10 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
     EMPTY_MERKLE_ROOT,
+    balanceproof_from_envelope,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import Block
+from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils import publickey_to_address, random_secret
 
 
@@ -885,6 +887,89 @@ def test_events_for_balanceproof_lock_expired():
         UNIT_SECRETHASH,
     )
     assert not events
+
+
+def test_regression_onchain_secret_reveal_must_update_channel_state():
+    """ If a secret is learned off-chain and then on-chain, the state of the
+    lock must be updated in the channel.
+    """
+    amount = 10
+    block_number = 10
+    pseudo_random_generator = random.Random()
+
+    channel_map, transfers_pair = make_transfers_pair(
+        [HOP2_KEY, HOP3_KEY],
+        amount,
+        block_number,
+    )
+
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
+    mediator_state.transfers_pair = transfers_pair
+
+    secret = UNIT_SECRET
+    secrethash = UNIT_SECRETHASH
+    payer_channelid = transfers_pair[0].payer_transfer.balance_proof.channel_identifier
+    payee_channelid = transfers_pair[0].payee_transfer.balance_proof.channel_identifier
+    payer_channel = channel_map[payer_channelid]
+    payee_channel = channel_map[payee_channelid]
+    lock = payer_channel.partner_state.secrethashes_to_lockedlocks[secrethash]
+
+    mediator.state_transition(
+        mediator_state,
+        ReceiveSecretReveal(secret, payee_channel.partner_state.address),
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
+
+    secret_registry_address = factories.make_address()
+    transaction_hash = factories.make_address()
+    mediator.state_transition(
+        mediator_state,
+        ContractReceiveSecretReveal(
+            transaction_hash,
+            secret_registry_address,
+            secrethash,
+            secret,
+            block_number,
+        ),
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
+
+    # Creates a transfer as it was from the *partner*
+    send_lock_expired = channel.create_sendexpiredlock(
+        sender_end_state=payer_channel.partner_state,
+        locked_lock=lock,
+        pseudo_random_generator=pseudo_random_generator,
+        chain_id=payer_channel.chain_id,
+        token_network_identifier=payer_channel.token_network_identifier,
+        channel_identifier=payer_channel.identifier,
+        recipient=payer_channel.our_state.address,
+    )
+    assert send_lock_expired
+    lock_expired_message = message_from_sendevent(send_lock_expired, HOP1)
+    lock_expired_message.sign(HOP2_KEY)
+    balance_proof = balanceproof_from_envelope(lock_expired_message)
+
+    message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    expired_block_number = lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    mediator.state_transition(
+        mediator_state,
+        ReceiveLockExpired(
+            sender=payer_channel.partner_state.address,
+            balance_proof=balance_proof,
+            secrethash=secrethash,
+            message_identifier=message_identifier,
+        ),
+        channel_map,
+        pseudo_random_generator,
+        expired_block_number,
+    )
+    assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
 
 
 def test_events_for_onchain_secretreveal():
