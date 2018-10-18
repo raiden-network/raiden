@@ -13,7 +13,7 @@ settings:
   #chain: any
   ## Other examples
   #chain: ropsten
-  chain: kovan
+  #chain: kovan
   #chain: rinkeby
   #chain: raiden_clique
   #chain: raiden_aura

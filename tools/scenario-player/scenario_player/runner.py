@@ -26,7 +26,7 @@ from scenario_player.utils import (
 log = structlog.get_logger(__name__)
 
 
-DEFAULT_TOKEN_BALANCE_MIN = 1_000
+DEFAULT_TOKEN_BALANCE_MIN = 2_000
 DEFAULT_TOKEN_BALANCE_FUND = 10_000
 OWN_ACCOUNT_BALANCE_MIN = 5 * 10 ** 17    # := 2.0 Eth
 NODE_ACCOUNT_BALANCE_MIN = 15 * 10 ** 16   # := 0.15 Eth
@@ -179,6 +179,8 @@ class ScenarioRunner(object):
         self.root_task = task_class(runner=self, config=root_task_config)
 
     def run_scenario(self):
+        fund_tx = []
+        node_starter: gevent.Greenlet = None
         if self.is_managed:
             self.node_controller.initialize_nodes()
             node_addresses = self.node_controller.addresses
@@ -191,16 +193,13 @@ class ScenarioRunner(object):
                 for address, balance in node_balances.items()
                 if balance < NODE_ACCOUNT_BALANCE_MIN
             }
-            fund_tx = []
             if low_balances:
                 log.info('Funding nodes', nodes=low_balances.keys())
                 fund_tx = [
                     self.client.send_transaction(address, NODE_ACCOUNT_BALANCE_FUND - balance)
                     for address, balance in low_balances.items()
                 ]
-            self.node_controller.start()
-            if fund_tx:
-                wait_for_txs(self.client, fund_tx)
+            node_starter = self.node_controller.start(wait=False)
         else:
             log.info("Fetching node addresses")
             unreachable_nodes = [node for node, addr in self.node_to_address.items() if not addr]
@@ -218,6 +217,10 @@ class ScenarioRunner(object):
             'balance_min',
             DEFAULT_TOKEN_BALANCE_MIN,
         )
+        token_balance_fund = token_settings.get(
+            'balance_fund',
+            DEFAULT_TOKEN_BALANCE_FUND,
+        )
 
         mint_tx = []
         if self.is_managed:
@@ -227,12 +230,20 @@ class ScenarioRunner(object):
         for address in addresses:
             balance = token_ctr.contract.functions.balanceOf(address).call()
             if balance < token_balance_min:
-                mint_amount = token_balance_min - balance
+                mint_amount = token_balance_fund - balance
                 log.debug("Minting tokens for", address=address, amount=mint_amount)
                 mint_tx.append(token_ctr.transact('mintFor', mint_amount, address))
             elif balance > token_balance_min:
                 log.warning("Node is overfunded", address=address, balance=balance)
-        wait_for_txs(self.client, mint_tx)
+
+        all_tx = mint_tx
+        if fund_tx:
+            all_tx.extend(fund_tx)
+
+        wait_for_txs(self.client, all_tx)
+
+        if node_starter:
+            node_starter.get(block=True)
 
         registered_tokens = set(
             self.session.get(
