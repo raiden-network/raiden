@@ -909,7 +909,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
 
 def is_transaction_effect_satisfied(
         chain_state: ChainState,
-        transaction,
+        transaction: ContractSendEvent,
         state_change: StateChange,
 ) -> bool:
     """ True if the side-effect of `transaction` is satisfied by
