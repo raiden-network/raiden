@@ -26,6 +26,9 @@ class OpenChannelTask(RaidenAPIActionTask):
         total_deposit = self._config.get('total_deposit')
         if total_deposit is not None:
             params['total_deposit'] = total_deposit
+        settle_timeout = self._config.get('settle_timeout')
+        if settle_timeout:
+            params['settle_timeout'] = settle_timeout
         return params
 
 
