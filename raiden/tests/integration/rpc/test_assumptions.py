@@ -69,7 +69,7 @@ def test_call_invalid_selector(deploy_client):
     wrong_selector = next_byte + selector[1:]
     call = deploy_client.web3.eth.call
     data = {
-        'from': to_checksum_address(deploy_client.sender),
+        'from': to_checksum_address(deploy_client.address),
         'to': to_checksum_address(address),
         'data': wrong_selector,
     }
@@ -83,7 +83,7 @@ def test_call_inexisting_address(deploy_client):
 
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(inexisting_address))) == 0
     transaction = {
-        'from': to_checksum_address(deploy_client.sender),
+        'from': to_checksum_address(deploy_client.address),
         'to': to_checksum_address(inexisting_address),
         'data': b'',
         'value': 0,
