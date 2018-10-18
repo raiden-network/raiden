@@ -286,14 +286,14 @@ def run_app(
         config['contracts_path'] = contracts_precompiled_path(contracts_version)
         not_allowed = (  # for now we only disallow mainnet with test configuration
             network_id == 1 and
-            network_type == NetworkType.TEST
+            environment == Environment.DEVELOPMENT
         )
         if not_allowed:
             click.secho(
-                'The chosen network {} has no test configuration but a test network type '
-                'was given. This is not allowed.'.format(
-                    ID_TO_NETWORKNAME[node_network_id],
-                ),
+                f'The chosen network ({ID_TO_NETWORKNAME[node_network_id]}) is not a testnet, '
+                'but the "development" environment was selected.\n'
+                'This is not allowed. Please start again with a safe environment setting '
+                '(--environment production).',
                 fg='red',
             )
             sys.exit(1)
