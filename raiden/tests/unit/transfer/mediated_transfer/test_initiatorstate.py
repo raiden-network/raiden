@@ -770,8 +770,6 @@ def test_handle_offchain_secretreveal():
 
 def test_initiator_lock_expired():
     amount = UNIT_TRANSFER_AMOUNT * 2
-    block_number = 1
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=amount,
@@ -886,8 +884,6 @@ def test_initiator_handle_contract_receive_secret_reveal():
     the channel is open.
     """
     amount = UNIT_TRANSFER_AMOUNT * 2
-    block_number = 1
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=amount,
@@ -945,8 +941,6 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
     on-chain *after* the lock expiration.
     """
     amount = UNIT_TRANSFER_AMOUNT * 2
-    block_number = 1
-    pseudo_random_generator = random.Random()
 
     channel1 = factories.make_channel(
         our_balance=amount,
