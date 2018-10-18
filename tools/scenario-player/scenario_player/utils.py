@@ -1,26 +1,34 @@
+import json
 import os
 import time
 import uuid
-from collections import deque
+from collections import defaultdict, deque
 from datetime import datetime
 from itertools import islice
-from typing import Union
+from pathlib import Path
+from typing import Dict, Union
 
 import click
 import mirakuru
 import requests
 import structlog
+from eth_keyfile import decode_keyfile_json
 from eth_utils import encode_hex, to_checksum_address
 from mirakuru import TimeoutExpired
 from mirakuru.base import IGNORED_ERROR_CODES
 from requests.adapters import HTTPAdapter
+from web3 import HTTPProvider, Web3
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
-from raiden.network.rpc.client import check_address_has_code
+from raiden.accounts import Account
+from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 from scenario_player.exceptions import ScenarioError, ScenarioTxError
+
+RECLAIM_MIN_BALANCE = 10 ** 12  # 1 µEth (a.k.a. Twei, szabo)
+VALUE_TX_GAS_COST = 21_000
 
 log = structlog.get_logger(__name__)
 
@@ -109,7 +117,11 @@ class HTTPExecutor(mirakuru.HTTPExecutor):
         return self
 
 
-def wait_for_txs(client, txhashes, timeout=360):
+def wait_for_txs(client_or_web3, txhashes, timeout=360):
+    if isinstance(client_or_web3, Web3):
+        web3 = client_or_web3
+    else:
+        web3 = client_or_web3.web3
     start = time.monotonic()
     outstanding = False
     txhashes = txhashes[:]
@@ -123,7 +135,7 @@ def wait_for_txs(client, txhashes, timeout=360):
                 timeout_remaining=int(remaining_timeout),
             )
         for txhash in txhashes[:]:
-            tx = client.web3.eth.getTransaction(txhash)
+            tx = web3.eth.getTransaction(txhash)
             if tx and tx['blockNumber'] is not None:
                 txhashes.remove(txhash)
             time.sleep(.1)
@@ -222,3 +234,73 @@ def get_gas_price_strategy(gas_price: Union[int, str]) -> callable:
         return medium_gas_price_strategy
     else:
         raise ValueError(f'Invalid gas_price value: "{gas_price}"')
+
+
+def reclaim_eth(account: Account, chain_rpc_urls: dict, data_path: str, min_age_hours: int):
+    web3s: Dict[str, Web3] = {
+        name: Web3(HTTPProvider(urls[0]))
+        for name, urls in chain_rpc_urls.items()
+    }
+
+    data_path = Path(data_path)
+    log.info('Starting eth reclaim', data_path=data_path)
+
+    addresses = dict()
+    for node_dir in data_path.glob('**/node_???'):
+        scenario_name: Path = node_dir.parent.name
+        last_run = next(
+            iter(
+                sorted(
+                    list(node_dir.glob('run-*.log')),
+                    key=lambda p: p.stat().st_mtime,
+                    reverse=True,
+                ),
+            ),
+            None,
+        )
+        # If there is no last run assume we can reclaim
+        if last_run:
+            age_hours = (time.time() - last_run.stat().st_mtime) / 3600
+            if age_hours < min_age_hours:
+                log.debug(
+                    'Skipping too recent node',
+                    scenario_name=scenario_name,
+                    node=node_dir.name,
+                    age_hours=age_hours,
+                )
+                continue
+        for keyfile in node_dir.glob('keys/*'):
+            keyfile_content = json.loads(keyfile.read_text())
+            address = keyfile_content.get('address')
+            if address:
+                addresses[to_checksum_address(address)] = decode_keyfile_json(keyfile_content, b'')
+
+    log.info('Reclaiming candidates', addresses=list(addresses.keys()))
+
+    txs = defaultdict(list)
+    reclaim_amount = defaultdict(int)
+    for chain_name, web3 in web3s.items():
+        log.info('Checking chain', chain=chain_name)
+        for address, privkey in addresses.items():
+            balance = web3.eth.getBalance(address)
+            if balance > RECLAIM_MIN_BALANCE:
+                drain_amount = balance - (web3.eth.gasPrice * VALUE_TX_GAS_COST)
+                log.info(
+                    'Reclaiming',
+                    from_address=address,
+                    amount=drain_amount.__format__(',d'),
+                    chain=chain_name,
+                )
+                reclaim_amount[chain_name] += drain_amount
+                client = JSONRPCClient(web3, privkey)
+                txs[chain_name].append(
+                    client.send_transaction(
+                        account.address,
+                        drain_amount,
+                        startgas=VALUE_TX_GAS_COST,
+                    ),
+                )
+    for chain_name, chain_txs in txs.items():
+        wait_for_txs(web3s[chain_name], chain_txs, 1000)
+    for chain_name, amount in reclaim_amount.items():
+        log.info('Reclaimed', chain=chain_name, amount=amount.__format__(',d'))

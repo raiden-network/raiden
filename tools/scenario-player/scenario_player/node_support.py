@@ -3,6 +3,7 @@ import json
 import os
 import random
 import shutil
+import socket
 import stat
 import sys
 import time
@@ -153,6 +154,7 @@ class NodeRunner:
         self._address = None
         self._eth_rpc_endpoint = None
         self._executor = None
+        self._port = None
 
         if options.pop('_clean', False):
             shutil.rmtree(self._datadir)
@@ -301,7 +303,13 @@ class NodeRunner:
 
     @property
     def _api_address(self):
-        return f'127.0.0.1:5{self._index:03d}'
+        if not self._port:
+            # Find a random free port
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(('127.0.0.1', 0))
+            self._port = sock.getsockname()[1]
+            sock.close()
+        return f'127.0.0.1:{self._port}'
 
     @property
     def _log_file(self):
@@ -337,13 +345,21 @@ class NodeController:
     def __len__(self):
         return self._node_runners.__len__()
 
-    def start(self):
-        # Start nodes in <number of cpus> * 2 batches
+    def start(self, wait=True):
         log.info('Starting nodes')
-        pool = Pool(size=os.cpu_count() * 2)
-        for runner in self._node_runners:
-            pool.start(Greenlet(runner.start))
-        pool.join(raise_error=True)
+
+        # Start nodes in <number of cpus> batches
+        pool = Pool(size=os.cpu_count())
+
+        def _start():
+            for runner in self._node_runners:
+                pool.start(Greenlet(runner.start))
+            pool.join(raise_error=True)
+
+        starter = gevent.spawn(_start)
+        if wait:
+            starter.get(block=True)
+        return starter
 
     def stop(self):
         log.info('Stopping nodes')
