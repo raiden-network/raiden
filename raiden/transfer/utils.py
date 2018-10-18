@@ -20,9 +20,9 @@ def get_latest_known_balance_proof_from_state_changes(
     """ Tries to find the balance proof with the provided balance hash
     in stored state changes. """
     state_change_record = storage.get_latest_state_change_by_data_field({
-        'balance_proof.chain_id': str(chain_id),
+        'balance_proof.chain_id': chain_id,
         'balance_proof.token_network_identifier': to_checksum_address(token_network_id),
-        'balance_proof.channel_identifier': str(channel_identifier),
+        'balance_proof.channel_identifier': channel_identifier,
         'balance_proof.sender': to_checksum_address(sender),
         'balance_hash': serialize_bytes(balance_hash),
     })
@@ -41,9 +41,9 @@ def get_latest_known_balance_proof_from_events(
     """ Tries to find the balance proof with the provided balance hash
     in stored events. """
     event_record = storage.get_latest_event_by_data_field({
-        'balance_proof.chain_id': str(chain_id),
+        'balance_proof.chain_id': chain_id,
         'balance_proof.token_network_identifier': to_checksum_address(token_network_id),
-        'balance_proof.channel_identifier': str(channel_identifier),
+        'balance_proof.channel_identifier': channel_identifier,
         'balance_hash': serialize_bytes(balance_hash),
     })
     if event_record.data:

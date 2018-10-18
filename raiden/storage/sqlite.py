@@ -195,7 +195,7 @@ class SQLiteStorage:
 
     def get_latest_event_by_data_field(
             self,
-            filters: typing.Dict[str, str],
+            filters: typing.Dict[str, typing.Any],
     ) -> EventRecord:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()

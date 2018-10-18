@@ -869,7 +869,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
         locksroot = EMPTY_MERKLE_ROOT
         nonce = 0
         transferred_amount: typing.TokenAmount = 0
-        locked_amount: typing.Balance = 0
+        locked_amount: typing.TokenAmount = 0
 
     return (locksroot, nonce, transferred_amount, locked_amount)
 
