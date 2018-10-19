@@ -1461,6 +1461,7 @@ def events_for_expired_lock(
         chain_id=channel_state.chain_id,
     )
 
+    channel_state.our_state.balance_proof = balance_proof
     delete_secrethash_endstate(channel_state.our_state, secrethash, locked_lock)
 
     return [SendLockExpired(
