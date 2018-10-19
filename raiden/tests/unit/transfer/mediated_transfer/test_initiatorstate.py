@@ -1027,7 +1027,7 @@ def test_lock_expiry_updates_balance_proof():
         block_hash=factories.make_transaction_hash(),
     )
 
-    iteration = initiator_manager.state_transition(
+    initiator_manager.state_transition(
         current_state,
         state_change,
         channel_map,
@@ -1035,15 +1035,7 @@ def test_lock_expiry_updates_balance_proof():
         block_number,
     )
 
-    assert events.must_contain_entry(iteration.events, SendLockExpired, {
-        'balance_proof': {
-            'nonce': 2,
-            'transferred_amount': 0,
-            'locked_amount': 0,
-        },
-        'secrethash': transfer.lock.secrethash,
-        'recipient': channel1.partner_state.address,
-    })
-
-    nonce_after_lock_expiry = channel1.our_state.balance_proof.nonce
-    assert nonce_after_lock_expiry == nonce_before_lock_expiry + 1
+    balance_proof = channel1.our_state.balance_proof
+    assert balance_proof.nonce == nonce_before_lock_expiry + 1
+    assert balance_proof.transferred_amount == 0
+    assert balance_proof.locked_amount == 0
