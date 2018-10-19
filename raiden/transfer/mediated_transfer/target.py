@@ -39,12 +39,12 @@ def events_for_onchain_secretreveal(
         channel_state.reveal_timeout,
         block_number,
     )
-    secret_known = channel.is_secret_known(
+    secret_known_offchain = channel.is_secret_known_offchain(
         channel_state.partner_state,
         transfer.lock.secrethash,
     )
 
-    if not safe_to_wait and secret_known:
+    if not safe_to_wait and secret_known_offchain:
         secret = channel.get_secret(
             channel_state.partner_state,
             transfer.lock.secrethash,
