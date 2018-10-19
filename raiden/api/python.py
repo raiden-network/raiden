@@ -5,7 +5,7 @@ from eth_utils import is_binary_address, to_checksum_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
@@ -30,7 +30,6 @@ from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
-from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -384,7 +383,7 @@ class RaidenAPI:
 
         balance = token.balance_of(self.raiden.address)
 
-        if self.raiden.config['network_type'] == NetworkType.MAIN:
+        if self.raiden.config['environment_type'] == Environment.PRODUCTION:
             deposit_limit = (
                 token_network_proxy.proxy.contract.functions.
                 channel_participant_deposit_limit().call()
