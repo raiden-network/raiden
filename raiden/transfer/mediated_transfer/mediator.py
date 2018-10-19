@@ -5,7 +5,7 @@ from typing import Dict, List
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer import channel, secret_registry
-from raiden.transfer.architecture import TransitionResult
+from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import ContractSendChannelBatchUnlock, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
@@ -129,7 +129,11 @@ def is_send_transfer_almost_equal(
     )
 
 
-def has_secret_registration_started(channel_states, transfers_pair, secrethash):
+def has_secret_registration_started(
+        channel_states: typing.List[NettingChannelState],
+        transfers_pair: typing.List[MediationPairState],
+        secrethash: typing.SecretHash,
+) -> bool:
     # If it's known the secret is registered on-chain, the node should not send
     # a new transaction. Note there is a race condition:
     #
@@ -395,9 +399,9 @@ def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash
 
 def set_offchain_reveal_state(transfers_pair, payee_address):
     """ Set the state of a transfer *sent* to a payee. """
-    for back in transfers_pair:
-        if back.payee_address == payee_address:
-            back.payee_state = 'payee_secret_revealed'
+    for pair in transfers_pair:
+        if pair.payee_address == payee_address:
+            pair.payee_state = 'payee_secret_revealed'
             break
 
 
@@ -497,7 +501,7 @@ def events_for_refund_transfer(
     return list()
 
 
-def events_for_revealsecret(transfers_pair, secret, pseudo_random_generator):
+def events_for_secretreveal(transfers_pair, secret, pseudo_random_generator):
     """ Reveal the secret off-chain.
 
     The secret is revealed off-chain even if there is a pending transaction to
@@ -610,10 +614,10 @@ def events_for_balanceproof(
 
 
 def events_for_onchain_secretreveal_if_dangerzone(
-        channelmap,
-        transfers_pair,
-        block_number,
-):
+        channelmap: typing.ChainMap,
+        transfers_pair: typing.List[MediationPairState],
+        block_number: typing.BlockNumber,
+) -> typing.List[Event]:
     """ Reveal the secret on-chain if the lock enters the unsafe region and the
     secret is not yet on-chain.
     """
@@ -669,8 +673,8 @@ def events_for_onchain_secretreveal_if_dangerzone(
 def events_for_onchain_secretreveal_if_closed(
         channelmap: typing.ChannelMap,
         transfers_pair: typing.List[MediationPairState],
-        secret,
-        secrethash,
+        secret: typing.Secret,
+        secrethash: typing.SecretHash,
 ) -> typing.List[ContractSendChannelBatchUnlock]:
     """ Register the secret on-chain if the payer channel is already closed and
     the mediator learned the secret off-chain.
@@ -788,7 +792,7 @@ def secret_learned(
         secrethash,
     )
 
-    offchain_secret_reveal = events_for_revealsecret(
+    offchain_secret_reveal = events_for_secretreveal(
         state.transfers_pair,
         secret,
         pseudo_random_generator,
@@ -1020,12 +1024,7 @@ def handle_offchain_secretreveal(
         pseudo_random_generator,
         block_number,
 ):
-    """ Validate and handle a ReceiveSecretReveal mediator_state change.
-    The Secret must propagate backwards through the chain of mediators, this
-    function will record the learned secret, check if the secret is propagating
-    backwards (for the known paths), and send the SendBalanceProof/RevealSecret if
-    necessary.
-    """
+    """ Handles the secret reveal and sends SendBalanceProof/RevealSecret if necessary. """
     is_secret_unknown = mediator_state.secret is None
     is_valid_reveal = mediator_state_change.secrethash == mediator_state.secrethash
 

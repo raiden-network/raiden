@@ -563,7 +563,7 @@ def test_regression_send_refund():
     assert must_contain_entry(iteration.events, SendRefundTransfer, {})
 
 
-def test_events_for_revealsecret():
+def test_events_for_secretreveal():
     """ The secret is revealed backwards to the payer once the payee sent the
     SecretReveal.
     """
@@ -578,7 +578,7 @@ def test_events_for_revealsecret():
         block_number,
     )
 
-    events = mediator.events_for_revealsecret(
+    events = mediator.events_for_secretreveal(
         transfers_pair,
         our_address,
         pseudo_random_generator,
@@ -592,7 +592,7 @@ def test_events_for_revealsecret():
     last_pair = transfers_pair[1]
 
     last_pair.payee_state = 'payee_secret_revealed'
-    events = mediator.events_for_revealsecret(
+    events = mediator.events_for_secretreveal(
         transfers_pair,
         UNIT_SECRET,
         pseudo_random_generator,
@@ -605,7 +605,7 @@ def test_events_for_revealsecret():
     assert events[0].recipient == last_pair.payer_transfer.balance_proof.sender
     assert last_pair.payer_state == 'payer_secret_revealed'
 
-    events = mediator.events_for_revealsecret(
+    events = mediator.events_for_secretreveal(
         transfers_pair,
         our_address,
         pseudo_random_generator,
@@ -616,7 +616,7 @@ def test_events_for_revealsecret():
     assert not events
 
     first_pair.payee_state = 'payee_secret_revealed'
-    events = mediator.events_for_revealsecret(
+    events = mediator.events_for_secretreveal(
         transfers_pair,
         UNIT_SECRET,
         pseudo_random_generator,
@@ -628,7 +628,7 @@ def test_events_for_revealsecret():
     assert first_pair.payer_state == 'payer_secret_revealed'
 
 
-def test_events_for_revealsecret_secret_unknown():
+def test_events_for_secretreveal_secret_unknown():
     """ When the secret is not known there is nothing to do. """
     amount = 10
     pseudo_random_generator = random.Random()
@@ -640,7 +640,7 @@ def test_events_for_revealsecret_secret_unknown():
         block_number,
     )
 
-    events = mediator.events_for_revealsecret(
+    events = mediator.events_for_secretreveal(
         transfers_pair,
         ADDR,
         pseudo_random_generator,
@@ -649,7 +649,7 @@ def test_events_for_revealsecret_secret_unknown():
     assert not events
 
 
-def test_events_for_revealsecret_all_states():
+def test_events_for_secretreveal_all_states():
     """ The secret must be revealed backwards to the payer if the payee knows
     the secret.
     """
@@ -672,7 +672,7 @@ def test_events_for_revealsecret_all_states():
         pair = transfers_pair[0]
         pair.payee_state = state
 
-        events = mediator.events_for_revealsecret(
+        events = mediator.events_for_secretreveal(
             transfers_pair,
             UNIT_SECRET,
             pseudo_random_generator,
