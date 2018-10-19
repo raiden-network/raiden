@@ -10,7 +10,7 @@ import { SwapToken } from '../models/swaptoken';
 
 import { UserToken } from '../models/usertoken';
 import { amountFromDecimal, amountToDecimal } from '../utils/amount.converter';
-import { NetworkType } from './network-type.enum';
+import { EnvironmentType } from './enviroment-type.enum';
 
 import { RaidenConfig } from './raiden.config';
 import { SharedService } from './shared.service';
@@ -42,8 +42,8 @@ export class RaidenService {
         );
     }
 
-    public get main(): boolean {
-        return this.raidenConfig.config.network_type === NetworkType.MAIN;
+    public get production(): boolean {
+        return this.raidenConfig.config.environment_type === EnvironmentType.PRODUCTION;
     }
 
     private _raidenAddress: string;
