@@ -1462,6 +1462,7 @@ def events_for_expired_lock(
     )
 
     channel_state.our_state.balance_proof = balance_proof
+    channel_state.our_state.merkletree = merkletree
     delete_secrethash_endstate(channel_state.our_state, secrethash, locked_lock)
 
     return [SendLockExpired(
@@ -1762,7 +1763,7 @@ def handle_receive_lock_expired(
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     """Remove expired locks from channel states."""
-    is_valid, _, _ = is_valid_lock_expired(
+    is_valid, _, merkletree = is_valid_lock_expired(
         state_change=state_change,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
@@ -1773,6 +1774,7 @@ def handle_receive_lock_expired(
     events = list()
     if is_valid:
         channel_state.partner_state.balance_proof = state_change.balance_proof
+        channel_state.partner_state.merkletree = merkletree
         secrethashes_to_lockedlocks = channel_state.partner_state.secrethashes_to_lockedlocks
         locked_lock = secrethashes_to_lockedlocks.get(state_change.secrethash)
         delete_secrethash_endstate(
