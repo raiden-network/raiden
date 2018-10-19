@@ -986,3 +986,64 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
     )
 
     assert events.must_contain_entry(iteration.events, SendBalanceProof, {}) is None
+
+
+def test_lock_expiry_updates_balance_proof():
+    amount = UNIT_TRANSFER_AMOUNT * 2
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    pseudo_random_generator = random.Random()
+
+    channel_map = {
+        channel1.identifier: channel1,
+    }
+
+    available_routes = [
+        factories.route_from_channel(channel1),
+    ]
+
+    block_number = 10
+    current_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    transfer = current_state.initiator.transfer
+    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
+
+    nonce_before_lock_expiry = channel1.our_state.balance_proof.nonce
+
+    # Trigger lock expiry
+    state_change = Block(
+        block_number=transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+
+    iteration = initiator_manager.state_transition(
+        current_state,
+        state_change,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    assert events.must_contain_entry(iteration.events, SendLockExpired, {
+        'balance_proof': {
+            'nonce': 2,
+            'transferred_amount': 0,
+            'locked_amount': 0,
+        },
+        'secrethash': transfer.lock.secrethash,
+        'recipient': channel1.partner_state.address,
+    })
+
+    nonce_after_lock_expiry = channel1.our_state.balance_proof.nonce
+    assert nonce_after_lock_expiry == nonce_before_lock_expiry + 1
