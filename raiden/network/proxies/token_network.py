@@ -29,7 +29,6 @@ from raiden.exceptions import (
 from raiden.network.proxies import Token
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.utils import compare_versions, pex, privatekey_to_address, typing
 from raiden_contracts.constants import (
@@ -92,7 +91,7 @@ class TokenNetwork:
 
         is_good_version = compare_versions(
             proxy.contract.functions.contract_version().call(),
-            EXPECTED_CONTRACTS_VERSION,
+            contract_manager.contracts_version,
         )
         if not is_good_version:
             raise ContractVersionMismatch('Incompatible ABI for TokenNetwork')

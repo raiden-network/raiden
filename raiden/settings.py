@@ -43,5 +43,3 @@ DEFAULT_SHUTDOWN_TIMEOUT = 2
 
 ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = 3
 ETHERSCAN_API = 'https://{network}.etherscan.io/api?module=proxy&action={action}'
-
-EXPECTED_CONTRACTS_VERSION = '0.4.0'

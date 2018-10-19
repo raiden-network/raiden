@@ -12,7 +12,6 @@ from raiden.exceptions import (
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.settings import EXPECTED_CONTRACTS_VERSION
 from raiden.utils import compare_versions, pex, privatekey_to_address
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
@@ -46,7 +45,7 @@ class Discovery:
         try:
             is_valid_version = compare_versions(
                 proxy.contract.functions.contract_version().call(),
-                EXPECTED_CONTRACTS_VERSION,
+                contract_manager.contracts_version,
             )
             if not is_valid_version:
                 raise ContractVersionMismatch('Incompatible ABI for Discovery')
