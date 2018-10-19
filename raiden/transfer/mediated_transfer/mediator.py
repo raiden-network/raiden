@@ -1025,8 +1025,9 @@ def handle_offchain_secretreveal(
 ):
     """ Handles the secret reveal and sends SendBalanceProof/RevealSecret if necessary. """
     is_valid_reveal = mediator_state_change.secrethash == mediator_state.secrethash
+    is_secret_unknown = mediator_state.secret is None
 
-    if is_valid_reveal:
+    if is_secret_unknown and is_valid_reveal:
         iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,
