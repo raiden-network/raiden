@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { NetworkType } from './network-type.enum';
+import { EnvironmentType } from './enviroment-type.enum';
 
 import { SharedService } from './shared.service';
 
@@ -15,7 +15,7 @@ interface RDNConfig {
     http_timeout?: number;
     settle_timeout?: number;
     reveal_timeout?: number;
-    network_type?: NetworkType;
+    environment_type?: EnvironmentType;
 }
 
 const default_config: RDNConfig = {
@@ -27,7 +27,7 @@ const default_config: RDNConfig = {
     http_timeout: 600000,
     settle_timeout: 500,
     reveal_timeout: 10,
-    network_type: NetworkType.TEST
+    environment_type: EnvironmentType.DEVELOPMENT
 };
 
 @Injectable()
