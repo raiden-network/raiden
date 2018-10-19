@@ -59,7 +59,7 @@ scenario:
             - assert: {from: 6, to: 1, balance: 5}
             - assert: {from: 1, to: 6, balance: 5}
 
-      ## in the hexagon everyone now has 5 tokens - Node 0 still has 60 (10 in each channel)
+      # In the hexagon everyone now has 5 tokens - Node 0 still has 60 (10 in each channel)
 
       - parallel:
           name: "Series of direct transfers from the top"
@@ -71,7 +71,7 @@ scenario:
             - transfer: {from: 0, to: 5, amount: 5}
             - transfer: {from: 0, to: 6, amount: 5}
 
-      ## Assert that there is a symmetric diamond
+      # Assert that there is a symmetric diamond
       - serial:
           name: "Assert after balancing"
           tasks:
@@ -112,7 +112,6 @@ scenario:
                 tasks:
                   - transfer: {from: 1, to: 4, amount: 1, expected_http_status: "(200|409)"}
                   - wait: 30
-                  - assert_all: {from: 4, count: 3, balances: [6, 5, 5]}
             - serial:
                 name: "Node 0 crashes"
                 tasks:
@@ -143,7 +142,6 @@ scenario:
                       tasks:
                         - transfer: {from: 1, to: 5, amount: 1, expected_http_status: "(200|409)"}
                         - wait: 30
-                        - assert: {from: 5, to: 4, balance: 6}
                   - serial:
                       tasks:
                         - wait: 2
@@ -162,10 +160,8 @@ scenario:
                 tasks:
                   - transfer: {from: 2, to: 5, amount: 1, expected_http_status: "(200|409)"}
                   - wait: 30
-                  - assert_all: {from: 5, count: 2, balance: [6, 6, 5]}
             - serial:
                 tasks:
-                  - wait: 0
                   - kill_node: 0
                   - start_node: 0
             - serial:
