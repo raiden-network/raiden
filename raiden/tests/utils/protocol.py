@@ -36,6 +36,8 @@ class WaitForMessage(MessageHandler):
         return event
 
     def on_message(self, raiden: RaidenService, message: Message):
+        # First handle the message, and then set the events, to ensure the
+        # expected side-effects of the message is applied
         super().on_message(raiden, message)
 
         for waiting in self.waiting[type(message)]:
