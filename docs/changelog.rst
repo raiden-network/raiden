@@ -2,6 +2,7 @@
 Changelog
 =========
 
+:bug:`2836` Contract version check now works for any deployed contract version.
 :bug:`2449` Only polling events from confirmed blocks to prevent conflicts with reorgs.
 :bug:`2827` Fixed a typo in the handle_secretrequest function.
 :bug:`2813` Fixed swapped message and payment id, which caused problems on node restart.
