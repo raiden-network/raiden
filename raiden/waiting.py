@@ -3,6 +3,7 @@ import structlog
 
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
+from raiden.transfer.mediated_transfer.state_change import ActionInitTarget
 from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
     CHANNEL_STATE_SETTLED,
@@ -280,6 +281,40 @@ def wait_for_healthy(
         network_statuses = views.get_networkstatuses(
             views.state_from_raiden(raiden),
         )
+
+
+def wait_for_target_to_receive_locked_mediated_transfer(
+        raiden: RaidenService,
+        payment_identifier: typing.PaymentID,
+        amount: typing.PaymentAmount,
+        retry_timeout: float,
+) -> None:
+    """Wait until a mediated transfer with a specific identifier and amount is
+    seen in the WAL.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    found = False
+    start = 0
+    end = 0
+
+    while not found:
+        # latest window of state changes
+        start = end
+        end = raiden.wal.storage.count_state_changes()
+        state_changes = raiden.wal.storage.get_statechanges_by_identifier(start, end)
+
+        for state_change in state_changes:
+            found = (
+                isinstance(state_change, ActionInitTarget) and
+                state_change.transfer.payment_identifier == payment_identifier and
+                state_change.transfer.lock.amount == amount
+            )
+            if found:
+                break
+
+        gevent.sleep(retry_timeout)
 
 
 def wait_for_transfer_success(

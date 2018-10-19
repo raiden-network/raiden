@@ -1,3 +1,4 @@
+import os
 from typing import Dict, List
 
 import gevent
@@ -14,8 +15,9 @@ from raiden.blockchain.events import (
     get_token_network_events,
     get_token_network_registry_events,
 )
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.messages import RevealSecret
 from raiden.network.blockchain_service import BlockChainService
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import must_contain_entry, must_have_event, wait_for_state_change
 from raiden.tests.utils.geth import wait_until_block
@@ -23,10 +25,9 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, dont_handle_secret_request_mock
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
 from raiden.transfer import views
-from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
-from raiden.transfer.state_change import ContractReceiveSecretReveal
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils import sha3, wait_until
 from raiden.utils.typing import Address, BlockSpecification, ChannelID
 from raiden_contracts.constants import (
@@ -37,12 +38,17 @@ from raiden_contracts.constants import (
 from raiden_contracts.contract_manager import ContractManager
 
 
+class NeverSendSecretReveal(RaidenEventHandler):
+    def handle_send_secretreveal(self, raiden, reveal_secret_event):
+        pass
+
+
 def get_netting_channel_closed_events(
         chain: BlockChainService,
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
+        from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     closed_event_abi = contract_manager.get_event_abi(
@@ -75,7 +81,7 @@ def get_netting_channel_deposit_events(
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
+        from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     deposit_event_abi = contract_manager.get_event_abi(
@@ -107,7 +113,7 @@ def get_netting_channel_settled_events(
         token_network_address: Address,
         netting_channel_identifier: ChannelID,
         contract_manager: ContractManager,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
+        from_block: BlockSpecification = 0,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     settled_event_abi = contract_manager.get_event_abi(
@@ -494,15 +500,14 @@ def test_query_events(
 
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_secret_revealed_on_chain(
-        raiden_chain,
-        deposit,
-        settle_timeout,
-        token_addresses,
-        retry_interval,
-):
-    """ A node must reveal the secret on-chain if it's known and the channel is closed. """
+def test_secret_revealed(raiden_chain, settle_timeout, token_addresses, deposit, retry_interval):
     app0, app1, app2 = raiden_chain
+
+    raiden_event_handler = NeverSendSecretReveal()
+    app0.raiden.raiden_event_handler = raiden_event_handler
+    app1.raiden.raiden_event_handler = raiden_event_handler
+    app2.raiden.raiden_event_handler = raiden_event_handler
+
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(app0),
@@ -513,7 +518,7 @@ def test_secret_revealed_on_chain(
     amount = 10
     identifier = 1
     target = app2.raiden.address
-    secret = sha3(target)
+    secret = os.urandom(32)
     secrethash = sha3(secret)
 
     # Reveal the secret, but do not unlock it off-chain
@@ -538,21 +543,34 @@ def test_secret_revealed_on_chain(
         )
 
     channel_state2_1 = get_channelstate(app2, app1, token_network_identifier)
-    pending_lock = channel_state2_1.partner_state.secrethashes_to_unlockedlocks.get(secrethash)
-    msg = "The lock must be registered in unlocked locks since the secret is known"
-    assert pending_lock is not None, msg
+    assert secrethash in channel_state2_1.partner_state.secrethashes_to_lockedlocks
 
-    # The channels are out-of-sync. app1 has sent the unlock, however we are
-    # intercepting it and app2 has not received the updated balance proof
-
-    # Close the channel. This must register the secret on chain
-    channel_close_event = ContractSendChannelClose(
-        channel_identifier=channel_state2_1.identifier,
-        token_address=channel_state2_1.token_address,
-        token_network_identifier=token_network_identifier,
-        balance_proof=channel_state2_1.partner_state.balance_proof,
+    netting_channel_proxy = app2.raiden.chain.payment_channel(
+        token_network_identifier,
+        channel_state2_1.identifier,
     )
-    app2.raiden.raiden_event_handler.on_raiden_event(app2.raiden, channel_close_event)
+
+    balance_proof = channel_state2_1.partner_state.balance_proof
+    netting_channel_proxy.close(
+        nonce=balance_proof.nonce,
+        balance_hash=balance_proof.balance_hash,
+        additional_hash=balance_proof.message_hash,
+        signature=balance_proof.signature,
+    )
+
+    # Because the secret is learned after the channel is closed, the secret
+    # must be registered on chain
+    message_identifier = 177
+    reveal_secret = RevealSecret(
+        message_identifier=message_identifier,
+        secret=secret,
+    )
+    app1.raiden.sign(reveal_secret)
+    queue_identifier = QueueIdentifier(
+        recipient=app2.raiden.address,
+        channel_identifier=channel_state2_1.identifier,
+    )
+    app1.raiden.transport.send_async(queue_identifier, reveal_secret)
 
     settle_expiration = (
         app0.raiden.chain.block_number() +
@@ -572,13 +590,8 @@ def test_secret_revealed_on_chain(
         app1, deposit + amount, [],
     )
 
-    with gevent.Timeout(10):
-        wait_for_state_change(
-            app2.raiden,
-            ContractReceiveSecretReveal,
-            {'secrethash': secrethash},
-            retry_interval,
-        )
+    secret_registry = app2.raiden.default_secret_registry
+    assert secret_registry.check_registered(secrethash)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

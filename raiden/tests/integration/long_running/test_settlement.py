@@ -1,3 +1,4 @@
+import os
 import random
 
 import gevent
@@ -8,6 +9,7 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret
 from raiden.storage.restore import channel_state_until_state_change
+from raiden.tests.integration.test_integration_events import NeverSendSecretReveal
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
@@ -131,6 +133,11 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
 def test_lock_expiry(raiden_network, token_addresses, deposit):
     """Test lock expiry and removal."""
     alice_app, bob_app = raiden_network
+
+    raiden_event_handler = NeverSendSecretReveal()
+    alice_app.raiden.raiden_event_handler = raiden_event_handler
+    bob_app.raiden.raiden_event_handler = raiden_event_handler
+
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(alice_app),
@@ -186,6 +193,13 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     )
     transfer1_received.wait()
 
+    waiting.wait_for_target_to_receive_locked_mediated_transfer(
+        raiden=bob_app.raiden,
+        payment_identifier=identifier,
+        amount=alice_to_bob_amount,
+        retry_timeout=.5,
+    )
+
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     lock = channel.get_lock(alice_bob_channel_state.our_state, transfer_1_secrethash)
 
@@ -222,9 +236,10 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
     assert transfer_1_secrethash not in alice_chain_state.payment_mapping.secrethashes_to_task
 
-    # Make another transfer
     alice_to_bob_amount = 10
     identifier = 2
+    transfer_2_secret = os.urandom(32)
+    transfer_2_secrethash = sha3(transfer_2_secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_2_secrethash)
 
@@ -284,7 +299,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     alice_to_bob_amount = 10
     identifier = 1
     target = bob_app.raiden.address
-    secret = sha3(target)
+    secret = os.urandom(32)
     secrethash = sha3(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -297,7 +312,12 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         secret,
     )
 
-    gevent.sleep(1)  # wait for the messages to be exchanged
+    waiting.wait_for_target_to_receive_locked_mediated_transfer(
+        raiden=bob_app.raiden,
+        payment_identifier=identifier,
+        amount=alice_to_bob_amount,
+        retry_timeout=.5,
+    )
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
@@ -420,7 +440,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     initial_balance1 = token_proxy.balance_of(address1)
     identifier = 1
     target = app1.raiden.address
-    secret = sha3(target)
+    secret = os.urandom(32)
     secrethash = sha3(secret)
 
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -498,6 +518,10 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
         token_address,
     )
 
+    raiden_event_handler = NeverSendSecretReveal()
+    app0.raiden.raiden_event_handler = raiden_event_handler
+    app1.raiden.raiden_event_handler = raiden_event_handler
+
     amount = 100
     identifier = 1
 
@@ -505,7 +529,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     app1.raiden.raiden_event_handler = hold_event_handler
 
     target = app1.raiden.address
-    secret = sha3(target)
+    secret = os.urandom(32)
     secrethash = sha3(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -518,10 +542,12 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
         secret,
     )
 
-    gevent.sleep(1)  # wait for the messages to be exchanged
-
-    # Stop app0 to avoid sending the unlock
-    app0.raiden.transport.stop()
+    waiting.wait_for_target_to_receive_locked_mediated_transfer(
+        raiden=app1.raiden,
+        payment_identifier=identifier,
+        amount=amount,
+        retry_timeout=.5,
+    )
 
     reveal_secret = RevealSecret(
         random.randint(0, UINT64_MAX),
@@ -568,9 +594,10 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     app2.raiden.raiden_event_handler = hold_event_handler
 
     # the attacker owns app0 and app2 and creates a transfer through app1
+    amount = 100
     identifier = 1
     target = app2.raiden.address
-    secret = sha3(target)
+    secret = os.urandom(32)
     secrethash = sha3(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
@@ -583,7 +610,12 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
         secret,
     )
 
-    gevent.sleep(1)  # wait for the messages to be exchanged
+    waiting.wait_for_target_to_receive_locked_mediated_transfer(
+        raiden=app2.raiden,
+        payment_identifier=identifier,
+        amount=amount,
+        retry_timeout=.5,
+    )
 
     attack_channel = get_channelstate(app2, app1, token_network_identifier)
     attack_transfer = None  # TODO
