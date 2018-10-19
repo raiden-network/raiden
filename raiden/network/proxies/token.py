@@ -68,7 +68,7 @@ class Token:
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
-            user_balance = self.balance_of(self.client.sender)
+            user_balance = self.balance_of(self.client.address)
 
             # If the balance is zero, either the smart contract doesnt have a
             # balanceOf function or the actual balance is zero
