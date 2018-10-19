@@ -74,29 +74,29 @@ def handle_block(
     secrethash = initiator_state.transfer.lock.secrethash
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
-    if locked_lock:
-        lock_expiration_threshold = (
-            locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    if not locked_lock:
+        return TransitionResult(initiator_state, list())
+
+    lock_expiration_threshold = (
+        locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    )
+    lock_has_expired, _ = channel.is_lock_expired(
+        end_state=channel_state.our_state,
+        lock=locked_lock,
+        block_number=state_change.block_number,
+        lock_expiration_threshold=lock_expiration_threshold,
+    )
+
+    if lock_has_expired:
+        expired_lock_events = channel.events_for_expired_lock(
+            channel_state,
+            secrethash,
+            locked_lock,
+            pseudo_random_generator,
         )
-        lock_has_expired, _ = channel.is_lock_expired(
-            end_state=channel_state.our_state,
-            lock=locked_lock,
-            block_number=state_change.block_number,
-            lock_expiration_threshold=lock_expiration_threshold,
-        )
-
-        if lock_has_expired:
-            expired_lock_events = channel.events_for_expired_lock(
-                channel_state,
-                secrethash,
-                locked_lock,
-                pseudo_random_generator,
-            )
-
-            iteration = TransitionResult(None, expired_lock_events)
-            return iteration
-
-    return TransitionResult(initiator_state, list())
+        return TransitionResult(None, expired_lock_events)
+    else:
+        return TransitionResult(initiator_state, list())
 
 
 def get_initial_lock_expiration(
