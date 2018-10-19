@@ -614,7 +614,7 @@ def events_for_balanceproof(
 
 
 def events_for_onchain_secretreveal_if_dangerzone(
-        channelmap: typing.ChainMap,
+        channelmap: typing.ChannelMap,
         transfers_pair: typing.List[MediationPairState],
         block_number: typing.BlockNumber,
 ) -> typing.List[Event]:
