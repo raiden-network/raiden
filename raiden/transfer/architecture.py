@@ -100,6 +100,9 @@ class Event:
 class SendMessageEvent(Event):
     """ Marker used for events which represent off-chain protocol messages tied
     to a channel.
+
+    Messages are sent only once, delivery is guaranteed by the transport and
+    not by the state machine
     """
 
     def __init__(
@@ -134,6 +137,7 @@ class SendMessageEvent(Event):
 
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
+
     def __init__(self, sender):
         self.sender = sender
 
