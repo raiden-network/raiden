@@ -6,8 +6,9 @@ import pytest
 from raiden import message_handler, waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
-from raiden.messages import LockExpired, RevealSecret
+from raiden.messages import LockedTransfer, LockExpired, RevealSecret
 from raiden.storage.restore import channel_state_until_state_change
+from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
@@ -157,11 +158,21 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_to_bob_amount = 10
     identifier = 1
     target = bob_app.raiden.address
-    transfer_1_secret = sha3(target + b'1')
+    transfer_1_secret = factories.make_secret(0)
     transfer_1_secrethash = sha3(transfer_1_secret)
+    transfer_2_secret = factories.make_secret(1)
+    transfer_2_secrethash = sha3(transfer_2_secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_1_secrethash)
-    remove_expired_lock = wait_message_handler.wait_for_message(
+    transfer1_received = wait_message_handler.wait_for_message(
+        LockedTransfer,
+        {'lock': {'secrethash': transfer_1_secrethash}},
+    )
+    transfer2_received = wait_message_handler.wait_for_message(
+        LockedTransfer,
+        {'lock': {'secrethash': transfer_2_secrethash}},
+    )
+    remove_expired_lock_received = wait_message_handler.wait_for_message(
         LockExpired,
         {'secrethash': transfer_1_secrethash},
     )
@@ -173,8 +184,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
         identifier,
         transfer_1_secret,
     )
-
-    gevent.sleep(1)  # wait for the messages to be exchanged
+    transfer1_received.wait()
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     lock = channel.get_lock(alice_bob_channel_state.our_state, transfer_1_secrethash)
@@ -200,7 +210,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
     assert transfer_1_secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
 
-    remove_expired_lock.wait()
+    remove_expired_lock_received.wait()
 
     alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     assert transfer_1_secrethash not in alice_channel_state.our_state.secrethashes_to_lockedlocks
@@ -216,9 +226,6 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_to_bob_amount = 10
     identifier = 2
 
-    transfer_2_secret = sha3(target + b'2')
-    transfer_2_secrethash = sha3(transfer_2_secret)
-
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_2_secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
@@ -228,8 +235,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
         identifier,
         transfer_2_secret,
     )
-
-    gevent.sleep(1)  # wait for the messages to be exchanged
+    transfer2_received.wait()
 
     # Make sure the other transfer still exists
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
