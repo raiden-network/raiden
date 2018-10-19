@@ -30,7 +30,7 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file):
     )
 
     targets = [t.strip() for t in targets_file]
-    balance = client.balance(client.sender)
+    balance = client.balance(client.address)
 
     balance_needed = len(targets) * eth_amount
     if balance_needed * WEI_TO_ETH > balance:
