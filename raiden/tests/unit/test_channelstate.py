@@ -21,7 +21,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_TARGET,
     make_secret,
 )
-from raiden.tests.utils.transfer import make_receive_transfer_mediated
+from raiden.tests.utils.transfer import make_receive_expired_lock, make_receive_transfer_mediated
 from raiden.transfer import channel
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
@@ -40,6 +40,7 @@ from raiden.transfer.merkle_tree import (
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
     EMPTY_MERKLE_ROOT,
+    EMPTY_MERKLE_TREE,
     HashTimeLockState,
     MerkleTreeState,
     NettingChannelEndState,
@@ -1194,7 +1195,77 @@ def test_channel_must_never_expire_locks_with_onchain_secret():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = b'test_channel_must_accept_expired_locks'
+    lock_secret = sha3(b'test_channel_must_never_expire_locks_with_onchain_secret')
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        amount=lock_amount,
+        expiration=lock_expiration,
+        secrethash=lock_secrethash,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        lock=lock,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state=channel_state,
+        mediated_transfer=receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
+
+    lock_expired = make_receive_expired_lock(
+        channel_state,
+        privkey2,
+        receive_lockedtransfer.balance_proof.nonce + 1,
+        transferred_amount,
+        lock,
+        locked_amount=0,
+    )
+
+    is_valid, msg, _ = channel.is_valid_lock_expired(
+        state_change=lock_expired,
+        channel_state=channel_state,
+        sender_state=channel_state.partner_state,
+        receiver_state=channel_state.our_state,
+        block_number=block_number,
+    )
+
+    assert is_valid, msg
+
+    iteration = channel.handle_receive_lock_expired(
+        channel_state=channel_state,
+        state_change=lock_expired,
+        block_number=block_number,
+    )
+
+    new_channel_state = iteration.new_state
+    assert lock.secrethash not in new_channel_state.partner_state.secrethashes_to_lockedlocks
+    msg = 'the balance proof must be updated'
+    assert new_channel_state.partner_state.balance_proof == lock_expired.balance_proof, msg
+    assert new_channel_state.partner_state.merkletree == EMPTY_MERKLE_TREE
+
+
+def test_regression_must_update_balanceproof_remove_expired_lock():
+    """ A remove expire lock message contains a balance proof and changes the
+    merkle tree, the receiver must update the channel state.
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    block_number = 100
+
+    lock_amount = 10
+    lock_expiration = block_number - 10
+    lock_secret = sha3(b'test_regression_must_update_balanceproof_remove_expired_lock')
     lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         amount=lock_amount,
@@ -1329,7 +1400,7 @@ def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
     secret_reveal_block_number = block_number - 5
 
     lock_amount = 10
-    lock_secret = b'test_channel_must_accept_expired_locks'
+    lock_secret = sha3(b'test_channel_rejects_onchain_secret_reveal_with_expired_locks')
     lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         amount=lock_amount,
@@ -1779,7 +1850,7 @@ def test_update_transfer():
     closed channel sets the update_transaction member
     """
     our_model1, _ = create_model(70)
-    partner_model1, privkey2 = create_model(100)
+    partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
 
     pseudo_random_generator = random.Random()
@@ -1896,7 +1967,7 @@ def test_valid_lock_expired_for_unlocked_lock():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = b'test_channel_must_accept_expired_locks'
+    lock_secret = sha3(b'test_valid_lock_expired_for_unlocked_lock')
     lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         amount=lock_amount,

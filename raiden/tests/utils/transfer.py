@@ -6,13 +6,14 @@ from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer
+from raiden.messages import LockedTransfer, LockExpired
 from raiden.tests.utils.factories import make_address
 from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     lockedtransfersigned_from_message,
 )
+from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
     EMPTY_MERKLE_TREE,
@@ -346,6 +347,59 @@ def make_receive_transfer_mediated(
         lock,
         transfer_initiator,
         transfer_target,
+    )
+
+    return receive_lockedtransfer
+
+
+def make_receive_expired_lock(
+        channel_state,
+        privkey,
+        nonce,
+        transferred_amount,
+        lock,
+        merkletree_leaves=None,
+        locked_amount=None,
+        chain_id=None,
+):
+
+    if not isinstance(lock, HashTimeLockState):
+        raise ValueError('lock must be of type HashTimeLockState')
+
+    address = privatekey_to_address(privkey.secret)
+    if address not in (channel_state.our_state.address, channel_state.partner_state.address):
+        raise ValueError('Private key does not match any of the participants.')
+
+    if merkletree_leaves is None:
+        layers = EMPTY_MERKLE_TREE.layers
+    else:
+        assert lock.lockhash not in merkletree_leaves
+        layers = compute_layers(merkletree_leaves)
+
+    locksroot = layers[MERKLEROOT][0]
+
+    chain_id = chain_id or channel_state.chain_id
+    lock_expired_msg = LockExpired(
+        chain_id=chain_id,
+        nonce=nonce,
+        message_identifier=random.randint(0, UINT64_MAX),
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        locksroot=locksroot,
+        channel_identifier=channel_state.identifier,
+        token_network_address=channel_state.token_network_identifier,
+        recipient=channel_state.partner_state.address,
+        secrethash=lock.secrethash,
+    )
+    lock_expired_msg.sign(privkey)
+
+    balance_proof = balanceproof_from_envelope(lock_expired_msg)
+
+    receive_lockedtransfer = ReceiveLockExpired(
+        channel_state.partner_state.address,
+        balance_proof,
+        lock.secrethash,
+        random.randint(0, UINT64_MAX),
     )
 
     return receive_lockedtransfer
