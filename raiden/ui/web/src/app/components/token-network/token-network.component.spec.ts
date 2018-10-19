@@ -7,7 +7,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { ClipboardModule } from 'ngx-clipboard';
 import { MaterialComponentsModule } from '../../modules/material-components/material-components.module';
 import { DecimalPipe } from '../../pipes/decimal.pipe';
-import { NetworkType } from '../../services/network-type.enum';
+import { EnvironmentType } from '../../services/enviroment-type.enum';
 import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
@@ -56,15 +56,15 @@ describe('TokenNetworkComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('should have a registration button when configuration is testnet', async(() => {
-        mockConfiguration.config.network_type = NetworkType.TEST;
+    it('should have a registration button when configuration is development', async(() => {
+        mockConfiguration.config.environment_type = EnvironmentType.DEVELOPMENT;
         fixture.detectChanges();
         const element = fixture.debugElement.query(By.css('#token-registration'));
         expect(element).toBeTruthy();
     }));
 
-    it('should have registration disabled when configuration is mainnet', async(() => {
-        mockConfiguration.config.network_type = NetworkType.MAIN;
+    it('should have registration disabled when configuration is production', async(() => {
+        mockConfiguration.config.environment_type = EnvironmentType.PRODUCTION;
         fixture.detectChanges();
         const element = fixture.debugElement.query(By.css('#token-registration'));
         expect(element).toBeFalsy();

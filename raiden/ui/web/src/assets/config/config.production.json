@@ -3,5 +3,5 @@
   "reveal_timeout": 10,
   "settle_timeout": 500,
   "web3": "http://localhost:8545",
-  "environment_type": "production"
+  "environment_type": "development"
 }
