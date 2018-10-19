@@ -1772,6 +1772,7 @@ def handle_receive_lock_expired(
 
     events = list()
     if is_valid:
+        channel_state.partner_state.balance_proof = state_change.balance_proof
         secrethashes_to_lockedlocks = channel_state.partner_state.secrethashes_to_lockedlocks
         locked_lock = secrethashes_to_lockedlocks.get(state_change.secrethash)
         delete_secrethash_endstate(
