@@ -753,7 +753,6 @@ def events_for_expired_locks(
                 transfer_pair.payee_state = 'payee_expired'
                 expired_lock_events = channel.events_for_expired_lock(
                     channel_state=channel_state,
-                    secrethash=secrethash,
                     locked_lock=locked_lock,
                     pseudo_random_generator=pseudo_random_generator,
                 )
@@ -1025,10 +1024,9 @@ def handle_offchain_secretreveal(
         block_number,
 ):
     """ Handles the secret reveal and sends SendBalanceProof/RevealSecret if necessary. """
-    is_secret_unknown = mediator_state.secret is None
     is_valid_reveal = mediator_state_change.secrethash == mediator_state.secrethash
 
-    if is_secret_unknown and is_valid_reveal:
+    if is_valid_reveal:
         iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,
@@ -1056,11 +1054,9 @@ def handle_onchain_secretreveal(
     secret known.
     """
     secrethash = onchain_secret_reveal.secrethash
-
-    is_secret_unknown = mediator_state.secret is None
     is_valid_reveal = secrethash == mediator_state.secrethash
 
-    if is_secret_unknown and is_valid_reveal:
+    if is_valid_reveal:
         secret = onchain_secret_reveal.secret
         # Compare against the block number at which the event was emitted.
         block_number = onchain_secret_reveal.block_number

@@ -260,7 +260,7 @@ def is_valid_signature(
         # propagate because it's a memory pressure problem.
         #
         # Exception is raised if the public key recovery failed.
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         msg = 'Signature invalid, could not be recovered.'
         return (False, msg)
 
@@ -1431,20 +1431,22 @@ def events_for_close(
     return events
 
 
-def events_for_expired_lock(
-        channel_state: NettingChannelState,
-        secrethash: typing.SecretHash,
+def create_sendexpiredlock(
+        sender_end_state: NettingChannelEndState,
         locked_lock: HashTimeLockState,
         pseudo_random_generator: random.Random,
-) -> typing.List[SendLockExpired]:
-    nonce = get_next_nonce(channel_state.our_state)
-    locked_amount = get_amount_locked(channel_state.our_state)
-    our_balance_proof = channel_state.our_state.balance_proof
+        chain_id: typing.ChainID,
+        token_network_identifier: typing.TokenNetworkID,
+        channel_identifier: typing.ChannelID,
+        recipient: typing.Address,
+):
+    nonce = get_next_nonce(sender_end_state)
+    locked_amount = get_amount_locked(sender_end_state)
+    balance_proof = sender_end_state.balance_proof
     updated_locked_amount = locked_amount - locked_lock.amount
-    transferred_amount = our_balance_proof.transferred_amount
+    transferred_amount = balance_proof.transferred_amount
 
-    sender_state = channel_state.our_state
-    merkletree = compute_merkletree_without(sender_state.merkletree, locked_lock.lockhash)
+    merkletree = compute_merkletree_without(sender_end_state.merkletree, locked_lock.lockhash)
 
     if not merkletree:
         return []
@@ -1456,21 +1458,43 @@ def events_for_expired_lock(
         transferred_amount=transferred_amount,
         locked_amount=updated_locked_amount,
         locksroot=locksroot,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
-        chain_id=channel_state.chain_id,
+        token_network_identifier=token_network_identifier,
+        channel_identifier=channel_identifier,
+        chain_id=chain_id,
     )
 
-    channel_state.our_state.balance_proof = balance_proof
-    channel_state.our_state.merkletree = merkletree
-    del channel_state.our_state.secrethashes_to_lockedlocks[secrethash]
-
-    return [SendLockExpired(
-        recipient=channel_state.partner_state.address,
+    send_lock_expired = SendLockExpired(
+        recipient=recipient,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         balance_proof=balance_proof,
         secrethash=locked_lock.secrethash,
-    )]
+    )
+
+    return send_lock_expired, merkletree
+
+
+def events_for_expired_lock(
+        channel_state: NettingChannelState,
+        locked_lock: HashTimeLockState,
+        pseudo_random_generator: random.Random,
+) -> typing.List[SendLockExpired]:
+    send_lock_expired, merkletree = create_sendexpiredlock(
+        sender_end_state=channel_state.our_state,
+        locked_lock=locked_lock,
+        pseudo_random_generator=pseudo_random_generator,
+        chain_id=channel_state.chain_id,
+        token_network_identifier=channel_state.token_network_identifier,
+        channel_identifier=channel_state.identifier,
+        recipient=channel_state.partner_state.address,
+    )
+
+    if send_lock_expired:
+        channel_state.our_state.merkletree = merkletree
+        channel_state.our_state.balance_proof = send_lock_expired.balance_proof
+        del channel_state.our_state.secrethashes_to_lockedlocks[locked_lock.secrethash]
+        return [send_lock_expired]
+
+    return []
 
 
 def register_secret_endstate(

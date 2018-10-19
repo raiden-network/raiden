@@ -89,10 +89,9 @@ def handle_block(
 
     if lock_has_expired:
         expired_lock_events = channel.events_for_expired_lock(
-            channel_state,
-            secrethash,
-            locked_lock,
-            pseudo_random_generator,
+            channel_state=channel_state,
+            locked_lock=locked_lock,
+            pseudo_random_generator=pseudo_random_generator,
         )
         return TransitionResult(None, expired_lock_events)
     else:
