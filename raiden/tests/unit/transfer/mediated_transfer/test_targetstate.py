@@ -30,10 +30,19 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
 )
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
-from raiden.transfer.state_change import Block, ReceiveUnlock
+from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 
 
-def make_target_state(our_address, amount, block_number, initiator, expiration=None):
+def make_target_state(
+        our_address,
+        amount,
+        block_number,
+        initiator,
+        expiration=None,
+        pseudo_random_generator=None,
+):
+    pseudo_random_generator = pseudo_random_generator or random.Random()
+
     from_channel = factories.make_channel(
         our_address=our_address,
         partner_address=UNIT_TRANSFER_SENDER,
@@ -53,9 +62,14 @@ def make_target_state(our_address, amount, block_number, initiator, expiration=N
         UNIT_SECRET,
     )
 
-    state = TargetTransferState(from_route, from_transfer)
-
-    return from_channel, state
+    state_change = ActionInitTarget(from_route, from_transfer)
+    iteration = target.handle_inittarget(
+        state_change,
+        from_channel,
+        pseudo_random_generator,
+        block_number,
+    )
+    return from_channel, iteration.new_state
 
 
 def test_events_for_onchain_secretreveal():
@@ -226,6 +240,54 @@ def test_handle_offchain_secretreveal():
     assert iteration.new_state.state == 'reveal_secret'
     assert reveal.secret == secret
     assert reveal.recipient == state.route.node_address
+
+
+def test_handle_onchain_secretreveal():
+    """ The target node must update the lock state when the secret is
+    registered in the blockchain.
+    """
+    amount = 3
+    block_number = 1
+    expiration = block_number + factories.UNIT_REVEAL_TIMEOUT
+    initiator = factories.HOP1
+    our_address = factories.ADDR
+    secret = factories.UNIT_SECRET
+    pseudo_random_generator = random.Random()
+
+    channel_state, state = make_target_state(
+        our_address,
+        amount,
+        block_number,
+        initiator,
+        expiration,
+    )
+    assert factories.UNIT_SECRETHASH in channel_state.partner_state.secrethashes_to_lockedlocks
+
+    offchain_secret_reveal_iteration = target.state_transition(
+        state,
+        ReceiveSecretReveal(secret, initiator),
+        channel_state,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert factories.UNIT_SECRETHASH in channel_state.partner_state.secrethashes_to_unlockedlocks
+
+    block_number_prior_the_expiration = expiration - 1
+    target.state_transition(
+        offchain_secret_reveal_iteration.new_state,
+        ContractReceiveSecretReveal(
+            transaction_hash=factories.make_address(),
+            secret_registry_address=factories.make_address(),
+            secrethash=UNIT_SECRETHASH,
+            secret=UNIT_SECRET,
+            block_number=block_number_prior_the_expiration,
+        ),
+        channel_state,
+        pseudo_random_generator,
+        block_number_prior_the_expiration,
+    )
+    unlocked_onchain = channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
+    assert factories.UNIT_SECRETHASH in unlocked_onchain
 
 
 def test_handle_block():
