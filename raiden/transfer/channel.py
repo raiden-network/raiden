@@ -1447,7 +1447,7 @@ def create_sendexpiredlock(
         token_network_identifier: typing.TokenNetworkID,
         channel_identifier: typing.ChannelID,
         recipient: typing.Address,
-):
+) -> typing.Tuple[typing.Optional[SendLockExpired], typing.Optional[MerkleTreeState]]:
     nonce = get_next_nonce(sender_end_state)
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
@@ -1457,7 +1457,7 @@ def create_sendexpiredlock(
     merkletree = compute_merkletree_without(sender_end_state.merkletree, locked_lock.lockhash)
 
     if not merkletree:
-        return []
+        return None, None
 
     locksroot = merkleroot(merkletree)
 
