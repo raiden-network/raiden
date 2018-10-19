@@ -73,7 +73,7 @@ def token_network_contract(
         deploy_contract,
         secret_registry_contract,
         token_contract,
-        network_type,
+        environment_type,
 ):
     return deploy_contract(
         CONTRACT_TOKEN_NETWORK,
