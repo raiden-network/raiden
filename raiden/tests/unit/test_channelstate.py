@@ -1922,7 +1922,7 @@ def test_valid_lock_expired_for_unlocked_lock():
 
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
 
-    channel.register_secret(
+    channel.register_offchain_secret(
         channel_state=channel_state,
         secret=lock_secret,
         secrethash=lock_secrethash,
