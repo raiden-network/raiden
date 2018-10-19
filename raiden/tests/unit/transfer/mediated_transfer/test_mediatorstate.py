@@ -941,7 +941,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
 
     # Creates a transfer as it was from the *partner*
-    send_lock_expired = channel.create_sendexpiredlock(
+    send_lock_expired, _ = channel.create_sendexpiredlock(
         sender_end_state=payer_channel.partner_state,
         locked_lock=lock,
         pseudo_random_generator=pseudo_random_generator,
