@@ -47,7 +47,7 @@ from raiden.api.v1.resources import (
     TokensResource,
     create_blueprint,
 )
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -85,7 +85,6 @@ from raiden.utils import (
     typing,
 )
 from raiden.utils.runnable import Runnable
-from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)
 
@@ -403,13 +402,15 @@ class APIServer(Runnable):
 
             web3 = self.flask_app.config.get('WEB3_ENDPOINT')
             if 'config.' in file_name and file_name.endswith('.json'):
-                network_type = self.rest_api.raiden_api.raiden.config['network_type'].name.lower()
+                environment_type = self.rest_api.raiden_api.raiden.config[
+                    'environment_type'
+                ].name.lower()
                 config = {
                     'raiden': self._api_prefix,
                     'web3': web3,
                     'settle_timeout': self.rest_api.raiden_api.raiden.config['settle_timeout'],
                     'reveal_timeout': self.rest_api.raiden_api.raiden.config['reveal_timeout'],
-                    'network_type': network_type,
+                    'environment_type': environment_type,
                 }
 
                 # if raiden sees eth rpc endpoint as localhost, replace it by Host header,
@@ -512,7 +513,7 @@ class RestAPI:
             registry_address: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
     ):
-        if self.raiden_api.raiden.config['network_type'] == NetworkType.MAIN:
+        if self.raiden_api.raiden.config['environment_type'] == Environment.PRODUCTION:
             return api_error(
                 errors='Registering a new token is currently disabled in the Ethereum mainnet',
                 status_code=HTTPStatus.NOT_IMPLEMENTED,

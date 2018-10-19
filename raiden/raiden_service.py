@@ -16,7 +16,7 @@ from raiden import constants, routing, waiting
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import GENESIS_BLOCK_NUMBER, SNAPSHOT_STATE_CHANGES_COUNT
+from raiden.constants import GENESIS_BLOCK_NUMBER, SNAPSHOT_STATE_CHANGES_COUNT, Environment
 from raiden.exceptions import (
     InvalidAddress,
     InvalidDBData,
@@ -60,7 +60,6 @@ from raiden.utils import (
     typing,
 )
 from raiden.utils.runnable import Runnable
-from raiden_contracts.constants import NetworkType
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -480,7 +479,7 @@ class RaidenService(Runnable):
             except InvalidDBData as e:
                 raise
             except RaidenUnrecoverableError as e:
-                if self.config['network_type'] == NetworkType.MAIN:
+                if self.config['environment_type'] == Environment.PRODUCTION:
                     log.error(str(e))
                 else:
                     raise
@@ -590,7 +589,7 @@ class RaidenService(Runnable):
                 except InvalidDBData as e:
                     raise
                 except RaidenUnrecoverableError as e:
-                    if self.config['network_type'] == NetworkType.MAIN:
+                    if self.config['environment_type'] == Environment.PRODUCTION:
                         log.error(str(e))
                     else:
                         raise

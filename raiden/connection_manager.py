@@ -8,6 +8,7 @@ from gevent.lock import Semaphore
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.constants import Environment
 from raiden.exceptions import (
     DepositMismatch,
     DepositOverLimit,
@@ -22,7 +23,6 @@ from raiden.exceptions import (
 from raiden.transfer import views
 from raiden.utils import pex, typing
 from raiden.utils.typing import Address
-from raiden_contracts.constants import NetworkType
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 RECOVERABLE_ERRORS = (
@@ -273,7 +273,7 @@ class ConnectionManager:
             except InvalidDBData:
                 raise
             except RaidenUnrecoverableError as e:
-                if self.raiden.config['network_type'] != NetworkType.MAIN:
+                if self.raiden.config['environment_type'] != Environment.PRODUCTION:
                     raise
 
                 log.critical(
@@ -358,7 +358,7 @@ class ConnectionManager:
                 partner=pex(partner),
             )
         except RaidenUnrecoverableError:
-            if self.raiden.config['network_type'] != NetworkType.MAIN:
+            if self.raiden.config['environment_type'] != Environment.Production:
                 raise
 
             log.critical(

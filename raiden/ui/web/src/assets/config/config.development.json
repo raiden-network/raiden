@@ -3,5 +3,5 @@
   "reveal_timeout": 10,
   "settle_timeout": 500,
   "web3": "/web3",
-  "network_type": "test"
+  "environment_type": "development"
 }

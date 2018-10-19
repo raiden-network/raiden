@@ -7,7 +7,7 @@ from eth_utils import is_checksum_address, to_canonical_address, to_checksum_add
 from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
 from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import assert_dicts_are_equal
@@ -22,7 +22,6 @@ from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
-    NetworkType,
 )
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
@@ -969,7 +968,7 @@ def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('network_type', [NetworkType.MAIN])
+@pytest.mark.parametrize('environment_type', [Environment.PRODUCTION])
 def test_register_token_mainnet(
         test_api_server,
         token_amount,

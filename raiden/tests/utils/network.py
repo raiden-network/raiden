@@ -283,7 +283,7 @@ def create_apps(
         nat_invitation_timeout,
         nat_keepalive_retries,
         nat_keepalive_timeout,
-        network_type,
+        environment_type,
         local_matrix_url=None,
         private_rooms=None,
 ):
@@ -301,7 +301,7 @@ def create_apps(
 
         config = {
             'chain_id': chain_id,
-            'network_type': network_type,
+            'environment_type': environment_type,
             'privatekey_hex': encode_hex(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,

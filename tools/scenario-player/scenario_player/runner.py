@@ -13,8 +13,8 @@ from requests import RequestException, Session
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import Account
+from raiden.constants import Environment
 from raiden.network.rpc.client import JSONRPCClient
-from raiden_contracts.constants import NetworkType
 from scenario_player.exceptions import NodesUnreachableError, ScenarioError, TokenRegistrationError
 from scenario_player.utils import (
     TimeOutHTTPAdapter,
@@ -143,7 +143,7 @@ class ScenarioRunner(object):
 
         self.chain_id = self.client.web3.net.version
         # FIXME: Support main net type for test chains
-        self.chain_type = NetworkType.MAIN if self.chain_id == 1 else NetworkType.TEST
+        self.chain_type = Environment.PRODUCTION if self.chain_id == 1 else Environment.DEVELOPMENT
 
         balance = self.client.balance(account.address)
         if balance < OWN_ACCOUNT_BALANCE_MIN:

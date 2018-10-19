@@ -37,7 +37,6 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     ID_TO_NETWORKNAME,
-    NetworkType,
 )
 from raiden_contracts.contract_manager import (
     ContractManager,
@@ -147,7 +146,7 @@ def _setup_udp(
 def _setup_matrix(config):
     if config['transport']['matrix'].get('available_servers') is None:
         # fetch list of known servers from raiden-network/raiden-tranport repo
-        available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['network_type']]
+        available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
         available_servers = get_matrix_servers(available_servers_url)
         config['transport']['matrix']['available_servers'] = available_servers
 
@@ -181,7 +180,7 @@ def run_app(
         transport,
         matrix_server,
         network_id,
-        environment,
+        environment_type,
         config=None,
         extra_config=None,
         **kwargs,
@@ -267,26 +266,26 @@ def run_app(
 
     config['chain_id'] = given_network_id
 
-    log.debug('Environment setting', type=environment)
-    if environment == Environment.PRODUCTION:
+    log.debug('Environment setting', type=environment_type)
+    if environment_type == Environment.PRODUCTION:
         # Safe configuration: restrictions for mainnet apply and matrix rooms have to be private
-        config['network_type'] = NetworkType.MAIN
+        config['environment_type'] = Environment.PRODUCTION
         config['transport']['matrix']['private_rooms'] = True
     else:
-        config['network_type'] = NetworkType.TEST
+        config['environment_type'] = Environment.PRODUCTION
 
-    network_type = config['network_type']
+    environment_type = config['environment_type']
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
     config['contracts_path'] = contracts_precompiled_path()
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
-        contracts_version = 'pre_limits' if network_type == NetworkType.TEST else None
+        contracts_version = 'pre_limits' if environment_type == Environment.DEVELOPMENT else None
         deployment_data = get_contracts_deployed(node_network_id, contracts_version)
         config['contracts_path'] = contracts_precompiled_path(contracts_version)
         not_allowed = (  # for now we only disallow mainnet with test configuration
             network_id == 1 and
-            environment == Environment.DEVELOPMENT
+            environment_type == Environment.DEVELOPMENT
         )
         if not_allowed:
             click.secho(

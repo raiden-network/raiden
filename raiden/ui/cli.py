@@ -151,7 +151,7 @@ def options(func):
             show_default=True,
         ),
         option(
-            '--environment',
+            '--environment-type',
             help=(
                 'Specify the environment (production or development).\n'
                 'The "production" setting adds some safety measures and is mainly intended '

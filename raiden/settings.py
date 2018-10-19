@@ -1,6 +1,6 @@
 from eth_utils import denoms, to_hex
 
-from raiden_contracts.constants import NetworkType
+from raiden.constants import Environment
 
 INITIAL_PORT = 38647
 
@@ -16,11 +16,11 @@ DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL = 1.
 # matrix gets spammed with the default retry-interval of 1s, wait a little more
 DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL = 5.
 DEFAULT_MATRIX_KNOWN_SERVERS = {
-    NetworkType.MAIN: (
+    Environment.PRODUCTION: (
         "https://raw.githubusercontent.com/raiden-network/raiden-transport"
         "/master/known_servers.main.yaml"
     ),
-    NetworkType.TEST: (
+    Environment.DEVELOPMENT: (
         "https://raw.githubusercontent.com/raiden-network/raiden-transport"
         "/master/known_servers.test.yaml"
     ),
