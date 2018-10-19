@@ -191,7 +191,7 @@ def test_handle_inittarget_bad_expiration():
     assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {})
 
 
-def test_handle_secretreveal():
+def test_handle_offchain_secretreveal():
     """ The target node needs to inform the secret to the previous node to
     receive an updated balance proof.
     """
@@ -212,7 +212,7 @@ def test_handle_secretreveal():
     )
     state_change = ReceiveSecretReveal(secret, initiator)
 
-    iteration = target.handle_secretreveal(
+    iteration = target.handle_offchain_secretreveal(
         state,
         state_change,
         channel_state,

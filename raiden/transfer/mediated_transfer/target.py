@@ -84,12 +84,16 @@ def handle_inittarget(
         # the handler handle_receive_lockedtransfer.
         target_state = TargetTransferState(route, transfer)
 
-        safe_to_wait, unsafe_msg = is_safe_to_wait(
+        safe_to_wait, _ = is_safe_to_wait(
             transfer.lock.expiration,
             channel_state.reveal_timeout,
             block_number,
         )
 
+        # If there is not enough time to safely unlock the lock on-chain
+        # silently let the transfer expire. The target task must be created to
+        # handle the ReceiveLockExpired state change, which will clear the
+        # expired lock.
         if safe_to_wait:
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             recipient = transfer.initiator
@@ -103,17 +107,6 @@ def handle_inittarget(
                 secrethash=transfer.lock.secrethash,
             )
             channel_events.append(secret_request)
-        else:
-            # If there is not enough time to safely unlock the lock on-chain
-            # silently let the transfer expire. The target task must be created
-            # to handle the ReceiveLockExpired state change, which will clear
-            # the expired lock.
-            unlock_failed = EventUnlockClaimFailed(
-                identifier=transfer.payment_identifier,
-                secrethash=transfer.lock.secrethash,
-                reason=unsafe_msg,
-            )
-            channel_events.append(unlock_failed)
 
         iteration = TransitionResult(target_state, channel_events)
     else:
@@ -131,7 +124,7 @@ def handle_inittarget(
     return iteration
 
 
-def handle_secretreveal(
+def handle_offchain_secretreveal(
         target_state: TargetTransferState,
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,
@@ -139,24 +132,13 @@ def handle_secretreveal(
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
-    waiting_for_secret = target_state.state == 'secret_request'
 
-    if valid_secret and waiting_for_secret:
-        if isinstance(state_change, ReceiveSecretReveal):
-            channel.register_offchain_secret(
-                channel_state,
-                state_change.secret,
-                state_change.secrethash,
-            )
-        elif isinstance(state_change, ContractReceiveSecretReveal):
-            channel.register_onchain_secret(
-                channel_state=channel_state,
-                secret=state_change.secret,
-                secrethash=state_change.secrethash,
-                secret_reveal_block_number=state_change.block_number,
-            )
-        else:
-            assert False, 'Got unexpected StateChange'
+    if valid_secret:
+        channel.register_offchain_secret(
+            channel_state,
+            state_change.secret,
+            state_change.secrethash,
+        )
 
         route = target_state.route
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
@@ -164,8 +146,6 @@ def handle_secretreveal(
         target_state.secret = state_change.secret
         recipient = route.node_address
 
-        # Send the secret reveal message only once, delivery is guaranteed by
-        # the transport and not by the state machine
         reveal = SendSecretReveal(
             recipient=recipient,
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
@@ -180,6 +160,28 @@ def handle_secretreveal(
         iteration = TransitionResult(target_state, list())
 
     return iteration
+
+
+def handle_onchain_secretreveal(
+        target_state: TargetTransferState,
+        state_change: ContractReceiveSecretReveal,
+        channel_state: NettingChannelState,
+):
+    """ Validates and handles a ContractReceiveSecretReveal state change. """
+    valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
+
+    if valid_secret:
+        channel.register_onchain_secret(
+            channel_state=channel_state,
+            secret=state_change.secret,
+            secrethash=state_change.secrethash,
+            secret_reveal_block_number=state_change.block_number,
+        )
+
+        target_state.state = 'reveal_secret'
+        target_state.secret = state_change.secret
+
+    return TransitionResult(target_state, list())
 
 
 def handle_unlock(
@@ -278,6 +280,13 @@ def handle_lock_expired(
     )
 
     if not channel.get_lock(result.new_state.partner_state, target_state.transfer.lock.secrethash):
+        transfer = target_state.transfer
+        unlock_failed = EventUnlockClaimFailed(
+            identifier=transfer.payment_identifier,
+            secrethash=transfer.lock.secrethash,
+            reason='Lock expired',
+        )
+        result.events.append(unlock_failed)
         return TransitionResult(None, result.events)
 
     return TransitionResult(target_state, result.events)
@@ -311,18 +320,17 @@ def state_transition(
             state_change.block_number,
         )
     elif type(state_change) == ReceiveSecretReveal:
-        iteration = handle_secretreveal(
+        iteration = handle_offchain_secretreveal(
             target_state,
             state_change,
             channel_state,
             pseudo_random_generator,
         )
     elif type(state_change) == ContractReceiveSecretReveal:
-        iteration = handle_secretreveal(
+        iteration = handle_onchain_secretreveal(
             target_state,
             state_change,
             channel_state,
-            pseudo_random_generator,
         )
     elif type(state_change) == ReceiveUnlock:
         iteration = handle_unlock(
