@@ -1056,11 +1056,9 @@ def handle_onchain_secretreveal(
     secret known.
     """
     secrethash = onchain_secret_reveal.secrethash
-
-    is_secret_unknown = mediator_state.secret is None
     is_valid_reveal = secrethash == mediator_state.secrethash
 
-    if is_secret_unknown and is_valid_reveal:
+    if is_valid_reveal:
         secret = onchain_secret_reveal.secret
         # Compare against the block number at which the event was emitted.
         block_number = onchain_secret_reveal.block_number
