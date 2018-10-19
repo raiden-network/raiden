@@ -41,7 +41,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ActionInitTarget,
 )
-from raiden.transfer.state import PaymentNetworkState, RouteState
+from raiden.transfer.state import BalanceProofUnsignedState, PaymentNetworkState, RouteState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionInitChain,
@@ -175,7 +175,12 @@ class PaymentStatus(typing.NamedTuple):
     token_network_identifier: typing.TokenNetworkID
     payment_done: AsyncResult
 
-    def matches(self, payment_type, token_network_identifier, amount):
+    def matches(
+            self,
+            payment_type: PaymentType,
+            token_network_identifier: typing.TokenNetworkID,
+            amount: typing.TokenAmount,
+    ):
         return (
             payment_type == self.payment_type and
             token_network_identifier == self.token_network_identifier and
@@ -183,7 +188,7 @@ class PaymentStatus(typing.NamedTuple):
         )
 
 
-StatusesDict = typing.Dict[typing.Address, typing.Dict[typing.PaymentID, PaymentStatus]]
+StatusesDict = typing.Dict[typing.TargetAddress, typing.Dict[typing.PaymentID, PaymentStatus]]
 
 
 class RaidenService(Runnable):
@@ -552,7 +557,13 @@ class RaidenService(Runnable):
             )
             self.handle_state_change(state_change)
 
-    def _register_payment_status(self, target, identifier, payment_type, balance_proof):
+    def _register_payment_status(
+            self,
+            target: typing.TargetAddress,
+            identifier: typing.PaymentID,
+            payment_type: PaymentType,
+            balance_proof: BalanceProofUnsignedState,
+    ):
         self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
             payment_type=payment_type,
             payment_identifier=identifier,

@@ -16,6 +16,7 @@ from mirakuru import ProcessExitedWithError
 
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
+from raiden.constants import Environment
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
@@ -150,12 +151,14 @@ def options(func):
             show_default=True,
         ),
         option(
-            '--network-type',
+            '--environment',
             help=(
-                'Specify the network type (main or test).\n'
+                'Specify the environment (production or development).\n'
+                'The "production" setting adds some safety measures and is mainly intended '
+                'for running Raiden on the mainnet.\n'
             ),
-            type=click.Choice(['main', 'test']),
-            default='test',
+            type=click.Choice([e.value for e in Environment]),
+            default=Environment.DEVELOPMENT.value,
             show_default=True,
         ),
         option(

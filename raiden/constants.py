@@ -38,3 +38,9 @@ SNAPSHOT_STATE_CHANGES_COUNT = 500
 # exceeded. The limit is inclusive.
 TRANSACTION_GAS_LIMIT = int(0.4 * 3141592)
 MAXIMUM_PENDING_TRANSFERS = 160
+
+
+class Environment(Enum):
+    """Environment configurations that can be chosen on the command line."""
+    PRODUCTION = 'production'
+    DEVELOPMENT = 'development'
