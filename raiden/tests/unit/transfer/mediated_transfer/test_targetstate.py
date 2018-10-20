@@ -273,8 +273,8 @@ def test_handle_onchain_secretreveal():
     assert factories.UNIT_SECRETHASH in channel_state.partner_state.secrethashes_to_unlockedlocks
     assert factories.UNIT_SECRETHASH not in channel_state.partner_state.secrethashes_to_lockedlocks
 
-    block_number_prior_the_expiration = expiration - 1
-    target.state_transition(
+    block_number_prior_the_expiration = expiration - 2
+    onchain_secret_reveal_iteration = target.state_transition(
         offchain_secret_reveal_iteration.new_state,
         ContractReceiveSecretReveal(
             transaction_hash=factories.make_address(),
@@ -289,6 +289,15 @@ def test_handle_onchain_secretreveal():
     )
     unlocked_onchain = channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
     assert factories.UNIT_SECRETHASH in unlocked_onchain
+
+    # Check that after we register a lock on-chain handling the block again will
+    # not cause us to attempt an onchain re-register
+    extra_block_handle_transition = target.handle_block(
+        onchain_secret_reveal_iteration.new_state,
+        channel_state,
+        block_number_prior_the_expiration + 1,
+    )
+    assert len(extra_block_handle_transition.events) == 0
 
 
 def test_handle_block():
