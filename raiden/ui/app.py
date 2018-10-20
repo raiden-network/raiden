@@ -52,7 +52,7 @@ log = structlog.get_logger(__name__)
 
 def handle_contract_version_mismatch(mismatch_exception: ContractVersionMismatch) -> None:
     click.secho(
-        f'{str(mismatch_exception)} Please update your Raiden installation.',
+        f'{str(mismatch_exception)}. Please update your Raiden installation.',
         fg='red',
     )
     sys.exit(1)
