@@ -135,9 +135,9 @@ def handle_offchain_secretreveal(
 
     if valid_secret:
         channel.register_offchain_secret(
-            channel_state,
-            state_change.secret,
-            state_change.secrethash,
+            channel_state=channel_state,
+            secret=state_change.secret,
+            secrethash=state_change.secrethash,
         )
 
         route = target_state.route
