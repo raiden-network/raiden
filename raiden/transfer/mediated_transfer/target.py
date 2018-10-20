@@ -28,8 +28,8 @@ def events_for_onchain_secretreveal(
         channel_state: NettingChannelState,
         block_number: typing.BlockNumber,
 ):
-    """ Emits the event for revealing the secret on-chain if the transfer cannot
-    to be settled off-chain.
+    """ Emits the event for revealing the secret on-chain if the transfer
+    can not be settled off-chain.
     """
     transfer = target_state.transfer
     expiration = transfer.lock.expiration
