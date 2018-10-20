@@ -50,11 +50,9 @@ from .sync import check_discovery_registration_gas, check_synced
 log = structlog.get_logger(__name__)
 
 
-def handle_contract_version_mismatch(name: str, address: typing.Address) -> None:
-    hex_addr = to_checksum_address(address)
+def handle_contract_version_mismatch(mismatch_exception: ContractVersionMismatch) -> None:
     click.secho(
-        f'Error: Provided {name} {hex_addr} contract version mismatch. '
-        'Please update your Raiden installation.',
+        f'{str(mismatch_exception)} Please update your Raiden installation.',
         fg='red',
     )
     sys.exit(1)
@@ -120,8 +118,8 @@ def _setup_udp(
             blockchain_service.node_address,
             dicovery_proxy,
         )
-    except ContractVersionMismatch:
-        handle_contract_version_mismatch('Endpoint Registry', endpoint_registry_contract_address)
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
     except AddressWithoutCode:
         handle_contract_no_code('Endpoint Registry', endpoint_registry_contract_address)
     except AddressWrongContract:
@@ -325,11 +323,8 @@ def run_app(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
             ),
         )
-    except ContractVersionMismatch:
-        handle_contract_version_mismatch(
-            'token network registry',
-            tokennetwork_registry_contract_address,
-        )
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
     except AddressWithoutCode:
         handle_contract_no_code('token network registry', tokennetwork_registry_contract_address)
     except AddressWrongContract:
@@ -344,8 +339,8 @@ def run_app(
                 contracts[CONTRACT_SECRET_REGISTRY]['address'],
             ),
         )
-    except ContractVersionMismatch:
-        handle_contract_version_mismatch('secret registry', secret_registry_contract_address)
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
     except AddressWithoutCode:
         handle_contract_no_code('secret registry', secret_registry_contract_address)
     except AddressWrongContract:

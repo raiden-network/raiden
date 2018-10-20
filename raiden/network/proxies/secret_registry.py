@@ -40,11 +40,18 @@ class SecretRegistry:
         )
 
         try:
-            if not compare_versions(
-                    proxy.contract.functions.contract_version().call(),
-                    contract_manager.contracts_version,
-            ):
-                raise ContractVersionMismatch('Incompatible ABI for SecretRegistry')
+            deployed_version = proxy.contract.functions.contract_version().call()
+            expected_version = contract_manager.contracts_version
+            is_valid_version = compare_versions(
+                deployed_version=deployed_version,
+                expected_version=expected_version,
+            )
+            if not is_valid_version:
+                raise ContractVersionMismatch(
+                    f'Provided SecretRegistry contract ({pex(secret_registry_address)}) '
+                    f'version mismatch. Expected: {expected_version} Got: {deployed_version}.'
+                )
+
         except BadFunctionCallOutput:
             raise AddressWrongContract('')
 
