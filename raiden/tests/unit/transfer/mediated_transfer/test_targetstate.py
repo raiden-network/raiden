@@ -271,6 +271,7 @@ def test_handle_onchain_secretreveal():
         block_number,
     )
     assert factories.UNIT_SECRETHASH in channel_state.partner_state.secrethashes_to_unlockedlocks
+    assert factories.UNIT_SECRETHASH not in channel_state.partner_state.secrethashes_to_lockedlocks
 
     block_number_prior_the_expiration = expiration - 1
     target.state_transition(
