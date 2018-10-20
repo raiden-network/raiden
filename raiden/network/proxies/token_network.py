@@ -89,12 +89,17 @@ class TokenNetwork:
             to_normalized_address(manager_address),
         )
 
+        deployed_version = proxy.contract.functions.contract_version().call()
+        expected_version = contract_manager.contracts_version
         is_good_version = compare_versions(
-            proxy.contract.functions.contract_version().call(),
-            contract_manager.contracts_version,
+            deployed_version=deployed_version,
+            expected_version=expected_version,
         )
         if not is_good_version:
-            raise ContractVersionMismatch('Incompatible ABI for TokenNetwork')
+            raise ContractVersionMismatch(
+                f'Provided TokenNetwork contract ({pex(manager_address)}) '
+                f'version mismatch. Expected: {expected_version} Got: {deployed_version}.'
+            )
 
         self.address = manager_address
         self.proxy = proxy

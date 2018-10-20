@@ -237,22 +237,22 @@ def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
     return zip_longest(iterator, iterator)
 
 
-def compare_versions(deployed_version, current_version):
+def compare_versions(deployed_version, expected_version):
     """Compare version strings of a contract"""
     assert isinstance(deployed_version, str)
-    assert isinstance(current_version, str)
+    assert isinstance(expected_version, str)
 
     deployed_version = deployed_version.replace('_', '0')
-    current_version = current_version.replace('_', '0')
+    expected_version = expected_version.replace('_', '0')
 
     deployed = [int(x) for x in deployed_version.split('.')]
-    current = [int(x) for x in current_version.split('.')]
+    expected = [int(x) for x in expected_version.split('.')]
 
-    if deployed[0] != current[0]:
+    if deployed[0] != expected[0]:
         return False
-    if deployed[1] != current[1]:
+    if deployed[1] != expected[1]:
         return False
-    if deployed[2] != current[2]:
+    if deployed[2] != expected[2]:
         return False
 
     return True
