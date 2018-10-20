@@ -11,13 +11,10 @@ from eth_utils import (
 )
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
-from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.exceptions import (
-    AddressWrongContract,
     ChannelOutdatedError,
-    ContractVersionMismatch,
     DepositMismatch,
     DuplicatedChannelError,
     InvalidAddress,
@@ -29,10 +26,11 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.network.proxies import Token
+from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
-from raiden.utils import compare_versions, pex, privatekey_to_address, typing
+from raiden.utils import pex, privatekey_to_address, typing
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     ChannelInfoIndex,
@@ -91,21 +89,12 @@ class TokenNetwork:
             to_normalized_address(manager_address),
         )
 
-        try:
-            deployed_version = proxy.contract.functions.contract_version().call()
-            expected_version = contract_manager.contracts_version
-            is_good_version = compare_versions(
-                deployed_version=deployed_version,
-                expected_version=expected_version,
-            )
-            if not is_good_version:
-                raise ContractVersionMismatch(
-                    f'Provided TokenNetwork contract ({pex(manager_address)}) '
-                    f'version mismatch. Expected: {expected_version} Got: {deployed_version}.'
-                )
-
-        except BadFunctionCallOutput:
-            raise AddressWrongContract('')
+        compare_contract_versions(
+            proxy=proxy,
+            expected_version=contract_manager.contracts_version,
+            contract_name=CONTRACT_TOKEN_NETWORK,
+            address=manager_address,
+        )
 
         self.address = manager_address
         self.proxy = proxy
