@@ -43,12 +43,18 @@ class Discovery:
         check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
         try:
+            deployed_version = proxy.contract.functions.contract_version().call()
+            expected_version = contract_manager.contracts_version
             is_valid_version = compare_versions(
-                proxy.contract.functions.contract_version().call(),
-                contract_manager.contracts_version,
+                deployed_version=deployed_version,
+                expected_version=expected_version,
             )
             if not is_valid_version:
-                raise ContractVersionMismatch('Incompatible ABI for Discovery')
+                raise ContractVersionMismatch(
+                    f'Provided EndpointRegistry contract ({pex(discovery_address)}) '
+                    f'version mismatch. Expected: {expected_version} Got: {deployed_version}.'
+                )
+
         except BadFunctionCallOutput:
             raise AddressWrongContract('')
 
