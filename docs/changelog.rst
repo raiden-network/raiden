@@ -2,6 +2,8 @@
 Changelog
 =========
 
+:bug:`2845` Properly update local state balance proof during a lock expiration.
+:bug:`2835` Incorrectly accepting a ``RemoveLockExpired`` is no longer possible
 :feature:`2752` Renamed ``--network-type`` cli option to ``--environment-type``.
 :bug:`2836` Contract version check now works for any deployed contract version.
 :bug:`2449` Only polling events from confirmed blocks to prevent conflicts with reorgs.
