@@ -1,0 +1,31 @@
+{
+  "name": "Raiden-Installer",
+  "version": "0.14.0",
+  "description": "A minimal Electron application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "build"
+  },
+  "repository": "https://github.com/electron/electron-quick-start",
+  "keywords": [
+    "Electron",
+    "quick",
+    "start",
+    "tutorial",
+    "demo"
+  ],
+  "author": "GitHub",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "electron": "^2.0.0",
+    "electron-builder": "^19.45.4"
+  },
+  "dependencies": {
+    "md5-file": "^4.0.0",
+    "npm": "^6.4.1",
+    "touch": "^3.1.0",
+    "web3": "^0.19.0",
+    "webworker-threads": "^0.7.17"
+  }
+}
