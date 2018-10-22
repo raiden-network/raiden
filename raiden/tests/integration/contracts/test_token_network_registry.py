@@ -8,7 +8,7 @@ from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 
-def test_network_registry(
+def test_token_network_registry(
         deploy_client,
         contract_manager,
         token_network_registry_proxy: TokenNetworkRegistry,
