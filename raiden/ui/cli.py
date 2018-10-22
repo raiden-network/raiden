@@ -107,19 +107,19 @@ def options(func):
         ),
         option(
             '--tokennetwork-registry-contract-address',
-            help='hex encoded address of the registry contract.',
+            help='hex encoded address of the Token Network Registry contract.',
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
             '--secret-registry-contract-address',
-            help='hex encoded address of the secret registry contract.',
+            help='hex encoded address of the Secret Registry contract.',
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
-            '--discovery-contract-address',
-            help='hex encoded address of the discovery contract.',
+            '--endpoint-registry-contract-address',
+            help='hex encoded address of the Endpoint Registry contract.',
             type=ADDRESS_TYPE,
             show_default=True,
         ),

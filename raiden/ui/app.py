@@ -107,12 +107,12 @@ def _setup_udp(
         blockchain_service,
         address,
         contracts,
-        discovery_contract_address,
+        endpoint_registry_contract_address,
 ):
     check_discovery_registration_gas(blockchain_service, address)
     try:
         dicovery_proxy = blockchain_service.discovery(
-            discovery_contract_address or to_canonical_address(
+            endpoint_registry_contract_address or to_canonical_address(
                 contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
             ),
         )
@@ -121,11 +121,11 @@ def _setup_udp(
             dicovery_proxy,
         )
     except ContractVersionMismatch:
-        handle_contract_version_mismatch('discovery', discovery_contract_address)
+        handle_contract_version_mismatch('Endpoint Registry', endpoint_registry_contract_address)
     except AddressWithoutCode:
-        handle_contract_no_code('discovery', discovery_contract_address)
+        handle_contract_no_code('Endpoint Registry', endpoint_registry_contract_address)
     except AddressWrongContract:
-        handle_contract_wrong_address('discovery', discovery_contract_address)
+        handle_contract_wrong_address('Endpoint Registry', endpoint_registry_contract_address)
 
     throttle_policy = TokenBucket(
         config['transport']['udp']['throttle_capacity'],
@@ -166,7 +166,7 @@ def run_app(
         eth_rpc_endpoint,
         tokennetwork_registry_contract_address,
         secret_registry_contract_address,
-        discovery_contract_address,
+        endpoint_registry_contract_address,
         listen_address,
         mapped_socket,
         max_unresponsive_time,
@@ -308,7 +308,7 @@ def run_app(
     contract_addresses_given = (
         tokennetwork_registry_contract_address is not None and
         secret_registry_contract_address is not None and
-        discovery_contract_address is not None
+        endpoint_registry_contract_address is not None
     )
 
     if not contract_addresses_given and not contract_addresses_known:
@@ -374,7 +374,7 @@ def run_app(
             blockchain_service,
             address,
             contracts,
-            discovery_contract_address,
+            endpoint_registry_contract_address,
         )
     elif transport == 'matrix':
         transport = _setup_matrix(config)
