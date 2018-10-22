@@ -140,7 +140,7 @@ def test_cli_wrong_network_id_try_mainnet(cli_args):
 
 @pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{
-    'registry_contract_address': '0xdfD10vAe9CCl5EBf11bc6309A0645eFe9f979584',
+    'tokennetwork_registry_contract_address': '0xdfD10vAe9CCl5EBf11bc6309A0645eFe9f979584',
 }])
 def test_cli_malformed_registry_address(cli_args):
     child = spawn_raiden(cli_args)
@@ -157,7 +157,9 @@ def test_cli_malformed_registry_address(cli_args):
 
 @pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{
-    'registry_contract_address': to_checksum_address('0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359'),
+    'tokennetwork_registry_contract_address': to_checksum_address(
+        '0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359',
+    ),
 }])
 def test_cli_registry_address_without_deployed_contract(cli_args):
     child = spawn_raiden(cli_args)

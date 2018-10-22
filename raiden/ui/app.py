@@ -164,7 +164,7 @@ def run_app(
         keystore_path,
         gas_price,
         eth_rpc_endpoint,
-        registry_contract_address,
+        tokennetwork_registry_contract_address,
         secret_registry_contract_address,
         discovery_contract_address,
         listen_address,
@@ -306,7 +306,7 @@ def run_app(
         check_synced(blockchain_service, known_node_network_id)
 
     contract_addresses_given = (
-        registry_contract_address is not None and
+        tokennetwork_registry_contract_address is not None and
         secret_registry_contract_address is not None and
         discovery_contract_address is not None
     )
@@ -321,16 +321,22 @@ def run_app(
 
     try:
         token_network_registry = blockchain_service.token_network_registry(
-            registry_contract_address or to_canonical_address(
+            tokennetwork_registry_contract_address or to_canonical_address(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
             ),
         )
     except ContractVersionMismatch:
-        handle_contract_version_mismatch('token network registry', registry_contract_address)
+        handle_contract_version_mismatch(
+            'token network registry',
+            tokennetwork_registry_contract_address,
+        )
     except AddressWithoutCode:
-        handle_contract_no_code('token network registry', registry_contract_address)
+        handle_contract_no_code('token network registry', tokennetwork_registry_contract_address)
     except AddressWrongContract:
-        handle_contract_wrong_address('token network registry', registry_contract_address)
+        handle_contract_wrong_address(
+            'token network registry',
+            tokennetwork_registry_contract_address,
+        )
 
     try:
         secret_registry = blockchain_service.secret_registry(

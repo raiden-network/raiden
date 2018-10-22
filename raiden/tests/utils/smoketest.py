@@ -292,7 +292,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     discovery_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
     )
-    registry_contract_address = to_checksum_address(
+    tokennetwork_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
     )
     secret_registry_contract_address = to_checksum_address(
@@ -309,7 +309,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
             'matrix_server': matrix_server,
             'network_id': str(NETWORKNAME_TO_ID['smoketest']),
             'password_file': click.File()(os.path.join(base_datadir, 'pw')),
-            'registry_contract_address': registry_contract_address,
+            'tokennetwork_registry_contract_address': tokennetwork_registry_contract_address,
             'secret_registry_contract_address': secret_registry_contract_address,
             'sync_check': False,
             'transport': transport,
