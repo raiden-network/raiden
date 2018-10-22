@@ -53,8 +53,8 @@ def cli_args(blockchain_provider, removed_args, changed_args):
         initial_args['tokennetwork_registry_contract_address'],
         '--secret-registry-contract-address',
         initial_args['secret_registry_contract_address'],
-        '--discovery-contract-address',
-        initial_args['discovery_contract_address'],
+        '--endpoint-registry-contract-address',
+        initial_args['endpoint_registry_contract_address'],
     ]
 
     append_arg_if_existing('keystore_path', initial_args, args)
