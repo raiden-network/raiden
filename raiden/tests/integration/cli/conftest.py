@@ -49,8 +49,8 @@ def cli_args(blockchain_provider, removed_args, changed_args):
 
     args = [
         '--no-sync-check',
-        '--registry-contract-address',
-        initial_args['registry_contract_address'],
+        '--tokennetwork-registry-contract-address',
+        initial_args['tokennetwork_registry_contract_address'],
         '--secret-registry-contract-address',
         initial_args['secret_registry_contract_address'],
         '--discovery-contract-address',

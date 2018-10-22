@@ -106,7 +106,7 @@ def options(func):
             show_default=True,
         ),
         option(
-            '--registry-contract-address',
+            '--tokennetwork-registry-contract-address',
             help='hex encoded address of the registry contract.',
             type=ADDRESS_TYPE,
             show_default=True,
