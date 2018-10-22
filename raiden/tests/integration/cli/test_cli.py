@@ -146,7 +146,7 @@ def test_cli_malformed_registry_address(cli_args):
     child = spawn_raiden(cli_args)
     try:
         child.expect(
-            'Error: Invalid value for "--registry-contract-address"'
+            'Error: Invalid value for "--tokennetwork-registry-contract-address"'
             ': Address must be EIP55 checksummed',
         )
     except pexpect.TIMEOUT as e:
