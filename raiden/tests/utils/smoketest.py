@@ -289,7 +289,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     if matrix_server == 'auto':
         matrix_server = 'http://localhost:8008'
 
-    discovery_contract_address = to_checksum_address(
+    endpoint_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
     )
     tokennetwork_registry_contract_address = to_checksum_address(
@@ -302,7 +302,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         'args': {
             'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
             'datadir': keystore,
-            'discovery_contract_address': discovery_contract_address,
+            'endpoint_registry_contract_address': endpoint_registry_contract_address,
             'eth_rpc_endpoint': eth_rpc_endpoint,
             'gas_price': 'fast',
             'keystore_path': keystore,
