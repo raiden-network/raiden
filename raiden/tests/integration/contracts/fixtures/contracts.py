@@ -3,9 +3,8 @@ from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
 from raiden.tests.utils import factories
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import (
-    CONTRACT_HUMAN_STANDARD_TOKEN,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
@@ -98,8 +97,15 @@ def token_network_proxy(deploy_client, token_network_contract, contract_manager)
 
 
 @pytest.fixture
-def token_contract(deploy_token):
-    return deploy_token(10000, 0, 'TKN', 'TKN')
+def token_contract(deploy_client, contract_manager):
+    return deploy_token(
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        initial_amount=10000,
+        decimals=0,
+        token_name='TKN',
+        token_symbol='TKN',
+    )
 
 
 @pytest.fixture
@@ -109,27 +115,3 @@ def token_proxy(deploy_client, token_contract, contract_manager):
         token_address=to_canonical_address(token_contract.contract.address),
         contract_manager=contract_manager,
     )
-
-
-@pytest.fixture
-def deploy_token(deploy_client, contract_manager):
-    def f(initial_amount, decimals, token_name, token_symbol):
-        token_address = deploy_contract_web3(
-            contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
-            deploy_client=deploy_client,
-            contract_manager=contract_manager,
-            constructor_arguments=(
-                initial_amount,
-                decimals,
-                token_name,
-                token_symbol,
-            ),
-        )
-
-        contract_abi = contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
-        return deploy_client.new_contract_proxy(
-            contract_interface=contract_abi,
-            contract_address=token_address,
-        )
-
-    return f

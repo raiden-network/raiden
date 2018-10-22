@@ -4,10 +4,15 @@ from eth_utils import is_same_address, to_canonical_address
 from raiden.exceptions import RaidenRecoverableError, TransactionThrew
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 
-def test_network_registry(token_network_registry_proxy: TokenNetworkRegistry, deploy_token):
+def test_network_registry(
+        deploy_client,
+        contract_manager,
+        token_network_registry_proxy: TokenNetworkRegistry,
+):
 
     assert token_network_registry_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
     assert token_network_registry_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
@@ -17,7 +22,14 @@ def test_network_registry(token_network_registry_proxy: TokenNetworkRegistry, de
     with pytest.raises(TransactionThrew):
         token_network_registry_proxy.add_token(bad_token_address)
     # create token network & register it
-    test_token = deploy_token(1000, 0, 'TKN', 'TKN')
+    test_token = deploy_token(
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        initial_amount=1000,
+        decimals=0,
+        token_name='TKN',
+        token_symbol='TKN',
+    )
     test_token_address = to_canonical_address(test_token.contract.address)
     event_filter = token_network_registry_proxy.tokenadded_filter()
     token_network_address = token_network_registry_proxy.add_token(
