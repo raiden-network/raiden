@@ -74,25 +74,6 @@ from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils import publickey_to_address, random_secret
 
 
-def make_transfer_pair(
-        payee,
-        initiator,
-        target,
-        amount,
-        expiration,
-        secret,
-        reveal_timeout=UNIT_REVEAL_TIMEOUT):
-
-    payer_expiration = expiration
-    payee_expiration = expiration - reveal_timeout
-
-    return MediationPairState(
-        factories.make_signed_transfer(amount, initiator, target, payer_expiration, secret=secret),
-        payee,
-        factories.make_transfer(amount, initiator, target, payee_expiration, secret=secret),
-    )
-
-
 def make_transfers_pair(privatekeys, amount, block_number):
     transfers_pair = list()
     channel_map = dict()
