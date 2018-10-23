@@ -11,6 +11,7 @@ from pathlib import Path
 
 import gevent
 import pytest
+from _pytest.outcomes import Failed
 from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
 from _pytest.tmpdir import get_user
 
@@ -166,6 +167,7 @@ def dont_exit_pytest():
 
     This allows the test suite to finish in case an exception is unhandled.
     """
+    gevent.get_hub().SYSTEM_ERROR += (Failed, )
     gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit)
 
 

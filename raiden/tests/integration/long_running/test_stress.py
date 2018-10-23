@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 from http import HTTPStatus
 from itertools import combinations, count
@@ -34,11 +35,14 @@ class RandomCrashEventHandler(RaidenEventHandler):
     def __init__(self, raiden, api):
         self.raiden = raiden
         self.api = api
+        self.killer = None
 
     def on_raiden_event(self, raiden, event):
-        if random.random() < 0.2:
-            self.raiden.stop()
-            self.api.stop()
+        if random.random() < 0.7 and self.killer is None:
+
+            # we cannot call stop() here, it would deadlock!
+            # a crash while handling a message would wait on itself to finish
+            self.killer = gevent.spawn(kill_and_restart, self.raiden, self.api)
         else:
             super().on_raiden_event(raiden, event)
 
@@ -124,23 +128,26 @@ def start_apiserver_for_network(raiden_network, port_generator):
     ]
 
 
-def _monitor(app, api_server):
-    assert app.raiden
+def kill_and_restart(raiden, api_server):
+
+    assert raiden
     assert api_server
 
-    while True:
-        # wait for a failure to happen and then stop the rest api
-        app.raiden.stop_event.wait()
+    raiden.stop()
+    api_server.stop()
 
-        # wait for both services to stop
-        app.raiden.get()
-        api_server.get()
+    # wait for a failure to happen and then stop the rest api
+    raiden.stop_event.wait()
 
-        assert not app.raiden
-        assert not api_server
+    # wait for both services to stop
+    raiden.get()
+    api_server.get()
 
-        app.start()
-        api_server.start()
+    assert not raiden
+    assert not api_server
+
+    raiden.start()
+    api_server.start()
 
 
 def new_app(app, raiden_event_handler=STATELESS_EVENT_HANDLER):
@@ -232,8 +239,6 @@ def transfer_and_assert(post_url, identifier, amount):
         is_json = response.headers['Content-Type'] == 'application/json'
         assert is_json, response.headers['Content-Type']
         assert response.status_code == HTTPStatus.OK, response.json()
-    else:
-        log.critical('server is in shutdown')
 
 
 def _wait_for_server(post_url, identifier, amount, port_number):
@@ -524,14 +529,61 @@ def test_stress_happy_case(
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('deposit', [50])
 @pytest.mark.parametrize('reveal_timeout', [15])
-@pytest.mark.parametrize('settle_timeout', [120])
-def test_stress_unhappy_case(
+@pytest.mark.parametrize('settle_timeout', [151])
+@pytest.mark.parametrize('retry_interval', [0.5])
+@pytest.mark.parametrize('privatekey_seed', ['test_stress_unhappy{}'])
+@pytest.mark.skipif(
+    'TRAVIS' in os.environ and os.environ['TRAVIS'] == 'true',
+    reason='too slow on Travis CI',
+)
+def test_stress_unhappy_case_local(
         raiden_chain,
         deposit,
         token_addresses,
         port_generator,
         network_wait,
 ):
+    run_stress_test_unhappy(
+        raiden_chain,
+        deposit,
+        token_addresses,
+        port_generator,
+        network_wait,
+    )
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('deposit', [20])
+@pytest.mark.parametrize('reveal_timeout', [25])
+@pytest.mark.parametrize('settle_timeout', [151])
+@pytest.mark.parametrize('retry_interval', [0.5])
+@pytest.mark.parametrize('privatekey_seed', ['test_stress_unhappy{}'])
+def test_stress_unhappy_case_travis(
+        raiden_chain,
+        deposit,
+        token_addresses,
+        port_generator,
+        network_wait,
+):
+    run_stress_test_unhappy(
+        raiden_chain,
+        deposit,
+        token_addresses,
+        port_generator,
+        network_wait,
+    )
+
+
+def run_stress_test_unhappy(
+        raiden_chain,
+        deposit,
+        token_addresses,
+        port_generator,
+        network_wait,
+):
+    """Test body, to allow different executions travis/local"""
     initiator, mediator, target = raiden_chain
 
     initiator_api_port = next(port_generator)
@@ -555,10 +607,6 @@ def test_stress_unhappy_case(
         target_api,
     )
 
-    gevent.spawn(_monitor, initiator, initiator_api)
-    gevent.spawn(_monitor, mediator, mediator_api)
-    gevent.spawn(_monitor, target, target_api)
-
     token_address = token_addresses[0]
     identifier_generator = count()
 
@@ -577,7 +625,8 @@ def test_stress_unhappy_case(
         number_of_requests=deposit,
         port_number=initiator_api_port,
     )
-    waiting.wait_for_participant_newbalance(
+
+    waiting.wait_for_payment_balance(
         initiator.raiden,
         initiator.raiden.default_registry.address,
         token_address,
@@ -586,12 +635,12 @@ def test_stress_unhappy_case(
         0,
         network_wait,
     )
-    waiting.wait_for_participant_newbalance(
+    waiting.wait_for_payment_balance(
         target.raiden,
         target.raiden.default_registry.address,
         token_address,
         mediator.raiden.address,
         target.raiden.address,
-        deposit + deposit,
+        deposit,
         network_wait,
     )
