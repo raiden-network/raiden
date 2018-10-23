@@ -5,45 +5,20 @@ settings:
   ## Gas price to use, either `fast`, `medium` or an integer (in gwei)
   gas_price: "fast"
 
-  ## Chain to use
-  ## Named chains given on the scenario player command line
-  ## Defaults to 'any' - use any available one
-  #chain: any
-  ## Other examples
-  #chain: ropsten
   chain: kovan
-  #chain: rinkeby
 
 token:
   decimals: 18
 
 nodes:
-  ## Mode, either `managed` or `external`
-  # - managed: The scenario player will manage the Raiden nodes
-  # - external: The nodes need to be managed externally (see v1 for examples)
   mode: managed
   count: 15
   ## Raiden version to use, default: 'LATEST' uses the latest nightly release
   raiden_version: LATEST
-  #raiden_version: v0.12.0
   ## Options to apply to all nodes
   ## Option names correspond to Raiden cli options without the leading double dash (`--`)
   default_options:
     gas-price: fast
-    ## Kovan contracts
-    registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
-    discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
-    secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
-    ## Rinkeby contracts
-    #registry-contract-address: "0xed50A9ad6263f5416dE956B27979eE3457557896"
-    #discovery-contract-address: "0x705F9A00aD2894555ED3ed90a2531e4D1aaDe366"
-    #secret-registry-contract-address: "0x429d427588E2ff7214c147a3C738A28bA873f8e9"
-  ## Per-node option overrides
-  node_options:
-    0:
-      matrix-server: https://transport02.raiden.network
-    1:
-      matrix-server: https://transport02.raiden.network
 
 scenario:
   serial:
