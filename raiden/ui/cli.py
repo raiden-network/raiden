@@ -158,7 +158,7 @@ def options(func):
                 'for running Raiden on the mainnet.\n'
             ),
             type=click.Choice([e.value for e in Environment]),
-            default=Environment.DEVELOPMENT.value,
+            default=Environment.PRODUCTION.value,
             show_default=True,
         ),
         option(
