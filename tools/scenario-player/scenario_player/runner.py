@@ -143,7 +143,9 @@ class ScenarioRunner(object):
 
         self.chain_id = self.client.web3.net.version
         # FIXME: Support main net type for test chains
-        self.chain_type = Environment.PRODUCTION if self.chain_id == 1 else Environment.DEVELOPMENT
+        self.environment_type = (
+            Environment.PRODUCTION if self.chain_id == 1 else Environment.DEVELOPMENT
+        )
 
         balance = self.client.balance(account.address)
         if balance < OWN_ACCOUNT_BALANCE_MIN:
