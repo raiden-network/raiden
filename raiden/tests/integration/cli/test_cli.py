@@ -8,6 +8,8 @@ from eth_utils import to_checksum_address
 
 from raiden.ui.cli import run
 
+EXPECTED_DEFAULT_ENVIRONMENT_VALUE = 'production'
+
 
 def spawn_raiden(args):
     return pexpect.spawn(
@@ -46,20 +48,22 @@ def expect_cli_until_account_selection(child):
     child.sendline('0')
 
 
-def expect_cli_normal_startup(child):
+def expect_cli_normal_startup(child, mode):
     expect_cli_until_acknowledgment(child)
     child.expect('The following accounts were found in your machine:')
     child.expect('Select one of them by index to continue: ')
     child.sendline('0')
+    child.expect(f'Raiden is running in {mode} mode')
     child.expect('You are connected')
     child.expect('The Raiden API RPC server is now running')
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(65)
 def test_cli_full_init(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        expect_cli_normal_startup(child)
+        # expect the default mode
+        expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
@@ -97,12 +101,12 @@ def test_cli_missing_password_file_enter_password(blockchain_provider, cli_args)
         child.close()
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(65)
 @pytest.mark.parametrize('removed_args', [['data_dir']])
 def test_cli_missing_data_dir(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        expect_cli_normal_startup(child)
+        expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
@@ -166,6 +170,21 @@ def test_cli_registry_address_without_deployed_contract(cli_args):
     try:
         expect_cli_until_account_selection(child)
         child.expect('contract does not contain code')
+    except pexpect.TIMEOUT as e:
+        print('Timed out at', e)
+    finally:
+        child.close()
+
+
+@pytest.mark.timeout(65)
+@pytest.mark.parametrize('changed_args', [{
+    'environment_type': 'development'
+}])
+def test_cli_change_environment_type(cli_args):
+    child = spawn_raiden(cli_args)
+    try:
+        # expect the provided mode
+        expect_cli_normal_startup(child, 'development')
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
