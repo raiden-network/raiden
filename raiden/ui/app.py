@@ -273,10 +273,8 @@ def run_app(
         config['environment_type'] = Environment.DEVELOPMENT
 
     environment_type = config['environment_type']
-    click.secho(
-        f'Raiden is running in {environment_type.value.lower()} mode',
-        fg='green'
-    )
+    print(f'Raiden is running in {environment_type.value.lower()} mode')
+
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
