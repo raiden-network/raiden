@@ -251,7 +251,7 @@ class NodeRunner:
             self._password_file,
             '--network-id',
             self._runner.chain_id,
-            '--network-type',
+            '--environment-type',
             self._runner.chain_type.name.lower(),
             '--sync-check',  # FIXME: Disable sync check for private chains
             '--gas-price',
