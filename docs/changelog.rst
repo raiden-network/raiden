@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`2857` Respect the ``--environment-type`` for private chain setup.
 * :feature:`2858` Changed contract address argument names to be consistent with the names of the contracts in the contracts repository.
 
 * :release:`0.14.0 <2018-10-20>`
