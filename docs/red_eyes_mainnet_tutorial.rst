@@ -6,7 +6,7 @@ Raiden Red Eyes Mainnet Tutorial
 
 Introduction
 =============
-In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. For this tutorial we use the Red Eyes (LINK TO RELEASE) release. More information on the Red Eyes release can be found here(INSERT LINK ONCE READY). Since the Red Eyes release is a `bug bounty release <https://bounty.raiden.network>`_, certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
+In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. For this tutorial we use the `Red Eyes release <https://github.com/raiden-network/raiden/releases/tag/v0.100.0>`_. More information on the Red Eyes release can be found here(INSERT LINK ONCE READY). Since the Red Eyes release is a `bug bounty release <https://bounty.raiden.network>`_, certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
 
 Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version. The current version is version 1.
 
@@ -14,13 +14,13 @@ Before getting started with this tutorial, please see the :doc:`Installation Gui
 
 .. _about-weth:
 
-About WETH
-==========
+About W-ETH
+===========
 
-For the Red Eyes Mainnet release only WETH can be used with the Raiden Network. WETH stands for wrapped Ether, meaning that Ether is packaged to conform to
-the ERC20 token guidelines which Raiden relies on. To learn more about WETH you can read the `announcement blog post <https://blog.0xproject.com/canonical-weth-a9aa7d0279dd>`_.
+For the Red Eyes Mainnet release only W-ETH can be used with the Raiden Network. W-ETH stands for wrapped Ether, meaning that Ether is packaged to conform to
+the ERC20 token guidelines which Raiden relies on. To learn more about W-ETH you can read the `announcement blog post <https://blog.0xproject.com/canonical-weth-a9aa7d0279dd>`_.
 
-To create WETH fron your Ether you can either use interfaces like `0x OTC <https://0xproject.com/otc>`_ or `Radar Relay <https://radarrelay.com/>`_. You can also use the `contract <https://etherscan.io/address/0x2956356cd2a2bf3202f771f50d3d14a367b48070#code>`_ directly.
+To create W-ETH from your Ether you can either use interfaces like `0x OTC <https://0xproject.com/otc>`_ or `Radar Relay <https://radarrelay.com/>`_. You can also use the `contract <https://etherscan.io/address/0x2956356cd2a2bf3202f771f50d3d14a367b48070#code>`_ directly.
 
 
 .. _join-token-network:
@@ -72,16 +72,16 @@ Successfully opening a channel returns the following information:
    Content-Type: application/json
 
    {
-       "channel_identifier": "0xfb43f382bbdbf209f854e14b74d183970e26ad5c1fd1b74a20f8f6bb653c1617",
+       "channel_identifier": 13,
        "token_network_identifier": "0x3C158a20b47d9613DDb9409099Be186fC272421a",
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
        "balance": 2000,
+       "total_deposit": 2000,
        "state": "opened",
        "settle_timeout": 600,
        "reveal_timeout": 10
    }
-TODO: update token_network_identifier once it's known
 
 .. _doing-payments:
 
@@ -121,7 +121,7 @@ Just like this we can send payments to anyone who is part of the token network f
 
 Depositing tokens
 =================
-If we are spending more tokens than we are receiving and hence depleting our channels, it it possible to "top up" channels. For this we need the token address and the partner address:
+If we spend more tokens than we receive and hence deplete our channels, it it possible to "top up" channels. For this we need the token address and the partner address:
 
 .. http:example:: curl wget httpie python-requests
 
