@@ -26,6 +26,7 @@ from raiden.utils import get_system_spec, merge_dict, split_endpoint
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
+    EnvironmentChoiceType,
     GasPriceChoiceType,
     MatrixServerType,
     NATChoiceType,
@@ -157,7 +158,7 @@ def options(func):
                 'The "production" setting adds some safety measures and is mainly intended '
                 'for running Raiden on the mainnet.\n'
             ),
-            type=click.Choice([e.value for e in Environment]),
+            type=EnvironmentChoiceType([e.value for e in Environment]),
             default=Environment.PRODUCTION.value,
             show_default=True,
         ),
