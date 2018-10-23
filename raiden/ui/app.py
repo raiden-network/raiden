@@ -272,7 +272,7 @@ def run_app(
         config['environment_type'] = Environment.PRODUCTION
         config['transport']['matrix']['private_rooms'] = True
     else:
-        config['environment_type'] = Environment.PRODUCTION
+        config['environment_type'] = Environment.DEVELOPMENT
 
     environment_type = config['environment_type']
     chain_config = {}
