@@ -252,7 +252,7 @@ class NodeRunner:
             '--network-id',
             self._runner.chain_id,
             '--environment-type',
-            self._runner.chain_type.name.lower(),
+            self._runner.environment_type.name.lower(),
             '--sync-check',  # FIXME: Disable sync check for private chains
             '--gas-price',
             self._options.get('gas-price', 'normal'),
