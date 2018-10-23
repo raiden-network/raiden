@@ -313,6 +313,10 @@ The balance of the channel is now ``0`` and the state ``"settled"``. This means 
 
 Interacting with the Raiden Echo Node
 ======================================
+
+.. note::
+   For the Raiden Red Eyes release on mainnet the Echo Node will not be available.
+
 For easy testing of Raiden, there is a specialized Raiden node running, the "Raiden Echo Node". The Echo Node responds to received payments by sending a payment back to the initiator. The echo payment follows certain rules:
 
 - consecutive payments with the same ``identifier`` and same ``amount`` from the same address are ignored (as in: the Echo Node just keeps your money)
