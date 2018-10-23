@@ -267,12 +267,10 @@ def run_app(
     config['chain_id'] = given_network_id
 
     log.debug('Environment setting', type=environment_type)
+    config['environment_type'] = environment_type
     if environment_type == Environment.PRODUCTION:
         # Safe configuration: restrictions for mainnet apply and matrix rooms have to be private
-        config['environment_type'] = Environment.PRODUCTION
         config['transport']['matrix']['private_rooms'] = True
-    else:
-        config['environment_type'] = Environment.PRODUCTION
 
     environment_type = config['environment_type']
     chain_config = {}
