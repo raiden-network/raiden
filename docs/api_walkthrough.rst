@@ -315,7 +315,7 @@ Interacting with the Raiden Echo Node
 ======================================
 
 .. note::
-   For the Raiden Red Eyes release on mainnet the Echo Node will not be available.
+   For the Raiden Red Eyes release on mainnet the Echo Node will not be available. Currently the Echo Node is available on the Ropsten testnet according to the text below.
 
 For easy testing of Raiden, there is a specialized Raiden node running, the "Raiden Echo Node". The Echo Node responds to received payments by sending a payment back to the initiator. The echo payment follows certain rules:
 
