@@ -264,8 +264,8 @@ def run_app(
 
     config['chain_id'] = given_network_id
 
-    log.debug('Environment setting', type=environment_type)
-    if environment_type == Environment.PRODUCTION:
+    # interpret the provided string argument
+    if environment_type == 'production':
         # Safe configuration: restrictions for mainnet apply and matrix rooms have to be private
         config['environment_type'] = Environment.PRODUCTION
         config['transport']['matrix']['private_rooms'] = True
@@ -273,6 +273,10 @@ def run_app(
         config['environment_type'] = Environment.DEVELOPMENT
 
     environment_type = config['environment_type']
+    click.secho(
+        f'Raiden is running in {environment_type.value.lower()} mode',
+        fg='green'
+    )
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
