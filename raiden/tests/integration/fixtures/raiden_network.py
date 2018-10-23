@@ -8,13 +8,14 @@ from raiden.tests.utils.network import (
     create_apps,
     create_network_channels,
     create_sequential_channels,
-    parallel_start_apps,
+    parallel_start_with_supervisor,
     wait_for_alarm_start,
     wait_for_channels,
     wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 from raiden.waiting import wait_for_block_using_web3
+from raiden.utils.runnable import Supervisor
 
 
 def wait_for_confirmed_block(blockchain_services, raiden_apps):
@@ -31,8 +32,14 @@ def timeout(blockchain_type: str):
     return 120 if blockchain_type == 'parity' else 30
 
 
+@pytest.fixture(name='supervisor')
+def create_supervisor() -> Supervisor:
+    return Supervisor()
+
+
 @pytest.fixture
 def raiden_chain(
+        supervisor: Supervisor,
         token_addresses,
         token_network_registry_address,
         channels_per_node,
@@ -91,7 +98,7 @@ def raiden_chain(
     )
 
     wait_for_confirmed_block(blockchain_services, raiden_apps)
-    parallel_start_apps(raiden_apps)
+    parallel_start_with_supervisor(raiden_apps, supervisor)
 
     from_block = GENESIS_BLOCK_NUMBER
     for app in raiden_apps:
@@ -139,6 +146,7 @@ def raiden_chain(
 
 @pytest.fixture
 def raiden_network(
+        supervisor: Supervisor,
         token_addresses,
         token_network_registry_address,
         channels_per_node,
@@ -188,7 +196,7 @@ def raiden_network(
     )
 
     wait_for_confirmed_block(blockchain_services, raiden_apps)
-    parallel_start_apps(raiden_apps)
+    parallel_start_with_supervisor(raiden_apps, supervisor)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
     with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):

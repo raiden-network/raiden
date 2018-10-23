@@ -388,11 +388,12 @@ def create_apps(
     return apps
 
 
-def parallel_start_apps(raiden_apps):
+def parallel_start_with_supervisor(raiden_apps, supervisor):
     """Start all the raiden apps in parallel."""
     start_tasks = list()
 
     for app in raiden_apps:
+        supervisor.supervise(app)
         greenlet = gevent.spawn(app.raiden.start)
         greenlet.name = f'Fixture:raiden_network node:{pex(app.raiden.address)}'
         start_tasks.append(greenlet)

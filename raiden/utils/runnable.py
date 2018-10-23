@@ -1,7 +1,7 @@
 from typing import Sequence
 
+import gevent
 import structlog
-from gevent import Greenlet
 
 log = structlog.get_logger(__name__)
 
@@ -12,7 +12,7 @@ class Runnable:
     Allows subtasks to crash self, and bubble up the exception in the greenlet
     In the future, when proper restart is implemented, may be replaced by actual greenlet
     """
-    greenlet: Greenlet = None
+    greenlet: gevent.Greenlet = None
     args: Sequence = tuple()  # args for _run()
     kwargs: dict = dict()  # kwargs for _run()
 
@@ -22,14 +22,19 @@ class Runnable:
         self.args = args
         self.kwargs = kwargs
 
-        self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
+        self.greenlet = gevent.Greenlet(self._run, *self.args, **self.kwargs)
         self.greenlet.name = f'{self.__class__.__name__}|{self.greenlet.name}'
 
     def start(self):
         """ Synchronously start task
 
-        Reimplements in children an call super().start() at end to start _run()
-        Start-time exceptions may be raised
+        If you need specialized initialization, then reimplement
+        and call `super().start()` at the end.
+
+        In the same way as a greenlet, `start()` will call `_run()` with the initialization
+        arguments.
+
+        Start-time exceptions may be raised.
         """
         if self.greenlet:
             raise RuntimeError(f'Greenlet {self.greenlet!r} already started')
@@ -39,7 +44,7 @@ class Runnable:
             self.greenlet.kwargs == self.kwargs
         )
         if not pristine:
-            self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
+            self.greenlet = gevent.Greenlet(self._run, *self.args, **self.kwargs)
             self.greenlet.name = f'{self.__class__.__name__}|{self.greenlet.name}'
         self.greenlet.start()
 
@@ -58,8 +63,8 @@ class Runnable:
         """
         raise NotImplementedError
 
-    def on_error(self, subtask: Greenlet):
-        """ Default callback for substasks link_exception
+    def on_error(self, subtask: gevent.Greenlet):
+        """ Default callback for subtasks link_exception
 
         Default callback re-raises the exception inside _run() """
         log.error(
@@ -86,3 +91,34 @@ class Runnable:
 
     def __bool__(self):
         return bool(self.greenlet)
+
+
+class Supervisor(Runnable):
+    def __init__(self, run=None, *args, **kwargs):
+        self.children = []
+        super().__init__(run=None, *args, **kwargs)
+
+    def _remove_child(self, child: Runnable):
+        if child in self.children:
+            self.children.remove(child)
+
+    def supervise(self, child):
+        child.link_exception(self.on_error)
+        child.link_value(self._remove_child)
+        self.children.append(child)
+
+    def stop(self):
+        for child in self.children:
+            child.stop()
+        gevent.joinall(self.children, raise_error=True)
+
+    def _run(self, *args, **kwargs):
+        try:
+            while self.children:
+                gevent.joinall(self.children, raise_error=True)
+        except gevent.GreenletExit:
+            gevent.killall(self.children)
+            raise
+        except Exception:
+            self.stop()
+            raise
