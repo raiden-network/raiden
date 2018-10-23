@@ -57,8 +57,8 @@ MANAGED_CONFIG_OPTIONS = {
 }
 
 MANAGED_CONFIG_OPTIONS_OVERRIDABLE = {
-    'discovery-contract-address',
-    'registry-contract-address',
+    'endpoint-registry-contract-address',
+    'tokennetwork-registry-contract-address',
     'secret-registry-contract-address',
 }
 
