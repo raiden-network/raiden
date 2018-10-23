@@ -12,8 +12,6 @@ Raiden is a payment channel implementation which provides scalable, low latency,
 Installation
 ============
 
-.. warning:: If you are just switching from an old installation of raiden which was using python 2, then you should make sure to remove your raiden directory. By default that would mean: :code:`rm -rf ~/.raiden`
-
 The preferred way to install Raiden is downloading a self contained application bundle from the
 `GitHub release page <https://github.com/raiden-network/raiden/releases>`_.
 
@@ -142,7 +140,7 @@ Run the Ethereum client and let it sync::
     geth --fast --rpc --rpcapi eth,net,web3
 
 .. note::
-    When you want to use a testnet add the ``--testnet`` or ``--rinkeby`` flags or set the network id with `` --networkid`` directly.
+    When you want to use a testnet add the ``--testnet`` or ``--rinkeby`` flags or set the network id with ``--networkid`` directly.
 
 Unless you already have an account you can also create one in the console by invoking ``personal.newAccount()``.
 
@@ -176,7 +174,11 @@ Using --eth-rpc-endpoint/Infura
 
 In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node, sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden on Ropsten directly::
 
-    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://ropsten.infura.io/v3/<yourToken>"
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://mainnet.infura.io/v3/<yourToken>"
+
+.. note::
+    When you want to use a testnet you need to update the URL of the infura endpoints, e.g. for the ropsten testnet use ``https://ropsten.infura.io/v3/<yourToken>``
+
 
 Select the desired Ethereum account when prompted, and type in the account's password.
 
