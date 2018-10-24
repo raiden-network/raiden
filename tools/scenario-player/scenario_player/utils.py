@@ -1,5 +1,7 @@
 import json
 import os
+import platform
+import subprocess
 import time
 import uuid
 from collections import defaultdict, deque
@@ -14,8 +16,8 @@ import requests
 import structlog
 from eth_keyfile import decode_keyfile_json
 from eth_utils import encode_hex, to_checksum_address
-from mirakuru import TimeoutExpired
-from mirakuru.base import IGNORED_ERROR_CODES
+from mirakuru import AlreadyRunning, TimeoutExpired
+from mirakuru.base import ENV_UUID, IGNORED_ERROR_CODES
 from requests.adapters import HTTPAdapter
 from web3 import HTTPProvider, Web3
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
@@ -85,6 +87,39 @@ class ChainConfigType(click.ParamType):
 
 
 class HTTPExecutor(mirakuru.HTTPExecutor):
+    def start(self, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
+        """ Merged copy paste from the inheritance chain with modified stdout/err behaviour """
+        if self.pre_start_check():
+            # Some other executor (or process) is running with same config:
+            raise AlreadyRunning(self)
+
+        if self.process is None:
+            command = self.command
+            if not self._shell:
+                command = self.command_parts
+
+            env = os.environ.copy()
+            env[ENV_UUID] = self._uuid
+            popen_kwargs = {
+                'shell': self._shell,
+                'stdin': subprocess.PIPE,
+                'stdout': stdout,
+                'stderr': stderr,
+                'universal_newlines': True,
+                'env': env,
+            }
+            if platform.system() != 'Windows':
+                popen_kwargs['preexec_fn'] = os.setsid
+            self.process = subprocess.Popen(
+                command,
+                **popen_kwargs,
+            )
+
+        self._set_timeout()
+
+        self.wait_for(self.check_subprocess)
+        return self
+
     def stop(self, sig=None, timeout=10):
         """ Copy paste job from `SimpleExecutor.stop()` to add the `timeout` parameter. """
         if self.process is None:
@@ -109,7 +144,7 @@ class HTTPExecutor(mirakuru.HTTPExecutor):
         try:
             self.wait_for(process_stopped)
         except TimeoutExpired:
-            # at this moment, process got killed,
+            log.warning('Timeout expired, killing process', process=self)
             pass
 
         self._kill_all_kids(sig)

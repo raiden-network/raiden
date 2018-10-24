@@ -8,6 +8,7 @@ import stat
 import sys
 import time
 from datetime import timedelta
+from enum import Enum
 from pathlib import Path
 from tarfile import TarFile
 from zipfile import ZipFile
@@ -19,7 +20,8 @@ from cachetools.func import ttl_cache
 from eth_keyfile import create_keyfile_json
 from eth_utils import to_checksum_address
 from gevent import Greenlet
-from gevent.pool import Pool
+from gevent.pool import Group, Pool
+from mirakuru import ProcessExitedWithError
 
 from scenario_player.exceptions import ScenarioError
 from scenario_player.runner import ScenarioRunner
@@ -61,6 +63,11 @@ MANAGED_CONFIG_OPTIONS_OVERRIDABLE = {
     'tokennetwork-registry-contract-address',
     'secret-registry-contract-address',
 }
+
+
+class NodeState(Enum):
+    STOPPED = 1
+    STARTED = 2
 
 
 class RaidenReleaseKeeper:
@@ -156,6 +163,10 @@ class NodeRunner:
         self._executor = None
         self._port = None
 
+        self.state: NodeState = NodeState.STOPPED
+
+        self._output_files = {}
+
         if options.pop('_clean', False):
             shutil.rmtree(self._datadir)
         self._datadir.mkdir(parents=True, exist_ok=True)
@@ -189,22 +200,41 @@ class NodeRunner:
             address=self.address,
             port=self._api_address.rpartition(':')[2],
         )
+        self._output_files['stdout'] = self._stdout_file.open('at', 1)
+        self._output_files['stderr'] = self._stderr_file.open('at', 1)
+        for file in self._output_files.values():
+            file.write('--------- Starting ---------\n')
+
         begin = time.monotonic()
-        ret = self.executor.start()
+        try:
+            ret = self.executor.start(**self._output_files)
+        except ProcessExitedWithError as ex:
+            raise ScenarioError(f'Failed to start Raiden node {self._index}') from ex
+        self.state = NodeState.STARTED
         duration = str(timedelta(seconds=time.monotonic() - begin))
         log.info('Node started', node=self._index, duration=duration)
         return ret
 
-    def stop(self, timeout=600):
+    def stop(self, timeout=60):
         log.info('Stopping node', node=self._index)
         begin = time.monotonic()
+        self.state = NodeState.STOPPED
         ret = self.executor.stop(timeout=timeout)
         duration = str(timedelta(seconds=time.monotonic() - begin))
+        for file in self._output_files.values():
+            file.write('--------- Stopped ---------\n')
+            file.close()
+        self._output_files = {}
         log.info('Node stopped', node=self._index, duration=duration)
         return ret
 
     def kill(self):
         log.info('Killing node', node=self._index)
+        for file in self._output_files.values():
+            file.write('--------- Killed ---------\n')
+            file.close()
+        self._output_files = {}
+        self.state = NodeState.STOPPED
         return self.executor.kill()
 
     @property
@@ -251,8 +281,6 @@ class NodeRunner:
             self._password_file,
             '--network-id',
             self._runner.chain_id,
-            '--environment-type',
-            self._runner.environment_type.name.lower(),
             '--sync-check',  # FIXME: Disable sync check for private chains
             '--gas-price',
             self._options.get('gas-price', 'normal'),
@@ -272,6 +300,9 @@ class NodeRunner:
         for option_name in MANAGED_CONFIG_OPTIONS_OVERRIDABLE:
             if option_name in self._options:
                 cmd.extend([f'--{option_name}', self._options[option_name]])
+
+        if 'environment-type' in self._options:
+            cmd.extend(['--environment-type', self._options['environment-type']])
 
         # Ensure path instances are converted to strings
         cmd = [str(c) for c in cmd]
@@ -313,7 +344,15 @@ class NodeRunner:
 
     @property
     def _log_file(self):
-        return self._datadir.joinpath(f'run-{self._runner.run_number}.log')
+        return self._datadir.joinpath(f'run-{self._runner.run_number:03d}.log')
+
+    @property
+    def _stdout_file(self):
+        return self._datadir.joinpath(f'run-{self._runner.run_number:03d}.stdout')
+
+    @property
+    def _stderr_file(self):
+        return self._datadir.joinpath(f'run-{self._runner.run_number:03d}.stderr')
 
 
 class NodeController:
@@ -355,6 +394,7 @@ class NodeController:
             for runner in self._node_runners:
                 pool.start(Greenlet(runner.start))
             pool.join(raise_error=True)
+            log.info('All nodes started')
 
         starter = gevent.spawn(_start)
         if wait:
@@ -365,11 +405,13 @@ class NodeController:
         log.info('Stopping nodes')
         stop_tasks = [gevent.spawn(runner.stop) for runner in self._node_runners]
         gevent.joinall(stop_tasks, raise_error=True)
+        log.info('Nodes stopped')
 
     def kill(self):
         log.info('Killing nodes')
         kill_tasks = [gevent.spawn(runner.kill) for runner in self._node_runners]
         gevent.joinall(kill_tasks, raise_error=True)
+        log.info('Nodes killed')
 
     def initialize_nodes(self):
         for runner in self._node_runners:
@@ -378,3 +420,25 @@ class NodeController:
     @property
     def addresses(self):
         return {runner.address for runner in self._node_runners}
+
+    def start_node_monitor(self):
+        def _monitor(runner: NodeRunner):
+            while not self._runner.root_task.done:
+                if runner.state is NodeState.STARTED:
+                    try:
+                        runner.executor.check_subprocess()
+                    except ProcessExitedWithError as ex:
+                        raise ScenarioError(
+                            f'Raiden node {runner._index} died with non-zero exit status',
+                        ) from ex
+                gevent.sleep(.5)
+
+        monitor_group = Group()
+        for runner in self._node_runners:
+            monitor_group.start(Greenlet(_monitor, runner))
+
+        def _wait():
+            while not monitor_group.join(.5, raise_error=True):
+                pass
+
+        return gevent.spawn(_wait)
