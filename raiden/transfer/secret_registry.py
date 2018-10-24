@@ -20,7 +20,10 @@ def events_for_onchain_secretreveal(
         raise ValueError('secret must be a Secret instance')
 
     if get_status(channel_state) in CHANNEL_STATES_PRIOR_TO_CLOSED + (CHANNEL_STATE_CLOSED, ):
-        reveal_event = ContractSendSecretReveal(expiration, secret)
+        reveal_event = ContractSendSecretReveal(
+            expiration=expiration,
+            secret=secret,
+        )
         events.append(reveal_event)
 
     return events
