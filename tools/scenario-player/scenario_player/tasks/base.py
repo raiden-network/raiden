@@ -68,7 +68,7 @@ class Task:
         self._start_time = time.monotonic()
         try:
             return self._run(*args, **kwargs)
-        except Exception as ex:
+        except BaseException as ex:
             self.state = TaskState.ERRORED
             log.exception('Task errored', task=self)
             self.exception = ex

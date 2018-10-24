@@ -13,7 +13,6 @@ from requests import RequestException, Session
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import Account
-from raiden.constants import Environment
 from raiden.network.rpc.client import JSONRPCClient
 from scenario_player.exceptions import NodesUnreachableError, ScenarioError, TokenRegistrationError
 from scenario_player.utils import (
@@ -142,10 +141,6 @@ class ScenarioRunner(object):
         )
 
         self.chain_id = self.client.web3.net.version
-        # FIXME: Support main net type for test chains
-        self.environment_type = (
-            Environment.PRODUCTION if self.chain_id == 1 else Environment.DEVELOPMENT
-        )
 
         balance = self.client.balance(account.address)
         if balance < OWN_ACCOUNT_BALANCE_MIN:
@@ -238,13 +233,9 @@ class ScenarioRunner(object):
             elif balance > token_balance_min:
                 log.warning("Node is overfunded", address=address, balance=balance)
 
-        all_tx = mint_tx
-        if fund_tx:
-            all_tx.extend(fund_tx)
+        wait_for_txs(self.client, mint_tx + fund_tx)
 
-        wait_for_txs(self.client, all_tx)
-
-        if node_starter:
+        if node_starter is not None:
             node_starter.get(block=True)
 
         registered_tokens = set(
@@ -258,7 +249,18 @@ class ScenarioRunner(object):
                 log.error("Couldn't register token with network", code=code, message=msg)
                 raise TokenRegistrationError(msg)
 
-        self.root_task()
+        # Start root task
+        root_task_greenlet = gevent.spawn(self.root_task)
+        greenlets = [root_task_greenlet]
+        if self.is_managed:
+            greenlets.append(self.node_controller.start_node_monitor())
+        try:
+            gevent.joinall(greenlets, raise_error=True)
+        except BaseException:
+            if not root_task_greenlet.dead:
+                # Make sure we kill the tasks if a node dies
+                root_task_greenlet.kill()
+            raise
 
     def register_token(self, token_address, node):
         try:

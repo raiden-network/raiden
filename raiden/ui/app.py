@@ -146,6 +146,7 @@ def _setup_matrix(config):
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
         available_servers = get_matrix_servers(available_servers_url)
+        log.debug('Fetching available matrix servers', available_servers=available_servers)
         config['transport']['matrix']['available_servers'] = available_servers
 
     try:
