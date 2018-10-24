@@ -148,7 +148,7 @@ def options(func):
                 '"<NETWORK_ID>": use the given network id directly\n'
             ),
             type=NetworkChoiceType(['mainnet', 'ropsten', 'rinkeby', 'kovan', '<NETWORK_ID>']),
-            default='ropsten',
+            default='mainnet',
             show_default=True,
         ),
         option(
