@@ -9,7 +9,7 @@ from eth_utils import to_checksum_address
 from raiden.constants import Environment
 from raiden.ui.cli import run
 
-EXPECTED_DEFAULT_ENVIRONMENT_VALUE = Environment.PRODUCTION.value.lower()
+EXPECTED_DEFAULT_ENVIRONMENT_VALUE = Environment.PRODUCTION.value
 
 
 def spawn_raiden(args):
@@ -179,13 +179,13 @@ def test_cli_registry_address_without_deployed_contract(cli_args):
 
 @pytest.mark.timeout(65)
 @pytest.mark.parametrize('changed_args', [{
-    'environment_type': Environment.DEVELOPMENT.value.lower(),
+    'environment_type': Environment.DEVELOPMENT.value,
 }])
 def test_cli_change_environment_type(cli_args):
     child = spawn_raiden(cli_args)
     try:
         # expect the provided mode
-        expect_cli_normal_startup(child, Environment.DEVELOPMENT.value.lower())
+        expect_cli_normal_startup(child, Environment.DEVELOPMENT.value)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
