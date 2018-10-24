@@ -13,12 +13,10 @@ token:
 nodes:
   mode: managed
   count: 15
-  ## Raiden version to use, default: 'LATEST' uses the latest nightly release
   raiden_version: LATEST
-  ## Options to apply to all nodes
-  ## Option names correspond to Raiden cli options without the leading double dash (`--`)
   default_options:
     gas-price: fast
+    environment-type: development
 
 scenario:
   serial:
