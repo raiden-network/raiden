@@ -144,7 +144,7 @@ def main(
                 mailgun_api_key,
             )
         except ScenarioError as ex:
-            log.error('Run finished', result='scenario error')
+            log.exception('Run finished', result='scenario error')
             send_notification_mail(
                 runner.notification_email,
                 f'Invalid scenario {scenario_file.name}',
@@ -167,6 +167,8 @@ def main(
                 while not ui_greenlet.dead:
                     gevent.sleep(1)
         finally:
+            if runner.is_managed:
+                runner.node_controller.stop()
             if not ui_greenlet.dead:
                 ui_greenlet.kill(ExitMainLoop)
                 ui_greenlet.join()
