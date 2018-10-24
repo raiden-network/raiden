@@ -358,7 +358,7 @@ class RaidenService(Runnable):
         # - The alarm must complete its first run before the transport is started,
         #   to reject messages for closed/settled channels.
         self.alarm.register_callback(self._callback_new_block)
-        self.alarm.first_run()
+        self.alarm.first_run(last_log_block_number)
 
         # The transport must not ever be started before the alarm task's first
         # run, because it's this method which synchronizes the node with the
