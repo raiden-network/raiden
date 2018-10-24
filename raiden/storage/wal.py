@@ -2,6 +2,7 @@ from datetime import datetime
 
 import structlog
 
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer.architecture import StateManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -22,6 +23,13 @@ def restore_to_state_change(transition_function, storage, state_change_identifie
         from_identifier=from_state_change_id,
         to_identifier=state_change_identifier,
     )
+
+    if chain_state is None and not unapplied_state_changes:
+        raise RaidenUnrecoverableError(
+            f'Failed to restore chain state to state change {state_change_identifier}. '
+            'The state DB seems to have been corrupted leading to the chain state '
+            'not being initialized. ',
+        )
 
     state_manager = StateManager(transition_function, chain_state)
     wal = WriteAheadLog(state_manager, storage)
