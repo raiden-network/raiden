@@ -1053,24 +1053,28 @@ def test_events_for_onchain_secretreveal_once():
     for channel_state in channel_map.values():
         channel.register_offchain_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
 
-    block_number = (
+    start_danger_zone_block_number = (
         pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
     )
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
         transfers_pair,
-        block_number,
+        start_danger_zone_block_number,
     )
     assert len(events) == 1
 
     for pair in transfers_pair:
         assert pair.payer_state == 'payer_waiting_secret_reveal'
 
+    end_danger_zone_block_number = (
+        pair.payer_transfer.lock.expiration - 1
+    )
+
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
         transfers_pair,
-        block_number,
+        end_danger_zone_block_number,
     )
     assert not events
 
@@ -1080,52 +1084,12 @@ def test_events_for_onchain_secretreveal_once():
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
         transfers_pair,
-        block_number,
+        pair.payer_transfer.lock.expiration,
     )
     assert not events
 
     for pair in transfers_pair:
         assert pair.payer_state == 'payer_waiting_secret_reveal'
-
-
-@pytest.mark.skip(reason='issue #1736')
-def test_onchain_secretreveal_must_be_emitted_only_once():
-    amount = 10
-    block_number = 1
-    channel_map, transfers_pair = make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY],
-        amount,
-        block_number,
-    )
-
-    pair = transfers_pair[0]
-    channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
-    channel_state = channel_map[channel_identifier]
-
-    # Reveal the secret off-chain
-    for channel_state in channel_map.values():
-        channel.register_offchain_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
-
-    block_number = (
-        pair.payer_transfer.lock.expiration - channel_state.reveal_timeout
-    )
-
-    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        channel_map,
-        transfers_pair,
-        block_number,
-    )
-
-    assert must_contain_entry(events, ContractSendSecretReveal, {
-        'secret': UNIT_SECRET,
-    })
-
-    events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        channel_map,
-        transfers_pair,
-        block_number,
-    )
-    assert not events
 
 
 def test_secret_learned():
