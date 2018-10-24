@@ -1,4 +1,4 @@
-Raiden Specification
+Raiden Notes [outdated]
 ####################
 
 .. toctree::
@@ -332,15 +332,4 @@ Hashlocks are not Transfer Identifiers
 --------------------------------------
 
 Even though hashlocks are unique, this value is not used as an identifier because routing via a specific path may fail. The initiator is at a position where he may choose to discard a path and retry with a different first hop. For this reason hashlocks can change for the same payment and an additional field just for transfer identification is used.
-
-Known Issues
-============
-
-Below are some of the open issues of the current version of raiden and our work towards solving them.
-
-- `Secure from interception of RevealSecret <https://github.com/raiden-network/raiden/issues/473>`_
-- `Prevent replay attacks from different registries or Ethereum networks <https://github.com/raiden-network/raiden/issues/292>`_
-- `Whitelist for smart contract code <https://github.com/raiden-network/raiden/issues/344>`_
-- `Handle blockchain congestion <https://github.com/raiden-network/raiden/issues/383>`_
-- `Cooperative channel closing <https://github.com/raiden-network/raiden/issues/217>`_
 
