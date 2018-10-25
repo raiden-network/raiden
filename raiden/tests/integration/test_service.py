@@ -1,7 +1,11 @@
 import pytest
 
 from raiden.messages import Ping
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import state, views
+from raiden.transfer.state_change import Block
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -57,3 +61,33 @@ def test_udp_ping_pong_unreachable_node(raiden_network, skip_if_not_udp):
         app1.raiden.address,
     )
     assert network_state is state.NODE_NETWORK_UNREACHABLE
+
+
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('number_of_tokens', [1])
+def test_raiden_service_callback_new_block(raiden_network):
+    """ Regression test for: https://github.com/raiden-network/raiden/issues/2894 """
+    app0 = raiden_network[0]
+
+    app0.raiden.alarm.stop()
+    target_block_num = app0.raiden.chain.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
+    wait_until_block(
+        app0.raiden.chain,
+        target_block_num,
+    )
+
+    latest_block = app0.raiden.chain.get_block(block_identifier='latest')
+    app0.raiden._callback_new_block(latest_block=latest_block)
+
+    app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
+        from_identifier=0,
+        to_identifier='latest',
+    )
+
+    assert must_contain_entry(app0_state_changes, Block, {
+        'block_number': target_block_num - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    })
+    assert not must_contain_entry(app0_state_changes, Block, {
+        'block_number': latest_block['number']
+    })
