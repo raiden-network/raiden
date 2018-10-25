@@ -118,15 +118,15 @@ Requirements for Safe Usage
 
 In order to use Raiden correctly and safely there are some things that need to be taken care of by the user:
 
-- **Layer 1 works reliably**: That means that you have a local ethereum node, either geth or parity, that is always synced and working reliably. If there are any problems or bugs on the client then Raiden can not work reliably.
-- **Unique account for Raiden**: We need to have a specific ethereum account dedicated to Raiden. Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result in undefined behaviour
-- **Raiden account has sufficient ETH**: Raiden will try to warn you if there is not enough ETH in your raiden account in order to maintain your current open chanels and go through their entire cycle. But it is your job as the user to refill your account with ETH and always have it filled.
+- **Layer 1 works reliably**: That means that you have a local Ethereum node, either geth or parity, that is always synced and working reliably. If there are any problems or bugs on the client then Raiden can not work reliably.
+- **Unique account for Raiden**: We need to have a specific Ethereum account dedicated to Raiden. Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result in undefined behaviour
+- **Raiden account has sufficient ETH**: Raiden will try to warn you if there is not enough ETH in your Raiden account in order to maintain your current open channels and go through their entire cycle. But it is your job as the user to refill your account with ETH and always have it filled.
 - **Persistency of local DB**: Your local state database is located at ``~/.raiden``. This data should not be deleted by the user or tampered with in any way. Frequent backups are also recommended. Deleting this directory could mean losing funds.
-- **Raiden Always online**: Make sure that your node is always working, your network connection is stable and that the Raiden node is always online. If it crashes for whatever reason you are responsible to restart it and keep it always online. We recommend running it inside some form of monitor that will restart if for some reason the raiden node crashes.
-- **Ethereum Client Always Online**: Make sure that your ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
-- **Ethereum Client can not be changed**: Swapping the ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching ethereum clients once the Raiden node is running.
+- **Raiden Always online**: Make sure that your node is always working, your network connection is stable and that the Raiden node is always online. If it crashes for whatever reason you are responsible to restart it and keep it always online. We recommend running it inside some form of monitor that will restart if for some reason the Raiden node crashes.
+- **Ethereum Client Always Online**: Make sure that your Ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
+- **Ethereum Client can not be changed**: Swapping the Ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching Ethereum clients once the Raiden node is running.
 - **Never expose the Raiden REST API to the public**: For Raiden's operation, the client needs to be able to sign transactions at any point in time. Therefore you should never expose the Raiden Rest API to the public. Be very careful when changing the --rpc and --rpccorsdomain values.
-
+- **Be patient**: Do not mash buttons in the webUI and do not shut down the client while on-chain transactions are on the fly and have not yet been confirmed.
 
 Firing it up
 =============
