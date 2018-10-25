@@ -530,6 +530,7 @@ class RaidenService(Runnable):
             latest_block_number = latest_block['number']
             confirmation_blocks = self.config['blockchain']['confirmation_blocks']
             confirmed_block_number = latest_block_number - confirmation_blocks
+            confirmed_block = self.chain.client.web3.eth.getBlock(confirmed_block_number)
 
             # handle testing private chains
             confirmed_block_number = max(GENESIS_BLOCK_NUMBER, confirmed_block_number)
@@ -550,9 +551,9 @@ class RaidenService(Runnable):
             # been processed but the Block state change has not been
             # dispatched.
             state_change = Block(
-                block_number=latest_block_number,
-                gas_limit=latest_block['gasLimit'],
-                block_hash=bytes(latest_block['hash']),
+                block_number=confirmed_block_number,
+                gas_limit=confirmed_block['gasLimit'],
+                block_hash=bytes(confirmed_block['hash']),
             )
             self.handle_state_change(state_change)
 
