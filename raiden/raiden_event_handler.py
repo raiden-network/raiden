@@ -318,8 +318,9 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
+        token_network_identifier = channel_unlock_event.token_network_identifier
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            channel_unlock_event.token_network_identifier,
+            token_network_identifier,
             channel_unlock_event.channel_identifier,
         )
         token_network: TokenNetwork = payment_channel.token_network
@@ -350,7 +351,7 @@ class RaidenEventHandler:
             record = raiden.wal.storage.get_latest_state_change_by_data_field({
                 'balance_proof.chain_id': raiden.chain.network_id,
                 'balance_proof.token_network_identifier': to_checksum_address(
-                    channel_unlock_event.token_network_identifier,
+                    token_network_identifier,
                 ),
                 'balance_proof.channel_identifier': channel_unlock_event.channel_identifier,
                 'balance_proof.sender': to_checksum_address(
@@ -362,14 +363,18 @@ class RaidenEventHandler:
             record = raiden.wal.storage.get_latest_event_by_data_field({
                 'balance_proof.chain_id': raiden.chain.network_id,
                 'balance_proof.token_network_identifier': to_checksum_address(
-                    channel_unlock_event.token_network_identifier,
+                    token_network_identifier,
                 ),
                 'balance_proof.locksroot': serialize_bytes(our_locksroot),
                 'channel_identifier': channel_unlock_event.channel_identifier,
             })
         else:
             raise RaidenUnrecoverableError(
-                'Failed to find state/event that match current channel locksroots',
+                f'Failed to find state/event that match current channel locksroots. '
+                f'token:{to_checksum_address(channel_unlock_event.token_address)} '
+                f'token_network:{to_checksum_address(token_network_identifier)} '
+                f'channel:{channel_unlock_event.channel_identifier} '
+                f'participant:{to_checksum_address(channel_unlock_event.participant)}',
             )
 
         # Replay state changes until a channel state is reached where
