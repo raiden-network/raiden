@@ -16,6 +16,7 @@ from raiden.blockchain.events import (
 )
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
@@ -538,7 +539,11 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
         channel_state2_1.partner_state.balance_proof,
     )
 
-    settle_expiration = app0.raiden.chain.block_number() + settle_timeout
+    settle_expiration = (
+        app0.raiden.chain.block_number() +
+        settle_timeout +
+        DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+    )
     wait_until_block(app0.raiden.chain, settle_expiration)
 
     assert_synced_channel_state(
