@@ -273,11 +273,23 @@ class UDPTransport(Runnable):
 
         return self.addresses_events[recipient]
 
+    def whitelist(self, address: typing.Address):
+        """Whitelist peer address to receive communications from
+
+        This may be called before transport is started, to ensure events generated during
+        start are handled properly.
+        PS: udp currently doesn't do whitelisting, method defined for compatibility with matrix
+        """
+        return
+
     def start_health_check(self, recipient):
         """ Starts a task for healthchecking `recipient` if there is not
         one yet.
+
+        It also whitelists the address
         """
         if recipient not in self.addresses_events:
+            self.whitelist(recipient)  # noop for now, for compatibility
             ping_nonce = self.nodeaddresses_to_nonces.setdefault(
                 recipient,
                 {'nonce': 0},  # HACK: Allows the task to mutate the object
