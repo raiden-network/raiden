@@ -1,4 +1,3 @@
-from raiden.transfer.architecture import Event
 from raiden.transfer.channel import get_status
 from raiden.transfer.events import ContractSendSecretReveal
 from raiden.transfer.state import (
@@ -13,7 +12,7 @@ def events_for_onchain_secretreveal(
         channel_state: NettingChannelState,
         secret: typing.Secret,
         expiration: typing.BlockExpiration,
-) -> typing.List[Event]:
+) -> typing.List[ContractSendSecretReveal]:
     events = list()
 
     if not isinstance(secret, typing.T_Secret):
