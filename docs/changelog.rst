@@ -1,6 +1,7 @@
 =========
 Changelog
 =========
+* :release:`0.100.0 <2018-11-07>`
 
 * :release:`0.16.0 <2018-11-09>`
 * :bug'`2963` Fixes an overflow issue with the hint of the join network dialog.
