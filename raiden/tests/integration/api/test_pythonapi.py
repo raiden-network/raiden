@@ -3,6 +3,7 @@ from eth_utils import is_same_address, to_normalized_address
 
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import DepositMismatch, UnknownTokenAddress
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.transfer import get_channelstate
@@ -159,7 +160,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_c
         channel12.settle_timeout +
         10  # arbitrary number of additional blocks, used to wait for the settle() call
     )
-    wait_until_block(node1.raiden.chain, settlement_block)
+    wait_until_block(node1.raiden.chain, settlement_block + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
 
     state_changes = node1.raiden.wal.storage.get_statechanges_by_identifier(
         from_identifier=0,
