@@ -360,6 +360,11 @@ class RaidenService(Runnable):
         self.alarm.register_callback(self._callback_new_block)
         self.alarm.first_run(last_log_block_number)
 
+        chain_state = views.state_from_raiden(self)
+
+        self._initialize_transactions_queues(chain_state)
+        self._initialize_whitelists(chain_state)
+
         # The transport must not ever be started before the alarm task's first
         # run, because it's this method which synchronizes the node with the
         # blockchain, including the channel's state (if the channel is closed
@@ -367,22 +372,17 @@ class RaidenService(Runnable):
         # the node is not synchronized)
         self.transport.start(self, self.message_handler)
 
-        chain_state = views.state_from_raiden(self)
-
-        self._initialize_transactions_queues(chain_state)
-
         self.alarm.start()
 
         # after transport and alarm is started, send queued messages
-        events_queues = views.get_all_messagequeues(chain_state)
-        self._initialize_messages_queues(events_queues)
+        self._initialize_messages_queues(chain_state)
 
         # exceptions on these subtasks should crash the app and bubble up
         self.alarm.link_exception(self.on_error)
         self.transport.link_exception(self.on_error)
 
         # Health check needs the transport layer
-        self.start_neighbours_healthcheck()
+        self.start_neighbours_healthcheck(chain_state)
 
         if self.config['transport_type'] == 'udp':
             endpoint_registration_greenlet.get()  # re-raise if exception occurred
@@ -436,8 +436,8 @@ class RaidenService(Runnable):
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
-    def start_neighbours_healthcheck(self):
-        for neighbour in views.all_neighbour_nodes(self.wal.state_manager.current_state):
+    def start_neighbours_healthcheck(self, chain_state):
+        for neighbour in views.all_neighbour_nodes(chain_state):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                 self.start_health_check_for(neighbour)
 
@@ -600,10 +600,11 @@ class RaidenService(Runnable):
                     else:
                         raise
 
-    def _initialize_messages_queues(self, events_queues):
+    def _initialize_messages_queues(self, chain_state):
         """ Push the queues to the transport and populate
         targets_to_identifiers_to_statuses.
         """
+        events_queues = views.get_all_messagequeues(chain_state)
 
         for queue_identifier, event_queue in events_queues.items():
             self.start_health_check_for(queue_identifier.recipient)
@@ -632,6 +633,25 @@ class RaidenService(Runnable):
                 message = message_from_sendevent(event, self.address)
                 self.sign(message)
                 self.transport.send_async(queue_identifier, message)
+
+    def _initialize_whitelists(self, chain_state):
+        """ Whitelist neighbors and mediated transfer targets on transport """
+
+        for neighbour in views.all_neighbour_nodes(chain_state):
+            if neighbour == ConnectionManager.BOOTSTRAP_ADDR:
+                continue
+            self.transport.whitelist(neighbour)
+
+        events_queues = views.get_all_messagequeues(chain_state)
+
+        for event_queue in events_queues.values():
+            for event in event_queue:
+                is_initiator = (
+                    type(event) == SendLockedTransfer and
+                    event.transfer.initiator == self.address
+                )
+                if is_initiator:
+                    self.transport.whitelist(address=event.transfer.target)
 
     def sign(self, message):
         """ Sign message inplace. """

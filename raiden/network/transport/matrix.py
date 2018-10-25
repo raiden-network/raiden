@@ -234,7 +234,19 @@ class MatrixTransport(Runnable):
         self.greenlets.append(greenlet)
         return greenlet
 
+    def whitelist(self, address: Address):
+        """Whitelist peer address to receive communications from
+
+        This may be called before transport is started, to ensure events generated during
+        start are handled properly.
+        """
+        self._address_to_userids.setdefault(address, set())
+
     def start_health_check(self, node_address):
+        """Start healthcheck (status monitoring) for a peer
+
+        It also whitelists the address to answer invites and listen for messages
+        """
         if self._stop_event.ready():
             return
 
@@ -254,6 +266,7 @@ class MatrixTransport(Runnable):
                 for user in candidates
                 if self._validate_userid_signature(user) == node_address
             }
+            self.whitelist(node_address)
             self._address_to_userids[node_address].update(user_ids)
 
             # Ensure network state is updated in case we already know about the user presences
@@ -442,7 +455,7 @@ class MatrixTransport(Runnable):
             )
 
     def _handle_invite(self, room_id: _RoomID, state: dict):
-        """ Join rooms invited by healthchecked partners """
+        """ Join rooms invited by whitelisted partners """
         if self._stop_event.ready():
             return
 
@@ -482,7 +495,7 @@ class MatrixTransport(Runnable):
 
         if peer_address not in self._address_to_userids:
             self.log.debug(
-                'Got invited by a non-healthchecked user - ignoring',
+                'Got invited by a non-whitelisted user - ignoring',
                 room_id=room_id,
                 user=user,
             )
@@ -549,11 +562,11 @@ class MatrixTransport(Runnable):
             )
             return False
 
-        # don't proceed if user isn't healthchecked (yet)
+        # don't proceed if user isn't whitelisted (yet)
         if peer_address not in self._address_to_userids:
             # user not start_health_check'ed
             self.log.debug(
-                'Message from non-healthchecked peer - ignoring',
+                'Message from non-whitelisted peer - ignoring',
                 sender=user,
                 sender_address=pex(peer_address),
                 room=room,
@@ -936,7 +949,7 @@ class MatrixTransport(Runnable):
             # Malformed address - skip
             return
 
-        # not a user we've started healthcheck, skip
+        # not a user we've whitelisted, skip
         if address not in self._address_to_userids:
             return
         self._address_to_userids[address].add(user_id)
@@ -1188,8 +1201,8 @@ class MatrixTransport(Runnable):
 
     def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = None):
         """ Checks for rooms we've joined and which partner isn't health-checked and leave"""
-        # cache in a set all healthchecked addresses
-        healthchecked_hex_addresses: Set[AddressHex] = {
+        # cache in a set all whitelisted addresses
+        whitelisted_hex_addresses: Set[AddressHex] = {
             to_checksum_address(address)
             for address in self._address_to_userids
         }
@@ -1212,7 +1225,7 @@ class MatrixTransport(Runnable):
             if not isinstance(room_ids, list):  # old version, single room
                 room_ids = [room_ids]
 
-            if address_hex not in healthchecked_hex_addresses:
+            if address_hex not in whitelisted_hex_addresses:
                 _address_to_room_ids.pop(address_hex)
                 changed = True
                 continue
