@@ -89,5 +89,5 @@ def test_raiden_service_callback_new_block(raiden_network):
         'block_number': target_block_num - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     })
     assert not must_contain_entry(app0_state_changes, Block, {
-        'block_number': latest_block['number']
+        'block_number': latest_block['number'],
     })
