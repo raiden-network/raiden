@@ -6,7 +6,7 @@ from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, TransitionResult
-from raiden.transfer.events import ContractSendChannelBatchUnlock, SendProcessed
+from raiden.transfer.events import ContractSendSecretReveal, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnlockClaimFailed,
@@ -675,7 +675,7 @@ def events_for_onchain_secretreveal_if_closed(
         transfers_pair: typing.List[MediationPairState],
         secret: typing.Secret,
         secrethash: typing.SecretHash,
-) -> typing.List[ContractSendChannelBatchUnlock]:
+) -> typing.List[ContractSendSecretReveal]:
     """ Register the secret on-chain if the payer channel is already closed and
     the mediator learned the secret off-chain.
 
