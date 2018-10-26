@@ -52,16 +52,11 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.mediator import set_offchain_secret
-from raiden.transfer.mediated_transfer.state import (
-    MediationPairState,
-    MediatorTransferState,
-    RouteState,
-)
+from raiden.transfer.mediated_transfer.state import MediatorTransferState, RouteState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ReceiveLockExpired,
     ReceiveSecretReveal,
-    ReceiveTransferRefund,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
@@ -71,92 +66,7 @@ from raiden.transfer.state import (
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
-from raiden.utils import publickey_to_address, random_secret
-
-
-def make_transfers_pair(privatekeys, amount, block_number):
-    transfers_pair = list()
-    channel_map = dict()
-    pseudo_random_generator = random.Random()
-
-    addresses = list()
-    for pkey in privatekeys:
-        pubkey = pkey.public_key.format(compressed=False)
-        address = publickey_to_address(pubkey)
-        addresses.append(address)
-
-    key_address = list(zip(privatekeys, addresses))
-
-    deposit_amount = amount * 5
-    channels_state = {
-        address: factories.make_channel(
-            our_address=factories.HOP1,
-            our_balance=deposit_amount,
-            partner_balance=deposit_amount,
-            partner_address=address,
-            token_address=UNIT_TOKEN_ADDRESS,
-            token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-        )
-        for address in addresses
-    }
-
-    lock_expiration = block_number + UNIT_REVEAL_TIMEOUT * 2
-    for (payer_key, payer_address), payee_address in zip(key_address[:-1], addresses[1:]):
-        pay_channel = channels_state[payee_address]
-        receive_channel = channels_state[payer_address]
-
-        received_transfer = factories.make_signed_transfer(
-            amount=amount,
-            initiator=UNIT_TRANSFER_INITIATOR,
-            target=UNIT_TRANSFER_TARGET,
-            expiration=lock_expiration,
-            secret=UNIT_SECRET,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            channel_identifier=receive_channel.identifier,
-            pkey=payer_key,
-            sender=payer_address,
-        )
-
-        is_valid, _, msg = channel.handle_receive_lockedtransfer(
-            receive_channel,
-            received_transfer,
-        )
-        assert is_valid, msg
-
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        lockedtransfer_event = channel.send_lockedtransfer(
-            channel_state=pay_channel,
-            initiator=UNIT_TRANSFER_INITIATOR,
-            target=UNIT_TRANSFER_TARGET,
-            amount=amount,
-            message_identifier=message_identifier,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            expiration=lock_expiration,
-            secrethash=UNIT_SECRETHASH,
-        )
-        assert lockedtransfer_event
-        lock_timeout = lock_expiration - block_number
-        assert mediator.is_channel_usable(
-            candidate_channel_state=pay_channel,
-            transfer_amount=amount,
-            lock_timeout=lock_timeout,
-        )
-        sent_transfer = lockedtransfer_event.transfer
-
-        pair = MediationPairState(
-            received_transfer,
-            lockedtransfer_event.recipient,
-            sent_transfer,
-        )
-        transfers_pair.append(pair)
-
-        channel_map[receive_channel.identifier] = receive_channel
-        channel_map[pay_channel.identifier] = pay_channel
-
-        assert channel.is_lock_locked(receive_channel.partner_state, UNIT_SECRETHASH)
-        assert channel.is_lock_locked(pay_channel.our_state, UNIT_SECRETHASH)
-
-    return channel_map, transfers_pair
+from raiden.utils import random_secret
 
 
 def make_route_from_channelstate(channel_state):
@@ -365,7 +275,7 @@ def test_next_transfer_pair():
 def test_set_payee():
     amount = 10
     block_number = 1
-    _, transfers_pair = make_transfers_pair(
+    _, transfers_pair = factories.make_transfers_pair(
         [
             HOP2_KEY,
             HOP3_KEY,
@@ -405,7 +315,7 @@ def test_set_expired_pairs():
     """ The transfer pair must switch to expired at the right block. """
     amount = 10
     block_number = 1
-    _, transfers_pair = make_transfers_pair(
+    _, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY],
         amount,
         block_number,
@@ -492,94 +402,6 @@ def test_events_for_refund():
     })
 
 
-def test_regression_send_refund():
-    """Regression test for discarded refund transfer.
-
-    This is a unit test to ensure that handle_refundtransfer will not swallow
-    the event to send the refund transfer.
-    """
-    amount = 10
-    privatekeys = [HOP2_KEY, HOP3_KEY, HOP4_KEY]
-    pseudo_random_generator = random.Random()
-    block_number = 5
-
-    channel_map, transfers_pair = make_transfers_pair(
-        privatekeys,
-        amount,
-        block_number,
-    )
-
-    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
-    mediator_state.transfers_pair = transfers_pair
-
-    last_pair = transfers_pair[-1]
-    channel_identifier = last_pair.payee_transfer.balance_proof.channel_identifier
-    lock_expiration = last_pair.payee_transfer.lock.expiration
-
-    received_transfer = factories.make_signed_transfer(
-        amount=amount,
-        initiator=UNIT_TRANSFER_INITIATOR,
-        target=UNIT_TRANSFER_TARGET,
-        expiration=lock_expiration,
-        secret=UNIT_SECRET,
-        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-        channel_identifier=channel_identifier,
-        pkey=HOP4_KEY,
-        sender=HOP4,
-    )
-
-    # All three channels have been used
-    routes = []
-
-    refund_state_change = ReceiveTransferRefund(
-        HOP4,
-        received_transfer,
-        routes,
-    )
-
-    iteration = mediator.handle_refundtransfer(
-        mediator_state,
-        refund_state_change,
-        channel_map,
-        pseudo_random_generator,
-        block_number,
-    )
-
-    first_pair = transfers_pair[0]
-    first_payer_transfer = first_pair.payer_transfer
-    payer_channel = mediator.get_payer_channel(channel_map, first_pair)
-    lock = channel.get_lock(
-        end_state=payer_channel.partner_state,
-        secrethash=UNIT_SECRETHASH,
-    )
-    token_network_identifier = first_payer_transfer.balance_proof.token_network_identifier
-    assert must_contain_entry(iteration.events, SendRefundTransfer, {
-        'recipient': HOP2,
-        'queue_identifier': {
-            'recipient': HOP2,
-            'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
-        },
-        'payment_identifier': UNIT_TRANSFER_IDENTIFIER,
-        'token': UNIT_TOKEN_ADDRESS,
-        'balance_proof': {
-            # 'nonce': ,
-            'transferred_amount': 0,
-            'locked_amount': 10,
-            'locksroot': lock.lockhash,
-            'token_network_identifier': token_network_identifier,
-            'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
-            'chain_id': first_payer_transfer.balance_proof.chain_id,
-        },
-        'lock': {
-            'amount': lock.amount,
-            'expiration': lock.expiration,
-            'secrethash': lock.secrethash,
-        },
-        'initiator': UNIT_TRANSFER_INITIATOR,
-        'target': UNIT_TRANSFER_TARGET,
-    })
-
-
 def test_events_for_secretreveal():
     """ The secret is revealed backwards to the payer once the payee sent the
     SecretReveal.
@@ -589,7 +411,7 @@ def test_events_for_secretreveal():
     pseudo_random_generator = random.Random()
     block_number = 1
 
-    _, transfers_pair = make_transfers_pair(
+    _, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY],
         amount,
         block_number,
@@ -653,7 +475,7 @@ def test_events_for_secretreveal_secret_unknown():
     pseudo_random_generator = random.Random()
     block_number = 1
 
-    _, transfers_pair = make_transfers_pair(
+    _, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY],
         amount,
         block_number,
@@ -682,7 +504,7 @@ def test_events_for_secretreveal_all_states():
 
     amount = 10
     for state in payee_secret_known:
-        _, transfers_pair = make_transfers_pair(
+        _, transfers_pair = factories.make_transfers_pair(
             [HOP2_KEY, HOP3_KEY],
             amount,
             block_number,
@@ -711,7 +533,7 @@ def test_events_for_balanceproof():
     pseudo_random_generator = random.Random()
     block_number = 1
 
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         [HOP1_KEY, HOP2_KEY],
         amount,
         block_number,
@@ -776,7 +598,7 @@ def test_events_for_balanceproof_channel_closed():
     pseudo_random_generator = random.Random()
 
     for invalid_state in (CHANNEL_STATE_CLOSED, CHANNEL_STATE_SETTLED):
-        channel_map, transfers_pair = make_transfers_pair(
+        channel_map, transfers_pair = factories.make_transfers_pair(
             [HOP2_KEY, HOP3_KEY],
             amount,
             block_number,
@@ -816,7 +638,7 @@ def test_events_for_balanceproof_middle_secret():
     pseudo_random_generator = random.Random()
     block_number = 1
 
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
         amount,
         block_number,
@@ -847,7 +669,7 @@ def test_events_for_balanceproof_secret_unknown():
     amount = 10
     pseudo_random_generator = random.Random()
 
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY],
         amount,
         block_number,
@@ -871,7 +693,7 @@ def test_events_for_balanceproof_lock_expired():
     pseudo_random_generator = random.Random()
     block_number = 1
 
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
         amount,
         block_number,
@@ -917,7 +739,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     block_number = 10
     pseudo_random_generator = random.Random()
 
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY],
         amount,
         block_number,
@@ -998,7 +820,7 @@ def test_events_for_onchain_secretreveal():
     """
     amount = 10
     block_number = 1
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY],
         amount,
         block_number,
@@ -1040,7 +862,7 @@ def test_events_for_onchain_secretreveal_once():
     """ Secret must be registered on-chain only once. """
     amount = 10
     block_number = 1
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
         amount,
         block_number,
@@ -1176,7 +998,7 @@ def test_secret_learned_with_refund():
     #                                             /-> HOP3
     # Emulate HOP2(Initiator) -> HOP1 (This node)
     #                                             \-> HOP4 -> HOP5
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         privatekeys,
         amount,
         block_number,
@@ -1737,7 +1559,7 @@ def test_set_offchain_secret():
 
     amount = 10
     block_number = 1
-    channel_map, transfers_pair = make_transfers_pair(
+    channel_map, transfers_pair = factories.make_transfers_pair(
         [
             HOP2_KEY,
             HOP3_KEY,
