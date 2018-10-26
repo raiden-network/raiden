@@ -79,6 +79,7 @@ def test_raiden_service_callback_new_block(raiden_network):
 
     latest_block = app0.raiden.chain.get_block(block_identifier='latest')
     app0.raiden._callback_new_block(latest_block=latest_block)
+    target_block_num = latest_block['number']
 
     app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
         from_identifier=0,
@@ -89,5 +90,5 @@ def test_raiden_service_callback_new_block(raiden_network):
         'block_number': target_block_num - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     })
     assert not must_contain_entry(app0_state_changes, Block, {
-        'block_number': latest_block['number'],
+        'block_number': target_block_num,
     })
