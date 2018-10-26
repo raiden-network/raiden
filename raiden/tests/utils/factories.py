@@ -8,9 +8,11 @@ from coincurve import PrivateKey
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer
 from raiden.transfer import balance_proof, channel
+from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
     LockedTransferUnsignedState,
+    MediationPairState,
     TransferDescriptionWithSecretState,
     lockedtransfersigned_from_message,
 )
@@ -23,6 +25,7 @@ from raiden.transfer.state import (
     NettingChannelState,
     RouteState,
     TransactionExecutionStatus,
+    message_identifier_from_prng,
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import privatekey_to_address, publickey_to_address, random_secret, sha3
@@ -413,3 +416,88 @@ def make_signed_transfer_for(
         assert is_valid, msg
 
     return mediated_transfer
+
+
+def make_transfers_pair(privatekeys, amount, block_number):
+    transfers_pair = list()
+    channel_map = dict()
+    pseudo_random_generator = random.Random()
+
+    addresses = list()
+    for pkey in privatekeys:
+        pubkey = pkey.public_key.format(compressed=False)
+        address = publickey_to_address(pubkey)
+        addresses.append(address)
+
+    key_address = list(zip(privatekeys, addresses))
+
+    deposit_amount = amount * 5
+    channels_state = {
+        address: make_channel(
+            our_address=HOP1,
+            our_balance=deposit_amount,
+            partner_balance=deposit_amount,
+            partner_address=address,
+            token_address=UNIT_TOKEN_ADDRESS,
+            token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        )
+        for address in addresses
+    }
+
+    lock_expiration = block_number + UNIT_REVEAL_TIMEOUT * 2
+    for (payer_key, payer_address), payee_address in zip(key_address[:-1], addresses[1:]):
+        pay_channel = channels_state[payee_address]
+        receive_channel = channels_state[payer_address]
+
+        received_transfer = make_signed_transfer(
+            amount=amount,
+            initiator=UNIT_TRANSFER_INITIATOR,
+            target=UNIT_TRANSFER_TARGET,
+            expiration=lock_expiration,
+            secret=UNIT_SECRET,
+            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+            channel_identifier=receive_channel.identifier,
+            pkey=payer_key,
+            sender=payer_address,
+        )
+
+        is_valid, _, msg = channel.handle_receive_lockedtransfer(
+            receive_channel,
+            received_transfer,
+        )
+        assert is_valid, msg
+
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
+        lockedtransfer_event = channel.send_lockedtransfer(
+            channel_state=pay_channel,
+            initiator=UNIT_TRANSFER_INITIATOR,
+            target=UNIT_TRANSFER_TARGET,
+            amount=amount,
+            message_identifier=message_identifier,
+            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+            expiration=lock_expiration,
+            secrethash=UNIT_SECRETHASH,
+        )
+        assert lockedtransfer_event
+        lock_timeout = lock_expiration - block_number
+        assert mediator.is_channel_usable(
+            candidate_channel_state=pay_channel,
+            transfer_amount=amount,
+            lock_timeout=lock_timeout,
+        )
+        sent_transfer = lockedtransfer_event.transfer
+
+        pair = MediationPairState(
+            received_transfer,
+            lockedtransfer_event.recipient,
+            sent_transfer,
+        )
+        transfers_pair.append(pair)
+
+        channel_map[receive_channel.identifier] = receive_channel
+        channel_map[pay_channel.identifier] = pay_channel
+
+        assert channel.is_lock_locked(receive_channel.partner_state, UNIT_SECRETHASH)
+        assert channel.is_lock_locked(pay_channel.our_state, UNIT_SECRETHASH)
+
+    return channel_map, transfers_pair
