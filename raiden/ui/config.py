@@ -43,7 +43,7 @@ def _clean_non_serializables(data):
 
 
 def dump_config(config):
-    print(pytoml.dumps({'configs': config}))
+    print(pytoml.dumps({'configs': _clean_non_serializables(config)}))
     print()
 
 
