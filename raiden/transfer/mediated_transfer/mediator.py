@@ -234,21 +234,25 @@ def sanity_check(state):
         assert original.payee_transfer.lock.expiration == refund.payer_transfer.lock.expiration
 
 
-def clear_if_finalized(iteration):
+def clear_if_finalized(iteration, channelidentifiers_to_channels):
     """ Clear the state if all transfer pairs have finalized. """
     state = iteration.new_state
 
     if state is None:
         return iteration
 
-    all_finalized = all(
-        pair.payee_state in STATE_TRANSFER_FINAL and pair.payer_state in STATE_TRANSFER_FINAL
-        for pair in state.transfers_pair
-    )
+    # Only clear the taks if all channels have the lock cleared.
+    secrethash = state.secrethash
+    for pair in state.transfers_pair:
+        payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
+        if channel.is_lock_pending(payer_channel.partner_state, secrethash):
+            return iteration
 
-    if all_finalized:
-        return TransitionResult(None, iteration.events)
-    return iteration
+        payee_channel = get_payee_channel(channelidentifiers_to_channels, pair)
+        if channel.is_lock_pending(payee_channel.our_state, secrethash):
+            return iteration
+
+    return TransitionResult(None, iteration.events)
 
 
 def next_channel_from_routes(
@@ -1229,4 +1233,4 @@ def state_transition(
     if iteration.new_state is not None:
         sanity_check(iteration.new_state)
 
-    return clear_if_finalized(iteration)
+    return clear_if_finalized(iteration, channelidentifiers_to_channels)
