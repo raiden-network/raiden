@@ -190,7 +190,6 @@ def handle_unlock(
         channel_state: NettingChannelState,
 ):
     """ Handles a ReceiveUnlock state change. """
-    iteration = TransitionResult(target_state, list())
     balance_proof_sender = state_change.balance_proof.sender
 
     is_valid, events, _ = channel.handle_unlock(
@@ -220,9 +219,9 @@ def handle_unlock(
         )
 
         events.extend([payment_received_success, unlock_success, send_processed])
-        iteration = TransitionResult(None, events)
+        target_state = None
 
-    return iteration
+    return TransitionResult(target_state, events)
 
 
 def handle_block(
