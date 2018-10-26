@@ -303,7 +303,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
 
     msg = (
         "The payer's lock has also expired, "
-        "but it must not be touched locally (without a Expired lock)"
+        "but it must not be removed locally (without an Expired lock)"
     )
     assert transfer.lock.secrethash in payer_channel.partner_state.secrethashes_to_lockedlocks, msg
 
