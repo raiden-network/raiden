@@ -241,7 +241,7 @@ def clear_if_finalized(iteration, channelidentifiers_to_channels):
     if state is None:
         return iteration
 
-    # Only clear the taks if all channels have the lock cleared.
+    # Only clear the task if all channels have the lock cleared.
     secrethash = state.secrethash
     for pair in state.transfers_pair:
         payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
