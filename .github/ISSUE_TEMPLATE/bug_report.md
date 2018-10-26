@@ -17,6 +17,18 @@ expected behaviour.
 Raiden also logs debug information to the `raiden-debug.log` file. Please attach it to the
 issue as it may help us find the source of the issue faster.
 
+### Issue checklist
+Read through [Requirements for safe usage](https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html#requirements-for-safe-usage) mentioned in our documentation and make sure your usage follows the requirements.
+
+1. Is your Ethereum node syncing and up to date with the blockchain?
+2. Are you using the same Ethereum account with anything other than the Raiden node? Or are you running multiple Raiden nodes with the same Ethereum account?
+3. Does your Ethereum account used by Raiden have sufficient ETH?
+4. Did you alter or delete the local DB that exists by default at ~/.raiden?
+4. Did you stop / restart your raiden node while having open channels and/or pending transfers? if so, please provide further information.
+5. Did you stop / restart your Ethereum node while Raiden was running?
+6. Did you switch from one Ethereum node to another? example: switching from a local Ethereum node to an Infura one.
+7. Is Raiden REST API protected from public access?
+
 ### System Description
 
 Here add a detailed description of your system, e.g. output of the following script:
