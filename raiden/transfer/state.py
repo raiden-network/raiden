@@ -745,7 +745,7 @@ class BalanceProofUnsignedState(State):
         return (
             '<'
             'BalanceProofUnsignedState nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} token_network:{} channel_identifier:{} chain_id: {}'
+            'locked_amount:{} locksroot:{} token_network:{} channel_identifier:{} chain_id:{}'
             '>'
         ).format(
             self.nonce,
