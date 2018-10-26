@@ -589,6 +589,194 @@ class EventTransferReceivedInvalidDirectTransfer(Event):
         return restored
 
 
+class EventInvalidReceivedTransferRefund(Event):
+    """ Event emitted when an invalid refund transfer is received. """
+
+    def __init__(self, payment_identifier: typing.PaymentID, reason: str):
+        self.payment_identifier = payment_identifier
+        self.reason = reason
+
+    def __repr__(self):
+        return (
+            f'<'
+            f'EventInvalidReceivedTransferRefund '
+            f'payment_identifier:{self.payment_identifier} '
+            f'reason:{self.reason}'
+            f'>'
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventInvalidReceivedTransferRefund) and
+            self.payment_identifier == other.payment_identifier and
+            self.reason == other.reason
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'payment_identifier': self.payment_identifier,
+            'reason': self.reason,
+        }
+
+        return result
+
+    @classmethod
+    def from_dict(
+            cls,
+            data: typing.Dict[str, typing.Any],
+    )-> 'EventInvalidReceivedTransferRefund':
+        restored = cls(
+            payment_identifier=data['payment_identifier'],
+            reason=data['reason'],
+        )
+
+        return restored
+
+
+class EventInvalidReceivedLockExpired(Event):
+    """ Event emitted when an invalid lock expired message is received. """
+
+    def __init__(self, secrethash: typing.SecretHash, reason: str):
+        self.secrethash = secrethash
+        self.reason = reason
+
+    def __repr__(self):
+        return (
+            f'<'
+            f'EventInvalidReceivedLockExpired '
+            f'secrethash:{pex(self.secrethash)} '
+            f'reason:{self.reason}'
+            f'>'
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventInvalidReceivedLockExpired) and
+            self.secrethash == other.secrethash and
+            self.reason == other.reason
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'secrethash': serialization.serialize_bytes(self.secrethash),
+            'reason': self.reason,
+        }
+
+        return result
+
+    @classmethod
+    def from_dict(
+            cls,
+            data: typing.Dict[str, typing.Any],
+    )-> 'EventInvalidReceivedLockExpired':
+        restored = cls(
+            secrethash=serialization.deserialize_bytes(data['secrethash']),
+            reason=data['reason'],
+        )
+
+        return restored
+
+
+class EventInvalidReceivedLockedTransfer(Event):
+    """ Event emitted when an invalid locked transfer is received. """
+
+    def __init__(self, payment_identifier: typing.PaymentID, reason: str):
+        self.payment_identifier = payment_identifier
+        self.reason = reason
+
+    def __repr__(self):
+        return (
+            f'<'
+            f'EventInvalidReceivedLockedTransfer '
+            f'payment_identifier:{self.payment_identifier} '
+            f'reason:{self.reason}'
+            f'>'
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventInvalidReceivedLockedTransfer) and
+            self.payment_identifier == other.payment_identifier and
+            self.reason == other.reason
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'payment_identifier': self.payment_identifier,
+            'reason': self.reason,
+        }
+
+        return result
+
+    @classmethod
+    def from_dict(
+            cls,
+            data: typing.Dict[str, typing.Any],
+    )-> 'EventInvalidReceivedLockedTransfer':
+        restored = cls(
+            payment_identifier=data['payment_identifier'],
+            reason=data['reason'],
+        )
+
+        return restored
+
+
+class EventInvalidReceivedUnlock(Event):
+    """ Event emitted when an invalid unlock message is received. """
+
+    def __init__(self, secrethash: typing.SecretHash, reason: str):
+        self.secrethash = secrethash
+        self.reason = reason
+
+    def __repr__(self):
+        return (
+            f'<'
+            f'EventInvalidReceivedUnlock '
+            f'secrethash:{pex(self.secrethash)} '
+            f'reason:{self.reason}'
+            f'>'
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventInvalidReceivedUnlock) and
+            self.secrethash == other.secrethash and
+            self.reason == other.reason
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'secrethash': serialization.serialize_bytes(self.secrethash),
+            'reason': self.reason,
+        }
+
+        return result
+
+    @classmethod
+    def from_dict(
+            cls,
+            data: typing.Dict[str, typing.Any],
+    )-> 'EventInvalidReceivedUnlock':
+        restored = cls(
+            secrethash=serialization.deserialize_bytes(data['secrethash']),
+            reason=data['reason'],
+        )
+
+        return restored
+
+
 class SendDirectTransfer(SendMessageEvent):
     """ Event emitted when a direct transfer message must be sent. """
 

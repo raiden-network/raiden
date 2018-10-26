@@ -15,6 +15,10 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
+    EventInvalidReceivedLockedTransfer,
+    EventInvalidReceivedLockExpired,
+    EventInvalidReceivedTransferRefund,
+    EventInvalidReceivedUnlock,
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
@@ -52,6 +56,10 @@ UNEVENTFUL_EVENTS = (
     EventUnlockSuccess,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
+    EventInvalidReceivedLockedTransfer,
+    EventInvalidReceivedLockExpired,
+    EventInvalidReceivedTransferRefund,
+    EventInvalidReceivedUnlock,
 )
 
 
