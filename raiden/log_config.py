@@ -1,3 +1,4 @@
+import datetime
 import logging
 import logging.config
 import os
@@ -11,7 +12,8 @@ from typing import Callable, Dict, FrozenSet, List, Pattern, Tuple
 import structlog
 
 DEFAULT_LOG_LEVEL = 'INFO'
-MAX_LOG_FILE_SIZE = 5 * 1024 * 1024
+MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
+LOG_BACKUP_COUNT = 3
 
 _FIRST_PARTY_PACKAGES = frozenset(['raiden'])
 
@@ -133,7 +135,7 @@ def configure_logging(
         log_json: bool = False,
         log_file: str = None,
         disable_debug_logfile: bool = False,
-        debug_log_file_name: str = 'raiden-debug.log',
+        debug_log_file_name: str = None,
         _first_party_packages: FrozenSet[str] =_FIRST_PARTY_PACKAGES,
         cache_logger_on_first_use: bool = True,
 ):
@@ -175,6 +177,10 @@ def configure_logging(
 
     if not disable_debug_logfile:
         enabled_log_handlers.append('debug-info')
+
+    if debug_log_file_name is None:
+        time = datetime.datetime.utcnow().isoformat()
+        debug_log_file_name = f'raiden-debug_{time}.log'
 
     logging.config.dictConfig(
         {
@@ -235,7 +241,7 @@ def configure_logging(
                     'level': 'DEBUG',
                     'formatter': 'debug',
                     'maxBytes': MAX_LOG_FILE_SIZE,
-                    'backupCount': 3,
+                    'backupCount': LOG_BACKUP_COUNT,
                     'filters': ['raiden_debug_file_filter'],
                 },
             },
