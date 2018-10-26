@@ -9,9 +9,9 @@ if [[ ${PYTHON2_VERSION} != "2.7" ]]; then
     exit 1
 fi
 
-SYNAPSE_URL="${SYNAPSE_URL:-https://github.com/matrix-org/synapse/archive/v0.33.6.tar.gz#egg=matrix-synapse}"
+SYNAPSE_URL="${SYNAPSE_URL:-https://github.com/matrix-org/synapse/archive/v0.33.7.tar.gz#egg=matrix-synapse}"
 SYNAPSE_SERVER_NAME="${SYNAPSE_SERVER_NAME:-matrix.local.raiden}"
-BASEDIR=$(python3 -c 'import sys; from pathlib import Path; print(Path(sys.argv[1]).parent.parent.absolute())' "$0")
+BASEDIR=$( readlink -f $( dirname $0 )/.. )
 
 if [[ ! -d ${DESTDIR} ]]; then
     if [[ -n ${TRAVIS} ]]; then
@@ -36,21 +36,22 @@ if [[ ! -x ${SYNAPSE} ]]; then
 
     virtualenv -p "$(which python2)" venv
     ./venv/bin/pip install --upgrade pip pyinstaller
-    ./venv/bin/pip install pysaml2==4.6.2 dis3 coincurve pycryptodome
+    ./venv/bin/pip install pysaml2==4.6.3 dis3 coincurve pycryptodome future html
     ./venv/bin/pip install "${SYNAPSE_URL}"
     SITE="$( ./venv/bin/python -c 'from distutils.sysconfig import get_python_lib; print(get_python_lib())' )"
     cp "${BASEDIR}/tools/eth_auth_provider.py2" "${SITE}/eth_auth_provider.py"
     ./venv/bin/pyinstaller -F -n synapse \
-        --hidden-import="sqlite3" \
-        --hidden-import="syweb" \
-        --hidden-import="eth_auth_provider" \
-        --hidden-import="saml2" \
+        --hidden-import "sqlite3" \
+        --hidden-import "syweb" \
+        --hidden-import "eth_auth_provider" \
+        --hidden-import "saml2" \
+        --hidden-import "html" \
         --add-data="${SITE}/synapse/storage/schema:synapse/storage/schema" \
         --add-data="${SITE}/syweb:syweb" \
         --add-data="${SITE}/Crypto/__init__.py:Crypto/" \
         --add-data="${SITE}/Crypto/Util:Crypto/Util" \
         --add-data="${SITE}/Crypto/Hash:Crypto/Hash" \
-        --add-data="${SITE}/pysaml2-4.6.2.dist-info:pysaml2-4.6.2.dist-info" \
+        --add-data="${SITE}/pysaml2-4.6.3.dist-info:pysaml2-4.6.3.dist-info" \
         "${SITE}/synapse/app/homeserver.py"
     rm -f ${DESTDIR}/synapse.*
     cp dist/synapse "${SYNAPSE}"
