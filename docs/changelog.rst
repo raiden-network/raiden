@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2905` Don't cleanup mediator task if ExpireLock is not processed. Could leadto stuck channels.
 * :feature:`2909` Add explicit flag `--unrecoverable-error-should-crash` to control UnrecoverableError crashing behaviour.
 * :bug:`2894` Raiden will no longer miss confirmation blocks at restart and will emit the block state change only for confirmed blocks.
 * :feature:`2857` Respect the ``--environment-type`` for private chain setup.
