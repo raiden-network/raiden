@@ -26,6 +26,7 @@ from raiden.utils import get_system_spec, merge_dict, split_endpoint
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
+    EnvironmentChoiceType,
     GasPriceChoiceType,
     MatrixServerType,
     NATChoiceType,
@@ -106,20 +107,20 @@ def options(func):
             show_default=True,
         ),
         option(
-            '--registry-contract-address',
-            help='hex encoded address of the registry contract.',
+            '--tokennetwork-registry-contract-address',
+            help='hex encoded address of the Token Network Registry contract.',
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
             '--secret-registry-contract-address',
-            help='hex encoded address of the secret registry contract.',
+            help='hex encoded address of the Secret Registry contract.',
             type=ADDRESS_TYPE,
             show_default=True,
         ),
         option(
-            '--discovery-contract-address',
-            help='hex encoded address of the discovery contract.',
+            '--endpoint-registry-contract-address',
+            help='hex encoded address of the Endpoint Registry contract.',
             type=ADDRESS_TYPE,
             show_default=True,
         ),
@@ -147,7 +148,7 @@ def options(func):
                 '"<NETWORK_ID>": use the given network id directly\n'
             ),
             type=NetworkChoiceType(['mainnet', 'ropsten', 'rinkeby', 'kovan', '<NETWORK_ID>']),
-            default='ropsten',
+            default='mainnet',
             show_default=True,
         ),
         option(
@@ -157,8 +158,8 @@ def options(func):
                 'The "production" setting adds some safety measures and is mainly intended '
                 'for running Raiden on the mainnet.\n'
             ),
-            type=click.Choice([e.value for e in Environment]),
-            default=Environment.DEVELOPMENT.value,
+            type=EnvironmentChoiceType([e.value for e in Environment]),
+            default=Environment.PRODUCTION.value,
             show_default=True,
         ),
         option(

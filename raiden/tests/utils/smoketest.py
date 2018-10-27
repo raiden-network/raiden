@@ -24,7 +24,6 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
 from raiden.tests.fixtures.variables import DEFAULT_PASSPHRASE
-from raiden.tests.integration.contracts.fixtures.contracts import deploy_token
 from raiden.tests.utils.geth import (
     GethNodeDescription,
     geth_node_config,
@@ -33,7 +32,7 @@ from raiden.tests.utils.geth import (
     geth_run_nodes,
     geth_wait_and_check,
 )
-from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import get_project_root, privatekey_to_address
@@ -270,8 +269,14 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         chain_id=NETWORKNAME_TO_ID['smoketest'],
         contract_manager=contract_manager,
     )
-    token_contract = deploy_token(client, contract_manager)
-    token = token_contract(1000, 0, 'TKN', 'TKN')
+    token = deploy_token(
+        deploy_client=client,
+        contract_manager=contract_manager,
+        initial_amount=1000,
+        decimals=0,
+        token_name='TKN',
+        token_symbol='TKN',
+    )
     registry = TokenNetworkRegistry(
         jsonrpc_client=client,
         registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
@@ -284,10 +289,10 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     if matrix_server == 'auto':
         matrix_server = 'http://localhost:8008'
 
-    discovery_contract_address = to_checksum_address(
+    endpoint_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
     )
-    registry_contract_address = to_checksum_address(
+    tokennetwork_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
     )
     secret_registry_contract_address = to_checksum_address(
@@ -297,14 +302,14 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         'args': {
             'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
             'datadir': keystore,
-            'discovery_contract_address': discovery_contract_address,
+            'endpoint_registry_contract_address': endpoint_registry_contract_address,
             'eth_rpc_endpoint': eth_rpc_endpoint,
             'gas_price': 'fast',
             'keystore_path': keystore,
             'matrix_server': matrix_server,
             'network_id': str(NETWORKNAME_TO_ID['smoketest']),
             'password_file': click.File()(os.path.join(base_datadir, 'pw')),
-            'registry_contract_address': registry_contract_address,
+            'tokennetwork_registry_contract_address': tokennetwork_registry_contract_address,
             'secret_registry_contract_address': secret_registry_contract_address,
             'sync_check': False,
             'transport': transport,

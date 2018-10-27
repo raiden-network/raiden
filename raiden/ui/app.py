@@ -50,11 +50,9 @@ from .sync import check_discovery_registration_gas, check_synced
 log = structlog.get_logger(__name__)
 
 
-def handle_contract_version_mismatch(name: str, address: typing.Address) -> None:
-    hex_addr = to_checksum_address(address)
+def handle_contract_version_mismatch(mismatch_exception: ContractVersionMismatch) -> None:
     click.secho(
-        f'Error: Provided {name} {hex_addr} contract version mismatch. '
-        'Please update your Raiden installation.',
+        f'{str(mismatch_exception)}. Please update your Raiden installation.',
         fg='red',
     )
     sys.exit(1)
@@ -107,12 +105,12 @@ def _setup_udp(
         blockchain_service,
         address,
         contracts,
-        discovery_contract_address,
+        endpoint_registry_contract_address,
 ):
     check_discovery_registration_gas(blockchain_service, address)
     try:
         dicovery_proxy = blockchain_service.discovery(
-            discovery_contract_address or to_canonical_address(
+            endpoint_registry_contract_address or to_canonical_address(
                 contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
             ),
         )
@@ -120,12 +118,12 @@ def _setup_udp(
             blockchain_service.node_address,
             dicovery_proxy,
         )
-    except ContractVersionMismatch:
-        handle_contract_version_mismatch('discovery', discovery_contract_address)
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
     except AddressWithoutCode:
-        handle_contract_no_code('discovery', discovery_contract_address)
+        handle_contract_no_code('Endpoint Registry', endpoint_registry_contract_address)
     except AddressWrongContract:
-        handle_contract_wrong_address('discovery', discovery_contract_address)
+        handle_contract_wrong_address('Endpoint Registry', endpoint_registry_contract_address)
 
     throttle_policy = TokenBucket(
         config['transport']['udp']['throttle_capacity'],
@@ -148,6 +146,7 @@ def _setup_matrix(config):
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
         available_servers = get_matrix_servers(available_servers_url)
+        log.debug('Fetching available matrix servers', available_servers=available_servers)
         config['transport']['matrix']['available_servers'] = available_servers
 
     try:
@@ -164,9 +163,9 @@ def run_app(
         keystore_path,
         gas_price,
         eth_rpc_endpoint,
-        registry_contract_address,
+        tokennetwork_registry_contract_address,
         secret_registry_contract_address,
-        discovery_contract_address,
+        endpoint_registry_contract_address,
         listen_address,
         mapped_socket,
         max_unresponsive_time,
@@ -266,15 +265,17 @@ def run_app(
 
     config['chain_id'] = given_network_id
 
-    log.debug('Environment setting', type=environment_type)
+    # interpret the provided string argument
     if environment_type == Environment.PRODUCTION:
         # Safe configuration: restrictions for mainnet apply and matrix rooms have to be private
         config['environment_type'] = Environment.PRODUCTION
         config['transport']['matrix']['private_rooms'] = True
     else:
-        config['environment_type'] = Environment.PRODUCTION
+        config['environment_type'] = Environment.DEVELOPMENT
 
     environment_type = config['environment_type']
+    print(f'Raiden is running in {environment_type.value.lower()} mode')
+
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
@@ -306,9 +307,9 @@ def run_app(
         check_synced(blockchain_service, known_node_network_id)
 
     contract_addresses_given = (
-        registry_contract_address is not None and
+        tokennetwork_registry_contract_address is not None and
         secret_registry_contract_address is not None and
-        discovery_contract_address is not None
+        endpoint_registry_contract_address is not None
     )
 
     if not contract_addresses_given and not contract_addresses_known:
@@ -321,16 +322,19 @@ def run_app(
 
     try:
         token_network_registry = blockchain_service.token_network_registry(
-            registry_contract_address or to_canonical_address(
+            tokennetwork_registry_contract_address or to_canonical_address(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
             ),
         )
-    except ContractVersionMismatch:
-        handle_contract_version_mismatch('token network registry', registry_contract_address)
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
     except AddressWithoutCode:
-        handle_contract_no_code('token network registry', registry_contract_address)
+        handle_contract_no_code('token network registry', tokennetwork_registry_contract_address)
     except AddressWrongContract:
-        handle_contract_wrong_address('token network registry', registry_contract_address)
+        handle_contract_wrong_address(
+            'token network registry',
+            tokennetwork_registry_contract_address,
+        )
 
     try:
         secret_registry = blockchain_service.secret_registry(
@@ -338,8 +342,8 @@ def run_app(
                 contracts[CONTRACT_SECRET_REGISTRY]['address'],
             ),
         )
-    except ContractVersionMismatch:
-        handle_contract_version_mismatch('secret registry', secret_registry_contract_address)
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
     except AddressWithoutCode:
         handle_contract_no_code('secret registry', secret_registry_contract_address)
     except AddressWrongContract:
@@ -368,7 +372,7 @@ def run_app(
             blockchain_service,
             address,
             contracts,
-            discovery_contract_address,
+            endpoint_registry_contract_address,
         )
     elif transport == 'matrix':
         transport = _setup_matrix(config)

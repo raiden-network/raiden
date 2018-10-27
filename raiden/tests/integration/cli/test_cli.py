@@ -6,7 +6,10 @@ import pytest
 from click.testing import CliRunner
 from eth_utils import to_checksum_address
 
+from raiden.constants import Environment
 from raiden.ui.cli import run
+
+EXPECTED_DEFAULT_ENVIRONMENT_VALUE = Environment.PRODUCTION.value
 
 
 def spawn_raiden(args):
@@ -46,20 +49,22 @@ def expect_cli_until_account_selection(child):
     child.sendline('0')
 
 
-def expect_cli_normal_startup(child):
+def expect_cli_normal_startup(child, mode):
     expect_cli_until_acknowledgment(child)
     child.expect('The following accounts were found in your machine:')
     child.expect('Select one of them by index to continue: ')
     child.sendline('0')
+    child.expect(f'Raiden is running in {mode} mode')
     child.expect('You are connected')
     child.expect('The Raiden API RPC server is now running')
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(65)
 def test_cli_full_init(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        expect_cli_normal_startup(child)
+        # expect the default mode
+        expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
@@ -97,12 +102,12 @@ def test_cli_missing_password_file_enter_password(blockchain_provider, cli_args)
         child.close()
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(65)
 @pytest.mark.parametrize('removed_args', [['data_dir']])
 def test_cli_missing_data_dir(cli_args):
     child = spawn_raiden(cli_args)
     try:
-        expect_cli_normal_startup(child)
+        expect_cli_normal_startup(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
@@ -140,13 +145,13 @@ def test_cli_wrong_network_id_try_mainnet(cli_args):
 
 @pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{
-    'registry_contract_address': '0xdfD10vAe9CCl5EBf11bc6309A0645eFe9f979584',
+    'tokennetwork_registry_contract_address': '0xdfD10vAe9CCl5EBf11bc6309A0645eFe9f979584',
 }])
 def test_cli_malformed_registry_address(cli_args):
     child = spawn_raiden(cli_args)
     try:
         child.expect(
-            'Error: Invalid value for "--registry-contract-address"'
+            'Error: Invalid value for "--tokennetwork-registry-contract-address"'
             ': Address must be EIP55 checksummed',
         )
     except pexpect.TIMEOUT as e:
@@ -157,13 +162,30 @@ def test_cli_malformed_registry_address(cli_args):
 
 @pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{
-    'registry_contract_address': to_checksum_address('0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359'),
+    'tokennetwork_registry_contract_address': to_checksum_address(
+        '0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359',
+    ),
 }])
 def test_cli_registry_address_without_deployed_contract(cli_args):
     child = spawn_raiden(cli_args)
     try:
         expect_cli_until_account_selection(child)
         child.expect('contract does not contain code')
+    except pexpect.TIMEOUT as e:
+        print('Timed out at', e)
+    finally:
+        child.close()
+
+
+@pytest.mark.timeout(65)
+@pytest.mark.parametrize('changed_args', [{
+    'environment_type': Environment.DEVELOPMENT.value,
+}])
+def test_cli_change_environment_type(cli_args):
+    child = spawn_raiden(cli_args)
+    try:
+        # expect the provided mode
+        expect_cli_normal_startup(child, Environment.DEVELOPMENT.value)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:

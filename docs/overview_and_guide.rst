@@ -12,8 +12,6 @@ Raiden is a payment channel implementation which provides scalable, low latency,
 Installation
 ============
 
-.. warning:: If you are just switching from an old installation of raiden which was using python 2, then you should make sure to remove your raiden directory. By default that would mean: :code:`rm -rf ~/.raiden`
-
 The preferred way to install Raiden is downloading a self contained application bundle from the
 `GitHub release page <https://github.com/raiden-network/raiden/releases>`_.
 
@@ -120,15 +118,15 @@ Requirements for Safe Usage
 
 In order to use Raiden correctly and safely there are some things that need to be taken care of by the user:
 
-- **Layer 1 works reliably**: That means that you have a local ethereum node, either geth or parity, that is always synced and working reliably. If there are any problems or bugs on the client then Raiden can not work reliably.
-- **Unique account for Raiden**: We need to have a specific ethereum account dedicated to Raiden. Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result in undefined behaviour
-- **Raiden account has sufficient ETH**: Raiden will try to warn you if there is not enough ETH in your raiden account in order to maintain your current open chanels and go through their entire cycle. But it is your job as the user to refill your account with ETH and always have it filled.
+- **Layer 1 works reliably**: That means that you have a local Ethereum node, either geth or parity, that is always synced and working reliably. If there are any problems or bugs on the client then Raiden can not work reliably.
+- **Unique account for Raiden**: We need to have a specific Ethereum account dedicated to Raiden. Creating any manual transaction with the account that Raiden uses, while the Raiden client is running, can result in undefined behaviour
+- **Raiden account has sufficient ETH**: Raiden will try to warn you if there is not enough ETH in your Raiden account in order to maintain your current open channels and go through their entire cycle. But it is your job as the user to refill your account with ETH and always have it filled.
 - **Persistency of local DB**: Your local state database is located at ``~/.raiden``. This data should not be deleted by the user or tampered with in any way. Frequent backups are also recommended. Deleting this directory could mean losing funds.
-- **Raiden Always online**: Make sure that your node is always working, your network connection is stable and that the Raiden node is always online. If it crashes for whatever reason you are responsible to restart it and keep it always online. We recommend running it inside some form of monitor that will restart if for some reason the raiden node crashes.
-- **Ethereum Client Always Online**: Make sure that your ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
-- **Ethereum Client can not be changed**: Swapping the ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching ethereum clients once the Raiden node is running.
+- **Raiden Always online**: Make sure that your node is always working, your network connection is stable and that the Raiden node is always online. If it crashes for whatever reason you are responsible to restart it and keep it always online. We recommend running it inside some form of monitor that will restart if for some reason the Raiden node crashes.
+- **Ethereum Client Always Online**: Make sure that your Ethereum client is always running and is synced. We recommend running it inside some form of monitor that will restart if for some reason it crashes.
+- **Ethereum Client can not be changed**: Swapping the Ethereum client while transactions are not mined is considered unsafe. We recommend avoiding switching Ethereum clients once the Raiden node is running.
 - **Never expose the Raiden REST API to the public**: For Raiden's operation, the client needs to be able to sign transactions at any point in time. Therefore you should never expose the Raiden Rest API to the public. Be very careful when changing the --rpc and --rpccorsdomain values.
-
+- **Be patient**: Do not mash buttons in the webUI and do not shut down the client while on-chain transactions are on the fly and have not yet been confirmed.
 
 Firing it up
 =============
@@ -137,9 +135,12 @@ Firing it up
 Using geth
 **********
 
-Run the Ethereum client and let it sync with the Ropsten testnet::
+Run the Ethereum client and let it sync::
 
-    geth --testnet --fast --rpc --rpcapi eth,net,web3 --bootnodes "enode://20c9ad97c081d63397d7b685a412227a40e23c8bdc6688c6f37e97cfbc22d2b4d1db1510d8f61e6a8866ad7f0e17c02b14182d37ea7c3c8b9c2683aeb6b733a1@52.169.14.227:30303,enode://6ce05930c72abc632c58e2e4324f7c7ea478cec0ed4fa2528982cf34483094e9cbc9216e7aa349691242576d552a2a56aaeae426c5303ded677ce455ba1acd9d@13.84.180.240:30303"
+    geth --fast --rpc --rpcapi eth,net,web3
+
+.. note::
+    When you want to use a testnet add the ``--testnet`` or ``--rinkeby`` flags or set the network id with ``--networkid`` directly.
 
 Unless you already have an account you can also create one in the console by invoking ``personal.newAccount()``.
 
@@ -152,9 +153,12 @@ Then launch Raiden with the default testnet keystore path::
 Using parity
 ************
 
-Run the client and let it sync with the Ropsten testnet::
+Run the client and let it sync::
 
-    parity --chain ropsten --bootnodes "enode://20c9ad97c081d63397d7b685a412227a40e23c8bdc6688c6f37e97cfbc22d2b4d1db1510d8f61e6a8866ad7f0e17c02b14182d37ea7c3c8b9c2683aeb6b733a1@52.169.14.227:30303,enode://6ce05930c72abc632c58e2e4324f7c7ea478cec0ed4fa2528982cf34483094e9cbc9216e7aa349691242576d552a2a56aaeae426c5303ded677ce455ba1acd9d@13.84.180.240:30303"
+    parity --no-warp
+
+.. note::
+    When you want to use a testnet add the ``--chain ropsten`` or ``--chain kovan`` flags or set the network id with ``--network-id`` directly.
 
 .. attention:: Parity sometimes loses its historical DB (potentially after updates). Due to this some events might be lost which will result in Raiden not being able to fetch all events. Therefore it is recommended to make sure to have Parity fully synced with the `--no-warp` option.
 
@@ -170,7 +174,11 @@ Using --eth-rpc-endpoint/Infura
 
 In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node, sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden on Ropsten directly::
 
-    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://ropsten.infura.io/v3/<yourToken>"
+    raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://mainnet.infura.io/v3/<yourToken>"
+
+.. note::
+    When you want to use a testnet you need to update the URL of the infura endpoints, e.g. for the ropsten testnet use ``https://ropsten.infura.io/v3/<yourToken>``
+
 
 Select the desired Ethereum account when prompted, and type in the account's password.
 

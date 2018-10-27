@@ -2,9 +2,37 @@ from eth_utils import to_canonical_address
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import typing
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
+
+
+def deploy_token(
+        deploy_client: JSONRPCClient,
+        contract_manager: ContractManager,
+        initial_amount: typing.TokenAmount,
+        decimals: int,
+        token_name: str,
+        token_symbol: str,
+)-> ContractProxy:
+    token_address = deploy_contract_web3(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        constructor_arguments=(
+            initial_amount,
+            decimals,
+            token_name,
+            token_symbol,
+        ),
+    )
+
+    contract_abi = contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
+    return deploy_client.new_contract_proxy(
+        contract_interface=contract_abi,
+        contract_address=token_address,
+    )
 
 
 def deploy_tokens_and_fund_accounts(

@@ -15,7 +15,6 @@ from gevent.lock import RLock, Semaphore
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.exceptions import (
     ChannelOutdatedError,
-    ContractVersionMismatch,
     DepositMismatch,
     DuplicatedChannelError,
     InvalidAddress,
@@ -27,10 +26,11 @@ from raiden.exceptions import (
     WithdrawMismatch,
 )
 from raiden.network.proxies import Token
+from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
-from raiden.utils import compare_versions, pex, privatekey_to_address, typing
+from raiden.utils import pex, privatekey_to_address, typing
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     ChannelInfoIndex,
@@ -89,12 +89,12 @@ class TokenNetwork:
             to_normalized_address(manager_address),
         )
 
-        is_good_version = compare_versions(
-            proxy.contract.functions.contract_version().call(),
-            contract_manager.contracts_version,
+        compare_contract_versions(
+            proxy=proxy,
+            expected_version=contract_manager.contracts_version,
+            contract_name=CONTRACT_TOKEN_NETWORK,
+            address=manager_address,
         )
-        if not is_good_version:
-            raise ContractVersionMismatch('Incompatible ABI for TokenNetwork')
 
         self.address = manager_address
         self.proxy = proxy

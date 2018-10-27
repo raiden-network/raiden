@@ -2,6 +2,10 @@
 Changelog
 =========
 
+* :bug:`2894` Raiden will no longer miss confirmation blocks at restart and will emit the block state change only for confirmed blocks.
+* :feature:`2857` Respect the ``--environment-type`` for private chain setup.
+* :feature:`2858` Changed contract address argument names to be consistent with the names of the contracts in the contracts repository.
+
 * :release:`0.14.0 <2018-10-20>`
 * :bug:`2845` Properly update local state balance proof during a lock expiration.
 * :bug:`2835` Incorrectly accepting a ``RemoveLockExpired`` is no longer possible

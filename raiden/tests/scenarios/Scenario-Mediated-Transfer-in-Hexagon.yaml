@@ -1,0 +1,186 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: kovan
+
+token:
+  ##address: "0xabEE20bdA7476337ea051Dac011763F6D7eD8d9c"
+
+nodes:
+  mode: managed
+  count: 7
+  default_options:
+    gas-price: fast
+    registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
+    discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
+    secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
+
+
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 10}
+            - open_channel: {from: 0, to: 2, total_deposit: 10}
+            - open_channel: {from: 0, to: 3, total_deposit: 10}
+            - open_channel: {from: 0, to: 4, total_deposit: 10}
+            - open_channel: {from: 0, to: 5, total_deposit: 10}
+            - open_channel: {from: 0, to: 6, total_deposit: 10}
+            - open_channel: {from: 1, to: 2, total_deposit: 10}
+            - open_channel: {from: 2, to: 3, total_deposit: 10}
+            - open_channel: {from: 3, to: 4, total_deposit: 10}
+            - open_channel: {from: 4, to: 5, total_deposit: 10}
+            - open_channel: {from: 5, to: 6, total_deposit: 10}
+            - open_channel: {from: 6, to: 1, total_deposit: 10}
+
+      - serial:
+          name: "Mediated transfer in the hexagon"
+          tasks:
+            - transfer: {from: 1, to: 6, amount: 5}
+            - wait: 5
+            - assert: {from: 1, to: 2, balance: 5}
+            - assert: {from: 2, to: 3, balance: 5}
+            - assert: {from: 3, to: 4, balance: 5}
+            - assert: {from: 4, to: 5, balance: 5}
+            - assert: {from: 5, to: 6, balance: 5}
+            - assert: {from: 2, to: 1, balance: 5}
+            - assert: {from: 3, to: 2, balance: 5}
+            - assert: {from: 4, to: 3, balance: 5}
+            - assert: {from: 5, to: 4, balance: 5}
+            - assert: {from: 6, to: 5, balance: 5}
+            - assert: {from: 6, to: 1, balance: 10}
+            - assert: {from: 1, to: 6, balance: 0}
+            - transfer: {from: 6, to: 1, amount: 5}
+            - wait: 10
+            - assert: {from: 6, to: 1, balance: 5}
+            - assert: {from: 1, to: 6, balance: 5}
+
+      # In the hexagon everyone now has 5 tokens - Node 0 still has 60 (10 in each channel)
+
+      - parallel:
+          name: "Series of direct transfers from the top"
+          tasks:
+            - transfer: {from: 0, to: 1, amount: 5}
+            - transfer: {from: 0, to: 2, amount: 5}
+            - transfer: {from: 0, to: 3, amount: 5}
+            - transfer: {from: 0, to: 4, amount: 5}
+            - transfer: {from: 0, to: 5, amount: 5}
+            - transfer: {from: 0, to: 6, amount: 5}
+
+      # Assert that there is a symmetric diamond
+      - serial:
+          name: "Assert after balancing"
+          tasks:
+            - wait: 100
+            - assert: {from: 1, to: 2, balance: 5, state: "opened"}
+            - assert: {from: 2, to: 3, balance: 5, state: "opened"}
+            - assert: {from: 3, to: 4, balance: 5, state: "opened"}
+            - assert: {from: 4, to: 5, balance: 5, state: "opened"}
+            - assert: {from: 5, to: 6, balance: 5, state: "opened"}
+            - assert: {from: 6, to: 1, balance: 5, state: "opened"}
+
+            - assert: {from: 2, to: 1, balance: 5, state: "opened"}
+            - assert: {from: 3, to: 2, balance: 5, state: "opened"}
+            - assert: {from: 4, to: 3, balance: 5, state: "opened"}
+            - assert: {from: 5, to: 4, balance: 5, state: "opened"}
+            - assert: {from: 6, to: 5, balance: 5, state: "opened"}
+            - assert: {from: 1, to: 6, balance: 5, state: "opened"}
+
+            - assert: {from: 0, to: 1, balance: 5, state: "opened"}
+            - assert: {from: 0, to: 2, balance: 5, state: "opened"}
+            - assert: {from: 0, to: 3, balance: 5, state: "opened"}
+            - assert: {from: 0, to: 4, balance: 5, state: "opened"}
+            - assert: {from: 0, to: 5, balance: 5, state: "opened"}
+            - assert: {from: 0, to: 6, balance: 5, state: "opened"}
+
+            - assert: {from: 1, to: 0, balance: 5, state: "opened"}
+            - assert: {from: 2, to: 0, balance: 5, state: "opened"}
+            - assert: {from: 3, to: 0, balance: 5, state: "opened"}
+            - assert: {from: 4, to: 0, balance: 5, state: "opened"}
+            - assert: {from: 5, to: 0, balance: 5, state: "opened"}
+            - assert: {from: 6, to: 0, balance: 5, state: "opened"}
+
+      - parallel:
+          name: "Test 1: Node 1 tries to send 1 token to Node 4 but all possible paths crash"
+          tasks:
+            - serial:
+                name: "transfer"
+                tasks:
+                  - transfer: {from: 1, to: 4, amount: 1, expected_http_status: "(200|409)"}
+                  - wait: 30
+            - serial:
+                name: "Node 0 crashes"
+                tasks:
+                  - stop_node: 0
+                  - wait: 5
+                  - start_node: 0
+            - serial:
+                name: "Node 3 crashes"
+                tasks:
+                  - stop_node: 3
+                  - wait: 5
+                  - start_node: 3
+            - serial:
+                name: "Node 5 crashes"
+                tasks:
+                  - stop_node: 5
+                  - wait: 5
+                  - start_node: 5
+
+      - serial:
+          name: "Test 2: Node 1 transfers 1 token to Node 5, whereas Node 0 and Node 6 are shut down (there is only the long path)"
+          tasks:
+            - stop_node: 0
+            - stop_node: 6 #this is to block alternative paths
+            - parallel:
+                tasks:
+                  - serial:
+                      tasks:
+                        - transfer: {from: 1, to: 5, amount: 1, expected_http_status: "(200|409)"}
+                        - wait: 30
+                  - serial:
+                      tasks:
+                        - wait: 2
+                        - stop_node: 3
+                        - wait: 3
+                        - start_node: 3
+            - serial:
+                tasks:
+                  - start_node: 0
+                  - start_node: 6
+
+      - parallel:
+          name: "Test 3: Node 2 transfers 1 token to Node 5. All other nodes reboot after some seconds"
+          tasks:
+            - serial:
+                tasks:
+                  - transfer: {from: 2, to: 5, amount: 1, expected_http_status: "(200|409)"}
+                  - wait: 30
+            - serial:
+                tasks:
+                  - kill_node: 0
+                  - start_node: 0
+            - serial:
+                tasks:
+                  - wait: 1
+                  - kill_node: 3
+                  - start_node: 3
+            - serial:
+                tasks:
+                  - wait: 2
+                  - kill_node: 4
+                  - start_node: 4
+            - serial:
+                tasks:
+                  - wait: 3
+                  - kill_node: 1
+                  - start_node: 1
+            - serial:
+                tasks:
+                  - wait: 4
+                  - kill_node: 6
+                  - start_node: 6

@@ -1,18 +1,13 @@
 import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
-from web3.exceptions import BadFunctionCallOutput
 
 from raiden.constants import NULL_ADDRESS
-from raiden.exceptions import (
-    AddressWrongContract,
-    ContractVersionMismatch,
-    TransactionThrew,
-    UnknownAddress,
-)
+from raiden.exceptions import TransactionThrew, UnknownAddress
+from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import compare_versions, pex, privatekey_to_address
+from raiden.utils import pex, privatekey_to_address
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
@@ -42,15 +37,12 @@ class Discovery:
 
         check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
 
-        try:
-            is_valid_version = compare_versions(
-                proxy.contract.functions.contract_version().call(),
-                contract_manager.contracts_version,
-            )
-            if not is_valid_version:
-                raise ContractVersionMismatch('Incompatible ABI for Discovery')
-        except BadFunctionCallOutput:
-            raise AddressWrongContract('')
+        compare_contract_versions(
+            proxy=proxy,
+            expected_version=contract_manager.contracts_version,
+            contract_name=CONTRACT_ENDPOINT_REGISTRY,
+            address=discovery_address,
+        )
 
         self.address = discovery_address
         self.node_address = privatekey_to_address(jsonrpc_client.privkey)

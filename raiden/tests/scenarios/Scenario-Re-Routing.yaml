@@ -1,0 +1,43 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: kovan
+
+token:
+  ##address: "0xabEE20bdA7476337ea051Dac011763F6D7eD8d9c"
+
+nodes:
+  mode: managed
+  count: 7
+  default_options:
+    gas-price: fast
+    registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
+    discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
+    secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
+
+
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 1, to: 2, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 1, to: 3, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 3, to: 4, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 4, to: 5, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 5, to: 6, total_deposit: 10, settle_timeout: 50}
+            - open_channel: {from: 2, to: 6, total_deposit: 10, settle_timeout: 50}
+
+      - serial:
+          name: "Send tokens to Node 5 and kill it "
+          tasks:
+          - transfer: {from: 2, to: 6, amount: 10, expected_http_status: 200}
+          - transfer: {from: 0, to: 6, amount: 3, expected_http_status: 200} ## Routing thinks the path would be over node 2 (shortest)
+          - wait: 10
+          - assert: {from: 1, to: 2, balance: 10, state: "opened"} ## this should stay the same, since there must be a refund transfer
+
+
