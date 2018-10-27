@@ -60,8 +60,7 @@ int main() {
 		execv("/usr/bin/firefox", args);
 		exit(1);
 	} else {
-		//char *args[] = {"gnome-terminal", "-e","\"/home/$USER/.raiden/raiden-quick\"" , NULL};
-		//execv("/usr/bin/gnome-terminal", args);
+		// Temporary implementation
         system("gnome-terminal -e \"/home/$USER/.raiden/raiden-quick\"");
 		exit(1);
 	}
