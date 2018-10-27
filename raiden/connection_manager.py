@@ -273,7 +273,11 @@ class ConnectionManager:
             except InvalidDBData:
                 raise
             except RaidenUnrecoverableError as e:
-                if self.raiden.config['environment_type'] != Environment.PRODUCTION:
+                should_crash = (
+                    self.raiden.config['environment_type'] != Environment.PRODUCTION or
+                    self.raiden.config['unrecoverable_error_should_crash']
+                )
+                if should_crash:
                     raise
 
                 log.critical(
@@ -358,7 +362,11 @@ class ConnectionManager:
                 partner=pex(partner),
             )
         except RaidenUnrecoverableError:
-            if self.raiden.config['environment_type'] != Environment.Production:
+            should_crash = (
+                self.raiden.config['environment_type'] != Environment.PRODUCTION or
+                self.raiden.config['unrecoverable_error_should_crash']
+            )
+            if should_crash:
                 raise
 
             log.critical(

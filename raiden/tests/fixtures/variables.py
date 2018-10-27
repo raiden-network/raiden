@@ -312,3 +312,9 @@ def private_rooms():
 def environment_type():
     """Specifies the environment type"""
     return Environment.PRODUCTION
+
+
+@pytest.fixture
+def unrecoverable_error_should_crash():
+    """For testing an UnrecoverableError should crash"""
+    return True

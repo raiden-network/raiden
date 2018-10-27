@@ -479,7 +479,11 @@ class RaidenService(Runnable):
             except InvalidDBData as e:
                 raise
             except RaidenUnrecoverableError as e:
-                if self.config['environment_type'] == Environment.PRODUCTION:
+                log_unrecoverable = (
+                    self.config['environment_type'] == Environment.PRODUCTION and
+                    not self.config['unrecoverable_error_should_crash']
+                )
+                if log_unrecoverable:
                     log.error(str(e))
                 else:
                     raise
@@ -590,7 +594,11 @@ class RaidenService(Runnable):
                 except InvalidDBData as e:
                     raise
                 except RaidenUnrecoverableError as e:
-                    if self.config['environment_type'] == Environment.PRODUCTION:
+                    log_unrecoverable = (
+                        self.config['environment_type'] == Environment.PRODUCTION and
+                        not self.config['unrecoverable_error_should_crash']
+                    )
+                    if log_unrecoverable:
                         log.error(str(e))
                     else:
                         raise

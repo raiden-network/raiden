@@ -284,6 +284,7 @@ def create_apps(
         nat_keepalive_retries,
         nat_keepalive_timeout,
         environment_type,
+        unrecoverable_error_should_crash,
         local_matrix_url=None,
         private_rooms=None,
 ):
@@ -302,6 +303,7 @@ def create_apps(
         config = {
             'chain_id': chain_id,
             'environment_type': environment_type,
+            'unrecoverable_error_should_crash': unrecoverable_error_should_crash,
             'privatekey_hex': encode_hex(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
