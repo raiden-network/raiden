@@ -163,15 +163,6 @@ def options(func):
             show_default=True,
         ),
         option(
-            '--unrecoverable-error-should-crash',
-            help=(
-                'If provided along with a production environment setting then all '
-                'unrecoverable errors will lead to a crash and not simply get logged'
-            ),
-            is_flag=True,
-            default=False,
-        ),
-        option(
             '--accept-disclaimer',
             help='Bypass the experimental software disclaimer prompt',
             is_flag=True,
@@ -338,6 +329,19 @@ def options(func):
                 ),
                 default=True,
                 show_default=True,
+            ),
+        ),
+        option_group(
+            'Debugging options',
+            option(
+                '--unrecoverable-error-should-crash',
+                help=(
+                    'DO NOT use, unless you know what you are doing. If provided '
+                    'along with a production environment setting then all '
+                    'unrecoverable errors will lead to a crash and not simply get logged.'
+                ),
+                is_flag=True,
+                default=False,
             ),
         ),
     ]
