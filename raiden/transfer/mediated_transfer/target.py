@@ -190,7 +190,6 @@ def handle_unlock(
         channel_state: NettingChannelState,
 ):
     """ Handles a ReceiveUnlock state change. """
-    iteration = TransitionResult(target_state, list())
     balance_proof_sender = state_change.balance_proof.sender
 
     is_valid, events, _ = channel.handle_unlock(
@@ -220,9 +219,9 @@ def handle_unlock(
         )
 
         events.extend([payment_received_success, unlock_success, send_processed])
-        iteration = TransitionResult(None, events)
+        target_state = None
 
-    return iteration
+    return TransitionResult(target_state, events)
 
 
 def handle_block(
@@ -241,7 +240,7 @@ def handle_block(
         channel_state.partner_state,
         lock.secrethash,
     )
-    lock_has_expired, lock_expired_msg = channel.is_lock_expired(
+    lock_has_expired, _ = channel.is_lock_expired(
         end_state=channel_state.our_state,
         lock=lock,
         block_number=block_number,
@@ -252,7 +251,7 @@ def handle_block(
         failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
-            reason=f'lock expired {lock_expired_msg}',
+            reason=f'lock expired',
         )
         target_state.state = 'expired'
         events = [failed]

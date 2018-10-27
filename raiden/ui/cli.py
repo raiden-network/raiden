@@ -331,6 +331,19 @@ def options(func):
                 show_default=True,
             ),
         ),
+        option_group(
+            'Debugging options',
+            option(
+                '--unrecoverable-error-should-crash',
+                help=(
+                    'DO NOT use, unless you know what you are doing. If provided '
+                    'along with a production environment setting then all '
+                    'unrecoverable errors will lead to a crash and not simply get logged.'
+                ),
+                is_flag=True,
+                default=False,
+            ),
+        ),
     ]
 
     for option_ in reversed(options_):

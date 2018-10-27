@@ -13,6 +13,10 @@ from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
+    EventInvalidReceivedLockedTransfer,
+    EventInvalidReceivedLockExpired,
+    EventInvalidReceivedTransferRefund,
+    EventInvalidReceivedUnlock,
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventTransferReceivedInvalidDirectTransfer,
@@ -1771,7 +1775,11 @@ def handle_refundtransfer(
         )
         events = [send_processed]
     else:
-        events = list()
+        invalid_refund = EventInvalidReceivedTransferRefund(
+            payment_identifier=received_transfer.payment_identifier,
+            reason=msg,
+        )
+        events = [invalid_refund]
 
     return is_valid, events, msg
 
@@ -1782,7 +1790,7 @@ def handle_receive_lock_expired(
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     """Remove expired locks from channel states."""
-    is_valid, _, merkletree = is_valid_lock_expired(
+    is_valid, msg, merkletree = is_valid_lock_expired(
         state_change=state_change,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
@@ -1801,6 +1809,12 @@ def handle_receive_lock_expired(
             message_identifier=state_change.message_identifier,
         )
         events = [send_processed]
+    else:
+        invalid_lock_expired = EventInvalidReceivedLockExpired(
+            secrethash=state_change.secrethash,
+            reason=msg,
+        )
+        events = [invalid_lock_expired]
 
     return TransitionResult(channel_state, events)
 
@@ -1837,7 +1851,11 @@ def handle_receive_lockedtransfer(
         )
         events = [send_processed]
     else:
-        events = list()
+        invalid_locked = EventInvalidReceivedLockedTransfer(
+            payment_identifier=mediated_transfer.payment_identifier,
+            reason=msg,
+        )
+        events = [invalid_locked]
 
     return is_valid, events, msg
 
@@ -1869,7 +1887,11 @@ def handle_unlock(channel_state: NettingChannelState, unlock: ReceiveUnlock) -> 
         )
         events: typing.List[Event] = [send_processed]
     else:
-        events: typing.List[Event] = list()
+        invalid_unlock = EventInvalidReceivedUnlock(
+            secrethash=unlock.secrethash,
+            reason=msg,
+        )
+        events = [invalid_unlock]
 
     return is_valid, events, msg
 
