@@ -39,6 +39,7 @@ from raiden.transfer import channel
 from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendSecretReveal,
+    EventInvalidReceivedLockedTransfer,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer import mediator
@@ -1664,7 +1665,14 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
 
     # last iteration should have failed due to exceeded pending transfer limit
     failed_iteration = iterations.pop()
-    assert failed_iteration.new_state is None and not failed_iteration.events
+    assert failed_iteration.new_state is None
+    assert must_contain_entry(failed_iteration.events, EventInvalidReceivedLockedTransfer, {
+        'payment_identifier': MAXIMUM_PENDING_TRANSFERS + 1,
+        'reason': (
+            'Invalid LockedTransfer message. Adding the transfer would '
+            'exceed the allowed limit of 160 pending transfers per channel.'
+        ),
+    })
 
     assert all(isinstance(iteration.new_state, MediatorTransferState) for iteration in iterations)
 
