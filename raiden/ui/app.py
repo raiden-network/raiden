@@ -180,6 +180,7 @@ def run_app(
         matrix_server,
         network_id,
         environment_type,
+        unrecoverable_error_should_crash,
         config=None,
         extra_config=None,
         **kwargs,
@@ -220,6 +221,7 @@ def run_app(
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['transport']['udp']['nat_keepalive_timeout'] = timeout
     config['privatekey_hex'] = encode_hex(privatekey_bin)
+    config['unrecoverable_error_should_crash'] = unrecoverable_error_should_crash
 
     parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
     if not parsed_eth_rpc_endpoint.scheme:
@@ -280,6 +282,7 @@ def run_app(
     contract_addresses_known = False
     contracts = dict()
     config['contracts_path'] = contracts_precompiled_path()
+
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
         contracts_version = 'pre_limits' if environment_type == Environment.DEVELOPMENT else None
         deployment_data = get_contracts_deployed(node_network_id, contracts_version)
