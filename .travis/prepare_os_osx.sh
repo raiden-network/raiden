@@ -29,10 +29,13 @@ wget ${NODE_10_URL}
 node_dl_file=$(basename ${NODE_10_URL})
 tar xvf $(basename ${NODE_10_URL})
 rm ${node_dl_file}
-ln -sf ${node_dl_file%.tar.xz}/bin/node /usr/local/bin/
-ln -sf ${node_dl_file%.tar.xz}/bin/npm /usr/local/bin/
-ln -sf ${node_dl_file%.tar.xz}/bin/npx /usr/local/bin/
+base="$(pwd)/${node_dl_file%.tar.xz}"
+ln -sf ${base}/bin/node $HOME/.bin/
+ln -sf ${base}/bin/npm $HOME/.bin/
+ln -sf ${base}/bin/npx $HOME/.bin/
 
+# Remove all other node/npm versions
+rm /Users/travis/.nvm/versions/node/*/bin/{node,npm}
 
 # some debug info
 ls -la $HOME/.bin
