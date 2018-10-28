@@ -8,6 +8,7 @@ from eth_utils import denoms, remove_0x_prefix, to_normalized_address
 from raiden.constants import Environment
 from raiden.network.utils import get_free_port
 from raiden.settings import (
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     DEFAULT_RETRY_TIMEOUT,
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
@@ -70,7 +71,7 @@ def reveal_timeout(number_of_nodes):
     # Because the lock expiration is fixed, and it's computed based on the
     # reveal timeout value, we need to make it large enough to accomodate for
     # the room creation and invite, the formula below is used for that:
-    return number_of_nodes * 4
+    return number_of_nodes * 4 + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 
 
 @pytest.fixture
