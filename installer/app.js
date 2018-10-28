@@ -4,6 +4,7 @@ const Worker = require('webworker-threads').Worker;
 const remote = require('electron').remote;
 const fs = remote.require("fs")
 const Web3 = require("web3")
+const mainnet = ['0.15.0']
 //Confirm the installation
 function confirmInstallation() {
 	window.location = "pages/installation.html"
@@ -19,6 +20,16 @@ function confirmReinstallation() {
 // Confirm the upgrade
 function confirmUpgrade() {
 	try {
+		let user = require("os").userInfo().username;
+		let oldVersion = fs.readFileSync('/home/' + user + '/.raiden/version').toString();
+		let newVersion = fs.readFileSync('./version').toString();
+		if(mainnet.includes(newVersion) && !mainnet.includes(oldVersion)){
+			alert("detected different network between, " + oldVersion + "(ropsten) and " + newVersion + "(mainnet), therefore you need to fill the installation form");
+			confirmReinstallation();
+		} else if(!mainnet.includes(newVersion) && mainnet.includes(oldVersion)){
+			alert("detected different network between, " + oldVersion + "(mainnet) and " + newVersion + "(ropsten), therefore you need to fill the installation form");
+			confirmReinstallation();
+		} else {
 		document.body.innerHTML = "<img src = './loading.gif' >";
 		ipcRenderer.send('load');
 		let thread = new Worker(function(){
@@ -29,12 +40,14 @@ function confirmUpgrade() {
 			
 
 		})
-		thread.onmessage = function(event) {
-		system("cp raiden-cli ~/.raiden/raiden-cli")
-		system("cp version ~/.raiden/version")
-		GenerateLauncher();
-		window.location = "pages/success2.html"
-		};
+			thread.onmessage = function(event) {
+			system("cp raiden-cli ~/.raiden/raiden-cli")
+			system("cp version ~/.raiden/version")
+			GenerateLauncher();
+			window.location = "pages/success2.html"
+		}
+
+	};
 	} catch(e) {
 		alert(e.message);
 	}
@@ -112,7 +125,8 @@ function generateScripts(keystore, infura, network ) {
 		system("cp raiden-cli ~/.raiden/")
 		system("cp version ~/.raiden/")
 	  	append(raiden_quickPath, "# /bin/env bash\n")
-	  	append(raiden_quickPath, "/home/$USER/.raiden/raiden-cli --keystore-path " + keyPath + " --datadir " + dataPath + " --eth-rpc-endpoint " + infuraUrl + "\n")
+	  	let raiden_quickContent = "/home/$USER/.raiden/raiden-cli --keystore-path /home/$USER/.raiden/keys --datadir /home/$USER/.raiden/data --eth-rpc-endpoint " + infuraUrl + "\n"
+	  	append(raiden_quickPath, raiden_quickContent)
 	  	system("chmod a+x " + raiden_quickPath);
 }
 // Setup bash(Modify $PATH properly)

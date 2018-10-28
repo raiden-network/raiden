@@ -60,8 +60,15 @@ int main() {
 		execv("/usr/bin/firefox", args);
 		exit(1);
 	} else {
-		// Temporary implementation
-        system("gnome-terminal -e \"/home/$USER/.raiden/raiden-quick\"");
+        char * name = malloc(sizeof(char) * 64);
+        getlogin_r(name, 64);
+        char path[84];
+        strcpy(path, "\"/home/");
+        strcat(path, name);
+        strcat(path, "/.raiden/raiden-quick\"");
+        printf("%s\n",path);
+        char *args[] = {"gnome-terminal", "-e", path, NULL};
+        execv("/usr/bin/gnome-terminal", args);
 		exit(1);
 	}
 }
