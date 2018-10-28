@@ -195,7 +195,7 @@ class AlarmTask(Runnable):
             if missed_blocks > 2:
                 log.info(
                     'Missed block(s)',
-                    missed_blocks=missed_blocks,
+                    missed_blocks=missed_blocks - 1,
                     latest_block=latest_block,
                 )
 
