@@ -427,7 +427,7 @@ def wait_for_alarm_start(raiden_apps, retry_timeout=DEFAULT_RETRY_TIMEOUT):
     while apps:
         app = apps[-1]
 
-        if app.raiden.alarm.last_block_number is None:
+        if app.raiden.alarm.known_block_number is None:
             gevent.sleep(retry_timeout)
         else:
             apps.pop()
