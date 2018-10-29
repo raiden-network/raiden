@@ -72,6 +72,8 @@ class NodeRunner:
             disable_debug_logfile=self._options['disable_debug_logfile'],
         )
 
+        log.info('Starting Raiden', **get_system_spec())
+
         if self._options['config_file']:
             log.debug('Using config file', config_file=self._options['config_file'])
 
