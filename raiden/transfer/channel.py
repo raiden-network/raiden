@@ -1014,6 +1014,14 @@ def get_status(channel_state):
     return result
 
 
+def _del_unclaimed_lock(end_state: NettingChannelEndState, secrethash: typing.SecretHash):
+    if secrethash in end_state.secrethashes_to_lockedlocks:
+        del end_state.secrethashes_to_lockedlocks[secrethash]
+
+    if secrethash in end_state.secrethashes_to_unlockedlocks:
+        del end_state.secrethashes_to_unlockedlocks[secrethash]
+
+
 def _del_lock(end_state: NettingChannelEndState, secrethash: typing.SecretHash) -> None:
     """Removes the lock from the indexing structures.
 
@@ -1022,11 +1030,7 @@ def _del_lock(end_state: NettingChannelEndState, secrethash: typing.SecretHash) 
     """
     assert is_lock_pending(end_state, secrethash)
 
-    if secrethash in end_state.secrethashes_to_lockedlocks:
-        del end_state.secrethashes_to_lockedlocks[secrethash]
-
-    if secrethash in end_state.secrethashes_to_unlockedlocks:
-        del end_state.secrethashes_to_unlockedlocks[secrethash]
+    _del_unclaimed_lock(end_state, secrethash)
 
     if secrethash in end_state.secrethashes_to_onchain_unlockedlocks:
         del end_state.secrethashes_to_onchain_unlockedlocks[secrethash]
@@ -1503,7 +1507,9 @@ def events_for_expired_lock(
     if send_lock_expired:
         channel_state.our_state.merkletree = merkletree
         channel_state.our_state.balance_proof = send_lock_expired.balance_proof
-        del channel_state.our_state.secrethashes_to_lockedlocks[locked_lock.secrethash]
+
+        _del_unclaimed_lock(channel_state.our_state, secrethash)
+
         return [send_lock_expired]
 
     return []
@@ -1802,7 +1808,9 @@ def handle_receive_lock_expired(
     if is_valid:
         channel_state.partner_state.balance_proof = state_change.balance_proof
         channel_state.partner_state.merkletree = merkletree
-        del channel_state.partner_state.secrethashes_to_lockedlocks[state_change.secrethash]
+
+        _del_unclaimed_lock(channel_state.partner_state, state_change.secrethash)
+
         send_processed = SendProcessed(
             recipient=state_change.balance_proof.sender,
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
