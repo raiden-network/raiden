@@ -48,12 +48,13 @@ class WriteAheadLog:
 
         Events produced by applying state change are also saved.
         """
-        state_change_id = self.storage.write_state_change(state_change)
+        timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
+
+        state_change_id = self.storage.write_state_change(state_change, timestamp)
         self.state_change_id = state_change_id
 
         events = self.state_manager.dispatch(state_change)
 
-        timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
         self.storage.write_events(state_change_id, events, timestamp)
 
         return events
