@@ -181,6 +181,7 @@ class JSONRPCClient:
             'JSONRPCClient created',
             node=pex(self.address),
             available_nonce=_available_nonce,
+            client=version,
         )
 
     def __repr__(self):
