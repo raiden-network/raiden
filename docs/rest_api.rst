@@ -515,8 +515,8 @@ Connection Management
    :reqjson int initial_channel_target: Number of channels to open proactively.
    :reqjson float joinable_funds_target: Fraction of funds that will be used to join channels opened by other participants.
 
-   ..note::
-   Currently, the API calls are blocking. This means that in the case of long running calls like ``join``, if other calls to ``join`` are made concurrently, they will block too and wait for the first call to finish. If an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
+   .. note::
+      Currently, the API calls are blocking. This means that in the case of long running calls like ``join``, if other calls to ``join`` are made concurrently, they will block too and wait for the first call to finish. If an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
 
 .. http:delete:: /api/(version)/connections/(token_address)
 
@@ -549,8 +549,8 @@ Connection Management
    :statuscode 404: The given token address is not a valid eip55-encoded Ethereum address
    :statuscode 500: Internal Raiden node error
 
-   ..note::
-   Currently, the API calls are blocking. This means that in the case of long running calls like ``leave``, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
+   .. note::
+      Currently, the API calls are blocking. This means that in the case of long running calls like ``leave``, if an API call is currently being processed by Raiden, all pending calls will be queued and processed with their passed API call argument.
 
 Payments
 ========
