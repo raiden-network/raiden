@@ -611,6 +611,8 @@ class MatrixTransport(Runnable):
             )
             return False
 
+        messages: List[SignedMessage] = list()
+
         if data.startswith('0x'):
             try:
                 message = message_from_bytes(decode_hex(data))
@@ -632,27 +634,51 @@ class MatrixTransport(Runnable):
                     _exc=ex,
                 )
                 return False
+            else:
+                messages.append(message)
 
         else:
-            try:
-                message_dict = json.loads(data)
-                message = message_from_dict(message_dict)
-            except (UnicodeDecodeError, json.JSONDecodeError) as ex:
-                self.log.warning(
-                    "Can't parse message data JSON",
-                    message_data=data,
-                    peer_address=pex(peer_address),
-                    _exc=ex,
-                )
-                return False
-            except InvalidProtocolMessage as ex:
-                self.log.warning(
-                    "Message data JSON are not a valid message",
-                    message_data=data,
-                    peer_address=pex(peer_address),
-                    _exc=ex,
-                )
-                return False
+            for line in data.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    message_dict = json.loads(line)
+                    message = message_from_dict(message_dict)
+                except (UnicodeDecodeError, json.JSONDecodeError) as ex:
+                    self.log.warning(
+                        "Can't parse message data JSON",
+                        message_data=line,
+                        peer_address=pex(peer_address),
+                        _exc=ex,
+                    )
+                    continue
+                except InvalidProtocolMessage as ex:
+                    self.log.warning(
+                        "Message data JSON are not a valid message",
+                        message_data=line,
+                        peer_address=pex(peer_address),
+                        _exc=ex,
+                    )
+                    continue
+                if not isinstance(message, SignedMessage):
+                    self.log.warning(
+                        'Received invalid message',
+                        message=message,
+                    )
+                    continue
+                elif message.sender != peer_address:
+                    self.log.warning(
+                        'Message not signed by sender!',
+                        message=message,
+                        signer=message.sender,
+                        peer_address=peer_address,
+                    )
+                    continue
+                messages.append(message)
+
+        if not messages:
+            return False
 
         self.log.debug(
             'Message data',
@@ -662,31 +688,11 @@ class MatrixTransport(Runnable):
             room=room,
         )
 
-        if isinstance(message, Ping):
-            self.log.warning(
-                'Not required Ping received',
-                message=data,
-            )
-            return False
-        elif isinstance(message, SignedMessage):
-            if message.sender != peer_address:
-                self.log.warning(
-                    'Message not signed by sender!',
-                    message=message,
-                    signer=message.sender,
-                    peer_address=peer_address,
-                )
-                return False
+        for message in messages:
             if isinstance(message, Delivered):
                 self._receive_delivered(message)
             else:
                 self._receive_message(message)
-        else:
-            self.log.warning(
-                'Received Invalid message',
-                message=data,
-            )
-            return False
 
         return True
 
