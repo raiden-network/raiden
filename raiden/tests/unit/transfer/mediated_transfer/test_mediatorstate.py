@@ -1868,7 +1868,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     assert iteration.new_state.transfers_pair[0].payee_state == 'payee_pending'
 
 
-def test_mediator_lock_expired_with_receive_secret_reveal():
+def test_mediator_receive_lock_expired_after_secret_reveal():
     """
     Test the following scenario:
     I -> M -> T
@@ -1978,3 +1978,106 @@ def test_mediator_lock_expired_with_receive_secret_reveal():
     # LockExpired should remove the lock from both lockedlocks and unlockedlocks
     assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
     assert secrethash not in payer_channel.partner_state.secrethashes_to_unlockedlocks
+
+
+def test_mediator_lock_expired_after_receive_secret_reveal():
+    """
+    Test the following scenario:
+    I -> M -> T
+
+    - Mediator forwards a transfer from I to T.
+    - T receives secret from I and never registers into on-chain.
+    - T sends SecretReveal to M, lockedlock becomes an unlockedlock
+    - M expires the lock.
+    - M should remove the lock from both secrethashes_to_lockedlocks
+      and secrethashes_to_unlocklocks.
+    """
+    amount = 10
+    block_number = 5
+    target = HOP2
+    expiration = 30
+    pseudo_random_generator = random.Random()
+
+    payer_channel = factories.make_channel(
+        partner_balance=amount,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+
+    payer_transfer = factories.make_signed_transfer_for(
+        payer_channel,
+        amount,
+        UNIT_TRANSFER_SENDER,
+        target,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        partner_address=target,
+    )
+    channel_map = {
+        channel1.identifier: channel1,
+        payer_channel.identifier: payer_channel,
+    }
+    possible_routes = [factories.route_from_channel(channel1)]
+
+    init_mediator = ActionInitMediator(
+        possible_routes,
+        factories.route_from_channel(payer_channel),
+        payer_transfer,
+    )
+
+    iteration = mediator.state_transition(
+        None,
+        init_mediator,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    transfer = payer_transfer
+    secrethash = transfer.lock.secrethash
+
+    block_lock_expired = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+
+    assert secrethash in payer_channel.partner_state.secrethashes_to_lockedlocks
+
+    # Reveal secret just before the lock expires
+    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, target)
+
+    iteration = mediator.state_transition(
+        iteration.new_state,
+        secret_reveal,
+        channel_map,
+        pseudo_random_generator,
+        block_lock_expired,
+    )
+
+    # Make sure the lock was moved
+    assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
+    assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
+
+    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    block = Block(
+        block_number=block_expiration_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+
+    iteration = mediator.state_transition(
+        iteration.new_state,
+        block,
+        channel_map,
+        pseudo_random_generator,
+        block_expiration_number,
+    )
+
+    # LockExpired should NOT remove the lock from unlockedlocks
+    # for a transfer that it already knows it already sent out the balance proof for.
+    # If we remove the lock this means that the mediator will expire the lock and
+    # lose funds due to the fact that the target already received the balance proof
+    # upon revealing the secret
+    assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
