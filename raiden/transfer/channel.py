@@ -1508,7 +1508,7 @@ def events_for_expired_lock(
         channel_state.our_state.merkletree = merkletree
         channel_state.our_state.balance_proof = send_lock_expired.balance_proof
 
-        _del_unclaimed_lock(channel_state.our_state, secrethash)
+        _del_unclaimed_lock(channel_state.our_state, locked_lock.secrethash)
 
         return [send_lock_expired]
 
