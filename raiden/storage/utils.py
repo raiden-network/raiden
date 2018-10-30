@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS settings (
 DB_CREATE_STATE_CHANGES = '''
 CREATE TABLE IF NOT EXISTS state_changes (
     identifier INTEGER PRIMARY KEY AUTOINCREMENT,
-    data JSON
+    data JSON,
+    log_time TEXT
 );
 '''
 
