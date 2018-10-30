@@ -42,7 +42,6 @@ else:
 MANAGED_CONFIG_OPTIONS = {
     'accept-disclaimer',
     'address',
-    'api-address',
     'config-file',
     'datadir',
     'disable-debug-logfile',
@@ -59,6 +58,7 @@ MANAGED_CONFIG_OPTIONS = {
 }
 
 MANAGED_CONFIG_OPTIONS_OVERRIDABLE = {
+    'api-address',
     'endpoint-registry-contract-address',
     'tokennetwork-registry-contract-address',
     'secret-registry-contract-address',
@@ -161,7 +161,7 @@ class NodeRunner:
         self._address = None
         self._eth_rpc_endpoint = None
         self._executor = None
-        self._port = None
+        self._api_address = None
 
         self.state: NodeState = NodeState.STOPPED
 
@@ -198,12 +198,14 @@ class NodeRunner:
             'Starting node',
             node=self._index,
             address=self.address,
-            port=self._api_address.rpartition(':')[2],
+            port=self.api_address.rpartition(':')[2],
         )
+        log.debug('Node start command', command=self.executor.command)
         self._output_files['stdout'] = self._stdout_file.open('at', 1)
         self._output_files['stderr'] = self._stderr_file.open('at', 1)
         for file in self._output_files.values():
             file.write('--------- Starting ---------\n')
+        self._output_files['stdout'].write(f'Command line: {self.executor.command}\n')
 
         begin = time.monotonic()
         try:
@@ -294,10 +296,13 @@ class NodeRunner:
             '--matrix-server',
             self._options.get('matrix-server', 'auto'),
             '--api-address',
-            self._api_address,
+            self.api_address,
             '--no-web-ui',
         ]
         for option_name in MANAGED_CONFIG_OPTIONS_OVERRIDABLE:
+            if option_name == 'api-address':
+                # already handled above
+                continue
             if option_name in self._options:
                 cmd.extend([f'--{option_name}', self._options[option_name]])
 
@@ -333,14 +338,16 @@ class NodeRunner:
         return pw_file
 
     @property
-    def _api_address(self):
-        if not self._port:
-            # Find a random free port
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(('127.0.0.1', 0))
-            self._port = sock.getsockname()[1]
-            sock.close()
-        return f'127.0.0.1:{self._port}'
+    def api_address(self):
+        if not self._api_address:
+            self._api_address = self._options.get('api-address')
+            if self._api_address is None:
+                # Find a random free port
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.bind(('127.0.0.1', 0))
+                self._api_address = f'127.0.0.1:{sock.getsockname()[1]}'
+                sock.close()
+        return self._api_address
 
     @property
     def _log_file(self):
