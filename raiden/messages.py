@@ -1378,29 +1378,30 @@ class RefundTransfer(LockedTransfer):
 
     @classmethod
     def from_event(cls, event):
-        balance_proof = event.balance_proof
+        transfer = event.transfer
+        balance_proof = transfer.balance_proof
         lock = Lock(
-            amount=event.lock.amount,
-            expiration=event.lock.expiration,
-            secrethash=event.lock.secrethash,
+            amount=transfer.lock.amount,
+            expiration=transfer.lock.expiration,
+            secrethash=transfer.lock.secrethash,
         )
         fee = 0
 
         return cls(
             chain_id=balance_proof.chain_id,
             message_identifier=event.message_identifier,
-            payment_identifier=event.payment_identifier,
+            payment_identifier=transfer.payment_identifier,
             nonce=balance_proof.nonce,
             token_network_address=balance_proof.token_network_identifier,
-            token=event.token,
+            token=transfer.token,
             channel_identifier=balance_proof.channel_identifier,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=balance_proof.locked_amount,
             recipient=event.recipient,
             locksroot=balance_proof.locksroot,
             lock=lock,
-            target=event.target,
-            initiator=event.initiator,
+            target=transfer.target,
+            initiator=transfer.initiator,
             fee=fee,
         )
 
