@@ -32,6 +32,28 @@ from raiden.utils.solc import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def discover_next_available_nonce(web3, address):
+    """Returns the next available nonce for `address`."""
+
+    # The nonces of the mempool transactions are considered used, and it's
+    # assumed these transactions are different from the ones currenlty pending
+    # in the client. This is a simplification, otherwise it would be necessary
+    # to filter the local pending transactions based on the mempool.
+    pool = web3.txpool.inspect or {}
+
+    queued = pool.get('queued', {}).get(address)
+    if queued:
+        return max(queued.keys()) + 1
+
+    pending = pool.get('pending', {}).get(address)
+    if pending:
+        return max(pending.keys()) + 1
+
+    # The first valid nonce is 0, therefore the count is already the next
+    # avaiable nonce
+    return web3.eth.getTransactionCount(to_checksum_address(address), 'latest')
+
+
 def check_address_has_code(
         client: 'JSONRPCClient',
         address: typing.Address,
@@ -135,7 +157,6 @@ class JSONRPCClient:
         host: Ethereum node host address.
         port: Ethereum node port number.
         privkey: Local user private key, used to sign transactions.
-        nonce_offset: Network's default base nonce number.
     """
 
     def __init__(
@@ -143,7 +164,6 @@ class JSONRPCClient:
             web3: Web3,
             privkey: bytes,
             gas_price_strategy: typing.Callable = rpc_gas_price_strategy,
-            nonce_offset: int = 0,
             block_num_confirmations: int = 0,
     ):
         if privkey is None or len(privkey) != 32:
@@ -164,8 +184,8 @@ class JSONRPCClient:
         _, eth_node = is_supported_client(version)
 
         address = privatekey_to_address(privkey)
-        transaction_count = web3.eth.getTransactionCount(to_checksum_address(address), 'pending')
-        _available_nonce = transaction_count + nonce_offset
+
+        available_nonce = discover_next_available_nonce(web3, to_checksum_address(address))
 
         self.eth_node = eth_node
         self.privkey = privkey
@@ -173,14 +193,13 @@ class JSONRPCClient:
         self.web3 = web3
         self.default_block_num_confirmations = block_num_confirmations
 
-        self._available_nonce = _available_nonce
+        self._available_nonce = available_nonce
         self._nonce_lock = Semaphore()
-        self._nonce_offset = nonce_offset
 
         log.debug(
             'JSONRPCClient created',
             node=pex(self.address),
-            available_nonce=_available_nonce,
+            available_nonce=available_nonce,
             client=version,
         )
 
