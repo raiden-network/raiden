@@ -27,7 +27,7 @@ log = structlog.get_logger(__name__)
 
 DEFAULT_TOKEN_BALANCE_MIN = 2_000
 DEFAULT_TOKEN_BALANCE_FUND = 10_000
-OWN_ACCOUNT_BALANCE_MIN = 5 * 10 ** 17    # := 2.0 Eth
+OWN_ACCOUNT_BALANCE_MIN = 5 * 10 ** 17    # := 0.5 Eth
 NODE_ACCOUNT_BALANCE_MIN = 15 * 10 ** 16   # := 0.15 Eth
 NODE_ACCOUNT_BALANCE_FUND = 3 * 10 ** 17  # := 0.3 Eth
 TIMEOUT = 200
@@ -236,6 +236,7 @@ class ScenarioRunner(object):
         wait_for_txs(self.client, mint_tx + fund_tx)
 
         if node_starter is not None:
+            log.debug('Waiting for nodes to finish starting')
             node_starter.get(block=True)
 
         registered_tokens = set(
