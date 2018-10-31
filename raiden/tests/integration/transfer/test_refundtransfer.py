@@ -59,7 +59,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     assert_synced_channel_state(
         token_network_identifier,
         app0, deposit, [send_lockedtransfer.transfer.lock],
-        app1, deposit, [send_refundtransfer.lock],
+        app1, deposit, [send_refundtransfer.transfer.lock],
     )
 
     # This channel was exhausted to force the refund transfer
@@ -158,7 +158,7 @@ def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit
     assert send_refund
 
     lock = send_locked.transfer.lock
-    refund_lock = send_refund.lock
+    refund_lock = send_refund.transfer.lock
     assert lock.amount == refund_lock.amount
     assert lock.secrethash
     assert lock.expiration
@@ -272,7 +272,7 @@ def test_refund_transfer_after_2nd_hop(
     assert send_refund1
 
     lock1 = send_locked1.transfer.lock
-    refund_lock1 = send_refund1.lock
+    refund_lock1 = send_refund1.transfer.lock
     assert lock1.amount == refund_lock1.amount
     assert lock1.secrethash == refund_lock1.secrethash
 
@@ -287,7 +287,7 @@ def test_refund_transfer_after_2nd_hop(
     assert send_refund2
 
     lock2 = send_locked2.transfer.lock
-    refund_lock2 = send_refund2.lock
+    refund_lock2 = send_refund2.transfer.lock
     assert lock2.amount == refund_lock2.amount
     assert lock2.secrethash
     assert lock2.expiration
