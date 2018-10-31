@@ -14,7 +14,6 @@ from raiden.transfer.events import (
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
     EventPaymentSentSuccess,
-    SendDirectTransfer,
 )
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE

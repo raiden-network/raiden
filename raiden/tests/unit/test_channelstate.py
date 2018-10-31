@@ -7,7 +7,7 @@ from itertools import cycle
 import pytest
 
 from raiden.constants import UINT64_MAX
-from raiden.messages import DirectTransfer, Secret
+from raiden.messages import Secret
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
@@ -27,7 +27,6 @@ from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelUpdateTransfer,
     EventPaymentReceivedSuccess,
-    EventTransferReceivedInvalidDirectTransfer,
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import (
@@ -139,53 +138,6 @@ def create_channel_from_models(our_model, partner_model):
     )
 
     return channel_state
-
-
-def make_receive_transfer_direct(
-        channel_state,
-        privkey,
-        nonce,
-        transferred_amount,
-        locksroot=EMPTY_MERKLE_ROOT,
-        token_network_identifier=UNIT_REGISTRY_IDENTIFIER,
-        locked_amount=None,
-        chain_id=UNIT_CHAIN_ID,
-):
-
-    address = privatekey_to_address(privkey.secret)
-    if address not in (channel_state.our_state.address, channel_state.partner_state.address):
-        raise ValueError('Private key does not match any of the participants.')
-
-    if locked_amount is None:
-        locked_amount = channel.get_amount_locked(channel_state.our_state)
-
-    message_identifier = random.randint(0, UINT64_MAX)
-    payment_identifier = nonce
-    mediated_transfer_msg = DirectTransfer(
-        chain_id=chain_id,
-        message_identifier=message_identifier,
-        payment_identifier=payment_identifier,
-        nonce=nonce,
-        token_network_address=channel_state.token_network_identifier,
-        token=channel_state.token_address,
-        channel_identifier=channel_state.identifier,
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        recipient=channel_state.partner_state.address,
-        locksroot=locksroot,
-    )
-    mediated_transfer_msg.sign(privkey)
-
-    balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
-
-    receive_directtransfer = ReceiveTransferDirect(
-        token_network_identifier,
-        message_identifier,
-        payment_identifier,
-        balance_proof,
-    )
-
-    return receive_directtransfer
 
 
 def test_new_end_state():
@@ -649,83 +601,6 @@ def test_channelstate_receive_lockedtransfer():
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model3)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model3)
-
-
-def test_channelstate_directtransfer_overspent():
-    """Receiving a direct transfer with an amount large than distributable must
-    be ignored.
-    """
-    our_model1, _ = create_model(70)
-    partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
-
-    distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
-
-    nonce = 1
-    transferred_amount = distributable + 1
-    receive_lockedtransfer = make_receive_transfer_direct(
-        channel_state,
-        privkey2,
-        nonce,
-        transferred_amount,
-    )
-
-    is_valid, _ = channel.is_valid_directtransfer(
-        receive_lockedtransfer,
-        channel_state,
-        channel_state.partner_state,
-        channel_state.our_state,
-    )
-    assert not is_valid, 'message is invalid because it is spending more than the distributable'
-
-    iteration = channel.handle_receive_directtransfer(
-        channel_state,
-        receive_lockedtransfer,
-    )
-
-    assert must_contain_entry(iteration.events, EventTransferReceivedInvalidDirectTransfer, {})
-    assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model1)
-    assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
-
-
-def test_channelstate_directtransfer_invalid_chainid():
-    """Receiving a direct transfer with a chain_id different than the channel's
-    chain_id should be ignored
-    """
-    our_model1, _ = create_model(70)
-    partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
-
-    distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
-
-    nonce = 1
-    transferred_amount = distributable - 1
-    receive_lockedtransfer = make_receive_transfer_direct(
-        channel_state=channel_state,
-        privkey=privkey2,
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-        chain_id=UNIT_CHAIN_ID + 2,
-    )
-
-    is_valid, _ = channel.is_valid_directtransfer(
-        receive_lockedtransfer,
-        channel_state,
-        channel_state.partner_state,
-        channel_state.our_state,
-    )
-    assert not is_valid, (
-        'message is invalid because it contains different chain id than the channel'
-    )
-
-    iteration = channel.handle_receive_directtransfer(
-        channel_state,
-        receive_lockedtransfer,
-    )
-
-    assert must_contain_entry(iteration.events, EventTransferReceivedInvalidDirectTransfer, {})
-    assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model1)
-    assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model1)
 
 
 def test_channelstate_lockedtransfer_overspent():

@@ -22,8 +22,6 @@ from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
-    EventTransferReceivedInvalidDirectTransfer,
-    SendDirectTransfer,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
@@ -47,7 +45,6 @@ RaidenService = 'RaidenService'
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (
-    EventTransferReceivedInvalidDirectTransfer,
     EventPaymentReceivedSuccess,
     EventUnlockSuccess,
     EventUnlockClaimFailed,
@@ -69,8 +66,6 @@ class RaidenEventHandler:
             self.handle_send_lockexpired(raiden, event)
         elif type(event) == SendLockedTransfer:
             self.handle_send_lockedtransfer(raiden, event)
-        elif type(event) == SendDirectTransfer:
-            self.handle_send_directtransfer(raiden, event)
         elif type(event) == SendSecretReveal:
             self.handle_send_secretreveal(raiden, event)
         elif type(event) == SendBalanceProof:
@@ -128,18 +123,6 @@ class RaidenEventHandler:
         raiden.transport.send_async(
             send_locked_transfer.queue_identifier,
             mediated_transfer_message,
-        )
-
-    def handle_send_directtransfer(
-            self,
-            raiden: RaidenService,
-            send_direct_transfer: SendDirectTransfer,
-    ):
-        direct_transfer_message = message_from_sendevent(send_direct_transfer, raiden.address)
-        raiden.sign(direct_transfer_message)
-        raiden.transport.send_async(
-            send_direct_transfer.queue_identifier,
-            direct_transfer_message,
         )
 
     def handle_send_secretreveal(

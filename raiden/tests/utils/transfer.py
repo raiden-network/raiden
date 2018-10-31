@@ -43,9 +43,9 @@ def get_channelstate(app0, app1, token_network_identifier) -> NettingChannelStat
 def transfer(initiator_app, target_app, token, amount, identifier):
     """ Nice to read shortcut to make a transfer.
 
-    The transfer is either a DirectTransfer or a LockedTransfer, in both
-    cases all apps are synched, in the case of a LockedTransfer the secret
-    will be revealed.
+    The transfer is a LockedTransfer and we make sure,
+    all apps are synched. The secret
+    will also be revealed.
     """
     payment_network_identifier = initiator_app.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -60,34 +60,6 @@ def transfer(initiator_app, target_app, token, amount, identifier):
         identifier,
     )
     assert async_result.wait()
-
-
-def direct_transfer(
-        initiator_app,
-        target_app,
-        token_network_identifier,
-        amount,
-        identifier=None,
-        timeout=5,
-):
-    """ Nice to read shortcut to make a DirectTransfer. """
-
-    channel_state = views.get_channelstate_by_token_network_and_partner(
-        views.state_from_app(initiator_app),
-        token_network_identifier,
-        target_app.raiden.address,
-    )
-    assert channel_state, 'there is not a direct channel'
-
-    initiator_app.raiden.direct_transfer_async(
-        token_network_identifier,
-        amount,
-        target_app.raiden.address,
-        identifier,
-    )
-
-    # direct transfers don't have confirmation
-    gevent.sleep(timeout)
 
 
 def mediated_transfer(
