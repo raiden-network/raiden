@@ -245,7 +245,7 @@ def test_next_transfer_pair():
     channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
 
-    pair, events = mediator.next_transfer_pair(
+    pair, events = mediator.forward_transfer_pair(
         payer_transfer,
         available_routes,
         channel_map,
@@ -378,29 +378,24 @@ def test_events_for_refund():
     )
     assert is_valid, msg
 
-    transfer_to_refund = factories.make_transfer(
-        amount,
-        UNIT_TRANSFER_INITIATOR,
-        UNIT_TRANSFER_TARGET,
-        expiration,
-        UNIT_SECRET,
-    )
-
-    events = mediator.events_for_refund_transfer(
+    transfer_pair, refund_events = mediator.backward_transfer_pair(
         refund_channel,
-        transfer_to_refund,
+        received_transfer,
         pseudo_random_generator,
         block_number,
     )
 
-    must_contain_entry(events, SendRefundTransfer, {
-        'lock': {
-            'expiration': received_transfer.lock.expiration,
-            'amount': amount,
-            'secrethash': transfer_to_refund.lock.secrethash,
+    assert must_contain_entry(refund_events, SendRefundTransfer, {
+        'transfer': {
+            'lock': {
+                'expiration': received_transfer.lock.expiration,
+                'amount': amount,
+                'secrethash': received_transfer.lock.secrethash,
+            },
         },
         'recipient': refund_channel.partner_state.address,
     })
+    assert transfer_pair.payer_transfer == received_transfer
 
 
 def test_events_for_secretreveal():
@@ -1219,7 +1214,11 @@ def test_no_valid_routes():
         pseudo_random_generator,
         block_number,
     )
-    assert iteration.new_state is None
+    msg = (
+        'The task must be kept alive, '
+        'either to handle future available routes, or lock expired messages'
+    )
+    assert iteration.new_state is not None, msg
     assert must_contain_entry(iteration.events, SendRefundTransfer, {})
 
 
@@ -1318,7 +1317,11 @@ def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
         block_number,
     )
 
-    assert iteration.new_state is None
+    msg = (
+        'The transfer must not be forwarded because the lock timeout is '
+        'larger then the settlement timeout'
+    )
+    assert not must_contain_entry(iteration.events, SendLockedTransfer, {}), msg
 
 
 def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():

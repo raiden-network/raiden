@@ -252,6 +252,13 @@ def clear_if_finalized(iteration, channelidentifiers_to_channels):
         if channel.is_lock_pending(payee_channel.our_state, secrethash):
             return iteration
 
+    if state.waiting_transfer:
+        waiting_channel_identifier = state.waiting_transfer.balance_proof.channel_identifier
+        waiting_channel = channelidentifiers_to_channels[waiting_channel_identifier]
+
+        if channel.is_lock_pending(waiting_channel.partner_state, secrethash):
+            return iteration
+
     return TransitionResult(None, iteration.events)
 
 
@@ -289,7 +296,7 @@ def next_channel_from_routes(
     return None
 
 
-def next_transfer_pair(
+def forward_transfer_pair(
         payer_transfer: LockedTransferSignedState,
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
@@ -297,6 +304,7 @@ def next_transfer_pair(
         block_number: typing.BlockNumber,
 ):
     """ Given a payer transfer tries a new route to proceed with the mediation.
+
     Args:
         payer_transfer: The transfer received from the payer_channel.
         available_routes: Current available routes that may be used, it's
@@ -346,6 +354,62 @@ def next_transfer_pair(
         transfer_pair,
         mediated_events,
     )
+
+
+def backward_transfer_pair(
+        backward_channel: NettingChannelState,
+        payer_transfer: LockedTransferSignedState,
+        pseudo_random_generator: random.Random,
+        block_number: typing.BlockNumber,
+) -> typing.Tuple[MediationPairState, typing.List[Event]]:
+    """ Sends a transfer backwards, allowing the previous hop to try a new
+    route.
+
+    When all the routes available for this node failed, send a transfer
+    backwards with the same amount and secrethash, allowing the previous hop to
+    do a retry.
+
+    Args:
+        backward_channel: The original channel which sent the mediated transfer
+            to this node.
+        payer_transfer: The *latest* payer transfer which is backing the
+            mediation.
+        block_number (int): The current block number.
+
+    Returns:
+        An empty list if there are not enough blocks to safely create a refund,
+        or a list with a refund event.
+    """
+    transfer_pair = None
+    events = list()
+
+    lock = payer_transfer.lock
+    lock_timeout = lock.expiration - block_number
+
+    # Ensure the refund transfer's lock has a safe expiration, otherwise don't
+    # do anything and wait for the received lock to expire.
+    if is_channel_usable(backward_channel, lock.amount, lock_timeout):
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
+        refund_transfer = channel.send_refundtransfer(
+            channel_state=backward_channel,
+            initiator=payer_transfer.initiator,
+            target=payer_transfer.target,
+            amount=lock.amount,
+            message_identifier=message_identifier,
+            payment_identifier=payer_transfer.payment_identifier,
+            expiration=lock.expiration,
+            secrethash=lock.secrethash,
+        )
+
+        transfer_pair = MediationPairState(
+            payer_transfer,
+            backward_channel.partner_state.address,
+            refund_transfer.transfer,
+        )
+
+        events.append(refund_transfer)
+
+    return (transfer_pair, events)
 
 
 def set_offchain_secret(state, channelidentifiers_to_channels, secret, secrethash):
@@ -460,49 +524,6 @@ def set_expired_pairs(transfers_pair, block_number):
             events.append(unlock_failed)
 
     return events
-
-
-def events_for_refund_transfer(
-        refund_channel,
-        transfer_to_refund,
-        pseudo_random_generator,
-        block_number,
-):
-    """ Refund the transfer.
-    Args:
-        refund_route (RouteState): The original route that sent the mediated
-            transfer to this node.
-        transfer_to_refund (LockedTransferSignedState): The original mediated transfer
-            from the refund_route.
-        timeout_blocks (int): The number of blocks available from the /latest
-            transfer/ received by this node, this transfer might be the
-            original mediated transfer (if no route was available) or a refund
-            transfer from a down stream node.
-        block_number (int): The current block number.
-    Returns:
-        An empty list if there are not enough blocks to safely create a refund,
-        or a list with a refund event."""
-    lock_timeout = transfer_to_refund.lock.expiration - block_number
-    transfer_amount = transfer_to_refund.lock.amount
-
-    if is_channel_usable(refund_channel, transfer_amount, lock_timeout):
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        refund_transfer = channel.send_refundtransfer(
-            refund_channel,
-            transfer_to_refund.initiator,
-            transfer_to_refund.target,
-            transfer_to_refund.lock.amount,
-            message_identifier,
-            transfer_to_refund.payment_identifier,
-            transfer_to_refund.lock.expiration,
-            transfer_to_refund.lock.secrethash,
-        )
-
-        return [refund_transfer]
-
-    # Can not create a refund lock with a safe expiration, so don't do anything
-    # and wait for the received lock to expire.
-    return list()
 
 
 def events_for_secretreveal(transfers_pair, secret, pseudo_random_generator):
@@ -842,7 +863,7 @@ def mediate_transfer(
 
     assert payer_channel.partner_state.address == payer_transfer.balance_proof.sender
 
-    transfer_pair, mediated_events = next_transfer_pair(
+    transfer_pair, mediated_events = forward_transfer_pair(
         payer_transfer,
         available_routes,
         channelidentifiers_to_channels,
@@ -850,35 +871,36 @@ def mediate_transfer(
         block_number,
     )
 
-    # If none of the available_routes could be used, try a refund
     if transfer_pair is None:
+        assert not mediated_events
+
         if state.transfers_pair:
             original_pair = state.transfers_pair[0]
-            original_transfer = original_pair.payer_transfer
             original_channel = get_payer_channel(
                 channelidentifiers_to_channels,
                 original_pair,
             )
         else:
             original_channel = payer_channel
-            original_transfer = payer_transfer
 
-        refund_events = events_for_refund_transfer(
+        transfer_pair, mediated_events = backward_transfer_pair(
             original_channel,
-            original_transfer,
+            payer_transfer,
             pseudo_random_generator,
             block_number,
         )
 
-        iteration = TransitionResult(state, refund_events)
+    if transfer_pair is None:
+        assert not mediated_events
+        mediated_events = list()
+        state.waiting_transfer = payer_transfer
 
     else:
         # the list must be ordered from high to low expiration, expiration
         # handling depends on it
         state.transfers_pair.append(transfer_pair)
-        iteration = TransitionResult(state, mediated_events)
 
-    return iteration
+    return TransitionResult(state, mediated_events)
 
 
 def handle_init(
