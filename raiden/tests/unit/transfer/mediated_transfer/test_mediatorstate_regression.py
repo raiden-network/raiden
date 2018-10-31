@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 
+from raiden.messages import message_from_sendevent
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
@@ -29,9 +30,11 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.mediated_transfer.state import MediatorTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
+    ReceiveLockExpired,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
+from raiden.transfer.state import balanceproof_from_envelope, message_identifier_from_prng
 from raiden.transfer.state_change import Block
 
 
@@ -211,24 +214,26 @@ def test_regression_send_refund():
             'recipient': HOP2,
             'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
         },
-        'payment_identifier': UNIT_TRANSFER_IDENTIFIER,
-        'token': UNIT_TOKEN_ADDRESS,
-        'balance_proof': {
-            # 'nonce': ,
-            'transferred_amount': 0,
-            'locked_amount': 10,
-            'locksroot': lock.lockhash,
-            'token_network_identifier': token_network_identifier,
-            'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
-            'chain_id': first_payer_transfer.balance_proof.chain_id,
+        'transfer': {
+            'payment_identifier': UNIT_TRANSFER_IDENTIFIER,
+            'token': UNIT_TOKEN_ADDRESS,
+            'balance_proof': {
+                # 'nonce': ,
+                'transferred_amount': 0,
+                'locked_amount': 10,
+                'locksroot': lock.lockhash,
+                'token_network_identifier': token_network_identifier,
+                'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
+                'chain_id': first_payer_transfer.balance_proof.chain_id,
+            },
+            'lock': {
+                'amount': lock.amount,
+                'expiration': lock.expiration,
+                'secrethash': lock.secrethash,
+            },
+            'initiator': UNIT_TRANSFER_INITIATOR,
+            'target': UNIT_TRANSFER_TARGET,
         },
-        'lock': {
-            'amount': lock.amount,
-            'expiration': lock.expiration,
-            'secrethash': lock.secrethash,
-        },
-        'initiator': UNIT_TRANSFER_INITIATOR,
-        'target': UNIT_TRANSFER_TARGET,
     })
 
 
@@ -314,3 +319,103 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         'secrethash': transfer.lock.secrethash,
     })
     assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
+
+
+def test_regression_mediator_task_no_routes():
+    """ The mediator must only be cleared after the waiting transfer's lock has
+    been handled.
+
+    If a node receives a transfer to mediate, but there is no route available
+    (because there is no sufficient capacity or the partner nodes are offline),
+    and a refund is not possible, the mediator task must no be cleared,
+    otherwise followup remove expired lock messages wont be processed and the
+    nodes will get out of sync.
+    """
+
+    amount = 10
+    block_number = 5
+    target = HOP2
+    expiration = 30
+    pseudo_random_generator = random.Random()
+
+    payer_channel = factories.make_channel(
+        partner_balance=amount,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    payer_route = factories.route_from_channel(payer_channel)
+
+    payer_transfer = factories.make_signed_transfer_for(
+        payer_channel,
+        amount,
+        HOP1,
+        target,
+        expiration,
+        UNIT_SECRET,
+    )
+
+    available_routes = []
+    channel_map = {
+        payer_channel.identifier: payer_channel,
+    }
+
+    init_state_change = ActionInitMediator(
+        available_routes,
+        payer_route,
+        payer_transfer,
+    )
+    initial_state = None
+    init_iteration = mediator.state_transition(
+        initial_state,
+        init_state_change,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+    msg = 'The task must not be cleared, even if there is no route to forward the transfer'
+    assert init_iteration.new_state is not None, msg
+    assert must_contain_entry(init_iteration.events, SendLockedTransfer, {}) is None
+    assert must_contain_entry(init_iteration.events, SendRefundTransfer, {}) is None
+
+    secrethash = UNIT_SECRETHASH
+    lock = payer_channel.partner_state.secrethashes_to_lockedlocks[secrethash]
+
+    # Creates a transfer as it was from the *partner*
+    send_lock_expired, _ = channel.create_sendexpiredlock(
+        sender_end_state=payer_channel.partner_state,
+        locked_lock=lock,
+        pseudo_random_generator=pseudo_random_generator,
+        chain_id=payer_channel.chain_id,
+        token_network_identifier=payer_channel.token_network_identifier,
+        channel_identifier=payer_channel.identifier,
+        recipient=payer_channel.our_state.address,
+    )
+    assert send_lock_expired
+    lock_expired_message = message_from_sendevent(send_lock_expired, HOP1)
+    lock_expired_message.sign(HOP2_KEY)
+    balance_proof = balanceproof_from_envelope(lock_expired_message)
+
+    message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    expired_block_number = lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    mediator.state_transition(
+        init_iteration.new_state,
+        ReceiveLockExpired(
+            sender=payer_channel.partner_state.address,
+            balance_proof=balance_proof,
+            secrethash=secrethash,
+            message_identifier=message_identifier,
+        ),
+        channel_map,
+        pseudo_random_generator,
+        expired_block_number,
+    )
+
+    expired_iteration = mediator.state_transition(
+        initial_state,
+        init_state_change,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+    msg = 'The only used channel had the lock cleared, the taks must be cleared'
+    assert expired_iteration.new_state is None, msg
