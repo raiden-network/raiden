@@ -167,13 +167,14 @@ class MediatorTransferState(State):
         'secrethash',
         'secret',
         'transfers_pair',
+        'waiting_transfer',
     )
 
     def __init__(self, secrethash: typing.SecretHash):
-        # for convenience
         self.secrethash = secrethash
         self.secret = None
         self.transfers_pair: typing.List[MediationPairState] = list()
+        self.waiting_transfer: LockedTransferSignedState = None
 
     def __repr__(self):
         return '<MediatorTransferState secrethash:{} qtd_transfers:{}>'.format(
@@ -186,7 +187,8 @@ class MediatorTransferState(State):
             isinstance(other, MediatorTransferState) and
             self.secrethash == other.secrethash and
             self.secret == other.secret and
-            self.transfers_pair == other.transfers_pair
+            self.transfers_pair == other.transfers_pair and
+            self.waiting_transfer == other.waiting_transfer
         )
 
     def __ne__(self, other):
@@ -196,6 +198,7 @@ class MediatorTransferState(State):
         result = {
             'secrethash': serialization.serialize_bytes(self.secrethash),
             'transfers_pair': self.transfers_pair,
+            'waiting_transfer': self.waiting_transfer,
         }
 
         if self.secret is not None:
@@ -209,6 +212,7 @@ class MediatorTransferState(State):
             secrethash=serialization.deserialize_bytes(data['secrethash']),
         )
         restored.transfers_pair = data['transfers_pair']
+        restored.waiting_transfer = data['waiting_transfer']
 
         secret = data.get('secret')
         if secret is not None:

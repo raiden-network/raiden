@@ -3,7 +3,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
-from raiden.transfer.state import BalanceProofUnsignedState, HashTimeLockState
+from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils import pex, serialization, sha3, typing
 
 # According to the smart contracts as of 07/08:
@@ -15,17 +15,11 @@ CHANNEL_IDENTIFIER_GLOBAL_QUEUE: typing.ChannelID = 0
 
 
 def refund_from_sendmediated(send_lockedtransfer_event):
-    transfer = send_lockedtransfer_event.transfer
     return SendRefundTransfer(
         recipient=send_lockedtransfer_event.recipient,
         channel_identifier=send_lockedtransfer_event.queue_identifier.channel_identifier,
         message_identifier=send_lockedtransfer_event.message_identifier,
-        payment_identifier=transfer.payment_identifier,
-        token_address=transfer.token,
-        balance_proof=transfer.balance_proof,
-        lock=transfer.lock,
-        initiator=transfer.initiator,
-        target=transfer.target,
+        transfer=send_lockedtransfer_event.transfer,
     )
 
 
@@ -417,50 +411,25 @@ class SendRefundTransfer(SendMessageEvent):
             recipient: typing.Address,
             channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
-            payment_identifier: typing.PaymentID,
-            token_address: typing.TokenAddress,
-            balance_proof: BalanceProofUnsignedState,
-            lock: HashTimeLockState,
-            initiator: typing.InitiatorAddress,
-            target: typing.TargetAddress,
+            transfer: LockedTransferUnsignedState,
     ):
 
         super().__init__(recipient, channel_identifier, message_identifier)
 
-        self.payment_identifier = payment_identifier
-        self.token = token_address
-        self.balance_proof = balance_proof
-        self.lock = lock
-        self.initiator = initiator
-        self.target = target
+        self.transfer = transfer
 
     def __repr__(self):
         return (
-            '<'
-            'SendRefundTransfer msgid:{} paymentid:{} token:{} '
-            'balance_proof:{} lock:{} initiator:{} target:{} recipient:{}'
-            '>'
-        ).format(
-            self.message_identifier,
-            self.payment_identifier,
-            pex(self.token),
-            self.balance_proof,
-            self.lock,
-            pex(self.initiator),
-            pex(self.target),
-            pex(self.recipient),
+            f'<'
+            f'SendRefundTransfer msgid:{self.message_identifier} transfer:{self.transfer} '
+            f'recipient:{self.recipient} '
+            f'>'
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, SendRefundTransfer) and
-            self.payment_identifier == other.payment_identifier and
-            self.token == other.token and
-            self.balance_proof == other.balance_proof and
-            self.lock == other.lock and
-            self.initiator == other.initiator and
-            self.target == other.target and
-            self.recipient == other.recipient and
+            self.transfer == other.transfer and
             super().__eq__(other)
         )
 
@@ -472,13 +441,11 @@ class SendRefundTransfer(SendMessageEvent):
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': self.queue_identifier.channel_identifier,
             'message_identifier': self.message_identifier,
-            'payment_identifier': self.payment_identifier,
-            'token_address': to_checksum_address(self.token),
-            'balance_proof': self.balance_proof,
-            'balance_hash': serialization.serialize_bytes(self.balance_proof.balance_hash),
-            'lock': self.lock,
-            'initiator': to_checksum_address(self.initiator),
-            'target': to_checksum_address(self.target),
+            'transfer': self.transfer,
+            'balance_proof': self.transfer.balance_proof,
+            'balance_hash': serialization.serialize_bytes(
+                self.transfer.balance_proof.balance_hash,
+            ),
         }
 
         return result
@@ -489,12 +456,7 @@ class SendRefundTransfer(SendMessageEvent):
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=data['channel_identifier'],
             message_identifier=data['message_identifier'],
-            payment_identifier=data['payment_identifier'],
-            token_address=to_canonical_address(data['token_address']),
-            balance_proof=data['balance_proof'],
-            lock=data['lock'],
-            initiator=to_canonical_address(data['initiator']),
-            target=to_canonical_address(data['target']),
+            transfer=data['transfer'],
         )
 
         return restored
