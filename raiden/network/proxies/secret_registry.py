@@ -80,6 +80,7 @@ class SecretRegistry:
 
         if not secrets_to_register:
             log.debug('registerSecretBatch skipped', **log_details)
+            return
 
         log.debug('registerSecretBatch called', **log_details)
 
