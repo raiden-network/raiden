@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import gevent.lock
 import structlog
 
 from raiden.transfer.architecture import StateManager
@@ -39,6 +40,12 @@ class WriteAheadLog:
         self.state_change_id = None
         self.storage = storage
 
+        # The state changes must be applied in the same order as they are saved
+        # to the WAL. Because writing to the database context switches, and the
+        # scheduling is undertermined, a lock is necessary to protect the
+        # execution order.
+        self._lock = gevent.lock.Semaphore()
+
     def log_and_dispatch(self, state_change):
         """ Log and apply a state change.
 
@@ -48,14 +55,15 @@ class WriteAheadLog:
 
         Events produced by applying state change are also saved.
         """
-        timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
 
-        state_change_id = self.storage.write_state_change(state_change, timestamp)
-        self.state_change_id = state_change_id
+        with self._lock:
+            timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
+            state_change_id = self.storage.write_state_change(state_change, timestamp)
+            self.state_change_id = state_change_id
 
-        events = self.state_manager.dispatch(state_change)
+            events = self.state_manager.dispatch(state_change)
 
-        self.storage.write_events(state_change_id, events, timestamp)
+            self.storage.write_events(state_change_id, events, timestamp)
 
         return events
 
@@ -65,12 +73,13 @@ class WriteAheadLog:
         Snapshots are used to restore the application state, either after a
         restart or a crash.
         """
-        current_state = self.state_manager.current_state
-        state_change_id = self.state_change_id
+        with self._lock:
+            current_state = self.state_manager.current_state
+            state_change_id = self.state_change_id
 
-        # otherwise no state change was dispatched
-        if state_change_id:
-            self.storage.write_state_snapshot(state_change_id, current_state)
+            # otherwise no state change was dispatched
+            if state_change_id:
+                self.storage.write_state_snapshot(state_change_id, current_state)
 
     @property
     def version(self):
