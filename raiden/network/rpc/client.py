@@ -36,10 +36,18 @@ def discover_next_available_nonce(web3, address):
     """Returns the next available nonce for `address`."""
 
     # The nonces of the mempool transactions are considered used, and it's
-    # assumed these transactions are different from the ones currenlty pending
+    # assumed these transactions are different from the ones currently pending
     # in the client. This is a simplification, otherwise it would be necessary
     # to filter the local pending transactions based on the mempool.
     pool = web3.txpool.inspect or {}
+
+    # pool is roughly:
+    #
+    # {'queued': {'account1': {nonce1: ... nonce2: ...}, 'account2': ...}, 'pending': ...}
+    #
+    # Pending refers to the current block and if it contains transactions from
+    # the user, these will be the younger transactions. Because this needs the
+    # largest nonce, queued is checked first.
 
     queued = pool.get('queued', {}).get(address)
     if queued:
@@ -50,7 +58,7 @@ def discover_next_available_nonce(web3, address):
         return max(pending.keys()) + 1
 
     # The first valid nonce is 0, therefore the count is already the next
-    # avaiable nonce
+    # available nonce
     return web3.eth.getTransactionCount(to_checksum_address(address), 'latest')
 
 
