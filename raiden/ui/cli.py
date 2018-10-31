@@ -475,6 +475,10 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     report_file = mktemp(suffix='.log')
     configure_logging({'': 'DEBUG'}, log_file=report_file)
+    click.secho(
+        f'Report file: {report_file}',
+        fg='yellow',
+    )
 
     def append_report(subject, data):
         with open(report_file, 'a', encoding='UTF-8') as handler:
@@ -578,9 +582,9 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             append_report('Ethereum stdout', out)
             append_report('Ethereum stderr', err)
         if success:
-            print_step(f'Smoketest successful, report was written to {report_file}')
+            print_step(f'Smoketest successful')
         else:
-            print_step(f'Smoketest had errors, report was written to {report_file}', error=True)
+            print_step(f'Smoketest had errors', error=True)
         return success
 
     if args['transport'] == 'udp':
