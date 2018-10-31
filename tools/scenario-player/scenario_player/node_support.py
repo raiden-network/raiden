@@ -249,7 +249,7 @@ class NodeRunner:
 
     @property
     def base_url(self):
-        return self._api_address
+        return self.api_address
 
     @property
     def eth_rpc_endpoint(self):
