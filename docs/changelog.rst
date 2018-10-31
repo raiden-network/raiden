@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`2934` Don't send unecessary register secret transactions.
+
 * :release:`0.15.1 <2018-11-03>`
 * :bug:`2933` Raiden can now recover from crashes/restarts when there are pending onchain transactions.
 
