@@ -3,7 +3,7 @@ import random
 import string
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
-from raiden.messages import DirectTransfer, Lock, LockedTransfer, RefundTransfer
+from raiden.messages import Lock, LockedTransfer, RefundTransfer
 from raiden.tests.utils.factories import UNIT_CHAIN_ID, UNIT_CHANNEL_ID, make_privkey_address
 from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
@@ -165,35 +165,4 @@ def make_mediated_transfer(
         target=target,
         initiator=initiator,
         fee=fee,
-    )
-
-
-def make_direct_transfer(
-        message_identifier=None,
-        payment_identifier=0,
-        nonce=1,
-        registry_address=ADDRESS,
-        token=ADDRESS,
-        channel_identifier=UNIT_CHANNEL_ID,
-        transferred_amount=0,
-        locked_amount=0,
-        recipient=ADDRESS,
-        locksroot=EMPTY_MERKLE_ROOT,
-):
-
-    if message_identifier is None:
-        message_identifier = random.randint(0, UINT64_MAX)
-
-    return DirectTransfer(
-        chain_id=UNIT_CHAIN_ID,
-        message_identifier=message_identifier,
-        payment_identifier=payment_identifier,
-        nonce=nonce,
-        token_network_address=registry_address,
-        token=token,
-        channel_identifier=channel_identifier,
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        recipient=recipient,
-        locksroot=locksroot,
     )

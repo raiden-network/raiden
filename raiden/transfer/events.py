@@ -535,50 +535,6 @@ class EventPaymentReceivedSuccess(Event):
         return restored
 
 
-class EventTransferReceivedInvalidDirectTransfer(Event):
-    """ Event emitted when an invalid direct transfer is received. """
-
-    def __init__(self, identifier: typing.PaymentID, reason: str):
-        self.identifier = identifier
-        self.reason = reason
-
-    def __repr__(self):
-        return '<EventTransferReceivedInvalidDirectTransfer identifier:{} reason:{}>'.format(
-            self.identifier,
-            self.reason,
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, EventTransferReceivedInvalidDirectTransfer) and
-            self.identifier == other.identifier and
-            self.reason == other.reason
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
-        result = {
-            'identifier': str(self.identifier),
-            'reason': self.reason,
-        }
-
-        return result
-
-    @classmethod
-    def from_dict(
-            cls,
-            data: typing.Dict[str, typing.Any],
-    )-> 'EventTransferReceivedInvalidDirectTransfer':
-        restored = cls(
-            identifier=int(data['identifier']),
-            reason=data['reason'],
-        )
-
-        return restored
-
-
 class EventInvalidReceivedTransferRefund(Event):
     """ Event emitted when an invalid refund transfer is received. """
 
@@ -762,77 +718,6 @@ class EventInvalidReceivedUnlock(Event):
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
             reason=data['reason'],
-        )
-
-        return restored
-
-
-class SendDirectTransfer(SendMessageEvent):
-    """ Event emitted when a direct transfer message must be sent. """
-
-    def __init__(
-            self,
-            recipient: typing.Address,
-            channel_identifier: typing.ChannelID,
-            message_identifier: typing.MessageID,
-            payment_identifier: typing.PaymentID,
-            balance_proof: BalanceProofUnsignedState,
-            token_address: typing.TokenAddress,
-    ):
-
-        super().__init__(recipient, channel_identifier, message_identifier)
-
-        self.payment_identifier = payment_identifier
-        self.balance_proof = balance_proof
-        self.token = token_address
-
-    def __repr__(self):
-        return (
-            '<'
-            'SendDirectTransfer msgid:{} paymentid:{} balance_proof:{}'
-            ' token:{} recipient:{}'
-            '>'
-        ).format(
-            self.message_identifier,
-            self.payment_identifier,
-            self.balance_proof,
-            pex(self.token),
-            pex(self.recipient),
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, SendDirectTransfer) and
-            self.payment_identifier == other.payment_identifier and
-            self.balance_proof == other.balance_proof and
-            self.token == other.token and
-            super().__eq__(other)
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
-        result = {
-            'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': str(self.queue_identifier.channel_identifier),
-            'message_identifier': str(self.message_identifier),
-            'payment_identifier': str(self.payment_identifier),
-            'balance_proof': self.balance_proof,
-            'token_address': to_checksum_address(self.token),
-        }
-
-        return result
-
-    @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendDirectTransfer':
-        restored = cls(
-            recipient=to_canonical_address(data['recipient']),
-            channel_identifier=int(data['channel_identifier']),
-            message_identifier=int(data['message_identifier']),
-            payment_identifier=int(data['payment_identifier']),
-            balance_proof=data['balance_proof'],
-            token_address=to_canonical_address(data['token_address']),
         )
 
         return restored

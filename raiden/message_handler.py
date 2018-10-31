@@ -2,7 +2,6 @@ import structlog
 
 from raiden.messages import (
     Delivered,
-    DirectTransfer,
     LockedTransfer,
     LockExpired,
     Message,
@@ -49,8 +48,6 @@ class MessageHandler:
             self.handle_message_secret(raiden, message)
         elif type(message) == LockExpired:
             self.handle_message_lockexpired(raiden, message)
-        elif type(message) == DirectTransfer:
-            self.handle_message_directtransfer(raiden, message)
         elif type(message) == RefundTransfer:
             self.handle_message_refundtransfer(raiden, message)
         elif type(message) == LockedTransfer:
@@ -130,19 +127,6 @@ class MessageHandler:
             )
 
         raiden.handle_state_change(state_change)
-
-    def handle_message_directtransfer(self, raiden: RaidenService, message: DirectTransfer):
-        token_network_identifier = message.token_network_address
-        balance_proof = balanceproof_from_envelope(message)
-
-        direct_transfer = ReceiveTransferDirect(
-            token_network_identifier,
-            message.message_identifier,
-            message.payment_identifier,
-            balance_proof,
-        )
-
-        raiden.handle_state_change(direct_transfer)
 
     def handle_message_lockedtransfer(self, raiden: RaidenService, message: LockedTransfer):
         secret_hash = message.lock.secrethash
