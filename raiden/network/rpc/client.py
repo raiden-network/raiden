@@ -69,7 +69,7 @@ def discover_next_available_nonce(
 
     # The first valid nonce is 0, therefore the count is already the next
     # available nonce
-    return web3.eth.getTransactionCount(to_checksum_address(address), 'latest')
+    return web3.eth.getTransactionCount(address, 'latest')
 
 
 def check_address_has_code(
