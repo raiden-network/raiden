@@ -18,6 +18,6 @@ def pytest_generate_tests(metafunc):
             if 'public_and_private_rooms' in metafunc.fixturenames:
                 transport_and_privacy.extend([('matrix', False), ('matrix', True)])
             else:
-                transport_and_privacy.append(('matrix', True))
+                transport_and_privacy.append(('matrix', False))
 
         metafunc.parametrize('transport,private_rooms', transport_and_privacy)
