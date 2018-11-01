@@ -32,8 +32,18 @@ from raiden.utils.solc import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def discover_next_available_nonce(web3, address):
+def discover_next_available_nonce(
+        web3: Web3,
+        address: typing.Address,
+        client_version: str,
+) -> typing.Nonce:
     """Returns the next available nonce for `address`."""
+
+    if client_version.startswith('Parity'):
+        return int(web3.manager.request_blocking(
+            "parity_nextNonce",
+            [address],
+        ), 16)
 
     # The nonces of the mempool transactions are considered used, and it's
     # assumed these transactions are different from the ones currently pending
@@ -193,7 +203,11 @@ class JSONRPCClient:
 
         address = privatekey_to_address(privkey)
 
-        available_nonce = discover_next_available_nonce(web3, to_checksum_address(address))
+        available_nonce = discover_next_available_nonce(
+            web3,
+            to_checksum_address(address),
+            version,
+        )
 
         self.eth_node = eth_node
         self.privkey = privkey
