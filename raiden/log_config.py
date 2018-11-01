@@ -217,7 +217,7 @@ def configure_logging(
                 },
                 'debug': {
                     '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': _chain(structlog.dev.ConsoleRenderer(colors=False), redact),
+                    'processor': _chain(structlog.processors.JSONRenderer(), redact),
                     'foreign_pre_chain': processors,
                 },
             },
