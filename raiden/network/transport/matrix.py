@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
@@ -44,6 +45,7 @@ from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialize import JSONSerializer
 from raiden.transfer import views
+from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
@@ -60,7 +62,9 @@ from raiden.utils.typing import (
     Callable,
     Dict,
     Iterable,
+    Iterator,
     List,
+    NamedTuple,
     NewType,
     Optional,
     Set,
@@ -87,12 +91,150 @@ class UserPresence(Enum):
 _JOIN_RETRIES = 5
 
 
+class _RetryQueue(Runnable):
+    """ A helper Runnable to send batched messages to receiver through transport """
+
+    class _MessageData(NamedTuple):
+        """ Small helper data structure for message queue """
+        queue_identifier: QueueIdentifier
+        message: Message
+        text: str
+        # generator that tells if the message should be sent now
+        expiration_generator: Iterator[bool]
+
+    def __init__(self, transport: 'MatrixTransport', receiver: Address):
+        self.transport = transport
+        self.receiver = receiver
+        self._message_queue: List[_RetryQueue._MessageData] = list()
+        self._notify_event = gevent.event.Event()
+        self._lock = gevent.lock.Semaphore()
+        super().__init__()
+
+    @staticmethod
+    def _expiration_generator(
+            timeout_generator: Iterable[float],
+            now: Callable[[], float]=time.time,
+    ) -> Iterator[bool]:
+        """Stateful generator that yields True if more than timeout has passed since previous True,
+        False otherwise.
+
+        Helper method to tell when a message needs to be retried (more than timeout seconds
+        passed since last time it was sent).
+        timeout is iteratively fetched from timeout_generator
+        First value is True to always send message at least once
+        """
+        for timeout in timeout_generator:
+            _next = now() + timeout  # next value is now + next generated timeout
+            yield True
+            while now() < _next:  # yield False while next is still in the future
+                yield False
+
+    def enqueue(self, queue_identifier: QueueIdentifier, message: Message):
+        """ Enqueue a message to be sent, and notify main loop """
+        assert queue_identifier.recipient == self.receiver
+        with self._lock:
+            already_queued = any(
+                queue_identifier == data.queue_identifier and message == data.message
+                for data in self._message_queue
+            )
+            if already_queued:
+                return
+            timeout_generator = udp_utils.timeout_exponential_backoff(
+                self.transport._config['retries_before_backoff'],
+                self.transport._config['retry_interval'],
+                self.transport._config['retry_interval'] * 10,
+            )
+            expiration_generator = self._expiration_generator(timeout_generator)
+            self._message_queue.append(_RetryQueue._MessageData(
+                queue_identifier=queue_identifier,
+                message=message,
+                text=JSONSerializer.serialize(message),
+                expiration_generator=expiration_generator,
+            ))
+        self.notify()
+
+    def enqueue_global(self, message: Message):
+        """ Helper to enqueue a message in the global queue (e.g. Delivered) """
+        self.enqueue(
+            queue_identifier=QueueIdentifier(
+                recipient=self.receiver,
+                channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+            ),
+            message=message,
+        )
+
+    def notify(self):
+        """ Notify main loop to check if anything needs to be sent """
+        with self._lock:
+            self._notify_event.set()
+
+    def _check_and_send(self):
+        """Check and send all pending/queued messages that are not waiting on retry timeout
+
+        After composing the to-be-sent message, also message queue from messages that are not
+        present in the respective SendMessageEvent queue anymore
+        """
+        if self.transport._stop_event.ready() or not self.transport.greenlet:
+            return
+        status = self.transport._address_to_presence.get(self.receiver)
+        if status not in self.transport._reachable:
+            # if partner is not reachable, return
+            return
+        # sort output by channel_identifier (so global/unordered queue goes first)
+        # inside queue, preserve order in which messages were enqueued
+        ordered_queue = sorted(
+            self._message_queue,
+            key=lambda d: d.queue_identifier.channel_identifier,
+        )
+        texts = [
+            data.text
+            for data in ordered_queue
+            # if expired_gen generator yields False, message was sent recently, so skip it
+            if next(data.expiration_generator)
+        ]
+
+        # clean after composing, so any queued messages (e.g. Delivered) are sent at least once
+        # iterate in reverse order to safely pop from list
+        for i in range(len(self._message_queue) - 1, -1, -1):
+            data = self._message_queue[i]
+            keep = (  # keep if it's still in the respective queue
+                data.queue_identifier in self.transport._queueids_to_queues and
+                hasattr(data.message, 'message_identifier') and
+                any(
+                    send_event.message_identifier == data.message.message_identifier
+                    for send_event in self.transport._queueids_to_queues[data.queue_identifier]
+                )
+            )
+            if not keep:
+                self._message_queue.pop(i)
+
+        if texts:
+            self.transport._send_raw(self.receiver, '\n'.join(texts))
+
+    def _run(self):
+        # run while transport parent is running
+        while not self.transport._stop_event.ready():
+            # once entered the critical section, block any other enqueue or notify attempt
+            with self._lock:
+                self._notify_event.clear()
+                self._check_and_send()
+            # wait up to retry_interval (or to be notified) before checking again
+            if not self._notify_event.wait(self.transport._config['retry_interval']):
+                gevent.idle()  # if timed out without notify, wait until idle
+
+    def stop(self):
+        """ Simply notify, as stop is controled by transport._stop_event """
+        self.notify()
+
+
 class MatrixTransport(Runnable):
     _room_prefix = 'raiden'
     _room_sep = '_'
     _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
     _addresses_cache = LRUCache(512)  # deterministic thus shared
     log = log
+    # set of reachable statuses
+    _reachable = {UserPresence.ONLINE, UserPresence.UNAVAILABLE}
 
     def __init__(self, config: dict):
         super().__init__()
@@ -142,6 +284,7 @@ class MatrixTransport(Runnable):
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_presence: Dict[Address, UserPresence] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
+        self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
 
         self._discovery_room_alias = None
 
@@ -183,6 +326,10 @@ class MatrixTransport(Runnable):
         self.greenlets = [self._client.sync_thread]
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
+        # (re)start any _RetryQueue which was initialized before start
+        for retrier in self._address_to_retrier.values():
+            if not retrier:
+                retrier.start()
 
         self.log.debug('Matrix started', config=self._config)
 
@@ -210,11 +357,16 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return
         self._stop_event.set()
+
+        for retrier in self._address_to_retrier.values():
+            if retrier:
+                retrier.stop()
+
         self._client.set_presence_state(UserPresence.OFFLINE.value)
 
         self._client.stop_listener_thread()  # stop sync_thread, wait client's greenlets
         # wait own greenlets, no need to get on them, exceptions should be raised in _run()
-        gevent.wait(self.greenlets)
+        gevent.wait(self.greenlets + [r.greenlet for r in self._address_to_retrier.values()])
         self._client.logout()
         self.log.debug('Matrix stopped', config=self._config)
         del self.log
@@ -278,9 +430,7 @@ class MatrixTransport(Runnable):
         queue_identifier: QueueIdentifier,
         message: Message,
     ):
-        if self._stop_event.ready():
-            return
-
+        # even if transport is not started, can run to enqueue messages to send when it starts
         message_id = message.message_identifier
         receiver_address = queue_identifier.recipient
 
@@ -713,83 +863,45 @@ class MatrixTransport(Runnable):
             sender=pex(message.sender),
         )
 
-        def send_delivered_for(message: SignedMessage):
-            delivered_message = Delivered(message.message_identifier)
-            self._raiden_service.sign(delivered_message)
-            self._send_raw(message.sender, JSONSerializer.serialize(delivered_message))
-
         try:
             # TODO: Maybe replace with Matrix read receipts.
             #       Unfortunately those work on an 'up to' basis, not on individual messages
             #       which means that message order is important which isn't guaranteed between
             #       federated servers.
             #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
-            self._spawn(send_delivered_for, message)
+            delivered_message = Delivered(message.message_identifier)
+            self._raiden_service.sign(delivered_message)
+            retrier = self._get_retrier(message.sender)
+            retrier.enqueue_global(delivered_message)
             self._raiden_service.on_message(message)
 
         except (InvalidAddress, UnknownAddress, UnknownTokenAddress):
             self.log.warning('Exception while processing message', exc_info=True)
             return
 
+    def _get_retrier(self, receiver: Address) -> _RetryQueue:
+        """ Construct and return a _RetryQueue for receiver """
+        if receiver not in self._address_to_retrier:
+            retrier = _RetryQueue(transport=self, receiver=receiver)
+            self._address_to_retrier[receiver] = retrier
+            if not self._stop_event.ready():
+                retrier.start()
+        return self._address_to_retrier[receiver]
+
     def _send_with_retry(
         self,
         queue_identifier: QueueIdentifier,
         message: Message,
     ):
-        data = json.dumps(message.to_dict())
-        message_id = message.message_identifier
-        receiver_address = queue_identifier.recipient
-        reachable = {UserPresence.ONLINE, UserPresence.UNAVAILABLE}
-
-        def retry():
-            timeout_generator = udp_utils.timeout_exponential_backoff(
-                self._config['retries_before_backoff'],
-                self._config['retry_interval'],
-                self._config['retry_interval'] * 10,
-            )
-            for delay in timeout_generator:
-                status = self._address_to_presence.get(receiver_address)
-                if status in reachable:
-                    self._send_raw(receiver_address, data)
-                else:
-                    self.log.debug(
-                        'Skipping send to unreachable node',
-                        receiver=pex(receiver_address),
-                        status=status,
-                        message=message,
-                        queue=queue_identifier,
-                    )
-                # equivalent of gevent.sleep, but bails out when stopping
-                if self._stop_event.wait(delay):
-                    break
-                # retry while our queue is valid
-                if queue_identifier not in self._queueids_to_queues:
-                    self.log.debug(
-                        'Queue cleaned, stop retrying',
-                        message=message,
-                        queue=queue_identifier,
-                        queueids_to_queues={
-                            str(k): v for k, v in self._queueids_to_queues.items()
-                        },
-                    )
-                    break
-                # retry while the message is in queue
-                # Delivered and Processed messages should eventually remove them
-                message_in_queue = any(
-                    message_id == event.message_identifier
-                    for event in self._queueids_to_queues[queue_identifier]
-                )
-                if not message_in_queue:
-                    break
-
-        self._spawn(retry)
+        retrier = self._get_retrier(queue_identifier.recipient)
+        retrier.enqueue(queue_identifier=queue_identifier, message=message)
 
     def _send_immediate(
         self,
         queue_identifier: QueueIdentifier,
         message: Message,
     ):
-        data = json.dumps(message.to_dict())
+        data = JSONSerializer.serialize(message)
         receiver_address = queue_identifier.recipient
 
         self._send_raw(receiver_address, data)
@@ -1005,14 +1117,17 @@ class MatrixTransport(Runnable):
         )
         self._address_to_presence[address] = new_state
 
-        if new_state is UserPresence.UNKNOWN:
-            reachability = NODE_NETWORK_UNKNOWN
-        elif new_state is UserPresence.OFFLINE:
-            reachability = NODE_NETWORK_UNREACHABLE
-        else:
+        # The Matrix presence status 'unavailable' just means that the user has been inactive
+        # for a while. So a user with UserPresence.UNAVAILABLE is still 'reachable' to us.
+        if new_state in self._reachable:
             reachability = NODE_NETWORK_REACHABLE
-            # The Matrix presence status 'unavailable' just means that the user has been inactive
-            # for a while. So a user with UserPresence.UNAVAILABLE is still 'reachable' to us.
+            # _QueueRetry.notify when partner comes online
+            if address in self._address_to_retrier:
+                self._address_to_retrier[address].notify()
+        elif new_state is UserPresence.UNKNOWN:
+            reachability = NODE_NETWORK_UNKNOWN
+        else:
+            reachability = NODE_NETWORK_UNREACHABLE
 
         state_change = ActionChangeNodeNetworkState(address, reachability)
         self._raiden_service.handle_state_change(state_change)
