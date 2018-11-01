@@ -306,7 +306,7 @@ def database_paths(tmpdir, private_keys):
 
 @pytest.fixture
 def private_rooms():
-    return True
+    return False
 
 
 @pytest.fixture
