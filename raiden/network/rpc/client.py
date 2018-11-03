@@ -32,6 +32,46 @@ from raiden.utils.solc import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def discover_next_available_nonce(
+        web3: Web3,
+        address: typing.Address,
+        client_version: str,
+) -> typing.Nonce:
+    """Returns the next available nonce for `address`."""
+
+    if client_version.startswith('Parity'):
+        return int(web3.manager.request_blocking(
+            "parity_nextNonce",
+            [address],
+        ), 16)
+
+    # The nonces of the mempool transactions are considered used, and it's
+    # assumed these transactions are different from the ones currently pending
+    # in the client. This is a simplification, otherwise it would be necessary
+    # to filter the local pending transactions based on the mempool.
+    pool = web3.txpool.inspect or {}
+
+    # pool is roughly:
+    #
+    # {'queued': {'account1': {nonce1: ... nonce2: ...}, 'account2': ...}, 'pending': ...}
+    #
+    # Pending refers to the current block and if it contains transactions from
+    # the user, these will be the younger transactions. Because this needs the
+    # largest nonce, queued is checked first.
+
+    queued = pool.get('queued', {}).get(address)
+    if queued:
+        return max(queued.keys()) + 1
+
+    pending = pool.get('pending', {}).get(address)
+    if pending:
+        return max(pending.keys()) + 1
+
+    # The first valid nonce is 0, therefore the count is already the next
+    # available nonce
+    return web3.eth.getTransactionCount(address, 'latest')
+
+
 def check_address_has_code(
         client: 'JSONRPCClient',
         address: typing.Address,
@@ -135,7 +175,6 @@ class JSONRPCClient:
         host: Ethereum node host address.
         port: Ethereum node port number.
         privkey: Local user private key, used to sign transactions.
-        nonce_offset: Network's default base nonce number.
     """
 
     def __init__(
@@ -143,7 +182,6 @@ class JSONRPCClient:
             web3: Web3,
             privkey: bytes,
             gas_price_strategy: typing.Callable = rpc_gas_price_strategy,
-            nonce_offset: int = 0,
             block_num_confirmations: int = 0,
     ):
         if privkey is None or len(privkey) != 32:
@@ -164,8 +202,12 @@ class JSONRPCClient:
         _, eth_node = is_supported_client(version)
 
         address = privatekey_to_address(privkey)
-        transaction_count = web3.eth.getTransactionCount(to_checksum_address(address), 'pending')
-        _available_nonce = transaction_count + nonce_offset
+
+        available_nonce = discover_next_available_nonce(
+            web3,
+            to_checksum_address(address),
+            version,
+        )
 
         self.eth_node = eth_node
         self.privkey = privkey
@@ -173,14 +215,13 @@ class JSONRPCClient:
         self.web3 = web3
         self.default_block_num_confirmations = block_num_confirmations
 
-        self._available_nonce = _available_nonce
+        self._available_nonce = available_nonce
         self._nonce_lock = Semaphore()
-        self._nonce_offset = nonce_offset
 
         log.debug(
             'JSONRPCClient created',
             node=pex(self.address),
-            available_nonce=_available_nonce,
+            available_nonce=available_nonce,
             client=version,
         )
 
