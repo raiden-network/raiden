@@ -4,7 +4,7 @@ const Worker = require('webworker-threads').Worker;
 const remote = require('electron').remote;
 const fs = remote.require("fs")
 const Web3 = require("web3")
-const mainnet = ['0.15.0']
+const mainnet = []
 //Confirm the installation
 function confirmInstallation() {
 	window.location = "pages/installation.html"
@@ -24,7 +24,7 @@ function confirmUpgrade() {
 		let oldVersion = fs.readFileSync('/home/' + user + '/.raiden/version').toString();
 		let newVersion = fs.readFileSync('./version').toString();
 		if(mainnet.includes(newVersion) && !mainnet.includes(oldVersion)){
-			alert("detected different network between, " + oldVersion + "(ropsten) and " + newVersion + "(mainnet), therefore you need to fill the installation form");
+			alert("detected different network between, " + oldVersion + "(ropsten) and " + newVersion + "(mainnet), therefore you may need to fill the installation form");
 			confirmReinstallation();
 		} else if(!mainnet.includes(newVersion) && mainnet.includes(oldVersion)){
 			alert("detected different network between, " + oldVersion + "(mainnet) and " + newVersion + "(ropsten), therefore you need to fill the installation form");
