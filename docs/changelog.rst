@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.15.1 <2018-11-03>`
 * :bug:`2933` Raiden can now recover from crashes/restarts when there are pending onchain transactions.
 
 * :release:`0.15.0 <2018-10-27>`
