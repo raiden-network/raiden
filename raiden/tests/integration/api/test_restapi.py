@@ -11,7 +11,7 @@ from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
 from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import assert_dicts_are_equal
-from raiden.tests.utils.client import burn_all_eth
+from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import must_have_event, must_have_events
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import direct_transfer
@@ -476,7 +476,7 @@ def test_api_open_and_deposit_channel(
     assert_dicts_are_equal(response, expected_response)
 
     # finally let's burn all eth and try to open another channel
-    burn_all_eth(test_api_server.rest_api.raiden_api.raiden)
+    burn_eth(test_api_server.rest_api.raiden_api.raiden)
     channel_data_obj = {
         'partner_address': '0xf3AF96F89b3d7CdcBE0C083690A28185Feb0b3CE',
         'token_address': to_checksum_address(token_address),
@@ -602,7 +602,7 @@ def test_api_close_insufficient_eth(
     assert_dicts_are_equal(response, expected_response)
 
     # let's burn all eth and try to close the channel
-    burn_all_eth(test_api_server.rest_api.raiden_api.raiden)
+    burn_eth(test_api_server.rest_api.raiden_api.raiden)
     request = grequests.patch(
         api_url_for(
             test_api_server,
@@ -1056,7 +1056,7 @@ def test_register_token(
     assert_response_with_error(conflict_response, HTTPStatus.CONFLICT)
 
     # Burn all the eth and then make sure we get the appropriate API error
-    burn_all_eth(app0.raiden)
+    burn_eth(app0.raiden)
     poor_request = grequests.put(api_url_for(
         test_api_server,
         'registertokenresource',
@@ -1141,7 +1141,7 @@ def test_get_connection_managers_info(test_api_server, token_addresses):
 def test_connect_insufficient_reserve(test_api_server, token_addresses):
 
     # Burn all eth and then try to connect to a token network
-    burn_all_eth(test_api_server.rest_api.raiden_api.raiden)
+    burn_eth(test_api_server.rest_api.raiden_api.raiden)
     funds = 100
     token_address1 = to_checksum_address(token_addresses[0])
     connect_data_obj = {
