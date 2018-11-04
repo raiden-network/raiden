@@ -4,7 +4,7 @@ import pytest
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import AlreadyRegisteredTokenAddress, InsufficientFunds, InvalidAddress
-from raiden.tests.utils.client import burn_all_eth
+from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import (
@@ -14,6 +14,10 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
+from raiden.utils.gas_reserve import (
+    GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
+    get_required_gas_estimate,
+)
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN, ChannelEvent
 
 # Use a large enough settle timeout to have valid transfer messages
@@ -82,7 +86,7 @@ def test_register_token_insufficient_eth(raiden_network, token_amount, contract_
     assert token_address not in api1.get_tokens_list(registry_address)
 
     # app1.raiden loses all its ETH because it has been naughty
-    burn_all_eth(app1.raiden)
+    burn_eth(app1.raiden)
 
     # At this point we should get the InsufficientFunds exception
     with pytest.raises(InsufficientFunds):
@@ -297,3 +301,32 @@ def test_insufficient_funds(raiden_network, token_addresses, deposit):
         target=app1.raiden.address,
     )
     assert not result
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_funds_check_for_openchannel(raiden_network, token_addresses, deposit):
+    """Reproduces issue 2923"""
+    app0, app1, app2 = raiden_network
+    token_address = token_addresses[0]
+
+    gas = get_required_gas_estimate(raiden=app0.raiden, channels_to_open=1)
+    gas = round(gas * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
+    api0 = RaidenAPI(app0.raiden)
+    burn_eth(
+        raiden_service=app0.raiden,
+        amount_to_leave=gas + 50000,
+    )
+
+    partners = [app1.raiden.address, app2.raiden.address]
+
+    greenlets = [
+        gevent.spawn(
+            api0.channel_open,
+            app0.raiden.default_registry.address,
+            token_address,
+            partner,
+        )
+        for partner in partners
+    ]
+    gevent.joinall(greenlets, raise_error=True)

@@ -103,9 +103,29 @@ def _get_required_gas_estimate_for_state(raiden) -> int:
     return gas_estimate
 
 
+def get_required_gas_estimate(
+        raiden,
+        channels_to_open: int = 0,
+) -> int:
+    gas_estimate = _get_required_gas_estimate_for_state(raiden)
+    gas_estimate += _get_required_gas_estimate(new_channels=channels_to_open)
+    return gas_estimate
+
+
+def get_reserve_estimate(
+        raiden,
+        channels_to_open: int = 0,
+) -> int:
+    gas_estimate = get_required_gas_estimate(raiden, channels_to_open)
+    gas_price = raiden.chain.client.gas_price()
+    reserve_amount = gas_estimate * gas_price
+
+    return round(reserve_amount * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
+
+
 def has_enough_gas_reserve(
-    raiden,
-    channels_to_open: int = 0,
+        raiden,
+        channels_to_open: int = 0,
 ) -> Tuple[bool, int]:
     """ Checks if the account has enough balance to handle the lifecycles of all
     open channels as well as the to be created channels.
@@ -121,13 +141,7 @@ def has_enough_gas_reserve(
         the remaining lifecycle events and the estimate for the remaining
         lifecycle cost
     """
-    gas_estimate = _get_required_gas_estimate_for_state(raiden)
-    gas_estimate += _get_required_gas_estimate(new_channels=channels_to_open)
-
-    gas_price = raiden.chain.client.gas_price()
-    reserve_amount = gas_estimate * gas_price
-
-    secure_reserve_estimate = round(reserve_amount * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
+    secure_reserve_estimate = get_reserve_estimate(raiden, channels_to_open)
     current_account_balance = raiden.chain.client.balance(raiden.chain.client.address)
 
     return secure_reserve_estimate <= current_account_balance, secure_reserve_estimate
