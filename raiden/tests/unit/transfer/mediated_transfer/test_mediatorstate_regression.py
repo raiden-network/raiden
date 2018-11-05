@@ -340,7 +340,7 @@ def test_regression_mediator_task_no_routes():
 
     payer_channel = factories.make_channel(
         partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
+        partner_address=HOP2,
         token_address=UNIT_TOKEN_ADDRESS,
     )
     payer_route = factories.route_from_channel(payer_channel)
@@ -352,6 +352,8 @@ def test_regression_mediator_task_no_routes():
         target,
         expiration,
         UNIT_SECRET,
+        pkey=HOP2_KEY,
+        sender=HOP2,
     )
 
     available_routes = []
@@ -414,8 +416,8 @@ def test_regression_mediator_task_no_routes():
     )
     assert expire_block_iteration.new_state is not None
 
-    mediator.state_transition(
-        init_iteration.new_state,
+    receive_expired_iteration = mediator.state_transition(
+        expire_block_iteration.new_state,
         ReceiveLockExpired(
             sender=payer_channel.partner_state.address,
             balance_proof=balance_proof,
@@ -427,12 +429,6 @@ def test_regression_mediator_task_no_routes():
         expired_block_number,
     )
 
-    expired_iteration = mediator.state_transition(
-        initial_state,
-        init_state_change,
-        channel_map,
-        pseudo_random_generator,
-        block_number,
-    )
     msg = 'The only used channel had the lock cleared, the task must be cleared'
-    assert expired_iteration.new_state is None, msg
+    assert receive_expired_iteration.new_state is None, msg
+    assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
