@@ -260,6 +260,7 @@ class RaidenService(Runnable):
             self.db_lock = None
 
         self.event_poll_lock = gevent.lock.Semaphore()
+        self.gas_reserve_lock = gevent.lock.Semaphore()
 
     def start(self):
         """ Start the node synchronously. Raises directly if anything went wrong on startup """
