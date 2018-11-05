@@ -9,7 +9,7 @@ Changelog
 * :bug:`2933` Raiden can now recover from crashes/restarts when there are pending onchain transactions.
 
 * :release:`0.15.0 <2018-10-27>`
-* :bug:`2905` Don't cleanup mediator task if ExpireLock is not processed. Could leadto stuck channels.
+* :bug:`2905` Mediator task must wait for the expired message, not just for the lock to expire, otherwise the channel will be unsychronized.
 * :feature:`2909` Add explicit flag `--unrecoverable-error-should-crash` to control UnrecoverableError crashing behaviour.
 * :bug:`2894` Raiden will no longer miss confirmation blocks at restart and will emit the block state change only for confirmed blocks.
 * :feature:`2857` Respect the ``--environment-type`` for private chain setup.
