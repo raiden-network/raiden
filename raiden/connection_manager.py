@@ -424,6 +424,8 @@ class ConnectionManager:
         # until initial_channel_target of funded channels is met
         join_partners = (nonfunded_partners + possible_new_partners)[:n_to_join]
 
+        log.debug(f'Spawning {len(join_partners)} greenlets to join partners')
+
         greenlets = [
             gevent.spawn(self._join_partner, partner)
             for partner in join_partners
