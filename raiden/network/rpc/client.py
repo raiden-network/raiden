@@ -17,7 +17,7 @@ from web3 import Web3
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 
-from raiden.constants import NULL_ADDRESS
+from raiden import constants
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
 from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -32,18 +32,20 @@ from raiden.utils.solc import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def discover_next_available_nonce(
+def parity_discover_next_available_nonce(
         web3: Web3,
         address: typing.Address,
-        client_version: str,
 ) -> typing.Nonce:
     """Returns the next available nonce for `address`."""
+    next_nonce_encoded = web3.manager.request_blocking('parity_nextNonce', [address])
+    return int(next_nonce_encoded, 16)
 
-    if client_version.startswith('Parity'):
-        return int(web3.manager.request_blocking(
-            "parity_nextNonce",
-            [address],
-        ), 16)
+
+def geth_discover_next_available_nonce(
+        web3: Web3,
+        address: typing.Address,
+) -> typing.Nonce:
+    """Returns the next available nonce for `address`."""
 
     # The nonces of the mempool transactions are considered used, and it's
     # assumed these transactions are different from the ones currently pending
@@ -202,12 +204,29 @@ class JSONRPCClient:
         _, eth_node = is_supported_client(version)
 
         address = privatekey_to_address(privkey)
+        address_checksumed = to_checksum_address(address)
 
-        available_nonce = discover_next_available_nonce(
-            web3,
-            to_checksum_address(address),
-            version,
-        )
+        if eth_node == constants.EthClient.PARITY:
+            available_nonce = parity_discover_next_available_nonce(
+                web3,
+                address_checksumed,
+            )
+        elif eth_node == constants.EthClient.GETH:
+            available_nonce = geth_discover_next_available_nonce(
+                web3,
+                address_checksumed,
+            )
+        else:
+            warnings.warn(
+                f'The Ethereum client "{version}" does not provide an API to '
+                f'recover the latest used nonce. This may cause the Raiden node '
+                f'to error on restarts.\n'
+                f'The error will manifest while there is a pending transaction '
+                f'from a previous execution in the Ethereum\'s client pool. When '
+                f'Raiden restarts the same transaction with the same nonce will '
+                f'be retried and *rejected*, because the nonce is already used.',
+            )
+            available_nonce = web3.eth.getTransactionCount(address_checksumed, 'pending')
 
         self.eth_node = eth_node
         self.privkey = privkey
@@ -416,7 +435,7 @@ class JSONRPCClient:
         locally sign the transaction. This requires an extended server
         implementation that accepts the variables v, r, and s.
         """
-        if to == to_canonical_address(NULL_ADDRESS):
+        if to == to_canonical_address(constants.NULL_ADDRESS):
             warnings.warn('For contract creation the empty string must be used.')
 
         with self._nonce_lock:
