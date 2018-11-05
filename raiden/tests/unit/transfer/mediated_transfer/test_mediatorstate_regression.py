@@ -398,6 +398,22 @@ def test_regression_mediator_task_no_routes():
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
     expired_block_number = lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+
+    # Regression: The mediator must still be able to process the block which
+    # expires the lock
+    expire_block_iteration = mediator.state_transition(
+        init_iteration.new_state,
+        Block(
+            block_number=expired_block_number,
+            gas_limit=0,
+            block_hash=None,
+        ),
+        channel_map,
+        pseudo_random_generator,
+        expired_block_number,
+    )
+    assert expire_block_iteration.new_state is not None
+
     mediator.state_transition(
         init_iteration.new_state,
         ReceiveLockExpired(
