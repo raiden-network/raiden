@@ -374,7 +374,7 @@ def backward_transfer_pair(
             to this node.
         payer_transfer: The *latest* payer transfer which is backing the
             mediation.
-        block_number (int): The current block number.
+        block_number: The current block number.
 
     Returns:
         An empty list if there are not enough blocks to safely create a refund,
