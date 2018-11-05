@@ -284,25 +284,26 @@ class RaidenAPI:
             registry.get_token_network(token_address),
         )
 
-        has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
-            raiden=self.raiden,
-            channels_to_open=1,
-        )
-
-        if not has_enough_reserve:
-            raise InsufficientGasReserve((
-                'The account balance is below the estimated amount necessary to '
-                'finish the lifecycles of all active channels. A balance of at '
-                f'least {estimated_required_reserve} wei is required.'
-            ))
-
-        try:
-            token_network.new_netting_channel(
-                partner=partner_address,
-                settle_timeout=settle_timeout,
+        with self.raiden.gas_reserve_lock:
+            has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
+                self.raiden,
+                channels_to_open=1,
             )
-        except DuplicatedChannelError:
-            log.info('partner opened channel first')
+
+            if not has_enough_reserve:
+                raise InsufficientGasReserve((
+                    'The account balance is below the estimated amount necessary to '
+                    'finish the lifecycles of all active channels. A balance of at '
+                    f'least {estimated_required_reserve} wei is required.'
+                ))
+
+            try:
+                token_network.new_netting_channel(
+                    partner=partner_address,
+                    settle_timeout=settle_timeout,
+                )
+            except DuplicatedChannelError:
+                log.info('partner opened channel first')
 
         waiting.wait_for_newchannel(
             raiden=self.raiden,
