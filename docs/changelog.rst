@@ -2,7 +2,7 @@
 Changelog
 =========
 
-* :bug:`2951` Fallback to eth_getTransactionCount if there is not api to get the next available nonce.
+* :bug:`2951` Fallback to eth_getTransactionCount if there is no api to get the next available nonce.
 * :bug:`2934` Don't send unecessary register secret transactions.
 
 * :release:`0.15.1 <2018-11-03>`
