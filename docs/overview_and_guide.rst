@@ -172,13 +172,15 @@ After account creation, launch Raiden with the path of your keystore supplied::
 Using --eth-rpc-endpoint/Infura
 *******************************
 
+.. warning::
+    Raiden may fail during restarts when Infura is used. This can happen because Raiden does not know about transactions in the memory pool, while there are transactions waiting in the memory pool nonce conflicts will happen leading to node crashes.
+
 In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node, sign up with `Infura <https://infura.io/>`_ to get an API token. After that you can start using Raiden on Ropsten directly::
 
     raiden --keystore-path  ~/.ethereum/testnet/keystore --eth-rpc-endpoint "https://mainnet.infura.io/v3/<yourToken>"
 
 .. note::
     When you want to use a testnet you need to update the URL of the infura endpoints, e.g. for the ropsten testnet use ``https://ropsten.infura.io/v3/<yourToken>``
-
 
 Select the desired Ethereum account when prompted, and type in the account's password.
 

@@ -226,6 +226,8 @@ class JSONRPCClient:
                 f'Raiden restarts the same transaction with the same nonce will '
                 f'be retried and *rejected*, because the nonce is already used.',
             )
+            # The first valid nonce is 0, therefore the count is already the next
+            # available nonce
             available_nonce = web3.eth.getTransactionCount(address_checksumed, 'pending')
 
         self.eth_node = eth_node
