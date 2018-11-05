@@ -180,7 +180,7 @@ class RaidenAPI:
             raise InvalidAddress('token_address must be a valid address in binary')
 
         token_network_identifier = views.get_token_network_identifier_by_token_address(
-            views.state_from_raiden(self.raiden),
+            chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=registry_address,
             token_address=token_address,
         )
@@ -190,7 +190,7 @@ class RaidenAPI:
         )
 
         has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
-            self.raiden,
+            raiden=self.raiden,
             channels_to_open=initial_channel_target,
         )
 
@@ -202,7 +202,7 @@ class RaidenAPI:
             ))
 
         connection_manager.connect(
-            funds,
+            funds=funds,
             initial_channel_target=initial_channel_target,
             joinable_funds_target=joinable_funds_target,
         )
@@ -222,7 +222,7 @@ class RaidenAPI:
             raise UnknownTokenAddress('token_address unknown')
 
         token_network_identifier = views.get_token_network_identifier_by_token_address(
-            views.state_from_raiden(self.raiden),
+            chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=registry_address,
             token_address=token_address,
         )
@@ -263,10 +263,10 @@ class RaidenAPI:
 
         chain_state = views.state_from_raiden(self.raiden)
         channel_state = views.get_channelstate_for(
-            chain_state,
-            registry_address,
-            token_address,
-            partner_address,
+            chain_state=chain_state,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
         )
 
         if channel_state:
@@ -285,7 +285,7 @@ class RaidenAPI:
         )
 
         has_enough_reserve, estimated_required_reserve = has_enough_gas_reserve(
-            self.raiden,
+            raiden=self.raiden,
             channels_to_open=1,
         )
 
@@ -298,25 +298,25 @@ class RaidenAPI:
 
         try:
             token_network.new_netting_channel(
-                partner_address,
-                settle_timeout,
+                partner=partner_address,
+                settle_timeout=settle_timeout,
             )
         except DuplicatedChannelError:
             log.info('partner opened channel first')
 
         waiting.wait_for_newchannel(
-            self.raiden,
-            registry_address,
-            token_address,
-            partner_address,
-            retry_timeout,
+            raiden=self.raiden,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+            retry_timeout=retry_timeout,
         )
         chain_state = views.state_from_raiden(self.raiden)
         channel_state = views.get_channelstate_for(
-            chain_state,
-            registry_address,
-            token_address,
-            partner_address,
+            chain_state=chain_state,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
         )
 
         return channel_state.identifier
@@ -353,10 +353,10 @@ class RaidenAPI:
             registry_address,
         )
         channel_state = views.get_channelstate_for(
-            chain_state,
-            registry_address,
-            token_address,
-            partner_address,
+            chain_state=chain_state,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
         )
 
         if not is_binary_address(token_address):
@@ -372,13 +372,12 @@ class RaidenAPI:
             raise InvalidAddress('No channel with partner_address for the given token')
 
         token = self.raiden.chain.token(token_address)
-        netcontract_address = channel_state.identifier
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
         token_network_address = token_network_registry.get_token_network(token_address)
         token_network_proxy = self.raiden.chain.token_network(token_network_address)
         channel_proxy = self.raiden.chain.payment_channel(
-            token_network_proxy.address,
-            netcontract_address,
+            token_network_address=token_network_proxy.address,
+            channel_id=channel_state.identifier,
         )
 
         balance = token.balance_of(self.raiden.address)
@@ -417,13 +416,13 @@ class RaidenAPI:
 
             target_address = self.raiden.address
             waiting.wait_for_participant_newbalance(
-                self.raiden,
-                registry_address,
-                token_address,
-                partner_address,
-                target_address,
-                total_deposit,
-                retry_timeout,
+                raiden=self.raiden,
+                payment_network_id=registry_address,
+                token_address=token_address,
+                partner_address=partner_address,
+                target_address=target_address,
+                target_balance=total_deposit,
+                retry_timeout=retry_timeout,
             )
 
     def channel_close(
@@ -439,10 +438,10 @@ class RaidenAPI:
         Race condition, this can fail if channel was closed externally.
         """
         self.channel_batch_close(
-            registry_address,
-            token_address,
-            [partner_address],
-            retry_timeout,
+            registry_address=registry_address,
+            token_address=token_address,
+            partner_addresses=[partner_address],
+            retry_timeout=retry_timeout,
         )
 
     def channel_batch_close(
@@ -465,23 +464,23 @@ class RaidenAPI:
             raise InvalidAddress('Expected binary address format for partner in channel close')
 
         valid_tokens = views.get_token_network_addresses_for(
-            views.state_from_raiden(self.raiden),
-            registry_address,
+            chain_state=views.state_from_raiden(self.raiden),
+            payment_network_id=registry_address,
         )
         if token_address not in valid_tokens:
             raise UnknownTokenAddress('Token address is not known.')
 
         chain_state = views.state_from_raiden(self.raiden)
         channels_to_close = views.filter_channels_by_partneraddress(
-            chain_state,
-            registry_address,
-            token_address,
-            partner_addresses,
+            chain_state=chain_state,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_addresses=partner_addresses,
         )
         token_network_identifier = views.get_token_network_identifier_by_token_address(
-            views.state_from_raiden(self.raiden),
-            registry_address,
-            token_address,
+            chain_state=views.state_from_raiden(self.raiden),
+            payment_network_id=registry_address,
+            token_address=token_address,
         )
 
         # If concurrent operations are happening on one of the channels, fail entire
@@ -491,15 +490,15 @@ class RaidenAPI:
             # don't release the locks when their context goes out of scope
             for channel_state in channels_to_close:
                 channel = self.raiden.chain.payment_channel(
-                    token_network_identifier,
-                    channel_state.identifier,
+                    token_network_address=token_network_identifier,
+                    channel_id=channel_state.identifier,
                 )
                 stack.enter_context(channel.lock_or_raise())
 
             for channel_state in channels_to_close:
                 channel_close = ActionChannelClose(
-                    token_network_identifier,
-                    channel_state.identifier,
+                    token_network_identifier=token_network_identifier,
+                    channel_identifier=channel_state.identifier,
                 )
 
                 self.raiden.handle_state_change(channel_close)
@@ -507,11 +506,11 @@ class RaidenAPI:
         channel_ids = [channel_state.identifier for channel_state in channels_to_close]
 
         waiting.wait_for_close(
-            self.raiden,
-            registry_address,
-            token_address,
-            channel_ids,
-            retry_timeout,
+            raiden=self.raiden,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            channel_ids=channel_ids,
+            retry_timeout=retry_timeout,
         )
 
     def get_channel_list(
@@ -550,10 +549,10 @@ class RaidenAPI:
 
         if token_address and partner_address:
             channel_state = views.get_channelstate_for(
-                views.state_from_raiden(self.raiden),
-                registry_address,
-                token_address,
-                partner_address,
+                chain_state=views.state_from_raiden(self.raiden),
+                payment_network_id=registry_address,
+                token_address=token_address,
+                partner_address=partner_address,
             )
 
             if channel_state:
@@ -578,8 +577,8 @@ class RaidenAPI:
     def get_node_network_state(self, node_address: typing.Address):
         """ Returns the currently network status of `node_address`. """
         return views.get_node_network_status(
-            views.state_from_raiden(self.raiden),
-            node_address,
+            chain_state=views.state_from_raiden(self.raiden),
+            node_address=node_address,
         )
 
     def start_health_check_for(self, node_address: typing.Address):
@@ -589,8 +588,8 @@ class RaidenAPI:
     def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
         """Returns a list of tokens the node knows about"""
         tokens_list = views.get_token_network_addresses_for(
-            views.state_from_raiden(self.raiden),
-            registry_address,
+            chain_state=views.state_from_raiden(self.raiden),
+            payment_network_id=registry_address,
         )
         return tokens_list
 
@@ -607,11 +606,11 @@ class RaidenAPI:
         # pylint: disable=too-many-arguments
 
         async_result = self.transfer_async(
-            registry_address,
-            token_address,
-            amount,
-            target,
-            identifier,
+            registry_address=registry_address,
+            token_address=token_address,
+            amount=amount,
+            target=target,
+            identifier=identifier,
         )
         return async_result.wait(timeout=transfer_timeout)
 
@@ -644,7 +643,7 @@ class RaidenAPI:
             raise UnknownTokenAddress('Token address is not known.')
 
         log.debug(
-            'initiating transfer',
+            'Initiating transfer',
             initiator=pex(self.raiden.address),
             target=pex(target),
             token=pex(token_address),
@@ -654,15 +653,15 @@ class RaidenAPI:
 
         payment_network_identifier = self.raiden.default_registry.address
         token_network_identifier = views.get_token_network_identifier_by_token_address(
-            views.state_from_raiden(self.raiden),
-            payment_network_identifier,
-            token_address,
+            chain_state=views.state_from_raiden(self.raiden),
+            payment_network_id=payment_network_identifier,
+            token_address=token_address,
         )
         async_result = self.raiden.mediated_transfer_async(
-            token_network_identifier,
-            amount,
-            target,
-            identifier,
+            token_network_identifier=token_network_identifier,
+            amount=amount,
+            target=target,
+            identifier=identifier,
         )
         return async_result
 
@@ -687,9 +686,9 @@ class RaidenAPI:
         token_network_identifier = None
         if token_address:
             token_network_identifier = views.get_token_network_identifier_by_token_address(
-                views.state_from_raiden(self.raiden),
-                self.raiden.default_registry.address,
-                token_address,
+                chain_state=views.state_from_raiden(self.raiden),
+                payment_network_id=self.raiden.default_registry.address,
+                token_address=token_address,
             )
 
         events = [
@@ -714,10 +713,10 @@ class RaidenAPI:
             offset: int = None,
     ):
         timestamped_events = self.get_raiden_events_payment_history_with_timestamps(
-            token_address,
-            target_address,
-            limit,
-            offset,
+            token_address=token_address,
+            target_address=target_address,
+            limit=limit,
+            offset=offset,
         )
 
         return [event.wrapped_event for event in timestamped_events]
