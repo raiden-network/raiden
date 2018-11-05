@@ -837,6 +837,7 @@ def test_events_for_onchain_secretreveal():
     # If we are not in the unsafe region, we must NOT emit ContractSendSecretReveal
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
+        UNIT_SECRETHASH,
         transfers_pair,
         block_number - 1,
     )
@@ -845,6 +846,7 @@ def test_events_for_onchain_secretreveal():
     # If we are in the unsafe region, we must emit ContractSendSecretReveal
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
+        UNIT_SECRETHASH,
         transfers_pair,
         block_number,
     )
@@ -877,6 +879,7 @@ def test_events_for_onchain_secretreveal_once():
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
+        UNIT_SECRETHASH,
         transfers_pair,
         start_danger_zone_block_number,
     )
@@ -891,6 +894,7 @@ def test_events_for_onchain_secretreveal_once():
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
+        UNIT_SECRETHASH,
         transfers_pair,
         end_danger_zone_block_number,
     )
@@ -901,6 +905,7 @@ def test_events_for_onchain_secretreveal_once():
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
         channel_map,
+        UNIT_SECRETHASH,
         transfers_pair,
         pair.payer_transfer.lock.expiration,
     )
