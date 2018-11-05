@@ -637,3 +637,50 @@ class EventUnlockClaimFailed(Event):
         )
 
         return restored
+
+
+class EventUnexpectedSecretReveal(Event):
+    """ Event emitted when an unexpected secret reveal message is received. """
+
+    def __init__(self, secrethash: typing.SecretHash, reason: str):
+        self.secrethash = secrethash
+        self.reason = reason
+
+    def __repr__(self):
+        return (
+            f'<'
+            f'EventUnexpectedOffchainSecretReveal '
+            f'secrethash:{pex(self.secrethash)} '
+            f'reason:{self.reason}'
+            f'>'
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, EventUnexpectedSecretReveal) and
+            self.secrethash == other.secrethash and
+            self.reason == other.reason
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'secrethash': serialization.serialize_bytes(self.secrethash),
+            'reason': self.reason,
+        }
+
+        return result
+
+    @classmethod
+    def from_dict(
+            cls,
+            data: typing.Dict[str, typing.Any],
+    )-> 'EventUnexpectedOffchainSecretReveal':
+        restored = cls(
+            secrethash=serialization.deserialize_bytes(data['secrethash']),
+            reason=data['reason'],
+        )
+
+        return restored
