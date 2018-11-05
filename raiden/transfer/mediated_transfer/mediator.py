@@ -231,9 +231,16 @@ def sanity_check(state):
         assert pair.payee_state in pair.valid_payee_states
 
     for original, refund in zip(state.transfers_pair[:-1], state.transfers_pair[1:]):
-        assert is_send_transfer_almost_equal(original.payee_transfer, refund.payer_transfer)
         assert original.payee_address == refund.payer_address
-        assert original.payee_transfer.lock.expiration == refund.payer_transfer.lock.expiration
+
+        transfer_sent = original.payee_transfer
+        transfer_received = refund.payer_transfer
+        assert is_send_transfer_almost_equal(transfer_sent, transfer_received)
+
+    if state.waiting_transfer and state.transfers_pair:
+        transfer_sent = state.transfers_pair[-1].payee_transfer
+        transfer_received = state.waiting_transfer.transfer
+        assert is_send_transfer_almost_equal(transfer_sent, transfer_received)
 
 
 def clear_if_finalized(iteration, channelidentifiers_to_channels):
