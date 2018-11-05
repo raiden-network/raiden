@@ -312,7 +312,7 @@ def test_set_payee():
     assert transfers_pair[1].payee_state == 'payee_pending'
 
 
-def test_set_expired_pairs():
+def test_events_for_expired_pairs():
     """ The transfer pair must switch to expired at the right block. """
     amount = 10
     block_number = 1
@@ -325,8 +325,9 @@ def test_set_expired_pairs():
     pair = transfers_pair[0]
 
     first_unsafe_block = pair.payer_transfer.lock.expiration - UNIT_REVEAL_TIMEOUT
-    mediator.set_expired_pairs(
+    mediator.events_for_expired_pairs(
         transfers_pair,
+        None,
         first_unsafe_block,
     )
     assert pair.payee_state == 'payee_pending'
@@ -334,16 +335,18 @@ def test_set_expired_pairs():
 
     # edge case for the lock expiration
     payee_expiration_block = pair.payee_transfer.lock.expiration
-    mediator.set_expired_pairs(
+    mediator.events_for_expired_pairs(
         transfers_pair,
+        None,
         payee_expiration_block,
     )
     assert pair.payee_state == 'payee_pending'
     assert pair.payer_state == 'payer_pending'
 
     # lock expired
-    mediator.set_expired_pairs(
+    mediator.events_for_expired_pairs(
         transfers_pair,
+        None,
         payee_expiration_block + 1,
     )
     assert pair.payee_state == 'payee_expired'

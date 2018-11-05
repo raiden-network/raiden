@@ -155,6 +155,46 @@ class InitiatorTransferState(State):
         return restored
 
 
+class WaitingTransferState(State):
+    def __init__(
+            self,
+            transfer: 'LockedTransferSignedState',
+            state: str = 'waiting',
+    ):
+        self.transfer = transfer
+        self.state = state
+
+    def __repr__(self):
+        return f'<WaitingTransferState state:{self.state} transfer:{self.transfer}>'
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, WaitingTransferState) and
+            self.transfer == other.transfer and
+            self.state == other.state
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        result = {
+            'state': self.state,
+            'transfer': self.transfer,
+        }
+
+        return result
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'WaitingTransferState':
+        restored = cls(
+            transfer=data['transfer'],
+            state=data['state'],
+        )
+
+        return restored
+
+
 class MediatorTransferState(State):
     """ State of a transfer for the mediator node.
     A mediator may manage multiple channels because of refunds, but all these
@@ -172,9 +212,9 @@ class MediatorTransferState(State):
 
     def __init__(self, secrethash: typing.SecretHash):
         self.secrethash = secrethash
-        self.secret = None
+        self.secret: typing.Secret = None
         self.transfers_pair: typing.List[MediationPairState] = list()
-        self.waiting_transfer: LockedTransferSignedState = None
+        self.waiting_transfer: WaitingTransferState = None
 
     def __repr__(self):
         return '<MediatorTransferState secrethash:{} qtd_transfers:{}>'.format(

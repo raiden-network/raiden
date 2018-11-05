@@ -9,6 +9,7 @@ from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import ContractSendSecretReveal, SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    EventUnexpectedSecretReveal,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     EventUnlockFailed,
@@ -20,6 +21,7 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferUnsignedState,
     MediationPairState,
     MediatorTransferState,
+    WaitingTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
@@ -253,7 +255,8 @@ def clear_if_finalized(iteration, channelidentifiers_to_channels):
             return iteration
 
     if state.waiting_transfer:
-        waiting_channel_identifier = state.waiting_transfer.balance_proof.channel_identifier
+        waiting_transfer = state.waiting_transfer.transfer
+        waiting_channel_identifier = waiting_transfer.balance_proof.channel_identifier
         waiting_channel = channelidentifiers_to_channels[waiting_channel_identifier]
 
         if channel.is_lock_pending(waiting_channel.partner_state, secrethash):
@@ -435,6 +438,32 @@ def set_offchain_secret(state, channelidentifiers_to_channels, secret, secrethas
             secrethash,
         )
 
+    # The secret should never be revealed if `waiting_transfer` is not None.
+    # For this to happen this node must have received a transfer, which it did
+    # *not* mediate, and neverthless the secret was revealed.
+    #
+    # This can only be possible if the initiator reveals the secret without the
+    # target's secret request, or if the node which sent the `waiting_transfer`
+    # has sent another transfer which reached the target (meaning someone along
+    # the path will lose tokens).
+    if state.waiting_transfer:
+        payer_channel = channelidentifiers_to_channels[
+            state.waiting_transfer.transfer.balance_proof.channel_identifier
+        ]
+        channel.register_offchain_secret(
+            payer_channel,
+            secret,
+            secrethash,
+        )
+
+        unexpected_reveal = EventUnexpectedSecretReveal(
+            secrethash=secrethash,
+            reason='The mediator has a waiting transfer.',
+        )
+        return [unexpected_reveal]
+
+    return list()
+
 
 def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash, block_number):
     """ Set the secret to all mediated transfers.
@@ -464,17 +493,37 @@ def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash
             secret_reveal_block_number=block_number,
         )
 
+    # Like the off-chain secret reveal, the secret should never be revealed
+    # on-chain if there is a waiting transfer.
+    if state.waiting_transfer:
+        payer_channel = channelidentifiers_to_channels[
+            state.waiting_transfer.transfer.balance_proof.channel_identifier
+        ]
+        channel.register_onchain_secret(
+            channel_state=payer_channel,
+            secret=secret,
+            secrethash=secrethash,
+            secret_reveal_block_number=block_number,
+        )
+
+        unexpected_reveal = EventUnexpectedSecretReveal(
+            secrethash=secrethash,
+            reason='The mediator has a waiting transfer.',
+        )
+        return [unexpected_reveal]
+
+    return list()
+
 
 def set_offchain_reveal_state(transfers_pair, payee_address):
     """ Set the state of a transfer *sent* to a payee. """
     for pair in transfers_pair:
         if pair.payee_address == payee_address:
             pair.payee_state = 'payee_secret_revealed'
-            break
 
 
-def set_expired_pairs(transfers_pair, block_number):
-    """ Set the state transfers to the expired state and return the failed events."""
+def events_for_expired_pairs(transfers_pair, waiting_transfer, block_number):
+    """ Informational events for expired locks. """
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
     events = list()
@@ -522,6 +571,15 @@ def set_expired_pairs(transfers_pair, block_number):
                 'lock expired',
             )
             events.append(unlock_failed)
+
+    if waiting_transfer and waiting_transfer.state != 'expired':
+        waiting_transfer.state = 'expired'
+        unlock_claim_failed = EventUnlockClaimFailed(
+            waiting_transfer.transfer.payment_identifier,
+            waiting_transfer.transfer.lock.secrethash,
+            'lock expired',
+        )
+        events.append(unlock_claim_failed)
 
     return events
 
@@ -730,6 +788,9 @@ def events_for_onchain_secretreveal_if_closed(
         secrethash,
     )
 
+    # Just like the case forentering the danger zone, this will only consider
+    # the transfers which have a pair.
+
     for pending_pair in get_pending_transfer_pairs(transfers_pair):
         payer_channel = get_payer_channel(channelmap, pending_pair)
         # Don't register the secret on-chain if the channel is open or settled
@@ -750,12 +811,17 @@ def events_for_onchain_secretreveal_if_closed(
     return events
 
 
-def events_for_expired_locks(
+def events_to_remove_expired_locks(
         mediator_state: MediatorTransferState,
         channelidentifiers_to_channels: typing.ChannelMap,
         block_number: typing.BlockNumber,
         pseudo_random_generator: random.Random,
 ):
+    """ Clear the channels which have expired locks.
+
+    This only consider the *sent* transfers, received transfers can only be
+    updated by the partner.
+    """
     events = list()
 
     for transfer_pair in mediator_state.transfers_pair:
@@ -803,7 +869,7 @@ def secret_learned(
     """ Unlock the payee lock, reveal the lock to the payer, and if necessary
     register the secret on-chain.
     """
-    set_offchain_secret(
+    secret_reveal_events = set_offchain_secret(
         state,
         channelidentifiers_to_channels,
         secret,
@@ -839,7 +905,7 @@ def secret_learned(
 
     iteration = TransitionResult(
         state,
-        offchain_secret_reveal + balance_proof + onchain_secret_reveal,
+        secret_reveal_events + offchain_secret_reveal + balance_proof + onchain_secret_reveal,
     )
 
     return iteration
@@ -899,7 +965,7 @@ def mediate_transfer(
     if transfer_pair is None:
         assert not mediated_events
         mediated_events = list()
-        state.waiting_transfer = payer_transfer
+        state.waiting_transfer = WaitingTransferState(payer_transfer)
 
     else:
         # the list must be ordered from high to low expiration, expiration
@@ -964,7 +1030,7 @@ def handle_block(
     Return:
         TransitionResult: The resulting iteration
     """
-    expired_locks_events = events_for_expired_locks(
+    expired_locks_events = events_to_remove_expired_locks(
         mediator_state,
         channelidentifiers_to_channels,
         state_change.block_number,
@@ -978,8 +1044,9 @@ def handle_block(
         state_change.block_number,
     )
 
-    unlock_fail_events = set_expired_pairs(
+    unlock_fail_events = events_for_expired_pairs(
         mediator_state.transfers_pair,
+        mediator_state.waiting_transfer,
         state_change.block_number,
     )
 
@@ -1095,7 +1162,7 @@ def handle_onchain_secretreveal(
         # Compare against the block number at which the event was emitted.
         block_number = onchain_secret_reveal.block_number
 
-        set_onchain_secret(
+        secret_reveal = set_onchain_secret(
             mediator_state,
             channelidentifiers_to_channels,
             secret,
@@ -1111,7 +1178,7 @@ def handle_onchain_secretreveal(
             secret,
             secrethash,
         )
-        iteration = TransitionResult(mediator_state, balance_proof)
+        iteration = TransitionResult(mediator_state, secret_reveal + balance_proof)
     else:
         iteration = TransitionResult(mediator_state, list())
 

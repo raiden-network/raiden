@@ -374,7 +374,7 @@ def test_regression_mediator_task_no_routes():
     )
     msg = 'The task must not be cleared, even if there is no route to forward the transfer'
     assert init_iteration.new_state is not None, msg
-    assert init_iteration.new_state.waiting_transfer == payer_transfer
+    assert init_iteration.new_state.waiting_transfer.transfer == payer_transfer
     assert must_contain_entry(init_iteration.events, SendLockedTransfer, {}) is None
     assert must_contain_entry(init_iteration.events, SendRefundTransfer, {}) is None
 
