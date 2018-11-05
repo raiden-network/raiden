@@ -640,6 +640,7 @@ def events_for_balanceproof(
 
 def events_for_onchain_secretreveal_if_dangerzone(
         channelmap: typing.ChannelMap,
+        secrethash: typing.SecretHash,
         transfers_pair: typing.List[MediationPairState],
         block_number: typing.BlockNumber,
 ) -> typing.List[Event]:
@@ -648,7 +649,6 @@ def events_for_onchain_secretreveal_if_dangerzone(
     """
     events = list()
 
-    secrethash = transfers_pair[0].payer_transfer.lock.secrethash
     all_payer_channels = [
         get_payer_channel(channelmap, pair)
         for pair in transfers_pair
@@ -658,6 +658,12 @@ def events_for_onchain_secretreveal_if_dangerzone(
         transfers_pair,
         secrethash,
     )
+
+    # Only consider the transfers which have a pair. This means if we have a
+    # waiting transfer and for some reason the node knows the secret, it will
+    # not try to register it. Otherwise it would be possible for an attacker to
+    # reveal the secret late, just to force the node to send an unecessary
+    # transaction.
 
     for pair in get_pending_transfer_pairs(transfers_pair):
         payer_channel = get_payer_channel(channelmap, pair)
@@ -967,6 +973,7 @@ def handle_block(
 
     secret_reveal_events = events_for_onchain_secretreveal_if_dangerzone(
         channelidentifiers_to_channels,
+        mediator_state.secrethash,
         mediator_state.transfers_pair,
         state_change.block_number,
     )
