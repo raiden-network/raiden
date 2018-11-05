@@ -256,3 +256,21 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
         raise TypeError('Unknown TransportProtocol')
 
     gevent.joinall(wait)
+
+
+def test_regression_register_secret_once(secret_registry_address, deploy_service):
+    """Register secret transaction must not sent if the secret is already registered"""
+    # pylint: disable=protected-access
+
+    secret_registry = deploy_service.secret_registry(secret_registry_address)
+
+    secret = sha3(b'test_regression_register_secret_once')
+    secret_registry.register_secret(secret)
+
+    previous_nonce = deploy_service.client._available_nonce
+    secret_registry.register_secret(secret)
+    assert previous_nonce == deploy_service.client._available_nonce
+
+    previous_nonce = deploy_service.client._available_nonce
+    secret_registry.register_secret_batch([secret])
+    assert previous_nonce == deploy_service.client._available_nonce

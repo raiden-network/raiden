@@ -8,7 +8,7 @@ from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import typing
 
 # The latest DB version
-RAIDEN_DB_VERSION = 9
+RAIDEN_DB_VERSION = 10
 
 
 class EventRecord(typing.NamedTuple):
@@ -95,13 +95,13 @@ class SQLiteStorage:
 
         return int(query[0][0])
 
-    def write_state_change(self, state_change):
+    def write_state_change(self, state_change, log_time):
         serialized_data = self.serializer.serialize(state_change)
 
         with self.write_lock, self.conn:
             cursor = self.conn.execute(
-                'INSERT INTO state_changes(identifier, data) VALUES(null, ?)',
-                (serialized_data,),
+                'INSERT INTO state_changes(identifier, data, log_time) VALUES(null, ?, ?)',
+                (serialized_data, log_time),
             )
             last_id = cursor.lastrowid
 
