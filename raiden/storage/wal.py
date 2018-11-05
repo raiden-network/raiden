@@ -42,7 +42,7 @@ class WriteAheadLog:
 
         # The state changes must be applied in the same order as they are saved
         # to the WAL. Because writing to the database context switches, and the
-        # scheduling is undertermined, a lock is necessary to protect the
+        # scheduling is undetermined, a lock is necessary to protect the
         # execution order.
         self._lock = gevent.lock.Semaphore()
 
