@@ -327,7 +327,7 @@ def test_regression_mediator_task_no_routes():
 
     If a node receives a transfer to mediate, but there is no route available
     (because there is no sufficient capacity or the partner nodes are offline),
-    and a refund is not possible, the mediator task must no be cleared,
+    and a refund is not possible, the mediator task must not be cleared,
     otherwise followup remove expired lock messages wont be processed and the
     nodes will get out of sync.
     """
@@ -374,6 +374,7 @@ def test_regression_mediator_task_no_routes():
     )
     msg = 'The task must not be cleared, even if there is no route to forward the transfer'
     assert init_iteration.new_state is not None, msg
+    assert init_iteration.new_state.waiting_transfer == payer_transfer
     assert must_contain_entry(init_iteration.events, SendLockedTransfer, {}) is None
     assert must_contain_entry(init_iteration.events, SendRefundTransfer, {}) is None
 
@@ -417,5 +418,5 @@ def test_regression_mediator_task_no_routes():
         pseudo_random_generator,
         block_number,
     )
-    msg = 'The only used channel had the lock cleared, the taks must be cleared'
+    msg = 'The only used channel had the lock cleared, the task must be cleared'
     assert expired_iteration.new_state is None, msg
