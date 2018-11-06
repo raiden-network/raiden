@@ -32,7 +32,10 @@ HTTPS_PORT = 443
 START_QUERY_BLOCK_KEY = 'DefaultStartBlock'
 SNAPSHOT_STATE_CHANGES_COUNT = 500
 
+# An arbitrary limit for transaction size in Raiden, added in PR #1990
 GAS_LIMIT_UPPER_BOUND = int(0.4 * 3_141_592)
+
+# Used to add a 30% security margin to gas estimations in case the calculations are off
 GAS_FACTOR = 1.3
 
 # The more pending transfers there are, the more computationally complex
