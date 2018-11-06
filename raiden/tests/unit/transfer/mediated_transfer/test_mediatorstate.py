@@ -2013,16 +2013,16 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
         UNIT_SECRET,
     )
 
-    channel1 = factories.make_channel(
+    payee_channel = factories.make_channel(
         our_balance=amount,
         token_address=UNIT_TOKEN_ADDRESS,
         partner_address=target,
     )
     channel_map = {
-        channel1.identifier: channel1,
+        payee_channel.identifier: payee_channel,
         payer_channel.identifier: payer_channel,
     }
-    possible_routes = [factories.route_from_channel(channel1)]
+    possible_routes = [factories.route_from_channel(payee_channel)]
 
     init_mediator = ActionInitMediator(
         possible_routes,
@@ -2056,9 +2056,15 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
         block_lock_expired,
     )
 
+    # Mediator should NOT send balance proof
+    assert must_contain_entry(iteration.events, SendBalanceProof, {}) is None
+
     # Make sure the lock was moved
     assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
     assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
+
+    assert secrethash not in payee_channel.our_state.secrethashes_to_lockedlocks
+    assert secrethash in payee_channel.our_state.secrethashes_to_unlockedlocks
 
     block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
     block = Block(
@@ -2075,9 +2081,5 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
         block_expiration_number,
     )
 
-    # LockExpired should NOT remove the lock from unlockedlocks
-    # for a transfer that it already knows it already sent out the balance proof for.
-    # If we remove the lock this means that the mediator will expire the lock and
-    # lose funds due to the fact that the target already received the balance proof
-    # upon revealing the secret
-    assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
+    assert secrethash not in payer_channel.our_state.secrethashes_to_unlockedlocks
+    assert must_contain_entry(iteration.events, SendLockExpired, {})
