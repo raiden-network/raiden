@@ -12,7 +12,7 @@ from eth_utils import (
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
 
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.constants import GAS_FACTOR, GENESIS_BLOCK_NUMBER, UNLOCK_TX_GAS_LIMIT
 from raiden.exceptions import (
     ChannelOutdatedError,
     DepositMismatch,
@@ -33,6 +33,11 @@ from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.utils import pex, privatekey_to_address, typing
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
+    GAS_REQUIRED_FOR_CLOSE_CHANNEL,
+    GAS_REQUIRED_FOR_OPEN_CHANNEL,
+    GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT,
+    GAS_REQUIRED_FOR_SETTLE_CHANNEL,
+    GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF,
     ChannelInfoIndex,
     ChannelState,
     ParticipantInfoIndex,
@@ -799,7 +804,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
-            int(GAS_REQUIRED_FOR_UPDATE_TRANSFER * GAS_FACTOR),
+            int(GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF * GAS_FACTOR),
             channel_identifier,
             partner,
             self.node_address,
