@@ -1114,6 +1114,12 @@ class ReceiveTransferDirect(AuthenticatedSenderStateChange):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'balance_proof': self.balance_proof,
+            # This was added to enable query for the balance hash from the Sqlite storage
+            # on the 1st nested level.
+            # Example: json_extract(data, '$.balance_proof') == XYZ
+            # Because in some cases, the balance hash might be nested 2 levels
+            # deep into the stored JSON and this is only to unify the level among
+            # queried state changes and events.
             'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
@@ -1171,6 +1177,12 @@ class ReceiveUnlock(AuthenticatedSenderStateChange):
             'message_identifier': self.message_identifier,
             'secret': serialize_bytes(self.secret),
             'balance_proof': self.balance_proof,
+            # This was added to enable query for the balance hash from the Sqlite storage
+            # on the 1st nested level.
+            # Example: json_extract(data, '$.balance_proof') == XYZ
+            # Because in some cases, the balance hash might be nested 2 levels
+            # deep into the stored JSON and this is only to unify the level among
+            # queried state changes and events.
             'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 

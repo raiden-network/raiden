@@ -118,6 +118,12 @@ class ActionInitMediator(StateChange):
             'from_route': self.from_route,
             'from_transfer': self.from_transfer,
             'balance_proof': self.balance_proof,
+            # This was added to enable query for the balance hash from the Sqlite storage
+            # on the 1st nested level.
+            # Example: json_extract(data, '$.balance_proof') == XYZ
+            # Because in some cases, the balance hash might be nested 2 levels
+            # deep into the stored JSON and this is only to unify the level among
+            # queried state changes and event.s
             'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
@@ -177,6 +183,12 @@ class ActionInitTarget(StateChange):
             'route': self.route,
             'transfer': self.transfer,
             'balance_proof': self.balance_proof,
+            # This was added to enable query for the balance hash from the Sqlite storage
+            # on the 1st nested level.
+            # Example: json_extract(data, '$.balance_proof') == XYZ
+            # Because in some cases, the balance hash might be nested 2 levels
+            # deep into the stored JSON and this is only to unify the level among
+            # queried state changes and events.
             'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
@@ -274,9 +286,16 @@ class ReceiveLockExpired(AuthenticatedSenderStateChange):
         return {
             'sender': to_checksum_address(self.sender),
             'balance_proof': self.balance_proof,
-            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
             'secrethash': serialize_bytes(self.secrethash),
             'message_identifier': self.message_identifier,
+            # This was added to enable query for the balance hash from the Sqlite storage
+            # on the 1st nested level.
+            # Example: json_extract(data, '$.balance_proof') == XYZ
+            # Because in some cases, the balance hash might be nested 2 levels
+            # deep into the stored JSON and this is only to unify the level among
+            # queried state changes and events.
+            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
+
         }
 
     @classmethod
