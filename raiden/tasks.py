@@ -145,20 +145,20 @@ class AlarmTask(Runnable):
                 )
 
             if latest_block_number != last_block_number:
-                log.debug(
-                    'Received new block',
-                    number=latest_block_number,
-                    gas_limit=latest_block['gasLimit'],
+                log_details = dict(
+                    block_number=latest_block_number,
                     block_hash=to_hex(latest_block['hash']),
+                    block_gas_limit=latest_block['gasLimit'],
                 )
 
                 if latest_block_number > last_block_number + 1:
                     missed_blocks = latest_block_number - last_block_number - 1
-                    log.info(
-                        'Missed block(s)',
-                        missed_blocks=missed_blocks,
-                        latest_block=latest_block,
-                    )
+                    log_details['num_missed_blocks'] = missed_blocks
+
+                log.debug(
+                    'Received new block',
+                    **log_details,
+                )
 
                 self._run_callbacks(latest_block)
 
