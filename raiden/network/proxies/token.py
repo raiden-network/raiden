@@ -1,6 +1,7 @@
 import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 
+from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.exceptions import TransactionThrew
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -129,7 +130,7 @@ class Token:
         }
         log.debug('transfer called', **log_details)
 
-        startgas = 100000
+        startgas = GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
         transaction_hash = self.proxy.transact(
             'transfer',
             startgas,
