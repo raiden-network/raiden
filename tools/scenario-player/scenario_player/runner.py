@@ -227,7 +227,7 @@ class ScenarioRunner(object):
         for address in addresses:
             balance = token_ctr.contract.functions.balanceOf(address).call()
             if balance < token_balance_min:
-                mint_amount = token_balance_min - balance
+                mint_amount = token_balance_fund - balance
                 startgas = 100000
                 log.debug("Minting tokens for", address=address, amount=mint_amount)
                 mint_tx.append(token_ctr.transact('mintFor', startgas, mint_amount, address))

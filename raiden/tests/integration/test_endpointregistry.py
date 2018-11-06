@@ -1,6 +1,5 @@
 import pytest
 
-from raiden.constants import GAS_REQUIRED_FOR_ENDPOINT_REGISTER
 from raiden.exceptions import UnknownAddress
 from raiden.network.discovery import ContractDiscovery
 from raiden.tests.utils.factories import make_address
