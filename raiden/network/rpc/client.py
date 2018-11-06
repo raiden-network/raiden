@@ -369,7 +369,7 @@ class JSONRPCClient:
                 dependency_contract['bin'] = bytecode
 
                 transaction_hash = self.send_transaction(
-                    to=Address(b''),
+                    to=typing.Address(b''),
                     startgas=self.gaslimit(),
                     data=bytecode,
                 )
@@ -427,7 +427,7 @@ class JSONRPCClient:
 
     def send_transaction(
             self,
-            to: Address,
+            to: typing.Address,
             startgas: int,
             value: int = 0,
             data: bytes = b'',

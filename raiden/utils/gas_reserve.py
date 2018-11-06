@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from raiden.constants import TRANSACTION_GAS_LIMIT
+from raiden.constants import GAS_LIMIT_UPPER_BOUND
 from raiden.transfer import views
 from raiden_contracts.constants import (
     GAS_REQUIRED_FOR_CLOSE_CHANNEL,
@@ -10,7 +10,7 @@ from raiden_contracts.constants import (
 )
 
 GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE = (
-    TRANSACTION_GAS_LIMIT
+    GAS_LIMIT_UPPER_BOUND
 )
 GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE = (
     GAS_REQUIRED_FOR_SETTLE_CHANNEL + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE

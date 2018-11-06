@@ -4,14 +4,9 @@ import structlog
 from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_normalized_address
 from gevent.event import AsyncResult
 
-from raiden.network.proxies.utils import compare_contract_versions
 from raiden.constants import GAS_FACTOR, GAS_REQUIRED_PER_SECRET_IN_BATCH, GENESIS_BLOCK_NUMBER
-from raiden.exceptions import (
-    AddressWrongContract,
-    ContractVersionMismatch,
-    InvalidAddress,
-    TransactionThrew,
-)
+from raiden.exceptions import InvalidAddress, TransactionThrew
+from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, privatekey_to_address, sha3, typing

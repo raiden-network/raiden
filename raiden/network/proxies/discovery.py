@@ -1,19 +1,17 @@
 import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 
+from raiden.constants import GAS_FACTOR, NULL_ADDRESS
+from raiden.exceptions import TransactionThrew, UnknownAddress
 from raiden.network.proxies.utils import compare_contract_versions
-from raiden.constants import GAS_FACTOR, GAS_REQUIRED_FOR_ENDPOINT_REGISTER, NULL_ADDRESS
-from raiden.exceptions import (
-    AddressWrongContract,
-    ContractVersionMismatch,
-    TransactionThrew,
-    UnknownAddress,
-)
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, privatekey_to_address
-from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY
+from raiden_contracts.constants import (
+    CONTRACT_ENDPOINT_REGISTRY,
+    GAS_REQUIRED_FOR_ENDPOINT_REGISTER,
+)
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
