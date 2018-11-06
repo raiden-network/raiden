@@ -352,9 +352,11 @@ Then you can send a payment to it via the payments endpoint:
 Afterwards you can check your events and you should find an ``EventPaymentReceivedSuccess`` event with::
 
     {
+        "event": "EventPaymentReceivedSuccess",
         "amount": 1,
         "identifier": 43,
         "initiator": "0x02f4b6BC65561A792836212Ebc54434Db0Ab759a"
+        "log_time": "2018-10-30T07:04:22.293"
     }
 
 According to the rules from above, you should try the same with different amounts, ``3``, ``6``, ``7``, ... -- have fun!
