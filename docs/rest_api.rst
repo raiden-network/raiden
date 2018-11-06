@@ -822,19 +822,22 @@ The format of ``log_time`` is ISO8601 with milliseconds.
              event: "EventPaymentReceivedSuccess",
              amount: 5,
              initiator: "0x82641569b2062B545431cF6D7F0A418582865ba7",
-             identifier: 1
+             identifier: 1,
+             log_time: "2018-10-30T07:03:52.193"
          },
          {
              event: "EventPaymentSentSuccess",
              amount: 35,
              target: "0x82641569b2062B545431cF6D7F0A418582865ba7",
-             identifier: 2
+             identifier: 2,
+             log_time: "2018-10-30T07:04:22.293"
          },
          {
              event: "EventPaymentSentSuccess",
              amount: 20,
              target: "0x82641569b2062B545431cF6D7F0A418582865ba7"
-             identifier: 3
+             identifier: 3,
+             log_time: "2018-10-30T07:10:13.122"
          }
      ]
 
