@@ -48,6 +48,11 @@ from raiden_libs.utils.signing import eth_recover
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def get_gas_limit(given, precalculated):
+    """ Even though it's not documented, it does happen that estimate_gas returns `None`. """
+    return max(given or 0, precalculated)
+
+
 class ChannelData(NamedTuple):
     channel_identifier: typing.ChannelID
     settle_block_number: typing.BlockNumber
@@ -206,7 +211,7 @@ class TokenNetwork:
             partner,
             settle_timeout,
         )
-        gas_limit = max(gas_limit or 0, GAS_REQUIRED_FOR_OPEN_CHANNEL)
+        gas_limit = get_gas_limit(gas_limit, GAS_REQUIRED_FOR_OPEN_CHANNEL)
 
         transaction_hash = self.proxy.transact(
             'openChannel',
@@ -610,7 +615,7 @@ class TokenNetwork:
                 total_deposit,
                 partner,
             )
-            gas_limit = max(gas_limit or 0, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
+            gas_limit = get_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
 
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
@@ -893,10 +898,10 @@ class TokenNetwork:
             # gaslimit below must be defined
             raise NotImplementedError('feature temporarily disabled')
 
-            gaslimit = None
+            gas_limit = None
             transaction_hash = self.proxy.transact(
                 'setTotalWithdraw',
-                gaslimit,
+                gas_limit,
                 channel_identifier,
                 self.node_address,
                 total_withdraw,
@@ -948,7 +953,7 @@ class TokenNetwork:
             partner,
             leaves_packed,
         )
-        gas_limit = max(gas_limit or 0, UNLOCK_TX_GAS_LIMIT)
+        gas_limit = get_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
 
         transaction_hash = self.proxy.transact(
             'unlock',
@@ -1035,7 +1040,7 @@ class TokenNetwork:
                     locked_amount,
                     locksroot,
                 )
-                gas_limit = max(gas_limit or 0, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
+                gas_limit = get_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
 
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
@@ -1063,7 +1068,7 @@ class TokenNetwork:
                     partner_locked_amount,
                     partner_locksroot,
                 )
-                gas_limit = max(gas_limit or 0, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
+                gas_limit = get_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
 
                 transaction_hash = self.proxy.transact(
                     'settleChannel',

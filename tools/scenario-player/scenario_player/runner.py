@@ -13,6 +13,7 @@ from requests import RequestException, Session
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import Account
+from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.network.rpc.client import JSONRPCClient
 from scenario_player.exceptions import NodesUnreachableError, ScenarioError, TokenRegistrationError
 from scenario_player.utils import (
@@ -228,7 +229,7 @@ class ScenarioRunner(object):
             balance = token_ctr.contract.functions.balanceOf(address).call()
             if balance < token_balance_min:
                 mint_amount = token_balance_fund - balance
-                startgas = 100000
+                startgas = GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
                 log.debug("Minting tokens for", address=address, amount=mint_amount)
                 mint_tx.append(token_ctr.transact('mintFor', startgas, mint_amount, address))
             elif balance > token_balance_min:
