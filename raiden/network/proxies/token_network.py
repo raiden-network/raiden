@@ -48,9 +48,13 @@ from raiden_libs.utils.signing import eth_recover
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def get_gas_limit(given, precalculated):
-    """ Even though it's not documented, it does happen that estimate_gas returns `None`. """
-    return max(given or 0, precalculated)
+def get_gas_limit(given: int = None, precalculated: int = 0) -> int:
+    """ Even though it's not documented, it does happen that estimate_gas returns `None`.
+
+    This function takes care of this and adds a security margin as well.
+    """
+    calculated_limit = max(given or 0, precalculated)
+    return int(calculated_limit * GAS_FACTOR)
 
 
 class ChannelData(NamedTuple):
@@ -215,7 +219,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'openChannel',
-            int(gas_limit * GAS_FACTOR),
+            gas_limit,
             self.node_address,
             partner,
             settle_timeout,
@@ -619,7 +623,7 @@ class TokenNetwork:
 
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
-                int(gas_limit * GAS_FACTOR),
+                gas_limit,
                 channel_identifier,
                 self.node_address,
                 total_deposit,
@@ -957,7 +961,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'unlock',
-            int(gas_limit * GAS_FACTOR),
+            gas_limit,
             channel_identifier,
             self.node_address,
             partner,
@@ -1044,7 +1048,7 @@ class TokenNetwork:
 
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
-                    int(gas_limit * GAS_FACTOR),
+                    gas_limit,
                     channel_identifier,
                     partner,
                     partner_transferred_amount,
@@ -1072,7 +1076,7 @@ class TokenNetwork:
 
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
-                    int(gas_limit * GAS_FACTOR),
+                    gas_limit,
                     channel_identifier,
                     self.node_address,
                     transferred_amount,
