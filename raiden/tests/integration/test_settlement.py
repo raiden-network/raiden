@@ -63,7 +63,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
 
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
-    assert channel_identifier in token_network.partneraddresses_to_channels[
+    assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
         app1.raiden.address
     ]
 
@@ -105,7 +105,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
         token_network_identifier,
     )
 
-    assert channel_identifier not in token_network.partneraddresses_to_channels[
+    assert channel_identifier not in token_network.partneraddresses_to_channelidentifiers[
         app1.raiden.address
     ]
 
@@ -151,7 +151,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     channel_identifier = channel_state.identifier
 
-    assert channel_identifier in token_network.partneraddresses_to_channels[
+    assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
         bob_app.raiden.address
     ]
 
@@ -271,7 +271,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
     channel_identifier = get_channelstate(alice_app, bob_app, token_network_identifier).identifier
 
-    assert channel_identifier in token_network.partneraddresses_to_channels[
+    assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
         bob_app.raiden.address
     ]
 
@@ -361,7 +361,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         token_network_identifier,
     )
 
-    assert channel_identifier in token_network.partneraddresses_to_channels[
+    assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
         alice_app.raiden.address
     ]
 
@@ -379,7 +379,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
         token_network_identifier,
     )
 
-    assert channel_identifier not in token_network.partneraddresses_to_channels[
+    assert channel_identifier not in token_network.partneraddresses_to_channelidentifiers[
         alice_app.raiden.address
     ]
 

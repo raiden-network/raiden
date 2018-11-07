@@ -578,7 +578,7 @@ def test_clear_closed_queue(raiden_network, token_addresses, deposit):
 
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
-    assert channel_identifier in token_network.partneraddresses_to_channels[
+    assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
         app1.raiden.address
     ]
 

@@ -37,16 +37,16 @@ def subdispatch_to_channel_by_id(
             block_number,
         )
 
-        partner_to_channels = token_network_state.partneraddresses_to_channels[
+        partner_to_channelids = token_network_state.partneraddresses_to_channelidentifiers[
             channel_state.partner_state.address
         ]
 
+        channel_identifier = state_change.channel_identifier
         if result.new_state is None:
-            del ids_to_channels[state_change.channel_identifier]
-            del partner_to_channels[state_change.channel_identifier]
+            del ids_to_channels[channel_identifier]
+            partner_to_channelids.remove(channel_identifier)
         else:
-            ids_to_channels[state_change.channel_identifier] = result.new_state
-            partner_to_channels[state_change.channel_identifier] = result.new_state
+            ids_to_channels[channel_identifier] = result.new_state
 
         events.extend(result.events)
 
@@ -89,8 +89,8 @@ def handle_channelnew(token_network_state, state_change):
     # the ethereum node
     if channel_identifier not in token_network_state.channelidentifiers_to_channels:
         token_network_state.channelidentifiers_to_channels[channel_identifier] = channel_state
-        partneraddresses_to_channels = token_network_state.partneraddresses_to_channels
-        partneraddresses_to_channels[partner_address][channel_identifier] = channel_state
+        addrs_to_ids = token_network_state.partneraddresses_to_channelidentifiers
+        addrs_to_ids[partner_address].append(channel_identifier)
 
     return TransitionResult(token_network_state, events)
 
@@ -203,9 +203,9 @@ def handle_batch_unlock(
 
             if sub_iteration.new_state is None:
 
-                del token_network_state.partneraddresses_to_channels[
+                token_network_state.partneraddresses_to_channelidentifiers[
                     channel_state.partner_state.address
-                ][channel_state.identifier]
+                ].remove(channel_state.identifier)
 
                 del token_network_state.channelidentifiers_to_channels[
                     channel_state.identifier
@@ -258,8 +258,14 @@ def handle_action_transfer_direct(
         block_number,
 ):
     receiver_address = state_change.receiver_address
+    channels = [
+        token_network_state.channelidentifiers_to_channels[channel_id]
+        for channel_id in token_network_state.partneraddresses_to_channelidentifiers[
+            receiver_address
+        ]
+    ]
     channel_states = views.filter_channels_by_status(
-        token_network_state.partneraddresses_to_channels[receiver_address],
+        channels,
         [CHANNEL_STATE_UNUSABLE],
     )
     if channel_states:

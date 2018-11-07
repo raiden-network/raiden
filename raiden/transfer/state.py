@@ -414,7 +414,7 @@ class TokenNetworkState(State):
         'token_address',
         'network_graph',
         'channelidentifiers_to_channels',
-        'partneraddresses_to_channels',
+        'partneraddresses_to_channelidentifiers',
     )
 
     def __init__(self, address: typing.TokenNetworkID, token_address: typing.TokenAddress):
@@ -430,7 +430,7 @@ class TokenNetworkState(State):
         self.network_graph = TokenNetworkGraphState(self.address)
 
         self.channelidentifiers_to_channels = dict()
-        self.partneraddresses_to_channels = defaultdict(dict)
+        self.partneraddresses_to_channelidentifiers = defaultdict(list)
 
     def __repr__(self):
         return '<TokenNetworkState id:{} token:{}>'.format(
@@ -445,7 +445,10 @@ class TokenNetworkState(State):
             self.token_address == other.token_address and
             self.network_graph == other.network_graph and
             self.channelidentifiers_to_channels == other.channelidentifiers_to_channels and
-            self.partneraddresses_to_channels == other.partneraddresses_to_channels
+            (
+                self.partneraddresses_to_channelidentifiers ==
+                other.partneraddresses_to_channelidentifiers
+            )
         )
 
     def __ne__(self, other):
@@ -456,11 +459,12 @@ class TokenNetworkState(State):
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
             'network_graph': self.network_graph,
-            'partneraddresses_to_channels': map_dict(
+            'channelidentifiers_to_channels': map_dict(
                 to_checksum_address,
                 serialization.identity,
-                self.partneraddresses_to_channels,
+                self.channelidentifiers_to_channels,
             ),
+            'partneraddresses_to_channelidentifiers': self.partneraddresses_to_channelidentifiers,
         }
 
     @classmethod
@@ -470,20 +474,22 @@ class TokenNetworkState(State):
             token_address=to_canonical_address(data['token_address']),
         )
         restored.network_graph = data['network_graph']
+        restored.partneraddresses_to_channelidentifiers = data[
+            'partneraddresses_to_channelidentifiers'
+        ]
 
         recovered_partneraddresses_to_channels = map_dict(
             to_canonical_address,
             serialization.identity,
-            data['partneraddresses_to_channels'],
+            data['partneraddresses_to_channelidentifiers'],
         )
 
         # for some reason the identifier becomes a string in the dict, recover it
         # recover id -> channel map
-        for partner, channelmap in recovered_partneraddresses_to_channels.items():
-            restored.partneraddresses_to_channels[partner] = {}
+
+        for _, channelmap in recovered_partneraddresses_to_channels.items():
             for channel in channelmap.values():
                 restored.channelidentifiers_to_channels[channel.identifier] = channel
-                restored.partneraddresses_to_channels[partner][channel.identifier] = channel
 
         return restored
 
