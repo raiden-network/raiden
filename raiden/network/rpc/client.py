@@ -257,21 +257,12 @@ class JSONRPCClient:
         """ Return the balance of the account of given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
-    def gaslimit(self, location='latest') -> int:
-        gas_limit = self.web3.eth.getBlock(location)['gasLimit']
-        return gas_limit * 8 // 10
-
     def gas_price(self) -> int:
         # generateGasPrice takes the transaction to be send as an optional argument
         # but both strategies that we are using (time-based and rpc-based) don't make
         # use of this argument. It is therefore safe to not provide it at the moment.
         # This needs to be reevaluated if we use different gas price strategies
         return int(self.web3.eth.generateGasPrice())
-
-    def check_startgas(self, startgas):
-        if not startgas:
-            return self.gaslimit()
-        return startgas
 
     def new_contract_proxy(self, contract_interface, contract_address: typing.Address):
         """ Return a proxy for interacting with a smart contract.
@@ -368,9 +359,10 @@ class JSONRPCClient:
 
                 dependency_contract['bin'] = bytecode
 
+                gas_limit = self.web3.eth.getBlock('latest')['gasLimit'] * 8 // 10
                 transaction_hash = self.send_transaction(
                     to=typing.Address(b''),
-                    startgas=self.gaslimit(),
+                    startgas=gas_limit,
                     data=bytecode,
                 )
 

@@ -99,10 +99,7 @@ class SecretRegistry:
 
     def _register_secret_batch(self, secrets):
         gas_limit = self.proxy.estimate_gas('registerSecretBatch', secrets)
-        gas_limit = max(
-            gas_limit,
-            safe_gas_limit(len(secrets) * GAS_REQUIRED_PER_SECRET_IN_BATCH),
-        )
+        gas_limit = safe_gas_limit(gas_limit, len(secrets) * GAS_REQUIRED_PER_SECRET_IN_BATCH)
         transaction_hash = self.proxy.transact('registerSecretBatch', gas_limit, secrets)
         self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
