@@ -8,6 +8,7 @@ Changelog
 * :bug:`2951` Fallback to eth_getTransactionCount if there is no api to get the next available nonce.
 * :bug:`2934` Don't send unecessary register secret transactions.
 * :bug:`2938` Don't cleanup mediator if the transfer could not be forwarded. Could lead to stuck channels.
+* :bug:`2918` Fixed a synchronization problem, where a node would send invalid balance proofs.
 
 * :release:`0.15.1 <2018-11-03>`
 * :bug:`2933` Raiden can now recover from crashes/restarts when there are pending onchain transactions.
