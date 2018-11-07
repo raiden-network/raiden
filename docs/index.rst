@@ -24,6 +24,7 @@ Contents
   webui_tutorial
   spec
   config_file
+  onboarding
   changelog
   glossary
   trademarks
