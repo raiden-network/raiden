@@ -92,8 +92,9 @@ def _setup_web3(eth_rpc_endpoint):
         raise EthNodeCommunicationError("Couldn't connect to the ethereum node")
     except ValueError:
         raise EthNodeInterfaceError(
-            'The underlying geth node does not have the web3 rpc interface '
-            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+            'The underlying ethereum node does not have the web3 rpc interface '
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool for geth '
+            'and --jsonrpc-apis=eth,net,web3,parity for parity.'
         )
 
     supported, _ = is_supported_client(node_version)
