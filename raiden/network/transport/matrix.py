@@ -110,6 +110,10 @@ class _RetryQueue(Runnable):
         self._lock = gevent.lock.Semaphore()
         super().__init__()
 
+    @property
+    def log(self):
+        return self.transport.log
+
     @staticmethod
     def _expiration_generator(
             timeout_generator: Iterable[float],
@@ -138,6 +142,12 @@ class _RetryQueue(Runnable):
                 for data in self._message_queue
             )
             if already_queued:
+                self.log.warning(
+                    'Message already in queue - ignoring',
+                    receiver=pex(self.receiver),
+                    queue=queue_identifier,
+                    message=message,
+                )
                 return
             timeout_generator = udp_utils.timeout_exponential_backoff(
                 self.transport._config['retries_before_backoff'],
@@ -179,6 +189,11 @@ class _RetryQueue(Runnable):
         status = self.transport._address_to_presence.get(self.receiver)
         if status not in self.transport._reachable:
             # if partner is not reachable, return
+            self.log.debug(
+                'Partner not reachable. Skipping.',
+                partner=pex(self.receiver),
+                status=status,
+            )
             return
         # sort output by channel_identifier (so global/unordered queue goes first)
         # inside queue, preserve order in which messages were enqueued
@@ -193,23 +208,41 @@ class _RetryQueue(Runnable):
             if next(data.expiration_generator)
         ]
 
+        def message_is_in_queue(data: _RetryQueue._MessageData) -> bool:
+            return any(
+                send_event.message_identifier == data.message.message_identifier
+                for send_event in self.transport._queueids_to_queues[data.queue_identifier]
+            )
+
         # clean after composing, so any queued messages (e.g. Delivered) are sent at least once
         # iterate in reverse order to safely pop from list
         for i in range(len(self._message_queue) - 1, -1, -1):
             data = self._message_queue[i]
-            keep = (  # keep if it's still in the respective queue
-                data.queue_identifier in self.transport._queueids_to_queues and
-                hasattr(data.message, 'message_identifier') and
-                any(
-                    send_event.message_identifier == data.message.message_identifier
-                    for send_event in self.transport._queueids_to_queues[data.queue_identifier]
+            keep = False
+            if not hasattr(data.message, 'message_identifier'):
+                pass  # e.g. Delivered, send only once and then clear
+            elif data.queue_identifier not in self.transport._queueids_to_queues:
+                self.log.debug(
+                    'Queue is gone, cleaning message from retry queue',
+                    queue=data.queue_identifier,
+                    message=data.message,
                 )
-            )
+            elif not message_is_in_queue(data):
+                self.log.debug(
+                    'Message removed from queue, clearing from retry queue',
+                    queue=data.queue_identifier,
+                    message=data.message,
+                )
+            else:
+                keep = True
+
             if not keep:
                 self._message_queue.pop(i)
 
         if texts:
-            self.transport._send_raw(self.receiver, '\n'.join(texts))
+            body = '\n'.join(texts)
+            self.log.debug('Send', receiver=pex(self.receiver), messages=body)
+            self.transport._send_raw(self.receiver, body)
 
     def _run(self):
         # run while transport parent is running
@@ -217,7 +250,8 @@ class _RetryQueue(Runnable):
             # once entered the critical section, block any other enqueue or notify attempt
             with self._lock:
                 self._notify_event.clear()
-                self._check_and_send()
+                if self._message_queue:
+                    self._check_and_send()
             # wait up to retry_interval (or to be notified) before checking again
             if not self._notify_event.wait(self.transport._config['retry_interval']):
                 gevent.idle()  # if timed out without notify, wait until idle
