@@ -32,15 +32,6 @@ from raiden.utils.solc import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def parity_discover_next_available_nonce(
-        web3: Web3,
-        address: typing.Address,
-) -> typing.Nonce:
-    """Returns the next available nonce for `address`."""
-    next_nonce_encoded = web3.manager.request_blocking('parity_nextNonce', [address])
-    return int(next_nonce_encoded, 16)
-
-
 def geth_assert_rpc_interfaces(web3: Web3):
 
     try:
@@ -74,6 +65,53 @@ def geth_assert_rpc_interfaces(web3: Web3):
             'The underlying geth node does not have the txpool rpc interface '
             'enabled. Please run it with --rpcapi eth,net,web3,txpool'
         )
+
+
+def parity_assert_rpc_interfaces(web3: Web3):
+
+    try:
+        web3.version.node
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying parity node does not have the web3 rpc interface '
+            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
+        )
+
+    try:
+        web3.eth.blockNumber
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying parity node does not have the eth rpc interface '
+            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
+        )
+
+    try:
+        web3.net.version
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying parity node does not have the net rpc interface '
+            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
+        )
+
+    try:
+        web3.manager.request_blocking(
+            'parity_nextNonce',
+            ['0x0000000000000000000000000000000000000000'],
+        )
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying parity node does not have the parity rpc interface '
+            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
+        )
+
+def parity_discover_next_available_nonce(
+        web3: Web3,
+        address: typing.Address,
+) -> typing.Nonce:
+    """Returns the next available nonce for `address`."""
+    next_nonce_encoded = web3.manager.request_blocking('parity_nextNonce', [address])
+    return int(next_nonce_encoded, 16)
+
 
 def geth_discover_next_available_nonce(
         web3: Web3,
@@ -241,6 +279,7 @@ class JSONRPCClient:
         address_checksumed = to_checksum_address(address)
 
         if eth_node == constants.EthClient.PARITY:
+            parity_assert_rpc_interfaces(web3)
             available_nonce = parity_discover_next_available_nonce(
                 web3,
                 address_checksumed,
