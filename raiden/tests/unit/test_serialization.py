@@ -4,7 +4,7 @@ import pytest
 from eth_utils import to_canonical_address
 from networkx import Graph
 
-from raiden.storage.serialize import JSONSerializer, RaidenJSONDecoder
+from raiden.storage.serialize import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state, state_change
 from raiden.transfer.merkle_tree import compute_layers
@@ -61,71 +61,6 @@ def test_object_custom_serialization():
     assert original_obj == decoded_obj
     assert decoded_obj.embedded.amount == 1
     assert decoded_obj.embedded.identifier == '123'
-
-
-def test_ref_cache():
-    import_path = f'{MockObject.__module__}.{MockObject.__class__.__name__}'
-    ref_cache = serialization.ReferenceCache()
-
-    embedded_A = MockObject(channel_id='0x3DE6B821E4fb4599653BF76FF60dC5FaF2e92De8')
-    A = MockObject(attr1=10, attr2='123', embedded=embedded_A)
-
-    # A is not cached yet
-    assert ref_cache.get(import_path, A) is None
-
-    ref_cache.add(import_path, A)
-    assert len(ref_cache._cache[import_path]) == 1
-
-    # Object should not be added again
-    ref_cache.add(import_path, A)
-    assert len(ref_cache._cache[import_path]) == 1
-
-    # Create an exact replica of A
-    embedded_B = MockObject(channel_id='0x3DE6B821E4fb4599653BF76FF60dC5FaF2e92De8')
-    B = MockObject(attr1=10, attr2='123', embedded=embedded_B)
-
-    assert A == B  # Both objects are equal because their attributes are equal
-
-    # get() should return A as B is exactly the same, but we want to have exactly
-    # one instance of each class where all the attributes match.
-    assert id(A) == id(ref_cache.get(import_path, B))
-
-
-def test_decode_with_ref_cache():
-    embedded_A = MockObject(channel_id='0x3DE6B821E4fb4599653BF76FF60dC5FaF2e92De8')
-    A = MockObject(attr1=10, attr2='123', embedded=embedded_A)
-
-    decoded_A = JSONSerializer.deserialize(
-        JSONSerializer.serialize(A),
-    )
-
-    assert A == decoded_A
-
-    # Create an exact replica of A
-    embedded_B = MockObject(channel_id='0x3DE6B821E4fb4599653BF76FF60dC5FaF2e92De8')
-    B = MockObject(attr1=10, attr2='123', embedded=embedded_B)
-
-    decoded_B = JSONSerializer.deserialize(
-        JSONSerializer.serialize(B),
-    )
-
-    assert B == decoded_B
-    assert id(B) != id(decoded_B)
-    # Make sure that the original decoded A
-    # is returned
-    assert id(decoded_A) == id(decoded_B)
-
-    # Make sure no object is cached
-    RaidenJSONDecoder.cache_object_references = False
-    RaidenJSONDecoder.ref_cache.clear()
-
-    # Decode some object
-    decoded_B = JSONSerializer.deserialize(
-        JSONSerializer.serialize(B),
-    )
-
-    for _, cache_entries in RaidenJSONDecoder.ref_cache._cache.items():
-        assert len(cache_entries) == 0
 
 
 def test_decode_with_unknown_type():

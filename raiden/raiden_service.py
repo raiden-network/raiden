@@ -337,10 +337,6 @@ class RaidenService(Runnable):
                     f'smart contracts {known_registries}',
                 )
 
-        # Clear ref cache & disable caching
-        serialize.RaidenJSONDecoder.ref_cache.clear()
-        serialize.RaidenJSONDecoder.cache_object_references = False
-
         # Restore the current snapshot group
         state_change_qty = self.wal.storage.count_state_changes()
         self.snapshot_group = state_change_qty // SNAPSHOT_STATE_CHANGES_COUNT

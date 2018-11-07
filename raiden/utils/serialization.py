@@ -1,31 +1,10 @@
 import json
-from collections import defaultdict
 
 import networkx
 from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
 
 from raiden.transfer.merkle_tree import LEAVES, compute_layers
 from raiden.utils import typing
-
-
-class ReferenceCache:
-    def __init__(self):
-        self._cache = defaultdict(list)
-
-    def add(self, import_path, obj):
-        """ Register an instance of a certain class into the cache. """
-        if obj not in self._cache[import_path]:
-            self._cache[import_path].append(obj)
-
-    def get(self, import_path, obj):
-        """ Check if a certain obj exists for reuse. """
-        for candidate in self._cache[import_path]:
-            if obj == candidate:
-                return candidate
-        return None
-
-    def clear(self):
-        self._cache = defaultdict(list)
 
 
 def identity(val):
