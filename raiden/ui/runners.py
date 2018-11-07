@@ -39,11 +39,7 @@ log = structlog.get_logger(__name__)
 ETHEREUM_NODE_COMMUNICATION_ERROR = (
     '\n'
     'Could not contact the ethereum node through JSON-RPC.\n'
-    'Please make sure that JSON-RPC is enabled for these interfaces:\n'
-    '\n'
-    '    eth_*, net_*, web3_*\n'
-    '\n'
-    'geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n'
+    'Please make sure that the ethereum node is running and JSON-RPC is enabled.'
 )
 
 
