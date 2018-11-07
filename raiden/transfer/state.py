@@ -459,7 +459,11 @@ class TokenNetworkState(State):
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
             'network_graph': self.network_graph,
-            'channelidentifiers_to_channels': self.channelidentifiers_to_channels,
+            'channelidentifiers_to_channels': map_dict(
+                str,  # keys in json can only be strings
+                serialization.identity,
+                self.channelidentifiers_to_channels,
+            ),
             'partneraddresses_to_channelidentifiers': map_dict(
                 to_checksum_address,
                 serialization.identity,
@@ -474,9 +478,11 @@ class TokenNetworkState(State):
             token_address=to_canonical_address(data['token_address']),
         )
         restored.network_graph = data['network_graph']
-        restored.channelidentifiers_to_channels = data[
-            'channelidentifiers_to_channels'
-        ]
+        restored.channelidentifiers_to_channels = map_dict(
+            int,
+            serialization.identity,
+            data['channelidentifiers_to_channels'],
+        )
 
         restored_partneraddresses_to_channelidentifiers = map_dict(
             to_canonical_address,
@@ -533,7 +539,7 @@ class TokenNetworkGraphState(State):
             'token_network_id': to_checksum_address(self.token_network_id),
             'network': serialization.serialize_networkx_graph(self.network),
             'channel_identifier_to_participants': map_dict(
-                str,
+                str,  # keys in json can only be strings
                 serialization.serialize_participants_tuple,
                 self.channel_identifier_to_participants,
             ),
