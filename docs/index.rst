@@ -23,7 +23,6 @@ Contents
   rest_api
   webui_tutorial
   spec
-  smart_contracts
   config_file
   changelog
   glossary
