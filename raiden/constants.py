@@ -33,7 +33,7 @@ START_QUERY_BLOCK_KEY = 'DefaultStartBlock'
 SNAPSHOT_STATE_CHANGES_COUNT = 500
 
 # An arbitrary limit for transaction size in Raiden, added in PR #1990
-GAS_LIMIT_UPPER_BOUND = int(0.4 * 3_141_592)
+TRANSACTION_GAS_LIMIT_UPPER_BOUND = int(0.4 * 3_141_592)
 
 # Used to add a 30% security margin to gas estimations in case the calculations are off
 GAS_FACTOR = 1.3
@@ -43,7 +43,7 @@ GAS_FACTOR = 1.3
 # not enough gas is available, we define a gas limit for unlock calls
 # and limit the number of pending transfers per channel so it is not
 # exceeded. The limit is inclusive.
-UNLOCK_TX_GAS_LIMIT = GAS_LIMIT_UPPER_BOUND
+UNLOCK_TX_GAS_LIMIT = TRANSACTION_GAS_LIMIT_UPPER_BOUND
 MAXIMUM_PENDING_TRANSFERS = 160
 
 
