@@ -478,10 +478,14 @@ class TokenNetworkState(State):
             'channelidentifiers_to_channels'
         ]
 
-        restored.partneraddresses_to_channelidentifiers = map_dict(
+        restored_partneraddresses_to_channelidentifiers = map_dict(
             to_canonical_address,
             serialization.identity,
             data['partneraddresses_to_channelidentifiers'],
+        )
+        restored.partneraddresses_to_channelidentifiers = defaultdict(
+            list,
+            restored_partneraddresses_to_channelidentifiers,
         )
 
         return restored
