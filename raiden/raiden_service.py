@@ -303,7 +303,8 @@ class RaidenService(Runnable):
                 self.chain.node_address,
                 self.chain.network_id,
             )
-            self.wal.log_and_dispatch(state_change)
+            self.handle_state_change(state_change)
+
             payment_network = PaymentNetworkState(
                 self.default_registry.address,
                 [],  # empty list of token network states as it's the node's startup
