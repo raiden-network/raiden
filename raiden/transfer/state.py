@@ -459,12 +459,12 @@ class TokenNetworkState(State):
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
             'network_graph': self.network_graph,
-            'channelidentifiers_to_channels': map_dict(
+            'channelidentifiers_to_channels': self.channelidentifiers_to_channels,
+            'partneraddresses_to_channelidentifiers': map_dict(
                 to_checksum_address,
                 serialization.identity,
-                self.channelidentifiers_to_channels,
+                self.partneraddresses_to_channelidentifiers,
             ),
-            'partneraddresses_to_channelidentifiers': self.partneraddresses_to_channelidentifiers,
         }
 
     @classmethod
@@ -474,22 +474,15 @@ class TokenNetworkState(State):
             token_address=to_canonical_address(data['token_address']),
         )
         restored.network_graph = data['network_graph']
-        restored.partneraddresses_to_channelidentifiers = data[
-            'partneraddresses_to_channelidentifiers'
+        restored.channelidentifiers_to_channels = data[
+            'channelidentifiers_to_channels'
         ]
 
-        recovered_partneraddresses_to_channels = map_dict(
+        restored.partneraddresses_to_channelidentifiers = map_dict(
             to_canonical_address,
             serialization.identity,
             data['partneraddresses_to_channelidentifiers'],
         )
-
-        # for some reason the identifier becomes a string in the dict, recover it
-        # recover id -> channel map
-
-        for _, channelmap in recovered_partneraddresses_to_channels.items():
-            for channel in channelmap.values():
-                restored.channelidentifiers_to_channels[channel.identifier] = channel
 
         return restored
 
