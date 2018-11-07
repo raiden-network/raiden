@@ -278,8 +278,12 @@ def get_channelstate_for(
 
     channel_state = None
     if token_network:
+        channels = [
+            token_network.channelidentifiers_to_channels[channel_id]
+            for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]
+        ]
         states = filter_channels_by_status(
-            token_network.partneraddresses_to_channels[partner_address],
+            channels,
             [CHANNEL_STATE_UNUSABLE],
         )
         # If multiple channel states are found, return the last one.
@@ -302,8 +306,12 @@ def get_channelstate_by_token_network_and_partner(
 
     channel_state = None
     if token_network:
+        channels = [
+            token_network.channelidentifiers_to_channels[channel_id]
+            for channel_id in token_network.partneraddresses_to_channelidentifiers[partner_address]
+        ]
         states = filter_channels_by_status(
-            token_network.partneraddresses_to_channels[partner_address],
+            channels,
             [CHANNEL_STATE_UNUSABLE],
         )
         if states:
@@ -492,7 +500,7 @@ def list_channelstate_for_tokennetwork(
     )
 
     if token_network:
-        result = flatten_channel_states(token_network.partneraddresses_to_channels.values())
+        result = flatten_channel_states(token_network.channelidentifiers_to_channels.values())
     else:
         result = []
 
@@ -505,7 +513,7 @@ def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannel
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
             # TODO: Either enforce immutability or make a copy
             result.extend(
-                flatten_channel_states(token_network.partneraddresses_to_channels.values()),
+                flatten_channel_states(token_network.channelidentifiers_to_channels.values()),
             )
 
     return result
@@ -543,8 +551,12 @@ def filter_channels_by_partneraddress(
 
     result = []
     for partner in partner_addresses:
+        channels = [
+            token_network.channelidentifiers_to_channels[channel_id]
+            for channel_id in token_network.partneraddresses_to_channelidentifiers[partner]
+        ]
         states = filter_channels_by_status(
-            token_network.partneraddresses_to_channels[partner],
+            channels,
             [CHANNEL_STATE_UNUSABLE],
         )
         # If multiple channel states are found, return the last one.
@@ -555,7 +567,7 @@ def filter_channels_by_partneraddress(
 
 
 def filter_channels_by_status(
-        channel_states: typing.Dict[typing.ChannelID, NettingChannelState],
+        channel_states: typing.List[NettingChannelState],
         exclude_states=None,
 ) -> typing.List[NettingChannelState]:
     """ Filter the list of channels by excluding ones
@@ -565,7 +577,7 @@ def filter_channels_by_status(
         exclude_states = []
 
     states = []
-    for channel_state in channel_states.values():
+    for channel_state in channel_states:
         if channel.get_status(channel_state) not in exclude_states:
             states.append(channel_state)
 
