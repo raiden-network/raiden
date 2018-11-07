@@ -1,10 +1,18 @@
+from collections import Counter
 from copy import deepcopy
 from random import Random
 
 import pytest
-from hypothesis import assume
-from hypothesis.stateful import Bundle, RuleBasedStateMachine, initialize, rule
-from hypothesis.strategies import binary, composite, integers, random_module, randoms
+from hypothesis import assume, event
+from hypothesis.stateful import (
+    Bundle,
+    RuleBasedStateMachine,
+    initialize,
+    invariant,
+    precondition,
+    rule,
+)
+from hypothesis.strategies import builds, composite, integers, random_module, randoms
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.tests.utils import factories
@@ -18,22 +26,29 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
 from raiden.transfer.state_change import ContractReceiveChannelNew
-from raiden.utils import sha3
+from raiden.utils import random_secret, sha3
 
 
 @composite
 def secret(draw):
-    return draw(binary(min_size=32, max_size=32))
+    return draw(builds(random_secret))
 
 
-def events_include(events, type, number=1):
-    return len([event for event in events if isinstance(event, type)]) == number
+def event_types_match(events, *expected_types):
+    return Counter([type(event) for event in events]) == Counter(expected_types)
 
 
 class ChainStateStateMachine(RuleBasedStateMachine):
 
+    def __init__(self, address=None, channels_with=None):
+        self.address = address or factories.make_address()
+        self.channels_with = channels_with or [factories.make_address()]
+        self.replay_path = False
+        self.channels = None
+        super().__init__()
+
     @initialize(
-        block_number=integers(min_value=GENESIS_BLOCK_NUMBER),
+        block_number=integers(min_value=GENESIS_BLOCK_NUMBER + 1),
         random=randoms(),
         random_seed=random_module(),
     )
@@ -65,19 +80,69 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.payment_network_id
         ] = self.payment_network_state
 
-        self.channel = factories.make_channel(
-            our_balance=1000,
-            token_network_identifier=self.token_network_id,
-        )
+        self.channels = list()
 
-        channel_new_state_change = ContractReceiveChannelNew(
-            factories.make_transaction_hash(),
-            self.token_network_id,
-            self.channel,
-            self.block_number,
-        )
+        for partner_address in self.channels_with:
+            channel = factories.make_channel(
+                our_balance=1000,
+                partner_balance=1000,
+                token_network_identifier=self.token_network_id,
+                our_address=self.address,
+                partner_address=partner_address,
+            )
+            channel_new_state_change = ContractReceiveChannelNew(
+                factories.make_transaction_hash(),
+                self.token_network_id,
+                channel,
+                self.block_number,
+            )
+            node.state_transition(self.chain_state, channel_new_state_change)
 
-        node.state_transition(self.chain_state, channel_new_state_change)
+            self.channels.append(channel)
+
+    def event(self, description):
+        """ Wrapper for hypothesis' event function.
+
+        hypothesis.event raises an exception when invoked outside of hypothesis
+        context, so skip it when we are replaying a failed path.
+        """
+        if not self.replay_path:
+            event(description)
+
+    @precondition(lambda self: self.channels)
+    @invariant()
+    def channel_state_invariants(self):
+        for netting_channel in self.channels:
+            our_state = netting_channel.our_state
+            partner_state = netting_channel.partner_state
+
+            our_transferred_amount = 0
+            if our_state.balance_proof:
+                our_transferred_amount = our_state.balance_proof.transferred_amount
+                assert our_transferred_amount >= 0
+
+            partner_transferred_amount = 0
+            if partner_state.balance_proof:
+                partner_transferred_amount = partner_state.balance_proof.transferred_amount
+                assert partner_transferred_amount >= 0
+
+            assert channel.get_distributable(our_state, partner_state) >= 0
+            assert channel.get_distributable(partner_state, our_state) >= 0
+
+            our_deposit = netting_channel.our_total_deposit
+            our_amount_locked = channel.get_amount_locked(our_state)
+            our_balance = channel.get_balance(our_state, partner_state)
+            assert 0 <= our_amount_locked <= our_balance <= our_deposit
+
+            partner_deposit = netting_channel.partner_total_deposit
+            partner_amount_locked = channel.get_amount_locked(partner_state)
+            partner_balance = channel.get_balance(partner_state, our_state)
+            assert 0 <= partner_amount_locked <= partner_balance <= partner_deposit
+
+            our_net_value = partner_transferred_amount - our_transferred_amount
+            deposit_sum = our_deposit + partner_deposit
+            assert 0 <= our_deposit + our_net_value - our_amount_locked <= deposit_sum
+            assert 0 <= partner_deposit - our_net_value - partner_amount_locked <= deposit_sum
 
 
 class InitiatorState(ChainStateStateMachine):
@@ -89,6 +154,10 @@ class InitiatorState(ChainStateStateMachine):
 
         self.failing_path_2 = False
         self.failing_path_4 = False
+
+    @property
+    def channel(self):
+        return self.channels[0]
 
     def _action_init_initiator(self, transfer: TransferDescriptionWithSecretState):
         return ActionInitInitiator(
@@ -142,7 +211,7 @@ class InitiatorState(ChainStateStateMachine):
         assume(transfer.amount <= self._available_amount())
         action = self._action_init_initiator(transfer)
         result = node.state_transition(self.chain_state, action)
-        assert events_include(result.events, SendLockedTransfer)
+        assert event_types_match(result.events, SendLockedTransfer)
         self.initiated.add(transfer.payment_identifier)
         return action
 
@@ -152,7 +221,7 @@ class InitiatorState(ChainStateStateMachine):
             assume(previous_action.transfer.payment_identifier not in self.failed_secret_requests)
         action = self._receive_secret_request(previous_action.transfer)
         result = node.state_transition(self.chain_state, action)
-        assert events_include(result.events, SendSecretReveal)
+        assert event_types_match(result.events, SendSecretReveal)
 
     @rule(
         target=invalid_authentic_secret_requests,
@@ -169,7 +238,7 @@ class InitiatorState(ChainStateStateMachine):
     def invalid_authentic_secret_request(self, action):
         result = node.state_transition(self.chain_state, action)
         if action.payment_identifier not in self.failed_secret_requests:
-            assert events_include(result.events, EventPaymentSentFailed)
+            assert event_types_match(result.events, EventPaymentSentFailed)
         else:
             assert not result.events
         self.failed_secret_requests.add(action.payment_identifier)
@@ -207,6 +276,7 @@ TestInitiator = InitiatorState.TestCase
 # directly after the first was answered with a secret request.)
 def test_failing_path_2():
     state = InitiatorState()
+    state.replay_path = True
     state.failing_path_2 = True
     state.initialize(block_number=1, random=Random(), random_seed=None)
     v1 = state.populate_transfer_descriptions(amount=1, payment_id=1, secret=b'\x00' * 32)
@@ -217,17 +287,18 @@ def test_failing_path_2():
     state.teardown()
 
 
-@pytest.mark.skip('Previous invalid secret request keeps valid one from being processed')
-# When processing the invalid secret request, the InitiatorTask is cleared from the dict
-# in transfer/node.py:200, which results in the following valid secret request not being
-# processed. Is this intentional?
-def test_failing_path_4():
+@pytest.mark.skip()
+# Makes the same assertion fail like the test above, but this time a second transfer
+# with the same secret is created instead of the same transfer being initiated
+# twice.
+def test_failing_path_2a():
     state = InitiatorState()
-    state.failing_path_4 = True
+    state.replay_path = True
     state.initialize(block_number=1, random=Random(), random_seed=None)
     v1 = state.populate_transfer_descriptions(amount=1, payment_id=1, secret=b'\x00' * 32)
-    v2 = state.valid_init_initiator(transfer=v1)
-    v3 = state.wrong_amount_secret_request(amount=0, previous_action=v2)
-    state.invalid_authentic_secret_request(action=v3)
-    state.valid_secret_request(previous_action=v2)
+    v2 = state.populate_transfer_descriptions(amount=1, payment_id=2, secret=b'\x00' * 32)
+    v3 = state.valid_init_initiator(transfer=v2)
+    v4 = state.wrong_amount_secret_request(amount=0, previous_action=v3)
+    state.invalid_authentic_secret_request(action=v4)
+    state.valid_init_initiator(transfer=v1)
     state.teardown()
