@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`2946` Do not show full block information in the INFO logging message.
 * :bug:`2921` Properly estimate gas cost of transactions so that we have a more reasonable minimal amount of ETH required to run Raiden.
 * :bug:`2951` Fallback to eth_getTransactionCount if there is no api to get the next available nonce.
 * :bug:`2934` Don't send unecessary register secret transactions.
