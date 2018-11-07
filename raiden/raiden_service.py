@@ -365,6 +365,12 @@ class RaidenService(Runnable):
         self._initialize_transactions_queues(chain_state)
         self._initialize_whitelists(chain_state)
 
+        # send messages in queue before starting transport,
+        # this is necessary to avoid a race where, if the transport is started
+        # before the messages are queued, actions triggered by it can cause new
+        # messages to be enqueued before these older ones
+        self._initialize_messages_queues(chain_state)
+
         # The transport must not ever be started before the alarm task's first
         # run, because it's this method which synchronizes the node with the
         # blockchain, including the channel's state (if the channel is closed
@@ -373,9 +379,6 @@ class RaidenService(Runnable):
         self.transport.start(self, self.message_handler)
 
         self.alarm.start()
-
-        # after transport and alarm is started, send queued messages
-        self._initialize_messages_queues(chain_state)
 
         # exceptions on these subtasks should crash the app and bubble up
         self.alarm.link_exception(self.on_error)
