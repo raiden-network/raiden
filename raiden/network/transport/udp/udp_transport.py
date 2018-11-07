@@ -81,9 +81,8 @@ def single_queue_send(
     )
 
     # Wait for the endpoint registration or to quit
-    log.debug(
+    transport.log.debug(
         'queue: waiting for node to become healthy',
-        node=pex(transport.raiden.address),
         queue_identifier=queue_identifier,
         queue_size=len(queue),
     )
@@ -93,9 +92,8 @@ def single_queue_send(
         event_stop,
     ).wait()
 
-    log.debug(
+    transport.log.debug(
         'queue: processing queue',
-        node=pex(transport.raiden.address),
         queue_identifier=queue_identifier,
         queue_size=len(queue),
     )
@@ -104,9 +102,8 @@ def single_queue_send(
         data_or_stop.wait()
 
         if event_stop.is_set():
-            log.debug(
+            transport.log.debug(
                 'queue: stopping',
-                node=pex(transport.raiden.address),
                 queue_identifier=queue_identifier,
                 queue_size=len(queue),
             )
@@ -116,9 +113,8 @@ def single_queue_send(
         # This task being the only consumer is a requirement.
         (messagedata, message_id) = queue.peek(block=False)
 
-        log.debug(
+        transport.log.debug(
             'queue: sending message',
-            node=pex(transport.raiden.address),
             recipient=pex(recipient),
             msgid=message_id,
             queue_identifier=queue_identifier,
@@ -158,11 +154,13 @@ def single_queue_send(
 
 class UDPTransport(Runnable):
     UDP_MAX_MESSAGE_SIZE = 1200
+    log = log
+    log_healthcheck = log_healthcheck
 
     def __init__(self, address, discovery, udpsocket, throttle_policy, config):
         super().__init__()
         # these values are initialized by the start method
-        self.queueids_to_queues: typing.Dict
+        self.queueids_to_queues = dict()
         self.raiden: RaidenService
         self.message_handler: MessageHandler
 
@@ -208,15 +206,16 @@ class UDPTransport(Runnable):
 
         self.event_stop.clear()
         self.raiden = raiden
+        self.log = log.bind(node=pex(self.raiden.address))
+        self.log_healthcheck = log_healthcheck.bind(node=pex(self.raiden.address))
         self.message_handler = message_handler
-        self.queueids_to_queues = dict()
 
         # server.stop() clears the handle. Since this may be a restart the
         # handle must always be set
         self.server.set_handle(self.receive)
 
         self.server.start()
-        log.debug('UDP started', node=pex(self.raiden.address))
+        self.log.debug('UDP started')
         super().start()
 
     def _run(self):
@@ -262,7 +261,9 @@ class UDPTransport(Runnable):
         for async_result in self.messageids_to_asyncresults.values():
             async_result.set(False)
 
-        log.debug('UDP stopped', node=pex(self.raiden.address))
+        self.log.debug('UDP stopped')
+        del self.log_healthcheck
+        del self.log
 
     def get_health_events(self, recipient):
         """ Starts a healthcheck task for `recipient` and returns a
@@ -359,9 +360,8 @@ class UDPTransport(Runnable):
         greenlet_queue.link_exception(self.on_error)
         self.greenlets.append(greenlet_queue)
 
-        log.debug(
+        self.log.debug(
             'new queue created for',
-            node=pex(self.raiden.address),
             queue_identifier=queue_identifier,
             items_qty=len(items),
         )
@@ -418,9 +418,8 @@ class UDPTransport(Runnable):
             queue.put((messagedata, message_id))
             assert queue.is_set()
 
-            log.debug(
+            self.log.debug(
                 'Message queued',
-                node=pex(self.raiden.address),
                 queue_identifier=queue_identifier,
                 queue_size=len(queue),
                 message=message,
@@ -486,9 +485,8 @@ class UDPTransport(Runnable):
         # pylint: disable=unidiomatic-typecheck
 
         if len(messagedata) > self.UDP_MAX_MESSAGE_SIZE:
-            log.warning(
+            self.log.warning(
                 'Invalid message: Packet larger than maximum size',
-                node=pex(self.raiden.address),
                 message=encode_hex(messagedata),
                 length=len(messagedata),
             )
@@ -497,10 +495,9 @@ class UDPTransport(Runnable):
         try:
             message = decode(messagedata)
         except InvalidProtocolMessage as e:
-            log.warning(
+            self.log.warning(
                 'Invalid protocol message',
                 error=str(e),
-                node=pex(self.raiden.address),
                 message=encode_hex(messagedata),
             )
             return False
@@ -514,9 +511,8 @@ class UDPTransport(Runnable):
         elif message is not None:
             self.receive_message(message)
         else:
-            log.warning(
+            self.log.warning(
                 'Invalid message: Unknown cmdid',
-                node=pex(self.raiden.address),
                 message=encode_hex(messagedata),
             )
             return False
@@ -570,7 +566,7 @@ class UDPTransport(Runnable):
             del self.messageids_to_asyncresults[message_id]
             async_result.set()
         else:
-            log.warn(
+            self.log.warn(
                 'Unknown delivered message received',
                 message_id=message_id,
             )
@@ -581,9 +577,8 @@ class UDPTransport(Runnable):
     def receive_ping(self, ping: Ping):
         """ Handle a Ping message by answering with a Pong. """
 
-        log_healthcheck.debug(
+        self.log_healthcheck.debug(
             'Ping received',
-            node=pex(self.raiden.address),
             message_id=ping.nonce,
             message=ping,
             sender=pex(ping.sender),
@@ -595,7 +590,7 @@ class UDPTransport(Runnable):
         try:
             self.maybe_send(ping.sender, pong)
         except (InvalidAddress, UnknownAddress) as e:
-            log.debug("Couldn't send the `Delivered` message", e=e)
+            self.log.debug("Couldn't send the `Delivered` message", e=e)
 
     def receive_pong(self, pong: Pong):
         """ Handles a Pong message. """
@@ -604,9 +599,8 @@ class UDPTransport(Runnable):
         async_result = self.messageids_to_asyncresults.get(message_id)
 
         if async_result is not None:
-            log_healthcheck.debug(
+            self.log_healthcheck.debug(
                 'Pong received',
-                node=pex(self.raiden.address),
                 sender=pex(pong.sender),
                 message_id=pong.nonce,
             )
@@ -614,7 +608,7 @@ class UDPTransport(Runnable):
             async_result.set(True)
 
         else:
-            log_healthcheck.warn(
+            self.log_healthcheck.warn(
                 'Unknown pong received',
                 message_id=message_id,
             )
