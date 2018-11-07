@@ -503,7 +503,7 @@ class RaidenService(Runnable):
 
     def set_node_network_state(self, node_address, network_state):
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
-        self.wal.log_and_dispatch(state_change)
+        self.handle_state_change(state_change)
 
     def start_health_check_for(self, node_address):
         # This function is a noop during initialization. It can be called
@@ -698,7 +698,7 @@ class RaidenService(Runnable):
 
     def leave_all_token_networks(self):
         state_change = ActionLeaveAllNetworks()
-        self.wal.log_and_dispatch(state_change)
+        self.handle_state_change(state_change)
 
     def close_and_settle(self):
         log.info('raiden will close and settle all channels now')
