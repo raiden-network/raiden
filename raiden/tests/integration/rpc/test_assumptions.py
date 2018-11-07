@@ -1,13 +1,12 @@
-import math
 import os
 
 import pytest
 from eth_utils import decode_hex, to_checksum_address
 
-from raiden.constants import GAS_FACTOR
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.utils import safe_gas_limit
 from raiden.utils.solc import compile_files_cwd
 
 # pylint: disable=unused-argument,protected-access
@@ -133,7 +132,7 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
         contract_proxy.contract_address,
     )
 
-    startgas = contract_proxy.estimate_gas('ret') * 2
+    startgas = safe_gas_limit(contract_proxy.estimate_gas('ret'))
 
     with pytest.raises(TransactionAlreadyPending):
         second_proxy.transact('ret', startgas)
@@ -159,7 +158,7 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
         contract_proxy.contract_address,
     )
 
-    startgas = contract_proxy.estimate_gas('ret') * 2
+    startgas = safe_gas_limit(contract_proxy.estimate_gas('ret'))
 
     with pytest.raises(ReplacementTransactionUnderpriced):
         second_proxy.transact('ret', startgas)
@@ -216,7 +215,7 @@ def test_filter_start_block_inclusive(deploy_client):
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     # call the create event function twice and wait for confirmation each time
-    startgas = math.ceil(contract_proxy.estimate_gas('createEvent', 1) * GAS_FACTOR)
+    startgas = safe_gas_limit(contract_proxy.estimate_gas('createEvent', 1))
     transaction_1 = contract_proxy.transact('createEvent', startgas, 1)
     deploy_client.poll(transaction_1)
     transaction_2 = contract_proxy.transact('createEvent', startgas, 2)
@@ -248,7 +247,7 @@ def test_filter_end_block_inclusive(deploy_client):
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     # call the create event function twice and wait for confirmation each time
-    startgas = math.ceil(contract_proxy.estimate_gas('createEvent', 1) * GAS_FACTOR)
+    startgas = safe_gas_limit(contract_proxy.estimate_gas('createEvent', 1))
     transaction_1 = contract_proxy.transact('createEvent', startgas, 1)
     deploy_client.poll(transaction_1)
     transaction_2 = contract_proxy.transact('createEvent', startgas, 2)

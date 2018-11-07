@@ -12,7 +12,7 @@ from eth_utils import (
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
 
-from raiden.constants import GAS_FACTOR, GENESIS_BLOCK_NUMBER, UNLOCK_TX_GAS_LIMIT
+from raiden.constants import GENESIS_BLOCK_NUMBER, UNLOCK_TX_GAS_LIMIT
 from raiden.exceptions import (
     ChannelOutdatedError,
     DepositMismatch,
@@ -30,7 +30,7 @@ from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
-from raiden.utils import pex, privatekey_to_address, typing
+from raiden.utils import pex, privatekey_to_address, safe_gas_limit, typing
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     GAS_REQUIRED_FOR_CLOSE_CHANNEL,
@@ -46,15 +46,6 @@ from raiden_contracts.contract_manager import ContractManager
 from raiden_libs.utils.signing import eth_recover
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
-
-
-def get_gas_limit(given: int = None, precalculated: int = 0) -> int:
-    """ Even though it's not documented, it does happen that estimate_gas returns `None`.
-
-    This function takes care of this and adds a security margin as well.
-    """
-    calculated_limit = max(given or 0, precalculated)
-    return int(calculated_limit * GAS_FACTOR)
 
 
 class ChannelData(NamedTuple):
@@ -215,7 +206,7 @@ class TokenNetwork:
             partner,
             settle_timeout,
         )
-        gas_limit = get_gas_limit(gas_limit, GAS_REQUIRED_FOR_OPEN_CHANNEL)
+        gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_OPEN_CHANNEL)
 
         transaction_hash = self.proxy.transact(
             'openChannel',
@@ -619,7 +610,7 @@ class TokenNetwork:
                 total_deposit,
                 partner,
             )
-            gas_limit = get_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
+            gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
 
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
@@ -709,7 +700,7 @@ class TokenNetwork:
         with self.channel_operations_lock[partner]:
             transaction_hash = self.proxy.transact(
                 'closeChannel',
-                int(GAS_REQUIRED_FOR_CLOSE_CHANNEL * GAS_FACTOR),
+                safe_gas_limit(GAS_REQUIRED_FOR_CLOSE_CHANNEL),
                 channel_identifier,
                 partner,
                 balance_hash,
@@ -813,7 +804,7 @@ class TokenNetwork:
 
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
-            int(GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF * GAS_FACTOR),
+            safe_gas_limit(GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF),
             channel_identifier,
             partner,
             self.node_address,
@@ -957,7 +948,7 @@ class TokenNetwork:
             partner,
             leaves_packed,
         )
-        gas_limit = get_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
+        gas_limit = safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
 
         transaction_hash = self.proxy.transact(
             'unlock',
@@ -1044,7 +1035,7 @@ class TokenNetwork:
                     locked_amount,
                     locksroot,
                 )
-                gas_limit = get_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
+                gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
 
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
@@ -1072,7 +1063,7 @@ class TokenNetwork:
                     partner_locked_amount,
                     partner_locksroot,
                 )
-                gas_limit = get_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
+                gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
 
                 transaction_hash = self.proxy.transact(
                     'settleChannel',

@@ -261,3 +261,13 @@ def optional_address_to_string(address: typing.Address = None) -> typing.Optiona
         return None
 
     return to_checksum_address(address)
+
+
+def safe_gas_limit(*estimates) -> int:
+    """ Calculates a safe gas limit for a number of estimates.
+
+    Even though it's not documented, it does happen that estimate_gas returns `None`.
+    This function takes care of this and adds a security margin as well.
+    """
+    calculated_limit = max(gas or 0 for gas in estimates)
+    return int(calculated_limit * constants.GAS_FACTOR)
