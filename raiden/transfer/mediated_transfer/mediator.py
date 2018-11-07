@@ -312,7 +312,7 @@ def forward_transfer_pair(
         channelidentifiers_to_channels: Dict,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
-):
+) -> typing.Tuple[typing.Optional[MediationPairState], typing.List[Event]]:
     """ Given a payer transfer tries a new route to proceed with the mediation.
 
     Args:
@@ -371,7 +371,7 @@ def backward_transfer_pair(
         payer_transfer: LockedTransferSignedState,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
-) -> typing.Tuple[MediationPairState, typing.List[Event]]:
+) -> typing.Tuple[typing.Optional[MediationPairState], typing.List[Event]]:
     """ Sends a transfer backwards, allowing the previous hop to try a new
     route.
 
@@ -387,8 +387,7 @@ def backward_transfer_pair(
         block_number: The current block number.
 
     Returns:
-        An empty list if there are not enough blocks to safely create a refund,
-        or a list with a refund event.
+        The mediator pair and the correspoding refund event.
     """
     transfer_pair = None
     events = list()
@@ -422,7 +421,12 @@ def backward_transfer_pair(
     return (transfer_pair, events)
 
 
-def set_offchain_secret(state, channelidentifiers_to_channels, secret, secrethash):
+def set_offchain_secret(
+        state: MediatorTransferState,
+        channelidentifiers_to_channels: typing.ChannelMap,
+        secret: typing.Secret,
+        secrethash: typing.SecretHash,
+) -> typing.List[Event]:
     """ Set the secret to all mediated transfers. """
     state.secret = secret
 
@@ -472,7 +476,13 @@ def set_offchain_secret(state, channelidentifiers_to_channels, secret, secrethas
     return list()
 
 
-def set_onchain_secret(state, channelidentifiers_to_channels, secret, secrethash, block_number):
+def set_onchain_secret(
+        state: MediatorTransferState,
+        channelidentifiers_to_channels: typing.ChannelMap,
+        secret: typing.Secret,
+        secrethash: typing.SecretHash,
+        block_number: typing.BlockNumber,
+) -> typing.List[Event]:
     """ Set the secret to all mediated transfers.
 
     The secret should have been learned from the secret registry.
@@ -529,7 +539,11 @@ def set_offchain_reveal_state(transfers_pair, payee_address):
             pair.payee_state = 'payee_secret_revealed'
 
 
-def events_for_expired_pairs(transfers_pair, waiting_transfer, block_number):
+def events_for_expired_pairs(
+        transfers_pair: typing.List[MediationPairState],
+        waiting_transfer: WaitingTransferState,
+        block_number: typing.BlockNumber,
+) -> typing.List[Event]:
     """ Informational events for expired locks. """
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
@@ -795,7 +809,7 @@ def events_for_onchain_secretreveal_if_closed(
         secrethash,
     )
 
-    # Just like the case forentering the danger zone, this will only consider
+    # Just like the case for entering the danger zone, this will only consider
     # the transfers which have a pair.
 
     for pending_pair in get_pending_transfer_pairs(transfers_pair):
@@ -826,7 +840,7 @@ def events_to_remove_expired_locks(
 ):
     """ Clear the channels which have expired locks.
 
-    This only consider the *sent* transfers, received transfers can only be
+    This only considers the *sent* transfers, received transfers can only be
     updated by the partner.
     """
     events = list()
