@@ -351,7 +351,7 @@ class PaymentNetworkState(State):
     __slots__ = (
         'address',
         'tokenidentifiers_to_tokennetworks',
-        'tokenaddresses_to_tokennetworks',
+        'tokenaddresses_to_tokenidentifiers',
     )
 
     def __init__(
@@ -367,8 +367,8 @@ class PaymentNetworkState(State):
             token_network.address: token_network
             for token_network in token_network_list
         }
-        self.tokenaddresses_to_tokennetworks = {
-            token_network.token_address: token_network
+        self.tokenaddresses_to_tokenidentifiers = {
+            token_network.token_address: token_network.address
             for token_network in token_network_list
         }
 
@@ -379,7 +379,7 @@ class PaymentNetworkState(State):
         return (
             isinstance(other, PaymentNetworkState) and
             self.address == other.address and
-            self.tokenaddresses_to_tokennetworks == other.tokenaddresses_to_tokennetworks and
+            self.tokenaddresses_to_tokenidentifiers == other.tokenaddresses_to_tokenidentifiers and
             self.tokenidentifiers_to_tokennetworks == other.tokenidentifiers_to_tokennetworks
         )
 

@@ -190,7 +190,7 @@ def get_token_identifiers(
     if payment_network is not None:
         return [
             token_address
-            for token_address in payment_network.tokenaddresses_to_tokennetworks.keys()
+            for token_address in payment_network.tokenaddresses_to_tokenidentifiers.keys()
         ]
 
     return list()
@@ -239,7 +239,10 @@ def get_token_network_by_token_address(
 
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
     if payment_network is not None:
-        return payment_network.tokenaddresses_to_tokennetworks.get(token_address)
+        token_network_id = payment_network.tokenaddresses_to_tokenidentifiers.get(token_address)
+
+    if token_network_id:
+        return payment_network.tokenidentifiers_to_tokennetworks.get(token_network_id)
 
     return None
 
@@ -499,7 +502,7 @@ def list_channelstate_for_tokennetwork(
 def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannelState]:
     result = []
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
-        for token_network in payment_network.tokenaddresses_to_tokennetworks.values():
+        for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
             # TODO: Either enforce immutability or make a copy
             result.extend(
                 flatten_channel_states(token_network.partneraddresses_to_channels.values()),

@@ -75,8 +75,13 @@ def get_networks(
     )
 
     if payment_network_state:
-        token_network_state = payment_network_state.tokenaddresses_to_tokennetworks.get(
+        token_network_id = payment_network_state.tokenaddresses_to_tokenidentifiers.get(
             token_address,
+        )
+
+    if token_network_id:
+        token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
+            token_network_id,
         )
 
     return payment_network_state, token_network_state
@@ -104,7 +109,7 @@ def subdispatch_to_all_channels(
     events = list()
 
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
-        for token_network_state in payment_network.tokenaddresses_to_tokennetworks.values():
+        for token_network_state in payment_network.tokenidentifiers_to_tokennetworks.values():
             for channel_state in token_network_state.channelidentifiers_to_channels.values():
                 result = channel.state_transition(
                     channel_state,
@@ -386,10 +391,10 @@ def maybe_add_tokennetwork(
 
     if token_network_state_previous is None:
         ids_to_tokens = payment_network_state.tokenidentifiers_to_tokennetworks
-        addrs_to_tokens = payment_network_state.tokenaddresses_to_tokennetworks
+        addrs_to_ids = payment_network_state.tokenaddresses_to_tokenidentifiers
 
         ids_to_tokens[token_network_identifier] = token_network_state
-        addrs_to_tokens[token_address] = token_network_state
+        addrs_to_ids[token_address] = token_network_identifier
 
 
 def sanity_check(iteration: TransitionResult):
@@ -499,7 +504,7 @@ def handle_token_network_action(
                 state_change.token_network_identifier,
             )
 
-            del payment_network_state.tokenaddresses_to_tokennetworks[
+            del payment_network_state.tokenaddresses_to_tokenidentifiers[
                 token_network_state.token_address
             ]
             del payment_network_state.tokenidentifiers_to_tokennetworks[
@@ -574,7 +579,8 @@ def handle_leave_all_networks(chain_state: ChainState) -> TransitionResult:
     events = list()
 
     for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
-        for token_network_state in payment_network_state.tokenaddresses_to_tokennetworks.values():
+        all_token_networks = payment_network_state.tokenidentifiers_to_tokennetworks.values()
+        for token_network_state in all_token_networks:
             events.extend(_get_channels_close_events(chain_state, token_network_state))
 
     return TransitionResult(chain_state, events)
