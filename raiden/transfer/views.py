@@ -500,7 +500,7 @@ def list_channelstate_for_tokennetwork(
     )
 
     if token_network:
-        result = flatten_channel_states(token_network.channelidentifiers_to_channels.values())
+        result = token_network.channelidentifiers_to_channels.values()
     else:
         result = []
 
@@ -512,9 +512,7 @@ def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannel
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
             # TODO: Either enforce immutability or make a copy
-            result.extend(
-                flatten_channel_states(token_network.channelidentifiers_to_channels.values()),
-            )
+            result.extend(token_network.channelidentifiers_to_channels.values())
 
     return result
 
@@ -582,16 +580,3 @@ def filter_channels_by_status(
             states.append(channel_state)
 
     return states
-
-
-def flatten_channel_states(
-        channel_states: typing.List[typing.Dict[typing.ChannelID, NettingChannelState]],
-) -> typing.List[NettingChannelState]:
-    """ Receive a list of dicts with channel_id -> channel state
-    and return the values of those dicts flattened. """
-    states = []
-    for channel_state in channel_states:
-        states.extend(channel_state.values())
-
-    # Sort the list of states in ascending order of identifiers
-    return sorted(states, key=lambda item: item.identifier)
