@@ -689,24 +689,38 @@ class MatrixTransport(Runnable):
             join_rules_event = join_rules_events[0]
             private_room: bool = join_rules_event['content'].get('join_rule') == 'invite'
 
-        # we join room and _set_room_id_for_address despite room privacy and requirements,
-        # _get_room_ids_for_address will take care of returning only matching rooms and
-        # _leave_unused_rooms will clear it in the future, if and when needed
-        room = self._client.join_room(room_id)
-        if not room.listeners:
-            room.add_listener(self._handle_message, 'm.room.message')
+        # join room async, so it doesn't block handling loop
+        def join_room():
+            # we join room and _set_room_id_for_address despite room privacy and requirements,
+            # _get_room_ids_for_address will take care of returning only matching rooms and
+            # _leave_unused_rooms will clear it in the future, if and when needed
+            last_ex = None
+            for _ in range(_JOIN_RETRIES):
+                try:
+                    room = self._client.join_room(room_id)
+                except MatrixRequestError as e:
+                    last_ex = e
+                else:
+                    break
+            else:
+                raise last_ex  # re-raise if couldn't succeed in retries
 
-        # at this point, room state is not populated yet, so we populate 'invite_only' from event
-        room.invite_only = private_room
+            if not room.listeners:
+                room.add_listener(self._handle_message, 'm.room.message')
 
-        self._set_room_id_for_address(peer_address, room_id)
+            # room state may not populated yet, so we populate 'invite_only' from event
+            room.invite_only = private_room
 
-        self.log.debug(
-            'Invited and joined a room',
-            room_id=room_id,
-            aliases=room.aliases,
-            peer=to_checksum_address(peer_address),
-        )
+            self._set_room_id_for_address(peer_address, room_id)
+
+            self.log.debug(
+                'Invited and joined a room',
+                room_id=room_id,
+                aliases=room.aliases,
+                peer=to_checksum_address(peer_address),
+            )
+
+        self._spawn(join_room)
 
     @cachedmethod(
         attrgetter('_messages_cache'),
