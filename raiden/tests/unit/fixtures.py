@@ -58,7 +58,7 @@ def token_network_state(payment_network_state, token_network_id, token_id):
         token_id,
     )
     payment_network_state.tokenidentifiers_to_tokennetworks[token_network_id] = token_network
-    payment_network_state.tokenaddresses_to_tokennetworks[token_id] = token_network
+    payment_network_state.tokenaddresses_to_tokenidentifiers[token_id] = token_network_id
 
     return token_network
 
