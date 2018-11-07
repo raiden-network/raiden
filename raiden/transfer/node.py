@@ -1174,7 +1174,11 @@ def _get_channels_close_events(
         token_network_state: TokenNetworkState,
 ) -> typing.List[Event]:
     events = []
-    for channel_states in token_network_state.partneraddresses_to_channels.values():
+    for channel_identifiers in token_network_state.partneraddresses_to_channelidentifiers.values():
+        channel_states = [
+            token_network_state.channelidentifiers_to_channels[channel_id]
+            for channel_id in channel_identifiers
+        ]
         filtered_channel_states = views.filter_channels_by_status(
             channel_states,
             [channel.CHANNEL_STATE_UNUSABLE],
