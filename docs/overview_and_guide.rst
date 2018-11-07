@@ -155,7 +155,7 @@ Using parity
 
 Run the client and let it sync::
 
-    parity --no-warp
+    parity --no-warp --jsonrpc-apis=web3,eth,net,parity
 
 .. note::
     When you want to use a testnet add the ``--chain ropsten`` or ``--chain kovan`` flags or set the network id with ``--network-id`` directly.
