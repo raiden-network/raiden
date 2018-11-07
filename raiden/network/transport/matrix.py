@@ -430,21 +430,13 @@ class MatrixTransport(Runnable):
         queue_identifier: QueueIdentifier,
         message: Message,
     ):
-        # even if transport is not started, can run to enqueue messages to send when it starts
-        message_id = message.message_identifier
-        receiver_address = queue_identifier.recipient
+        """Queue the message for sending to recipient in the queue_identifier
 
-        assert queue_identifier in self._queueids_to_queues
-        message_in_queue = any(
-            message_id == event.message_identifier
-            for event in self._queueids_to_queues[queue_identifier]
-        )
-        if not message_in_queue:
-            self.log.warning(
-                'Message not in queue',
-                message=message,
-                queue=queue_identifier,
-            )
+        It may be called before transport is started, to initialize message queues
+        The actual sending is started only when the transport is started
+        """
+        # even if transport is not started, can run to enqueue messages to send when it starts
+        receiver_address = queue_identifier.recipient
 
         if not is_binary_address(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
