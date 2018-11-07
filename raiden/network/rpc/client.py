@@ -39,7 +39,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             'The underlying geth node does not have the web3 rpc interface '
-            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool',
         )
 
     try:
@@ -47,7 +47,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             'The underlying geth node does not have the eth rpc interface '
-            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool',
         )
 
     try:
@@ -55,7 +55,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             'The underlying geth node does not have the net rpc interface '
-            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool',
         )
 
     try:
@@ -63,7 +63,7 @@ def geth_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             'The underlying geth node does not have the txpool rpc interface '
-            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool',
         )
 
 
@@ -74,7 +74,7 @@ def parity_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             'The underlying parity node does not have the web3 rpc interface '
-            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
+            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity',
         )
 
     try:
@@ -82,7 +82,7 @@ def parity_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             'The underlying parity node does not have the eth rpc interface '
-            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
+            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity',
         )
 
     try:
@@ -90,7 +90,7 @@ def parity_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             'The underlying parity node does not have the net rpc interface '
-            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
+            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity',
         )
 
     try:
@@ -101,7 +101,7 @@ def parity_assert_rpc_interfaces(web3: Web3):
     except ValueError:
         raise EthNodeInterfaceError(
             'The underlying parity node does not have the parity rpc interface '
-            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
+            'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity',
         )
 
 
