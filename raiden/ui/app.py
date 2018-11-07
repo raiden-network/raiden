@@ -15,6 +15,7 @@ from raiden.exceptions import (
     AddressWrongContract,
     ContractVersionMismatch,
     EthNodeCommunicationError,
+    EthNodeInterfaceError,
     RaidenError,
 )
 from raiden.message_handler import MessageHandler
@@ -89,6 +90,11 @@ def _setup_web3(eth_rpc_endpoint):
         node_version = web3.version.node  # pylint: disable=no-member
     except ConnectTimeout:
         raise EthNodeCommunicationError("Couldn't connect to the ethereum node")
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying geth node does not have the web3 rpc interface '
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+        )
 
     supported, _ = is_supported_client(node_version)
     if not supported:

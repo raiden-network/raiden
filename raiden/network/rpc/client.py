@@ -18,7 +18,7 @@ from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 
 from raiden import constants
-from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError
+from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError, EthNodeInterfaceError
 from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import is_supported_client, pex, privatekey_to_address, typing
@@ -40,6 +40,40 @@ def parity_discover_next_available_nonce(
     next_nonce_encoded = web3.manager.request_blocking('parity_nextNonce', [address])
     return int(next_nonce_encoded, 16)
 
+
+def geth_assert_rpc_interfaces(web3: Web3):
+
+    try:
+        web3.version.node
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying geth node does not have the web3 rpc interface '
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+        )
+
+    try:
+        web3.eth.blockNumber
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying geth node does not have the eth rpc interface '
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+        )
+
+    try:
+        web3.net.version
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying geth node does not have the net rpc interface '
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+        )
+
+    try:
+        web3.txpool.inspect
+    except ValueError:
+        raise EthNodeInterfaceError(
+            'The underlying geth node does not have the txpool rpc interface '
+            'enabled. Please run it with --rpcapi eth,net,web3,txpool'
+        )
 
 def geth_discover_next_available_nonce(
         web3: Web3,
@@ -212,6 +246,7 @@ class JSONRPCClient:
                 address_checksumed,
             )
         elif eth_node == constants.EthClient.GETH:
+            geth_assert_rpc_interfaces(web3)
             available_nonce = geth_discover_next_available_nonce(
                 web3,
                 address_checksumed,

@@ -136,6 +136,11 @@ class EthNodeCommunicationError(RaidenError):
         self.error_code = error_code
 
 
+class EthNodeInterfaceError(RaidenError):
+    """ Raised when the underlying ETH node does not support an rpc interface"""
+    pass
+
+
 class AddressWithoutCode(RaidenError):
     """Raised on attempt to execute contract on address without a code."""
     pass

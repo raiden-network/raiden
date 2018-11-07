@@ -19,6 +19,7 @@ from raiden.app import App
 from raiden.exceptions import (
     APIServerPortInUseError,
     EthNodeCommunicationError,
+    EthNodeInterfaceError,
     RaidenError,
     RaidenServicePortInUseError,
 )
@@ -99,6 +100,9 @@ class NodeRunner:
             app_ = run_app(**self._options)
         except (EthNodeCommunicationError, RequestsConnectionError):
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
+            sys.exit(1)
+        except EthNodeInterfaceError as e:
+            click.secho(str(e), fg='red')
             sys.exit(1)
 
         tasks = [app_.raiden]  # RaidenService takes care of Transport and AlarmTask
