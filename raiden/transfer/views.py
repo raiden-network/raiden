@@ -238,6 +238,8 @@ def get_token_network_by_token_address(
 ) -> typing.Optional[TokenNetworkState]:
 
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
+    token_network_id = None
+
     if payment_network is not None:
         token_network_id = payment_network.tokenaddresses_to_tokenidentifiers.get(token_address)
 
