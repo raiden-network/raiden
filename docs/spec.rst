@@ -257,7 +257,7 @@ Transfer Routing
 
 Routing is a hard problem and because of the lack of a global view Raiden has a graph search strategy. The packet routing may be looked at as an ``A*`` search, using the sorted path with capacity as an heuristic to do the packet routing.
 
-.. image:: pics/channelsgraph.png
+.. image:: images/channelsgraph.png
 
 Consider the above graph where each graph node represents a raiden node, each edge an existing channel, arrows represent the direction of the transfers, solid lines the current searched space of the graph, dashed lines the rest of the path and the red line an exhausted/closed channel.
 
@@ -278,7 +278,7 @@ Each of these hops forwarded a MediatedTransfer paying fees and sending the tran
 Merkle Tree
 ===========
 
-.. image:: pics/merkletree.png
+.. image:: images/merkletree.png
 
 The `merkle tree <https://en.wikipedia.org/wiki/Merkle_tree>`_ data blocks are composed of the hashes of the locks. The unique purpose of the merkle tree is to have an ``O(log N)`` proof of containment and a constant ``O(1)`` storage requirement for the signed messages. The alternative is to have linear space ``O(n)`` for the signed messages by having a list of all the pending locks in each message.
 
