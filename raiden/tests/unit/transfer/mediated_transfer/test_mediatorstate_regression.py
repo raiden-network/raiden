@@ -218,7 +218,6 @@ def test_regression_send_refund():
             'payment_identifier': UNIT_TRANSFER_IDENTIFIER,
             'token': UNIT_TOKEN_ADDRESS,
             'balance_proof': {
-                # 'nonce': ,
                 'transferred_amount': 0,
                 'locked_amount': 10,
                 'locksroot': lock.lockhash,
