@@ -46,7 +46,7 @@ def test_endpointregistry(private_keys, blockchain_services, contract_manager):
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 def test_endpointregistry_gas(endpoint_discovery_services):
-    """ GAS_REQUIRED_FOR_ENDPOINT_REGISTER value must be equal to the gas requried to call
+    """ GAS_REQUIRED_FOR_ENDPOINT_REGISTER value must be equal to the gas required to call
     registerEndpoint.
     """
     contract_discovery = endpoint_discovery_services[0]
