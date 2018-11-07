@@ -104,9 +104,10 @@ def parity_assert_rpc_interfaces(web3: Web3):
             'enabled. Please run it with --jsonrpc-apis=eth,net,web3,parity'
         )
 
+
 def parity_discover_next_available_nonce(
         web3: Web3,
-        address: typing.Address,
+        address: typing.AddressHex,
 ) -> typing.Nonce:
     """Returns the next available nonce for `address`."""
     next_nonce_encoded = web3.manager.request_blocking('parity_nextNonce', [address])
@@ -115,7 +116,7 @@ def parity_discover_next_available_nonce(
 
 def geth_discover_next_available_nonce(
         web3: Web3,
-        address: typing.Address,
+        address: typing.AddressHex,
 ) -> typing.Nonce:
     """Returns the next available nonce for `address`."""
 
