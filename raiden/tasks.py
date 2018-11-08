@@ -13,7 +13,7 @@ from raiden.utils import gas_reserve, pex
 from raiden.utils.runnable import Runnable
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
-CHECK_GAS_RESERVE_INTERVAL = 60 * 60
+CHECK_GAS_RESERVE_INTERVAL = 5 * 60
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
 SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
