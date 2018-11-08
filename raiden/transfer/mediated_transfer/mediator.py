@@ -593,15 +593,6 @@ def events_for_expired_pairs(
             )
             events.append(unlock_claim_failed)
 
-        if has_payee_transfer_expired:
-            pair.payee_state = 'payee_expired'
-            unlock_failed = EventUnlockFailed(
-                pair.payee_transfer.payment_identifier,
-                pair.payee_transfer.lock.secrethash,
-                'lock expired',
-            )
-            events.append(unlock_failed)
-
     if waiting_transfer and waiting_transfer.state != 'expired':
         waiting_transfer.state = 'expired'
         unlock_claim_failed = EventUnlockClaimFailed(
@@ -888,6 +879,14 @@ def events_to_remove_expired_locks(
                     pseudo_random_generator=pseudo_random_generator,
                 )
                 events.extend(expired_lock_events)
+
+                unlock_failed = EventUnlockFailed(
+                    transfer_pair.payee_transfer.payment_identifier,
+                    transfer_pair.payee_transfer.lock.secrethash,
+                    'lock expired',
+                )
+                events.append(unlock_failed)
+
     return events
 
 
@@ -1079,6 +1078,7 @@ def handle_block(
     )
 
     unlock_fail_events = events_for_expired_pairs(
+        channelidentifiers_to_channels,
         mediator_state.transfers_pair,
         mediator_state.waiting_transfer,
         state_change.block_number,
