@@ -156,7 +156,7 @@ export class TokenNetworkComponent implements OnInit, OnDestroy {
         };
 
         const joinDialogRef = this.dialog.open(JoinDialogComponent, {
-            width: '400px',
+            width: '480px',
             data: payload
         });
 
