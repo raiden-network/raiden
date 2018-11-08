@@ -181,10 +181,6 @@ def decode_event_to_internal(event):
         data['deposit'] = data['args']['total_deposit']
         data['participant'] = to_canonical_address(data['args']['participant'])
 
-    elif data['event'] == ChannelEvent.WITHDRAW:
-        data['withdrawn_amount'] = data['args']['withdrawn_amount']
-        data['participant'] = to_canonical_address(data['args']['participant'])
-
     elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
         data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
 
