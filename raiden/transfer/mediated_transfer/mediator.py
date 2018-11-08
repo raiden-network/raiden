@@ -855,6 +855,7 @@ def events_to_remove_expired_locks(
         secrethash = mediator_state.secrethash
         lock = None
         if secrethash in channel_state.our_state.secrethashes_to_lockedlocks:
+            assert secrethash not in channel_state.our_state.secrethashes_to_unlockedlocks
             lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
         elif secrethash in channel_state.our_state.secrethashes_to_unlockedlocks:
             lock = channel_state.our_state.secrethashes_to_unlockedlocks.get(secrethash)
