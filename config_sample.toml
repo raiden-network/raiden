@@ -6,8 +6,8 @@
 #password-file =
 
 #secret-registry-contract-address = "0x7862eF1296EeF5Fa55ef056c0cB03FF8D4d49Cf8"
-#registry-contract-address = "0x66eea3159A01d134DD64Bfe36fde4bE9ED9c1695"
-#discovery-contract-address = "0x1E3941d8c05ffFA7466216480209240cc26ea577"
+#tokennetwork-registry-contract-address = "0x66eea3159A01d134DD64Bfe36fde4bE9ED9c1695"
+#endpoint-registry-contract-address = "0x1E3941d8c05ffFA7466216480209240cc26ea577"
 
 #console = false
 
