@@ -540,6 +540,7 @@ def set_offchain_reveal_state(transfers_pair, payee_address):
 
 
 def events_for_expired_pairs(
+        channelidentifiers_to_channels: typing.ChannelMap,
         transfers_pair: typing.List[MediationPairState],
         waiting_transfer: WaitingTransferState,
         block_number: typing.BlockNumber,
@@ -549,12 +550,20 @@ def events_for_expired_pairs(
 
     events = list()
     for pair in pending_transfers_pairs:
-        has_payee_transfer_expired = (
-            block_number > pair.payee_transfer.lock.expiration and
-            pair.payee_state != 'payee_expired'
+        payer_balance_proof = pair.payer_transfer.balance_proof
+        payer_channel = channelidentifiers_to_channels.get(payer_balance_proof.channel_identifier)
+        payer_lock_expiration_threshold = (
+            pair.payer_transfer.lock.expiration +
+            DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+        )
+        has_payer_lock_expired, _ = channel.is_lock_expired(
+            end_state=payer_channel.our_state,
+            lock=pair.payer_transfer.lock,
+            block_number=block_number,
+            lock_expiration_threshold=payer_lock_expiration_threshold,
         )
         has_payer_transfer_expired = (
-            block_number > pair.payer_transfer.lock.expiration and
+            has_payer_lock_expired and
             pair.payer_state != 'payer_expired'
         )
 
