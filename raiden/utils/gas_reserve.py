@@ -49,7 +49,7 @@ def _get_required_gas_estimate(
     return estimate
 
 
-def _get_required_gas_estimate_for_state(raiden: 'RaidenService') -> int:
+def _get_required_gas_estimate_for_state(raiden) -> int:
     chain_state = views.state_from_raiden(raiden)
     registry_address = raiden.default_registry.address
     token_addresses = views.get_token_identifiers(chain_state, registry_address)
@@ -104,7 +104,7 @@ def _get_required_gas_estimate_for_state(raiden: 'RaidenService') -> int:
 
 
 def has_enough_gas_reserve(
-    raiden: 'RaidenService',
+    raiden,
     channels_to_open: int = 0,
 ) -> Tuple[bool, int]:
     """ Checks if the account has enough balance to handle the lifecycles of all
