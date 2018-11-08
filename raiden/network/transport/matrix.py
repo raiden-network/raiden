@@ -749,7 +749,9 @@ class MatrixTransport(Runnable):
                         'Queue cleaned, stop retrying',
                         message=message,
                         queue=queue_identifier,
-                        queueids_to_queues=self._queueids_to_queues,
+                        queueids_to_queues={
+                            str(k): v for k, v in self._queueids_to_queues.items()
+                        },
                     )
                     break
                 # retry while the message is in queue
