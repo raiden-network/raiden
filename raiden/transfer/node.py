@@ -391,10 +391,10 @@ def maybe_add_tokennetwork(
 
     if token_network_state_previous is None:
         ids_to_tokens = payment_network_state.tokenidentifiers_to_tokennetworks
-        addrs_to_ids = payment_network_state.tokenaddresses_to_tokenidentifiers
+        addresses_to_ids = payment_network_state.tokenaddresses_to_tokenidentifiers
 
         ids_to_tokens[token_network_identifier] = token_network_state
-        addrs_to_ids[token_address] = token_network_identifier
+        addresses_to_ids[token_address] = token_network_identifier
 
 
 def sanity_check(iteration: TransitionResult):
