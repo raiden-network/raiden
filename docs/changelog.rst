@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug'`2963` Fixes an overflow issue with the hint of the join network dialog.
 * :bug:`2973` Introduce special handling of infura endpoints so that the old getTransactionCount is used.
 * :feature:`2946` Do not show full block information in the INFO logging message.
 * :bug:`2921` Properly estimate gas cost of transactions so that we have a more reasonable minimal amount of ETH required to run Raiden.
