@@ -2,11 +2,11 @@ import structlog
 from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
-from raiden.exceptions import TransactionThrew
+from raiden.exceptions import RaidenUnrecoverableError, TransactionThrew
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, privatekey_to_address, safe_gas_limit
+from raiden.utils import pex, privatekey_to_address, safe_gas_limit, typing
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -42,7 +42,7 @@ class Token:
             to_checksum_address(spender),
         ).call()
 
-    def approve(self, allowed_address, allowance):
+    def approve(self, allowed_address: typing.AddressHex, allowance: typing.TokenAmount):
         """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
@@ -57,14 +57,21 @@ class Token:
             'allowed_address': pex(allowed_address),
             'allowance': allowance,
         }
-        log.debug('approve called', **log_details)
 
         startgas = self.proxy.estimate_gas(
             'approve',
             to_checksum_address(allowed_address),
             allowance,
         )
+        if not startgas:
+            msg = self._check_why_approved_failed(allowance)
+            log.critical(
+                f'approve transaction will always fail due to,  {msg}',
+                **log_details,
+            )
+            raise RaidenUnrecoverableError('Approve transaction will always fail')
 
+        log.debug('approve called', **log_details)
         transaction_hash = self.proxy.transact(
             'approve',
             safe_gas_limit(startgas),
@@ -76,44 +83,47 @@ class Token:
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
-            user_balance = self.balance_of(self.client.address)
-
-            # If the balance is zero, either the smart contract doesnt have a
-            # balanceOf function or the actual balance is zero
-            if user_balance == 0:
-                msg = (
-                    "Approve failed. \n"
-                    "Your account balance is 0 (zero), either the smart "
-                    "contract is not a valid ERC20 token or you don't have funds "
-                    "to use for openning a channel. "
-                )
-
-            # The approve call failed, check the user has enough balance
-            # (assuming the token smart contract may check for the maximum
-            # allowance, which is not necessarily the case)
-            elif user_balance < allowance:
-                msg = (
-                    'Approve failed. \n'
-                    'Your account balance is {}, nevertheless the call to '
-                    'approve failed. Please make sure the corresponding smart '
-                    'contract is a valid ERC20 token.'
-                ).format(user_balance)
-
-            # If the user has enough balance, warn the user the smart contract
-            # may not have the approve function.
-            else:
-                msg = (
-                    f'Approve failed. \n'
-                    f'Your account balance is {user_balance}, '
-                    f'the request allowance is {allowance}. '
-                    f'The smart contract may be rejecting your request for the '
-                    f'lack of balance.'
-                )
-
+            msg = self._check_why_approved_failed(allowance)
             log.critical(f'approve failed, {msg}', **log_details)
             raise TransactionThrew(msg, receipt_or_none)
 
         log.info('approve successful', **log_details)
+
+    def _check_why_approved_failed(self, allowance: typing.TokenAmount) -> str:
+        user_balance = self.balance_of(self.client.address)
+
+        # If the balance is zero, either the smart contract doesnt have a
+        # balanceOf function or the actual balance is zero
+        if user_balance == 0:
+            msg = (
+                "Approve failed. \n"
+                "Your account balance is 0 (zero), either the smart "
+                "contract is not a valid ERC20 token or you don't have funds "
+                "to use for openning a channel. "
+            )
+
+        # The approve call failed, check the user has enough balance
+        # (assuming the token smart contract may check for the maximum
+        # allowance, which is not necessarily the case)
+        elif user_balance < allowance:
+            msg = (
+                'Approve failed. \n'
+                'Your account balance is {}, nevertheless the call to '
+                'approve failed. Please make sure the corresponding smart '
+                'contract is a valid ERC20 token.'
+            ).format(user_balance)
+
+        # If the user has enough balance, warn the user the smart contract
+        # may not have the approve function.
+        else:
+            msg = (
+                f'Approve failed. \n'
+                f'Your account balance is {user_balance}, '
+                f'the request allowance is {allowance}. '
+                f'The smart contract may be rejecting your request for the '
+                f'lack of balance.'
+            )
+        return msg
 
     def balance_of(self, address):
         """ Return the balance of `address`. """

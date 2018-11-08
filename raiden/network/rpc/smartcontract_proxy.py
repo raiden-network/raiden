@@ -181,7 +181,10 @@ class ContractProxy:
     def encode_function_call(self, function: str, args: List = None):
         return self.get_transaction_data(self.contract.abi, function, args)
 
-    def estimate_gas(self, function: str, *args):
+    def estimate_gas(self, function: str, *args) -> typing.Optional[int]:
+        """Returns a gas estimate for the function with the given arguments or
+        None if the function call will always fail due to Insufficient funds or
+        the logic in the called function."""
         fn = getattr(self.contract.functions, function)
         try:
             return fn(*args).estimateGas({
