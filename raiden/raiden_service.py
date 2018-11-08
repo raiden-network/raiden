@@ -2,7 +2,7 @@
 import os
 import random
 from collections import defaultdict
-from typing import Dict, List, NamedTuple, Union
+from typing import Callable, Dict, List, NamedTuple, Union
 
 import filelock
 import gevent
@@ -29,7 +29,7 @@ from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
-from raiden.transfer.architecture import StateChange
+from raiden.transfer.architecture import ContractSendEvent, StateChange
 from raiden.transfer.mediated_transfer.events import (
     EventNewBalanceProofReceived,
     SendLockedTransfer,
@@ -266,6 +266,7 @@ class RaidenService(Runnable):
             self.serialization_file = None
             self.db_lock = None
 
+        self.greenlets = list()
         self.event_poll_lock = gevent.lock.Semaphore()
         self.gas_reserve_lock = gevent.lock.Semaphore()
         self.payment_identifier_lock = gevent.lock.Semaphore()
@@ -490,52 +491,91 @@ class RaidenService(Runnable):
 
         old_state = views.state_from_raiden(self)
 
-        event_list = self.wal.log_and_dispatch(state_change)
+        raiden_event_list = self.wal.log_and_dispatch(state_change)
 
         current_state = views.state_from_raiden(self)
         for balance_proof in views.detect_balance_proof_change(old_state, current_state):
-            event_list.append(EventNewBalanceProofReceived(balance_proof))
+            raiden_event_list.append(EventNewBalanceProofReceived(balance_proof))
 
-        if self.dispatch_events_lock.locked():
-            return []
+        log.debug(
+            'Raiden events',
+            node=pex(self.address),
+            raiden_events=[
+                _redact_secret(serialize.JSONSerializer.serialize(event))
+                for event in raiden_event_list
+            ],
+        )
 
-        for event in event_list:
-            log.debug(
-                'Raiden event',
-                node=pex(self.address),
-                raiden_event=_redact_secret(serialize.JSONSerializer.serialize(event)),
-            )
-
-            try:
-                self.raiden_event_handler.on_raiden_event(
-                    raiden=self,
-                    event=event,
-                )
-            except RaidenRecoverableError as e:
-                log.error(str(e))
-            except InvalidDBData:
-                raise
-            except RaidenUnrecoverableError as e:
-                log_unrecoverable = (
-                    self.config['environment_type'] == Environment.PRODUCTION and
-                    not self.config['unrecoverable_error_should_crash']
-                )
-                if log_unrecoverable:
-                    log.error(str(e))
+        if not self.dispatch_events_lock.locked():
+            # Note: It's important to /not/ block here, because this function
+            # can be called from the alarm task, which should not starve.
+            for raiden_event in raiden_event_list:
+                if isinstance(raiden_event, ContractSendEvent):
+                    self.handle_transaction_event(transaction_event=raiden_event)
                 else:
-                    raise
+                    self.raiden_event_handler.on_raiden_event(
+                        raiden=self,
+                        event=raiden_event,
+                    )
 
-        # Take a snapshot every SNAPSHOT_STATE_CHANGES_COUNT
-        # TODO: Gather more data about storage requirements
-        # and update the value to specify how often we need
-        # capturing a snapshot should take place
-        new_snapshot_group = self.wal.storage.count_state_changes() // SNAPSHOT_STATE_CHANGES_COUNT
-        if new_snapshot_group > self.snapshot_group:
-            log.debug('Storing snapshot', snapshot_id=new_snapshot_group)
-            self.wal.snapshot()
-            self.snapshot_group = new_snapshot_group
+            state_changes_count = self.wal.storage.count_state_changes()
+            new_snapshot_group = (
+                state_changes_count // SNAPSHOT_STATE_CHANGES_COUNT
+            )
+            if new_snapshot_group > self.snapshot_group:
+                log.debug('Storing snapshot', snapshot_id=new_snapshot_group)
+                self.wal.snapshot()
+                self.snapshot_group = new_snapshot_group
 
-        return event_list
+    def handle_transaction_event(self, transaction_event: ContractSendEvent):
+        """Spawn a new thread to handle a transaction event.
+
+        This will spawn a new greenlet to handle each transaction, which is
+        important for two reasons:
+
+        - Blockchain transactions can be queued without interfering with each
+          other.
+        - The calling thread is free to do more work. This is specially
+          important for the AlarmTask thread, which will eventually cause the
+          node to send transactions when a given Block is reached (e.g.
+          registering a secret or settling a channel).
+
+        Important:
+
+            This is spawing a new greenlet for /each/ transaction. It's
+            therefore /required/ there is *NO* order among these.
+        """
+        assert isinstance(transaction_event, ContractSendEvent)
+        self.spawn_sub_task(self._handle_transaction_event, transaction_event)
+
+    def _handle_transaction_event(self, transaction_event: ContractSendEvent):
+        assert isinstance(transaction_event, ContractSendEvent)
+        try:
+            self.raiden_event_handler.on_raiden_event(
+                raiden=self,
+                event=transaction_event,
+            )
+        except RaidenRecoverableError as e:
+            log.error(str(e))
+        except InvalidDBData as e:
+            raise
+        except RaidenUnrecoverableError as e:
+            log_unrecoverable = (
+                self.config['environment_type'] == Environment.PRODUCTION and
+                not self.config['unrecoverable_error_should_crash']
+            )
+            if log_unrecoverable:
+                log.error(str(e))
+            else:
+                raise
+
+    def spawn_sub_task(self, func: Callable, *args, **kwargs):
+        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet. """
+
+        greenlet = gevent.spawn(func, *args, **kwargs)
+        self.greenlets.append(greenlet)
+        greenlet.link_exception(self.on_error)
+        greenlet.link_value(self.greenlets.remove)
 
     def set_node_network_state(self, node_address: Address, network_state: str):
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
@@ -609,21 +649,7 @@ class RaidenService(Runnable):
 
         with self.dispatch_events_lock:
             for transaction in pending_transactions:
-                try:
-                    self.raiden_event_handler.on_raiden_event(self, transaction)
-                except RaidenRecoverableError as e:
-                    log.error(str(e))
-                except InvalidDBData:
-                    raise
-                except RaidenUnrecoverableError as e:
-                    log_unrecoverable = (
-                        self.config['environment_type'] == Environment.PRODUCTION and
-                        not self.config['unrecoverable_error_should_crash']
-                    )
-                    if log_unrecoverable:
-                        log.error(str(e))
-                    else:
-                        raise
+                self.handle_transaction_event(transaction)
 
     def _initialize_payment_statuses(self, chain_state: ChainState):
         """ Re-initialize targets_to_identifiers_to_statuses. """
