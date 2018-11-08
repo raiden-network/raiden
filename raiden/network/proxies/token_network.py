@@ -166,6 +166,16 @@ class TokenNetwork:
             'peer1': pex(self.node_address),
             'peer2': pex(partner),
         }
+        gas_limit = self.proxy.estimate_gas(
+            'openChannel',
+            self.node_address,
+            partner,
+            settle_timeout,
+        )
+        if not gas_limit:
+            log.critical('openChannel will always fail', **log_details)
+            raise RaidenUnrecoverableError('creating new channel failed')
+
         log.debug('new_netting_channel called', **log_details)
 
         # Prevent concurrent attempts to open a channel with the same token and
@@ -175,7 +185,11 @@ class TokenNetwork:
             self.open_channel_transactions[partner] = new_open_channel_transaction
 
             try:
-                transaction_hash = self._new_netting_channel(partner, settle_timeout)
+                transaction_hash = self._new_netting_channel(
+                    partner=partner,
+                    settle_timeout=settle_timeout,
+                    gas_limit=gas_limit,
+                )
             except Exception as e:
                 log.critical('new_netting_channel failed', **log_details)
                 new_open_channel_transaction.set_exception(e)
@@ -202,16 +216,15 @@ class TokenNetwork:
 
         return channel_identifier
 
-    def _new_netting_channel(self, partner: typing.Address, settle_timeout: int):
+    def _new_netting_channel(
+            self,
+            partner: typing.Address,
+            settle_timeout: int,
+            gas_limit: int,
+    ) -> typing.TransactionHash:
         if self.channel_exists_and_not_settled(self.node_address, partner):
             raise DuplicatedChannelError('Channel with given partner address already exists')
 
-        gas_limit = self.proxy.estimate_gas(
-            'openChannel',
-            self.node_address,
-            partner,
-            settle_timeout,
-        )
         gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_OPEN_CHANNEL)
 
         transaction_hash = self.proxy.transact(
@@ -545,7 +558,6 @@ class TokenNetwork:
                 'new_total_deposit': total_deposit,
                 'previous_total_deposit': previous_total_deposit,
             }
-            log.debug('setTotalDeposit called', **log_details)
 
             # These two scenarios can happen if two calls to deposit happen
             # and then we get here on the second call
@@ -615,8 +627,20 @@ class TokenNetwork:
                 total_deposit,
                 partner,
             )
+            if not gas_limit:
+                self._check_why_deposit_failed(
+                    channel_identifier=channel_identifier,
+                    partner=partner,
+                    token=token,
+                    amount_to_deposit=amount_to_deposit,
+                    total_deposit=total_deposit,
+                    log_details=log_details,
+                )
+                raise RaidenUnrecoverableError('Deposit transaction will always fail')
+
             gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
 
+            log.debug('setTotalDeposit called', **log_details)
             transaction_hash = self.proxy.transact(
                 'setTotalDeposit',
                 gas_limit,
@@ -630,37 +654,54 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
             if receipt_or_none:
-                latest_deposit = self.detail_participant(
-                    channel_identifier,
-                    self.node_address,
-                    partner,
-                ).deposit
-
-                if token.allowance(self.node_address, self.address) < amount_to_deposit:
-                    log_msg = (
-                        'The allowance is insufficient, '
-                        'check concurrent deposits for the same token network '
-                        'but different proxies.'
-                    )
-                elif token.balance_of(self.node_address) < amount_to_deposit:
-                    log_msg = "The address doesn't have enough funds"
-                elif latest_deposit < total_deposit:
-                    log_msg = 'The tokens were not transferred'
-                else:
-                    log_msg = 'unknown'
-
-                log.critical('setTotalDeposit failed', reason=log_msg, **log_details)
-
-                self._check_channel_state_for_deposit(
-                    self.node_address,
-                    partner,
-                    channel_identifier,
-                    total_deposit,
+                self._check_why_deposit_failed(
+                    channel_identifier=channel_identifier,
+                    partner=partner,
+                    token=token,
+                    amount_to_deposit=amount_to_deposit,
+                    total_deposit=total_deposit,
+                    log_details=log_details,
                 )
-
                 raise TransactionThrew('Deposit', receipt_or_none)
 
             log.info('setTotalDeposit successful', **log_details)
+
+    def _check_why_deposit_failed(
+            self,
+            channel_identifier: typing.ChannelID,
+            partner: typing.Address,
+            token: Token,
+            amount_to_deposit: typing.TokenAmount,
+            total_deposit: typing.TokenAmount,
+            log_details: typing.Dict,
+    ):
+        latest_deposit = self.detail_participant(
+            channel_identifier,
+            self.node_address,
+            partner,
+        ).deposit
+
+        if token.allowance(self.node_address, self.address) < amount_to_deposit:
+            log_msg = (
+                'setTotalDeposit failed. The allowance is insufficient, '
+                'check concurrent deposits for the same token network '
+                'but different proxies.'
+            )
+        elif token.balance_of(self.node_address) < amount_to_deposit:
+            log_msg = 'setTotalDeposit failed. The address doesnt have funds'
+        elif latest_deposit < total_deposit:
+            log_msg = 'setTotalDeposit failed. The tokens were not transferred'
+        else:
+            log_msg = 'setTotalDeposit failed'
+
+        log.critical(log_msg, **log_details)
+
+        self._check_channel_state_for_deposit(
+            self.node_address,
+            partner,
+            channel_identifier,
+            total_deposit,
+        )
 
     def close(
             self,
@@ -880,8 +921,6 @@ class TokenNetwork:
             log.info('skipping unlock, tree is empty', **log_details)
             return
 
-        log.info('unlock called', **log_details)
-
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
         gas_limit = self.proxy.estimate_gas(
@@ -891,8 +930,13 @@ class TokenNetwork:
             partner,
             leaves_packed,
         )
+        if not gas_limit:
+            log.critical('unlock transaction will always fail', **log_details)
+            raise RaidenUnrecoverableError('Unlock transaction will always fail')
+
         gas_limit = safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
 
+        log.info('unlock called', **log_details)
         transaction_hash = self.proxy.transact(
             'unlock',
             gas_limit,
@@ -975,6 +1019,15 @@ class TokenNetwork:
                     locked_amount,
                     locksroot,
                 )
+                if not gas_limit:
+                    log.critical('settle transaction will always fail', **log_details)
+                    self._check_channel_state_for_settle(
+                        participant1=self.node_address,
+                        participant2=partner,
+                        channel_identifier=channel_identifier,
+                    )
+                    raise RaidenUnrecoverableError('Settle transaction will always fail')
+
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
 
                 transaction_hash = self.proxy.transact(
@@ -1003,6 +1056,15 @@ class TokenNetwork:
                     partner_locked_amount,
                     partner_locksroot,
                 )
+                if not gas_limit:
+                    log.critical('settle transaction will always fail', **log_details)
+                    self._check_channel_state_for_settle(
+                        participant1=self.node_address,
+                        participant2=partner,
+                        channel_identifier=channel_identifier,
+                    )
+                    raise RaidenUnrecoverableError('Settle transaction will always fail')
+
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
 
                 transaction_hash = self.proxy.transact(
@@ -1024,9 +1086,9 @@ class TokenNetwork:
             if receipt_or_none:
                 log.critical('settle failed', **log_details)
                 self._check_channel_state_for_settle(
-                    self.node_address,
-                    partner,
-                    channel_identifier,
+                    participant1=self.node_address,
+                    participant2=partner,
+                    channel_identifier=channel_identifier,
                 )
                 raise TransactionThrew('Settle', receipt_or_none)
 
@@ -1182,7 +1244,11 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID,
     ) -> None:
-        channel_data = self.detail_channel(participant1, participant2, channel_identifier)
+        channel_data = self.detail_channel(
+            participant1=participant1,
+            participant2=participant2,
+            channel_identifier=channel_identifier,
+        )
         if channel_data.state == ChannelState.SETTLED:
             raise RaidenRecoverableError(
                 'Channel is already settled',

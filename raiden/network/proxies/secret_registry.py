@@ -5,7 +5,7 @@ from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_
 from gevent.event import AsyncResult
 
 from raiden.constants import GAS_REQUIRED_PER_SECRET_IN_BATCH, GENESIS_BLOCK_NUMBER
-from raiden.exceptions import InvalidAddress, TransactionThrew
+from raiden.exceptions import InvalidAddress, RaidenUnrecoverableError, TransactionThrew
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -82,10 +82,17 @@ class SecretRegistry:
             log.debug('registerSecretBatch skipped', **log_details)
             return
 
-        log.debug('registerSecretBatch called', **log_details)
+        gas_limit = self.proxy.estimate_gas('registerSecretBatch', secrets)
+        if not gas_limit:
+            log.critical(
+                'registerSecretBatch will always fail',
+                **log_details,
+            )
+            raise RaidenUnrecoverableError('RegisterSecretBatch transaction will always fail')
 
         try:
-            transaction_hash = self._register_secret_batch(secrets_to_register)
+            log.debug('registerSecretBatch called', **log_details)
+            transaction_hash = self._register_secret_batch(secrets_to_register, gas_limit)
         except Exception as e:
             log.critical('registerSecretBatch failed', **log_details)
             secret_registry_transaction.set_exception(e)
@@ -97,8 +104,12 @@ class SecretRegistry:
             for secret in secrets_to_register:
                 self.open_secret_transactions.pop(secret, None)
 
-    def _register_secret_batch(self, secrets):
-        gas_limit = self.proxy.estimate_gas('registerSecretBatch', secrets)
+    def _register_secret_batch(
+            self,
+            secrets: List[typing.Secret],
+            gas_limit: int,
+    ) -> typing.TransactionHash:
+
         gas_limit = safe_gas_limit(gas_limit, len(secrets) * GAS_REQUIRED_PER_SECRET_IN_BATCH)
         transaction_hash = self.proxy.transact('registerSecretBatch', gas_limit, secrets)
         self.client.poll(transaction_hash)
