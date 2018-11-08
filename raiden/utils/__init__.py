@@ -280,11 +280,10 @@ def optional_address_to_string(
     return to_checksum_address(address)
 
 
-def safe_gas_limit(*estimates) -> int:
-    """ Calculates a safe gas limit for a number of estimates.
-
-    Even though it's not documented, it does happen that estimate_gas returns `None`.
-    This function takes care of this and adds a security margin as well.
+def safe_gas_limit(*estimates: int) -> int:
+    """ Calculates a safe gas limit for a number of gas estimates
+    including a security margin
     """
-    calculated_limit = max(gas or 0 for gas in estimates)
+    assert None not in estimates, 'if estimateGas returned None it should not reach here'
+    calculated_limit = max(estimates)
     return int(calculated_limit * constants.GAS_FACTOR)
