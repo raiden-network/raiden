@@ -316,7 +316,7 @@ def test_events_for_expired_pairs():
     """ The transfer pair must switch to expired at the right block. """
     amount = 10
     block_number = 1
-    _, transfers_pair = factories.make_transfers_pair(
+    channelmap, transfers_pair = factories.make_transfers_pair(
         [HOP2_KEY, HOP3_KEY],
         amount,
         block_number,
@@ -325,31 +325,36 @@ def test_events_for_expired_pairs():
     pair = transfers_pair[0]
 
     first_unsafe_block = pair.payer_transfer.lock.expiration - UNIT_REVEAL_TIMEOUT
+
     mediator.events_for_expired_pairs(
+        channelmap,
         transfers_pair,
         None,
         first_unsafe_block,
     )
-    assert pair.payee_state == 'payee_pending'
     assert pair.payer_state == 'payer_pending'
 
     # edge case for the lock expiration
     payee_expiration_block = pair.payee_transfer.lock.expiration
     mediator.events_for_expired_pairs(
+        channelmap,
         transfers_pair,
         None,
         payee_expiration_block,
     )
-    assert pair.payee_state == 'payee_pending'
     assert pair.payer_state == 'payer_pending'
 
     # lock expired
+    payer_lock_expiration_threshold = (
+        pair.payer_transfer.lock.expiration +
+        DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    )
     mediator.events_for_expired_pairs(
+        channelmap,
         transfers_pair,
         None,
-        payee_expiration_block + 1,
+        payer_lock_expiration_threshold,
     )
-    assert pair.payee_state == 'payee_expired'
     assert pair.payer_state == 'payer_expired'
 
 
@@ -1753,6 +1758,9 @@ def test_mediator_lock_expired_with_new_block():
 
     assert iteration.events
     assert must_contain_entry(iteration.events, SendLockExpired, {
+        'secrethash': transfer.lock.secrethash,
+    })
+    assert must_contain_entry(iteration.events, EventUnlockFailed, {
         'secrethash': transfer.lock.secrethash,
     })
     assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
