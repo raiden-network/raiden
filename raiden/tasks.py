@@ -183,21 +183,20 @@ class AlarmTask(Runnable):
                 old_gas_limit=latest_block['gasLimit'],
                 old_block_hash=to_hex(latest_block['hash']),
             )
-        elif missed_blocks > 1:
+        elif missed_blocks > 0:
+            log_details = dict(
+                known_block_number=self.known_block_number,
+                latest_block_number=latest_block_number,
+                latest_block_hash=to_hex(latest_block['hash']),
+                latest_block_gas_limit=latest_block['gasLimit'],
+            )
+            if missed_blocks > 1:
+                log_details['num_missed_blocks'] = missed_blocks - 1
+
             log.debug(
                 'Received new block',
-                known_block_number=self.known_block_number,
-                latest_block_number=latest_block['number'],
-                latest_gas_limit=latest_block['gasLimit'],
-                latest_block_hash=to_hex(latest_block['hash']),
+                **log_details,
             )
-
-            if missed_blocks > 2:
-                log.info(
-                    'Missed block(s)',
-                    missed_blocks=missed_blocks - 1,
-                    latest_block=latest_block,
-                )
 
             remove = list()
             for callback in self.callbacks:
@@ -208,7 +207,7 @@ class AlarmTask(Runnable):
             for callback in remove:
                 self.callbacks.remove(callback)
 
-            self.known_block_number = latest_block['number']
+            self.known_block_number = latest_block_number
 
     def stop(self):
         self._stop_event.set(True)
