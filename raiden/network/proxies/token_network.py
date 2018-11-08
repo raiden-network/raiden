@@ -23,7 +23,6 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     SamePeerAddress,
     TransactionThrew,
-    WithdrawMismatch,
 )
 from raiden.network.proxies import Token
 from raiden.network.proxies.utils import compare_contract_versions
@@ -845,81 +844,6 @@ class TokenNetwork:
 
         log.info('updateNonClosingBalanceProof successful', **log_details)
 
-    def withdraw(
-            self,
-            channel_identifier: typing.ChannelID,
-            partner: typing.Address,
-            total_withdraw: int,
-            partner_signature: typing.Address,
-            signature: typing.Signature,
-    ):
-        log_details = {
-            'token_network': pex(self.address),
-            'node': pex(self.node_address),
-            'partner': pex(partner),
-            'total_withdraw': total_withdraw,
-            'partner_signature': encode_hex(partner_signature),
-            'signature': encode_hex(signature),
-        }
-        log.debug('setTotalWithdraw called', **log_details)
-
-        self._check_for_outdated_channel(
-            self.node_address,
-            partner,
-            channel_identifier,
-        )
-
-        current_withdraw = self.detail_participant(
-            channel_identifier,
-            self.node_address,
-            partner,
-        ).withdrawn
-        amount_to_withdraw = total_withdraw - current_withdraw
-
-        if total_withdraw < current_withdraw:
-            msg = (
-                f'Current withdraw ({current_withdraw}) is already larger '
-                f'than the requested total withdraw amount ({total_withdraw})',
-            )
-            log.critical(f'setTotalWithdraw failed, {msg}', **log_details)
-            raise WithdrawMismatch(msg)
-
-        if amount_to_withdraw <= 0:
-            msg = f'withdraw {amount_to_withdraw} must be greater than 0.'
-            log.critical(f'setTotalWithdraw failed, {msg}', **log_details)
-            raise ValueError(msg)
-
-        with self.channel_operations_lock[partner]:
-            # gaslimit below must be defined
-            raise NotImplementedError('feature temporarily disabled')
-
-            gas_limit = None
-            transaction_hash = self.proxy.transact(
-                'setTotalWithdraw',
-                gas_limit,
-                channel_identifier,
-                self.node_address,
-                total_withdraw,
-                partner_signature,
-                signature,
-            )
-            self.client.poll(transaction_hash)
-
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-            if receipt_or_none:
-                log.critical('setTotalWithdraw failed', **log_details)
-
-                self._check_channel_state_for_withdraw(
-                    self.node_address,
-                    partner,
-                    channel_identifier,
-                    total_withdraw,
-                )
-
-                raise TransactionThrew('Withdraw', receipt_or_none)
-
-            log.info('setTotalWithdraw successful', **log_details)
-
     def unlock(
             self,
             channel_identifier: typing.ChannelID,
@@ -1223,42 +1147,6 @@ class TokenNetwork:
             )
         elif participant_details.our_details.deposit < deposit_amount:
             raise RaidenUnrecoverableError('Deposit amount decreased')
-
-    def _check_channel_state_for_withdraw(
-            self,
-            participant1,
-            participant2,
-            channel_identifier,
-            withdraw_amount,
-    ):
-        participant_details = self.detail_participants(
-            participant1,
-            participant2,
-            channel_identifier,
-        )
-
-        if participant_details.our_details.withdrawn > withdraw_amount:
-            raise WithdrawMismatch('Withdraw amount decreased')
-
-        channel_state = self._get_channel_state(
-            participant1=participant1,
-            participant2=participant2,
-            channel_identifier=channel_identifier,
-        )
-
-        if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-            raise RaidenUnrecoverableError(
-                f'Channel between participant {participant1} '
-                f'and {participant2} does not exist',
-            )
-        elif channel_state == ChannelState.SETTLED:
-            raise RaidenUnrecoverableError(
-                'A settled channel cannot be closed',
-            )
-        elif channel_state == ChannelState.CLOSED:
-            raise RaidenRecoverableError(
-                'Channel is already closed',
-            )
 
     def _check_channel_state_for_settle(self, participant1, participant2, channel_identifier):
         channel_data = self.detail_channel(participant1, participant2, channel_identifier)

@@ -145,18 +145,6 @@ def test_token_network_proxy_basics(
 
         assert 'does not exist' in str(exc)
 
-    # Channel is not open yet
-    # with pytest.raises(RaidenUnrecoverableError) as exc:
-    #     c1_token_network_proxy.withdraw(
-    #         1,
-    #         c2_client.address,
-    #         1,
-    #         EMPTY_HASH,
-    #         EMPTY_HASH,
-    #     )
-
-    #     assert 'does not exist' in str(exc)
-
     # actually create a channel
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         c2_client.address,
@@ -202,16 +190,6 @@ def test_token_network_proxy_basics(
         10,
         c2_client.address,
     )
-
-    # no negative deposit
-    # with pytest.raises(WithdrawMismatch):
-    #     c1_token_network_proxy.withdraw(
-    #         channel_identifier,
-    #         c2_client.address,
-    #         -1,
-    #         EMPTY_HASH,
-    #         EMPTY_HASH,
-    #     )
 
     # balance proof by c2
     transferred_amount = 3
@@ -331,28 +309,6 @@ def test_token_network_proxy_basics(
         )
         # No channel exists
         assert 'getChannelIdentifier returned 0' in str(exc)
-
-    # with pytest.raises(RaidenUnrecoverableError) as exc:
-    #     c1_token_network_proxy.withdraw(
-    #         channel_identifier,
-    #         c2_client.address,
-    #         5,
-    #         decode_hex(balance_proof.signature),
-    #         decode_hex(balance_proof.signature),
-    #     )
-    #     # No channel exists
-    #     assert 'getChannelIdentifier returned 0' in str(exc)
-
-    # with pytest.raises(RaidenUnrecoverableError) as exc:
-    #     c1_token_network_proxy.withdraw(
-    #         channel_identifier,
-    #         c2_client.address,
-    #         5,
-    #         decode_hex(balance_proof.signature),
-    #         decode_hex(balance_proof.signature),
-    #     )
-    #     # No channel exists
-    #     assert 'getChannelIdentifier returned 0' in str(exc)
 
 
 def test_token_network_proxy_update_transfer(

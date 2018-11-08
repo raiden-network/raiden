@@ -65,15 +65,6 @@ class DepositMismatch(RaidenRecoverableError):
     pass
 
 
-class WithdrawMismatch(RaidenRecoverableError):
-    """ Raised when the requested withdraw is lower than actual channel withdraw
-
-    Used when a *user* tries to withdraw a given amount of token from a channel,
-    but the on-chain amount is already higher.
-    """
-    pass
-
-
 class InvalidAddress(RaidenError):
     """ Raised when the user provided value is not a valid address. """
     pass

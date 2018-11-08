@@ -312,10 +312,6 @@ def on_blockchain_event(raiden: 'RaidenService', event: Event):
     elif data['event'] == ChannelEvent.DEPOSIT:
         handle_channel_new_balance(raiden, event)
 
-    elif data['event'] == ChannelEvent.WITHDRAW:
-        # handle_channel_withdraw(raiden, event)
-        raise NotImplementedError('handle_channel_withdraw not implemented yet')
-
     elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
         handle_channel_update_transfer(raiden, event)
 
