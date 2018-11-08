@@ -49,6 +49,8 @@ def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspe
             return ClientErrorInspectResult.INSUFFICIENT_FUNDS
         elif error['code'] == -32010 and 'another transaction with same nonce in the queue':
             return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
+        elif error['code'] == -32015 and 'Transaction execution error' in error['message']:
+            return ClientErrorInspectResult.ALWAYS_FAIL
 
     return ClientErrorInspectResult.PROPAGATE_ERROR
 
