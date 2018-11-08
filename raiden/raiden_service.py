@@ -371,13 +371,14 @@ class RaidenService(Runnable):
         # messages to be enqueued before these older ones
         self._initialize_messages_queues(chain_state)
 
-        # The transport must not ever be started before the alarm task's first
-        # run, because it's this method which synchronizes the node with the
-        # blockchain, including the channel's state (if the channel is closed
-        # on-chain new messages must be rejected, which will not be the case if
-        # the node is not synchronized)
+        # The transport must not ever be started before the alarm task's
+        # `first_run()` has been, because it's this method which synchronizes the
+        # node with the blockchain, including the channel's state (if the channel
+        # is closed on-chain new messages must be rejected, which will not be the
+        # case if the node is not synchronized)
         self.transport.start(self, self.message_handler)
 
+        # First run has been called above!
         self.alarm.start()
 
         # exceptions on these subtasks should crash the app and bubble up
