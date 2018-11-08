@@ -258,6 +258,7 @@ class JSONRPCClient:
             privkey: bytes,
             gas_price_strategy: typing.Callable = rpc_gas_price_strategy,
             block_num_confirmations: int = 0,
+            uses_infura=False,
     ):
         if privkey is None or len(privkey) != 32:
             raise ValueError('Invalid private key')
@@ -279,31 +280,36 @@ class JSONRPCClient:
         address = privatekey_to_address(privkey)
         address_checksumed = to_checksum_address(address)
 
-        if eth_node == constants.EthClient.PARITY:
+        if uses_infura:
+            warnings.warn(
+                'Infura does not provide an API to '
+                'recover the latest used nonce. This may cause the Raiden node '
+                'to error on restarts.\n'
+                'The error will manifest while there is a pending transaction '
+                'from a previous execution in the Ethereum\'s client pool. When '
+                'Raiden restarts the same transaction with the same nonce will '
+                'be retried and *rejected*, because the nonce is already used.',
+            )
+            # The first valid nonce is 0, therefore the count is already the next
+            # available nonce
+            available_nonce = web3.eth.getTransactionCount(address_checksumed, 'pending')
+
+        elif eth_node == constants.EthClient.PARITY:
             parity_assert_rpc_interfaces(web3)
             available_nonce = parity_discover_next_available_nonce(
                 web3,
                 address_checksumed,
             )
+
         elif eth_node == constants.EthClient.GETH:
             geth_assert_rpc_interfaces(web3)
             available_nonce = geth_discover_next_available_nonce(
                 web3,
                 address_checksumed,
             )
+
         else:
-            warnings.warn(
-                f'The Ethereum client "{version}" does not provide an API to '
-                f'recover the latest used nonce. This may cause the Raiden node '
-                f'to error on restarts.\n'
-                f'The error will manifest while there is a pending transaction '
-                f'from a previous execution in the Ethereum\'s client pool. When '
-                f'Raiden restarts the same transaction with the same nonce will '
-                f'be retried and *rejected*, because the nonce is already used.',
-            )
-            # The first valid nonce is 0, therefore the count is already the next
-            # available nonce
-            available_nonce = web3.eth.getTransactionCount(address_checksumed, 'pending')
+            raise EthNodeInterfaceError(f'Unsupported Ethereum client {version}')
 
         self.eth_node = eth_node
         self.privkey = privkey
