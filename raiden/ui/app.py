@@ -241,6 +241,7 @@ def run_app(
         privatekey_bin,
         gas_price_strategy=gas_price,
         block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+        uses_infura='infura.io' in eth_rpc_endpoint,
     )
 
     blockchain_service = BlockChainService(
