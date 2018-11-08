@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`2973` Introduce special handling of infura endpoints so that the old getTransactionCount is used.
 * :feature:`2946` Do not show full block information in the INFO logging message.
 * :bug:`2921` Properly estimate gas cost of transactions so that we have a more reasonable minimal amount of ETH required to run Raiden.
 * :feature:`2962` Check that the ethereum node has all required json rpc interfaces enabled when Raiden starts. If not fail with a proper error.
