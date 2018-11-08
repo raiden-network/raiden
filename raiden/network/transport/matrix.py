@@ -88,6 +88,7 @@ class UserPresence(Enum):
     UNKNOWN = 'unknown'
 
 
+_PRESENCE_REACHABLE_STATES = {UserPresence.ONLINE, UserPresence.UNAVAILABLE}
 _JOIN_RETRIES = 5
 
 
@@ -187,7 +188,7 @@ class _RetryQueue(Runnable):
         if self.transport._stop_event.ready() or not self.transport.greenlet:
             return
         status = self.transport._address_to_presence.get(self.receiver)
-        if status not in self.transport._reachable:
+        if status not in _PRESENCE_REACHABLE_STATES:
             # if partner is not reachable, return
             self.log.debug(
                 'Partner not reachable. Skipping.',
@@ -201,7 +202,7 @@ class _RetryQueue(Runnable):
             self._message_queue,
             key=lambda d: d.queue_identifier.channel_identifier,
         )
-        texts = [
+        message_texts = [
             data.text
             for data in ordered_queue
             # if expired_gen generator yields False, message was sent recently, so skip it
@@ -215,34 +216,36 @@ class _RetryQueue(Runnable):
             )
 
         # clean after composing, so any queued messages (e.g. Delivered) are sent at least once
-        # iterate in reverse order to safely pop from list
-        for i in range(len(self._message_queue) - 1, -1, -1):
-            data = self._message_queue[i]
-            keep = False
-            if not hasattr(data.message, 'message_identifier'):
-                pass  # e.g. Delivered, send only once and then clear
-            elif data.queue_identifier not in self.transport._queueids_to_queues:
+        for msg_data in self._message_queue[:]:
+            remove = False
+            if not hasattr(msg_data, 'message_identifier'):
+                # e.g. Delivered, send only once and then clear
+                # TODO: Is this correct? Will a missed Delivered be 'fixed' by the
+                #       later `Processed` message?
+                remove = True
+            elif msg_data.queue_identifier not in self.transport._queueids_to_queues:
+                remove = True
                 self.log.debug(
-                    'Queue is gone, cleaning message from retry queue',
-                    queue=data.queue_identifier,
-                    message=data.message,
+                    'Stopping message send retry',
+                    queue=msg_data.queue_identifier,
+                    message=msg_data.message,
+                    reason='Raiden queue is gone',
                 )
-            elif not message_is_in_queue(data):
+            elif not message_is_in_queue(msg_data):
+                remove = True
                 self.log.debug(
-                    'Message removed from queue, clearing from retry queue',
-                    queue=data.queue_identifier,
-                    message=data.message,
+                    'Stopping message send retry',
+                    queue=msg_data.queue_identifier,
+                    message=msg_data.message,
+                    reason='Message was removed from queue',
                 )
-            else:
-                keep = True
 
-            if not keep:
-                self._message_queue.pop(i)
+            if remove:
+                self._message_queue.remove(msg_data)
 
-        if texts:
-            body = '\n'.join(texts)
-            self.log.debug('Send', receiver=pex(self.receiver), messages=body)
-            self.transport._send_raw(self.receiver, body)
+        if message_texts:
+            self.log.debug('Send', receiver=pex(self.receiver), messages=message_texts)
+            self.transport._send_raw(self.receiver, '\n'.join(message_texts))
 
     def _run(self):
         # run while transport parent is running
@@ -253,12 +256,7 @@ class _RetryQueue(Runnable):
                 if self._message_queue:
                     self._check_and_send()
             # wait up to retry_interval (or to be notified) before checking again
-            if not self._notify_event.wait(self.transport._config['retry_interval']):
-                gevent.idle()  # if timed out without notify, wait until idle
-
-    def stop(self):
-        """ Simply notify, as stop is controled by transport._stop_event """
-        self.notify()
+            self._notify_event.wait(self.transport._config['retry_interval'])
 
 
 class MatrixTransport(Runnable):
@@ -267,8 +265,6 @@ class MatrixTransport(Runnable):
     _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
     _addresses_cache = LRUCache(512)  # deterministic thus shared
     log = log
-    # set of reachable statuses
-    _reachable = {UserPresence.ONLINE, UserPresence.UNAVAILABLE}
 
     def __init__(self, config: dict):
         super().__init__()
@@ -394,7 +390,7 @@ class MatrixTransport(Runnable):
 
         for retrier in self._address_to_retrier.values():
             if retrier:
-                retrier.stop()
+                retrier.notify()
 
         self._client.set_presence_state(UserPresence.OFFLINE.value)
 
@@ -612,6 +608,8 @@ class MatrixTransport(Runnable):
                         break
                 else:
                     break
+            else:
+                raise TransportError('Could neither join nor create a discovery room')
 
         self._discovery_room = discovery_room
 
@@ -1159,11 +1157,12 @@ class MatrixTransport(Runnable):
 
         # The Matrix presence status 'unavailable' just means that the user has been inactive
         # for a while. So a user with UserPresence.UNAVAILABLE is still 'reachable' to us.
-        if new_state in self._reachable:
+        if new_state in _PRESENCE_REACHABLE_STATES:
             reachability = NODE_NETWORK_REACHABLE
             # _QueueRetry.notify when partner comes online
-            if address in self._address_to_retrier:
-                self._address_to_retrier[address].notify()
+            retrier = self._address_to_retrier.get(address)
+            if retrier:
+                retrier.notify()
         elif new_state is UserPresence.UNKNOWN:
             reachability = NODE_NETWORK_UNKNOWN
         else:
