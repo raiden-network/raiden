@@ -195,3 +195,32 @@ In the figure above the following things happen:
 
 Raiden Architecture
 ===================
+
+In this section we are going to see an explanation of how the code of the Raiden client is structured and how it implements the protocol detailed in the previous section and.
+
+
+Architecture Overview
+*********************
+
+.. figure:: images/architecture_overview.png
+    :width: 600px
+
+    Raiden Architecture Overview
+
+
+At the core of the Raiden architecture lies a state machine. The state machine gets fed state changes from various sources such as:
+
+- User commands directly from the user through the REST API
+- Trigerred via blockchain via polling for blockchain events
+- Triggered by receiving an offchain message
+
+All these state changes are processed along with the current state and produce a new state along with something that we call the "Raiden Internal Events" which is essentially I/O since the state machine can't do I/O on its own.
+
+Processing those raiden internal events performs all kinds of I/O such as:
+
+- Sending offchain messages
+- Sending onchain transactions
+- Logging a debug message
+
+The State Machine
+*****************
