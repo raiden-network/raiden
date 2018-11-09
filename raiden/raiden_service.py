@@ -50,7 +50,15 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import create_default_identifier, lpex, pex, random_secret, sha3
+from raiden.utils import (
+    create_default_identifier,
+    lpex,
+    pex,
+    random_secret,
+    sha3,
+    spawn_and_link_with_parent,
+    typing,
+)
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -266,7 +274,6 @@ class RaidenService(Runnable):
             self.serialization_file = None
             self.db_lock = None
 
-        self.greenlets = list()
         self.event_poll_lock = gevent.lock.Semaphore()
         self.gas_reserve_lock = gevent.lock.Semaphore()
         self.payment_identifier_lock = gevent.lock.Semaphore()
@@ -546,7 +553,7 @@ class RaidenService(Runnable):
             therefore /required/ there is *NO* order among these.
         """
         assert isinstance(transaction_event, ContractSendEvent)
-        self.spawn_sub_task(self._handle_transaction_event, transaction_event)
+        spawn_and_link_with_parent(self._handle_transaction_event, transaction_event)
 
     def _handle_transaction_event(self, transaction_event: ContractSendEvent):
         assert isinstance(transaction_event, ContractSendEvent)
