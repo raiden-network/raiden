@@ -265,3 +265,15 @@ def safe_gas_limit(*estimates: int) -> int:
     assert None not in estimates, 'if estimateGas returned None it should not reach here'
     calculated_limit = max(estimates)
     return int(calculated_limit * constants.GAS_FACTOR)
+
+
+def spawn_and_link_with_parent(func, *args, **kwargs):
+    """ Spawn a new greenlet and link it to the current thread instead of the hub. """
+    parent = gevent.getcurrent()
+
+    # closure for the parent greenlet
+    def on_error(subtask):
+        parent.kill(subtask.exception)
+
+    greenlet = gevent.spawn(func, *args, **kwargs)
+    greenlet.link_exception(on_error)
