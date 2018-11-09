@@ -310,23 +310,19 @@ def test_insufficient_funds(raiden_network, token_addresses, deposit):
 
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_funds_check_for_openchannel(raiden_network, token_addresses, deposit):
+def test_funds_check_for_openchannel(raiden_network, token_addresses):
     """Reproduces issue 2923 -- two open channel racing through the gas reserve"""
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
 
     gas = get_required_gas_estimate(raiden=app0.raiden, channels_to_open=1)
     gas = round(gas * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
-    gas += 7800000  # TODO: Find out why do we need the additional gas for the first tx to work
     api0 = RaidenAPI(app0.raiden)
-    # import pdb
-    # pdb.set_trace()
     burn_eth(
         raiden_service=app0.raiden,
         amount_to_leave=gas,
     )
 
-    partners = [app1.raiden.address]
     partners = [app1.raiden.address, app2.raiden.address]
 
     greenlets = [
@@ -339,6 +335,8 @@ def test_funds_check_for_openchannel(raiden_network, token_addresses, deposit):
         for partner in partners
     ]
 
-    gevent.joinall(greenlets, raise_error=True)
-    # with pytest.raises(InsufficientGasReserve):
-    #     gevent.joinall(greenlets, raise_error=True)
+    # Opening two channels needs to fail, because the gas reserve is not big enough
+    # This didn't fail prior to #2977, which serializes calls to channel open,
+    # so that the gas reserve checks cannot pass in parallel
+    with pytest.raises(InsufficientGasReserve):
+        gevent.joinall(greenlets, raise_error=True)
