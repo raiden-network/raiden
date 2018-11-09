@@ -42,7 +42,7 @@ class Token:
             to_checksum_address(spender),
         ).call()
 
-    def approve(self, allowed_address: typing.AddressHex, allowance: typing.TokenAmount):
+    def approve(self, allowed_address: typing.Address, allowance: typing.TokenAmount):
         """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
