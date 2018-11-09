@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import List, NamedTuple, Optional
 
+import gevent
 import structlog
 from eth_utils import (
     encode_hex,
@@ -173,6 +174,9 @@ class TokenNetwork:
             settle_timeout,
         )
         if not gas_limit:
+            channel_exists = self.channel_exists_and_not_settled(self.node_address, partner)
+            if channel_exists:
+                raise DuplicatedChannelError('Duplicated channel')
             log.critical('openChannel will always fail', **log_details)
             raise RaidenUnrecoverableError('creating new channel failed')
 
@@ -1020,12 +1024,15 @@ class TokenNetwork:
                     locksroot,
                 )
                 if not gas_limit:
-                    log.critical('settle transaction will always fail', **log_details)
-                    self._check_channel_state_for_settle(
+                    # Context switch before we check the channel data in
+                    # case the partner already settled and this is why settle would fail
+                    gevent.sleep(1)
+                    self._check_channel_state_before_settle(
                         participant1=self.node_address,
                         participant2=partner,
                         channel_identifier=channel_identifier,
                     )
+                    log.critical('settle transaction will always fail', **log_details)
                     raise RaidenUnrecoverableError('Settle transaction will always fail')
 
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
@@ -1057,12 +1064,15 @@ class TokenNetwork:
                     partner_locksroot,
                 )
                 if not gas_limit:
-                    log.critical('settle transaction will always fail', **log_details)
-                    self._check_channel_state_for_settle(
+                    # Context switch before we check the channel data in
+                    # case the partner already settled and this is why settle would fail
+                    gevent.sleep(1)
+                    self._check_channel_state_before_settle(
                         participant1=self.node_address,
                         participant2=partner,
                         channel_identifier=channel_identifier,
                     )
+                    log.critical('settle transaction will always fail', **log_details)
                     raise RaidenUnrecoverableError('Settle transaction will always fail')
 
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
@@ -1085,7 +1095,7 @@ class TokenNetwork:
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             if receipt_or_none:
                 log.critical('settle failed', **log_details)
-                self._check_channel_state_for_settle(
+                self._check_channel_state_after_settle(
                     participant1=self.node_address,
                     participant2=partner,
                     channel_identifier=channel_identifier,
@@ -1238,12 +1248,13 @@ class TokenNetwork:
                 'Deposit amount did not increase after deposit transaction',
             )
 
-    def _check_channel_state_for_settle(
+    def _check_channel_state_before_settle(
             self,
             participant1: typing.Address,
             participant2: typing.Address,
             channel_identifier: typing.ChannelID,
-    ) -> None:
+    ) -> ChannelData:
+
         channel_data = self.detail_channel(
             participant1=participant1,
             participant2=participant2,
@@ -1267,6 +1278,20 @@ class TokenNetwork:
                     'Channel cannot be settled before settlement window is over',
                 )
 
+        return channel_data
+
+    def _check_channel_state_after_settle(
+            self,
+            participant1: typing.Address,
+            participant2: typing.Address,
+            channel_identifier: typing.ChannelID,
+    ):
+        channel_data = self._check_channel_state_before_settle(
+            participant1=participant1,
+            participant2=participant2,
+            channel_identifier=channel_identifier,
+        )
+        if channel_data.state == ChannelState.CLOSED:
             raise RaidenUnrecoverableError(
                 "Settling this channel failed although the channel's current state "
                 "is closed.",
