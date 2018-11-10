@@ -519,23 +519,6 @@ def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannel
     return result
 
 
-def search_payment_network_by_token_network_id(
-        chain_state: ChainState,
-        token_network_id: typing.Address,
-) -> typing.Optional['PaymentNetworkState']:
-
-    payment_network_state = None
-    for payment_network in chain_state.identifiers_to_paymentnetworks.values():
-        token_network_state = payment_network.tokenidentifiers_to_tokennetworks.get(
-            token_network_id,
-        )
-
-        if token_network_state:
-            return payment_network_state
-
-    return payment_network_state
-
-
 def filter_channels_by_partneraddress(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,
