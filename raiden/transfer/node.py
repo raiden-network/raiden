@@ -497,19 +497,7 @@ def handle_token_network_action(
             pseudo_random_generator,
             chain_state.block_number,
         )
-
-        if iteration.new_state is None:
-            payment_network_state = views.search_payment_network_by_token_network_id(
-                chain_state,
-                state_change.token_network_identifier,
-            )
-
-            del payment_network_state.tokenaddresses_to_tokenidentifiers[
-                token_network_state.token_address
-            ]
-            del payment_network_state.tokenidentifiers_to_tokennetworks[
-                token_network_state.address
-            ]
+        assert iteration.new_state, 'No token network state transition leads to None'
 
         events = iteration.events
 
