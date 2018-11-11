@@ -41,10 +41,10 @@ lint:
 	flake8 raiden/ tools/
 	isort --ignore-whitespace --settings-path ./ --check-only --recursive --diff raiden/ -sg */node_modules/*
 	pylint --rcfile .pylint.rc raiden/
-	python setup.py check --restructuredtext --strict
+	python3 setup.py check --restructuredtext --strict
 
 test:
-	python setup.py test
+	python3 setup.py test
 
 test-all:
 	tox
@@ -79,20 +79,20 @@ bundle-docker:
 	docker rm builder
 
 bundle:
-	python setup.py compile_webui
+	python3 setup.py compile_webui
 	pyinstaller --noconfirm --clean raiden.spec
 
 release: clean
-	python setup.py sdist upload
-	python setup.py bdist_wheel upload
+	python3 setup.py sdist upload
+	python3 setup.py bdist_wheel upload
 
 dist: clean
-	python setup.py sdist
-	python setup.py bdist_wheel
+	python3 setup.py sdist
+	python3 setup.py bdist_wheel
 	ls -l dist
 
 install: clean
-	python setup.py install
+	python3 setup.py install
 
 logging_settings = :info,contracts:debug
 mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
