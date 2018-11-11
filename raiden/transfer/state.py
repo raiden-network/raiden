@@ -1639,9 +1639,15 @@ class TransactionChannelNewBalance(State):
         if not isinstance(other, TransactionChannelNewBalance):
             return NotImplemented
         return (
-            self.participant_address < other.participant_address and
-            self.contract_balance < other.contract_balance and
-            self.deposit_block_number < other.deposit_block_number
+            (
+                self.participant_address,
+                self.contract_balance,
+                self.deposit_block_number,
+            ) < (
+                other.participant_address,
+                other.contract_balance,
+                other.deposit_block_number,
+            )
         )
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
@@ -1692,8 +1698,8 @@ class TransactionOrder(State):
         if not isinstance(other, TransactionOrder):
             return NotImplemented
         return (
-            self.block_number < other.block_number and
-            self.transaction < other.transaction
+            (self.block_number, self.transaction) <
+            (other.block_number, other.transaction)
         )
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
