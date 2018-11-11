@@ -63,7 +63,7 @@ class CompileWebUI(Command):
         if not int(npm_version.split(b'.')[0]) >= 4:
             if os.environ.get('RAIDEN_NPM_MISSING_FATAL') is not None:
                 # Used in the automatic deployment scripts to prevent builds with missing web-ui
-                raise RuntimeError(f'NPM >= 4.0 required. Have {npm_version} from {npm}.')
+                raise RuntimeError('NPM >= 4.0 required. Have {npm_version} from {npm}.')
             self.announce(
                 'NPM 4.x or later required. Skipping webUI compilation',
                 level=distutils.log.WARN,  # pylint: disable=no-member
