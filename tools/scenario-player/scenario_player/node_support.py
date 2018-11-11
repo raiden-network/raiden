@@ -289,7 +289,7 @@ class NodeRunner:
             '--eth-rpc-endpoint',
             self.eth_rpc_endpoint,
             '--log-config',
-            ':info,raiden:debug',
+            ':info,raiden:debug,raiden.api.rest.pywsgi:warning',
             '--log-file',
             self._log_file,
             '--disable-debug-logfile',
