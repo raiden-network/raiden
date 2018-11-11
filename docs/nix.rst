@@ -1,3 +1,5 @@
+:orphan:
+
 .. _nix_development_setup:
 
 Dev environment with nix and direnv
