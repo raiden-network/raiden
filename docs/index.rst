@@ -22,7 +22,6 @@ Contents
   api_walkthrough
   rest_api
   webui_tutorial
-  spec
   config_file
   onboarding
   changelog
