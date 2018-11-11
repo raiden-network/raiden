@@ -68,6 +68,7 @@ extensions = [
     'sphinxcontrib.httpdomain',
     'sphinxcontrib.httpexample',
     'sphinxcontrib.images',
+    'sphinx.ext.mathjax',
 ]
 
 # 'releases' (changelog) settings

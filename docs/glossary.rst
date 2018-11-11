@@ -37,7 +37,7 @@ Raiden Glossary
 
    merkletree root
    locksroot
-       The root of the :ref:`merkle tree<merkletree-section>` which holds the hashes of all the locks in the channel.
+       The root of the ``merkle tree`` which holds the hashes of all the locks in the channel.
 
    transfer
        In Raiden a transfer denotes a single hop transfer of tokens, either direct or hash time locked inside a payment channel.
@@ -47,6 +47,9 @@ Raiden Glossary
 
    transferred amount
        The transferred amount is the total amount of tokens one participant of a payment channel has sent to his counterparty.
+
+   locked amount
+       The locked amount is the total amount of tokens one participant of a payment channel has locked in pending transfers towards his counterparty
 
    channel capacity
        A channel's capacity is the sum of the total deposits of both its participants. It is also the sum of the channel participants :term:`balance`.
