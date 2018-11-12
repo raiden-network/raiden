@@ -3,21 +3,36 @@ from datetime import datetime
 import gevent.lock
 import structlog
 
+from raiden.storage.sqlite import SQLiteStorage
 from raiden.transfer.architecture import StateManager
+from raiden.utils import typing
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def restore_to_state_change(transition_function, storage, state_change_identifier):
-    snapshot = storage.get_snapshot_closest_to_state_change(state_change_identifier)
+def restore_to_state_change(
+        transition_function: typing.Callable,
+        storage: SQLiteStorage,
+        state_change_identifier: int,
+) -> 'WriteAheadLog':
+    msg = "state change identifier 'latest' or an integer greater than zero"
+    assert state_change_identifier == 'latest' or state_change_identifier > 0, msg
 
-    from_state_change_id = 0
-    chain_state = None
-    if snapshot:
-        log.debug('Restoring from snapshot')
-        from_state_change_id, chain_state = snapshot
+    from_state_change_id, chain_state = storage.get_snapshot_closest_to_state_change(
+        state_change_identifier=state_change_identifier,
+    )
+
+    if chain_state is not None:
+        log.debug(
+            'Restoring from snapshot',
+            from_state_change_id=from_state_change_id,
+            to_state_change_id=state_change_identifier,
+        )
     else:
-        log.debug('No snapshot found, replaying all state changes')
+        log.debug(
+            'No snapshot found, replaying all state changes',
+            to_state_change_id=state_change_identifier,
+        )
 
     unapplied_state_changes = storage.get_statechanges_by_identifier(
         from_identifier=from_state_change_id,
