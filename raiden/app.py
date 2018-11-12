@@ -95,12 +95,21 @@ class App:  # pylint: disable=too-few-public-methods
 
         # Check if files with older versions of the DB exist, emit a warning
         db_base_path = os.path.dirname(config['database_path'])
-        if older_db_files_exist(db_base_path):
-            log.warning(
-                'Older versions of the database exist in '
-                f'{db_base_path}. Since a newer breaking version is introduced, '
-                'it is advised that you leave all token networks before upgrading and '
-                'then proceed with the upgrade.',
+        old_version_path = older_db_files_exist(db_base_path)
+        if old_version_path:
+            old_version_file = os.path.basename(old_version_path)
+            raise RuntimeError(
+                f'A database file for a previous version of Raiden exists '
+                f'{old_version_path}. Because the new version of Raiden '
+                f'introduces changes which breaks compatibility with the old '
+                f'database, a new database is necessary. The new database '
+                f'file will be created automatically for you, but as a side effect all '
+                f'previous data will be unavailable. The only way to proceed '
+                f'without the risk of losing funds is to leave all token networks '
+                f'and *make a backup* of the existing database. Please, *after* all the '
+                f'existing channels have been settled, make sure to make a backup by '
+                f'renaming {old_version_file} to {old_version_file}_backup, and the new '
+                f'version of Raiden can be used.',
             )
 
         # check that the settlement timeout fits the limits of the contract
