@@ -97,6 +97,9 @@ class NodeRunner:
         except (EthNodeCommunicationError, RequestsConnectionError):
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
+        except RuntimeError as e:
+            click.secho(str(e), fg='red')
+            sys.exit(1)
         except EthNodeInterfaceError as e:
             click.secho(str(e), fg='red')
             sys.exit(1)
