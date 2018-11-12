@@ -14,12 +14,14 @@ def channel_state_until_state_change(
         state_change_identifier: int,
 ) -> typing.Optional[NettingChannelState]:
     """ Go through WAL state changes until a certain balance hash is found. """
-    # Restore state from the latest snapshot
     wal = restore_to_state_change(
-        node.state_transition,
-        raiden.wal.storage,
-        state_change_identifier,
+        transition_function=node.state_transition,
+        storage=raiden.wal.storage,
+        state_change_identifier=state_change_identifier,
     )
+
+    msg = 'There is a state change, therefore the state must not be None'
+    assert wal.state_manager.current_state is not None, msg
 
     channel_state = views.get_channelstate_by_id(
         chain_state=wal.state_manager.current_state,

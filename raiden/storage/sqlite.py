@@ -119,15 +119,15 @@ class SQLiteStorage:
 
         return last_id
 
-    def write_events(self, state_change_id, events, log_time):
+    def write_events(self, state_change_identifier, events, log_time):
         """ Save events.
 
         Args:
-            state_change_id: Id of the state change that generate these events.
+            state_change_identifier: Id of the state change that generate these events.
             events: List of Event objects.
         """
         events_data = [
-            (None, state_change_id, log_time, self.serializer.serialize(event))
+            (None, state_change_identifier, log_time, self.serializer.serialize(event))
             for event in events
         ]
 
@@ -157,39 +157,40 @@ class SQLiteStorage:
 
     def get_snapshot_closest_to_state_change(
             self,
-            state_change_id: int,
-    ) -> Optional[Tuple[int, Any]]:
+            state_change_identifier: int,
+    ) -> Tuple[int, Any]:
         """ Get snapshots earlier than state_change with provided ID. """
 
-        if not (state_change_id == 'latest' or isinstance(state_change_id, int)):
+        if not (state_change_identifier == 'latest' or isinstance(state_change_identifier, int)):
             raise ValueError("from_identifier must be an integer or 'latest'")
 
         cursor = self.conn.cursor()
-        if state_change_id == 'latest':
+        if state_change_identifier == 'latest':
             cursor.execute(
                 'SELECT identifier FROM state_changes ORDER BY identifier DESC LIMIT 1',
             )
             result = cursor.fetchone()
 
             if result:
-                state_change_id = result[0]
+                state_change_identifier = result[0]
             else:
-                state_change_id = 0
+                state_change_identifier = 0
 
         cursor = self.conn.execute(
             'SELECT statechange_id, data FROM state_snapshot '
             'WHERE statechange_id <= ? '
             'ORDER BY identifier DESC LIMIT 1',
-            (state_change_id, ),
+            (state_change_identifier, ),
         )
         serialized = cursor.fetchall()
 
-        result = 0, None
         if serialized:
-            assert len(serialized) == 1
+            assert len(serialized) == 1, 'LIMIT 1 must return one element'
             last_applied_state_change_id = serialized[0][0]
             snapshot_state = self.serializer.deserialize(serialized[0][1])
-            return (last_applied_state_change_id, snapshot_state)
+            result = (last_applied_state_change_id, snapshot_state)
+        else:
+            result = (0, None)
 
         return result
 
@@ -223,11 +224,11 @@ class SQLiteStorage:
             row = cursor.fetchone()
             if row:
                 event_id = row[0]
-                state_change_id = row[1]
+                state_change_identifier = row[1]
                 event = self.serializer.deserialize(row[2])
                 result = EventRecord(
                     event_identifier=event_id,
-                    state_change_identifier=state_change_id,
+                    state_change_identifier=state_change_identifier,
                     data=event,
                 )
         except AttributeError:
@@ -262,10 +263,10 @@ class SQLiteStorage:
         try:
             row = cursor.fetchone()
             if row:
-                state_change_id = row[0]
+                state_change_identifier = row[0]
                 state_change = self.serializer.deserialize(row[1])
                 result = StateChangeRecord(
-                    state_change_identifier=state_change_id,
+                    state_change_identifier=state_change_identifier,
                     data=state_change,
                 )
         except AttributeError:

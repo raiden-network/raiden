@@ -347,9 +347,9 @@ def get_channelstate_by_id(
         channel_id: typing.ChannelID,
 ) -> typing.Optional[NettingChannelState]:
     token_network = get_token_network_by_token_address(
-        chain_state,
-        payment_network_id,
-        token_address,
+        chain_state=chain_state,
+        payment_network_id=payment_network_id,
+        token_address=token_address,
     )
 
     channel_state = None
