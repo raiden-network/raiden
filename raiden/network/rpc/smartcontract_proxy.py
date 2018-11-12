@@ -25,9 +25,11 @@ class ClientErrorInspectResult(Enum):
     ALWAYS_FAIL = 5
 
 
-def inspect_client_error(val_err: ValueError, eth_node: str) -> ClientErrorInspectResult:
+def inspect_client_error(val_err: ValueError, eth_node: EthClient) -> ClientErrorInspectResult:
     # both clients return invalid json. They use single quotes while json needs double ones.
-    json_response = str(val_err).replace("'", '"')
+    # Also parity may return something like: 'data': 'Internal("Error message")' which needs
+    # special processing
+    json_response = str(val_err).replace("'", '"').replace('("', '(').replace('")', ')')
     try:
         error = json.loads(json_response)
     except json.JSONDecodeError:
