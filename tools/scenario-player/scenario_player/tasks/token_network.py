@@ -20,10 +20,10 @@ class JoinTokenNetwork(RaidenAPIActionTask):
         )
 
         initial_channel_target = self._config.get('initial_channel_target')
-        if initial_channel_target:
+        if initial_channel_target is not None:
             params['initial_channel_target'] = initial_channel_target
         joinable_funds_target = self._config.get('joinable_funds_target')
-        if joinable_funds_target:
+        if joinable_funds_target is not None:
             params['joinable_funds_target'] = joinable_funds_target
 
         return params
