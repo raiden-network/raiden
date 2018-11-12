@@ -1,7 +1,11 @@
+import hashlib
+from typing import Any
+
 import structlog
 from toolz import first
 
 from scenario_player.exceptions import ScenarioAssertionError
+from scenario_player.runner import ScenarioRunner
 
 from .raiden_api import RaidenAPIActionTask
 
@@ -69,10 +73,36 @@ class TransferTask(ChannelActionTask):
     _name = 'transfer'
     _url_template = '{protocol}://{target_host}/api/1/payments/{token_address}/{partner_address}'
     _method = 'post'
+    _transfer_count = 0
+
+    def __init__(
+        self,
+        runner: ScenarioRunner,
+        config: Any,
+        parent: 'Task' = None,
+        abort_on_fail=True,
+    ) -> None:
+        super().__init__(runner, config, parent, abort_on_fail)
+        # Unique transfer identifier
+        self.__class__._transfer_count += 1
+        if str(self._config.get('identifier', '')).lower() == 'generate':
+            transfer_count = self.__class__._transfer_count
+            scenario_hash = int.from_bytes(
+                hashlib.sha256(self._runner.scenario_name.encode()).digest()[:2],
+                'little',
+            )
+            self._config['identifier'] = int(
+                f'1{scenario_hash}1{self._runner.run_number:04d}{transfer_count:06d}',
+            )
 
     @property
     def _request_params(self):
-        return dict(amount=self._config['amount'])
+        params = dict(
+            amount=self._config['amount'],
+        )
+        if 'identifier' in self._config:
+            params['identifier'] = self._config['identifier']
+        return params
 
 
 class AssertTask(ChannelActionTask):

@@ -2,6 +2,7 @@ import importlib
 import inspect
 import pkgutil
 import time
+from copy import copy
 from datetime import timedelta
 from enum import Enum
 from typing import Any, TypeVar
@@ -48,7 +49,7 @@ class Task:
         _TASK_ID = _TASK_ID + 1
         self.id = str(_TASK_ID)
         self._runner = runner
-        self._config = config
+        self._config = copy(config)
         self._parent = parent
         self._abort_on_fail = abort_on_fail
         self.state = TaskState.INITIALIZED
