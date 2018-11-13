@@ -806,7 +806,6 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     mediator.state_transition(
         mediator_state,
         ReceiveLockExpired(
-            sender=payer_channel.partner_state.address,
             balance_proof=balance_proof,
             secrethash=secrethash,
             message_identifier=message_identifier,
@@ -1845,7 +1844,6 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     )
 
     lock_expired_state_change = ReceiveLockExpired(
-        sender=HOP1,
         balance_proof=balance_proof,
         secrethash=transfer.lock.secrethash,
         message_identifier=1,
@@ -1969,10 +1967,9 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     )
 
     lock_expired_state_change = ReceiveLockExpired(
-        HOP1,
-        balance_proof,
-        transfer.lock.secrethash,
-        1,
+        balance_proof=balance_proof,
+        secrethash=transfer.lock.secrethash,
+        message_identifier=1,
     )
 
     iteration = mediator.state_transition(
