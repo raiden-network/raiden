@@ -149,11 +149,10 @@ class InitiatorState(ChainStateStateMachine):
 
     def __init__(self):
         super().__init__()
-        self.failed_secret_requests = set()
+        self.invalidated_transfer_ids = set()
         self.initiated = set()
 
         self.failing_path_2 = False
-        self.failing_path_4 = False
 
     @property
     def channel(self):
@@ -217,11 +216,14 @@ class InitiatorState(ChainStateStateMachine):
 
     @rule(previous_action=init_initiators)
     def valid_secret_request(self, previous_action):
-        if not self.failing_path_4:
-            assume(previous_action.transfer.payment_identifier not in self.failed_secret_requests)
         action = self._receive_secret_request(previous_action.transfer)
         result = node.state_transition(self.chain_state, action)
-        assert event_types_match(result.events, SendSecretReveal)
+        if previous_action.transfer.payment_identifier in self.invalidated_transfer_ids:
+            assert not result.events
+            self.event('Valid SecretRequest dropped due to previous invalid one.')
+        else:
+            assert event_types_match(result.events, SendSecretReveal)
+            self.event('Valid SecretRequest accepted.')
 
     @rule(
         target=invalid_authentic_secret_requests,
@@ -237,11 +239,11 @@ class InitiatorState(ChainStateStateMachine):
     @rule(action=invalid_authentic_secret_requests)
     def invalid_authentic_secret_request(self, action):
         result = node.state_transition(self.chain_state, action)
-        if action.payment_identifier not in self.failed_secret_requests:
+        if action.payment_identifier not in self.invalidated_transfer_ids:
             assert event_types_match(result.events, EventPaymentSentFailed)
         else:
             assert not result.events
-        self.failed_secret_requests.add(action.payment_identifier)
+        self.invalidated_transfer_ids.add(action.payment_identifier)
 
     @rule(target=unauthentic_secret_requests, previous_action=init_initiators, secret=secret())
     def secret_request_with_wrong_secrethash(self, previous_action, secret):
