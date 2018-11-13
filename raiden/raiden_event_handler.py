@@ -332,16 +332,16 @@ class RaidenEventHandler:
         token_address = channel_unlock_event.token_address
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            token_network_identifier,
-            channel_identifier,
+            token_network_address=token_network_identifier,
+            channel_id=channel_identifier,
         )
         token_network: TokenNetwork = payment_channel.token_network
 
         # Fetch on-chain balance hashes for both participants
         participants_details = token_network.detail_participants(
-            raiden.address,
-            participant,
-            channel_identifier,
+            participant1=raiden.address,
+            participant2=participant,
+            channel_identifier=channel_identifier,
         )
 
         our_details = participants_details.our_details
