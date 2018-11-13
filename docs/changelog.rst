@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`3001` Don't delete payment task when receiving invalid secret request.
+
 * :release:`0.16.0 <2018-11-09>`
 * :bug'`2963` Fixes an overflow issue with the hint of the join network dialog.
 * :bug:`2973` Introduce special handling of infura endpoints so that the old getTransactionCount is used.
