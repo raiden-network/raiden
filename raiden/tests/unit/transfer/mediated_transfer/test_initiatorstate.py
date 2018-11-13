@@ -540,8 +540,6 @@ def test_refund_transfer_next_route():
     )
 
     original_transfer = current_state.initiator.transfer
-    channel_identifier = current_state.initiator.channel_identifier
-    channel_state = channel_map[channel_identifier]
 
     refund_transfer = factories.make_signed_transfer(
         amount,
@@ -557,7 +555,6 @@ def test_refund_transfer_next_route():
     assert channel_state.partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
-        sender=refund_address,
         routes=available_routes,
         transfer=refund_transfer,
         secret=random_secret(),
@@ -624,7 +621,6 @@ def test_refund_transfer_no_more_routes():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        sender=channel_state.partner_state.address,
         routes=available_routes,
         transfer=refund_transfer,
         secret=random_secret(),
@@ -644,58 +640,6 @@ def test_refund_transfer_no_more_routes():
 
     assert unlocked_failed
     assert sent_failed
-
-
-def test_refund_transfer_invalid_sender():
-    amount = UNIT_TRANSFER_AMOUNT
-    block_number = 1
-    pseudo_random_generator = random.Random()
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        our_address=UNIT_TRANSFER_INITIATOR,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    )
-    channel_map = {channel1.identifier: channel1}
-    available_routes = [factories.route_from_channel(channel1)]
-
-    current_state = make_initiator_manager_state(
-        available_routes,
-        factories.UNIT_TRANSFER_DESCRIPTION,
-        channel_map,
-        pseudo_random_generator,
-        block_number,
-    )
-
-    original_transfer = current_state.initiator.transfer
-    refund_transfer = factories.make_signed_transfer(
-        amount,
-        original_transfer.initiator,
-        original_transfer.target,
-        original_transfer.lock.expiration,
-        UNIT_SECRET,
-    )
-
-    wrong_sender_address = factories.HOP3
-    state_change = ReceiveTransferRefundCancelRoute(
-        sender=wrong_sender_address,
-        routes=available_routes,
-        transfer=refund_transfer,
-        secret=random_secret(),
-    )
-
-    before_state = deepcopy(current_state)
-    iteration = initiator_manager.state_transition(
-        current_state,
-        state_change,
-        channel_map,
-        pseudo_random_generator,
-        block_number,
-    )
-    assert iteration.new_state is not None
-    assert not iteration.events
-    assert iteration.new_state == before_state
 
 
 def test_cancel_transfer():

@@ -3,6 +3,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.transfer.architecture import (
     AuthenticatedSenderStateChange,
+    BalanceProofStateChange,
     ContractReceiveStateChange,
     StateChange,
 )
@@ -1065,7 +1066,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
         )
 
 
-class ReceiveTransferDirect(AuthenticatedSenderStateChange):
+class ReceiveTransferDirect(BalanceProofStateChange):
     def __init__(
             self,
             token_network_identifier: typing.TokenNetworkID,
@@ -1076,12 +1077,11 @@ class ReceiveTransferDirect(AuthenticatedSenderStateChange):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be a BalanceProofSignedState instance')
 
-        super().__init__(balance_proof.sender)
+        super().__init__(balance_proof)
 
         self.token_network_identifier = token_network_identifier
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
-        self.balance_proof = balance_proof
 
     def __repr__(self):
         return (
@@ -1101,7 +1101,6 @@ class ReceiveTransferDirect(AuthenticatedSenderStateChange):
             self.token_network_identifier == other.token_network_identifier and
             self.message_identifier == other.message_identifier and
             self.payment_identifier == other.payment_identifier and
-            self.balance_proof == other.balance_proof and
             super().__eq__(other)
         )
 
@@ -1127,7 +1126,7 @@ class ReceiveTransferDirect(AuthenticatedSenderStateChange):
         )
 
 
-class ReceiveUnlock(AuthenticatedSenderStateChange):
+class ReceiveUnlock(BalanceProofStateChange):
     def __init__(
             self,
             message_identifier: typing.MessageID,
@@ -1137,14 +1136,13 @@ class ReceiveUnlock(AuthenticatedSenderStateChange):
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
 
-        super().__init__(balance_proof.sender)
+        super().__init__(balance_proof)
 
         secrethash: typing.SecretHash = typing.SecretHash(sha3(secret))
 
         self.message_identifier = message_identifier
         self.secret = secret
         self.secrethash = secrethash
-        self.balance_proof = balance_proof
 
     def __repr__(self):
         return '<ReceiveUnlock msgid:{} secrethash:{} balance_proof:{}>'.format(
@@ -1159,7 +1157,6 @@ class ReceiveUnlock(AuthenticatedSenderStateChange):
             self.message_identifier == other.message_identifier and
             self.secret == other.secret and
             self.secrethash == other.secrethash and
-            self.balance_proof == other.balance_proof and
             super().__eq__(other)
         )
 

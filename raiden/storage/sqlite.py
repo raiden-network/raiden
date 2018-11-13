@@ -252,12 +252,15 @@ class SQLiteStorage:
             args.append(f'$.{field}')
             args.append(value)
 
-        cursor.execute(
-            "SELECT identifier, data FROM state_changes WHERE "
-            f"{' AND '.join(where_clauses)}"
-            "ORDER BY identifier DESC LIMIT 1",
-            args,
+        where = ' AND '.join(where_clauses)
+        sql = (
+            f'SELECT identifier, data '
+            f'FROM state_changes '
+            f'WHERE {where} '
+            f'ORDER BY identifier '
+            f'DESC LIMIT 1'
         )
+        cursor.execute(sql, args)
 
         result = StateChangeRecord(state_change_identifier=0, data=None)
         try:

@@ -91,10 +91,9 @@ class MessageHandler:
     def handle_message_lockexpired(self, raiden: RaidenService, message: LockExpired):
         balance_proof = balanceproof_from_envelope(message)
         state_change = ReceiveLockExpired(
-            message.sender,
-            balance_proof,
-            message.secrethash,
-            message.message_identifier,
+            balance_proof=balance_proof,
+            secrethash=message.secrethash,
+            message_identifier=message.message_identifier,
         )
         raiden.handle_state_change(state_change)
 
@@ -120,16 +119,14 @@ class MessageHandler:
         if role == 'initiator':
             secret = random_secret()
             state_change = ReceiveTransferRefundCancelRoute(
-                message.sender,
-                routes,
-                from_transfer,
-                secret,
+                routes=routes,
+                transfer=from_transfer,
+                secret=secret,
             )
         else:
             state_change = ReceiveTransferRefund(
-                message.sender,
-                from_transfer,
-                routes,
+                transfer=from_transfer,
+                routes=routes,
             )
 
         raiden.handle_state_change(state_change)

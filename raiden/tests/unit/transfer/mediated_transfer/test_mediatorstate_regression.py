@@ -187,9 +187,8 @@ def test_regression_send_refund():
     routes = []
 
     refund_state_change = ReceiveTransferRefund(
-        HOP4,
-        received_transfer,
-        routes,
+        transfer=received_transfer,
+        routes=routes,
     )
 
     iteration = mediator.handle_refundtransfer(
@@ -418,7 +417,6 @@ def test_regression_mediator_task_no_routes():
     receive_expired_iteration = mediator.state_transition(
         expire_block_iteration.new_state,
         ReceiveLockExpired(
-            sender=payer_channel.partner_state.address,
             balance_proof=balance_proof,
             secrethash=secrethash,
             message_identifier=message_identifier,

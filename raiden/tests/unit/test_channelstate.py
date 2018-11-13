@@ -1300,10 +1300,9 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     )
 
     lock_expired = ReceiveLockExpired(
-        channel_state.partner_state.address,
-        receive_lockedtransfer.balance_proof,
-        lock_secrethash,
-        1,
+        balance_proof=receive_lockedtransfer.balance_proof,
+        secrethash=lock_secrethash,
+        message_identifier=1,
     )
 
     is_valid, _, _ = channel.is_valid_lock_expired(
@@ -2000,10 +1999,9 @@ def test_valid_lock_expired_for_unlocked_lock():
     )
 
     lock_expired = ReceiveLockExpired(
-        channel_state.partner_state.address,
-        receive_lockedtransfer.balance_proof,
-        lock_secrethash,
-        1,
+        balance_proof=receive_lockedtransfer.balance_proof,
+        secrethash=lock_secrethash,
+        message_identifier=1,
     )
 
     is_valid, _, _ = channel.is_valid_lock_expired(
