@@ -8,6 +8,8 @@ from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.state_change import (
+    ActionInitMediator,
+    ActionInitTarget,
     ReceiveLockExpired,
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
@@ -68,6 +70,34 @@ def make_signed_transfer_from_counter(counter):
     return signed_transfer
 
 
+def make_from_route_from_counter(counter):
+    from_channel = factories.make_channel(
+        partner_balance=next(counter),
+        partner_address=factories.HOP1,
+        token_address=factories.make_address(),
+        channel_identifier=next(counter),
+    )
+    from_route = factories.route_from_channel(from_channel)
+
+    expiration = factories.UNIT_REVEAL_TIMEOUT + 1
+
+    from_transfer = factories.make_signed_transfer_for(
+        channel_state=from_channel,
+        amount=1,
+        initiator=factories.make_address(),
+        target=factories.make_address(),
+        expiration=expiration,
+        secret=sha3(factories.make_secret(next(counter))),
+        identifier=next(counter),
+        nonce=1,
+        transferred_amount=0,
+        locked_amount=None,
+        pkey=factories.HOP1_KEY,
+        sender=factories.HOP1,
+    )
+    return from_route, from_transfer
+
+
 def test_get_latest_state_change_by_data_field():
     """ All state changes which contain a balance proof must be found by when
     querying the database.
@@ -101,6 +131,17 @@ def test_get_latest_state_change_by_data_field():
         transfer=make_signed_transfer_from_counter(counter),
         secret=sha3(factories.make_secret(next(counter))),
     )
+    mediator_from_route, mediator_signed_transfer = make_from_route_from_counter(counter)
+    action_init_mediator = ActionInitMediator(
+        routes=list(),
+        from_route=mediator_from_route,
+        from_transfer=mediator_signed_transfer,
+    )
+    target_from_route, target_signed_transfer = make_from_route_from_counter(counter)
+    action_init_target = ActionInitTarget(
+        route=target_from_route,
+        transfer=target_signed_transfer,
+    )
 
     statechange_balanceproof = [
         (lock_expired, lock_expired.balance_proof),
@@ -108,14 +149,14 @@ def test_get_latest_state_change_by_data_field():
         (unlock, unlock.balance_proof),
         (transfer_refund, transfer_refund.transfer.balance_proof),
         (transfer_refund_cancel_route, transfer_refund_cancel_route.transfer.balance_proof),
+        (action_init_mediator, action_init_mediator.from_transfer.balance_proof),
+        (action_init_target, action_init_target.transfer.balance_proof),
     ]
 
     timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
-    storage.write_state_change(lock_expired, timestamp)
-    storage.write_state_change(transfer_refund, timestamp)
-    storage.write_state_change(transfer_refund_cancel_route, timestamp)
-    storage.write_state_change(transfer_direct, timestamp)
-    storage.write_state_change(unlock, timestamp)
+
+    for state_change, _ in statechange_balanceproof:
+        storage.write_state_change(state_change, timestamp)
 
     for state_change, balance_proof in statechange_balanceproof:
         result = storage.get_latest_state_change_by_data_field({
