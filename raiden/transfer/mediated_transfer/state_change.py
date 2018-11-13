@@ -69,7 +69,7 @@ class ActionInitInitiator(StateChange):
         )
 
 
-class ActionInitMediator(StateChange):
+class ActionInitMediator(BalanceProofStateChange):
     """ Initial state for a new mediator.
 
     Args:
@@ -91,6 +91,7 @@ class ActionInitMediator(StateChange):
         if not isinstance(from_transfer, LockedTransferSignedState):
             raise ValueError('from_transfer must be a LockedTransferSignedState instance')
 
+        super().__init__(from_transfer.balance_proof)
         self.routes = routes
         self.from_route = from_route
         self.from_transfer = from_transfer
@@ -112,10 +113,6 @@ class ActionInitMediator(StateChange):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    @property
-    def balance_proof(self):
-        return self.from_transfer.balance_proof
-
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'routes': self.routes,
@@ -134,7 +131,7 @@ class ActionInitMediator(StateChange):
         )
 
 
-class ActionInitTarget(StateChange):
+class ActionInitTarget(BalanceProofStateChange):
     """ Initial state for a new target.
 
     Args:
@@ -153,6 +150,7 @@ class ActionInitTarget(StateChange):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be a LockedTransferSignedState instance')
 
+        super().__init__(transfer.balance_proof)
         self.route = route
         self.transfer = transfer
 
@@ -171,10 +169,6 @@ class ActionInitTarget(StateChange):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    @property
-    def balance_proof(self):
-        return self.transfer.balance_proof
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {

@@ -426,7 +426,7 @@ def make_signed_transfer_for(
     if not allow_invalid:
         msg = 'expiration must be lower than settle_timeout'
         assert expiration < channel_state.settle_timeout, msg
-        msg = 'expiration must be larger than settle_timeout'
+        msg = 'expiration must be larger than reveal_timeout'
         assert expiration > channel_state.reveal_timeout, msg
 
     pubkey = pkey.public_key.format(compressed=False)
