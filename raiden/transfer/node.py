@@ -745,6 +745,31 @@ def handle_receive_unlock(
     return subdispatch_to_paymenttask(chain_state, state_change, secrethash)
 
 
+def handle_contract_receive_channel_batch_unlock(
+        chain_state: ChainState,
+        state_change: ContractReceiveChannelBatchUnlock,
+) -> TransitionResult:
+    is_related = (
+        chain_state.our_address == state_change.participant or
+        chain_state.our_address == state_change.partner
+    )
+    if not is_related:
+        return TransitionResult(chain_state, [])
+
+    # First perform the token network actions so that if we are the participant
+    # the channel is deleted from channelidentifiers_to_channels
+    token_network_result = handle_token_network_action(
+        chain_state=chain_state,
+        state_change=state_change,
+    )
+    transfers_result = subdispatch_to_all_lockedtransfers(
+        chain_state=chain_state,
+        state_change=state_change,
+    )
+    events = transfers_result.events + token_network_result.events
+    return TransitionResult(chain_state, events)
+
+
 def handle_state_change(chain_state: ChainState, state_change: StateChange) -> TransitionResult:
     if type(state_change) == Block:
         iteration = handle_block(
@@ -806,7 +831,7 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             state_change,
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
-        iteration = handle_token_network_action(
+        iteration = handle_contract_receive_channel_batch_unlock(
             chain_state,
             state_change,
         )
