@@ -3,7 +3,11 @@ from typing import List
 
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
+from raiden.transfer.architecture import (
+    AuthenticatedSenderStateChange,
+    BalanceProofStateChange,
+    StateChange,
+)
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
@@ -237,18 +241,16 @@ class ActionCancelRoute(StateChange):
         )
 
 
-class ReceiveLockExpired(AuthenticatedSenderStateChange):
+class ReceiveLockExpired(BalanceProofStateChange):
     """ A LockExpired message received. """
 
     def __init__(
             self,
-            sender: typing.Address,
             balance_proof: BalanceProofSignedState,
             secrethash: typing.SecretHash,
             message_identifier: typing.MessageID,
     ):
-        super().__init__(sender)
-        self.balance_proof = balance_proof
+        super().__init__(balance_proof)
         self.secrethash = secrethash
         self.message_identifier = message_identifier
 
@@ -261,7 +263,6 @@ class ReceiveLockExpired(AuthenticatedSenderStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ReceiveLockExpired) and
-            self.balance_proof == other.balance_proof and
             self.secrethash == other.secrethash and
             self.message_identifier == other.message_identifier and
             super().__eq__(other)
@@ -272,7 +273,6 @@ class ReceiveLockExpired(AuthenticatedSenderStateChange):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'sender': to_checksum_address(self.sender),
             'balance_proof': self.balance_proof,
             'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
             'secrethash': serialize_bytes(self.secrethash),
@@ -282,7 +282,6 @@ class ReceiveLockExpired(AuthenticatedSenderStateChange):
     @classmethod
     def from_dict(cls, data) -> 'ReceiveLockExpired':
         return cls(
-            sender=to_canonical_address(data['sender']),
             balance_proof=data['balance_proof'],
             secrethash=deserialize_bytes(data['secrethash']),
             message_identifier=data['message_identifier'],
@@ -400,24 +399,23 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
         return instance
 
 
-class ReceiveTransferRefundCancelRoute(AuthenticatedSenderStateChange):
+class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     """ A RefundTransfer message received by the initiator will cancel the current
     route.
     """
 
     def __init__(
             self,
-            sender: typing.Address,
             routes: typing.List[RouteState],
             transfer: LockedTransferSignedState,
             secret: typing.Secret,
     ):
-        super().__init__(sender)
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
         secrethash = sha3(secret)
 
+        super().__init__(transfer.balance_proof)
         self.transfer = transfer
         self.routes = routes
         self.secrethash = secrethash
@@ -446,15 +444,15 @@ class ReceiveTransferRefundCancelRoute(AuthenticatedSenderStateChange):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'secret': serialize_bytes(self.secret),
-            'sender': to_checksum_address(self.sender),
             'routes': self.routes,
             'transfer': self.transfer,
+            'balance_proof': self.balance_proof,
+            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
     def from_dict(cls, data) -> 'ReceiveTransferRefundCancelRoute':
         instance = cls(
-            sender=to_canonical_address(data['sender']),
             routes=data['routes'],
             transfer=data['transfer'],
             secret=deserialize_bytes(data['secret']),
@@ -462,20 +460,18 @@ class ReceiveTransferRefundCancelRoute(AuthenticatedSenderStateChange):
         return instance
 
 
-class ReceiveTransferRefund(AuthenticatedSenderStateChange):
+class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 
     def __init__(
             self,
-            sender: typing.Address,
             transfer: LockedTransferSignedState,
             routes: List[RouteState],
     ):
-        super().__init__(sender)
-
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
+        super().__init__(transfer.balance_proof)
         self.transfer = transfer
         self.routes = routes
 
@@ -498,15 +494,15 @@ class ReceiveTransferRefund(AuthenticatedSenderStateChange):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'sender': to_checksum_address(self.sender),
             'routes': self.routes,
             'transfer': self.transfer,
+            'balance_proof': self.balance_proof,
+            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
     def from_dict(cls, data) -> 'ReceiveTransferRefund':
         instance = cls(
-            sender=to_canonical_address(data['sender']),
             routes=data['routes'],
             transfer=data['transfer'],
         )

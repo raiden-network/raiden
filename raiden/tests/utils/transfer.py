@@ -396,10 +396,9 @@ def make_receive_expired_lock(
     balance_proof = balanceproof_from_envelope(lock_expired_msg)
 
     receive_lockedtransfer = ReceiveLockExpired(
-        channel_state.partner_state.address,
-        balance_proof,
-        lock.secrethash,
-        random.randint(0, UINT64_MAX),
+        balance_proof=balance_proof,
+        secrethash=lock.secrethash,
+        message_identifier=random.randint(0, UINT64_MAX),
     )
 
     return receive_lockedtransfer
