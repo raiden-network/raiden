@@ -137,7 +137,7 @@ Using geth
 
 Run the Ethereum client and let it sync::
 
-    geth --fast --rpc --rpcapi eth,net,web3,txpool
+    geth --syncmode fast --rpc --rpcapi eth,net,web3,txpool
 
 .. note::
     When you want to use a testnet add the ``--testnet`` or ``--rinkeby`` flags or set the network id with ``--networkid`` directly.
