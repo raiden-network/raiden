@@ -4,12 +4,17 @@ import structlog
 from web3 import Web3
 
 from raiden.transfer import channel, views
-from raiden.transfer.events import EventPaymentReceivedSuccess
+from raiden.transfer.events import (
+    EventPaymentReceivedSuccess,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
+)
 from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
     CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
 )
+from raiden.transfer.views import get_token_network_identifier_by_token_address
 from raiden.utils import typing
 
 # type alias to avoid both circular dependencies and flake8 errors
@@ -101,6 +106,59 @@ def wait_for_participant_newbalance(
             token_address,
             partner_address,
         )
+
+
+PAYMENT_SENT = (
+    EventPaymentSentSuccess,
+    EventPaymentSentFailed,
+)
+
+
+def event_filter_for_payment_sent(event, token_network_identifier):
+    return (
+        isinstance(event, PAYMENT_SENT) and
+        (
+            token_network_identifier is None or
+            token_network_identifier == event.token_network_identifier
+        )
+    )
+
+
+def wait_for_completed_sent_transfers(
+        raiden: RaidenService,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        number: int,
+        retry_timeout: float,
+):
+    events = []
+    offset = 0
+    token_network_identifier = get_token_network_identifier_by_token_address(
+        views.state_from_raiden(raiden),
+        payment_network_id=payment_network_id,
+        token_address=token_address,
+    )
+
+    while len(events) < number:
+        polled = raiden.wal.storage.get_events_with_timestamps(
+            limit=None,
+            offset=offset,
+        )
+        offset += len(polled)
+        new_events = [
+            event
+            for event in polled if event_filter_for_payment_sent(
+                event=event.wrapped_event,
+                token_network_identifier=token_network_identifier,
+            )
+        ]
+        events = list(
+            tuple(events) + tuple(new_events),
+        )
+        unique_payments = set([event.identifier for event in events])
+
+        log.debug('wait', sent=len(events), unique=len(unique_payments), target=number)
+        gevent.sleep(retry_timeout)
 
 
 def wait_for_payment_balance(
