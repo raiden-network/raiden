@@ -5,6 +5,7 @@ Changelog
 * :bug:`3022` Reject REST API channel opening with an error if there is not enough token balance for the initial deposit.
 * :bug:`2932` Node will no longer crash if it mediated a transfer and the channel cycle for mediation has completed.
 * :bug:`3001` Don't delete payment task when receiving invalid secret request.
+* :bug:`2931` Fixes serialization of state changes for refund transfers, allowing it to be used for unlocks.
 
 * :release:`0.16.0 <2018-11-09>`
 * :bug:`2963` Fixes an overflow issue with the hint of the join network dialog.
