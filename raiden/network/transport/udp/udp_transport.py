@@ -162,9 +162,15 @@ class UDPTransport(Runnable):
     def __init__(self, address, discovery, udpsocket, throttle_policy, config):
         super().__init__()
         # these values are initialized by the start method
-        self.queueids_to_queues: Dict = dict()
+        self.queueids_to_queues: Dict
         self.raiden: RaidenService
         self.message_handler: MessageHandler
+        self.greenlets: List
+        self.addresses_events: Dict[Address, healthcheck.HealthEvents]
+        self.messageids_to_asyncresults: Dict[MessageID, AsyncResult]
+        # Maps the addresses to a dict with the latest nonce (using a dict
+        # because python integers are immutable)
+        self.nodeaddresses_to_nonces: Dict[Address, int]
 
         self.discovery = discovery
         self.config = config
@@ -176,17 +182,9 @@ class UDPTransport(Runnable):
         self.nat_keepalive_timeout = config['nat_keepalive_timeout']
         self.nat_invitation_timeout = config['nat_invitation_timeout']
 
+        # init in stopped state
         self.event_stop = Event()
         self.event_stop.set()
-
-        self.greenlets = list()
-        self.addresses_events = dict()
-
-        self.messageids_to_asyncresults = dict()
-
-        # Maps the addresses to a dict with the latest nonce (using a dict
-        # because python integers are immutable)
-        self.nodeaddresses_to_nonces = dict()
 
         cache = cachetools.TTLCache(
             maxsize=50,
@@ -224,9 +222,23 @@ class UDPTransport(Runnable):
         pool = gevent.pool.Pool()
         self.server.set_spawn(pool)
 
+        # reset all internal state on (re)start:
+        self.greenlets = list()
+        self.addresses_events = dict()
+        self.queueids_to_queues = dict()
+        self.messageids_to_asyncresults = dict()
+        self.nodeaddresses_to_nonces = dict()
+        cache = cachetools.TTLCache(
+            maxsize=50,
+            ttl=CACHE_TTL,
+        )
+        cache_wrapper = cachetools.cached(cache=cache)
+        self.get_host_port = cache_wrapper(raiden_service.discovery.get)
+
         self.server.start()
         self.log.debug('UDP started')
         super().start()
+        log.debug('UDP started', node=pex(self.raiden.address))
 
         log.debug('UDP transport started')
 
