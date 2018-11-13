@@ -35,7 +35,12 @@ from raiden.transfer.state import (
     NettingChannelState,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
+from raiden.transfer.state_change import (
+    Block,
+    ContractReceiveChannelBatchUnlock,
+    ContractReceiveSecretReveal,
+    ReceiveUnlock,
+)
 from raiden.utils import typing
 
 STATE_SECRET_KNOWN = (
@@ -1220,6 +1225,27 @@ def handle_onchain_secretreveal(
     return iteration
 
 
+def handle_onchain_batch_unlock(
+        mediator_state,
+        onchain_batch_unlock,
+        channelidentifiers_to_channels,
+):
+    # At this point we know that we are either a participant or a partner
+    indices_for_deletion = []
+    for idx, pair in enumerate(mediator_state.transfers_pair):
+        balance_proof = pair.payer_transfer.balance_proof
+        channel_identifier = balance_proof.channel_identifier
+        channel = channelidentifiers_to_channels.get(channel_identifier)
+        if not channel:
+            # The channel is gone so we need to delete the pair
+            indices_for_deletion.append(idx)
+
+    for idx in indices_for_deletion:
+        del mediator_state.transfers_pair[idx]
+
+    return TransitionResult(mediator_state, list())
+
+
 def handle_unlock(mediator_state, state_change: ReceiveUnlock, channelidentifiers_to_channels):
     """ Handle a ReceiveUnlock state change. """
     events = list()
@@ -1369,6 +1395,12 @@ def state_transition(
             state_change,
             channelidentifiers_to_channels,
             block_number,
+        )
+    elif isinstance(state_change, ContractReceiveChannelBatchUnlock):
+        iteration = handle_onchain_batch_unlock(
+            mediator_state,
+            state_change,
+            channelidentifiers_to_channels,
         )
 
     # this is the place for paranoia
