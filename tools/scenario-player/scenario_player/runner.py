@@ -194,7 +194,11 @@ class ScenarioRunner(object):
             if low_balances:
                 log.info('Funding nodes', nodes=low_balances.keys())
                 fund_tx = [
-                    self.client.send_transaction(address, NODE_ACCOUNT_BALANCE_FUND - balance)
+                    self.client.send_transaction(
+                        to=address,
+                        startgas=21000,
+                        value=NODE_ACCOUNT_BALANCE_FUND - balance,
+                    )
                     for address, balance in low_balances.items()
                 ]
             node_starter = self.node_controller.start(wait=False)

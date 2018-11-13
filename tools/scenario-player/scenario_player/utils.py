@@ -330,8 +330,8 @@ def reclaim_eth(account: Account, chain_rpc_urls: dict, data_path: str, min_age_
                 client = JSONRPCClient(web3, privkey)
                 txs[chain_name].append(
                     client.send_transaction(
-                        account.address,
-                        drain_amount,
+                        to=account.address,
+                        value=drain_amount,
                         startgas=VALUE_TX_GAS_COST,
                     ),
                 )
