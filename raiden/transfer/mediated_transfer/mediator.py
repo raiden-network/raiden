@@ -35,12 +35,7 @@ from raiden.transfer.state import (
     NettingChannelState,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import (
-    Block,
-    ContractReceiveChannelBatchUnlock,
-    ContractReceiveSecretReveal,
-    ReceiveUnlock,
-)
+from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.utils import typing
 
 STATE_SECRET_KNOWN = (
@@ -184,22 +179,22 @@ def filter_used_routes(transfers_pair, routes):
     return list(channelid_to_route.values())
 
 
-def get_payee_channel(channelidentifiers_to_channels, transfer_pair):
-    """ Returns the payee channel of a given transfer pair. """
+def get_payee_channel(
+        channelidentifiers_to_channels: typing.ChannelMap,
+        transfer_pair: MediationPairState,
+) -> typing.Optional[NettingChannelState]:
+    """ Returns the payee channel of a given transfer pair or None if it's not found """
     payee_channel_identifier = transfer_pair.payee_transfer.balance_proof.channel_identifier
-    assert payee_channel_identifier in channelidentifiers_to_channels
-    payee_channel = channelidentifiers_to_channels[payee_channel_identifier]
-
-    return payee_channel
+    return channelidentifiers_to_channels.get(payee_channel_identifier)
 
 
-def get_payer_channel(channelidentifiers_to_channels, transfer_pair):
-    """ Returns the payer channel of a given transfer pair. """
+def get_payer_channel(
+        channelidentifiers_to_channels: typing.ChannelMap,
+        transfer_pair: MediationPairState,
+) -> typing.Optional[NettingChannelState]:
+    """ Returns the payer channel of a given transfer pair or None if it's not found """
     payer_channel_identifier = transfer_pair.payer_transfer.balance_proof.channel_identifier
-    assert payer_channel_identifier in channelidentifiers_to_channels
-    payer_channel = channelidentifiers_to_channels[payer_channel_identifier]
-
-    return payer_channel
+    return channelidentifiers_to_channels.get(payer_channel_identifier)
 
 
 def get_pending_transfer_pairs(transfers_pair):
@@ -249,7 +244,7 @@ def sanity_check(state):
 
 
 def clear_if_finalized(iteration, channelidentifiers_to_channels):
-    """ Clear the state if all transfer pairs have finalized. """
+    """ Clear the state if all transfer pairs have finalized or all channels are removed """
     state = iteration.new_state
 
     if state is None:
@@ -259,19 +254,19 @@ def clear_if_finalized(iteration, channelidentifiers_to_channels):
     secrethash = state.secrethash
     for pair in state.transfers_pair:
         payer_channel = get_payer_channel(channelidentifiers_to_channels, pair)
-        if channel.is_lock_pending(payer_channel.partner_state, secrethash):
+        if payer_channel and channel.is_lock_pending(payer_channel.partner_state, secrethash):
             return iteration
 
         payee_channel = get_payee_channel(channelidentifiers_to_channels, pair)
-        if channel.is_lock_pending(payee_channel.our_state, secrethash):
+        if payee_channel and channel.is_lock_pending(payee_channel.our_state, secrethash):
             return iteration
 
     if state.waiting_transfer:
         waiting_transfer = state.waiting_transfer.transfer
         waiting_channel_identifier = waiting_transfer.balance_proof.channel_identifier
-        waiting_channel = channelidentifiers_to_channels[waiting_channel_identifier]
+        waiting_channel = channelidentifiers_to_channels.get(waiting_channel_identifier)
 
-        if channel.is_lock_pending(waiting_channel.partner_state, secrethash):
+        if waiting_channel and channel.is_lock_pending(waiting_channel.partner_state, secrethash):
             return iteration
 
     return TransitionResult(None, iteration.events)
@@ -1225,27 +1220,6 @@ def handle_onchain_secretreveal(
     return iteration
 
 
-def handle_onchain_batch_unlock(
-        mediator_state,
-        onchain_batch_unlock,
-        channelidentifiers_to_channels,
-):
-    # At this point we know that we are either a participant or a partner
-    indices_for_deletion = []
-    for idx, pair in enumerate(mediator_state.transfers_pair):
-        balance_proof = pair.payer_transfer.balance_proof
-        channel_identifier = balance_proof.channel_identifier
-        channel = channelidentifiers_to_channels.get(channel_identifier)
-        if not channel:
-            # The channel is gone so we need to delete the pair
-            indices_for_deletion.append(idx)
-
-    for idx in indices_for_deletion:
-        del mediator_state.transfers_pair[idx]
-
-    return TransitionResult(mediator_state, list())
-
-
 def handle_unlock(mediator_state, state_change: ReceiveUnlock, channelidentifiers_to_channels):
     """ Handle a ReceiveUnlock state change. """
     events = list()
@@ -1395,12 +1369,6 @@ def state_transition(
             state_change,
             channelidentifiers_to_channels,
             block_number,
-        )
-    elif isinstance(state_change, ContractReceiveChannelBatchUnlock):
-        iteration = handle_onchain_batch_unlock(
-            mediator_state,
-            state_change,
-            channelidentifiers_to_channels,
         )
 
     # this is the place for paranoia
