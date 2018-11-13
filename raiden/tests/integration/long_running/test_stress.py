@@ -11,19 +11,17 @@ import requests
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 from flask import url_for
-from gevent import pool, server
+from gevent import pool
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
-from raiden.app import App
-from raiden.message_handler import MessageHandler
-from raiden.network.transport import UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import wait_for_listening_port
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
 from raiden.transfer import views
+from raiden.utils import pex
 from raiden.utils.cli import LogLevelConfigType
 
 STATELESS_EVENT_HANDLER = RaidenEventHandler()
@@ -38,13 +36,33 @@ class RandomCrashEventHandler(RaidenEventHandler):
         self.killer = None
 
     def on_raiden_event(self, raiden, event):
-        if random.random() < 0.7 and self.killer is None:
+        if random.random() > .7 and not self.killer:
 
             # we cannot call stop() here, it would deadlock!
             # a crash while handling a message would wait on itself to finish
-            self.killer = gevent.spawn(kill_and_restart, self.raiden, self.api)
+            self.killer = gevent.spawn(kill_and_restart, self.api)
         else:
             super().on_raiden_event(raiden, event)
+
+
+def kill_and_restart(api_server):
+    raiden = api_server.rest_api.raiden_api.raiden
+
+    assert raiden
+    assert api_server
+
+    raiden.stop()
+    api_server.stop()
+
+    # wait for both services to stop
+    raiden.get()
+    api_server.get()
+
+    assert not raiden
+    assert not api_server
+
+    raiden.start()
+    api_server.start()
 
 
 def _url_for(apiserver, endpoint, **kwargs):
@@ -128,75 +146,12 @@ def start_apiserver_for_network(raiden_network, port_generator):
     ]
 
 
-def kill_and_restart(raiden, api_server):
-
-    assert raiden
-    assert api_server
-
-    raiden.stop()
-    api_server.stop()
-
-    # wait for a failure to happen and then stop the rest api
-    raiden.stop_event.wait()
-
-    # wait for both services to stop
-    raiden.get()
-    api_server.get()
-
-    assert not raiden
-    assert not api_server
-
-    raiden.start()
-    api_server.start()
-
-
-def new_app(app, raiden_event_handler=STATELESS_EVENT_HANDLER):
-    host_port = (
-        app.raiden.config['transport']['udp']['host'],
-        app.raiden.config['transport']['udp']['port'],
-    )
-    socket = server._udp_socket(host_port)  # pylint: disable=protected-access
-    new_transport = UDPTransport(
-        app.raiden.address,
-        app.discovery,
-        socket,
-        app.raiden.transport.throttle_policy,
-        app.raiden.config['transport']['udp'],
-    )
-    app = App(
-        config=app.config,
-        chain=app.raiden.chain,
-        query_start_block=0,
-        default_registry=app.raiden.default_registry,
-        default_secret_registry=app.raiden.default_secret_registry,
-        transport=new_transport,
-        raiden_event_handler=RaidenEventHandler(),
-        message_handler=MessageHandler(),
-        discovery=app.raiden.discovery,
-    )
-
-    app.start()
-
-    return app
-
-
-def restart_app(app):
-    app.stop()
-    app.raiden.get()
-    app.start()
-
-
-def restart_network(raiden_network, retry_timeout):
-    for app in raiden_network:
-        app.stop()
-
-    wait_network = [
-        gevent.spawn(restart_app, app)
-        for app in raiden_network
-    ]
-
-    gevent.wait(wait_network)
-
+def restart_network_and_apiservers(raiden_network, api_servers, retry_timeout):
+    """Stop an app and start it back"""
+    gevent.wait([
+        gevent.spawn(kill_and_restart, api_server)
+        for api_server in api_servers
+    ])
     # The tests assume the nodes are available to transfer
     for app0, app1 in combinations(raiden_network, 2):
         waiting.wait_for_healthy(
@@ -206,23 +161,11 @@ def restart_network(raiden_network, retry_timeout):
         )
 
 
-def restart_network_and_apiservers(raiden_network, api_servers, retry_timeout):
-    """Stop an app and start it back"""
-    for rest_api in api_servers:
-        rest_api.stop()
-        rest_api.get()
-
-    restart_network(raiden_network, retry_timeout)
-
-    for rest_api in api_servers:
-        rest_api.start()
-
-
 def address_from_apiserver(apiserver):
     return apiserver.rest_api.raiden_api.address
 
 
-def transfer_and_assert(post_url, identifier, amount):
+def _make_transfer(post_url, identifier, amount):
     json = {'amount': amount, 'identifier': identifier}
 
     log.debug('Payment request', url=post_url, json=json)
@@ -233,12 +176,32 @@ def transfer_and_assert(post_url, identifier, amount):
     exception = getattr(request, 'exception', None)
     if exception:
         raise exception
+    return response
 
-    assert response is not None
-    if response.status_code != 500:
-        is_json = response.headers['Content-Type'] == 'application/json'
-        assert is_json, response.headers['Content-Type']
-        assert response.status_code == HTTPStatus.OK, response.json()
+
+def transfer_and_assert(post_url, identifier, amount):
+    response = _make_transfer(post_url, identifier, amount)
+    is_json = response.headers['Content-Type'] == 'application/json'
+    assert is_json, response.headers['Content-Type']
+    assert response.status_code == HTTPStatus.OK, response.json()
+
+
+def retry_transfer_and_assert(post_url, identifier, amount, retry=20, wait=1):
+    while retry > 0:
+
+        response = _make_transfer(post_url, identifier, amount)
+
+        assert response is not None
+        # no route to target or target offline
+        if response.status_code == 409:
+            gevent.sleep(wait)
+            continue
+        if response.status_code != 500:
+            is_json = response.headers['Content-Type'] == 'application/json'
+            assert is_json, response.headers['Content-Type']
+            assert response.status_code == HTTPStatus.OK, response.json()
+            return
+    assert False
 
 
 def _wait_for_server(post_url, identifier, amount, port_number):
@@ -247,10 +210,11 @@ def _wait_for_server(post_url, identifier, amount, port_number):
 
     while True:
         try:
-            transfer_and_assert(
+            retry_transfer_and_assert(
                 post_url,
                 identifier,
                 amount,
+                retry=20,
             )
             return
         except (requests.RequestException, requests.ConnectionError):
@@ -442,7 +406,6 @@ def test_stress_happy_case(
         retry_timeout,
         token_addresses,
         port_generator,
-        skip_if_not_udp,  # pylint: disable=unused-argument
 ):
 
     config_converter = LogLevelConfigType()
@@ -521,17 +484,15 @@ def test_stress_happy_case(
             retry_timeout,
         )
 
-    restart_network(raiden_network, retry_timeout)
-
 
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('deposit', [50])
-@pytest.mark.parametrize('reveal_timeout', [15])
-@pytest.mark.parametrize('settle_timeout', [151])
+@pytest.mark.parametrize('reveal_timeout', [135])
+@pytest.mark.parametrize('settle_timeout', [351])
 @pytest.mark.parametrize('retry_interval', [0.5])
-@pytest.mark.parametrize('privatekey_seed', ['test_stress_unhappy{}'])
+@pytest.mark.parametrize('privatekey_seed', ['test_stress_unhappy_local{}'])
 @pytest.mark.skipif(
     'TRAVIS' in os.environ and os.environ['TRAVIS'] == 'true',
     reason='too slow on Travis CI',
@@ -556,10 +517,10 @@ def test_stress_unhappy_case_local(
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('deposit', [20])
-@pytest.mark.parametrize('reveal_timeout', [25])
+@pytest.mark.parametrize('reveal_timeout', [35])
 @pytest.mark.parametrize('settle_timeout', [151])
 @pytest.mark.parametrize('retry_interval', [0.5])
-@pytest.mark.parametrize('privatekey_seed', ['test_stress_unhappy{}'])
+@pytest.mark.parametrize('privatekey_seed', ['test_stress_unhappy_travis{}'])
 def test_stress_unhappy_case_travis(
         raiden_chain,
         deposit,
@@ -585,6 +546,12 @@ def run_stress_test_unhappy(
 ):
     """Test body, to allow different executions travis/local"""
     initiator, mediator, target = raiden_chain
+    log.debug(
+        'addresses',
+        initiator=pex(initiator.raiden.address),
+        mediator=pex(mediator.raiden.address),
+        target=pex(target.raiden.address),
+    )
 
     initiator_api_port = next(port_generator)
 
@@ -626,15 +593,14 @@ def run_stress_test_unhappy(
         port_number=initiator_api_port,
     )
 
-    waiting.wait_for_payment_balance(
-        initiator.raiden,
-        initiator.raiden.default_registry.address,
-        token_address,
-        mediator.raiden.address,
-        initiator.raiden.address,
-        0,
-        network_wait,
+    waiting.wait_for_completed_sent_transfers(
+        raiden=initiator.raiden,
+        payment_network_id=initiator.raiden.default_registry.address,
+        token_address=token_address,
+        number=deposit,
+        retry_timeout=network_wait,
     )
+
     waiting.wait_for_payment_balance(
         target.raiden,
         target.raiden.default_registry.address,
