@@ -142,10 +142,6 @@ class App(Runnable):  # pylint: disable=too-few-public-methods
         super().start()
 
     def stop(self):
-        """ Stop the raiden app.
-
-        Args:
-            leave_channels: if True, also close and settle all channels before stopping
-        """
+        """ Stop the raiden app. """
         if not self.raiden.stop_event.is_set():
             self.raiden.stop()
