@@ -241,6 +241,25 @@ def test_state_wait_secretrequest_valid():
 
     assert len(iteration.events) == 1
     assert isinstance(iteration.events[0], SendSecretReveal)
+    assert iteration.new_state.initiator.received_secret_request is True
+
+    state_change_2 = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        lock.amount,
+        lock.expiration,
+        lock.secrethash,
+        UNIT_TRANSFER_TARGET,
+    )
+
+    iteration2 = initiator_manager.state_transition(
+        iteration.new_state,
+        state_change_2,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    assert len(iteration2.events) == 0
 
 
 def test_state_wait_secretrequest_invalid_amount():
@@ -286,6 +305,25 @@ def test_state_wait_secretrequest_invalid_amount():
 
     assert len(iteration.events) == 1
     assert isinstance(iteration.events[0], EventPaymentSentFailed)
+    assert iteration.new_state.initiator.received_secret_request is True
+
+    state_change_2 = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        lock.amount,
+        lock.expiration,
+        lock.secrethash,
+        UNIT_TRANSFER_TARGET,
+    )
+
+    iteration2 = initiator_manager.state_transition(
+        iteration.new_state,
+        state_change_2,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    assert len(iteration2.events) == 0
 
 
 def test_state_wait_secretrequest_invalid_amount_and_sender():
@@ -330,6 +368,27 @@ def test_state_wait_secretrequest_invalid_amount_and_sender():
     )
 
     assert len(iteration.events) == 0
+    assert iteration.new_state.initiator.received_secret_request is False
+
+    # Now the proper target sends the message, this should be applied
+    state_change_2 = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        lock.amount,
+        lock.expiration,
+        lock.secrethash,
+        UNIT_TRANSFER_TARGET,
+    )
+
+    iteration2 = initiator_manager.state_transition(
+        iteration.new_state,
+        state_change_2,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    assert iteration2.new_state.initiator.received_secret_request is True
+    assert isinstance(iteration2.events[0], SendSecretReveal)
 
 
 def test_state_wait_unlock_valid():
