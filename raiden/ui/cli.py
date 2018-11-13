@@ -475,8 +475,10 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
     report_file = mktemp(suffix='.log')
     configure_logging(
-        {'': 'DEBUG'}, log_file=report_file,
-        disable_debug_logfile=ctx.parent.params['disable_debug_logfile'])
+        logger_level_config={'': 'DEBUG'},
+        log_file=report_file,
+        disable_debug_logfile=ctx.parent.params['disable_debug_logfile'],
+    )
     click.secho(
         f'Report file: {report_file}',
         fg='yellow',
