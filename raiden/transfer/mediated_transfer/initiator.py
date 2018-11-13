@@ -244,13 +244,19 @@ def handle_secretrequest(
         initiator_state.transfer_description.secrethash,
     )
 
+    already_received_secret_request = initiator_state.received_secret_request
+
     is_valid_secretrequest = (
-        is_message_from_target and
         state_change.amount == initiator_state.transfer_description.amount and
         state_change.expiration == lock.expiration
     )
 
-    if is_valid_secretrequest:
+    if already_received_secret_request and is_message_from_target:
+        # A secret request was received earlier, all subsequent are ignored
+        # as it might be an attack
+        iteration = TransitionResult(initiator_state, list())
+
+    elif is_valid_secretrequest and is_message_from_target:
         # Reveal the secret to the target node and wait for its confirmation.
         # At this point the transfer is not cancellable anymore as either the lock
         # timeouts or a secret reveal is received.
@@ -268,6 +274,7 @@ def handle_secretrequest(
         )
 
         initiator_state.revealsecret = revealsecret
+        initiator_state.received_secret_request = True
         iteration = TransitionResult(initiator_state, [revealsecret])
 
     elif not is_valid_secretrequest and is_message_from_target:
@@ -278,7 +285,9 @@ def handle_secretrequest(
             target=initiator_state.transfer_description.target,
             reason='bad secret request message from target',
         )
-        iteration = TransitionResult(None, [cancel])
+
+        initiator_state.received_secret_request = True
+        iteration = TransitionResult(initiator_state, [cancel])
 
     else:
         iteration = TransitionResult(initiator_state, list())
