@@ -9,6 +9,7 @@ from raiden.utils.typing import (
     ChannelID,
     List,
     MessageID,
+    Optional,
     T_BlockNumber,
     T_ChannelID,
     TransactionHash,
@@ -272,7 +273,7 @@ class TransitionResult:
         'events',
     )
 
-    def __init__(self, new_state: State, events: List[Event]):
+    def __init__(self, new_state: Optional[State], events: List[Event]):
         self.new_state = new_state
         self.events = events
 
