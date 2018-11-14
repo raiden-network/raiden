@@ -16,4 +16,8 @@ pip install ${INSTALL_OPT} pyinstaller
 pip install ${INSTALL_OPT} -c constraints.txt --upgrade --upgrade-strategy eager -r requirements-dev.txt
 pip install ${INSTALL_OPT} -c constraints.txt -e .
 
+if [[ ${RUN_COVERAGE} = run_coverage ]]; then
+    pip install ${INSTALL_OPT} --upgrade coveralls
+fi
+
 pip list --outdated
