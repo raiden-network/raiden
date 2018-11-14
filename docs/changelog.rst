@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3022` Reject REST API channel opening with an error if there is not enough token balance for the initial deposit.
 * :bug:`3001` Don't delete payment task when receiving invalid secret request.
 
 * :release:`0.16.0 <2018-11-09>`
