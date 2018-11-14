@@ -44,7 +44,7 @@ def get_latest_known_balance_proof_from_events(
         'balance_proof.chain_id': chain_id,
         'balance_proof.token_network_identifier': to_checksum_address(token_network_id),
         'balance_proof.channel_identifier': channel_identifier,
-        'balance_hash': serialize_bytes(balance_hash),
+        'balance_proof.balance_hash': serialize_bytes(balance_hash),
     })
     if event_record.data:
         return event_record.data.balance_proof
