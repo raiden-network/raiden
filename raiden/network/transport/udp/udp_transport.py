@@ -387,7 +387,7 @@ class UDPTransport(Runnable):
     def send_async(
             self,
             queue_identifier: QueueIdentifier,
-            message: 'Message',
+            message: Message,
     ):
         """ Send a new ordered message to recipient.
 

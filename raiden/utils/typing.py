@@ -10,7 +10,7 @@ Address = NewType('Address', T_Address)
 T_AddressHex = str
 AddressHex = NewType('AddressHex', T_AddressHex)
 
-# This is an absolute number of blocks
+# An absolute number of blocks
 T_BlockExpiration = int
 BlockExpiration = NewType('BlockExpiration', T_BlockExpiration)
 
@@ -32,7 +32,7 @@ BlockHash = NewType('BlockHash', T_BlockHash)
 T_BlockNumber = int
 BlockNumber = NewType('BlockNumber', T_BlockNumber)
 
-# This is a relative number of blocks
+# A relative number of blocks
 T_BlockTimeout = int
 BlockTimeout = NewType('BlockTimeout', T_BlockTimeout)
 
@@ -54,7 +54,7 @@ LockHash = NewType('LockHash', T_LockHash)
 T_MerkleTreeLeaves = List['HashTimeLockState']
 MerkleTreeLeaves = NewType('MerkleTreeLeaves', T_MerkleTreeLeaves)
 
-T_MessageID = Union[int, Tuple[str, int, bytes]]
+T_MessageID = int
 MessageID = NewType('MessageID', T_MessageID)
 
 T_Nonce = int

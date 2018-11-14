@@ -58,7 +58,7 @@ class SendLockExpired(SendMessageEvent):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'balance_proof': self.balance_proof,
             'secrethash': serialization.serialize_bytes(self.secrethash),
             'recipient': to_checksum_address(self.recipient),
@@ -70,7 +70,7 @@ class SendLockExpired(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendLockExpired':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             balance_proof=data['balance_proof'],
             secrethash=serialization.deserialize_bytes(data['secrethash']),
         )
@@ -120,7 +120,7 @@ class SendLockedTransfer(SendMessageEvent):
         result = {
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': str(self.queue_identifier.channel_identifier),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'transfer': self.transfer,
             'balance_proof': self.transfer.balance_proof,
         }
@@ -132,7 +132,7 @@ class SendLockedTransfer(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=int(data['channel_identifier']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             transfer=data['transfer'],
         )
 
@@ -204,7 +204,7 @@ class SendSecretReveal(SendMessageEvent):
         result = {
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': str(self.queue_identifier.channel_identifier),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'secret': serialization.serialize_bytes(self.secret),
         }
 
@@ -215,7 +215,7 @@ class SendSecretReveal(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=int(data['channel_identifier']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             secret=serialization.deserialize_bytes(data['secret']),
         )
 
@@ -291,7 +291,7 @@ class SendBalanceProof(SendMessageEvent):
         result = {
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': str(self.queue_identifier.channel_identifier),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'payment_identifier': str(self.payment_identifier),
             'token_address': to_checksum_address(self.token),
             'secret': serialization.serialize_bytes(self.secret),
@@ -305,7 +305,7 @@ class SendBalanceProof(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=int(data['channel_identifier']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
             token_address=to_canonical_address(data['token_address']),
             secret=serialization.deserialize_bytes(data['secret']),
@@ -370,7 +370,7 @@ class SendSecretRequest(SendMessageEvent):
         result = {
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': str(self.queue_identifier.channel_identifier),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'payment_identifier': str(self.payment_identifier),
             'amount': str(self.amount),
             'expiration': str(self.expiration),
@@ -384,7 +384,7 @@ class SendSecretRequest(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=int(data['channel_identifier']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
             amount=int(data['amount']),
             expiration=int(data['expiration']),
@@ -435,7 +435,7 @@ class SendRefundTransfer(SendMessageEvent):
         result = {
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': str(self.queue_identifier.channel_identifier),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'transfer': self.transfer,
             'balance_proof': self.transfer.balance_proof,
         }
@@ -447,7 +447,7 @@ class SendRefundTransfer(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=int(data['channel_identifier']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             transfer=data['transfer'],
         )
 
