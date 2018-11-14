@@ -10,6 +10,7 @@ Address = NewType('Address', T_Address)
 T_AddressHex = str
 AddressHex = NewType('AddressHex', T_AddressHex)
 
+# This is an absolute number of blocks
 T_BlockExpiration = int
 BlockExpiration = NewType('BlockExpiration', T_BlockExpiration)
 
@@ -31,6 +32,7 @@ BlockHash = NewType('BlockHash', T_BlockHash)
 T_BlockNumber = int
 BlockNumber = NewType('BlockNumber', T_BlockNumber)
 
+# This is a relative number of blocks
 T_BlockTimeout = int
 BlockTimeout = NewType('BlockTimeout', T_BlockTimeout)
 

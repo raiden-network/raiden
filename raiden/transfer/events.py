@@ -55,7 +55,7 @@ class ContractSendChannelClose(ContractSendEvent):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': str(self.channel_identifier),
             'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
@@ -66,7 +66,7 @@ class ContractSendChannelClose(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelClose':
         restored = cls(
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
@@ -111,7 +111,7 @@ class ContractSendChannelSettle(ContractSendEvent):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': str(self.channel_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
         }
 
@@ -120,7 +120,7 @@ class ContractSendChannelSettle(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelSettle':
         restored = cls(
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
         )
 
@@ -166,8 +166,8 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'expiration': self.expiration,
-            'channel_identifier': self.channel_identifier,
+            'expiration': str(self.expiration),
+            'channel_identifier': str(self.channel_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
         }
@@ -177,8 +177,8 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelUpdateTransfer':
         restored = cls(
-            expiration=data['expiration'],
-            channel_identifier=data['channel_identifier'],
+            expiration=int(data['expiration']),
+            channel_identifier=int(data['channel_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
         )
@@ -229,7 +229,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         result = {
             'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': str(self.channel_identifier),
             'participant': to_checksum_address(self.participant),
         }
 
@@ -240,7 +240,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         restored = cls(
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             participant=to_canonical_address(data['participant']),
         )
 
@@ -273,7 +273,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'expiration': self.expiration,
+            'expiration': str(self.expiration),
             'secret': serialization.serialize_bytes(self.secret),
         }
 
@@ -282,7 +282,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendSecretReveal':
         restored = cls(
-            expiration=data['expiration'],
+            expiration=int(data['expiration']),
             secret=serialization.deserialize_bytes(data['secret']),
         )
 
@@ -359,8 +359,8 @@ class EventPaymentSentSuccess(Event):
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'identifier': self.identifier,
-            'amount': self.amount,
+            'identifier': str(self.identifier),
+            'amount': str(self.amount),
             'target': to_checksum_address(self.target),
         }
 
@@ -371,8 +371,8 @@ class EventPaymentSentSuccess(Event):
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            identifier=data['identifier'],
-            amount=data['amount'],
+            identifier=int(data['identifier']),
+            amount=int(data['amount']),
             target=to_canonical_address(data['target']),
         )
 
@@ -433,7 +433,7 @@ class EventPaymentSentFailed(Event):
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'identifier': self.identifier,
+            'identifier': str(self.identifier),
             'target': to_checksum_address(self.target),
             'reason': self.reason,
         }
@@ -445,7 +445,7 @@ class EventPaymentSentFailed(Event):
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            identifier=data['identifier'],
+            identifier=int(data['identifier']),
             target=to_canonical_address(data['target']),
             reason=data['reason'],
         )
@@ -515,8 +515,8 @@ class EventPaymentReceivedSuccess(Event):
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'identifier': self.identifier,
-            'amount': self.amount,
+            'identifier': str(self.identifier),
+            'amount': str(self.amount),
             'initiator': to_checksum_address(self.initiator),
         }
 
@@ -527,8 +527,8 @@ class EventPaymentReceivedSuccess(Event):
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            identifier=data['identifier'],
-            amount=data['amount'],
+            identifier=int(data['identifier']),
+            amount=int(data['amount']),
             initiator=to_canonical_address(data['initiator']),
         )
 
@@ -560,7 +560,7 @@ class EventTransferReceivedInvalidDirectTransfer(Event):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'identifier': self.identifier,
+            'identifier': str(self.identifier),
             'reason': self.reason,
         }
 
@@ -572,7 +572,7 @@ class EventTransferReceivedInvalidDirectTransfer(Event):
             data: typing.Dict[str, typing.Any],
     )-> 'EventTransferReceivedInvalidDirectTransfer':
         restored = cls(
-            identifier=data['identifier'],
+            identifier=int(data['identifier']),
             reason=data['reason'],
         )
 
@@ -607,7 +607,7 @@ class EventInvalidReceivedTransferRefund(Event):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'payment_identifier': self.payment_identifier,
+            'payment_identifier': str(self.payment_identifier),
             'reason': self.reason,
         }
 
@@ -619,7 +619,7 @@ class EventInvalidReceivedTransferRefund(Event):
             data: typing.Dict[str, typing.Any],
     )-> 'EventInvalidReceivedTransferRefund':
         restored = cls(
-            payment_identifier=data['payment_identifier'],
+            payment_identifier=int(data['payment_identifier']),
             reason=data['reason'],
         )
 
@@ -701,7 +701,7 @@ class EventInvalidReceivedLockedTransfer(Event):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'payment_identifier': self.payment_identifier,
+            'payment_identifier': str(self.payment_identifier),
             'reason': self.reason,
         }
 
@@ -713,7 +713,7 @@ class EventInvalidReceivedLockedTransfer(Event):
             data: typing.Dict[str, typing.Any],
     )-> 'EventInvalidReceivedLockedTransfer':
         restored = cls(
-            payment_identifier=data['payment_identifier'],
+            payment_identifier=int(data['payment_identifier']),
             reason=data['reason'],
         )
 
@@ -815,9 +815,9 @@ class SendDirectTransfer(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.queue_identifier.channel_identifier,
+            'channel_identifier': str(self.queue_identifier.channel_identifier),
             'message_identifier': self.message_identifier,
-            'payment_identifier': self.payment_identifier,
+            'payment_identifier': str(self.payment_identifier),
             'balance_proof': self.balance_proof,
             'token_address': to_checksum_address(self.token),
         }
@@ -828,9 +828,9 @@ class SendDirectTransfer(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendDirectTransfer':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             message_identifier=data['message_identifier'],
-            payment_identifier=data['payment_identifier'],
+            payment_identifier=int(data['payment_identifier']),
             balance_proof=data['balance_proof'],
             token_address=to_canonical_address(data['token_address']),
         )
@@ -859,7 +859,7 @@ class SendProcessed(SendMessageEvent):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
-            'channel_identifier': self.queue_identifier.channel_identifier,
+            'channel_identifier': str(self.queue_identifier.channel_identifier),
             'message_identifier': self.message_identifier,
         }
 
@@ -869,7 +869,7 @@ class SendProcessed(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendProcessed':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             message_identifier=data['message_identifier'],
         )
 
