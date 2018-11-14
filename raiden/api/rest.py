@@ -561,6 +561,20 @@ class RestAPI:
             token_address=to_checksum_address(token_address),
             settle_timeout=settle_timeout,
         )
+        token = self.raiden_api.raiden.chain.token(token_address)
+        balance = token.balance_of(self.raiden_api.raiden.address)
+
+        if total_deposit is not None and total_deposit > balance:
+            error_msg = 'Not enough balance to deposit. {} Available={} Needed={}'.format(
+                pex(token_address),
+                balance,
+                total_deposit,
+            )
+            return api_error(
+                errors=error_msg,
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
+            )
+
         try:
             self.raiden_api.channel_open(
                 registry_address,
