@@ -211,7 +211,7 @@ class TargetTask(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': str(self.channel_identifier),
             'target_state': self.target_state,
         }
 
@@ -219,7 +219,7 @@ class TargetTask(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TargetTask':
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             target_state=data['target_state'],
         )
 
@@ -294,7 +294,7 @@ class ChainState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'block_number': self.block_number,
+            'block_number': str(self.block_number),
             'chain_id': self.chain_id,
             'pseudo_random_generator': self.pseudo_random_generator.getstate(),
             'identifiers_to_paymentnetworks': map_dict(
@@ -321,7 +321,7 @@ class ChainState(State):
 
         restored = cls(
             pseudo_random_generator=pseudo_random_generator,
-            block_number=data['block_number'],
+            block_number=int(data['block_number']),
             our_address=to_canonical_address(data['our_address']),
             chain_id=data['chain_id'],
         )
@@ -661,14 +661,14 @@ class RouteState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'node_address': to_checksum_address(self.node_address),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': str(self.channel_identifier),
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'RouteState':
         restored = cls(
-            to_canonical_address(data['node_address']),
-            data['channel_identifier'],
+            node_address=to_canonical_address(data['node_address']),
+            channel_identifier=int(data['channel_identifier']),
         )
 
         return restored
@@ -783,11 +783,11 @@ class BalanceProofUnsignedState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'nonce': self.nonce,
-            'transferred_amount': self.transferred_amount,
-            'locked_amount': self.locked_amount,
+            'transferred_amount': str(self.transferred_amount),
+            'locked_amount': str(self.locked_amount),
             'locksroot': serialization.serialize_bytes(self.locksroot),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': str(self.channel_identifier),
             'chain_id': self.chain_id,
             # Makes the balance hash available to query
             'balance_hash': serialize_bytes(self.balance_hash),
@@ -797,11 +797,11 @@ class BalanceProofUnsignedState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofUnsignedState':
         restored = cls(
             nonce=data['nonce'],
-            transferred_amount=data['transferred_amount'],
-            locked_amount=data['locked_amount'],
+            transferred_amount=int(data['transferred_amount']),
+            locked_amount=int(data['locked_amount']),
             locksroot=serialization.deserialize_bytes(data['locksroot']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             chain_id=data['chain_id'],
         )
 
@@ -953,11 +953,11 @@ class BalanceProofSignedState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'nonce': self.nonce,
-            'transferred_amount': self.transferred_amount,
-            'locked_amount': self.locked_amount,
+            'transferred_amount': str(self.transferred_amount),
+            'locked_amount': str(self.locked_amount),
             'locksroot': serialization.serialize_bytes(self.locksroot),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': str(self.channel_identifier),
             'message_hash': serialization.serialize_bytes(self.message_hash),
             'signature': serialization.serialize_bytes(self.signature),
             'sender': to_checksum_address(self.sender),
@@ -970,11 +970,11 @@ class BalanceProofSignedState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofSignedState':
         restored = cls(
             nonce=data['nonce'],
-            transferred_amount=data['transferred_amount'],
-            locked_amount=data['locked_amount'],
+            transferred_amount=int(data['transferred_amount']),
+            locked_amount=int(data['locked_amount']),
             locksroot=serialization.deserialize_bytes(data['locksroot']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             message_hash=serialization.deserialize_bytes(data['message_hash']),
             signature=serialization.deserialize_bytes(data['signature']),
             sender=to_canonical_address(data['sender']),
@@ -1239,9 +1239,9 @@ class TransactionExecutionStatus(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result: typing.Dict[str, typing.Any] = {}
         if self.started_block_number is not None:
-            result['started_block_number'] = self.started_block_number
+            result['started_block_number'] = str(self.started_block_number)
         if self.finished_block_number is not None:
-            result['finished_block_number'] = self.finished_block_number
+            result['finished_block_number'] = str(self.finished_block_number)
         if self.result is not None:
             result['result'] = self.result
 
@@ -1249,9 +1249,14 @@ class TransactionExecutionStatus(State):
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionExecutionStatus':
+        started_optional = data.get('started_block_number')
+        started_block_number = int(started_optional) if started_optional else None
+        finished_optional = data.get('finished_block_number')
+        finished_block_number = int(finished_optional) if finished_optional else None
+
         restored = cls(
-            started_block_number=data.get('started_block_number'),
-            finished_block_number=data.get('finished_block_number'),
+            started_block_number=started_block_number,
+            finished_block_number=finished_block_number,
             result=data.get('result'),
         )
 
@@ -1351,7 +1356,7 @@ class NettingChannelEndState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'address': to_checksum_address(self.address),
-            'contract_balance': self.contract_balance,
+            'contract_balance': str(self.contract_balance),
             'secrethashes_to_lockedlocks': map_dict(
                 serialization.serialize_bytes,
                 serialization.identity,
@@ -1378,7 +1383,7 @@ class NettingChannelEndState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelEndState':
         restored = cls(
             address=to_canonical_address(data['address']),
-            balance=data['contract_balance'],
+            balance=int(data['contract_balance']),
         )
         restored.secrethashes_to_lockedlocks = map_dict(
             serialization.deserialize_bytes,
@@ -1539,13 +1544,13 @@ class NettingChannelState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
-            'identifier': self.identifier,
+            'identifier': str(self.identifier),
             'chain_id': self.chain_id,
             'token_address': to_checksum_address(self.token_address),
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'reveal_timeout': self.reveal_timeout,
-            'settle_timeout': self.settle_timeout,
+            'reveal_timeout': str(self.reveal_timeout),
+            'settle_timeout': str(self.settle_timeout),
             'our_state': self.our_state,
             'partner_state': self.partner_state,
             'open_transaction': self.open_transaction,
@@ -1566,13 +1571,13 @@ class NettingChannelState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelState':
         restored = cls(
-            identifier=data['identifier'],
+            identifier=int(data['identifier']),
             chain_id=data['chain_id'],
             token_address=to_canonical_address(data['token_address']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            reveal_timeout=data['reveal_timeout'],
-            settle_timeout=data['settle_timeout'],
+            reveal_timeout=int(data['reveal_timeout']),
+            settle_timeout=int(data['settle_timeout']),
             our_state=data['our_state'],
             partner_state=data['partner_state'],
             open_transaction=data['open_transaction'],
@@ -1657,16 +1662,16 @@ class TransactionChannelNewBalance(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'participant_address': to_checksum_address(self.participant_address),
-            'contract_balance': self.contract_balance,
-            'deposit_block_number': self.deposit_block_number,
+            'contract_balance': str(self.contract_balance),
+            'deposit_block_number': str(self.deposit_block_number),
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionChannelNewBalance':
         restored = cls(
             participant_address=to_canonical_address(data['participant_address']),
-            contract_balance=data['contract_balance'],
-            deposit_block_number=data['deposit_block_number'],
+            contract_balance=int(data['contract_balance']),
+            deposit_block_number=int(data['deposit_block_number']),
         )
 
         return restored
@@ -1708,14 +1713,14 @@ class TransactionOrder(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'block_number': self.block_number,
+            'block_number': str(self.block_number),
             'transaction': self.transaction,
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionOrder':
         restored = cls(
-            block_number=data['block_number'],
+            block_number=int(data['block_number']),
             transaction=data['transaction'],
         )
 
