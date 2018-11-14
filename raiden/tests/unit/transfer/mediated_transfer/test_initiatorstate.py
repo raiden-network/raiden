@@ -741,6 +741,93 @@ def test_cancel_transfer():
     assert sent_failed
 
 
+def test_cancelpayment():
+    """ A payment can be cancelled as long as the secret has not been revealed. """
+    channel_state = factories.make_channel(
+        our_balance=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel_map = {channel_state.identifier: channel_state}
+    available_routes = [factories.route_from_channel(channel_state)]
+
+    init_state_change = ActionInitInitiator(
+        transfer_description=factories.UNIT_TRANSFER_DESCRIPTION,
+        routes=available_routes,
+    )
+
+    transition = initiator_manager.state_transition(
+        payment_state=None,
+        state_change=init_state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=random.Random(),
+        block_number=1,
+    )
+    payment_state = transition.new_state
+    assert isinstance(payment_state, InitiatorPaymentState)
+
+    iteration = initiator_manager.handle_cancelpayment(
+        payment_state=payment_state,
+        channel_state=channel_state,
+    )
+    msg = 'The secret has not been revealed yet, the payment can be cancelled'
+    assert iteration.new_state is None, msg
+
+
+def test_invalid_cancelpayment():
+    """ A payment can *NOT* be cancelled if a secret for any transfer has been
+    revealed.
+    """
+    channel_state = factories.make_channel(
+        our_balance=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel_map = {channel_state.identifier: channel_state}
+    available_routes = [factories.route_from_channel(channel_state)]
+
+    init_state_change = ActionInitInitiator(
+        transfer_description=factories.UNIT_TRANSFER_DESCRIPTION,
+        routes=available_routes,
+    )
+    pseudo_random_generator = random.Random()
+
+    init_iteration = initiator_manager.state_transition(
+        payment_state=None,
+        state_change=init_state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=1,
+    )
+
+    lock = channel.get_lock(
+        channel_state.our_state,
+        init_iteration.new_state.initiator.transfer_description.secrethash,
+    )
+    receive_secret_request = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        lock.amount,
+        lock.expiration,
+        lock.secrethash,
+        UNIT_TRANSFER_TARGET,
+    )
+    secret_transition = initiator_manager.state_transition(
+        payment_state=init_iteration.new_state,
+        state_change=receive_secret_request,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=1,
+    )
+
+    iteration = initiator_manager.handle_cancelpayment(
+        payment_state=secret_transition.new_state,
+        channel_state=channel_state,
+    )
+    msg = 'The secret *has* been revealed, the payment must not be cancelled'
+    assert iteration.new_state is not None, msg
+    assert not iteration.events, msg
+
+
 def test_action_cancel_route_comparison():
     """There was a bug in ActionCancelRoute comparison function which we check for"""
     routes1 = []
