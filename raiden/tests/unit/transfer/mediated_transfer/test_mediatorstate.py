@@ -1845,10 +1845,10 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     )
 
     lock_expired_state_change = ReceiveLockExpired(
-        HOP1,
-        balance_proof,
-        transfer.lock.secrethash,
-        1,
+        sender=HOP1,
+        balance_proof=balance_proof,
+        secrethash=transfer.lock.secrethash,
+        message_identifier=1,
     )
 
     block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS - 1
