@@ -23,7 +23,7 @@ def get_state_change_with_balance_proof(
     return storage.get_latest_state_change_by_data_field({
         'balance_proof.chain_id': chain_id,
         'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
-        'balance_proof.channel_identifier': channel_identifier,
+        'balance_proof.channel_identifier': str(channel_identifier),
         'balance_proof.balance_hash': serialize_bytes(balance_hash),
         'balance_proof.sender': to_checksum_address(sender),
     })

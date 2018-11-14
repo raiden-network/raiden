@@ -816,7 +816,7 @@ class SendDirectTransfer(SendMessageEvent):
         result = {
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': str(self.queue_identifier.channel_identifier),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'payment_identifier': str(self.payment_identifier),
             'balance_proof': self.balance_proof,
             'token_address': to_checksum_address(self.token),
@@ -829,7 +829,7 @@ class SendDirectTransfer(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=int(data['channel_identifier']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
             balance_proof=data['balance_proof'],
             token_address=to_canonical_address(data['token_address']),
@@ -860,7 +860,7 @@ class SendProcessed(SendMessageEvent):
         result = {
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': str(self.queue_identifier.channel_identifier),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
         }
 
         return result
@@ -870,7 +870,7 @@ class SendProcessed(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=int(data['channel_identifier']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
         )
 
         return restored

@@ -267,7 +267,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
         return {
             'balance_proof': self.balance_proof,
             'secrethash': serialize_bytes(self.secrethash),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
         }
 
     @classmethod
@@ -275,7 +275,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
         return cls(
             balance_proof=data['balance_proof'],
             secrethash=deserialize_bytes(data['secrethash']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
         )
 
 

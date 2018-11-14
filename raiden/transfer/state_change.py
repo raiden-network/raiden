@@ -1115,7 +1115,7 @@ class ReceiveTransferDirect(BalanceProofStateChange):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'payment_identifier': str(self.payment_identifier),
             'balance_proof': self.balance_proof,
         }
@@ -1124,7 +1124,7 @@ class ReceiveTransferDirect(BalanceProofStateChange):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ReceiveTransferDirect':
         return cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
             balance_proof=data['balance_proof'],
         )
@@ -1169,7 +1169,7 @@ class ReceiveUnlock(BalanceProofStateChange):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
             'secret': serialize_bytes(self.secret),
             'balance_proof': self.balance_proof,
         }
@@ -1177,7 +1177,7 @@ class ReceiveUnlock(BalanceProofStateChange):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ReceiveUnlock':
         return cls(
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
             secret=deserialize_bytes(data['secret']),
             balance_proof=data['balance_proof'],
         )
@@ -1208,14 +1208,14 @@ class ReceiveDelivered(AuthenticatedSenderStateChange):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'sender': to_checksum_address(self.sender),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ReceiveDelivered':
         return cls(
             sender=to_canonical_address(data['sender']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
         )
 
 
@@ -1243,12 +1243,12 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'sender': to_checksum_address(self.sender),
-            'message_identifier': self.message_identifier,
+            'message_identifier': str(self.message_identifier),
         }
 
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ReceiveProcessed':
         return cls(
             sender=to_canonical_address(data['sender']),
-            message_identifier=data['message_identifier'],
+            message_identifier=int(data['message_identifier']),
         )
