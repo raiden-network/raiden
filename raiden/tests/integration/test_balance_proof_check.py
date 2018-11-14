@@ -21,6 +21,7 @@ def test_invalid_close(
         token_addresses,
         network_wait,
 ):
+    raise Exception("Blah blah")
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)

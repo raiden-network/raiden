@@ -17,5 +17,6 @@ py.test \
     -v \
     --showlocals \
     --blockchain-type=${BLOCKCHAIN_TYPE} \
+    --show-capture='no' \
     ${TRANSPORT_OPTIONS} \
     ${TEST}

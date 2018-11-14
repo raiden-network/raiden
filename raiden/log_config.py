@@ -137,6 +137,7 @@ def configure_logging(
         debug_log_file_name: str = None,
         _first_party_packages: FrozenSet[str] = _FIRST_PARTY_PACKAGES,
         cache_logger_on_first_use: bool = True,
+        log_propagate=True,
 ):
     structlog.reset_defaults()
 
@@ -239,7 +240,7 @@ def configure_logging(
             'loggers': {
                 '': {
                     'handlers': handlers.keys(),
-                    'propagate': True,
+                    'propagate': log_propagate,
                 },
             },
         },
