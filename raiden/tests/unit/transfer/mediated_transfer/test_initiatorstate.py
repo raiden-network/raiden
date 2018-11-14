@@ -311,7 +311,7 @@ def test_state_wait_secretrequest_valid():
         setup.block_number,
     )
 
-    assert len(iteration2.events) == 0
+    assert not iteration2.events
 
 
 def test_state_wait_secretrequest_invalid_amount():
@@ -333,8 +333,8 @@ def test_state_wait_secretrequest_invalid_amount():
         setup.block_number,
     )
 
-    assert len(iteration.events) == 1
-    assert isinstance(iteration.events[0], EventPaymentSentFailed)
+    msg = 'The payment event now is emitted when the lock expires'
+    assert events.must_contain_entry(iteration.events, EventPaymentSentFailed, {}) is None, msg
     assert iteration.new_state.initiator.received_secret_request is True
 
     state_change_2 = ReceiveSecretRequest(
@@ -353,7 +353,7 @@ def test_state_wait_secretrequest_invalid_amount():
         setup.block_number,
     )
 
-    assert len(iteration2.events) == 0
+    assert not iteration2.events
 
 
 def test_state_wait_secretrequest_invalid_amount_and_sender():
@@ -375,7 +375,7 @@ def test_state_wait_secretrequest_invalid_amount_and_sender():
         setup.block_number,
     )
 
-    assert len(iteration.events) == 0
+    assert not iteration.events
     assert iteration.new_state.initiator.received_secret_request is False
 
     # Now the proper target sends the message, this should be applied
@@ -954,6 +954,8 @@ def test_initiator_lock_expired():
         'recipient': channel1.partner_state.address,
     })
     assert lock_expired is not None
+
+    assert search_for_item(iteration.events, EventUnlockFailed, {})
 
     # Since the lock expired make sure we also get the payment sent failed event
     payment_failed = search_for_item(iteration.events, EventPaymentSentFailed, {
