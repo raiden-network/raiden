@@ -552,7 +552,7 @@ def test_refund_transfer_next_route():
         pkey=refund_pkey,
         sender=refund_address,
     )
-    assert channel_state.partner_state.address == refund_address
+    assert channel1.partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
         routes=available_routes,
@@ -605,8 +605,6 @@ def test_refund_transfer_no_more_routes():
     )
 
     original_transfer = current_state.initiator.transfer
-    channel_identifier = current_state.initiator.channel_identifier
-    channel_state = channel_map[channel_identifier]
 
     refund_transfer = factories.make_signed_transfer(
         amount,
