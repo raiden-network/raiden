@@ -353,7 +353,7 @@ def test_state_wait_secretrequest_invalid_amount():
         setup.block_number,
     )
 
-    assert not iteration2.events
+    assert len(iteration2.events) == 0
 
 
 def test_state_wait_secretrequest_invalid_amount_and_sender():
@@ -375,7 +375,7 @@ def test_state_wait_secretrequest_invalid_amount_and_sender():
         setup.block_number,
     )
 
-    assert not iteration.events
+    assert len(iteration.events) == 0
     assert iteration.new_state.initiator.received_secret_request is False
 
     # Now the proper target sends the message, this should be applied

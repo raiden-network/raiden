@@ -89,7 +89,7 @@ def handle_block(
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     """ Checks if the lock has expired, and if it has sends a remove expired
-    lock and emit the failing events.
+    lock and emits the failing events.
     """
     secrethash = initiator_state.transfer.lock.secrethash
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
