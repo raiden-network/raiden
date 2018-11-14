@@ -165,22 +165,26 @@ def handle_cancelpayment(
         payment_state: InitiatorPaymentState,
         channel_state: NettingChannelState,
 ) -> TransitionResult:
-    """ Cancel the payment. """
-    assert can_cancel(payment_state), 'Cannot cancel a transfer after the secret is revealed'
+    """ Cancel the payment and all related transfers. """
+    # Cannot cancel a transfer after the secret is revealed
+    if can_cancel(payment_state):
+        transfer_description = payment_state.initiator.transfer_description
+        cancel_events = cancel_current_route(payment_state)
 
-    transfer_description = payment_state.initiator.transfer_description
-    cancel_events = cancel_current_route(payment_state)
+        cancel = EventPaymentSentFailed(
+            payment_network_identifier=channel_state.payment_network_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            identifier=transfer_description.payment_identifier,
+            target=transfer_description.target,
+            reason='user canceled payment',
+        )
+        cancel_events.append(cancel)
 
-    cancel = EventPaymentSentFailed(
-        payment_network_identifier=channel_state.payment_network_identifier,
-        token_network_identifier=channel_state.token_network_identifier,
-        identifier=transfer_description.payment_identifier,
-        target=transfer_description.target,
-        reason='user canceled payment',
-    )
-    cancel_events.append(cancel)
+        iteration = TransitionResult(None, cancel_events)
+    else:
+        iteration = TransitionResult(payment_state, list())
 
-    return TransitionResult(None, cancel_events)
+    return iteration
 
 
 def handle_transferrefundcancelroute(
