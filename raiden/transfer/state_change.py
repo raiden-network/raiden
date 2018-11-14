@@ -1113,7 +1113,6 @@ class ReceiveTransferDirect(BalanceProofStateChange):
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
             'balance_proof': self.balance_proof,
-            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
@@ -1168,7 +1167,6 @@ class ReceiveUnlock(BalanceProofStateChange):
             'message_identifier': self.message_identifier,
             'secret': serialize_bytes(self.secret),
             'balance_proof': self.balance_proof,
-            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod

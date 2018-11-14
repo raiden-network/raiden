@@ -14,7 +14,7 @@ from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_from_json
 from raiden.utils import lpex, pex, serialization, sha3, typing
-from raiden.utils.serialization import map_dict, map_list
+from raiden.utils.serialization import map_dict, map_list, serialize_bytes
 
 SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
@@ -960,6 +960,8 @@ class BalanceProofSignedState(State):
             'signature': serialization.serialize_bytes(self.signature),
             'sender': to_checksum_address(self.sender),
             'chain_id': self.chain_id,
+            # Makes the balance hash available to query
+            'balance_hash': serialize_bytes(self.balance_hash),
         }
 
     @classmethod

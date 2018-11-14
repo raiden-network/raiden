@@ -119,7 +119,6 @@ class ActionInitMediator(BalanceProofStateChange):
             'from_route': self.from_route,
             'from_transfer': self.from_transfer,
             'balance_proof': self.balance_proof,
-            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
@@ -175,7 +174,6 @@ class ActionInitTarget(BalanceProofStateChange):
             'route': self.route,
             'transfer': self.transfer,
             'balance_proof': self.balance_proof,
-            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
@@ -268,7 +266,6 @@ class ReceiveLockExpired(BalanceProofStateChange):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'balance_proof': self.balance_proof,
-            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
             'secrethash': serialize_bytes(self.secrethash),
             'message_identifier': self.message_identifier,
         }
@@ -441,7 +438,6 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
             'routes': self.routes,
             'transfer': self.transfer,
             'balance_proof': self.balance_proof,
-            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
@@ -491,7 +487,6 @@ class ReceiveTransferRefund(BalanceProofStateChange):
             'routes': self.routes,
             'transfer': self.transfer,
             'balance_proof': self.balance_proof,
-            'balance_hash': serialize_bytes(self.balance_proof.balance_hash),
         }
 
     @classmethod
