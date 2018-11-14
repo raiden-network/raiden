@@ -220,7 +220,7 @@ class ActionCancelRoute(StateChange):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'registry_address': to_checksum_address(self.registry_address),
-            'identifier': self.identifier,
+            'identifier': str(self.identifier),
             'routes': self.routes,
         }
 
@@ -228,7 +228,7 @@ class ActionCancelRoute(StateChange):
     def from_dict(cls, data) -> 'ActionInitTarget':
         return cls(
             registry_address=to_canonical_address(data['registry_address']),
-            channel_identifier=data['identifier'],
+            channel_identifier=int(data['identifier']),
             routes=data['routes'],
         )
 
@@ -321,9 +321,9 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'payment_identifier': self.payment_identifier,
-            'amount': self.amount,
-            'expiration': self.expiration,
+            'payment_identifier': str(self.payment_identifier),
+            'amount': str(self.amount),
+            'expiration': str(self.expiration),
             'secrethash': serialize_bytes(self.secrethash),
             'sender': to_checksum_address(self.sender),
             'revealsecret': self.revealsecret,
@@ -332,9 +332,9 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     @classmethod
     def from_dict(cls, data) -> 'ReceiveSecretRequest':
         instance = cls(
-            payment_identifier=data['payment_identifier'],
-            amount=data['amount'],
-            expiration=data['expiration'],
+            payment_identifier=int(data['payment_identifier']),
+            amount=int(data['amount']),
+            expiration=int(data['expiration']),
             secrethash=deserialize_bytes(data['secrethash']),
             sender=to_canonical_address(data['sender']),
         )

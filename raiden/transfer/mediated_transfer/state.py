@@ -140,7 +140,7 @@ class InitiatorTransferState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         result = {
             'transfer_description': self.transfer_description,
-            'channel_identifier': self.channel_identifier,
+            'channel_identifier': str(self.channel_identifier),
             'transfer': self.transfer,
             'revealsecret': self.revealsecret,
             'received_secret_request': self.received_secret_request,
@@ -152,7 +152,7 @@ class InitiatorTransferState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTransferState':
         restored = cls(
             transfer_description=data['transfer_description'],
-            channel_identifier=data['channel_identifier'],
+            channel_identifier=int(data['channel_identifier']),
             transfer=data['transfer'],
             revealsecret=data['revealsecret'],
             received_secret_request=data['received_secret_request'],
@@ -411,7 +411,7 @@ class LockedTransferUnsignedState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'payment_identifier': self.payment_identifier,
+            'payment_identifier': str(self.payment_identifier),
             'token': to_checksum_address(self.token),
             'balance_proof': self.balance_proof,
             'lock': self.lock,
@@ -422,7 +422,7 @@ class LockedTransferUnsignedState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferUnsignedState':
         restored = cls(
-            payment_identifier=data['payment_identifier'],
+            payment_identifier=int(data['payment_identifier']),
             token=to_canonical_address(data['token']),
             balance_proof=data['balance_proof'],
             lock=data['lock'],
@@ -512,8 +512,8 @@ class LockedTransferSignedState(State):
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'message_identifier': self.message_identifier,
-            'payment_identifier': self.payment_identifier,
+            'message_identifier': str(self.message_identifier),
+            'payment_identifier': str(self.payment_identifier),
             'token': to_checksum_address(self.token),
             'balance_proof': self.balance_proof,
             'lock': self.lock,
@@ -524,8 +524,8 @@ class LockedTransferSignedState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'LockedTransferSignedState':
         restored = cls(
-            message_identifier=data['message_identifier'],
-            payment_identifier=data['payment_identifier'],
+            message_identifier=int(data['message_identifier']),
+            payment_identifier=int(data['payment_identifier']),
             token=to_canonical_address(data['token']),
             balance_proof=data['balance_proof'],
             lock=data['lock'],
@@ -604,8 +604,8 @@ class TransferDescriptionWithSecretState(State):
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
-            'payment_identifier': self.payment_identifier,
-            'amount': self.amount,
+            'payment_identifier': str(self.payment_identifier),
+            'amount': str(self.amount),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'initiator': to_checksum_address(self.initiator),
             'target': to_checksum_address(self.target),
@@ -616,8 +616,8 @@ class TransferDescriptionWithSecretState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransferDescriptionWithSecretState':
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
-            payment_identifier=data['payment_identifier'],
-            amount=data['amount'],
+            payment_identifier=int(data['payment_identifier']),
+            amount=int(data['amount']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             initiator=to_canonical_address(data['initiator']),
             target=to_canonical_address(data['target']),
