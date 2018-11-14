@@ -9,7 +9,13 @@ elif [ -z ${BLOCKCHAIN_TYPE} ]; then
     BLOCKCHAIN_TYPE="geth"
 fi
 
-py.test \
+if [[ ${RUN_COVERAGE} = run_coverage ]]; then
+    TEST_RUNNER="coverage run -m py.test"
+elif [[ ${RUN_COVERAGE} = no_coverage ]]; then
+    TEST_RUNNER="py.test"
+fi
+
+${TEST_RUNNER} \
     -Wd \
     --travis-fold=always \
     --log-config='raiden:DEBUG' \
