@@ -789,6 +789,8 @@ class BalanceProofUnsignedState(State):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': self.channel_identifier,
             'chain_id': self.chain_id,
+            # Makes the balance hash available to query
+            'balance_hash': serialize_bytes(self.balance_hash),
         }
 
     @classmethod
