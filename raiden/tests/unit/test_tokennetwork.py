@@ -405,10 +405,6 @@ def test_mediator_clear_pairs_after_batch_unlock(
     ids_to_channels = token_network_state.channelidentifiers_to_channels
     assert len(ids_to_channels) == 0
 
-    # Make sure that the mediator task is cleared now since the pair was removed
-    mediator_task = chain_state.payment_mapping.secrethashes_to_task.get(lock_secrethash)
-    assert not mediator_task
-
     # Make sure that all is fine in the next block
     block = Block(
         block_number=block_number + 1,
@@ -420,6 +416,11 @@ def test_mediator_clear_pairs_after_batch_unlock(
         state_change=block,
     )
     assert iteration.new_state
+
+    # Make sure that mediator task was cleared during the next block processing
+    # since the channel was removed
+    mediator_task = chain_state.payment_mapping.secrethashes_to_task.get(lock_secrethash)
+    assert not mediator_task
 
 
 def test_multiple_channel_states(
