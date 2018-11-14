@@ -7,6 +7,7 @@ from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    EventUnlockFailed,
     EventUnlockSuccess,
     SendLockedTransfer,
     SendSecretReveal,
@@ -50,7 +51,8 @@ def events_for_unlock_lock(
         secret: Secret,
         secrethash: SecretHash,
         pseudo_random_generator: random.Random,
-):
+) -> List[Event]:
+    """ Unlocks the lock offchain, and emit events for the successful payment. """
     # next hop learned the secret, unlock the token locally and send the
     # lock claim message to next hop
     transfer_description = initiator_state.transfer_description
@@ -86,6 +88,9 @@ def handle_block(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
+    """ Checks if the lock has expired, and if it has sends a remove expired
+    lock and emit the failing events.
+    """
     secrethash = initiator_state.transfer.lock.secrethash
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
@@ -119,20 +124,31 @@ def handle_block(
             )
             events.extend(expired_lock_events)
 
+        if initiator_state.received_secret_request:
+            reason = 'bad secret request message from target'
+        else:
+            reason = 'lock expired'
+
         transfer_description = initiator_state.transfer_description
+        payment_identifier = transfer_description.payment_identifier
         # TODO: When we introduce multiple transfers per payment this needs to be
         #       reconsidered. As we would want to try other routes once a route
         #       has failed, and a transfer failing does not mean the entire payment
         #       would have to fail.
         #       Related issue: https://github.com/raiden-network/raiden/issues/2329
-        transfer_failed = EventPaymentSentFailed(
+        payment_failed = EventPaymentSentFailed(
             payment_network_identifier=transfer_description.payment_network_identifier,
             token_network_identifier=transfer_description.token_network_identifier,
-            identifier=transfer_description.payment_identifier,
+            identifier=payment_identifier,
             target=transfer_description.target,
-            reason="transfer's lock has expired",
+            reason=reason,
         )
-        events.append(transfer_failed)
+        unlock_failed = EventUnlockFailed(
+            identifier=payment_identifier,
+            secrethash=initiator_state.transfer_description.secrethash,
+            reason=reason,
+        )
+
         lock_exists = channel.lock_exists_in_either_channel_side(
             channel_state=channel_state,
             secrethash=secrethash,
@@ -143,7 +159,7 @@ def handle_block(
             # task around to wait for the LockExpired messages to sync.
             # Check https://github.com/raiden-network/raiden/issues/3183
             initiator_state if lock_exists else None,
-            events,
+            expired_lock_events + [payment_failed, unlock_failed],
         )
     else:
         return TransitionResult(initiator_state, events)
@@ -333,16 +349,8 @@ def handle_secretrequest(
         iteration = TransitionResult(initiator_state, [revealsecret])
 
     elif not is_valid_secretrequest and is_message_from_target:
-        cancel = EventPaymentSentFailed(
-            payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifier=channel_state.token_network_identifier,
-            identifier=initiator_state.transfer_description.payment_identifier,
-            target=initiator_state.transfer_description.target,
-            reason='bad secret request message from target',
-        )
-
         initiator_state.received_secret_request = True
-        iteration = TransitionResult(initiator_state, [cancel])
+        iteration = TransitionResult(initiator_state, list())
 
     else:
         iteration = TransitionResult(initiator_state, list())
