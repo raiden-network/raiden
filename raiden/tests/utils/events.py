@@ -1,4 +1,7 @@
+import gevent
 from web3.datastructures import AttributeDict
+
+from raiden.raiden_service import RaidenService
 
 NOVALUE = object()
 
@@ -79,3 +82,44 @@ def must_have_events(event_list, *args) -> bool:
             return False
 
     return True
+
+
+def wait_for_raiden_event(
+        raiden: RaidenService,
+        type_,
+        data,
+        retry_timeout: float,
+) -> None:
+    """Wait until an event is seen in the WAL events
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    found = False
+    while not found:
+        found = raiden_events_must_contain_entry(raiden, type_, data)
+        if found:
+            break
+
+        gevent.sleep(retry_timeout)
+
+
+def wait_for_state_change(
+        raiden: RaidenService,
+        type_,
+        data,
+        retry_timeout: float,
+) -> None:
+    """Wait until a state change is seen in the WAL
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    found = False
+    while not found:
+        state_changes = raiden.wal.storage.get_statechanges_by_identifier(0, 'latest')
+        found = must_contain_entry(state_changes, type_, data)
+        if found:
+            break
+
+        gevent.sleep(retry_timeout)

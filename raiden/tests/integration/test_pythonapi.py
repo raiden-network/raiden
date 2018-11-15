@@ -3,6 +3,7 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.constants import Environment
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     InsufficientFunds,
@@ -10,7 +11,7 @@ from raiden.exceptions import (
     InvalidAddress,
 )
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.events import must_have_event
+from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
@@ -19,6 +20,7 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
+from raiden.transfer.state_change import ContractReceiveNewTokenNetwork
 from raiden.utils.gas_reserve import (
     GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
     get_required_gas_estimate,
@@ -37,8 +39,8 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
-@pytest.mark.skip('token registration not working in red eyes')
-def test_register_token(raiden_network, token_amount, contract_manager):
+@pytest.mark.parametrize('environment_type', [Environment.DEVELOPMENT])
+def test_register_token(raiden_network, token_amount, contract_manager, retry_timeout):
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
@@ -59,6 +61,18 @@ def test_register_token(raiden_network, token_amount, contract_manager):
     assert token_address not in api1.get_tokens_list(registry_address)
 
     api1.token_network_register(registry_address, token_address)
+    exception = RuntimeError('Did not see the token registration within 30 seconds')
+    with gevent.Timeout(seconds=30, exception=exception):
+        wait_for_state_change(
+            app1.raiden,
+            ContractReceiveNewTokenNetwork,
+            {
+                'token_network': {
+                    'token_address': token_address,
+                },
+            },
+            retry_timeout
+        )
     assert token_address in api1.get_tokens_list(registry_address)
 
     # Exception if we try to reregister
@@ -101,7 +115,7 @@ def test_register_token_insufficient_eth(raiden_network, token_amount, contract_
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [1])
-@pytest.mark.skip('token registration not working in red eyes')
+@pytest.mark.parametrize('environment_type', [Environment.DEVELOPMENT])
 def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contract_manager):
     """If a token is registered it must appear on the token list.
 
@@ -138,8 +152,18 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
     assert token_address not in api1.get_tokens_list(registry_address)
 
     api0.token_network_register(registry_address, token_address)
-
-    gevent.sleep(1)
+    exception = RuntimeError('Did not see the token registration within 30 seconds')
+    with gevent.Timeout(seconds=30, exception=exception):
+        wait_for_state_change(
+            app0.raiden,
+            ContractReceiveNewTokenNetwork,
+            {
+                'token_network': {
+                    'token_address': token_address,
+                },
+            },
+            retry_timeout
+        )
 
     assert token_address in api0.get_tokens_list(registry_address)
     assert token_address not in api1.get_tokens_list(registry_address)

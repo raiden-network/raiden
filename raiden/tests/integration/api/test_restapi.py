@@ -748,7 +748,7 @@ def test_api_channel_state_change_errors(
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [2])
-@pytest.mark.skip('multiple tokens not working in red eyes')
+@pytest.mark.parametrize('environment_type', [Environment.DEVELOPMENT])
 def test_api_tokens(test_api_server, blockchain_services, token_addresses):
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
     token_address1 = token_addresses[0]
