@@ -167,35 +167,12 @@ def configure_logging(
     _wrap_tracebackexception_format(redact)
 
     handlers = dict()
-    if log_file:
-        handlers['file'] = {
-            'class': 'logging.handlers.WatchedFileHandler',
-            'filename': log_file,
-            'level': 'DEBUG',
-            'formatter': formatter,
-            'filters': ['user_filter'],
-        }
-    else:
-        handlers['default'] = {
-            'class': 'logging.StreamHandler',
-            'level': 'DEBUG',
-            'formatter': formatter,
-            'filters': ['user_filter'],
-        }
-
-    if not disable_debug_logfile:
-        if debug_log_file_name is None:
-            time = datetime.datetime.utcnow().isoformat()
-            debug_log_file_name = f'raiden-debug_{time}.log'
-        handlers['debug-info'] = {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': debug_log_file_name,
-            'level': 'DEBUG',
-            'formatter': 'debug',
-            'maxBytes': MAX_LOG_FILE_SIZE,
-            'backupCount': LOG_BACKUP_COUNT,
-            'filters': ['raiden_debug_file_filter'],
-        }
+    handlers['default'] = {
+        'class': 'logging.StreamHandler',
+        'level': 'DEBUG',
+        'formatter': 'plain',
+        'filters': ['user_filter'],
+    }
 
     logging.config.dictConfig(
         {
@@ -220,26 +197,11 @@ def configure_logging(
                     'processor': _chain(structlog.dev.ConsoleRenderer(colors=False), redact),
                     'foreign_pre_chain': processors,
                 },
-                'json': {
-                    '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': _chain(structlog.processors.JSONRenderer(), redact),
-                    'foreign_pre_chain': processors,
-                },
-                'colorized': {
-                    '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': _chain(structlog.dev.ConsoleRenderer(colors=True), redact),
-                    'foreign_pre_chain': processors,
-                },
-                'debug': {
-                    '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': _chain(structlog.processors.JSONRenderer(), redact),
-                    'foreign_pre_chain': processors,
-                },
             },
             'handlers': handlers,
             'loggers': {
                 '': {
-                    'handlers': handlers.keys(),
+                    'handlers': ['default'],
                     'propagate': log_propagate,
                 },
             },
