@@ -251,7 +251,7 @@ So, for a specific queue message, e.g. a ``LockedTransfer`` in a specific channe
 - -> A sends a ``LockedTransfer`` and starts a retry loop for it with message_id=123
 - <- B receives it and sends ``Delivered(123)``.
 - <- B accepts it (i.e. succesfully processes it). Then sends ``Processed(123)`` and starts a retry loop for it.
-- -> A receives ``Delivered(123)``. Stops retry loop for any message_id=123 from B in its general queue, which is none, so it effectivelly skips it.
+- -> A receives ``Delivered(123)``. Stops retry loop for any message_id=123 from B in its global queue, which is none, so it effectivelly skips it.
 - -> A receives ``Processed(123)``, stops retry loop for any message_id=123 from B in its specific queue (in this case, ``LockedTransfer``), sends ``Delivered(123)`` in reply to ``Processed(123)``.
 - <- B receives ``Delivered(123)``, stops retry loop for any message_id=123 from A in its global queue (in this case, ``Processed``).
 
