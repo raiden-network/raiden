@@ -193,7 +193,6 @@ def test_get_state_change_with_balance_proof():
             token_network_identifier=balance_proof.token_network_identifier,
             channel_identifier=balance_proof.channel_identifier,
             sender=balance_proof.sender,
-            locksroot=balance_proof.locksroot,
             balance_hash=balance_proof.balance_hash,
         )
         assert state_change_record.data == state_change
@@ -270,7 +269,6 @@ def test_get_event_with_balance_proof():
             chain_id=balance_proof.chain_id,
             token_network_identifier=balance_proof.token_network_identifier,
             channel_identifier=balance_proof.channel_identifier,
-            locksroot=balance_proof.locksroot,
             balance_hash=balance_proof.balance_hash,
         )
         assert event_record.data == event
