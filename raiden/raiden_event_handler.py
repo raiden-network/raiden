@@ -38,12 +38,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.utils import (
-    get_latest_known_balance_proof_from_events,
-    get_latest_known_balance_proof_from_state_changes,
-)
+from raiden.transfer.utils import get_event_with_balance_proof, get_state_change_with_balance_proof
 from raiden.utils import pex
-from raiden.utils.serialization import serialize_bytes
 from raiden_libs.utils.signing import eth_sign
 
 # type alias to avoid both circular dependencies and flake8 errors
@@ -337,7 +333,6 @@ class RaidenEventHandler:
         )
         token_network: TokenNetwork = payment_channel.token_network
 
-        # Fetch on-chain balance hashes for both participants
         participants_details = token_network.detail_participants(
             participant1=raiden.address,
             participant2=participant,
@@ -360,28 +355,26 @@ class RaidenEventHandler:
         )
 
         if is_partner_unlock:
-            record = raiden.wal.storage.get_latest_state_change_by_data_field({
-                'balance_proof.chain_id': raiden.chain.network_id,
-                'balance_proof.token_network_identifier': to_checksum_address(
-                    token_network_identifier,
-                ),
-                'balance_proof.channel_identifier': channel_identifier,
-                'balance_proof.sender': to_checksum_address(
-                    participants_details.partner_details.address,
-                ),
-                'balance_proof.locksroot': serialize_bytes(partner_locksroot),
-            })
-            state_change_identifier = record.state_change_identifier
+            state_change_record = get_state_change_with_balance_proof(
+                storage=raiden.wal.storage,
+                chain_id=raiden.chain.network_id,
+                token_network_identifier=token_network_identifier,
+                channel_identifier=channel_identifier,
+                locksroot=partner_locksroot,
+                balance_hash=partner_details.balance_hash,
+                sender=participants_details.partner_details.address,
+            )
+            state_change_identifier = state_change_record.state_change_identifier
         elif is_our_unlock:
-            record = raiden.wal.storage.get_latest_event_by_data_field({
-                'balance_proof.chain_id': raiden.chain.network_id,
-                'balance_proof.token_network_identifier': to_checksum_address(
-                    token_network_identifier,
-                ),
-                'balance_proof.locksroot': serialize_bytes(our_locksroot),
-                'channel_identifier': channel_identifier,
-            })
-            state_change_identifier = record.state_change_identifier
+            event_record = get_event_with_balance_proof(
+                storage=raiden.wal.storage,
+                chain_id=raiden.chain.network_id,
+                token_network_identifier=token_network_identifier,
+                locksroot=our_locksroot,
+                channel_identifier=channel_identifier,
+                balance_hash=our_details.balance_hash,
+            )
+            state_change_identifier = event_record.state_change_identifier
         else:
             state_change_identifier = 0
 
@@ -403,15 +396,14 @@ class RaidenEventHandler:
             payment_network_identifier=raiden.default_registry.address,
             token_address=token_address,
             channel_identifier=channel_identifier,
-            state_change_identifier=record.state_change_identifier,
+            state_change_identifier=state_change_identifier,
         )
 
-        # Compute merkle tree leaves from partner state
         our_state = restored_channel_state.our_state
         partner_state = restored_channel_state.partner_state
-        if partner_state.address == participant:  # Partner account
+        if partner_state.address == participant:
             merkle_tree_leaves = get_batch_unlock(partner_state)
-        elif our_state.address == participant:  # Our account
+        elif our_state.address == participant:
             merkle_tree_leaves = get_batch_unlock(our_state)
 
         try:
@@ -433,29 +425,29 @@ class RaidenEventHandler:
         )
 
         token_network_proxy: TokenNetwork = payment_channel.token_network
-        # Fetch on-chain balance hashes for both participants
         participants_details = token_network_proxy.detail_participants(
             participant1=payment_channel.participant1,
             participant2=payment_channel.participant2,
             channel_identifier=channel_settle_event.channel_identifier,
         )
 
-        # Query state changes which have the on-chain
-        # balance hash and use the balance proofs from those states.
-
         our_balance_hash = participants_details.our_details.balance_hash
-        our_balance_proof = None
         if our_balance_hash != EMPTY_HASH:
-            # Fetch our latest balance proof from events our node has emitted
-            our_balance_proof = get_latest_known_balance_proof_from_events(
+            event_record = get_event_with_balance_proof(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
-                token_network_id=channel_settle_event.token_network_identifier,
+                token_network_identifier=channel_settle_event.token_network_identifier,
                 channel_identifier=channel_settle_event.channel_identifier,
+                locksroot=participants_details.our_details.locksroot,
                 balance_hash=our_balance_hash,
             )
 
-        if our_balance_proof:
+            if event_record.data is None:
+                raise RaidenUnrecoverableError(
+                    'Our balance proof could not be found in the database',
+                )
+
+            our_balance_proof = event_record.data.balance_proof
             our_transferred_amount = our_balance_proof.transferred_amount
             our_locked_amount = our_balance_proof.locked_amount
             our_locksroot = our_balance_proof.locksroot
@@ -465,19 +457,22 @@ class RaidenEventHandler:
             our_locksroot = EMPTY_HASH
 
         partner_balance_hash = participants_details.partner_details.balance_hash
-        partner_balance_proof = None
         if partner_balance_hash != EMPTY_HASH:
-            # Fetch partner's latest balance proof from received state changes
-            partner_balance_proof = get_latest_known_balance_proof_from_state_changes(
+            state_change_record = get_state_change_with_balance_proof(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
-                token_network_id=channel_settle_event.token_network_identifier,
+                token_network_identifier=channel_settle_event.token_network_identifier,
                 channel_identifier=channel_settle_event.channel_identifier,
+                locksroot=participants_details.partner_details.locksroot,
                 sender=participants_details.partner_details.address,
                 balance_hash=partner_balance_hash,
             )
+            if state_change_record.data is None:
+                raise RaidenUnrecoverableError(
+                    'Partner balance proof could not be found in the database',
+                )
 
-        if partner_balance_proof:
+            partner_balance_proof = state_change_record.data.balance_proof
             partner_transferred_amount = partner_balance_proof.transferred_amount
             partner_locked_amount = partner_balance_proof.locked_amount
             partner_locksroot = partner_balance_proof.locksroot

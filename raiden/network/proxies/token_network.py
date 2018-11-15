@@ -921,6 +921,7 @@ class TokenNetwork:
             ChannelBusyError: If the channel is busy with another operation
         """
         log_details = {
+            'channel_identifier': channel_identifier,
             'token_network': pex(self.address),
             'node': pex(self.node_address),
             'partner': pex(partner),

@@ -4,52 +4,51 @@ from eth_utils import to_checksum_address
 from web3 import Web3
 
 from raiden.constants import EMPTY_HASH
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage import sqlite
 from raiden.utils import typing
 from raiden.utils.serialization import serialize_bytes
 
 
-def get_latest_known_balance_proof_from_state_changes(
-        storage: SQLiteStorage,
+def get_state_change_with_balance_proof(
+        storage: sqlite.SQLiteStorage,
         chain_id: typing.ChainID,
-        token_network_id: typing.TokenNetworkID,
+        token_network_identifier: typing.TokenNetworkID,
         channel_identifier: typing.ChannelID,
+        locksroot: typing.Locksroot,
         balance_hash: typing.BalanceHash,
         sender: typing.Address,
-) -> typing.Optional['BalanceProofSignedState']:
-    """ Tries to find the balance proof with the provided balance hash
-    in stored state changes. """
-    state_change_record = storage.get_latest_state_change_by_data_field({
+) -> sqlite.StateChangeRecord:
+    """ Returns the state change which contains the corresponding balance
+    proof.
+    """
+    return storage.get_latest_state_change_by_data_field({
         'balance_proof.chain_id': chain_id,
-        'balance_proof.token_network_identifier': to_checksum_address(token_network_id),
+        'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
         'balance_proof.channel_identifier': channel_identifier,
+        'balance_proof.locksroot': serialize_bytes(locksroot),
+        'balance_proof.balance_hash': serialize_bytes(balance_hash),
         'balance_proof.sender': to_checksum_address(sender),
-        'balance_hash': serialize_bytes(balance_hash),
     })
-    if state_change_record.data:
-        return state_change_record.data.balance_proof
-    return None
 
 
-def get_latest_known_balance_proof_from_events(
-        storage: SQLiteStorage,
+def get_event_with_balance_proof(
+        storage: sqlite.SQLiteStorage,
         chain_id: typing.ChainID,
-        token_network_id: typing.TokenNetworkID,
+        token_network_identifier: typing.TokenNetworkID,
         channel_identifier: typing.ChannelID,
+        locksroot: typing.Locksroot,
         balance_hash: typing.BalanceHash,
-) -> typing.Optional['BalanceProofSignedState']:
-    """ Tries to find the balance proof with the provided balance hash
-    in stored events. """
-    event_record = storage.get_latest_event_by_data_field({
+) -> sqlite.EventRecord:
+    """ Returns the event which contains the corresponding balance
+    proof.
+    """
+    return storage.get_latest_event_by_data_field({
         'balance_proof.chain_id': chain_id,
-        'balance_proof.token_network_identifier': to_checksum_address(token_network_id),
+        'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
         'balance_proof.channel_identifier': channel_identifier,
+        'balance_proof.locksroot': serialize_bytes(locksroot),
         'balance_proof.balance_hash': serialize_bytes(balance_hash),
     })
-    if event_record.data:
-        return event_record.data.balance_proof
-
-    return None
 
 
 def hash_balance_data(

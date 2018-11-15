@@ -1,12 +1,17 @@
 import itertools
 from datetime import datetime
 
-from eth_utils import to_checksum_address
-
 from raiden.messages import Lock
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils import factories
+from raiden.transfer.events import SendDirectTransfer
+from raiden.transfer.mediated_transfer.events import (
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
+)
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ActionInitTarget,
@@ -14,9 +19,10 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
+from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.transfer.state_change import ReceiveTransferDirect, ReceiveUnlock
+from raiden.transfer.utils import get_event_with_balance_proof, get_state_change_with_balance_proof
 from raiden.utils import sha3
-from raiden.utils.serialization import serialize_bytes
 
 
 def make_signed_balance_proof_from_counter(counter):
@@ -40,6 +46,28 @@ def make_signed_balance_proof_from_counter(counter):
     return lock_expired_balance_proof
 
 
+def make_balance_proof_from_counter(counter) -> BalanceProofUnsignedState:
+    return BalanceProofUnsignedState(
+        nonce=next(counter),
+        transferred_amount=next(counter),
+        locked_amount=next(counter),
+        locksroot=sha3(next(counter).to_bytes(1, 'big')),
+        token_network_identifier=factories.make_address(),
+        channel_identifier=next(counter),
+        chain_id=next(counter),
+    )
+
+
+def make_transfer_from_counter(counter):
+    return factories.make_transfer(
+        amount=next(counter),
+        initiator=factories.make_address(),
+        target=factories.make_address(),
+        expiration=next(counter),
+        secret=factories.make_secret(next(counter)),
+    )
+
+
 def make_signed_transfer_from_counter(counter):
     lock = Lock(
         amount=next(counter),
@@ -52,7 +80,7 @@ def make_signed_transfer_from_counter(counter):
         initiator=factories.make_address(),
         target=factories.make_address(),
         expiration=next(counter),
-        secret=sha3(factories.make_secret(next(counter))),
+        secret=factories.make_secret(next(counter)),
         payment_identifier=next(counter),
         message_identifier=next(counter),
         nonce=next(counter),
@@ -98,7 +126,7 @@ def make_from_route_from_counter(counter):
     return from_route, from_transfer
 
 
-def test_get_latest_state_change_by_data_field():
+def test_get_state_change_with_balance_proof():
     """ All state changes which contain a balance proof must be found by when
     querying the database.
     """
@@ -143,7 +171,7 @@ def test_get_latest_state_change_by_data_field():
         transfer=target_signed_transfer,
     )
 
-    statechange_balanceproof = [
+    statechanges_balanceproofs = [
         (lock_expired, lock_expired.balance_proof),
         (transfer_direct, transfer_direct.balance_proof),
         (unlock, unlock.balance_proof),
@@ -155,17 +183,94 @@ def test_get_latest_state_change_by_data_field():
 
     timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
 
-    for state_change, _ in statechange_balanceproof:
+    for state_change, _ in statechanges_balanceproofs:
         storage.write_state_change(state_change, timestamp)
 
-    for state_change, balance_proof in statechange_balanceproof:
-        result = storage.get_latest_state_change_by_data_field({
-            'balance_proof.chain_id': balance_proof.chain_id,
-            'balance_proof.token_network_identifier': to_checksum_address(
-                balance_proof.token_network_identifier,
-            ),
-            'balance_proof.channel_identifier': balance_proof.channel_identifier,
-            'balance_proof.sender': to_checksum_address(balance_proof.sender),
-            'balance_proof.locksroot': serialize_bytes(balance_proof.locksroot),
-        })
-        assert result.data == state_change
+    for state_change, balance_proof in statechanges_balanceproofs:
+        state_change_record = get_state_change_with_balance_proof(
+            storage=storage,
+            chain_id=balance_proof.chain_id,
+            token_network_identifier=balance_proof.token_network_identifier,
+            channel_identifier=balance_proof.channel_identifier,
+            sender=balance_proof.sender,
+            locksroot=balance_proof.locksroot,
+            balance_hash=balance_proof.balance_hash,
+        )
+        assert state_change_record.data == state_change
+
+
+def test_get_event_with_balance_proof():
+    """ All events which contain a balance proof must be found by when
+    querying the database.
+    """
+    serializer = JSONSerializer
+    storage = SQLiteStorage(':memory:', serializer)
+    counter = itertools.count()
+
+    direct_transfer = SendDirectTransfer(
+        recipient=factories.make_address(),
+        channel_identifier=next(counter),
+        message_identifier=next(counter),
+        payment_identifier=next(counter),
+        balance_proof=make_balance_proof_from_counter(counter),
+        token_address=factories.make_address(),
+    )
+    lock_expired = SendLockExpired(
+        recipient=factories.make_address(),
+        message_identifier=next(counter),
+        balance_proof=make_balance_proof_from_counter(counter),
+        secrethash=sha3(factories.make_secret(next(counter))),
+    )
+    locked_transfer = SendLockedTransfer(
+        recipient=factories.make_address(),
+        channel_identifier=factories.make_channel_identifier(),
+        message_identifier=next(counter),
+        transfer=make_transfer_from_counter(counter),
+    )
+    balance_proof = SendBalanceProof(
+        recipient=factories.make_address(),
+        channel_identifier=factories.make_channel_identifier(),
+        message_identifier=next(counter),
+        payment_identifier=next(counter),
+        token_address=factories.make_address(),
+        secret=factories.make_secret(next(counter)),
+        balance_proof=make_balance_proof_from_counter(counter),
+    )
+    refund_transfer = SendRefundTransfer(
+        recipient=factories.make_address(),
+        channel_identifier=factories.make_channel_identifier(),
+        message_identifier=next(counter),
+        transfer=make_transfer_from_counter(counter),
+    )
+
+    events_balanceproofs = [
+        (direct_transfer, direct_transfer.balance_proof),
+        (lock_expired, lock_expired.balance_proof),
+        (locked_transfer, locked_transfer.balance_proof),
+        (balance_proof, balance_proof.balance_proof),
+        (refund_transfer, refund_transfer.transfer.balance_proof),
+    ]
+
+    timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
+    state_change = ''
+    for event, _ in events_balanceproofs:
+        state_change_identifier = storage.write_state_change(
+            state_change,
+            timestamp,
+        )
+        storage.write_events(
+            state_change_identifier=state_change_identifier,
+            events=[event],
+            log_time=timestamp,
+        )
+
+    for event, balance_proof in events_balanceproofs:
+        event_record = get_event_with_balance_proof(
+            storage=storage,
+            chain_id=balance_proof.chain_id,
+            token_network_identifier=balance_proof.token_network_identifier,
+            channel_identifier=balance_proof.channel_identifier,
+            locksroot=balance_proof.locksroot,
+            balance_hash=balance_proof.balance_hash,
+        )
+        assert event_record.data == event
