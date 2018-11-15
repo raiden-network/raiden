@@ -221,20 +221,3 @@ def configure_logging(
     structlog.get_logger('').setLevel(logger_level_config.get('', DEFAULT_LOG_LEVEL))
     for package in _first_party_packages:
         structlog.get_logger(package).setLevel('DEBUG')
-
-    # rollover RotatingFileHandler on startup, to split logs also per-session
-    root = logging.getLogger()
-    for handler in root.handlers:
-        if isinstance(handler, logging.handlers.RotatingFileHandler):
-            handler.flush()
-            if os.stat(handler.baseFilename).st_size > 0:
-                handler.doRollover()
-
-    # fix logging of py-evm (it uses a custom Trace logger from logging library)
-    # if py-evm is not used this will throw, hence the try-catch block
-    # for some reason it didn't work to put this into conftest.py
-    try:
-        from eth.tools.logging import setup_trace_logging
-        setup_trace_logging()
-    except ImportError:
-        pass
