@@ -13,6 +13,7 @@ py.test \
     -Wd \
     --travis-fold=always \
     --log-config='raiden:DEBUG' \
+    --no-print-logs \
     --random \
     -v \
     --showlocals \
