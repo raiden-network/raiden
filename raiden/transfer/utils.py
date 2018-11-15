@@ -14,7 +14,6 @@ def get_state_change_with_balance_proof(
         chain_id: typing.ChainID,
         token_network_identifier: typing.TokenNetworkID,
         channel_identifier: typing.ChannelID,
-        locksroot: typing.Locksroot,
         balance_hash: typing.BalanceHash,
         sender: typing.Address,
 ) -> sqlite.StateChangeRecord:
@@ -25,7 +24,6 @@ def get_state_change_with_balance_proof(
         'balance_proof.chain_id': chain_id,
         'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
         'balance_proof.channel_identifier': channel_identifier,
-        'balance_proof.locksroot': serialize_bytes(locksroot),
         'balance_proof.balance_hash': serialize_bytes(balance_hash),
         'balance_proof.sender': to_checksum_address(sender),
     })
@@ -36,7 +34,6 @@ def get_event_with_balance_proof(
         chain_id: typing.ChainID,
         token_network_identifier: typing.TokenNetworkID,
         channel_identifier: typing.ChannelID,
-        locksroot: typing.Locksroot,
         balance_hash: typing.BalanceHash,
 ) -> sqlite.EventRecord:
     """ Returns the event which contains the corresponding balance
@@ -46,7 +43,6 @@ def get_event_with_balance_proof(
         'balance_proof.chain_id': chain_id,
         'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
         'balance_proof.channel_identifier': channel_identifier,
-        'balance_proof.locksroot': serialize_bytes(locksroot),
         'balance_proof.balance_hash': serialize_bytes(balance_hash),
     })
 
