@@ -1,5 +1,7 @@
 import os
 import sqlite3
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 
@@ -261,3 +263,15 @@ def test_get_snapshot_closest_to_state_change():
 
     _, snapshot = wal.storage.get_snapshot_closest_to_state_change('latest')
     assert snapshot.state_changes == [block1, block2, block3]
+
+
+def test_log_raiden_run():
+    with patch('raiden.storage.sqlite.get_system_spec') as get_speck_mock:
+        get_speck_mock.return_value = dict(raiden='1.2.3')
+        store = SQLiteStorage(':memory:', None)
+    cursor = store.conn.cursor()
+    cursor.execute('SELECT started_at, raiden_version FROM runs')
+    run = cursor.fetchone()
+    now = datetime.utcnow()
+    assert now - timedelta(seconds=2) <= run[0] <= now, f'{run[0]} not right before {now}'
+    assert run[1] == '1.2.3'

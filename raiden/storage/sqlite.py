@@ -5,7 +5,7 @@ from typing import Any, Optional, Tuple
 from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
-from raiden.utils import typing
+from raiden.utils import typing, get_system_spec
 
 # The latest DB version
 RAIDEN_DB_VERSION = 13
@@ -30,7 +30,7 @@ def assert_sqlite_version() -> bool:
 
 class SQLiteStorage:
     def __init__(self, database_path, serializer):
-        conn = sqlite3.connect(database_path)
+        conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.text_factory = str
         conn.execute('PRAGMA foreign_keys=ON')
         self.conn = conn
@@ -45,6 +45,7 @@ class SQLiteStorage:
                 )
 
         self._run_updates()
+        self._log_raiden_run()
 
         # When writting to a table where the primary key is the identifier and we want
         # to return said identifier we use cursor.lastrowid, which uses sqlite's last_insert_rowid
@@ -71,6 +72,13 @@ class SQLiteStorage:
             'INSERT OR REPLACE INTO settings(name, value) VALUES(?, ?)',
             ('version', str(RAIDEN_DB_VERSION)),
         )
+        self.conn.commit()
+
+    def _log_raiden_run(self):
+        """ Log timestamp and raiden version to help with debugging """
+        version = get_system_spec()['raiden']
+        cursor = self.conn.cursor()
+        cursor.execute('INSERT INTO runs(raiden_version) VALUES (?)', [version])
         self.conn.commit()
 
     def get_version(self) -> int:

@@ -40,10 +40,17 @@ CREATE TABLE IF NOT EXISTS state_events (
 );
 '''
 
+DB_CREATE_RUNS = '''
+CREATE TABLE IF NOT EXISTS runs (
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP PRIMARY KEY,
+    raiden_version TEXT NOT NULL
+);
+'''
+
 DB_SCRIPT_CREATE_TABLES = """
 PRAGMA foreign_keys=off;
 BEGIN TRANSACTION;
-{}{}{}{}
+{}{}{}{}{}
 COMMIT;
 PRAGMA foreign_keys=on;
 """.format(
@@ -51,4 +58,5 @@ PRAGMA foreign_keys=on;
     DB_CREATE_STATE_CHANGES,
     DB_CREATE_SNAPSHOT,
     DB_CREATE_STATE_EVENTS,
+    DB_CREATE_RUNS,
 )
