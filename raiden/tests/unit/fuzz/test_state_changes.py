@@ -108,6 +108,53 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         if not self.replay_path:
             event(description)
 
+    @precondition(lambda self: self.channels)
+    @invariant()
+    def channel_state_invariants(self):
+        """ Check the invariants for the channel state given in the Raiden specification """
+
+        for netting_channel in self.channels:
+            our_state = netting_channel.our_state
+            partner_state = netting_channel.partner_state
+
+            our_transferred_amount = 0
+            if our_state.balance_proof:
+                our_transferred_amount = our_state.balance_proof.transferred_amount
+                assert our_transferred_amount >= 0
+
+            partner_transferred_amount = 0
+            if partner_state.balance_proof:
+                partner_transferred_amount = partner_state.balance_proof.transferred_amount
+                assert partner_transferred_amount >= 0
+
+            assert channel.get_distributable(our_state, partner_state) >= 0
+            assert channel.get_distributable(partner_state, our_state) >= 0
+
+            our_deposit = netting_channel.our_total_deposit
+            partner_deposit = netting_channel.partner_total_deposit
+            total_deposit = our_deposit + partner_deposit
+
+            our_amount_locked = channel.get_amount_locked(our_state)
+            our_balance = channel.get_balance(our_state, partner_state)
+            partner_amount_locked = channel.get_amount_locked(partner_state)
+            partner_balance = channel.get_balance(partner_state, our_state)
+
+            # invariant (5.1R), add withdrawn amounts when implemented
+            assert 0 <= our_amount_locked <= our_balance
+            assert 0 <= partner_amount_locked <= partner_balance
+            assert our_amount_locked <= total_deposit
+            assert partner_amount_locked <= total_deposit
+
+            our_transferred = partner_transferred_amount - our_transferred_amount
+            netted_transferred = our_transferred + partner_amount_locked - our_amount_locked
+
+            # invariant (6R), add withdrawn amounts when implemented
+            assert 0 <= our_deposit + our_transferred - our_amount_locked <= total_deposit
+            assert 0 <= partner_deposit - our_transferred - partner_amount_locked <= total_deposit
+
+            # invariant (7R), add withdrawn amounts when implemented
+            assert - our_deposit <= netted_transferred <= partner_deposit
+
 
 class InitiatorState(ChainStateStateMachine):
 
