@@ -119,7 +119,6 @@ def make_from_route_from_counter(counter):
         identifier=next(counter),
         nonce=1,
         transferred_amount=0,
-        locked_amount=None,
         pkey=factories.HOP1_KEY,
         sender=factories.HOP1,
     )
