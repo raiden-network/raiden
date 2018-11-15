@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :bug:`3035` Registering a token twice should now return a proper error.
+* :bug:`3013` Encode all integers before saving to the sqlite database
 * :bug:`3022` Reject REST API channel opening with an error if there is not enough token balance for the initial deposit.
 * :bug:`2932` Node will no longer crash if it mediated a transfer and the channel cycle for mediation has completed.
 * :bug:`3001` Don't delete payment task when receiving invalid secret request.
