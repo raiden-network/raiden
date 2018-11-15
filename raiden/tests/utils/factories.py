@@ -94,7 +94,9 @@ def make_privatekey(privatekey_bin: bytes = EMPTY) -> PrivateKey:
     return PrivateKey(privatekey_bin)
 
 
-def make_privatekey_address(privatekey: PrivateKey = EMPTY) -> typing.Tuple[PrivateKey, bytes]:
+def make_privatekey_address(
+        privatekey: PrivateKey = EMPTY,
+) -> typing.Tuple[PrivateKey, typing.Address]:
     privatekey = if_empty(privatekey, make_privatekey(privatekey_bin=None))
     publickey = privatekey.public_key.format(compressed=False)
     address = publickey_to_address(publickey)
@@ -108,7 +110,7 @@ def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> Route
 
 def make_channel_endstate(
         address: typing.Address = EMPTY,
-        balance: typing.TokenAmount = EMPTY,
+        balance: typing.Balance = EMPTY,
 ) -> NettingChannelEndState:
     address = if_empty(address, make_address())
     balance = if_empty(balance, 0)
@@ -124,7 +126,7 @@ def make_channel_state(
         payment_network_identifier: typing.PaymentNetworkID = EMPTY,
         token_network_identifier: typing.TokenNetworkID = EMPTY,
         channel_identifier: typing.ChannelID = EMPTY,
-        reveal_timeout: int = EMPTY,
+        reveal_timeout: typing.BlockTimeout = EMPTY,
         settle_timeout: int = EMPTY,
 ) -> NettingChannelState:
 
@@ -134,7 +136,9 @@ def make_channel_state(
     partner_address = if_empty(partner_address, make_address())
     token_address = if_empty(token_address, make_address())
     payment_network_identifier = if_empty(
-        payment_network_identifier, make_payment_network_identifier())
+        payment_network_identifier,
+        make_payment_network_identifier(),
+    )
     token_network_identifier = if_empty(token_network_identifier, make_address())
     channel_identifier = if_empty(channel_identifier, make_channel_identifier())
     reveal_timeout = if_empty(reveal_timeout, UNIT_REVEAL_TIMEOUT)
@@ -183,7 +187,9 @@ def make_transfer_description(
         secret: typing.Secret = EMPTY,
 ) -> TransferDescriptionWithSecretState:
     payment_network_identifier = if_empty(
-        payment_network_identifier, UNIT_PAYMENT_NETWORK_IDENTIFIER)
+        payment_network_identifier,
+        UNIT_PAYMENT_NETWORK_IDENTIFIER,
+    )
     payment_identifier = if_empty(payment_identifier, UNIT_TRANSFER_IDENTIFIER)
     amount = if_empty(amount, UNIT_TRANSFER_AMOUNT)
     token_network = if_empty(token_network, UNIT_TOKEN_NETWORK_ADDRESS)
@@ -412,7 +418,6 @@ def make_signed_transfer_for(
     identifier = if_empty(identifier, 1)
     nonce = if_empty(nonce, 1)
     transferred_amount = if_empty(transferred_amount, 0)
-    # locked_amount = if_empty(locked_amount, EMPTY)
     pkey = if_empty(pkey, UNIT_TRANSFER_PKEY)
     sender = if_empty(sender, UNIT_TRANSFER_SENDER)
     compute_locksroot = if_empty(compute_locksroot, False)
