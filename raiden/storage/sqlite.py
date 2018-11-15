@@ -5,7 +5,7 @@ from typing import Any, Optional, Tuple
 from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
-from raiden.utils import typing, get_system_spec
+from raiden.utils import get_system_spec, typing
 
 # The latest DB version
 RAIDEN_DB_VERSION = 13
