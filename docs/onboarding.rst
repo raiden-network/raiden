@@ -227,7 +227,7 @@ Irrespective of the transport layer once a message is received it will eventuall
 The Matrix Transport
 ~~~~~~~~~~~~~~~~~~~~
 
-The reasoning behing the choice of Matrix as a transport layer for Raiden is nicely explained in `this <https://medium.com/raiden-network/raiden-transport-explained-939d7741b6f4>`_ blogpost.
+The reasoning behind the choice of Matrix as a transport layer for Raiden is nicely explained in `this <https://medium.com/raiden-network/raiden-transport-explained-939d7741b6f4>`_ blogpost.
 
 In this section we are going to only look over the main points in the code which are the entries to the transport layer. For more information please check out the matrix transport `spec <https://raiden-network-specification.readthedocs.io/en/latest/transport.html>`_.
 
