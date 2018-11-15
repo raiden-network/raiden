@@ -360,7 +360,6 @@ class RaidenEventHandler:
                 chain_id=raiden.chain.network_id,
                 token_network_identifier=token_network_identifier,
                 channel_identifier=channel_identifier,
-                locksroot=partner_locksroot,
                 balance_hash=partner_details.balance_hash,
                 sender=participants_details.partner_details.address,
             )
@@ -370,7 +369,6 @@ class RaidenEventHandler:
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
                 token_network_identifier=token_network_identifier,
-                locksroot=our_locksroot,
                 channel_identifier=channel_identifier,
                 balance_hash=our_details.balance_hash,
             )
@@ -419,6 +417,10 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_settle_event: ContractSendChannelSettle,
     ):
+        chain_id = raiden.chain.network_id
+        token_network_identifier = channel_settle_event.token_network_identifier
+        channel_identifier = channel_settle_event.channel_identifier
+
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
             token_network_address=channel_settle_event.token_network_identifier,
             channel_id=channel_settle_event.channel_identifier,
@@ -431,18 +433,45 @@ class RaidenEventHandler:
             channel_identifier=channel_settle_event.channel_identifier,
         )
 
-        our_balance_hash = participants_details.our_details.balance_hash
-        if our_balance_hash != EMPTY_HASH:
+        our_details = participants_details.our_details
+        partner_details = participants_details.partner_details
+
+        log_details = {
+            'chain_id': chain_id,
+            'token_network_identifier': token_network_identifier,
+            'channel_identifier': channel_identifier,
+            'node': pex(raiden.address),
+            'partner': to_checksum_address(partner_details.address),
+            'our_deposit': our_details.deposit,
+            'our_withdrawn': our_details.withdrawn,
+            'our_is_closer': our_details.is_closer,
+            'our_balance_hash': to_hex(our_details.balance_hash),
+            'our_nonce': our_details.nonce,
+            'our_locksroot': to_hex(our_details.locksroot),
+            'our_locked_amount': our_details.locked_amount,
+            'partner_deposit': partner_details.deposit,
+            'partner_withdrawn': partner_details.withdrawn,
+            'partner_is_closer': partner_details.is_closer,
+            'partner_balance_hash': to_hex(partner_details.balance_hash),
+            'partner_nonce': partner_details.nonce,
+            'partner_locksroot': to_hex(partner_details.locksroot),
+            'partner_locked_amount': partner_details.locked_amount,
+        }
+
+        if our_details.balance_hash != EMPTY_HASH:
             event_record = get_event_with_balance_proof(
                 storage=raiden.wal.storage,
-                chain_id=raiden.chain.network_id,
-                token_network_identifier=channel_settle_event.token_network_identifier,
-                channel_identifier=channel_settle_event.channel_identifier,
-                locksroot=participants_details.our_details.locksroot,
-                balance_hash=our_balance_hash,
+                chain_id=chain_id,
+                token_network_identifier=token_network_identifier,
+                channel_identifier=channel_identifier,
+                balance_hash=our_details.balance_hash,
             )
 
             if event_record.data is None:
+                log.critical(
+                    'our balance proof not found',
+                    **log_details,
+                )
                 raise RaidenUnrecoverableError(
                     'Our balance proof could not be found in the database',
                 )
@@ -456,18 +485,20 @@ class RaidenEventHandler:
             our_locked_amount = 0
             our_locksroot = EMPTY_HASH
 
-        partner_balance_hash = participants_details.partner_details.balance_hash
-        if partner_balance_hash != EMPTY_HASH:
+        if partner_details.balance_hash != EMPTY_HASH:
             state_change_record = get_state_change_with_balance_proof(
                 storage=raiden.wal.storage,
-                chain_id=raiden.chain.network_id,
-                token_network_identifier=channel_settle_event.token_network_identifier,
-                channel_identifier=channel_settle_event.channel_identifier,
-                locksroot=participants_details.partner_details.locksroot,
+                chain_id=chain_id,
+                token_network_identifier=token_network_identifier,
+                channel_identifier=channel_identifier,
+                balance_hash=partner_details.balance_hash,
                 sender=participants_details.partner_details.address,
-                balance_hash=partner_balance_hash,
             )
             if state_change_record.data is None:
+                log.critical(
+                    'partner balance proof not found',
+                    **log_details,
+                )
                 raise RaidenUnrecoverableError(
                     'Partner balance proof could not be found in the database',
                 )
