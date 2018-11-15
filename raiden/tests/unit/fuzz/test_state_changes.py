@@ -2,7 +2,6 @@ from collections import Counter
 from copy import deepcopy
 from random import Random
 
-import pytest
 from hypothesis import assume, event
 from hypothesis.stateful import (
     Bundle,
@@ -109,50 +108,14 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         if not self.replay_path:
             event(description)
 
-    @precondition(lambda self: self.channels)
-    @invariant()
-    def channel_state_invariants(self):
-        for netting_channel in self.channels:
-            our_state = netting_channel.our_state
-            partner_state = netting_channel.partner_state
-
-            our_transferred_amount = 0
-            if our_state.balance_proof:
-                our_transferred_amount = our_state.balance_proof.transferred_amount
-                assert our_transferred_amount >= 0
-
-            partner_transferred_amount = 0
-            if partner_state.balance_proof:
-                partner_transferred_amount = partner_state.balance_proof.transferred_amount
-                assert partner_transferred_amount >= 0
-
-            assert channel.get_distributable(our_state, partner_state) >= 0
-            assert channel.get_distributable(partner_state, our_state) >= 0
-
-            our_deposit = netting_channel.our_total_deposit
-            our_amount_locked = channel.get_amount_locked(our_state)
-            our_balance = channel.get_balance(our_state, partner_state)
-            assert 0 <= our_amount_locked <= our_balance <= our_deposit
-
-            partner_deposit = netting_channel.partner_total_deposit
-            partner_amount_locked = channel.get_amount_locked(partner_state)
-            partner_balance = channel.get_balance(partner_state, our_state)
-            assert 0 <= partner_amount_locked <= partner_balance <= partner_deposit
-
-            our_net_value = partner_transferred_amount - our_transferred_amount
-            deposit_sum = our_deposit + partner_deposit
-            assert 0 <= our_deposit + our_net_value - our_amount_locked <= deposit_sum
-            assert 0 <= partner_deposit - our_net_value - partner_amount_locked <= deposit_sum
-
 
 class InitiatorState(ChainStateStateMachine):
 
     def __init__(self):
         super().__init__()
-        self.invalidated_transfer_ids = set()
+        self.used_secrets = set()
+        self.processed_secret_requests = set()
         self.initiated = set()
-
-        self.failing_path_2 = False
 
     @property
     def channel(self):
@@ -186,6 +149,8 @@ class InitiatorState(ChainStateStateMachine):
         secret=secret(),
     )
     def populate_transfer_descriptions(self, payment_id, amount, secret):
+        assume(secret not in self.used_secrets)
+        self.used_secrets.add(secret)
         return TransferDescriptionWithSecretState(
             payment_network_identifier=self.payment_network_id,
             payment_identifier=payment_id,
@@ -204,26 +169,30 @@ class InitiatorState(ChainStateStateMachine):
 
     @rule(target=init_initiators, transfer=transfers)
     def valid_init_initiator(self, transfer):
-        if not self.failing_path_2:
-            assume(transfer.payment_identifier not in self.initiated)
-        assume(not self._secret_in_use(transfer.secret))
+        assume(transfer.secret not in self.initiated)
         assume(transfer.amount <= self._available_amount())
         action = self._action_init_initiator(transfer)
         result = node.state_transition(self.chain_state, action)
         assert event_types_match(result.events, SendLockedTransfer)
-        self.initiated.add(transfer.payment_identifier)
+        self.initiated.add(transfer.secret)
         return action
+
+    @rule(previous_action=init_initiators)
+    def replay_init_initator(self, previous_action):
+        result = node.state_transition(self.chain_state, previous_action)
+        assert not result.events
 
     @rule(previous_action=init_initiators)
     def valid_secret_request(self, previous_action):
         action = self._receive_secret_request(previous_action.transfer)
         result = node.state_transition(self.chain_state, action)
-        if previous_action.transfer.payment_identifier in self.invalidated_transfer_ids:
+        if action.secrethash in self.processed_secret_requests:
             assert not result.events
             self.event('Valid SecretRequest dropped due to previous invalid one.')
         else:
             assert event_types_match(result.events, SendSecretReveal)
             self.event('Valid SecretRequest accepted.')
+            self.processed_secret_requests.add(action.secrethash)
 
     @rule(
         target=invalid_authentic_secret_requests,
@@ -239,11 +208,11 @@ class InitiatorState(ChainStateStateMachine):
     @rule(action=invalid_authentic_secret_requests)
     def invalid_authentic_secret_request(self, action):
         result = node.state_transition(self.chain_state, action)
-        if action.payment_identifier not in self.invalidated_transfer_ids:
+        if action.secrethash not in self.processed_secret_requests:
             assert event_types_match(result.events, EventPaymentSentFailed)
         else:
             assert not result.events
-        self.invalidated_transfer_ids.add(action.payment_identifier)
+        self.processed_secret_requests.add(action.secrethash)
 
     @rule(target=unauthentic_secret_requests, previous_action=init_initiators, secret=secret())
     def secret_request_with_wrong_secrethash(self, previous_action, secret):
@@ -272,35 +241,15 @@ class InitiatorState(ChainStateStateMachine):
 TestInitiator = InitiatorState.TestCase
 
 
-@pytest.mark.skip('AssertionError in the tested code (lock is already registered)')
-# The firing assertion is commented: "The caller must ensure the same lock is not being used
-# twice." It still looks like something that could happen (A transfer initiation is retried
-# directly after the first was answered with a secret request.)
-def test_failing_path_2():
+def test_regression_malicious_secret_request_handled_properly():
     state = InitiatorState()
     state.replay_path = True
-    state.failing_path_2 = True
+
     state.initialize(block_number=1, random=Random(), random_seed=None)
     v1 = state.populate_transfer_descriptions(amount=1, payment_id=1, secret=b'\x00' * 32)
     v2 = state.valid_init_initiator(transfer=v1)
     v3 = state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.invalid_authentic_secret_request(v3)
-    state.valid_init_initiator(transfer=v1)
-    state.teardown()
+    state.replay_init_initator(previous_action=v2)
 
-
-@pytest.mark.skip()
-# Makes the same assertion fail like the test above, but this time a second transfer
-# with the same secret is created instead of the same transfer being initiated
-# twice.
-def test_failing_path_2a():
-    state = InitiatorState()
-    state.replay_path = True
-    state.initialize(block_number=1, random=Random(), random_seed=None)
-    v1 = state.populate_transfer_descriptions(amount=1, payment_id=1, secret=b'\x00' * 32)
-    v2 = state.populate_transfer_descriptions(amount=1, payment_id=2, secret=b'\x00' * 32)
-    v3 = state.valid_init_initiator(transfer=v2)
-    v4 = state.wrong_amount_secret_request(amount=0, previous_action=v3)
-    state.invalid_authentic_secret_request(action=v4)
-    state.valid_init_initiator(transfer=v1)
     state.teardown()
