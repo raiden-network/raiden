@@ -1,6 +1,7 @@
 import pytest
 from web3 import HTTPProvider, Web3
 
+from raiden.constants import Environment
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
@@ -8,11 +9,7 @@ from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockc
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils import privatekey_to_address
-from raiden_contracts.contract_manager import (
-    ContractManager,
-    contracts_deployed_path,
-    contracts_precompiled_path,
-)
+from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
@@ -99,24 +96,17 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3):
 
 
 @pytest.fixture
-def testing_network_id():
-    return 1
-
-
-@pytest.fixture
 def testing_contracts_version():
     return None
 
 
 @pytest.fixture
-def contract_manager(testing_network_id, testing_contracts_version):
-    # Keeping this only for documentation purposes if we want to test specific
-    # contract versions apart from the last one
-    if False:
-        contracts_path = contracts_deployed_path(testing_network_id, testing_contracts_version)
-    else:
-        contracts_path = contracts_precompiled_path()
-    return ContractManager(contracts_path)
+def contract_manager(environment_type):
+    version = None
+    if environment_type == Environment.DEVELOPMENT:
+        version = 'pre_limits'
+
+    return ContractManager(contracts_precompiled_path(version))
 
 
 @pytest.fixture
