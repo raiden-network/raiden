@@ -50,8 +50,20 @@ def make_uint64() -> int:
     return random.randint(0, UINT64_MAX)
 
 
+def make_balance() -> typing.Balance:
+    return typing.Balance(random.randint(0, UINT256_MAX))
+
+
+def make_block_number() -> typing.BlockNumber:
+    return typing.BlockNumber(random.randint(0, UINT256_MAX))
+
+
+def make_chain_id() -> typing.ChainID:
+    return typing.ChainID(random.randint(0, UINT64_MAX))
+
+
 def make_message_identifier() -> typing.MessageID:
-    return typing.MessageID(make_uint64())
+    return typing.MessageID(random.randint(0, UINT64_MAX))
 
 
 def make_20bytes() -> bytes:
@@ -607,3 +619,16 @@ HOP6 = privatekey_to_address(b'66666666666666666666666666666666')
 UNIT_CHAIN_ID = 337
 ADDR = b'addraddraddraddraddr'
 UNIT_TRANSFER_DESCRIPTION = make_transfer_description(secret=UNIT_SECRET)
+
+
+RANDOM_FACTORIES = {
+    typing.Address: make_address,
+    typing.Balance: make_balance,
+    typing.BlockNumber: make_block_number,
+    typing.BlockTimeout: make_block_number,
+    typing.ChainID: make_chain_id,
+    typing.ChannelID: make_channel_identifier,
+    typing.PaymentNetworkID: make_payment_network_identifier,
+    typing.TokenNetworkID: make_payment_network_identifier,
+    NettingChannelState: make_channel_state,
+}
