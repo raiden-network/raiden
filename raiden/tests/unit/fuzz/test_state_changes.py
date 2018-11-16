@@ -205,7 +205,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             assert - our_deposit <= netted_transferred <= partner_deposit
 
 
-class InitiatorState(ChainStateStateMachine):
+class InitiatorStateMixin:
 
     def __init__(self):
         super().__init__()
@@ -332,6 +332,10 @@ class InitiatorState(ChainStateStateMachine):
     def unauthentic_secret_request(self, action):
         result = node.state_transition(self.chain_state, action)
         assert not result.events
+
+
+class InitiatorState(InitiatorStateMixin, ChainStateStateMachine):
+    pass
 
 
 TestInitiator = InitiatorState.TestCase
