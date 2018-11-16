@@ -62,7 +62,7 @@ pycryptodome==3.6.6
 pyethash==0.1.27
 pysha3==1.0.2
 pystun-patched-for-raiden==0.1.0
-pytest==3.8.0
+pytest==3.10.1
 pytoml==0.1.19
 pytz==2018.5
 raiden-contracts==0.6.0
