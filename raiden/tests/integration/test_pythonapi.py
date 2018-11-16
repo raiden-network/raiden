@@ -71,7 +71,7 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
                     'token_address': token_address,
                 },
             },
-            retry_timeout
+            retry_timeout,
         )
     assert token_address in api1.get_tokens_list(registry_address)
 
@@ -162,7 +162,7 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
                     'token_address': token_address,
                 },
             },
-            retry_timeout
+            retry_timeout,
         )
 
     assert token_address in api0.get_tokens_list(registry_address)

@@ -1003,7 +1003,7 @@ def test_register_token_mainnet(
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.skip('registration not working in red eyes')
+@pytest.mark.parametrize('environment_type', [Environment.DEVELOPMENT])
 def test_register_token(
         test_api_server,
         token_amount,

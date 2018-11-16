@@ -16,6 +16,7 @@ from raiden.exceptions import (
     InvalidAddress,
     InvalidAmount,
     InvalidSettleTimeout,
+    RaidenRecoverableError,
     TokenNotRegistered,
     UnknownTokenAddress,
 )
@@ -146,6 +147,12 @@ class RaidenAPI:
             registry = self.raiden.chain.token_network_registry(registry_address)
 
             return registry.add_token(token_address)
+        except RaidenRecoverableError as e:
+            if 'Token already registered' in str(e):
+                raise AlreadyRegisteredTokenAddress('Token already registered')
+            # else
+            raise
+
         finally:
             # Assume the transaction failed because the token is already
             # registered with the smart contract and this node has not yet
