@@ -27,7 +27,7 @@ RUN cd /tmp && \
 ADD . /raiden
 
 WORKDIR /raiden
-RUN git fetch --tags
+RUN git fetch --tags | true
 RUN pip install -U pip setuptools
 RUN pip install -r requirements.txt -c constraints.txt
 
