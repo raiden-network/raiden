@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.17.0 <2018-11-16>`
 * :bug:`3035` Registering a token twice should now return a proper error.
 * :bug:`3013` Encode all integers before saving to the sqlite database
 * :bug:`3022` Reject REST API channel opening with an error if there is not enough token balance for the initial deposit.
