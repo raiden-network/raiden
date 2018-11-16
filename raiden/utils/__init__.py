@@ -159,7 +159,7 @@ def get_contract_path(contract_name: str) -> str:
     return get_relative_path(contract_path)
 
 
-def get_system_spec():
+def get_system_spec() -> typing.Dict[str, str]:
     """Collect information about the system and installation.
     """
     import pkg_resources
@@ -181,7 +181,7 @@ def get_system_spec():
     try:
         version = pkg_resources.require(raiden.__name__)[0].version
     except (pkg_resources.ContextualVersionConflict, pkg_resources.DistributionNotFound):
-        version = None
+        version = 'unknown_raiden_version'
 
     system_spec = {
         'raiden': version,
