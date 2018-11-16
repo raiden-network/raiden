@@ -14,6 +14,7 @@ SYNAPSE_SERVER_NAME="${SYNAPSE_SERVER_NAME:-matrix.local.raiden}"
 BASEDIR=$( readlink -f $( dirname $0 )/.. )
 
 if [[ ! -d ${DESTDIR} ]]; then
+    #after travis is not used anymore the following if can be removed
     if [[ -n ${TRAVIS} ]]; then
         DESTDIR="${HOME}/.bin"  # cached folder
     else
