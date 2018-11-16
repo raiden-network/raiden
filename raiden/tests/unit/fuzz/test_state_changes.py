@@ -37,6 +37,10 @@ def event_types_match(events, *expected_types):
     return Counter([type(event) for event in events]) == Counter(expected_types)
 
 
+def transferred_amount(state):
+    return 0 if not state.balance_proof else state.balance_proof.transferred_amount
+
+
 class ChainStateStateMachine(RuleBasedStateMachine):
 
     def __init__(self, address=None, channels_with=None):
@@ -99,6 +103,14 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
             self.channels.append(channel)
 
+        number_of_channels = len(self.channels)
+        self.our_previous_deposit = [0] * number_of_channels
+        self.partner_previous_deposit = [0] * number_of_channels
+        self.our_previous_transferred = [0] * number_of_channels
+        self.partner_previous_transferred = [0] * number_of_channels
+        self.our_previous_unclaimed = [0] * number_of_channels
+        self.partner_previous_unclaimed = [0] * number_of_channels
+
     def event(self, description):
         """ Wrapper for hypothesis' event function.
 
@@ -107,6 +119,43 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         """
         if not self.replay_path:
             event(description)
+
+    @precondition(lambda self: self.channels)
+    @invariant()
+    def monotonicity(self):
+        """ Check monotonicity properties as given in Raiden specification """
+
+        for index in range(len(self.channels)):
+            netting_channel = self.channels[index]
+
+            # constraint (1TN)
+            assert netting_channel.our_total_deposit >= self.our_previous_deposit[index]
+            assert netting_channel.partner_total_deposit >= self.partner_previous_deposit[index]
+            self.our_previous_deposit[index] = netting_channel.our_total_deposit
+            self.partner_previous_deposit[index] = netting_channel.partner_total_deposit
+
+            # add constraint (2TN) when withdrawal is implemented
+            # constraint (3R) and (4R)
+            our_transferred = transferred_amount(netting_channel.our_state)
+            partner_transferred = transferred_amount(netting_channel.partner_state)
+            our_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.our_state)
+            partner_unclaimed = channel.get_amount_unclaimed_onchain(
+                netting_channel.partner_state,
+            )
+            assert our_transferred >= self.our_previous_transferred[index]
+            assert partner_transferred >= self.partner_previous_transferred[index]
+            assert (
+                our_unclaimed + our_transferred >=
+                self.our_previous_transferred[index] + self.our_previous_unclaimed[index]
+            )
+            assert (
+                partner_unclaimed + partner_transferred >=
+                self.our_previous_transferred[index] + self.our_previous_unclaimed[index]
+            )
+            self.our_previous_transferred[index] = our_transferred
+            self.partner_previous_transferred[index] = partner_transferred
+            self.our_previous_unclaimed[index] = our_unclaimed
+            self.partner_previous_unclaimed[index] = partner_unclaimed
 
     @precondition(lambda self: self.channels)
     @invariant()
