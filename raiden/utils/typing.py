@@ -42,8 +42,8 @@ ChannelID = NewType('ChannelID', T_ChannelID)
 T_ChannelState = int
 ChannelState = NewType('ChannelState', T_ChannelState)
 
-T_InitiatorAddress = bytes
-InitiatorAddress = NewType('InitiatorAddress', T_InitiatorAddress)
+T_InitiatorAddress = T_Address
+InitiatorAddress = NewType('InitiatorAddress', Address)
 
 T_Locksroot = bytes
 Locksroot = NewType('Locksroot', T_Locksroot)
@@ -84,14 +84,14 @@ ChainID = NewType('ChainID', T_ChainID)
 T_Keccak256 = bytes
 Keccak256 = NewType('Keccak256', T_Keccak256)
 
-T_TargetAddress = bytes
-TargetAddress = NewType('TargetAddress', T_TargetAddress)
+T_TargetAddress = T_Address
+TargetAddress = NewType('TargetAddress', Address)
 
-T_TokenAddress = bytes
-TokenAddress = NewType('TokenAddres', T_TokenAddress)
+T_TokenAddress = T_Address
+TokenAddress = NewType('TokenAddres', Address)
 
-T_TokenNetworkAddress = bytes
-TokenNetworkAddress = NewType('TokenNetworkAddress', T_TokenNetworkAddress)
+T_TokenNetworkAddress = T_Address
+TokenNetworkAddress = NewType('TokenNetworkAddress', Address)
 
 T_TokenNetworkID = bytes
 TokenNetworkID = NewType('TokenNetworkID', T_TokenNetworkID)
@@ -108,8 +108,8 @@ Secret = NewType('Secret', T_Secret)
 T_SecretHash = bytes
 SecretHash = NewType('SecretHash', T_SecretHash)
 
-T_SecretRegistryAddress = bytes
-SecretRegistryAddress = NewType('SecretRegistryAddress', T_SecretRegistryAddress)
+T_SecretRegistryAddress = T_Address
+SecretRegistryAddress = NewType('SecretRegistryAddress', Address)
 
 T_Signature = bytes
 Signature = NewType('Signature', T_Signature)
