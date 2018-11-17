@@ -87,6 +87,9 @@ class ContractSendChannelSettle(ContractSendEvent):
         if not isinstance(channel_identifier, typing.T_ChannelID):
             raise ValueError('channel_identifier must be a ChannelID instance')
 
+        # XXX! Remove this line.
+        token_network_identifier = typing.T_TokenNetworkAddress(token_network_identifier)
+
         if not isinstance(token_network_identifier, typing.T_TokenNetworkAddress):
             raise ValueError('token_network_identifier must be a TokenNetworkAddress instance')
 

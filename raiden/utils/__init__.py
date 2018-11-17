@@ -122,8 +122,8 @@ def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
     return private_key.public_key.format(compressed=False)
 
 
-def publickey_to_address(publickey: bytes) -> bytes:
-    return sha3(publickey[1:])[12:]
+def publickey_to_address(publickey: bytes) -> typing.Address:
+    return typing.Address(sha3(publickey[1:])[12:])
 
 
 def privatekey_to_address(private_key_bin: bytes) -> typing.Address:

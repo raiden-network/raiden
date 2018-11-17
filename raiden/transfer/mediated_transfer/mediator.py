@@ -374,7 +374,8 @@ def forward_transfer_pair(
 
         transfer_pair = MediationPairState(
             payer_transfer,
-            payee_channel.partner_state.address,
+            # XXX no conversion should be here
+            typing.Address(payee_channel.partner_state.address),
             lockedtransfer_event.transfer,
         )
 
@@ -432,7 +433,7 @@ def backward_transfer_pair(
 
         transfer_pair = MediationPairState(
             payer_transfer,
-            backward_channel.partner_state.address,
+            typing.Address(backward_channel.partner_state.address),  # no conversion should be here
             refund_transfer.transfer,
         )
 

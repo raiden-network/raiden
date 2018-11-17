@@ -359,7 +359,7 @@ class PaymentNetworkState(State):
             address: typing.Address,
             token_network_list: typing.List['TokenNetworkState'],
     ):
-        if not isinstance(address, typing.T_Address):
+        if not isinstance(address, bytes):  # bytes --> Typing.Address
             raise ValueError('address must be an address instance')
 
         self.address = address
@@ -419,10 +419,10 @@ class TokenNetworkState(State):
 
     def __init__(self, address: typing.TokenNetworkID, token_address: typing.TokenAddress):
 
-        if not isinstance(address, typing.T_Address):
+        if not isinstance(address, bytes):  # bytes --> Typing.Address
             raise ValueError('address must be an address instance')
 
-        if not isinstance(token_address, typing.T_Address):
+        if not isinstance(token_address, bytes):  # bytes --> Typing.Address
             raise ValueError('token_address must be an address instance')
 
         self.address = address
@@ -636,7 +636,7 @@ class RouteState(State):
             node_address: typing.Address,
             channel_identifier: typing.ChannelID,
     ):
-        if not isinstance(node_address, typing.T_Address):
+        if not isinstance(node_address, bytes):  # bytes --> typing.Address
             raise ValueError('node_address must be an address instance')
 
         self.node_address = node_address
@@ -851,7 +851,7 @@ class BalanceProofSignedState(State):
         if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(token_network_identifier, typing.T_Address):
+        if not isinstance(token_network_identifier, bytes):  # typing.Address
             raise ValueError('token_network_identifier must be an address instance')
 
         if not isinstance(channel_identifier, typing.T_ChannelID):
@@ -863,7 +863,7 @@ class BalanceProofSignedState(State):
         if not isinstance(signature, typing.T_Signature):
             raise ValueError('signature must be a signature instance')
 
-        if not isinstance(sender, typing.T_Address):
+        if not isinstance(sender, bytes):  # typing.Address
             raise ValueError('sender must be an address instance')
 
         if not isinstance(chain_id, typing.T_ChainID):
@@ -1313,7 +1313,7 @@ class NettingChannelEndState(State):
     )
 
     def __init__(self, address: typing.Address, balance: typing.Balance):
-        if not isinstance(address, typing.T_Address):
+        if not isinstance(address, bytes):  # typing.Address
             raise ValueError('address must be an address instance')
 
         if not isinstance(balance, typing.T_TokenAmount):
@@ -1615,7 +1615,7 @@ class TransactionChannelNewBalance(State):
             contract_balance: typing.TokenAmount,
             deposit_block_number: typing.BlockNumber,
     ):
-        if not isinstance(participant_address, typing.T_Address):
+        if not isinstance(participant_address, bytes):  # typing.Address
             raise ValueError('participant_address must be of type address')
 
         if not isinstance(contract_balance, typing.T_TokenAmount):
