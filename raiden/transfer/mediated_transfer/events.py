@@ -69,7 +69,7 @@ class SendLockExpired(SendMessageEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendLockExpired':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             message_identifier=int(data['message_identifier']),
             balance_proof=data['balance_proof'],
             secrethash=serialization.deserialize_bytes(data['secrethash']),
@@ -130,7 +130,7 @@ class SendLockedTransfer(SendMessageEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendLockedTransfer':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             channel_identifier=int(data['channel_identifier']),
             message_identifier=int(data['message_identifier']),
             transfer=data['transfer'],
@@ -213,7 +213,7 @@ class SendSecretReveal(SendMessageEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendSecretReveal':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             channel_identifier=int(data['channel_identifier']),
             message_identifier=int(data['message_identifier']),
             secret=serialization.deserialize_bytes(data['secret']),
@@ -303,11 +303,11 @@ class SendBalanceProof(SendMessageEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendBalanceProof':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             channel_identifier=int(data['channel_identifier']),
             message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
-            token_address=to_canonical_address(data['token_address']),
+            token_address=typing.Address(to_canonical_address(data['token_address'])),
             secret=serialization.deserialize_bytes(data['secret']),
             balance_proof=data['balance_proof'],
         )
@@ -382,7 +382,7 @@ class SendSecretRequest(SendMessageEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendSecretRequest':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             channel_identifier=int(data['channel_identifier']),
             message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
@@ -445,7 +445,7 @@ class SendRefundTransfer(SendMessageEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendRefundTransfer':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             channel_identifier=int(data['channel_identifier']),
             message_identifier=int(data['message_identifier']),
             transfer=data['transfer'],

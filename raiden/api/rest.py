@@ -561,6 +561,8 @@ class RestAPI:
             token_address=to_checksum_address(token_address),
             settle_timeout=settle_timeout,
         )
+        token_address = typing.Address(token_address)
+        partner_address = typing.Address(partner_address)
         token = self.raiden_api.raiden.chain.token(token_address)
         balance = token.balance_of(self.raiden_api.raiden.address)
 
@@ -841,6 +843,10 @@ class RestAPI:
             limit=limit,
             offset=offset,
         )
+        if token_address:
+            token_address = typing.T_TokenAddress(token_address)
+        if target_address:
+            target_address = typing.T_TargetAddress(target_address)
         try:
             service_result = self.raiden_api.get_raiden_events_payment_history_with_timestamps(
                 token_address=token_address,
@@ -988,6 +994,9 @@ class RestAPI:
             amount=amount,
             payment_identifier=identifier,
         )
+
+        token_address = typing.T_TokenAddress(token_address)
+        target_address = typing.T_TargetAddress(target_address)
 
         if identifier is None:
             identifier = create_default_identifier()

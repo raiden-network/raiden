@@ -529,8 +529,10 @@ class LockedTransferSignedState(State):
             token=to_canonical_address(data['token']),
             balance_proof=data['balance_proof'],
             lock=data['lock'],
-            initiator=to_canonical_address(data['initiator']),
-            target=to_canonical_address(data['target']),
+            initiator=typing.InitiatorAddress(
+                typing.Address(to_canonical_address(data['initiator']))),
+            target=typing.TargetAddress(
+                typing.Address(to_canonical_address(data['target']))),
         )
 
         return restored
@@ -619,8 +621,10 @@ class TransferDescriptionWithSecretState(State):
             payment_identifier=int(data['payment_identifier']),
             amount=int(data['amount']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            initiator=to_canonical_address(data['initiator']),
-            target=to_canonical_address(data['target']),
+            initiator=typing.InitiatorAddress(typing.Address(
+                to_canonical_address(data['initiator']))),
+            target=typing.TargetAddress(
+                typing.Address(to_canonical_address(data['target']))),
             secret=serialization.deserialize_bytes(data['secret']),
         )
 
@@ -683,9 +687,6 @@ class MediationPairState(State):
     ):
         if not isinstance(payer_transfer, LockedTransferSignedState):
             raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
-
-        # XXX remove
-        payee_address = typing.Address(payee_address)
 
         if not isinstance(payee_address, typing.Address):
             raise ValueError('payee_address must be an address')

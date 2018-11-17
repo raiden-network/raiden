@@ -169,23 +169,29 @@ def decode_event_to_internal(event):
 
     # Note: All addresses inside the event_data must be decoded.
     if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
-        data['token_network_address'] = to_canonical_address(data['args']['token_network_address'])
-        data['token_address'] = to_canonical_address(data['args']['token_address'])
+        data['token_network_address'] = typing.Address(
+            to_canonical_address(data['args']['token_network_address']))
+        data['token_address'] = typing.Address(
+            to_canonical_address(data['args']['token_address']))
 
     elif data['event'] == ChannelEvent.OPENED:
-        data['participant1'] = to_canonical_address(data['args']['participant1'])
-        data['participant2'] = to_canonical_address(data['args']['participant2'])
+        data['participant1'] = typing.Address(
+            to_canonical_address(data['args']['participant1']))
+        data['participant2'] = typing.Address(
+            to_canonical_address(data['args']['participant2']))
         data['settle_timeout'] = data['args']['settle_timeout']
 
     elif data['event'] == ChannelEvent.DEPOSIT:
         data['deposit'] = data['args']['total_deposit']
-        data['participant'] = to_canonical_address(data['args']['participant'])
+        data['participant'] = typing.Address(to_canonical_address(data['args']['participant']))
 
     elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
-        data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
+        data['closing_participant'] = typing.Address(
+            to_canonical_address(data['args']['closing_participant']))
 
     elif data['event'] == ChannelEvent.CLOSED:
-        data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
+        data['closing_participant'] = typing.Address(
+            to_canonical_address(data['args']['closing_participant']))
 
     elif data['event'] == ChannelEvent.SETTLED:
         data['participant1_amount'] = data['args']['participant1_amount']
@@ -194,8 +200,8 @@ def decode_event_to_internal(event):
     elif data['event'] == ChannelEvent.UNLOCKED:
         data['unlocked_amount'] = data['args']['unlocked_amount']
         data['returned_tokens'] = data['args']['returned_tokens']
-        data['participant'] = to_canonical_address(data['args']['participant'])
-        data['partner'] = to_canonical_address(data['args']['partner'])
+        data['participant'] = typing.Address(to_canonical_address(data['args']['participant']))
+        data['partner'] = typing.Address(to_canonical_address(data['args']['partner']))
         data['locksroot'] = data['args']['locksroot']
 
     elif data['event'] == EVENT_SECRET_REVEALED:
@@ -207,6 +213,8 @@ def decode_event_to_internal(event):
 
 class Event:
     def __init__(self, originating_contract, event_data):
+        if not isinstance(originating_contract, typing.Address):
+            raise ValueError('The first argument of Event() should be an Address')
         self.originating_contract = originating_contract
         self.event_data = event_data
 
@@ -238,7 +246,7 @@ class BlockchainEvents:
                 if decoded_event:
                     decoded_event['block_number'] = log_event.get('blockNumber', 0)
                     event = Event(
-                        to_canonical_address(log_event['address']),
+                        typing.Address(to_canonical_address(log_event['address'])),
                         decoded_event,
                     )
                     yield decode_event_to_internal(event)

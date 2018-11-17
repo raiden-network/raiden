@@ -7,6 +7,7 @@ from raiden.exceptions import InvalidAmount
 from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
+from raiden.utils.typing import Address
 
 
 def wait_for_transaction(
@@ -80,7 +81,7 @@ def test_participant_selection(raiden_network, token_addresses):
     registry_address = raiden_network[0].raiden.default_registry.address
 
     # pylint: disable=too-many-locals
-    token_address = token_addresses[0]
+    token_address = Address(token_addresses[0])
 
     # connect the first node (will register the token if necessary)
     RaidenAPI(raiden_network[0].raiden).token_network_connect(

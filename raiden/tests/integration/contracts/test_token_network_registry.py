@@ -5,6 +5,7 @@ from raiden.exceptions import RaidenRecoverableError, TransactionThrew
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_token
+from raiden.utils import typing
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 
@@ -30,7 +31,7 @@ def test_token_network_registry(
         token_name='TKN',
         token_symbol='TKN',
     )
-    test_token_address = to_canonical_address(test_token.contract.address)
+    test_token_address = typing.Address(to_canonical_address(test_token.contract.address))
     event_filter = token_network_registry_proxy.tokenadded_filter()
     token_network_address = token_network_registry_proxy.add_token(
         test_token_address,

@@ -40,8 +40,8 @@ class PaymentChannel:
             self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
             events[-1],
         )
-        participant1 = decode_hex(event['args']['participant1'])
-        participant2 = decode_hex(event['args']['participant2'])
+        participant1 = typing.Address(decode_hex(event['args']['participant1']))
+        participant2 = typing.Address(decode_hex(event['args']['participant2']))
 
         if token_network.node_address not in (participant1, participant2):
             raise ValueError('One participant must be the node address')

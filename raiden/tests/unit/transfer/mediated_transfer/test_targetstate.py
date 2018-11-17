@@ -31,6 +31,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
+from raiden.utils import typing
 
 
 def make_target_state(
@@ -41,6 +42,9 @@ def make_target_state(
         expiration=None,
         pseudo_random_generator=None,
 ):
+    if not isinstance(our_address, typing.Address):
+        raise ValueError('our_address must be an instance of Address')
+
     pseudo_random_generator = pseudo_random_generator or random.Random()
 
     from_channel = factories.make_channel(

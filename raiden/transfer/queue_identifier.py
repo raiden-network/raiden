@@ -9,6 +9,8 @@ class QueueIdentifier:
             recipient: typing.Address,
             channel_identifier: typing.ChannelID,
     ):
+        if not isinstance(recipient, typing.Address):
+            raise ValueError('recipient must be an instance of Address')
         self.recipient = recipient
         self.channel_identifier = channel_identifier
 
@@ -40,7 +42,7 @@ class QueueIdentifier:
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'QueueIdentifier':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             channel_identifier=data['channel_identifier'],
         )
 

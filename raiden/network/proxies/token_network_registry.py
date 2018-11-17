@@ -62,19 +62,13 @@ class TokenNetworkRegistry:
         there is no correspoding address.
         """
 
-        # XXX to be removed
-        if token_address is None:
-            raise ValueError('token_address must be an address, but got None')
-        else:
-            token_address = typing.T_TargetAddress(token_address)
-
         if not isinstance(token_address, typing.T_TargetAddress):
             raise ValueError('token_address must be an address, but got {}'.format(token_address))
 
         address = self.proxy.contract.functions.token_to_token_networks(
             to_checksum_address(token_address),
         ).call()
-        address = to_canonical_address(address)
+        address = typing.Address(to_canonical_address(address))
 
         if is_same_address(address, NULL_ADDRESS):
             return None
@@ -82,10 +76,8 @@ class TokenNetworkRegistry:
         return address
 
     def add_token(self, token_address: typing.TokenAddress):
-        if not is_binary_address(token_address):
-            raise InvalidAddress('Expected binary address format for token')
-
-        token_address = typing.Address(token_address)
+        if not isinstance(token_address, typing.T_TokenAddress):
+            raise InvalidAddress('Expected a T_TokenAddress instance for token')
 
         log_details = {
             'node': pex(self.node_address),

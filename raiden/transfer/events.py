@@ -67,7 +67,7 @@ class ContractSendChannelClose(ContractSendEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelClose':
         restored = cls(
             channel_identifier=int(data['channel_identifier']),
-            token_address=to_canonical_address(data['token_address']),
+            token_address=typing.Address(to_canonical_address(data['token_address'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
         )
@@ -81,16 +81,13 @@ class ContractSendChannelSettle(ContractSendEvent):
     def __init__(
             self,
             channel_identifier: typing.ChannelID,
-            token_network_identifier: typing.TokenNetworkAddress,
+            token_network_identifier: typing.TokenNetworkID,
 
     ):
         if not isinstance(channel_identifier, typing.T_ChannelID):
             raise ValueError('channel_identifier must be a ChannelID instance')
 
-        # XXX! Remove this line.
-        token_network_identifier = typing.T_TokenNetworkAddress(token_network_identifier)
-
-        if not isinstance(token_network_identifier, typing.T_TokenNetworkAddress):
+        if not isinstance(token_network_identifier, typing.T_TokenNetworkID):
             raise ValueError('token_network_identifier must be a TokenNetworkAddress instance')
 
         self.channel_identifier = channel_identifier
@@ -241,10 +238,10 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelBatchUnlock':
         restored = cls(
-            token_address=to_canonical_address(data['token_address']),
+            token_address=typing.Address(to_canonical_address(data['token_address'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=int(data['channel_identifier']),
-            participant=to_canonical_address(data['participant']),
+            participant=typing.Address(to_canonical_address(data['participant'])),
         )
 
         return restored
@@ -376,7 +373,7 @@ class EventPaymentSentSuccess(Event):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             identifier=int(data['identifier']),
             amount=int(data['amount']),
-            target=to_canonical_address(data['target']),
+            target=typing.Address(to_canonical_address(data['target'])),
         )
 
         return restored
@@ -449,7 +446,7 @@ class EventPaymentSentFailed(Event):
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             identifier=int(data['identifier']),
-            target=to_canonical_address(data['target']),
+            target=typing.Address(to_canonical_address(data['target'])),
             reason=data['reason'],
         )
 
@@ -532,7 +529,7 @@ class EventPaymentReceivedSuccess(Event):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             identifier=int(data['identifier']),
             amount=int(data['amount']),
-            initiator=to_canonical_address(data['initiator']),
+            initiator=typing.Address(to_canonical_address(data['initiator'])),
         )
 
         return restored
@@ -830,12 +827,12 @@ class SendDirectTransfer(SendMessageEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendDirectTransfer':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             channel_identifier=int(data['channel_identifier']),
             message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
             balance_proof=data['balance_proof'],
-            token_address=to_canonical_address(data['token_address']),
+            token_address=typing.Address(to_canonical_address(data['token_address'])),
         )
 
         return restored
@@ -871,7 +868,7 @@ class SendProcessed(SendMessageEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendProcessed':
         restored = cls(
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             channel_identifier=int(data['channel_identifier']),
             message_identifier=int(data['message_identifier']),
         )

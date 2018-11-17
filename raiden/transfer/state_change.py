@@ -187,7 +187,7 @@ class ActionTransferDirect(StateChange):
             payment_identifier: typing.PaymentID,
             amount: typing.PaymentAmount,
     ):
-        if not isinstance(receiver_address, bytes):  # bytes --> typing.Address
+        if not isinstance(receiver_address, typing.Address):
             raise ValueError('receiver_address must be address')
 
         if not isinstance(amount, int):
@@ -229,7 +229,7 @@ class ActionTransferDirect(StateChange):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ActionTransferDirect':
         return cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            receiver_address=to_canonical_address(data['receiver_address']),
+            receiver_address=typing.Address(to_canonical_address(data['receiver_address'])),
             payment_identifier=int(data['payment_identifier']),
             amount=int(data['amount']),
         )
@@ -590,7 +590,7 @@ class ActionChangeNodeNetworkState(StateChange):
             node_address: typing.Address,
             network_state: str,
     ):
-        if not isinstance(node_address, bytes):  # bytes --> typing.Address
+        if not isinstance(node_address, typing.Address):
             raise ValueError('node_address must be an address instance')
 
         self.node_address = node_address
@@ -621,7 +621,7 @@ class ActionChangeNodeNetworkState(StateChange):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ActionChangeNodeNetworkState':
         return cls(
-            node_address=to_canonical_address(data['node_address']),
+            node_address=typing.Address(to_canonical_address(data['node_address'])),
             network_state=data['network_state'],
         )
 
@@ -742,9 +742,6 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
             block_number: typing.BlockNumber,
     ):
 
-        # XXX to be removed
-        secret_registry_address = typing.T_SecretRegistryAddress(secret_registry_address)
-
         if not isinstance(secret_registry_address, typing.T_SecretRegistryAddress):
             raise ValueError('secret_registry_address must be of type SecretRegistryAddress')
         if not isinstance(secrethash, typing.T_SecretHash):
@@ -795,7 +792,8 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractReceiveSecretReveal':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
-            secret_registry_address=to_canonical_address(data['secret_registry_address']),
+            secret_registry_address=typing.SecretRegistryAddress(typing.Address(
+                to_canonical_address(data['secret_registry_address']))),
             secrethash=deserialize_bytes(data['secrethash']),
             secret=deserialize_bytes(data['secret']),
             block_number=int(data['block_number']),
@@ -828,10 +826,10 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
         if not isinstance(token_network_identifier, typing.T_TokenNetworkID):
             raise ValueError('token_network_identifier must be of type TokenNtetworkIdentifier')
 
-        if not isinstance(participant, bytes):  # bytes --> typing.Address
+        if not isinstance(participant, typing.Address):
             raise ValueError('participant must be of type address')
 
-        if not isinstance(partner, bytes):  # bytes --> typing.Address
+        if not isinstance(partner, typing.Address):
             raise ValueError('partner must be of type address')
 
         super().__init__(transaction_hash, block_number)
@@ -891,8 +889,10 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            participant=to_canonical_address(data['participant']),
-            partner=to_canonical_address(data['partner']),
+            participant=typing.Address(
+                to_canonical_address(data['participant'])),
+            partner=typing.Address(
+                to_canonical_address(data['partner'])),
             locksroot=deserialize_bytes(data['locksroot']),
             unlocked_amount=int(data['unlocked_amount']),
             returned_tokens=int(data['returned_tokens']),
@@ -913,10 +913,10 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
             block_number: typing.BlockNumber,
     ):
 
-        if not isinstance(participant1, bytes):  # bytes --> Typing.Address
+        if not isinstance(participant1, typing.Address):
             raise ValueError('participant1 must be of type address')
 
-        if not isinstance(participant2, bytes):  # bytes --> Typing.Address
+        if not isinstance(participant2, typing.Address):
             raise ValueError('participant2 must be of type address')
 
         super().__init__(transaction_hash, block_number)
@@ -968,8 +968,8 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=int(data['channel_identifier']),
-            participant1=to_canonical_address(data['participant1']),
-            participant2=to_canonical_address(data['participant2']),
+            participant1=typing.Address(to_canonical_address(data['participant1'])),
+            participant2=typing.Address(to_canonical_address(data['participant2'])),
             block_number=int(data['block_number']),
         )
 
@@ -1218,7 +1218,8 @@ class ReceiveDelivered(AuthenticatedSenderStateChange):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ReceiveDelivered':
         return cls(
-            sender=to_canonical_address(data['sender']),
+            sender=typing.Address(
+                to_canonical_address(data['sender'])),
             message_identifier=int(data['message_identifier']),
         )
 
@@ -1253,6 +1254,6 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ReceiveProcessed':
         return cls(
-            sender=to_canonical_address(data['sender']),
+            sender=typing.Address(to_canonical_address(data['sender'])),
             message_identifier=int(data['message_identifier']),
         )

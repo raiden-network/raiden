@@ -255,7 +255,7 @@ class SignedMessage(Message):
             ))
         except InvalidSignature:
             address = None
-        return address
+        return typing.Address(address)
 
     @classmethod
     def decode(cls, data):
@@ -291,7 +291,7 @@ class EnvelopeMessage(SignedMessage):
         self.locked_amount = locked_amount
         self.locksroot = locksroot
         self.channel_identifier = channel_identifier
-        self.token_network_address = token_network_address
+        self.token_network_address = typing.Address(token_network_address)
         self.chain_id = chain_id
 
     @property
@@ -633,7 +633,7 @@ class Secret(EnvelopeMessage):
             message_identifier=packed.message_identifier,
             payment_identifier=packed.payment_identifier,
             nonce=packed.nonce,
-            token_network_address=packed.token_network_address,
+            token_network_address=typing.Address(packed.token_network_address),
             channel_identifier=packed.channel_identifier,
             transferred_amount=packed.transferred_amount,
             locked_amount=packed.locked_amount,
@@ -697,7 +697,8 @@ class Secret(EnvelopeMessage):
             payment_identifier=data['payment_identifier'],
             secret=decode_hex(data['secret']),
             nonce=data['nonce'],
-            token_network_address=to_canonical_address(data['token_network_address']),
+            token_network_address=typing.Address(
+                to_canonical_address(data['token_network_address'])),
             channel_identifier=data['channel_identifier'],
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
@@ -830,7 +831,7 @@ class DirectTransfer(EnvelopeMessage):
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.token = token
-        self.recipient = recipient  #: partner's address
+        self.recipient = typing.Address(recipient)  #: partner's address
 
     @classmethod
     def unpack(cls, packed):
@@ -930,11 +931,12 @@ class DirectTransfer(EnvelopeMessage):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            token_network_address=to_canonical_address(data['token_network_address']),
-            token=to_canonical_address(data['token']),
+            token_network_address=typing.Address(
+                to_canonical_address(data['token_network_address'])),
+            token=typing.Address(to_canonical_address(data['token'])),
             channel_identifier=data['channel_identifier'],
             transferred_amount=data['transferred_amount'],
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             locked_amount=data['locked_amount'],
             locksroot=decode_hex(data['locksroot']),
         )
@@ -1162,11 +1164,14 @@ class LockedTransfer(LockedTransferBase):
             fee: int = 0,
     ):
 
-        if len(target) != 20:
-            raise ValueError('target is an invalid address')
+        if not isinstance(target, Address):
+            raise ValueError('target must be an instance of Address')
 
-        if len(initiator) != 20:
-            raise ValueError('initiator is an invalid address')
+        if not isinstance(initiator, Address):
+            raise ValueError('initiator must be an instance of Address')
+
+        if not isinstance(token_network_address, Address):
+            raise ValueError('token_network_address must be an instance of Address')
 
         if fee > UINT256_MAX:
             raise ValueError('fee is too large')
@@ -1229,16 +1234,16 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=packed.message_identifier,
             payment_identifier=packed.payment_identifier,
             nonce=packed.nonce,
-            token_network_address=packed.token_network_address,
+            token_network_address=typing.Address(packed.token_network_address),
             token=packed.token,
             channel_identifier=packed.channel_identifier,
             transferred_amount=packed.transferred_amount,
             locked_amount=packed.locked_amount,
-            recipient=packed.recipient,
+            recipient=typing.Address(packed.recipient),
             locksroot=packed.locksroot,
             lock=lock,
-            target=packed.target,
-            initiator=packed.initiator,
+            target=typing.Address(packed.target),
+            initiator=typing.Address(packed.initiator),
             fee=packed.fee,
         )
         mediated_transfer.signature = packed.signature
@@ -1284,16 +1289,16 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=event.message_identifier,
             payment_identifier=transfer.payment_identifier,
             nonce=balance_proof.nonce,
-            token_network_address=balance_proof.token_network_identifier,
+            token_network_address=typing.Address(balance_proof.token_network_identifier),
             token=transfer.token,
             channel_identifier=balance_proof.channel_identifier,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=balance_proof.locked_amount,
-            recipient=event.recipient,
+            recipient=typing.Address(event.recipient),
             locksroot=balance_proof.locksroot,
             lock=lock,
-            target=transfer.target,
-            initiator=transfer.initiator,
+            target=typing.Address(transfer.target),
+            initiator=typing.Address(transfer.initiator),
             fee=fee,
         )
 
@@ -1325,16 +1330,17 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            token_network_address=to_canonical_address(data['token_network_address']),
-            token=to_canonical_address(data['token']),
+            token_network_address=typing.Address(
+                to_canonical_address(data['token_network_address'])),
+            token=typing.Address(to_canonical_address(data['token'])),
             channel_identifier=data['channel_identifier'],
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             locksroot=decode_hex(data['locksroot']),
             lock=Lock.from_dict(data['lock']),
-            target=to_canonical_address(data['target']),
-            initiator=to_canonical_address(data['initiator']),
+            target=typing.Address(to_canonical_address(data['target'])),
+            initiator=typing.Address(to_canonical_address(data['initiator'])),
             fee=data['fee'],
         )
         message.signature = decode_hex(data['signature'])
@@ -1361,16 +1367,16 @@ class RefundTransfer(LockedTransfer):
             message_identifier=packed.message_identifier,
             payment_identifier=packed.payment_identifier,
             nonce=packed.nonce,
-            token_network_address=packed.token_network_address,
+            token_network_address=typing.Address(packed.token_network_address),
             token=packed.token,
             channel_identifier=packed.channel_identifier,
             transferred_amount=packed.transferred_amount,
             locked_amount=packed.locked_amount,
-            recipient=packed.recipient,
+            recipient=typing.Address(packed.recipient),
             locksroot=packed.locksroot,
             lock=lock,
-            target=packed.target,
-            initiator=packed.initiator,
+            target=typing.Address(packed.target),
+            initiator=typing.Address(packed.initiator),
             fee=packed.fee,
         )
         locked_transfer.signature = packed.signature
@@ -1397,11 +1403,11 @@ class RefundTransfer(LockedTransfer):
             channel_identifier=balance_proof.channel_identifier,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=balance_proof.locked_amount,
-            recipient=event.recipient,
+            recipient=typing.Address(event.recipient),
             locksroot=balance_proof.locksroot,
             lock=lock,
-            target=transfer.target,
-            initiator=transfer.initiator,
+            target=typing.Address(transfer.target),
+            initiator=typing.Address(transfer.initiator),
             fee=fee,
         )
 
@@ -1433,16 +1439,18 @@ class RefundTransfer(LockedTransfer):
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
             nonce=data['nonce'],
-            token_network_address=to_canonical_address(data['token_network_address']),
-            token=to_canonical_address(data['token']),
+            token_network_address=typing.Address(
+                to_canonical_address(data['token_network_address'])),
+            token=typing.Address(
+                to_canonical_address(data['token'])),
             channel_identifier=data['channel_identifier'],
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             locksroot=decode_hex(data['locksroot']),
             lock=Lock.from_dict(data['lock']),
-            target=to_canonical_address(data['target']),
-            initiator=to_canonical_address(data['initiator']),
+            target=typing.Address(to_canonical_address(data['target'])),
+            initiator=typing.Address(to_canonical_address(data['initiator'])),
             fee=data['fee'],
         )
         message.signature = decode_hex(data['signature'])
@@ -1488,10 +1496,10 @@ class LockExpired(EnvelopeMessage):
             chain_id=packed.chain_id,
             nonce=packed.nonce,
             message_identifier=packed.message_identifier,
-            token_network_address=packed.token_network_address,
+            token_network_address=typing.Address(packed.token_network_address),
             channel_identifier=packed.channel_identifier,
             transferred_amount=packed.transferred_amount,
-            recipient=packed.recipient,
+            recipient=typing.Address(packed.recipient),
             locked_amount=packed.locked_amount,
             locksroot=packed.locksroot,
             secrethash=packed.secrethash,
@@ -1574,11 +1582,12 @@ class LockExpired(EnvelopeMessage):
             chain_id=data['chain_id'],
             nonce=data['nonce'],
             message_identifier=data['message_identifier'],
-            token_network_address=to_canonical_address(data['token_network_address']),
+            token_network_address=typing.Address(
+                to_canonical_address(data['token_network_address'])),
             channel_identifier=data['channel_identifier'],
             transferred_amount=data['transferred_amount'],
             secrethash=decode_hex(data['secrethash']),
-            recipient=to_canonical_address(data['recipient']),
+            recipient=typing.Address(to_canonical_address(data['recipient'])),
             locked_amount=data['locked_amount'],
             locksroot=decode_hex(data['locksroot']),
         )

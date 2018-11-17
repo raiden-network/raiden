@@ -500,7 +500,7 @@ class JSONRPCClient:
 
     def send_transaction(
             self,
-            to: typing.Address,
+            to: typing.AddressOrEmpty,
             startgas: int,
             value: int = 0,
             data: bytes = b'',

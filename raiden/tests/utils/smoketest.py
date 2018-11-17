@@ -35,7 +35,7 @@ from raiden.tests.utils.geth import (
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.utils import get_project_root, privatekey_to_address
+from raiden.utils import get_project_root, privatekey_to_address, typing
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -282,7 +282,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
         registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         contract_manager=contract_manager,
     )
-    registry.add_token(to_canonical_address(token.contract.address))
+    registry.add_token(typing.Address(to_canonical_address(token.contract.address)))
 
     print_step('Setting up Raiden')
 

@@ -322,7 +322,7 @@ class ChainState(State):
         restored = cls(
             pseudo_random_generator=pseudo_random_generator,
             block_number=int(data['block_number']),
-            our_address=to_canonical_address(data['our_address']),
+            our_address=typing.Address(to_canonical_address(data['our_address'])),
             chain_id=data['chain_id'],
         )
 
@@ -359,7 +359,7 @@ class PaymentNetworkState(State):
             address: typing.Address,
             token_network_list: typing.List['TokenNetworkState'],
     ):
-        if not isinstance(address, bytes):  # bytes --> Typing.Address
+        if not isinstance(address, typing.Address):
             raise ValueError('address must be an address instance')
 
         self.address = address
@@ -397,7 +397,7 @@ class PaymentNetworkState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentNetworkState':
         restored = cls(
-            address=to_canonical_address(data['address']),
+            address=typing.Address(to_canonical_address(data['address'])),
             token_network_list=[
                 network for network in data['tokennetworks']
             ],
@@ -419,11 +419,11 @@ class TokenNetworkState(State):
 
     def __init__(self, address: typing.TokenNetworkID, token_address: typing.TokenAddress):
 
-        if not isinstance(address, bytes):  # bytes --> Typing.Address
-            raise ValueError('address must be an address instance')
+        if not isinstance(address, typing.T_TokenNetworkID):
+            raise ValueError('address must be an Address instance')
 
-        if not isinstance(token_address, bytes):  # bytes --> Typing.Address
-            raise ValueError('token_address must be an address instance')
+        if not isinstance(token_address, typing.T_TokenAddress):
+            raise ValueError('token_address must be a TokenAddress instance')
 
         self.address = address
         self.token_address = token_address
@@ -475,7 +475,7 @@ class TokenNetworkState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkState':
         restored = cls(
             address=to_canonical_address(data['address']),
-            token_address=to_canonical_address(data['token_address']),
+            token_address=typing.T_TokenAddress(to_canonical_address(data['token_address'])),
         )
         restored.network_graph = data['network_graph']
         restored.channelidentifiers_to_channels = map_dict(
@@ -510,8 +510,8 @@ class TokenNetworkGraphState(State):
         'channel_identifier_to_participants',
     )
 
-    def __init__(self, token_network_address: typing.TokenNetworkID):
-        self.token_network_id = token_network_address
+    def __init__(self, token_network_id: typing.TokenNetworkID):
+        self.token_network_id = token_network_id
         self.network = networkx.Graph()
         self.channel_identifier_to_participants = {}
 
@@ -548,7 +548,7 @@ class TokenNetworkGraphState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkGraphState':
         restored = cls(
-            token_network_address=to_canonical_address(data['token_network_id']),
+            token_network_id=to_canonical_address(data['token_network_id']),
         )
         restored.network = serialization.deserialize_networkx_graph(data['network'])
         restored.channel_identifier_to_participants = map_dict(
@@ -636,8 +636,8 @@ class RouteState(State):
             node_address: typing.Address,
             channel_identifier: typing.ChannelID,
     ):
-        if not isinstance(node_address, bytes):  # bytes --> typing.Address
-            raise ValueError('node_address must be an address instance')
+        if not isinstance(node_address, typing.Address):
+            raise ValueError('node_address must be an Address instance')
 
         self.node_address = node_address
         self.channel_identifier = channel_identifier
@@ -667,7 +667,7 @@ class RouteState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'RouteState':
         restored = cls(
-            node_address=to_canonical_address(data['node_address']),
+            node_address=typing.Address(to_canonical_address(data['node_address'])),
             channel_identifier=int(data['channel_identifier']),
         )
 
@@ -851,8 +851,8 @@ class BalanceProofSignedState(State):
         if not isinstance(locksroot, typing.T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(token_network_identifier, bytes):  # typing.Address
-            raise ValueError('token_network_identifier must be an address instance')
+        if not isinstance(token_network_identifier, typing.T_TokenNetworkID):
+            raise ValueError('token_network_identifier must be a T_TokenNetworkID instance')
 
         if not isinstance(channel_identifier, typing.T_ChannelID):
             raise ValueError('channel_identifier must be an ChannelID instance')
@@ -863,7 +863,7 @@ class BalanceProofSignedState(State):
         if not isinstance(signature, typing.T_Signature):
             raise ValueError('signature must be a signature instance')
 
-        if not isinstance(sender, bytes):  # typing.Address
+        if not isinstance(sender, typing.Address):
             raise ValueError('sender must be an address instance')
 
         if not isinstance(chain_id, typing.T_ChainID):
@@ -977,7 +977,7 @@ class BalanceProofSignedState(State):
             channel_identifier=int(data['channel_identifier']),
             message_hash=serialization.deserialize_bytes(data['message_hash']),
             signature=serialization.deserialize_bytes(data['signature']),
-            sender=to_canonical_address(data['sender']),
+            sender=typing.Address(to_canonical_address(data['sender'])),
             chain_id=data['chain_id'],
         )
 
@@ -1313,7 +1313,7 @@ class NettingChannelEndState(State):
     )
 
     def __init__(self, address: typing.Address, balance: typing.Balance):
-        if not isinstance(address, bytes):  # typing.Address
+        if not isinstance(address, typing.Address):
             raise ValueError('address must be an address instance')
 
         if not isinstance(balance, typing.T_TokenAmount):
@@ -1382,7 +1382,7 @@ class NettingChannelEndState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelEndState':
         restored = cls(
-            address=to_canonical_address(data['address']),
+            address=typing.Address(to_canonical_address(data['address'])),
             balance=int(data['contract_balance']),
         )
         restored.secrethashes_to_lockedlocks = map_dict(
@@ -1458,6 +1458,9 @@ class NettingChannelState(State):
 
         if not isinstance(open_transaction, TransactionExecutionStatus):
             raise ValueError('open_transaction must be a TransactionExecutionStatus instance')
+
+        if not isinstance(token_address, typing.Address):
+            raise ValueError('token_address must be an Address')
 
         if open_transaction.result != TransactionExecutionStatus.SUCCESS:
             raise ValueError(
@@ -1573,7 +1576,7 @@ class NettingChannelState(State):
         restored = cls(
             identifier=int(data['identifier']),
             chain_id=data['chain_id'],
-            token_address=to_canonical_address(data['token_address']),
+            token_address=typing.Address(to_canonical_address(data['token_address'])),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             reveal_timeout=int(data['reveal_timeout']),
@@ -1615,7 +1618,7 @@ class TransactionChannelNewBalance(State):
             contract_balance: typing.TokenAmount,
             deposit_block_number: typing.BlockNumber,
     ):
-        if not isinstance(participant_address, bytes):  # typing.Address
+        if not isinstance(participant_address, typing.Address):
             raise ValueError('participant_address must be of type address')
 
         if not isinstance(contract_balance, typing.T_TokenAmount):
@@ -1669,7 +1672,7 @@ class TransactionChannelNewBalance(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionChannelNewBalance':
         restored = cls(
-            participant_address=to_canonical_address(data['participant_address']),
+            participant_address=typing.Address(to_canonical_address(data['participant_address'])),
             contract_balance=int(data['contract_balance']),
             deposit_block_number=int(data['deposit_block_number']),
         )

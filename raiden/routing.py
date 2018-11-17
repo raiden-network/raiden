@@ -126,6 +126,7 @@ def get_best_routes(
 
     while neighbors_heap:
         *_, partner_address, channel_state_id = heappop(neighbors_heap)
+        partner_address = typing.Address(partner_address)
         route_state = RouteState(partner_address, channel_state_id)
         available_routes.append(route_state)
     return available_routes

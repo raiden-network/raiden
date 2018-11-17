@@ -14,6 +14,7 @@ from raiden.exceptions import (
     TransactionAlreadyPending,
 )
 from raiden.utils.filters import decode_event
+from raiden.utils.typing import Address
 
 
 class ClientErrorInspectResult(Enum):
@@ -171,4 +172,4 @@ class ContractProxy:
 
     @property
     def contract_address(self):
-        return to_canonical_address(self.contract.address)
+        return Address(to_canonical_address(self.contract.address))

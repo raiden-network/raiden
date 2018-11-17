@@ -6,12 +6,12 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
 )
 from raiden.transfer.state_change import ActionCancelPayment, ActionTransferDirect, Block
-from raiden.utils import sha3
+from raiden.utils import sha3, typing
 
-ADDRESS = sha3(b'foo')[:20]
-ADDRESS2 = sha3(b'boo')[:20]
-ADDRESS3 = sha3(b'coo')[:20]
-ADDRESS4 = sha3(b'goo')[:20]
+ADDRESS = typing.Address(sha3(b'foo')[:20])
+ADDRESS2 = typing.Address(sha3(b'boo')[:20])
+ADDRESS3 = typing.Address(sha3(b'coo')[:20])
+ADDRESS4 = typing.Address(sha3(b'goo')[:20])
 SECRET = b'secret'
 HASH = sha3(SECRET)
 HASH2 = sha3(b'joo')

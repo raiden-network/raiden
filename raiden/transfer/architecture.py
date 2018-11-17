@@ -117,6 +117,9 @@ class SendMessageEvent(Event):
         if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel identifier must be of type T_ChannelIdentifier')
 
+        if not isinstance(recipient, Address):
+            raise ValueError('recipient must be of type Address')
+
         self.recipient = recipient
         self.queue_identifier = QueueIdentifier(
             recipient=recipient,
