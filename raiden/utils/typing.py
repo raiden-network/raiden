@@ -88,7 +88,7 @@ T_TargetAddress = bytes
 TargetAddress = NewType('TargetAddress', T_TargetAddress)
 
 T_TokenAddress = bytes
-TokenAddress = NewType('TokenAddres', T_TokenAddress)
+TokenAddress = NewType('TokenAddress', T_TokenAddress)
 
 T_TokenNetworkAddress = bytes
 TokenNetworkAddress = NewType('TokenNetworkAddress', T_TokenNetworkAddress)
