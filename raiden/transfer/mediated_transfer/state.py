@@ -357,7 +357,7 @@ class LockedTransferUnsignedState(State):
     def __init__(
             self,
             payment_identifier: typing.PaymentID,
-            token: typing.Address,
+            token: typing.TokenAddress,
             balance_proof: BalanceProofUnsignedState,
             lock: HashTimeLockState,
             initiator: typing.Address,
