@@ -67,7 +67,8 @@ class ContractSendChannelClose(ContractSendEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelClose':
         restored = cls(
             channel_identifier=int(data['channel_identifier']),
-            token_address=typing.Address(to_canonical_address(data['token_address'])),
+            token_address=typing.TokenAddress(
+                typing.Address(to_canonical_address(data['token_address']))),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
         )
@@ -238,7 +239,8 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelBatchUnlock':
         restored = cls(
-            token_address=typing.Address(to_canonical_address(data['token_address'])),
+            token_address=typing.TokenAddress(
+                typing.Address(to_canonical_address(data['token_address']))),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=int(data['channel_identifier']),
             participant=typing.Address(to_canonical_address(data['participant'])),
@@ -373,7 +375,8 @@ class EventPaymentSentSuccess(Event):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             identifier=int(data['identifier']),
             amount=int(data['amount']),
-            target=typing.Address(to_canonical_address(data['target'])),
+            target=typing.TargetAddress(
+                typing.Address(to_canonical_address(data['target']))),
         )
 
         return restored
@@ -446,7 +449,8 @@ class EventPaymentSentFailed(Event):
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             identifier=int(data['identifier']),
-            target=typing.Address(to_canonical_address(data['target'])),
+            target=typing.TargetAddress(
+                typing.Address(to_canonical_address(data['target']))),
             reason=data['reason'],
         )
 
@@ -529,7 +533,8 @@ class EventPaymentReceivedSuccess(Event):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             identifier=int(data['identifier']),
             amount=int(data['amount']),
-            initiator=typing.Address(to_canonical_address(data['initiator'])),
+            initiator=typing.InitiatorAddress(
+                typing.Address(to_canonical_address(data['initiator']))),
         )
 
         return restored
@@ -832,7 +837,8 @@ class SendDirectTransfer(SendMessageEvent):
             message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
             balance_proof=data['balance_proof'],
-            token_address=typing.Address(to_canonical_address(data['token_address'])),
+            token_address=typing.TokenAddress(
+                typing.Address(to_canonical_address(data['token_address']))),
         )
 
         return restored

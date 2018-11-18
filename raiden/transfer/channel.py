@@ -1621,7 +1621,7 @@ def handle_send_directtransfer(
 
     amount = state_change.amount
     payment_identifier = state_change.payment_identifier
-    target_address = state_change.receiver_address
+    target_address = typing.TargetAddress(state_change.receiver_address)
     distributable_amount = get_distributable(channel_state.our_state, channel_state.partner_state)
 
     (
@@ -1736,7 +1736,7 @@ def handle_receive_directtransfer(
             token_network_identifier=channel_state.token_network_identifier,
             identifier=direct_transfer.payment_identifier,
             amount=transfer_amount,
-            initiator=channel_state.partner_state.address,
+            initiator=typing.InitiatorAddress(channel_state.partner_state.address),
         )
 
         send_processed = SendProcessed(

@@ -57,7 +57,7 @@ def is_supported_client(
     return False, None
 
 
-def address_checksum_and_decode(addr: str) -> typing.Address:
+def address_checksum_and_decode(addr: str) -> typing.AddressOrEmpty:
     """ Accepts a string address and turns it into binary.
 
         Makes sure that the string address provided starts is 0x prefixed and
@@ -71,7 +71,7 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
 
     addr = decode_hex(addr)
     assert len(addr) in (20, 0)
-    return addr
+    return typing.AddressOrEmpty(bytes(addr))
 
 
 def data_encoder(data: bytes, length: int = 0) -> str:

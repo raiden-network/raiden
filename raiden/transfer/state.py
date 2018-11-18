@@ -475,7 +475,8 @@ class TokenNetworkState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkState':
         restored = cls(
             address=to_canonical_address(data['address']),
-            token_address=typing.T_TokenAddress(to_canonical_address(data['token_address'])),
+            token_address=typing.TokenAddress(
+                typing.Address(to_canonical_address(data['token_address']))),
         )
         restored.network_graph = data['network_graph']
         restored.channelidentifiers_to_channels = map_dict(
@@ -1434,7 +1435,7 @@ class NettingChannelState(State):
             self,
             identifier: typing.ChannelID,
             chain_id: typing.ChainID,
-            token_address: typing.Address,
+            token_address: typing.TokenAddress,
             payment_network_identifier: typing.PaymentNetworkID,
             token_network_identifier: typing.TokenNetworkID,
             reveal_timeout: typing.BlockTimeout,
@@ -1459,7 +1460,7 @@ class NettingChannelState(State):
         if not isinstance(open_transaction, TransactionExecutionStatus):
             raise ValueError('open_transaction must be a TransactionExecutionStatus instance')
 
-        if not isinstance(token_address, typing.Address):
+        if not isinstance(token_address, typing.T_TokenAddress):
             raise ValueError('token_address must be an Address')
 
         if open_transaction.result != TransactionExecutionStatus.SUCCESS:
@@ -1576,7 +1577,8 @@ class NettingChannelState(State):
         restored = cls(
             identifier=int(data['identifier']),
             chain_id=data['chain_id'],
-            token_address=typing.Address(to_canonical_address(data['token_address'])),
+            token_address=typing.TokenAddress(
+                typing.Address(to_canonical_address(data['token_address']))),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             reveal_timeout=int(data['reveal_timeout']),

@@ -307,7 +307,8 @@ class SendBalanceProof(SendMessageEvent):
             channel_identifier=int(data['channel_identifier']),
             message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
-            token_address=typing.Address(to_canonical_address(data['token_address'])),
+            token_address=typing.TokenAddress(
+                typing.Address(to_canonical_address(data['token_address']))),
             secret=serialization.deserialize_bytes(data['secret']),
             balance_proof=data['balance_proof'],
         )
