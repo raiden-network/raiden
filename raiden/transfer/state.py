@@ -1434,7 +1434,7 @@ class NettingChannelState(State):
             self,
             identifier: typing.ChannelID,
             chain_id: typing.ChainID,
-            token_address: typing.Address,
+            token_address: typing.TokenAddress,
             payment_network_identifier: typing.PaymentNetworkID,
             token_network_identifier: typing.TokenNetworkID,
             reveal_timeout: typing.BlockTimeout,
