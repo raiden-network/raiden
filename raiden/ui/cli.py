@@ -22,7 +22,7 @@ from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.settings import INITIAL_PORT
-from raiden.utils import get_system_spec, merge_dict, split_endpoint
+from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
 from raiden.utils.cli import (
     ADDRESS_TYPE,
     LOG_LEVEL_CONFIG_TYPE,
@@ -552,13 +552,15 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
 
         raiden_api.channel_open(
             registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-            token_address=to_canonical_address(token.contract.address),
-            partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
+            token_address=typing.Address(
+                to_canonical_address(token.contract.address)),
+            partner_address=typing.Address(
+                to_canonical_address(TEST_PARTNER_ADDRESS)),
         )
         raiden_api.set_total_channel_deposit(
             contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-            to_canonical_address(token.contract.address),
-            to_canonical_address(TEST_PARTNER_ADDRESS),
+            typing.Address(to_canonical_address(token.contract.address)),
+            typing.Address(to_canonical_address(TEST_PARTNER_ADDRESS)),
             TEST_DEPOSIT_AMOUNT,
         )
         token_addresses = [to_checksum_address(token.contract.address)]

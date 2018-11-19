@@ -333,9 +333,9 @@ def run_app(
 
     try:
         token_network_registry = blockchain_service.token_network_registry(
-            tokennetwork_registry_contract_address or to_canonical_address(
+            typing.Address(tokennetwork_registry_contract_address or to_canonical_address(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
-            ),
+            )),
         )
     except ContractVersionMismatch as e:
         handle_contract_version_mismatch(e)

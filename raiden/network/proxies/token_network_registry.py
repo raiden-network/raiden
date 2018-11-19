@@ -4,7 +4,6 @@ import structlog
 from eth_utils import (
     encode_hex,
     event_abi_to_log_topic,
-    is_binary_address,
     is_same_address,
     to_canonical_address,
     to_checksum_address,
@@ -31,11 +30,11 @@ class TokenNetworkRegistry:
     def __init__(
             self,
             jsonrpc_client,
-            registry_address,
+            registry_address: typing.Address,
             contract_manager: ContractManager,
     ):
-        if not is_binary_address(registry_address):
-            raise InvalidAddress('Expected binary address format for token network registry')
+        if not isinstance(registry_address, typing.Address):
+            raise InvalidAddress('Expected an Address object for token network registry')
 
         check_address_has_code(jsonrpc_client, registry_address, CONTRACT_TOKEN_NETWORK_REGISTRY)
 
