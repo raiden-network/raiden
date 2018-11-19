@@ -478,7 +478,7 @@ class RaidenService(Runnable):
                 )
             except RaidenRecoverableError as e:
                 log.error(str(e))
-            except InvalidDBData as e:
+            except InvalidDBData:
                 raise
             except RaidenUnrecoverableError as e:
                 log_unrecoverable = (
@@ -593,7 +593,7 @@ class RaidenService(Runnable):
                     self.raiden_event_handler.on_raiden_event(self, transaction)
                 except RaidenRecoverableError as e:
                     log.error(str(e))
-                except InvalidDBData as e:
+                except InvalidDBData:
                     raise
                 except RaidenUnrecoverableError as e:
                     log_unrecoverable = (
