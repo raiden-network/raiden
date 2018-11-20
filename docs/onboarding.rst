@@ -301,3 +301,9 @@ The WebUI
 Raiden has a graphical user interface. It's an angular application running by default along with the raiden node and exposing an interface that can be accessed via the user's Browser
 
 TODO: Small overview of code architecture for the WebUI.
+
+Frequently Asked Questions
+==========================
+
+What is MS/PFS?
+  See `Monitoring Service <https://raiden-network-specification.readthedocs.io/en/latest/terminology.html#term-monitoring-service>`_ and `Pathfinding Service <https://raiden-network-specification.readthedocs.io/en/latest/terminology.html#term-pathfinding-service>`_ in the smart contract specification..
