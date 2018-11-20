@@ -106,7 +106,7 @@ with open('constraints.txt') as req_file:
 
 test_requirements = []
 
-version = '0.16.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
+version = '0.17.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
 
 setup(
     name='raiden',
