@@ -181,7 +181,11 @@ def get_system_spec() -> typing.Dict[str, str]:
     try:
         version = pkg_resources.require(raiden.__name__)[0].version
     except (pkg_resources.ContextualVersionConflict, pkg_resources.DistributionNotFound):
-        version = 'unknown_raiden_version'
+        raise RuntimeError(
+            'Cannot detect Raiden version. Did you do python setup.py?  '
+            'Refer to https://raiden-network.readthedocs.io/en/latest/'
+            'overview_and_guide.html#for-developers',
+        )
 
     system_spec = {
         'raiden': version,

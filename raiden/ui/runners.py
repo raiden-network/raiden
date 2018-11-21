@@ -153,8 +153,7 @@ class NodeRunner:
 
         # spawn a greenlet to handle the version checking
         version = get_system_spec()['raiden']
-        if version is not None:
-            tasks.append(gevent.spawn(check_version, version))
+        tasks.append(gevent.spawn(check_version, version))
 
         # spawn a greenlet to handle the gas reserve check
         tasks.append(gevent.spawn(check_gas_reserve, app_.raiden))
