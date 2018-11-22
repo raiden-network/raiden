@@ -46,6 +46,8 @@ executors:
 
     environment:
       PYTHON_VERSION_SHORT: << parameters.py-version >>
+      SOLC_VERSION: 'v0.4.23'
+      GETH_VERSION: '1.8.13'
 
 commands:
   config-path:
@@ -396,7 +398,7 @@ jobs:
 
 
 workflows:
-  test-and-deploy-tagged:
+  raiden-default:
 
     jobs:
       - prepare-system:
@@ -527,7 +529,7 @@ workflows:
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 8
           requires:
             - smoketest-udp-3.6
           filters:
@@ -557,7 +559,7 @@ workflows:
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-udp-3.6
           filters:
@@ -573,7 +575,7 @@ workflows:
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-udp-3.6
           filters:
@@ -604,7 +606,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 8
           requires:
             - smoketest-matrix-3.6
           filters:
@@ -621,7 +623,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-matrix-3.6
           filters:
@@ -653,7 +655,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-matrix-3.6
           filters:
@@ -733,7 +735,7 @@ workflows:
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 8
           requires:
             - smoketest-udp-3.7
           filters:
@@ -763,7 +765,7 @@ workflows:
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-udp-3.7
           filters:
@@ -779,7 +781,7 @@ workflows:
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-udp-3.7
           filters:
@@ -810,7 +812,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 8
           requires:
             - smoketest-matrix-3.7
           filters:
@@ -827,7 +829,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-matrix-3.7
           filters:
@@ -859,7 +861,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-matrix-3.7
           filters:
@@ -1013,7 +1015,7 @@ workflows:
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 8
           requires:
           - smoketest-udp-3.6
 
@@ -1033,7 +1035,7 @@ workflows:
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-udp-3.6
 
@@ -1044,7 +1046,7 @@ workflows:
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-udp-3.6
 
@@ -1065,7 +1067,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 8
           requires:
           - smoketest-matrix-3.6
 
@@ -1077,7 +1079,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-matrix-3.6
 
@@ -1099,7 +1101,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-matrix-3.6
 
@@ -1149,7 +1151,7 @@ workflows:
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 8
           requires:
           - smoketest-udp-3.7
 
@@ -1169,7 +1171,7 @@ workflows:
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-udp-3.7
 
@@ -1180,7 +1182,7 @@ workflows:
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-udp-3.7
 
@@ -1201,7 +1203,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 8
           requires:
           - smoketest-matrix-3.7
 
@@ -1213,7 +1215,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-matrix-3.7
 
@@ -1235,7 +1237,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-matrix-3.7
 
