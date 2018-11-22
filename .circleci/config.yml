@@ -15,6 +15,11 @@ templates:
         description: "python version to be used in the executor"
         default: "3.7"
         type: string
+    resource:
+        description: "resource type for underlying VM"
+        default: "medium"
+        type: enum
+        enum: ["small", "medium", "large", "xlarge"]
     transport-layer:
       description: "transmission protocol used, udp or matrix"
       default: "udp"
@@ -29,12 +34,20 @@ executors:
     parameters:
       py-version:
         <<: *py-version-template
+      resource:
+        description: "resource type for underlying VM"
+        default: "medium"
+        type: enum
+        enum: ["small", "medium", "large", "xlarge"]
     working_directory: ~/raiden
     docker:
     - image: circleci/python:<< parameters.py-version >>
+    resource_class: << parameters.resource >>
 
     environment:
       PYTHON_VERSION_SHORT: << parameters.py-version >>
+      SOLC_VERSION: 'v0.4.23'
+      GETH_VERSION: '1.8.13'
 
 commands:
   config-path:
@@ -243,6 +256,7 @@ jobs:
     executor:
       name: base-executor
       py-version: << parameters.py-version >>
+      resource: << parameters.resource >>
 
     environment:
       TEST_TYPE: << parameters.test-type >>
@@ -384,7 +398,7 @@ jobs:
 
 
 workflows:
-  test-and-deploy-tagged:
+  raiden-default:
 
     jobs:
       - prepare-system:
@@ -511,10 +525,11 @@ workflows:
       - test:
           name: test-integration-udp-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 8
           requires:
             - smoketest-udp-3.6
           filters:
@@ -540,10 +555,11 @@ workflows:
       - test:
           name: test-transfer-udp-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-udp-3.6
           filters:
@@ -555,10 +571,11 @@ workflows:
       - test:
           name: test-api-udp-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-udp-3.6
           filters:
@@ -584,11 +601,12 @@ workflows:
       - test:
           name: test-integration-matrix-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 8
           requires:
             - smoketest-matrix-3.6
           filters:
@@ -600,11 +618,12 @@ workflows:
       - test:
           name: test-transfer-matrix-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-matrix-3.6
           filters:
@@ -630,12 +649,13 @@ workflows:
 
       - test:
           name: test-api-matrix-3.6
+          resource: "large"
           py-version: "3.6"
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-matrix-3.6
           filters:
@@ -710,11 +730,12 @@ workflows:
 
       - test:
           name: test-integration-udp-3.7
+          resource: "large"
           py-version: "3.7"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 8
           requires:
             - smoketest-udp-3.7
           filters:
@@ -739,11 +760,12 @@ workflows:
 
       - test:
           name: test-transfer-udp-3.7
+          resource: "large"
           py-version: "3.7"
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-udp-3.7
           filters:
@@ -755,10 +777,11 @@ workflows:
       - test:
           name: test-api-udp-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-udp-3.7
           filters:
@@ -784,11 +807,12 @@ workflows:
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 8
           requires:
             - smoketest-matrix-3.7
           filters:
@@ -800,11 +824,12 @@ workflows:
       - test:
           name: test-api-matrix-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-matrix-3.7
           filters:
@@ -831,11 +856,12 @@ workflows:
       - test:
           name: test-transfer-matrix-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
             - smoketest-matrix-3.7
           filters:
@@ -985,10 +1011,11 @@ workflows:
       - test:
           name: test-integration-udp-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 8
           requires:
           - smoketest-udp-3.6
 
@@ -1003,21 +1030,23 @@ workflows:
 
       - test:
           name: test-transfer-udp-3.6
+          resource: "large"
           py-version: "3.6"
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-udp-3.6
 
       - test:
           name: test-api-udp-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-udp-3.6
 
@@ -1033,22 +1062,24 @@ workflows:
       - test:
           name: test-integration-matrix-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 8
           requires:
           - smoketest-matrix-3.6
 
       - test:
           name: test-transfer-matrix-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-matrix-3.6
 
@@ -1065,11 +1096,12 @@ workflows:
       - test:
           name: test-api-matrix-3.6
           py-version: "3.6"
+          resource: "large"
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-matrix-3.6
 
@@ -1115,10 +1147,11 @@ workflows:
       - test:
           name: test-integration-udp-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 8
           requires:
           - smoketest-udp-3.7
 
@@ -1134,20 +1167,22 @@ workflows:
       - test:
           name: test-transfer-udp-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-udp-3.7
 
       - test:
           name: test-api-udp-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-udp-3.7
 
@@ -1163,22 +1198,24 @@ workflows:
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 8
           requires:
           - smoketest-matrix-3.7
 
       - test:
           name: test-api-matrix-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration/api"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-matrix-3.7
 
@@ -1195,11 +1232,12 @@ workflows:
       - test:
           name: test-transfer-matrix-3.7
           py-version: "3.7"
+          resource: "large"
           test-type: "integration/transfer"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 4
           requires:
           - smoketest-matrix-3.7
 
