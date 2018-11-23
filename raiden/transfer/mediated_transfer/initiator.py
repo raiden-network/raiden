@@ -3,7 +3,7 @@ import random
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer import channel
-from raiden.transfer.architecture import TransitionResult
+from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
@@ -54,7 +54,7 @@ def events_for_unlock_lock(
         token_network_identifier=channel_state.token_network_identifier,
         identifier=transfer_description.payment_identifier,
         amount=transfer_description.amount,
-        target=transfer_description.target,
+        target=typing.cast(typing.TargetAddress, transfer_description.target),
     )
 
     unlock_success = EventUnlockSuccess(
@@ -77,8 +77,9 @@ def handle_block(
     if not locked_lock:
         return TransitionResult(initiator_state, list())
 
-    lock_expiration_threshold = (
-        locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    lock_expiration_threshold = typing.cast(
+        typing.BlockNumber,
+        locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
     )
     lock_has_expired, _ = channel.is_lock_expired(
         end_state=channel_state.our_state,
@@ -93,7 +94,10 @@ def handle_block(
             locked_lock=locked_lock,
             pseudo_random_generator=pseudo_random_generator,
         )
-        return TransitionResult(None, expired_lock_events)
+        return TransitionResult(
+            None,
+            typing.cast(typing.List[Event], expired_lock_events),
+        )
     else:
         return TransitionResult(initiator_state, list())
 
@@ -103,7 +107,7 @@ def get_initial_lock_expiration(
         reveal_timeout: typing.BlockTimeout,
 ) -> typing.BlockExpiration:
     """ Returns the expiration used for all hash-time-locks in transfer. """
-    return block_number + reveal_timeout * 2
+    return typing.cast(typing.BlockExpiration, block_number + reveal_timeout * 2)
 
 
 def next_channel_from_routes(
@@ -156,7 +160,7 @@ def try_new_route(
         transfer_description.amount,
     )
 
-    events = list()
+    events: typing.List[Event] = list()
     if channel_state is None:
         if not available_routes:
             reason = 'there is no route available'
@@ -167,7 +171,10 @@ def try_new_route(
             payment_network_identifier=transfer_description.payment_network_identifier,
             token_network_identifier=transfer_description.token_network_identifier,
             identifier=transfer_description.payment_identifier,
-            target=transfer_description.target,
+            target=typing.cast(
+                typing.TargetAddress,
+                transfer_description.target,
+            ),
             reason=reason,
         )
         events.append(transfer_failed)
@@ -215,9 +222,18 @@ def send_lockedtransfer(
 
     lockedtransfer_event = channel.send_lockedtransfer(
         channel_state,
-        transfer_description.initiator,
-        transfer_description.target,
-        transfer_description.amount,
+        typing.cast(
+            typing.InitiatorAddress,
+            transfer_description.initiator,
+        ),
+        typing.cast(
+            typing.TargetAddress,
+            transfer_description.target,
+        ),
+        typing.cast(
+            typing.PaymentAmount,
+            transfer_description.amount,
+        ),
         message_identifier,
         transfer_description.payment_identifier,
         lock_expiration,
@@ -282,7 +298,10 @@ def handle_secretrequest(
             payment_network_identifier=channel_state.payment_network_identifier,
             token_network_identifier=channel_state.token_network_identifier,
             identifier=initiator_state.transfer_description.payment_identifier,
-            target=initiator_state.transfer_description.target,
+            target=typing.cast(
+                typing.TargetAddress,
+                initiator_state.transfer_description.target,
+            ),
             reason='bad secret request message from target',
         )
 
