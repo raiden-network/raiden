@@ -49,11 +49,11 @@ def serialize_networkx_graph(graph: networkx.Graph) -> str:
 
 def deserialize_networkx_graph(data: str) -> networkx.Graph:
     raw_data = json.loads(data)
-    data = [
+    canonical_addresses = [
         (to_canonical_address(edge[0]), to_canonical_address(edge[1]))
         for edge in raw_data
     ]
-    return networkx.Graph(data)
+    return networkx.Graph(canonical_addresses)
 
 
 def serialize_participants_tuple(
