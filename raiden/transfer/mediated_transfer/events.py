@@ -641,7 +641,7 @@ class EventUnexpectedSecretReveal(Event):
     def __repr__(self):
         return (
             f'<'
-            f'EventUnexpectedOffchainSecretReveal '
+            f'EventUnexpectedSecretReveal '
             f'secrethash:{pex(self.secrethash)} '
             f'reason:{self.reason}'
             f'>'
@@ -669,7 +669,7 @@ class EventUnexpectedSecretReveal(Event):
     def from_dict(
             cls,
             data: typing.Dict[str, typing.Any],
-    )-> 'EventUnexpectedOffchainSecretReveal':
+    )-> 'EventUnexpectedSecretReveal':
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
             reason=data['reason'],
