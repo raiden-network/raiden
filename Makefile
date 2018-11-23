@@ -6,6 +6,7 @@ help:
 	@echo "clean-pyc - remove Python file artifacts"
 	@echo "clean-test - remove test and coverage artifacts"
 	@echo "lint - check style with flake8"
+	@echo "isort - use isort to fix import order"
 	@echo "test - run tests quickly with the default Python"
 	@echo "test-all - run tests on every Python version with tox"
 	@echo "coverage - check code coverage quickly with the default Python"
@@ -37,11 +38,16 @@ clean-test:
 	rm -f .coverage
 	rm -fr htmlcov/
 
+ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive raiden/ -sg */node_modules/*
+
 lint:
 	flake8 raiden/ tools/
-	isort --ignore-whitespace --settings-path ./ --check-only --recursive --diff raiden/ -sg */node_modules/*
+	isort $(ISORT_PARAMS) --diff --check-only
 	pylint --rcfile .pylint.rc raiden/
 	python setup.py check --restructuredtext --strict
+
+isort:
+	isort $(ISORT_PARAMS)
 
 test:
 	python setup.py test
