@@ -106,6 +106,7 @@ def handle_init(
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
+    events: typing.List[Event]
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels,
@@ -132,7 +133,7 @@ def handle_cancelroute(
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
-    events = list()
+    events: typing.List[Event] = list()
     if can_cancel(payment_state):
         transfer_description = payment_state.initiator.transfer_description
         cancel_events = cancel_current_route(payment_state)

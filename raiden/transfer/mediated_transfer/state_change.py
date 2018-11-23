@@ -225,7 +225,7 @@ class ActionCancelRoute(StateChange):
         }
 
     @classmethod
-    def from_dict(cls, data) -> 'ActionInitTarget':
+    def from_dict(cls, data) -> 'ActionCancelRoute':
         return cls(
             registry_address=to_canonical_address(data['registry_address']),
             channel_identifier=int(data['identifier']),
