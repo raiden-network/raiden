@@ -42,14 +42,20 @@ def is_supported_client(
         client_version: str,
 ) -> typing.Tuple[bool, typing.Optional[constants.EthClient]]:
     if client_version.startswith('Parity'):
+        matches = re.search(r'//v(\d+)\.(\d+)\.(\d+)', client_version)
+        if matches is None:
+            return False, None
         major, minor, patch = [
-            int(x) for x in re.search(r'//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
+            int(x) for x in matches.groups()
         ]
         if (major, minor, patch) >= (1, 7, 6):
             return True, constants.EthClient.PARITY
     elif client_version.startswith('Geth'):
+        matches = re.search(r'/v(\d+)\.(\d+)\.(\d+)', client_version)
+        if matches is None:
+            return False, None
         major, minor, patch = [
-            int(x) for x in re.search(r'/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
+            int(x) for x in matches.groups()
         ]
         if (major, minor, patch) >= (1, 7, 2):
             return True, constants.EthClient.GETH
