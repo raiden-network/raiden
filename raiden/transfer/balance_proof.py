@@ -1,6 +1,6 @@
 from raiden.utils import typing
+from raiden.utils.signing import pack_data
 from raiden_contracts.constants import MessageTypeId
-from raiden_libs.utils.signing import pack_data
 
 
 def pack_balance_proof(

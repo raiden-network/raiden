@@ -30,6 +30,7 @@ from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.utils import pex, privatekey_to_address, safe_gas_limit, typing
+from raiden.utils.signing import eth_recover
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     GAS_REQUIRED_FOR_CLOSE_CHANNEL,
@@ -42,7 +43,6 @@ from raiden_contracts.constants import (
     ParticipantInfoIndex,
 )
 from raiden_contracts.contract_manager import ContractManager
-from raiden_libs.utils.signing import eth_recover
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 

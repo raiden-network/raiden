@@ -29,7 +29,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import privatekey_to_address, publickey_to_address, random_secret, sha3, typing
-from raiden_libs.utils.signing import eth_sign
+from raiden.utils.signing import eth_sign
 
 EMPTY = object()
 

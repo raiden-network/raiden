@@ -14,13 +14,13 @@ from raiden.exceptions import (
 from raiden.network.proxies import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils import wait_blocks
+from raiden.utils.signing import eth_sign
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
     MessageTypeId,
 )
 from raiden_libs.messages import BalanceProof
-from raiden_libs.utils.signing import eth_sign
 
 
 def test_token_network_deposit_race(
