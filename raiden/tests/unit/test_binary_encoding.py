@@ -1,8 +1,10 @@
 import random
 
 import pytest
+from eth_utils import to_canonical_address
 
 from raiden import constants
+from raiden.exceptions import InvalidSignature
 from raiden.messages import Ping, Processed, decode
 from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.messages import (
@@ -11,6 +13,7 @@ from raiden.tests.utils.messages import (
     make_refund_transfer,
 )
 from raiden.utils import sha3
+from raiden.utils.signing import eth_recover, eth_sign
 
 PRIVKEY, ADDRESS = make_privkey_address()
 
@@ -19,6 +22,26 @@ def test_signature():
     ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
     ping.sign(PRIVKEY)
     assert ping.sender == ADDRESS
+
+    # test that the valid v values are accepted
+    message_data = ping._data_to_sign()
+    # This signature will sometimes end up with v being 0, sometimes 1
+    signature = eth_sign(privkey=PRIVKEY, data=message_data, v=0)
+    assert ADDRESS == to_canonical_address(eth_recover(message_data, signature))
+    # This signature will sometimes end up with v being 27, sometimes 28
+    signature = eth_sign(privkey=PRIVKEY, data=message_data, v=27)
+    assert ADDRESS == to_canonical_address(eth_recover(message_data, signature))
+
+    # test that other v values are rejected
+    signature = signature[:-1] + bytes([29])
+    with pytest.raises(InvalidSignature):
+        eth_recover(message_data, signature)
+    signature = signature[:-1] + bytes([37])
+    with pytest.raises(InvalidSignature):
+        eth_recover(message_data, signature)
+    signature = signature[:-1] + bytes([38])
+    with pytest.raises(InvalidSignature):
+        eth_recover(message_data, signature)
 
 
 def test_encoding():
