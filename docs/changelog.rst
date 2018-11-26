@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`3054` Client will now reject any signatures with ``v`` not in (0, 1, 27, 28)
+
 * :release:`0.17.0 <2018-11-16>`
 * :bug:`3035` Registering a token twice should now return a proper error.
 * :bug:`3013` Encode all integers before saving to the sqlite database
