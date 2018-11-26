@@ -54,7 +54,7 @@ def events_for_unlock_lock(
         token_network_identifier=channel_state.token_network_identifier,
         identifier=transfer_description.payment_identifier,
         amount=transfer_description.amount,
-        target=typing.cast(typing.TargetAddress, transfer_description.target),
+        target=transfer_description.target,
     )
 
     unlock_success = EventUnlockSuccess(
@@ -170,10 +170,7 @@ def try_new_route(
             payment_network_identifier=transfer_description.payment_network_identifier,
             token_network_identifier=transfer_description.token_network_identifier,
             identifier=transfer_description.payment_identifier,
-            target=typing.cast(
-                typing.TargetAddress,
-                transfer_description.target,
-            ),
+            target=transfer_description.target,
             reason=reason,
         )
         events.append(transfer_failed)
@@ -221,14 +218,8 @@ def send_lockedtransfer(
 
     lockedtransfer_event = channel.send_lockedtransfer(
         channel_state,
-        typing.cast(
-            typing.InitiatorAddress,
-            transfer_description.initiator,
-        ),
-        typing.cast(
-            typing.TargetAddress,
-            transfer_description.target,
-        ),
+        transfer_description.initiator,
+        transfer_description.target,
         typing.cast(
             typing.PaymentAmount,
             transfer_description.amount,
@@ -297,10 +288,7 @@ def handle_secretrequest(
             payment_network_identifier=channel_state.payment_network_identifier,
             token_network_identifier=channel_state.token_network_identifier,
             identifier=initiator_state.transfer_description.payment_identifier,
-            target=typing.cast(
-                typing.TargetAddress,
-                initiator_state.transfer_description.target,
-            ),
+            target=initiator_state.transfer_description.target,
             reason='bad secret request message from target',
         )
 
