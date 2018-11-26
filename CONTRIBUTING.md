@@ -128,25 +128,25 @@ To run the tests use pytest
 
 Tests are split in unit tests and integration tests. The first are faster to execute while
 the latter test the whole system but are slower to run. To choose which type of
-tests to run, just use the appropriate folder
+tests to run, just use the appropriate folder.
 
     pytest raiden/tests/<integration|unit>
 
 ### Testing on the CI
 
-By default whenever you make a Pull Request the linter tests, smoketests, unit tests and all the integration tests will run. This is in essence our entire test suite and at the time of writting takes around 50 mins assuming travis has enough free jobs for all the parallel jobs to run without any waiting time.
+By default whenever you make a Pull Request the linter tests, smoketests, unit tests and all the integration tests will run. This is in essence our entire test suite and at the time of writing takes around 50 mins assuming travis has enough free jobs for all the parallel jobs to run without any waiting time.
 
 This can take a lot of time and as such there are various labels you can add in the body of a commit in order to change which tests run on Travis. Following is a breakdown of those labels:
 
 - `[skip ci]`: This will skip all tests and run nothing. A repository administrator must merge the PR if you do this for the last commit.
 - `[ci nightly]`: This will run no tests but start a nightly release build.
 - `[no ci integration]`: This will only run the linter, smoketest and unit tests. It is rather fast.
-- `[ci integration-general]`: This will run linter, smoke, unit and only the integration tests under the `integration/` directory but no other subdirectories. This will include our slowest integration tests at the moment. At the time of writting they take around 38 mins.
-- `[ci integration-transfer]`: This will run linter, smoke, unit and only the integration tests under the `integration/transfer` directory. At the time of writting these take around 20 mins.
-- `[ci integration-long-running]`: This will run linter, smoke, unit and only the integration tests under the `integration/long-running` directory. At the time of writting these are empty so they take up only the time that is required for setting up a job. Around 2 mins.
-- `[ci integration-contracts]`: This will run linter, smoke, unit and only the integration tests under the `integration/contracts` directory. At the time of writting they take around 6 mins.
-- `[ci integration-api]`: This will run linter, smoke, unit and only the integration tests under the `integration/api` directory. At the time of writting they take around 17 mins.
-- `[ci integration-cli]`: This will run linter, smoke, unit and only the integration tests under the `integration/cli` directory. At the time of writting they take around 5 mins.
+- `[ci integration-general]`: This will run linter, smoke, unit and only the integration tests under the `integration/` directory but no other subdirectories. This will include our slowest integration tests at the moment. At the time of writing they take around 38 mins.
+- `[ci integration-transfer]`: This will run linter, smoke, unit and only the integration tests under the `integration/transfer` directory. At the time of writing these take around 20 mins.
+- `[ci integration-long-running]`: This will run linter, smoke, unit and only the integration tests under the `integration/long-running` directory. At the time of writing these are empty so they take up only the time that is required for setting up a job. Around 2 mins.
+- `[ci integration-contracts]`: This will run linter, smoke, unit and only the integration tests under the `integration/contracts` directory. At the time of writing they take around 6 mins.
+- `[ci integration-api]`: This will run linter, smoke, unit and only the integration tests under the `integration/api` directory. At the time of writing they take around 17 mins.
+- `[ci integration-cli]`: This will run linter, smoke, unit and only the integration tests under the `integration/cli` directory. At the time of writing they take around 5 mins.
 
 ### Commiting Rules
 
@@ -200,7 +200,7 @@ The following should be avoided:
             participant1_state.deposit
             + participant2_state.transferred_amount
             - participant1_state.transferred_amount
-        );
+        )
 ```
 
 instead it should be:
@@ -210,7 +210,7 @@ instead it should be:
             participant1_state.deposit +
             participant2_state.transferred_amount -
             participant1_state.transferred_amount
-        );
+        )
 ```
 
 #### Python
@@ -446,7 +446,7 @@ are used.
 
 ### Workflow
 
-When developing a feature, or a bug fix you should always start by writting a
+When developing a feature, or a bug fix you should always start by writing a
 **test** for it, or by modifying existing tests to test for your feature. Once
 you see that test failing you should implement the feature and confirm that all
 your new tests pass.
