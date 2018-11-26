@@ -306,4 +306,4 @@ Frequently Asked Questions
 ==========================
 
 What is MS/PFS?
-  See `Monitoring Service <https://raiden-network-specification.readthedocs.io/en/latest/terminology.html#term-monitoring-service>`_ and `Pathfinding Service <https://raiden-network-specification.readthedocs.io/en/latest/terminology.html#term-pathfinding-service>`_ in the smart contract specification..
+  These are smart contracts to be deployed in the future.  See `Monitoring Service <https://raiden-network-specification.readthedocs.io/en/latest/terminology.html#term-monitoring-service>`_ and `Pathfinding Service <https://raiden-network-specification.readthedocs.io/en/latest/terminology.html#term-pathfinding-service>`_ in the smart contract specification.
