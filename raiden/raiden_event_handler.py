@@ -40,7 +40,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.utils import get_event_with_balance_proof, get_state_change_with_balance_proof
 from raiden.utils import pex
-from raiden_libs.utils.signing import eth_sign
+from raiden.utils.signing import eth_sign
 
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'

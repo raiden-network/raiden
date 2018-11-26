@@ -27,6 +27,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import HashTimeLockState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3, typing
+from raiden.utils.signing import eth_recover, eth_sign
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -42,7 +43,6 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
 )
 from raiden_libs.exceptions import InvalidSignature
-from raiden_libs.utils.signing import eth_recover, eth_sign
 
 __all__ = (
     'Delivered',

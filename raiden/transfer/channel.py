@@ -78,7 +78,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import pex, typing
-from raiden_libs.utils.signing import eth_recover
+from raiden.utils.signing import eth_recover
 
 # This should be changed to `Union[str, MerkleTreeState]`
 MerkletreeOrError = typing.Tuple[bool, typing.Optional[str], typing.Optional[typing.Any]]

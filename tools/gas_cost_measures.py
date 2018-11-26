@@ -10,9 +10,9 @@ from web3 import EthereumTesterProvider, Web3
 from raiden.constants import TRANSACTION_GAS_LIMIT
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.utils import hash_balance_data
+from raiden.utils.signing import eth_sign
 from raiden_contracts.contract_manager import CONTRACTS_SOURCE_DIRS, ContractManager
 from raiden_contracts.utils.utils import get_pending_transfers_tree
-from raiden_libs.utils.signing import eth_sign
 
 pyevm_main.GENESIS_GAS_LIMIT = 6 * 10 ** 6
 
