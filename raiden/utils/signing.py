@@ -34,12 +34,14 @@ def address_from_signature(data: bytes, signature: bytes, hasher: Hasher = sha3)
     """Convert an EC signature into an ethereum address"""
     if not isinstance(signature, bytes) or len(signature) != 65:
         raise InvalidSignature('Invalid signature, must be 65 bytes')
-    # Support Ethereum's EC v value of 27 and EIP 155 values of > 35.
-    if signature[-1] >= 35:
-        network_id = (signature[-1] - 35) // 2
-        signature = signature[:-1] + bytes([signature[-1] - 35 - 2 * network_id])
-    elif signature[-1] >= 27:
+    v = signature[-1]
+    # Support Ethereum's EC v value of 27,28 but also 0,1 to be in
+    # sync with the values accepted by the contracts:
+    # https://github.com/raiden-network/raiden-contracts/blob/aea36ce403605670edc23fe0d14cf422e2b8e69b/raiden_contracts/contracts/lib/ECVerify.sol#L27
+    if v in (27, 28):
         signature = signature[:-1] + bytes([signature[-1] - 27])
+    elif v not in (0, 1):
+        raise InvalidSignature(f'Invalid signature. v value of {v} is illegal.')
 
     try:
         signer_pubkey = PublicKey.from_signature_and_message(signature, data, hasher=hasher)
@@ -50,7 +52,7 @@ def address_from_signature(data: bytes, signature: bytes, hasher: Hasher = sha3)
 
 
 def eth_recover(data: bytes, signature: bytes, hasher: Hasher = eth_sign_sha3) -> Address:
-    """ Recover an address (hex encoded) from a eth_sign data and signature """
+    """ Recover an address (hex encoded) from an eth_sign data and signature """
     return address_from_signature(data=data, signature=signature, hasher=hasher)
 
 
@@ -65,6 +67,7 @@ def sign(
     if isinstance(privkey, bytes):
         privkey = PrivateKey(privkey)
     sig = privkey.sign_recoverable(data, hasher=hasher)
+    assert v in (0, 27), 'Raiden is only signing messages with v in (0, 27)'
     return sig[:-1] + bytes([sig[-1] + v])
 
 
