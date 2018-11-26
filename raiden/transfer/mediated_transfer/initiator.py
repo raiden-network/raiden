@@ -77,8 +77,7 @@ def handle_block(
     if not locked_lock:
         return TransitionResult(initiator_state, list())
 
-    lock_expiration_threshold = typing.cast(
-        typing.BlockNumber,
+    lock_expiration_threshold = typing.BlockNumber(
         locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
     )
     lock_has_expired, _ = channel.is_lock_expired(
@@ -107,7 +106,7 @@ def get_initial_lock_expiration(
         reveal_timeout: typing.BlockTimeout,
 ) -> typing.BlockExpiration:
     """ Returns the expiration used for all hash-time-locks in transfer. """
-    return typing.cast(typing.BlockExpiration, block_number + reveal_timeout * 2)
+    return typing.BlockExpiration(block_number + reveal_timeout * 2)
 
 
 def next_channel_from_routes(
