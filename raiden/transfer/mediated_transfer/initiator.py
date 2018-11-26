@@ -273,7 +273,7 @@ def handle_secretrequest(
         transfer_description = initiator_state.transfer_description
         recipient = transfer_description.target
         revealsecret = SendSecretReveal(
-            recipient=recipient,
+            recipient=typing.Address(recipient),
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=message_identifier,
             secret=transfer_description.secret,
