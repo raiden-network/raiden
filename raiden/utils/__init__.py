@@ -23,7 +23,7 @@ import raiden
 from raiden import constants
 from raiden.exceptions import InvalidAddress
 from raiden.utils import typing
-from raiden_libs.utils.signing import sha3
+from raiden.utils.signing import sha3
 
 
 def random_secret():

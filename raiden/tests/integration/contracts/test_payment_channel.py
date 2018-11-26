@@ -7,9 +7,9 @@ from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils import wait_blocks
 from raiden.utils import privatekey_to_address
+from raiden.utils.signing import eth_sign
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
 from raiden_libs.messages import BalanceProof
-from raiden_libs.utils.signing import eth_sign
 
 
 def test_payment_channel_proxy_basics(

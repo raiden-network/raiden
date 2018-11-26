@@ -56,6 +56,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils import pex
 from raiden.utils.runnable import Runnable
+from raiden.utils.signing import eth_recover, eth_sign
 from raiden.utils.typing import (
     Address,
     AddressHex,
@@ -74,7 +75,6 @@ from raiden.utils.typing import (
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_libs.exceptions import InvalidSignature
 from raiden_libs.network.matrix import GMatrixClient, Room
-from raiden_libs.utils.signing import eth_recover, eth_sign
 
 log = structlog.get_logger(__name__)
 

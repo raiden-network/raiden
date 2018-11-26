@@ -83,6 +83,11 @@ class InvalidSettleTimeout(RaidenError):
     pass
 
 
+class InvalidSignature(RaidenError):
+    """Raised on invalid signature recover/verify"""
+    pass
+
+
 class SamePeerAddress(RaidenError):
     """ Raised when a user tries to create a channel where the address of both
     peers is the same.
