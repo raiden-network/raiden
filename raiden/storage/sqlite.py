@@ -12,13 +12,13 @@ RAIDEN_DB_VERSION = 14
 
 
 class EventRecord(typing.NamedTuple):
-    event_identifier: typing.ChannelID
+    event_identifier: int
     state_change_identifier: typing.BlockNumber
     data: typing.Any
 
 
 class StateChangeRecord(typing.NamedTuple):
-    state_change_identifier: typing.ChannelID
+    state_change_identifier: int
     data: typing.Any
 
 
