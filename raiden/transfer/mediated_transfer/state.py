@@ -558,8 +558,8 @@ class TransferDescriptionWithSecretState(State):
             payment_identifier: typing.PaymentID,
             amount: typing.TokenAmount,
             token_network_identifier: typing.TokenNetworkID,
-            initiator: typing.Address,
-            target: typing.Address,
+            initiator: typing.InitiatorAddress,
+            target: typing.TargetAddress,
             secret: typing.Secret,
     ):
         secrethash = sha3(secret)
