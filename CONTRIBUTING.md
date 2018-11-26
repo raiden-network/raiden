@@ -10,6 +10,7 @@ and what are the requirements for a Pull Request to be opened against Raiden.
 - [Development environment setup](#development-environment-setup)
 - [Development Guidelines](#development-guidelines)
     - [Coding Style](#coding-style)
+    - [Test Suite](#test-suite)
     - [Workflow](#workflow)
 
 ## Contributing
@@ -126,11 +127,15 @@ To run the tests use pytest
 
     pytest raiden
 
-Tests are split in unit tests and integration tests. The first are faster to execute while
+Tests are split in unit tests, fuzz tests (which are currently grouped under
+unit tests) and integration tests. The first are faster to execute while
 the latter test the whole system but are slower to run. To choose which type of
-tests to run, just use the appropriate folder.
+tests to run, just use the appropriate directory.
 
     pytest raiden/tests/<integration|unit>
+
+For a detailed explanation of the different types of tests, see the
+[test suite section](#test-suite) below.
 
 ### Testing on the CI
 
@@ -444,12 +449,56 @@ Code should be documented. For docstrings the [Google
 conventions](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
 are used.
 
+### Test suite
+
+The test suite is divided into unit tests, integration tests and fuzz tests.
+In addition to that, there is the scenario runner tool for acceptance testing.
+The parts of the test suite differ in scope:
+
+#### Fuzz tests
+
+By fuzz testing we mean model-based randomized testing using
+[hypothesis.stateful](https://hypothesis.readthedocs.io/en/latest/stateful.html)
+as our testing tool.
+The fuzz tests have the smallest scope, they are used only for the core state
+machine - nearly all tested operations consist in processing state changes
+through the central transition function (`raiden.node.state_transition`).
+
+#### Unit tests
+
+Many unit tests also test the proper processing of one or several state
+changes, but they may also test just details of the state machine or other
+parts of the code such as the api. The central `RaidenService` class and
+the interaction with the transport layer and the smart contracts are not
+in the scope of the unit tests.
+
+Unit and fuzz tests use a shared set of factories, to be found in the
+`raiden.tests.unit.factories` module, to create any objects necessary for
+testing. Integration tests have their own fixtures module,
+`raiden.tests.integration.fixtures`, for the same purpose.
+
+#### Integration tests
+
+The scope of the integration tests is the whole client. All integration tests
+require instantiating one or more `RaidenService` instances and providing
+the transport layer (e. g. by firing up a local Matrix server), which takes
+considerable time.
+
+As a general rule, a test should only be made an integration test if the
+tested actions touch the transport layer. An exception to this are the tests
+related to the smart contracts/smart contract proxies found in
+`raiden.tests.integration.contracts`.
+
 ### Workflow
 
 When developing a feature, or a bug fix you should always start by writing a
-**test** for it, or by modifying existing tests to test for your feature. Once
-you see that test failing you should implement the feature and confirm that all
-your new tests pass.
+**test** for it, or by modifying existing tests to test for your feature.
+Once you see that test failing you should implement the feature and confirm
+that all your new tests pass.
+
+Your addition to the test suite should call into the innermost level possible
+to test your feature/bugfix. In particular, integration tests should be avoided
+in favor of unit tests whenever possible.
 
 Afterwards you should open a Pull Request from your fork or feature branch
 against master. You will be given feedback from the core developers of raiden
