@@ -11,3 +11,4 @@ flake8-tuple==0.2.13
 isort==4.2.15
 readme-renderer==21.0
 pylint==2.1.1
+mypy==0.641

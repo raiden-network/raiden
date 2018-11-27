@@ -6,6 +6,7 @@ help:
 	@echo "clean-pyc - remove Python file artifacts"
 	@echo "clean-test - remove test and coverage artifacts"
 	@echo "lint - check style with flake8"
+	@echo "mypy - check types with mypy (coverage in progress)"
 	@echo "isort - use isort to fix import order"
 	@echo "test - run tests quickly with the default Python"
 	@echo "test-all - run tests on every Python version with tox"
@@ -45,6 +46,15 @@ lint:
 	isort $(ISORT_PARAMS) --diff --check-only
 	pylint --rcfile .pylint.rc raiden/
 	python setup.py check --restructuredtext --strict
+
+mypy:
+	# We are starting small with a single file here, but mypy should run on the
+	# whole codebase soon.
+	mypy raiden/transfer/mediated_transfer/target.py --ignore-missing-imports > mypy-out.txt || true
+	# Expecting status code 1 from `grep`, which indicates no match.
+	# Again, we are starting small, detecting only 'BlockNumber' related errors,
+	# but all mypy errors should be detected soon.
+	grep BlockNumber mypy-out.txt; [ $$? -eq 1 ]
 
 isort:
 	isort $(ISORT_PARAMS)
