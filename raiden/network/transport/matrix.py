@@ -26,6 +26,7 @@ from matrix_client.user import User
 from raiden.exceptions import (
     InvalidAddress,
     InvalidProtocolMessage,
+    InvalidSignature,
     TransportError,
     UnknownAddress,
     UnknownTokenAddress,
@@ -73,7 +74,6 @@ from raiden.utils.typing import (
     Union,
 )
 from raiden_contracts.constants import ID_TO_NETWORKNAME
-from raiden_libs.exceptions import InvalidSignature
 from raiden_libs.network.matrix import GMatrixClient, Room
 
 log = structlog.get_logger(__name__)
