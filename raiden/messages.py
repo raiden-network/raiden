@@ -248,10 +248,10 @@ class SignedMessage(Message):
         message_signature = self.signature
 
         try:
-            address = to_canonical_address(eth_recover(
+            address = eth_recover(
                 data=data_that_was_signed,
                 signature=message_signature,
-            ))
+            )
         except InvalidSignature:
             address = None
         return address

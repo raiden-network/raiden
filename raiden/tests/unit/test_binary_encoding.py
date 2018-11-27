@@ -1,7 +1,6 @@
 import random
 
 import pytest
-from eth_utils import to_canonical_address
 
 from raiden import constants
 from raiden.exceptions import InvalidSignature
@@ -27,10 +26,10 @@ def test_signature():
     message_data = ping._data_to_sign()
     # This signature will sometimes end up with v being 0, sometimes 1
     signature = eth_sign(privkey=PRIVKEY, data=message_data, v=0)
-    assert ADDRESS == to_canonical_address(eth_recover(message_data, signature))
+    assert ADDRESS == eth_recover(message_data, signature)
     # This signature will sometimes end up with v being 27, sometimes 28
     signature = eth_sign(privkey=PRIVKEY, data=message_data, v=27)
-    assert ADDRESS == to_canonical_address(eth_recover(message_data, signature))
+    assert ADDRESS == eth_recover(message_data, signature)
 
     # test that other v values are rejected
     signature = signature[:-1] + bytes([29])

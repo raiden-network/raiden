@@ -1,5 +1,5 @@
 from coincurve import PrivateKey, PublicKey
-from eth_utils import decode_hex, keccak, remove_0x_prefix, to_bytes, to_checksum_address
+from eth_utils import decode_hex, keccak, remove_0x_prefix, to_bytes
 from web3.utils.abi import map_abi_data
 from web3.utils.encoding import hex_encode_abi_type
 from web3.utils.normalizers import abi_address_to_hex
@@ -27,7 +27,7 @@ def public_key_to_address(public_key: Union[PublicKey, bytes]) -> Address:
     if isinstance(public_key, PublicKey):
         public_key = public_key.format(compressed=False)
     assert isinstance(public_key, bytes)
-    return to_checksum_address(sha3(public_key[1:])[-20:])
+    return sha3(public_key[1:])[-20:]
 
 
 def address_from_signature(data: bytes, signature: bytes, hasher: Hasher = sha3) -> Address:

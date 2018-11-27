@@ -1239,10 +1239,10 @@ class MatrixTransport(Runnable):
     @staticmethod
     def _recover(data: bytes, signature: bytes) -> Address:
         """ Use eth_sign compatible hasher to recover address from signed data """
-        return to_canonical_address(eth_recover(
+        return eth_recover(
             data=data,
             signature=signature,
-        ))
+        )
 
     @cached(_addresses_cache, key=lambda _, user: (user.user_id, user.displayname))
     def _validate_userid_signature(self, user: User) -> Optional[Address]:

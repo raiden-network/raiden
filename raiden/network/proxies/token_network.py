@@ -755,10 +755,10 @@ class TokenNetwork:
         )
 
         try:
-            signer_address = to_canonical_address(eth_recover(
+            signer_address = eth_recover(
                 data=data_that_was_signed,
                 signature=closing_signature,
-            ))
+            )
 
             # InvalidSignature is raised by eth_utils.eth_recover if signature
             # is not bytes or has the incorrect length
