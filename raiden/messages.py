@@ -12,7 +12,7 @@ from eth_utils import (
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
-from raiden.exceptions import InvalidProtocolMessage
+from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.events import SendDirectTransfer, SendProcessed
@@ -42,7 +42,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
 )
-from raiden_libs.exceptions import InvalidSignature
 
 __all__ = (
     'Delivered',
