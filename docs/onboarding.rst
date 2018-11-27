@@ -142,11 +142,11 @@ Architecture Overview
     Raiden Architecture Overview
 
 
-At the core of the Raiden architecture lies a state machine. The state machine gets fed state changes from various sources such as:
+At the core of the Raiden architecture lies a state machine. The state machine gets fed state changes from various sources.
 
-- User commands directly from the user through the REST API
-- Trigerred via blockchain via polling for blockchain events
-- Triggered by receiving an offchain message
+- ``Action*`` state changes are caused by user commands directly from the user through the REST API.
+- ``ContractReceive*`` state changes are caused by blockchain events fetched via polling.
+- ``Receive*`` state changes are caused by receiving an offchain message.
 
 All these state changes are processed along with the current state and produce a new state along with something that we call the "Raiden Internal Events" which is essentially I/O since the state machine can't do I/O on its own.
 
