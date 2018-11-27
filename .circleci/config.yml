@@ -211,6 +211,29 @@ jobs:
         name: lint test
         command: make lint
 
+  mypy:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
+    executor:
+      name: base-executor
+      py-version: << parameters.py-version >>
+
+    steps:
+    - attach_workspace:
+        at: "~"
+    - config-path
+    - run:
+        name: install requirements for mypy check
+        command: pip install -r requirements-lint.txt
+    - run:
+        name: ""
+        command: git rev-parse HEAD
+    - run:
+        name: mypy test
+        command: make mypy
+
   smoketest:
     parameters:
       <<: *parameter-templates
@@ -420,6 +443,17 @@ workflows:
           filters:
             <<: *filter-version-regex
 
+      - mypy:
+          name: mypy-3.6
+          py-version: "3.6"
+          requires:
+            - prepare-python-3.6
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+$/
+            branches:
+              only: /.*/
+
       - smoketest:
           name: smoketest-udp-3.6
           py-version: "3.6"
@@ -454,10 +488,12 @@ workflows:
       - finalize:
           requires:
             - lint-3.6
+            - mypy-3.6
             - test-unit-3.6
             - test-integration-udp-3.6
             - test-integration-matrix-3.6
             - lint-3.7
+            - mypy-3.7
             - test-unit-3.7
             - test-integration-udp-3.7
             - test-integration-matrix-3.7
@@ -499,6 +535,17 @@ workflows:
             - prepare-python-3.7
           filters:
             <<: *filter-version-regex
+
+      - mypy:
+          name: mypy-3.7
+          py-version: "3.7"
+          requires:
+            - prepare-python-3.7
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+$/
+            branches:
+              only: /.*/
 
       - smoketest:
           name: smoketest-udp-3.7
@@ -617,6 +664,12 @@ workflows:
           requires:
             - prepare-python-3.6
 
+      - mypy:
+          name: mypy-3.6
+          py-version: "3.6"
+          requires:
+          - prepare-python-3.6
+
       - smoketest:
           name: smoketest-udp-3.6
           py-version: "3.6"
@@ -645,10 +698,12 @@ workflows:
       - finalize:
           requires:
             - lint-3.6
+            - mypy-3.7
             - test-unit-3.6
             - test-integration-udp-3.6
             - test-integration-matrix-3.6
             - lint-3.7
+            - mypy-3.7
             - test-unit-3.7
             - test-integration-udp-3.7
             - test-integration-matrix-3.7
@@ -681,6 +736,12 @@ workflows:
           py-version: "3.7"
           requires:
             - prepare-python-3.7
+
+      - mypy:
+          name: mypy-3.7
+          py-version: "3.7"
+          requires:
+          - prepare-python-3.7
 
       - smoketest:
           name: smoketest-udp-3.7
