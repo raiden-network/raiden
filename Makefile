@@ -50,7 +50,7 @@ lint:
 mypy:
 	# We are starting small with a single file here, but mypy should run on the
 	# whole codebase soon.
-	mypy raiden/transfer/mediated_transfer/target.py --ignore-missing-imports > mypy-out.txt || true
+	mypy raiden/transfer/mediated_transfer/target.py --ignore-missing-imports | grep error > mypy-out.txt || true
 	# Expecting status code 1 from `grep`, which indicates no match.
 	# Again, we are starting small, detecting only 'BlockNumber' related errors,
 	# but all mypy errors should be detected soon.
