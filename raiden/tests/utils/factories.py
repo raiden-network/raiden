@@ -109,7 +109,7 @@ def make_privatekey(privatekey_bin: bytes = EMPTY) -> PrivateKey:
 def make_privatekey_address(
         privatekey: PrivateKey = EMPTY,
 ) -> typing.Tuple[PrivateKey, typing.Address]:
-    privatekey = if_empty(privatekey, make_privatekey(privatekey_bin=None))
+    privatekey = if_empty(privatekey, make_privatekey())
     publickey = privatekey.public_key.format(compressed=False)
     address = publickey_to_address(publickey)
     return (privatekey, address)
@@ -585,7 +585,7 @@ make_endstate = make_channel_endstate
 make_privkey_address = make_privatekey_address
 
 # CONSTANTS
-# In this module constans are in the bottom because we need some of the
+# In this module constants are in the bottom because we need some of the
 # factories.
 # Prefixing with UNIT_ to differ from the default globals.
 UNIT_SETTLE_TIMEOUT = 50
