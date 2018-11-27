@@ -2,6 +2,7 @@
 import random
 from collections import defaultdict
 from functools import total_ordering
+from typing import Optional
 
 import networkx
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
@@ -325,7 +326,9 @@ class ChainState(State):
 
         restored = cls(
             pseudo_random_generator=pseudo_random_generator,
-            block_number=int(data['block_number']),
+            block_number=typing.BlockNumber(
+                typing.T_BlockNumber(data['block_number']),
+            ),
             our_address=to_canonical_address(data['our_address']),
             chain_id=data['chain_id'],
         )
@@ -1192,8 +1195,8 @@ class TransactionExecutionStatus(State):
 
     def __init__(
             self,
-            started_block_number: typing.BlockNumber = None,
-            finished_block_number: typing.BlockNumber = None,
+            started_block_number: Optional[typing.BlockNumber] = None,
+            finished_block_number: Optional[typing.BlockNumber] = None,
             result: str = None,
     ):
 
@@ -1255,9 +1258,15 @@ class TransactionExecutionStatus(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionExecutionStatus':
         started_optional = data.get('started_block_number')
-        started_block_number = int(started_optional) if started_optional else None
+        started_block_number = (
+            typing.BlockNumber(int(started_optional))
+            if started_optional else None
+        )
         finished_optional = data.get('finished_block_number')
-        finished_block_number = int(finished_optional) if finished_optional else None
+        finished_block_number = (
+            typing.BlockNumber(int(finished_optional))
+            if finished_optional else None
+        )
 
         restored = cls(
             started_block_number=started_block_number,
@@ -1676,7 +1685,7 @@ class TransactionChannelNewBalance(State):
         restored = cls(
             participant_address=to_canonical_address(data['participant_address']),
             contract_balance=int(data['contract_balance']),
-            deposit_block_number=int(data['deposit_block_number']),
+            deposit_block_number=typing.BlockNumber(int(data['deposit_block_number'])),
         )
 
         return restored
@@ -1725,7 +1734,7 @@ class TransactionOrder(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionOrder':
         restored = cls(
-            block_number=int(data['block_number']),
+            block_number=typing.BlockNumber(int(data['block_number'])),
             transaction=data['transaction'],
         )
 
