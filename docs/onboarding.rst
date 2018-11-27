@@ -150,11 +150,11 @@ At the core of the Raiden architecture lies a state machine. The state machine g
 
 All these state changes are processed along with the current state and produce a new state along with something that we call the "Raiden Internal Events" which is essentially I/O since the state machine can't do I/O on its own.
 
-Processing those raiden internal events performs all kinds of I/O such as:
+Processing those raiden internal events performs all kinds of I/O.
 
-- Sending offchain messages
-- Sending onchain transactions
-- Logging a debug message
+- ``Send*`` events send offchain messages.
+- ``ContractSend*`` events send onchain transactions.
+- ``Event*`` events cause node events (for example, logging a debug message).
 
 The State Machine
 *****************
