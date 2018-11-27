@@ -13,7 +13,7 @@ RAIDEN_DB_VERSION = 15
 
 class EventRecord(typing.NamedTuple):
     event_identifier: int
-    state_change_identifier: typing.BlockNumber
+    state_change_identifier: int
     data: typing.Any
 
 

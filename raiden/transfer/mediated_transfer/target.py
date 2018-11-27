@@ -253,7 +253,9 @@ def handle_block(
         end_state=channel_state.our_state,
         lock=lock,
         block_number=block_number,
-        lock_expiration_threshold=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+        lock_expiration_threshold=typing.BlockNumber(
+            lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+        ),
     )
 
     if lock_has_expired and target_state.state != 'expired':

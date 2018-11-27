@@ -544,7 +544,9 @@ def is_valid_lock_expired(
             end_state=receiver_state,
             lock=lock,
             block_number=block_number,
-            lock_expiration_threshold=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+            lock_expiration_threshold=typing.BlockNumber(
+                lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+            ),
         )
 
         if not has_expired:
