@@ -2,7 +2,7 @@
 import heapq
 import random
 
-from eth_utils import encode_hex, to_canonical_address
+from eth_utils import encode_hex
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
@@ -261,10 +261,10 @@ def is_valid_signature(
     )
 
     try:
-        signer_address = to_canonical_address(eth_recover(
+        signer_address = eth_recover(
             data=data_that_was_signed,
             signature=balance_proof.signature,
-        ))
+        )
         # InvalidSignature is raised by eth_utils.eth_recover if signature
         # is not bytes or has the incorrect length
         #
