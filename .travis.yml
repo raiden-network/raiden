@@ -1,7 +1,6 @@
 conditions: v1
 stages:
   - name: lint
-  - name: mypy
   - name: test
   - name: integration
     if: (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND NOT commit_message =~ /\[ci nightly\]/ AND tag IS NOT present
@@ -69,12 +68,6 @@ jobs:
       script:
         - git rev-parse HEAD
         - make lint
-
-    - stage: mypy
-      sudo: false
-      install: pip install -r requirements-lint.txt
-      script:
-        - git rev-parse HEAD
         - make mypy
 
     - stage: test
