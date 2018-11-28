@@ -44,6 +44,7 @@ from raiden.transfer.state_change import (
     ActionLeaveAllNetworks,
     ActionNewTokenNetwork,
     ActionTransferDirect,
+    ActionUpdateTransportTimestamp,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -744,6 +745,14 @@ def handle_receive_unlock(
     return subdispatch_to_paymenttask(chain_state, state_change, secrethash)
 
 
+def handle_update_transport_timestamp(
+        chain_state: ChainState,
+        state_change: StateChange,
+) -> TransitionResult:
+    chain_state.last_transport_timestamp = state_change.timestamp
+    return TransitionResult(chain_state, list())
+
+
 def handle_state_change(chain_state: ChainState, state_change: StateChange) -> TransitionResult:
     if type(state_change) == Block:
         iteration = handle_block(
@@ -791,6 +800,11 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
         )
     elif type(state_change) == ActionInitTarget:
         iteration = handle_init_target(
+            chain_state,
+            state_change,
+        )
+    elif type(state_change) == ActionUpdateTransportTimestamp:
+        iteration = handle_update_transport_timestamp(
             chain_state,
             state_change,
         )
