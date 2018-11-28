@@ -324,3 +324,6 @@ Frequently Asked Questions
 
 What is MS/PFS?
   These are smart contracts to be deployed in the future.  See `Monitoring Service <https://raiden-network-specification.readthedocs.io/en/latest/terminology.html#term-monitoring-service>`_ and `Pathfinding Service <https://raiden-network-specification.readthedocs.io/en/latest/terminology.html#term-pathfinding-service>`_ in the smart contract specification.
+
+How are messages encoded?
+  The `messages specification <https://raiden-network-specification.readthedocs.io/en/latest/messaging.html>`_ should describe the message formats.  On the implementation side, the `messages file <https://github.com/raiden-network/raiden/blob/4979c27f5d031dd44963f7f7a4b10a7d20cee712/raiden/messages.py>`_ contains the details.  See ``encode()`` method of ``Message`` class, and ``packed()`` method of each subclass of ``Message``.
