@@ -379,7 +379,11 @@ class RaidenService(Runnable):
         # node with the blockchain, including the channel's state (if the channel
         # is closed on-chain new messages must be rejected, which will not be the
         # case if the node is not synchronized)
-        self.transport.start(self, self.message_handler)
+        self.transport.start(
+            self,
+            self.message_handler,
+            chain_state.last_transport_timestamp,
+        )
 
         # First run has been called above!
         self.alarm.start()

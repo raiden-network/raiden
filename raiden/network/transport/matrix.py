@@ -337,12 +337,16 @@ class MatrixTransport(Runnable):
         self,
         raiden_service: RaidenService,
         message_handler: MessageHandler,
+        fetch_since: str,
     ):
         if not self._stop_event.ready():
             raise RuntimeError(f'{self!r} already started')
         self._stop_event.clear()
         self._raiden_service = raiden_service
         self._message_handler = message_handler
+
+        # Initialize the point from which the client will sync messages
+        self._client.sync_token = fetch_since
 
         self._login_or_register()
         self.log = log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
