@@ -8,15 +8,18 @@ env:
   global:
     - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.23/solc-static-linux'
     - SOLC_VERSION='v0.4.23'
+    - CODECOV_TOKEN="2ca8f46a-aa46-4ca9-bd0f-8ee4195af7ad"
 
 before_install:
   - mkdir -p $HOME/.bin
   - export PATH=$PATH:$HOME/.bin
   - ./.travis/download_solc.sh
+  - pip install codecov
 
 install: pip install -r requirements-dev.txt
 
 script:
   - make lint
   - make typecheck
-  - make test
+  - pytest -v --cov=./
+  - codecov
