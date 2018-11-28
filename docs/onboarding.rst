@@ -240,11 +240,28 @@ As for sending messages to a partner in a channel the `send_async() <https://git
 Messages acknowledgment and processing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-All the messages seen in the :ref:`offchain messages <offchain-messages>` section need to be (1) seen and (2) succesfully processed by the partner node. To facilitate synchronization of that fact the transport layer makes sure that all messages but ``Delivered`` itself cause a ``Delivered`` to be sent.
+All the messages seen in the :ref:`offchain messages <offchain-messages>` section need to be (1) seen and (2) succesfully processed by the partner node. To facilitate synchronization of that fact the transport layer makes sure that all messages except for ``Delivered`` itself cause a ``Delivered`` to be sent.
 
-The `Delivered <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L380>`_  message is sent right when the transport receives a message and before processing. It just tells the sender that the message was received and will be processed.
+The `Delivered <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L380>`_  message is `sent <https://github.com/raiden-network/raiden/blob/9790bfd76de3f63a8c2e8e2a99eeabdbcd6df867/raiden/network/transport/matrix.py#L910>`_ right when the transport receives a message and before processing. It just tells the sender that the message was received and will be processed.
 
-For some messages (aka the messages in the “global” queue), it’s enough for them to be removed/cleaned from the queue, triggering the transport to stop retrying sending them. For the ones in the specific queues, they’ll wait for the `Processed <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L328>`_ message, informing not only that the message was delivered, but also that the processing of the respective state change occurred successfully, or else keep retrying.
+The `Processed <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L328>`_ message is sent for the following cases (essentially messages containing a BP):
+
+- Succesfully handling a valid unlock (aka Secret) message at both target and mediator.
+- Receiving a direct transfer
+- Handling a valid refund transfer message
+- Handling a valid lock expired message
+- Handling a valid locked transfer message
+
+
+On the sender's side for the messages in the global queue:
+
+- Secret Request
+- Secret Reveal
+- Processed
+
+Receiving a ``Delivered`` is enough to `remove <https://github.com/raiden-network/raiden/blob/9790bfd76de3f63a8c2e8e2a99eeabdbcd6df867/raiden/transfer/node.py#L531>`_ them from the queue triggering the transport to stop retrying sending them.
+
+On the sender's side for the specific queues they’ll wait for the `Processed <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L328>`_ message, signaling not only that the message was delivered, but also that the processing of the respective state change occurred successfully, or else keep retrying. If a ``Processed`` is received the the specific queue is `cleared <https://github.com/raiden-network/raiden/blob/9790bfd76de3f63a8c2e8e2a99eeabdbcd6df867/raiden/transfer/node.py#L735>`_.
 
 So, for a specific queue message, e.g. a ``LockedTransfer`` in a specific channel:
 

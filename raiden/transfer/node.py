@@ -527,7 +527,6 @@ def handle_contract_receive_channel_closed(
 
 def handle_delivered(chain_state: ChainState, state_change: ReceiveDelivered) -> TransitionResult:
     """ Check if the "Delivered" message exists in the global queue and delete if found."""
-    # Find the QueueIdentifier with channel_identifier == CHANNEL_IDENTIFIER_GLOBAL_QUEUE
     queueid = QueueIdentifier(state_change.sender, CHANNEL_IDENTIFIER_GLOBAL_QUEUE)
     inplace_delete_message_queue(chain_state, state_change, queueid)
     return TransitionResult(chain_state, [])
