@@ -54,7 +54,10 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNREACHABLE,
     QueueIdsToQueues,
 )
-from raiden.transfer.state_change import ActionChangeNodeNetworkState
+from raiden.transfer.state_change import (
+    ActionChangeNodeNetworkState,
+    ActionUpdateTransportTimestamp,
+)
 from raiden.utils import pex
 from raiden.utils.runnable import Runnable
 from raiden.utils.signing import eth_recover, eth_sign
@@ -324,6 +327,8 @@ class MatrixTransport(Runnable):
         self._client.add_invite_listener(self._handle_invite)
         self._client.add_presence_listener(self._handle_presence_change)
 
+        self._client.set_post_sync_hook(self._post_sync)
+
         self._messages_cache = TTLCache(32, 4)
         self._health_lock = Semaphore()
         self._getroom_lock = Semaphore()
@@ -402,6 +407,10 @@ class MatrixTransport(Runnable):
         del self.log
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
+
+    def _post_sync(self, next_batch):
+        state_change = ActionUpdateTransportTimestamp(next_batch)
+        self._raiden_service.handle_state_change(state_change)
 
     def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:
         """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
