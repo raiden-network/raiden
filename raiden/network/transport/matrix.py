@@ -519,7 +519,7 @@ class MatrixTransport(Runnable):
 
             try:
                 self._client.sync_token = None
-                self._client.login(username, password)
+                self._client.login(username, password, sync=False)
                 self.log.debug(
                     'Login',
                     homeserver=self._server_name,
