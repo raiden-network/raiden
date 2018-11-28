@@ -73,6 +73,40 @@ class Block(StateChange):
         )
 
 
+class ActionUpdateTransportTimestamp(StateChange):
+    """ Holds the last "timestamp" at which we synced
+    with the transport. Can be used later to filter
+    the messages which have not been processed.
+    """
+    def __init__(self, timestamp: str):
+        self.timestamp = timestamp
+
+    def __repr__(self):
+        return '<ActionUpdateTransportTimestamp timestamp:{}>'.format(
+            self.timestamp,
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionUpdateTransportTimestamp) and
+            self.timestamp == other.timestamp
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'timestamp': str(self.timestamp),
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ActionUpdateTransportTimestamp':
+        return cls(
+            timestamp=data['timestamp'],
+        )
+
+
 class ActionCancelPayment(StateChange):
     """ The user requests the transfer to be cancelled.
     This state change can fail, it depends on the node's role and the current
