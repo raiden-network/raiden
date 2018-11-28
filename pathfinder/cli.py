@@ -107,7 +107,7 @@ def main(
             log.info(f'Following {len(token_network_addresses)} network(s):')
         else:
             log.info('Following all networks.')
-    except ConnectionError as error:
+    except ConnectionError:
         log.error(
             'Can not connect to the Ethereum client. Please check that it is running and that '
             'your settings are correct.'
