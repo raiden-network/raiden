@@ -89,7 +89,7 @@ Navigate to the directory::
 
     cd raiden
 
-It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`_ for Raiden and install all python dependencies there.
+It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`_ for Raiden (requires python3.6) and install all python dependencies there.
 
 After you have done that you can proceed to install the dependencies::
 
