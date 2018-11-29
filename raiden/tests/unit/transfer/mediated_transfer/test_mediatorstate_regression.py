@@ -7,8 +7,10 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
+    HOP1_KEY,
     HOP2,
     HOP2_KEY,
+    HOP3,
     HOP3_KEY,
     HOP4,
     HOP4_KEY,
@@ -23,6 +25,7 @@ from raiden.tests.utils.factories import (
 from raiden.transfer import channel
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.events import (
+    EventUnlockClaimFailed,
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
@@ -429,3 +432,149 @@ def test_regression_mediator_task_no_routes():
     msg = 'The only used channel had the lock cleared, the task must be cleared'
     assert receive_expired_iteration.new_state is None, msg
     assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
+
+
+def test_regression_mediator_not_update_payer_state_twice():
+    """ Regression Test for https://github.com/raiden-network/raiden/issues/3086
+    Make sure that after a lock expired the mediator doesn't update the pair
+    twice causing EventUnlockClaimFailed to be generated at every block.
+    """
+    amount = 10
+    block_number = 5
+    initiator = HOP1
+    initiator_key = HOP1_KEY
+    mediator_address = HOP2
+    target = HOP3
+    expiration = 30
+    pseudo_random_generator = random.Random()
+
+    payer_channel = factories.make_channel(
+        partner_balance=amount,
+        our_balance=amount,
+        # partner_address=UNIT_TRANSFER_SENDER,
+        our_address=mediator_address,
+        partner_address=initiator,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    payer_route = factories.route_from_channel(payer_channel)
+
+    payer_transfer = factories.make_signed_transfer_for(
+        channel_state=payer_channel,
+        amount=amount,
+        initiator=initiator,
+        target=target,
+        expiration=expiration,
+        secret=UNIT_SECRET,
+        sender=initiator,
+        pkey=initiator_key,
+    )
+
+    payee_channel = factories.make_channel(
+        our_balance=amount,
+        our_address=mediator_address,
+        partner_address=target,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    available_routes = [factories.route_from_channel(payee_channel)]
+    channel_map = {
+        payee_channel.identifier: payee_channel,
+        payer_channel.identifier: payer_channel,
+    }
+
+    init_state_change = ActionInitMediator(
+        available_routes,
+        payer_route,
+        payer_transfer,
+    )
+    initial_state = None
+    iteration = mediator.state_transition(
+        initial_state,
+        init_state_change,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert iteration.new_state is not None
+    current_state = iteration.new_state
+    send_transfer = must_contain_entry(iteration.events, SendLockedTransfer, {})
+    assert send_transfer
+    transfer = send_transfer.transfer
+    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+
+    receive_secret = ReceiveSecretReveal(
+        UNIT_SECRET,
+        payee_channel.partner_state.address,
+    )
+    iteration = mediator.state_transition(
+        current_state,
+        receive_secret,
+        channel_map,
+        pseudo_random_generator,
+        transfer.lock.expiration - 2,
+    )
+    current_state = iteration.new_state
+    secrethash = payer_transfer.lock.secrethash
+    assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
+
+    # # Playing with also receiving a lock expired message from the initiator
+    # send_lock_expired, _ = channel.create_sendexpiredlock(
+    #     sender_end_state=payer_channel.partner_state,
+    #     locked_lock=transfer.lock,
+    #     pseudo_random_generator=pseudo_random_generator,
+    #     chain_id=payer_channel.chain_id,
+    #     token_network_identifier=payer_channel.token_network_identifier,
+    #     channel_identifier=payer_channel.identifier,
+    #     recipient=payer_channel.our_state.address,
+    # )
+    # assert send_lock_expired
+    # lock_expired_message = message_from_sendevent(send_lock_expired, HOP1)
+    # lock_expired_message.sign(initiator_key)
+    # balance_proof = balanceproof_from_envelope(lock_expired_message)
+
+    # message_identifier = message_identifier_from_prng(pseudo_random_generator)
+    # iteration = mediator.state_transition(
+    #     current_state,
+    #     ReceiveLockExpired(
+    #         balance_proof=balance_proof,
+    #         secrethash=payer_transfer.lock.secrethash,
+    #         message_identifier=message_identifier,
+    #     ),
+    #     channel_map,
+    #     pseudo_random_generator,
+    #     block_expiration_number,
+    # )
+    # current_state = iteration.new_state
+
+    block = Block(
+        block_number=block_expiration_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    iteration = mediator.state_transition(
+        current_state,
+        block,
+        channel_map,
+        pseudo_random_generator,
+        block_expiration_number,
+    )
+
+    msg = 'At the expiration block we should get an EventUnlockClaimFailed'
+    assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {}), msg
+
+    current_state = iteration.new_state
+    block = Block(
+        block_number=block_expiration_number + 1,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    # import pdb
+    # pdb.set_trace()
+    iteration = mediator.state_transition(
+        current_state,
+        block,
+        channel_map,
+        pseudo_random_generator,
+        block_expiration_number,
+    )
+    msg = 'At the next block we should not get the same event'
+    assert not must_contain_entry(iteration.events, EventUnlockClaimFailed, {}), msg
