@@ -89,14 +89,16 @@ def _redact_secret(data):
 
 
 def initiator_init(
-        raiden,
-        transfer_identifier,
-        transfer_amount,
-        transfer_secret,
-        token_network_identifier,
-        target_address,
+        raiden: 'RaidenService',
+        transfer_identifier: typing.PaymentID,
+        transfer_amount: typing.PaymentAmount,
+        transfer_secret: typing.Secret,
+        token_network_identifier: typing.TokenNetworkID,
+        target_address: typing.TargetAddress,
 ):
 
+    msg = 'Should never end up initiating transfer with Secret 0x0'
+    assert transfer_secret != constants.EMPTY_HASH, msg
     transfer_state = TransferDescriptionWithSecretState(
         raiden.default_registry.address,
         transfer_identifier,
@@ -859,12 +861,12 @@ class RaidenService(Runnable):
         self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
         init_initiator_statechange = initiator_init(
-            self,
-            identifier,
-            amount,
-            secret,
-            token_network_identifier,
-            target,
+            raiden=self,
+            transfer_identifier=identifier,
+            transfer_amount=amount,
+            transfer_secret=secret,
+            token_network_identifier=token_network_identifier,
+            target_address=target,
         )
 
         # Dispatch the state change even if there are no routes to create the

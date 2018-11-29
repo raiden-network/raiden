@@ -27,7 +27,12 @@ from raiden.utils.signing import sha3
 
 
 def random_secret():
-    return os.urandom(32)
+    """ Return a random 32 byte secret except the 0 secret since it's not accepted in the contracts
+    """
+    while True:
+        secret = os.urandom(32)
+        if secret != constants.EMPTY_HASH:
+            return secret
 
 
 def ishash(data: bytes) -> bool:
