@@ -282,12 +282,15 @@ jobs:
             $BLOCKCHAIN_TYPE_ARG \
             $TRANSPORT_OPTION_ARG \
             << parameters.additional-args >>
+
     - save_cache:
         key: ethash-{{ checksum "~/.local/bin/geth" }}
         paths:
         - "~/.ethash"
+
     - store_test_results:
         path: test-reports
+
     - store_artifacts:
         path: test-reports
 
@@ -473,6 +476,7 @@ workflows:
             - smoketest-udp-3.6
           filters:
             <<: *filter-version-regex
+
 
       - test:
           name: test-integration-matrix-3.6
