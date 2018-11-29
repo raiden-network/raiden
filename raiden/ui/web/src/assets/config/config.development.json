@@ -1,7 +1,0 @@
-{
-  "raiden": "/api/1",
-  "reveal_timeout": 10,
-  "settle_timeout": 500,
-  "web3": "/web3",
-  "environment_type": "development"
-}
