@@ -125,6 +125,7 @@ jobs:
       env:
         - TEST='raiden/tests/integration/long_running'
         - TRANSPORT_OPTIONS='--transport=udp'
+        - RUN_COVERAGE=no_coverage
 
     - stage: integration
       <<: *job-template-integration
@@ -133,6 +134,7 @@ jobs:
         - TEST='raiden/tests/integration/long_running'
         - TRANSPORT_OPTIONS='--transport=matrix --local-matrix=${HOME}/.bin/run_synapse.sh'
         - RUN_SYNAPSE=1
+        - RUN_COVERAGE=no_coverage
 
     - stage: integration
       <<: *job-template-integration
