@@ -67,10 +67,6 @@ If you want to use the Web-UI you additionally need node.js::
 
     $ brew install node
 
-Afterwards you can compile the Web-UI::
-
-    $ python setup.py compile_webui
-
 The installation should now be complete. To ensure your setup is working correctly you can use the
 :code:`smoketest` command::
 

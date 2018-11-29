@@ -2,7 +2,6 @@ import errno
 import json
 import logging
 import socket
-import sys
 from http import HTTPStatus
 from typing import Dict
 
@@ -15,6 +14,7 @@ from flask_cors import CORS
 from flask_restful import Api, abort
 from gevent.pywsgi import WSGIServer
 from hexbytes import HexBytes
+from raiden_webui import RAIDEN_WEBUI_PATH
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 
@@ -78,7 +78,6 @@ from raiden.transfer.events import (
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, NettingChannelState
 from raiden.utils import (
     create_default_identifier,
-    is_frozen,
     optional_address_to_string,
     pex,
     split_endpoint,
@@ -360,10 +359,7 @@ class APIServer(Runnable):
         self.wsgiserver = None
         self.flask_app.register_blueprint(self.blueprint)
 
-        self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
-        if is_frozen():
-            # Inside frozen pyinstaller image
-            self.flask_app.config['WEBUI_PATH'] = '{}/raiden/ui/web/dist/'.format(sys.prefix)
+        self.flask_app.config['WEBUI_PATH'] = RAIDEN_WEBUI_PATH
 
         self.flask_app.register_error_handler(HTTPStatus.NOT_FOUND, endpoint_not_found)
         self.flask_app.register_error_handler(Exception, self.unhandled_exception)

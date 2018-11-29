@@ -4,8 +4,6 @@ import sys
 
 import pkg_resources
 
-WEBUI_BASE_PATH = 'raiden/ui/web/dist'
-
 datas = []
 binaries = []
 
@@ -27,12 +25,6 @@ while required_packages:
         datas.extend(copy_metadata(req_name))
     except AssertionError:
         pass
-
-# Include webui while keeping dir structure
-for dirpath, _, filenames in os.walk(WEBUI_BASE_PATH):
-    for filename in filenames:
-        datas.append((os.path.join(dirpath, filename), dirpath))
-
 
 if sys.platform == 'darwin':
     # Include newer (Homebrew) OpenSSL libs if available

@@ -95,7 +95,6 @@ bundle-docker:
 	docker rm builder
 
 bundle:
-	python setup.py compile_webui
 	pyinstaller --noconfirm --clean raiden.spec
 
 release: clean
