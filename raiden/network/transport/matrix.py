@@ -56,7 +56,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
-    ActionUpdateTransportTimestamp,
+    ActionUpdateTransportSyncToken,
 )
 from raiden.utils import pex
 from raiden.utils.runnable import Runnable
@@ -337,7 +337,7 @@ class MatrixTransport(Runnable):
         self,
         raiden_service: RaidenService,
         message_handler: MessageHandler,
-        fetch_since: str,
+        fetch_since_token: str,
     ):
         if not self._stop_event.ready():
             raise RuntimeError(f'{self!r} already started')
@@ -346,7 +346,7 @@ class MatrixTransport(Runnable):
         self._message_handler = message_handler
 
         # Initialize the point from which the client will sync messages
-        self._client.sync_token = fetch_since
+        self._client.sync_token = fetch_since_token
 
         self._login_or_register()
         self.log = log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
@@ -413,7 +413,12 @@ class MatrixTransport(Runnable):
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
 
     def _post_sync(self, next_batch):
-        state_change = ActionUpdateTransportTimestamp(next_batch)
+        """ This function gets called after every "sync" performed.
+        This is needed to make sure we store the last sync token
+        so that the token is used as a starting point from which
+        messages are fetched from the matrix server.
+        """
+        state_change = ActionUpdateTransportSyncToken(next_batch)
         self._raiden_service.handle_state_change(state_change)
 
     def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:

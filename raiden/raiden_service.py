@@ -380,9 +380,9 @@ class RaidenService(Runnable):
         # is closed on-chain new messages must be rejected, which will not be the
         # case if the node is not synchronized)
         self.transport.start(
-            self,
-            self.message_handler,
-            chain_state.last_transport_timestamp,
+            raiden_service=self,
+            message_handler=self.message_handler,
+            fetch_since_token=chain_state.last_transport_synctoken,
         )
 
         # First run has been called above!
