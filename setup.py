@@ -22,74 +22,6 @@ class PyTest(TestCommand):
         raise SystemExit(errno)
 
 
-class CompileWebUI(Command):
-    description = 'use npm to compile webui code to raiden/ui/web/dist'
-    user_options = [
-        ('dev', 'D', 'use development preset, instead of production (default)'),
-    ]
-
-    def initialize_options(self):
-        self.dev = None
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        npm = find_executable('npm')
-        if not npm:
-            if os.environ.get('RAIDEN_NPM_MISSING_FATAL') is not None:
-                # Used in the automatic deployment scripts to prevent builds with missing web-ui
-                raise RuntimeError('NPM not found. Aborting')
-            self.announce(
-                'NPM not found. Skipping webUI compilation',
-                level=distutils.log.WARN,  # pylint: disable=no-member
-            )
-            return
-        npm_run = 'build:prod'
-        if self.dev is not None:
-            npm_run = 'build:dev'
-
-        cwd = os.path.abspath(
-            os.path.join(
-                os.path.dirname(__file__),
-                'raiden',
-                'ui',
-                'web',
-            ),
-        )
-
-        npm_version = subprocess.check_output([npm, '--version'])
-        # require npm 4.x.x or later
-        if not int(npm_version.split(b'.')[0]) >= 4:
-            if os.environ.get('RAIDEN_NPM_MISSING_FATAL') is not None:
-                # Used in the automatic deployment scripts to prevent builds with missing web-ui
-                raise RuntimeError(f'NPM >= 4.0 required. Have {npm_version} from {npm}.')
-            self.announce(
-                'NPM 4.x or later required. Skipping webUI compilation',
-                level=distutils.log.WARN,  # pylint: disable=no-member
-            )
-            return
-
-        command = [npm, 'install']
-        self.announce(
-            'Running %r in %r' % (command, cwd),
-            level=distutils.log.INFO,  # pylint: disable=no-member
-        )
-        subprocess.check_call(command, cwd=cwd)
-
-        command = [npm, 'run', npm_run]
-        self.announce(
-            'Running %r in %r' % (command, cwd),
-            level=distutils.log.INFO,  # pylint: disable=no-member
-        )
-        subprocess.check_call(command, cwd=cwd)
-
-        self.announce(
-            'WebUI compiled with success!',
-            level=distutils.log.INFO,  # pylint: disable=no-member
-        )
-
-
 with open('README.rst') as readme_file:
     readme = readme_file.read()
 
@@ -129,8 +61,7 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     cmdclass={
-        'test': PyTest,
-        'compile_webui': CompileWebUI,
+        'test': PyTest
     },
     use_scm_version=True,
     setup_requires=['setuptools_scm'],

@@ -6,9 +6,6 @@ ARG SOLC_RELEASE=0.4.21
 RUN \
     apt update && \
     apt install -y build-essential curl git libffi-dev libgmp-dev libssl-dev libtool pkg-config apt-transport-https lsb-release && \
-    curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
-    echo 'deb https://deb.nodesource.com/node_8.x jessie main' > /etc/apt/sources.list.d/nodesource.list && \
-    echo 'deb-src https://deb.nodesource.com/node_8.x jessie main' >> /etc/apt/sources.list.d/nodesource.list && \
     apt update && \
     apt install nodejs && \
     rm -rf /var/lib/apt/lists/* && \
@@ -30,10 +27,6 @@ RUN \
     rm -rf /root/.cache/pip
 
 WORKDIR /app
-
-RUN \
-    python setup.py compile_webui && \
-    rm -rf /root/.npm/_cacache
 
 ADD run_raiden.py /usr/local/bin
 ADD raiden /usr/local/bin
