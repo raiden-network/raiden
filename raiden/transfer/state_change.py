@@ -73,37 +73,38 @@ class Block(StateChange):
         )
 
 
-class ActionUpdateTransportTimestamp(StateChange):
+class ActionUpdateTransportSyncToken(StateChange):
     """ Holds the last "timestamp" at which we synced
-    with the transport. Can be used later to filter
-    the messages which have not been processed.
+    with the transport. The timestamp could be a date/time value
+    or any other value provided by the transport backend.
+    Can be used later to filter the messages which have not been processed.
     """
-    def __init__(self, timestamp: str):
-        self.timestamp = timestamp
+    def __init__(self, sync_token: str):
+        self.sync_token = sync_token
 
-    def __repr__(self):
-        return '<ActionUpdateTransportTimestamp timestamp:{}>'.format(
-            self.timestamp,
+    def __repr__(self) -> str:
+        return '<ActionUpdateTransportSyncToken value:{}>'.format(
+            self.sync_token,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: 'ActionUpdateTransportSyncToken') -> bool:
         return (
-            isinstance(other, ActionUpdateTransportTimestamp) and
-            self.timestamp == other.timestamp
+            isinstance(other, ActionUpdateTransportSyncToken) and
+            self.sync_token == other.sync_token
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: 'ActionUpdateTransportSyncToken') -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
-            'timestamp': str(self.timestamp),
+            'sync_token': str(self.sync_token),
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ActionUpdateTransportTimestamp':
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ActionUpdateTransportSyncToken':
         return cls(
-            timestamp=data['timestamp'],
+            sync_token=data['sync_token'],
         )
 
 

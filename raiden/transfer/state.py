@@ -244,7 +244,7 @@ class ChainState(State):
         'pending_transactions',
         'pseudo_random_generator',
         'queueids_to_queues',
-        'last_transport_timestamp',
+        'last_transport_synctoken',
     )
 
     def __init__(
@@ -269,7 +269,7 @@ class ChainState(State):
         self.pending_transactions = list()
         self.pseudo_random_generator = pseudo_random_generator
         self.queueids_to_queues: QueueIdsToQueues = dict()
-        self.last_transport_timestamp = None
+        self.last_transport_synctoken = None
 
     def __repr__(self):
         return '<ChainState block:{} networks:{} qty_transfers:{} chain_id:{}>'.format(
@@ -289,7 +289,7 @@ class ChainState(State):
             self.nodeaddresses_to_networkstates == other.nodeaddresses_to_networkstates and
             self.payment_mapping == other.payment_mapping and
             self.chain_id == other.chain_id and
-            self.last_transport_timestamp == other.last_transport_timestamp
+            self.last_transport_synctoken == other.last_transport_synctoken
         )
 
     def __ne__(self, other):
@@ -316,7 +316,7 @@ class ChainState(State):
             'queueids_to_queues': serialization.serialize_queueid_to_queue(
                 self.queueids_to_queues,
             ),
-            'last_transport_timestamp': self.last_transport_timestamp,
+            'last_transport_synctoken': self.last_transport_synctoken,
         }
 
     @classmethod
@@ -345,7 +345,7 @@ class ChainState(State):
         restored.queueids_to_queues = serialization.deserialize_queueid_to_queue(
             data['queueids_to_queues'],
         )
-        restored.last_transport_timestamp = data['last_transport_timestamp']
+        restored.last_transport_synctoken = data['last_transport_synctoken']
 
         return restored
 
