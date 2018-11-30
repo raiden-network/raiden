@@ -4,7 +4,7 @@ import random
 
 from eth_utils import encode_hex
 
-from raiden.constants import MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
+from raiden.constants import EMPTY_HASH_KECCAK, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.balance_proof import pack_balance_proof
@@ -687,6 +687,15 @@ def valid_lockedtransfer_check(
                 distributable,
             )
 
+            result = (False, msg, None)
+
+        # if the message contains the keccak of the empty hash it will never be
+        # usable onchain https://github.com/raiden-network/raiden/issues/3091
+        elif lock.secrethash == EMPTY_HASH_KECCAK:
+            msg = (
+                f'Invalid {message_name} message. '
+                'The secrethash is the keccak of 0x0 and will not be usable onchain'
+            )
             result = (False, msg, None)
 
         else:
