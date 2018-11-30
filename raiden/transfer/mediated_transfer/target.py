@@ -20,6 +20,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import NettingChannelState, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
+from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils import typing
 
 
@@ -131,7 +132,11 @@ def handle_offchain_secretreveal(
         pseudo_random_generator: random.Random,
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
-    valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
+    valid_secret = is_valid_secret_reveal(
+        state_change=state_change,
+        transfer_secrethash=target_state.transfer.lock.secrethash,
+        secret=state_change.secret,
+    )
 
     if valid_secret:
         channel.register_offchain_secret(
@@ -168,7 +173,11 @@ def handle_onchain_secretreveal(
         channel_state: NettingChannelState,
 ):
     """ Validates and handles a ContractReceiveSecretReveal state change. """
-    valid_secret = state_change.secrethash == target_state.transfer.lock.secrethash
+    valid_secret = is_valid_secret_reveal(
+        state_change=state_change,
+        transfer_secrethash=target_state.transfer.lock.secrethash,
+        secret=state_change.secret,
+    )
 
     if valid_secret:
         channel.register_onchain_secret(
