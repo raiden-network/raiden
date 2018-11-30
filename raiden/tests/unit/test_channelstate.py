@@ -105,45 +105,22 @@ def create_model(balance, merkletree_width=0):
     return our_model, privkey
 
 
-def create_channel_end_state_from_model(model):
-    state = NettingChannelEndState(model.participant_address, model.balance)
-    if model.merkletree_leaves:
-        state.merkletree = MerkleTreeState(compute_layers(model.merkletree_leaves))
-    return state
-
-
 def create_channel_from_models(our_model, partner_model):
     """Utility to instantiate state objects used throughout the tests."""
-    our_state = create_channel_end_state_from_model(our_model)
-    partner_state = create_channel_end_state_from_model(partner_model)
-
-    identifier = factories.make_channel_identifier()
-    token_address = factories.make_address()
-    payment_network_identifier = factories.make_payment_network_identifier()
-    token_network_identifier = factories.make_address()
-    reveal_timeout = 10
-    settle_timeout = 100
-    opened_transaction = TransactionExecutionStatus(
-        None,
-        1,
-        TransactionExecutionStatus.SUCCESS,
-    )
-    closed_transaction = None
-    settled_transaction = None
-
-    channel_state = NettingChannelState(
-        identifier=identifier,
-        chain_id=UNIT_CHAIN_ID,
-        token_address=token_address,
-        payment_network_identifier=payment_network_identifier,
-        token_network_identifier=token_network_identifier,
-        reveal_timeout=reveal_timeout,
-        settle_timeout=settle_timeout,
-        our_state=our_state,
-        partner_state=partner_state,
-        open_transaction=opened_transaction,
-        close_transaction=closed_transaction,
-        settle_transaction=settled_transaction,
+    channel_state = factories.make_netting_channel_state(
+        reveal_timeout=10,
+        settle_timeout=100,
+        our_state=factories.make_netting_channel_end_state_record(
+            address=our_model.participant_address,
+            balance=our_model.balance,
+            merkletree_leaves=our_model.merkletree_leaves,
+        ),
+        partner_state=factories.make_netting_channel_end_state_record(
+            address=partner_model.participant_address,
+            balance=partner_model.balance,
+            merkletree_leaves=partner_model.merkletree_leaves,
+        ),
+        open_transaction=factories.make_transaction_execution_status(finished_block_number=1),
     )
 
     assert channel_state.our_total_deposit == our_model.contract_balance
