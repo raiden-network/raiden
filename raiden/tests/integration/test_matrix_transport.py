@@ -1,13 +1,15 @@
 import json
 import random
 
+import gevent
 import pytest
 
 from raiden.constants import UINT64_MAX
-from raiden.messages import SecretRequest
-from raiden.network.transport.matrix import MatrixTransport
-from raiden.tests.utils.factories import ADDR, HOP1, HOP1_KEY, UNIT_SECRETHASH
+from raiden.messages import Processed, SecretRequest
+from raiden.network.transport import MatrixTransport
+from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH
 from raiden.tests.utils.transport import MockRaidenService
+from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils.typing import Address, List, Optional, Union
 
 USERID1 = '@Alice:Wonderland'
@@ -57,7 +59,7 @@ def mock_matrix(
     )
 
     transport = MatrixTransport(config)
-    transport.raiden = MockRaidenService(ADDR)
+    transport.raiden = MockRaidenService()
     transport._stop_event.clear()
     transport._address_to_userids[HOP1] = USERID1
 
@@ -189,3 +191,107 @@ def test_processing_invalid_message_cmdid_hex(
     old_data = event['content']['body']
     event['content']['body'] = '0xff' + old_data[4:]
     assert not m._handle_message(room, event)
+
+
+def test_matrix_message_sync(
+        skip_if_not_matrix,
+        local_matrix_server,
+        private_rooms,
+        retry_interval,
+        retries_before_backoff,
+):
+    transport0 = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_server,
+        'server_name': 'matrix.local.raiden',
+        'available_servers': [],
+        'private_rooms': private_rooms,
+    })
+    transport1 = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_server,
+        'server_name': 'matrix.local.raiden',
+        'available_servers': [],
+        'private_rooms': private_rooms,
+    })
+
+    latest_sync_token = None
+
+    received_messages = []
+
+    def hook(sync_token):
+        nonlocal latest_sync_token
+        latest_sync_token = sync_token
+
+    class MessageHandler:
+        def on_message(self, _, message):
+            nonlocal received_messages
+            received_messages.append(message)
+
+    transport0._client.set_post_sync_hook(hook)
+    message_handler = MessageHandler()
+    transport0.start(
+        MockRaidenService(message_handler),
+        message_handler,
+        None,
+    )
+    transport1.start(
+        MockRaidenService(message_handler),
+        message_handler,
+        None,
+    )
+
+    transport0.start_health_check(transport1._raiden_service.address)
+    transport1.start_health_check(transport0._raiden_service.address)
+
+    queue_identifier = QueueIdentifier(
+        recipient=transport1._raiden_service.address,
+        channel_identifier=1,
+    )
+
+    for i in range(5):
+        message = Processed(i)
+        message.sign(transport0._raiden_service.private_key)
+        transport0.send_async(
+            queue_identifier,
+            message,
+        )
+
+    gevent.sleep(2)
+
+    assert len(received_messages) == 10
+    for i in range(5):
+        assert received_messages[i].message_identifier == i
+
+    transport1.stop()
+
+    assert latest_sync_token
+
+    # Send more messages while the other end is offline
+    for i in range(10, 15):
+        message = Processed(i)
+        message.sign(transport0._raiden_service.private_key)
+        transport0.send_async(
+            queue_identifier,
+            message,
+        )
+
+    # Should fetch the 5 messages sent while transport1 was offline
+    transport1.start(
+        transport1._raiden_service,
+        message_handler,
+        latest_sync_token,
+    )
+
+    gevent.sleep(2)
+
+    assert len(received_messages) == 20
+    for i in range(10, 15):
+        assert received_messages[i].message_identifier == i
+
+    transport0.stop()
+    transport1.stop()
