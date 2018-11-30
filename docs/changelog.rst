@@ -4,6 +4,7 @@ Changelog
 
 * :bug:`3091` Client will no longer accept secret of 0x0 or secrethash keccak(0x0).
 * :bug:`3054` Client will now reject any signatures with ``v`` not in (0, 1, 27, 28)
+* :bug:`3046` Sync with the matrix server using the last known sync token. This solves the issue of missing messages during restart as previously only the last 10 were fetched.
 
 * :release:`0.17.0 <2018-11-16>`
 * :bug:`3035` Registering a token twice should now return a proper error.
