@@ -71,3 +71,7 @@ def pseudo_random_generator_from_json(data):
     pseudo_random_generator.setstate(tuple(state))
 
     return pseudo_random_generator
+
+
+def is_valid_secret_reveal(state_change, transfer_secrethash, secret):
+    return secret != EMPTY_HASH and state_change.secrethash == transfer_secrethash

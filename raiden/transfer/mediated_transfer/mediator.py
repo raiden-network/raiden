@@ -36,6 +36,7 @@ from raiden.transfer.state import (
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
+from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils import typing
 
 STATE_SECRET_KNOWN = (
@@ -1231,7 +1232,11 @@ def handle_offchain_secretreveal(
         block_number: typing.BlockNumber,
 ) -> TransitionResult:
     """ Handles the secret reveal and sends SendBalanceProof/RevealSecret if necessary. """
-    is_valid_reveal = mediator_state_change.secrethash == mediator_state.secrethash
+    is_valid_reveal = is_valid_secret_reveal(
+        state_change=mediator_state_change,
+        transfer_secrethash=mediator_state.secrethash,
+        secret=mediator_state_change.secret,
+    )
     is_secret_unknown = mediator_state.secret is None
 
     if is_secret_unknown and is_valid_reveal:
@@ -1262,7 +1267,11 @@ def handle_onchain_secretreveal(
     secret known.
     """
     secrethash = onchain_secret_reveal.secrethash
-    is_valid_reveal = secrethash == mediator_state.secrethash
+    is_valid_reveal = is_valid_secret_reveal(
+        state_change=onchain_secret_reveal,
+        transfer_secrethash=mediator_state.secrethash,
+        secret=onchain_secret_reveal.secret,
+    )
 
     if is_valid_reveal:
         secret = onchain_secret_reveal.secret
@@ -1270,20 +1279,20 @@ def handle_onchain_secretreveal(
         block_number = onchain_secret_reveal.block_number
 
         secret_reveal = set_onchain_secret(
-            mediator_state,
-            channelidentifiers_to_channels,
-            secret,
-            secrethash,
-            block_number,
+            state=mediator_state,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            secret=secret,
+            secrethash=secrethash,
+            block_number=block_number,
         )
 
         balance_proof = events_for_balanceproof(
-            channelidentifiers_to_channels,
-            mediator_state.transfers_pair,
-            pseudo_random_generator,
-            block_number,
-            secret,
-            secrethash,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            transfers_pair=mediator_state.transfers_pair,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+            secret=secret,
+            secrethash=secrethash,
         )
         iteration = TransitionResult(mediator_state, secret_reveal + balance_proof)
     else:
