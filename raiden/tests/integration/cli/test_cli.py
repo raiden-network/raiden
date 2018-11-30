@@ -128,13 +128,13 @@ def test_cli_wrong_rpc_endpoint(cli_args):
 
 
 @pytest.mark.timeout(35)
-@pytest.mark.parametrize('changed_args', [{'network_id': '1'}])
-def test_cli_wrong_network_id_try_mainnet(cli_args):
+@pytest.mark.parametrize('changed_args', [{'network_id': '42'}])
+def test_cli_wrong_network_id_try_kovan(cli_args):
     child = spawn_raiden(cli_args)
     try:
         expect_cli_until_account_selection(child)
         child.expect(
-            "The chosen ethereum network 'mainnet' differs from the ethereum "
+            "The chosen ethereum network 'kovan' differs from the ethereum "
             "client 'smoketest'",
         )
     except pexpect.TIMEOUT as e:
