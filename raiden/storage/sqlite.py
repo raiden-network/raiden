@@ -8,7 +8,7 @@ from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec, typing
 
 # The latest DB version
-RAIDEN_DB_VERSION = 14
+RAIDEN_DB_VERSION = 15
 
 
 class EventRecord(typing.NamedTuple):
