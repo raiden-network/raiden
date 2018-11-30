@@ -3,7 +3,7 @@ import random
 
 import pytest
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import EMPTY_HASH, EMPTY_HASH_KECCAK, UINT64_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
@@ -225,7 +225,6 @@ def test_handle_offchain_secretreveal():
         expiration,
     )
     state_change = ReceiveSecretReveal(secret, initiator)
-
     iteration = target.handle_offchain_secretreveal(
         state,
         state_change,
@@ -240,6 +239,17 @@ def test_handle_offchain_secretreveal():
     assert iteration.new_state.state == 'reveal_secret'
     assert reveal.secret == secret
     assert reveal.recipient == state.route.node_address
+
+    # if we get an empty hash secret make sure it's rejected
+    secret = EMPTY_HASH
+    state_change = ReceiveSecretReveal(secret, initiator)
+    iteration = target.handle_offchain_secretreveal(
+        state,
+        state_change,
+        channel_state,
+        pseudo_random_generator,
+    )
+    assert len(iteration.events) == 0
 
 
 def test_handle_onchain_secretreveal():
@@ -273,16 +283,31 @@ def test_handle_onchain_secretreveal():
     assert factories.UNIT_SECRETHASH in channel_state.partner_state.secrethashes_to_unlockedlocks
     assert factories.UNIT_SECRETHASH not in channel_state.partner_state.secrethashes_to_lockedlocks
 
+    # Make sure that an emptyhash on chain reveal is rejected.
     block_number_prior_the_expiration = expiration - 2
+    onchain_reveal = ContractReceiveSecretReveal(
+        transaction_hash=factories.make_address(),
+        secret_registry_address=factories.make_address(),
+        secrethash=EMPTY_HASH_KECCAK,
+        secret=EMPTY_HASH,
+        block_number=block_number_prior_the_expiration,
+    )
     onchain_secret_reveal_iteration = target.state_transition(
         offchain_secret_reveal_iteration.new_state,
-        ContractReceiveSecretReveal(
-            transaction_hash=factories.make_address(),
-            secret_registry_address=factories.make_address(),
-            secrethash=UNIT_SECRETHASH,
-            secret=UNIT_SECRET,
-            block_number=block_number_prior_the_expiration,
-        ),
+        onchain_reveal,
+        channel_state,
+        pseudo_random_generator,
+        block_number_prior_the_expiration,
+    )
+    unlocked_onchain = channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
+    assert EMPTY_HASH_KECCAK not in unlocked_onchain
+
+    # now let's go for the actual secret
+    onchain_reveal.secret = secret
+    onchain_reveal.secrethash = factories.UNIT_SECRETHASH
+    onchain_secret_reveal_iteration = target.state_transition(
+        offchain_secret_reveal_iteration.new_state,
+        onchain_reveal,
         channel_state,
         pseudo_random_generator,
         block_number_prior_the_expiration,

@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import EMPTY_HASH, EMPTY_HASH_KECCAK, MAXIMUM_PENDING_TRANSFERS
 from raiden.messages import message_from_sendevent
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
@@ -1168,6 +1168,91 @@ def test_init_mediator():
             },
         },
     }), 'mediated_transfer should /not/ split the transfer'
+
+
+def test_mediator_secret_reveal_empty_hash():
+    amount = UNIT_TRANSFER_AMOUNT
+    target = HOP2
+    from_expiration = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
+    pseudo_random_generator = random.Random()
+
+    from_channel = factories.make_channel(
+        partner_balance=amount,
+        partner_address=UNIT_TRANSFER_SENDER,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    from_route = factories.route_from_channel(from_channel)
+
+    from_transfer = factories.make_signed_transfer_for(
+        from_channel,
+        amount,
+        HOP1,
+        target,
+        from_expiration,
+        UNIT_SECRET,
+    )
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        partner_address=HOP2,
+        token_address=UNIT_TOKEN_ADDRESS,
+    )
+    available_routes = [factories.route_from_channel(channel1)]
+    channel_map = {
+        from_channel.identifier: from_channel,
+        channel1.identifier: channel1,
+    }
+
+    block_number = 1
+    init_state_change = ActionInitMediator(
+        available_routes,
+        from_route,
+        from_transfer,
+    )
+
+    mediator_state = None
+    iteration = mediator.state_transition(
+        mediator_state,
+        init_state_change,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert isinstance(iteration.new_state, MediatorTransferState)
+    assert iteration.new_state.transfers_pair[0].payer_transfer == from_transfer
+    current_state = iteration.new_state
+
+    # an empty hash offchain secret reveal should be rejected
+    receive_secret = ReceiveSecretReveal(
+        EMPTY_HASH,
+        HOP2,
+    )
+    iteration = mediator.state_transition(
+        current_state,
+        receive_secret,
+        channel_map,
+        pseudo_random_generator,
+        block_number + 1,
+    )
+    assert len(iteration.events) == 0
+
+    # an empty hash onchain secret reveal should be rejected
+    secrethash = EMPTY_HASH_KECCAK
+    onchain_reveal = ContractReceiveSecretReveal(
+        transaction_hash=factories.make_address(),
+        secret_registry_address=factories.make_address(),
+        secrethash=secrethash,
+        secret=EMPTY_HASH,
+        block_number=block_number,
+    )
+    iteration = mediator.state_transition(
+        current_state,
+        onchain_reveal,
+        channel_map,
+        pseudo_random_generator,
+        block_number + 1,
+    )
+    assert secrethash not in from_channel.partner_state.secrethashes_to_onchain_unlockedlocks
 
 
 def test_no_valid_routes():
