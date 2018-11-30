@@ -198,14 +198,15 @@ class UDPTransport(Runnable):
 
     def start(
             self,
-            raiden: RaidenService,
+            raiden_service: RaidenService,
             message_handler: MessageHandler,
+            fetch_since_token: str,
     ):
         if not self.event_stop.ready():
             raise RuntimeError('UDPTransport started while running')
 
         self.event_stop.clear()
-        self.raiden = raiden
+        self.raiden = raiden_service
         self.log = log.bind(node=pex(self.raiden.address))
         self.log_healthcheck = log_healthcheck.bind(node=pex(self.raiden.address))
         self.message_handler = message_handler
