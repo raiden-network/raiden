@@ -1,6 +1,7 @@
 # pylint: disable=too-many-arguments
 import random
 import string
+from typing import NamedTuple
 
 from coincurve import PrivateKey
 
@@ -16,11 +17,12 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     lockedtransfersigned_from_message,
 )
-from raiden.transfer.merkle_tree import merkleroot
+from raiden.transfer.merkle_tree import compute_layers, merkleroot
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
+    MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
     RouteState,
@@ -632,3 +634,97 @@ RANDOM_FACTORIES = {
     typing.TokenNetworkID: make_payment_network_identifier,
     NettingChannelState: make_channel_state,
 }
+
+
+def make_merkletree_leaves(width: int):
+    return [make_secret() for _ in range(width)]
+
+
+def make_transaction_execution_status(
+        started_block_number: typing.BlockNumber = None,
+        finished_block_number: typing.BlockNumber = None,
+        success: bool = True,
+) -> TransactionExecutionStatus:
+    status = TransactionExecutionStatus.SUCCESS if success else TransactionExecutionStatus.FAILURE
+    return TransactionExecutionStatus(started_block_number, finished_block_number, status)
+
+
+class NettingChannelEndStateRecord(NamedTuple):
+    address: typing.Address = None
+    balance: typing.TokenAmount = 100
+    merkletree_leaves: typing.MerkleTreeLeaves = None
+    merkletree_width: int = 0
+
+    def create(self) -> NettingChannelEndState:
+        state = NettingChannelEndState(self.address or make_address(), self.balance)
+
+        merkletree_leaves = (
+            self.merkletree_leaves or
+            make_merkletree_leaves(self.merkletree_width) or
+            None
+        )
+        if merkletree_leaves:
+            state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
+
+        return state
+
+
+class NettingChannelStateRecord(NamedTuple):
+    identifier: typing.ChannelID = UNIT_CHANNEL_ID
+    chain_id: typing.ChainID = UNIT_CHAIN_ID
+    token_address: typing.TokenAddress = UNIT_TOKEN_ADDRESS
+    payment_network_identifier: typing.PaymentNetworkID = UNIT_PAYMENT_NETWORK_IDENTIFIER
+    token_network_identifier: typing.TokenNetworkID = UNIT_TOKEN_NETWORK_ADDRESS
+
+    reveal_timeout: typing.BlockTimeout = UNIT_REVEAL_TIMEOUT
+    settle_timeout: typing.BlockTimeout = UNIT_SETTLE_TIMEOUT
+
+    our_state: NettingChannelEndStateRecord = None
+    partner_state: NettingChannelEndStateRecord = None
+
+    open_transaction: TransactionExecutionStatus = None
+    close_transaction: TransactionExecutionStatus = None
+    settle_transaction: TransactionExecutionStatus = None
+
+
+def make_netting_channel_end_state_record(
+        base: NettingChannelEndStateRecord = None,
+        **kwargs,
+) -> NettingChannelEndStateRecord:
+    parameters = base._asdict() if base is not None else dict()
+    parameters.update(**kwargs)
+    return NettingChannelEndStateRecord(**parameters)
+
+
+def make_netting_channel_end_state(
+        base: NettingChannelEndStateRecord = None,
+        **kwargs,
+) -> NettingChannelEndState:
+    return make_netting_channel_end_state_record(base, **kwargs).create()
+
+
+def make_record_netting_channel_state(
+        base: NettingChannelStateRecord = None,
+        **kwargs,
+) -> NettingChannelStateRecord:
+    parameters = base._asdict() if base is not None else dict()
+    parameters.update(**kwargs)
+    return NettingChannelStateRecord(**parameters)
+
+
+def _record_to_channel_state(record: NettingChannelStateRecord) -> NettingChannelState:
+    parameters = record._asdict()
+
+    parameters['our_state'] = record.our_state.create()
+    parameters['partner_state'] = record.partner_state.create()
+
+    state = NettingChannelState(**parameters)
+
+    return state
+
+
+def make_netting_channel_state(
+        base: NettingChannelStateRecord = None,
+        **kwargs,
+) -> NettingChannelState:
+    return _record_to_channel_state(make_record_netting_channel_state(base, **kwargs))
