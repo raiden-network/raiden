@@ -2,7 +2,7 @@
 import random
 from copy import deepcopy
 
-from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import events, factories
 from raiden.tests.utils.factories import (
@@ -856,6 +856,38 @@ def test_handle_offchain_secretreveal():
     })
 
 
+def test_handle_offchain_emptyhash_secret():
+    channel1 = factories.make_channel(
+        our_balance=UNIT_TRANSFER_AMOUNT,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel_map = {channel1.identifier: channel1}
+    available_routes = [factories.route_from_channel(channel1)]
+    pseudo_random_generator = random.Random()
+    block_number = 10
+
+    manager_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    secret_reveal = ReceiveSecretReveal(
+        secret=EMPTY_HASH,
+        sender=channel1.partner_state.address,
+    )
+    iteration = initiator.handle_offchain_secretreveal(
+        initiator_state=manager_state.initiator,
+        state_change=secret_reveal,
+        channel_state=channel1,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+    assert len(iteration.events) == 0
+
+
 def test_initiator_lock_expired():
     amount = UNIT_TRANSFER_AMOUNT * 2
 
@@ -1022,6 +1054,56 @@ def test_initiator_handle_contract_receive_secret_reveal():
         'message_identifier': message_identifier,
         'payment_identifier': current_state.initiator.transfer_description.payment_identifier,
     })
+
+
+def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
+    """ Initiator must not accept contract receive secret reveal with emptyhash
+    """
+    amount = UNIT_TRANSFER_AMOUNT * 2
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    pseudo_random_generator = random.Random()
+
+    channel_map = {
+        channel1.identifier: channel1,
+    }
+
+    available_routes = [
+        factories.route_from_channel(channel1),
+    ]
+
+    block_number = 10
+    current_state = make_initiator_manager_state(
+        routes=available_routes,
+        transfer_description=factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+
+    transfer = current_state.initiator.transfer
+
+    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
+
+    state_change = ContractReceiveSecretReveal(
+        transaction_hash=factories.make_transaction_hash(),
+        secret_registry_address=factories.make_address(),
+        secrethash=transfer.lock.secrethash,
+        secret=EMPTY_HASH,
+        block_number=transfer.lock.expiration,
+    )
+
+    iteration = initiator_manager.handle_onchain_secretreveal(
+        payment_state=current_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+    assert len(iteration.events) == 0
 
 
 def test_initiator_handle_contract_receive_secret_reveal_expired():
