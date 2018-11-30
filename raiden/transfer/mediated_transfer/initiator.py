@@ -26,6 +26,7 @@ from raiden.transfer.state import (
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
+from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils import typing
 
 
@@ -314,19 +315,21 @@ def handle_offchain_secretreveal(
     the next hop with the current lock removed from the merkle tree and the
     transferred amount updated.
     """
-    is_valid_secret_reveal = (
-        state_change.sender == channel_state.partner_state.address and
-        state_change.secrethash == initiator_state.transfer_description.secrethash
+    valid_reveal = is_valid_secret_reveal(
+        state_change=state_change,
+        transfer_secrethash=initiator_state.transfer_description.secrethash,
+        secret=state_change.secret,
     )
+    sent_by_partner = state_change.sender == channel_state.partner_state.address
     is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
 
-    if is_valid_secret_reveal and is_channel_open:
+    if valid_reveal and is_channel_open and sent_by_partner:
         events = events_for_unlock_lock(
-            initiator_state,
-            channel_state,
-            state_change.secret,
-            state_change.secrethash,
-            pseudo_random_generator,
+            initiator_state=initiator_state,
+            channel_state=channel_state,
+            secret=state_change.secret,
+            secrethash=state_change.secrethash,
+            pseudo_random_generator=pseudo_random_generator,
         )
         iteration = TransitionResult(None, events)
     else:
@@ -349,12 +352,16 @@ def handle_onchain_secretreveal(
     the current lock removed from the merkle tree and the transferred amount
     updated.
     """
-    is_valid_secret = state_change.secrethash == initiator_state.transfer.lock.secrethash
+    valid_secret = is_valid_secret_reveal(
+        state_change=state_change,
+        transfer_secrethash=initiator_state.transfer_description.secrethash,
+        secret=state_change.secret,
+    )
     is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
     is_lock_expired = state_change.block_number > initiator_state.transfer.lock.expiration
 
     is_lock_unlocked = (
-        is_valid_secret and
+        valid_secret and
         is_channel_open and
         not is_lock_expired
     )
