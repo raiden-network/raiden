@@ -534,6 +534,50 @@ def test_state_transition():
     assert proof_iteration.new_state is None
 
 
+def test_target_reject_keccak_empty_hash():
+    lock_amount = 7
+    block_number = 1
+    initiator = factories.HOP6
+    pseudo_random_generator = random.Random()
+
+    our_balance = 100
+    our_address = factories.make_address()
+    partner_balance = 130
+
+    from_channel = factories.make_channel(
+        our_address=our_address,
+        our_balance=our_balance,
+        partner_address=UNIT_TRANSFER_SENDER,
+        partner_balance=partner_balance,
+    )
+    from_route = factories.route_from_channel(from_channel)
+    expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
+
+    from_transfer = factories.make_signed_transfer_for(
+        channel_state=from_channel,
+        amount=lock_amount,
+        initiator=initiator,
+        target=our_address,
+        expiration=expiration,
+        secret=EMPTY_HASH,
+        allow_invalid=True,
+    )
+
+    init = ActionInitTarget(
+        route=from_route,
+        transfer=from_transfer,
+    )
+
+    init_transition = target.state_transition(
+        None,
+        init,
+        from_channel,
+        pseudo_random_generator,
+        block_number,
+    )
+    assert init_transition.new_state is None
+
+
 def test_target_receive_lock_expired():
     lock_amount = 7
     block_number = 1
