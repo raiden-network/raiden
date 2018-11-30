@@ -868,11 +868,11 @@ def test_handle_offchain_emptyhash_secret():
     block_number = 10
 
     manager_state = make_initiator_manager_state(
-        available_routes,
-        factories.UNIT_TRANSFER_DESCRIPTION,
-        channel_map,
-        pseudo_random_generator,
-        block_number,
+        routes=available_routes,
+        transfer_description=factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     secret_reveal = ReceiveSecretReveal(
@@ -885,7 +885,10 @@ def test_handle_offchain_emptyhash_secret():
         channel_state=channel1,
         pseudo_random_generator=pseudo_random_generator,
     )
+    secrethash = factories.UNIT_TRANSFER_DESCRIPTION.secrethash
     assert len(iteration.events) == 0
+    # make sure the lock has not moved
+    assert secrethash in channel1.our_state.secrethashes_to_lockedlocks
 
 
 def test_initiator_lock_expired():
@@ -1104,6 +1107,8 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
         pseudo_random_generator=pseudo_random_generator,
     )
     assert len(iteration.events) == 0
+    # make sure the original lock wasn't moved
+    assert transfer.lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
 
 
 def test_initiator_handle_contract_receive_secret_reveal_expired():
