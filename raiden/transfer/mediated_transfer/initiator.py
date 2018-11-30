@@ -352,7 +352,7 @@ def handle_onchain_secretreveal(
     the current lock removed from the merkle tree and the transferred amount
     updated.
     """
-    valid_secret = is_valid_secret_reveal(
+    is_valid_secret = is_valid_secret_reveal(
         state_change=state_change,
         transfer_secrethash=initiator_state.transfer_description.secrethash,
         secret=state_change.secret,
@@ -361,7 +361,7 @@ def handle_onchain_secretreveal(
     is_lock_expired = state_change.block_number > initiator_state.transfer.lock.expiration
 
     is_lock_unlocked = (
-        valid_secret and
+        is_valid_secret and
         is_channel_open and
         not is_lock_expired
     )
