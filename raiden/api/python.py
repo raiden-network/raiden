@@ -72,7 +72,7 @@ def event_filter_for_payments(
         )
     )
     received_and_initiator_matches = (
-        isinstance(event, (EventPaymentSentFailed, EventPaymentReceivedSuccess)) and
+        isinstance(event, EventPaymentReceivedSuccess) and
         (
             partner_address is None or
             event.initiator == partner_address
