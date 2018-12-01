@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`3093` Getting raiden payment history will no longer crash raiden for failed sent payment events.
+
 * :release:`0.18.0 <2018-11-30>`
 * :bug:`3091` Client will no longer accept secret of 0x0 or secrethash keccak(0x0).
 * :bug:`3054` Client will now reject any signatures with ``v`` not in (0, 1, 27, 28)
