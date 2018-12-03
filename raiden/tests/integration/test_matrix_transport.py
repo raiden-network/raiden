@@ -382,7 +382,7 @@ def test_matrix_message_retry(
     # Retrier did not call send_raw given that the receiver is still offline
     assert transport._send_raw.call_count == 1
 
-    # Receiver goes offline
+    # Receiver comes back online
     transport._address_to_presence[partner_address] = UserPresence.ONLINE
 
     gevent.sleep(retry_interval)
