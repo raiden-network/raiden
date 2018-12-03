@@ -94,6 +94,20 @@ def handle_block(
             locked_lock=locked_lock,
             pseudo_random_generator=pseudo_random_generator,
         )
+        transfer_description = initiator_state.transfer_description
+        # TODO: When we introduce multiple transfers per payment this needs to be
+        #       reconsidered. As we would want to try other routes once a route
+        #       has failed, and a transfer failing does not mean the entire payment
+        #       would have to fail.
+        #       Related issue: https://github.com/raiden-network/raiden/issues/2329
+        transfer_failed = EventPaymentSentFailed(
+            payment_network_identifier=transfer_description.payment_network_identifier,
+            token_network_identifier=transfer_description.token_network_identifier,
+            identifier=transfer_description.payment_identifier,
+            target=transfer_description.target,
+            reason="transfer's lock has expired",
+        )
+        expired_lock_events.append(transfer_failed)
         return TransitionResult(
             None,
             typing.cast(typing.List[Event], expired_lock_events),
