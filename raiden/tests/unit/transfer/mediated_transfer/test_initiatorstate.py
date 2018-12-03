@@ -770,9 +770,13 @@ def test_initiator_lock_expired():
     ]
 
     block_number = 10
+    transfer_description = factories.make_transfer_description(
+        secret=UNIT_SECRET,
+        payment_network_identifier=channel1.payment_network_identifier,
+    )
     current_state = make_initiator_manager_state(
         available_routes,
-        factories.UNIT_TRANSFER_DESCRIPTION,
+        transfer_description,
         channel_map,
         pseudo_random_generator,
         block_number,
@@ -805,6 +809,14 @@ def test_initiator_lock_expired():
         },
         'secrethash': transfer.lock.secrethash,
         'recipient': channel1.partner_state.address,
+    })
+    # Since the lock expired make sure we also get the payment sent failed event
+    assert events.must_contain_entry(iteration.events, EventPaymentSentFailed, {
+        'payment_network_identifier': channel1.payment_network_identifier,
+        'token_network_identifier': channel1.token_network_identifier,
+        'identifier': UNIT_TRANSFER_IDENTIFIER,
+        'target': transfer.target,
+        'reason': "transfer's lock has expired",
     })
 
     assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
