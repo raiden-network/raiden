@@ -221,7 +221,7 @@ class _RetryQueue(Runnable):
         # clean after composing, so any queued messages (e.g. Delivered) are sent at least once
         for msg_data in self._message_queue[:]:
             remove = False
-            if not hasattr(msg_data.message, 'message_identifier'):
+            if isinstance(msg_data.message, (Delivered, Ping, Pong)):
                 # e.g. Delivered, send only once and then clear
                 # TODO: Is this correct? Will a missed Delivered be 'fixed' by the
                 #       later `Processed` message?
