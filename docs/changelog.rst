@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3103` Fixes a bug in matrix which prevented retries of messages.
 * :bug:`3093` Getting raiden payment history will no longer crash raiden for failed sent payment events.
 
 * :release:`0.18.0 <2018-11-30>`
