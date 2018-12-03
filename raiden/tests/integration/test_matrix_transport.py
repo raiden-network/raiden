@@ -8,10 +8,13 @@ import pytest
 from raiden.constants import UINT64_MAX
 from raiden.messages import Processed, SecretRequest
 from raiden.network.transport import MatrixTransport
-from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH
+from raiden.network.transport.matrix import UserPresence, _RetryQueue
+from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.transport import MockRaidenService
+from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state_change import ActionUpdateTransportSyncToken
+from raiden.utils import pex
 from raiden.utils.typing import Address, List, Optional, Union
 
 USERID1 = '@Alice:Wonderland'
@@ -305,3 +308,84 @@ def test_matrix_message_sync(
 
     transport0.stop()
     transport1.stop()
+
+
+def test_matrix_message_retry(
+    skip_if_not_matrix,
+    local_matrix_server,
+    private_rooms,
+    retry_interval,
+    retries_before_backoff,
+):
+    """ Test the retry mechanism implemented into the matrix client.
+    The test creates a transport and sends a message. Given that the
+    receiver was online, the initial message is sent but the receiver
+    doesn't respond in time and goes offline. The retrier should then
+    wait for the `retry_interval` duration to pass and send the message
+    again but this won't work because the receiver is offline. Once
+    the receiver comes back again, the message should be sent again.
+    """
+    partner_address = make_address()
+
+    transport = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_server,
+        'server_name': 'matrix.local.raiden',
+        'available_servers': [],
+        'private_rooms': private_rooms,
+    })
+    transport._send_raw = MagicMock()
+    raiden_service = MockRaidenService(None)
+
+    transport.start(
+        raiden_service,
+        raiden_service.message_handler,
+        None,
+    )
+    transport.log = MagicMock()
+
+    # Receiver is online
+    transport._address_to_presence[partner_address] = UserPresence.ONLINE
+
+    queueid = QueueIdentifier(
+        recipient=partner_address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+    chain_state = raiden_service.wal.state_manager.current_state
+
+    retry_queue = _RetryQueue(transport, partner_address)
+    retry_queue.start()
+
+    # Send the initial message
+    message = Processed(0)
+    message.sign(transport._raiden_service.private_key)
+    chain_state.queueids_to_queues[queueid] = [message]
+    retry_queue.enqueue_global(message)
+
+    gevent.sleep(1)
+
+    transport._send_raw.call_count = 1
+
+    # Receiver goes offline
+    transport._address_to_presence[partner_address] = UserPresence.OFFLINE
+
+    gevent.sleep(retry_interval)
+
+    transport.log.debug.assert_called_with(
+        'Partner not reachable. Skipping.',
+        partner=pex(partner_address),
+        status=UserPresence.OFFLINE,
+    )
+
+    # Retrier did not call send_raw given that the receiver is still offline
+    assert transport._send_raw.call_count == 1
+
+    # Receiver goes offline
+    transport._address_to_presence[partner_address] = UserPresence.ONLINE
+
+    gevent.sleep(retry_interval)
+
+    # Retrier now should have sent the message again
+    assert transport._send_raw.call_count == 2
