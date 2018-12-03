@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import gevent
 import pytest
 
@@ -364,3 +366,44 @@ def test_funds_check_for_openchannel(raiden_network, token_addresses):
     # so that the gas reserve checks cannot pass in parallel
     with pytest.raises(InsufficientGasReserve):
         gevent.joinall(greenlets, raise_error=True)
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize('reveal_timeout', [8])
+@pytest.mark.parametrize('settle_timeout', [30])
+def test_payment_timing_out_if_partner_does_not_respond(
+        raiden_network,
+        token_addresses,
+        reveal_timeout,
+        skip_if_not_matrix,
+        retry_timeout,
+):
+    """ Test to make sure that when our target does not respond payment times out
+
+    If the target does not respond and the lock times out then the payment will
+    timeout. Note that at the moment we don't retry other routes even if they
+    exist when the lock expires for this transfer.
+
+    Issue: https://github.com/raiden-network/raiden/issues/3094"""
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+
+    def fake_receive(room, event):
+        return True
+
+    with patch.object(app1.raiden.transport, '_handle_message', side_effect=fake_receive):
+        greenlet = gevent.spawn(
+            RaidenAPI(app0.raiden).transfer,
+            app0.raiden.default_registry.address,
+            token_address,
+            1,
+            target=app1.raiden.address,
+        )
+        waiting.wait_for_block(
+            app0.raiden,
+            app1.raiden.get_block_number() + 2 * reveal_timeout + 1,
+            retry_timeout,
+        )
+        greenlet.join(timeout=5)
+        assert not greenlet.value
