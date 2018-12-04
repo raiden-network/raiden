@@ -935,8 +935,6 @@ def events_to_remove_expired_locks(
             )
 
             if has_lock_expired:
-                import pdb
-                pdb.set_trace()
                 transfer_pair.payee_state = 'payee_expired'
                 expired_lock_events = channel.events_for_expired_lock(
                     channel_state=channel_state,
@@ -1235,7 +1233,23 @@ def handle_offchain_secretreveal(
     )
     is_secret_unknown = mediator_state.secret is None
 
-    if is_secret_unknown and is_valid_reveal:
+    # a SecretReveal should be rejected if the payer transfer
+    # has expired. To check for this, we use the last
+    # transfer pair.
+    transfer_pair = mediator_state.transfers_pair[-1]
+    payer_transfer = transfer_pair.payer_transfer
+    channel_identifier = payer_transfer.balance_proof.channel_identifier
+    payer_channel = channelidentifiers_to_channels.get(channel_identifier)
+    if not payer_channel:
+        return TransitionResult(mediator_state, list())
+
+    has_payer_transfer_expired = payer_transfer_expired(
+        payer_channel=payer_channel,
+        pair=transfer_pair,
+        block_number=block_number,
+    )
+
+    if is_secret_unknown and is_valid_reveal and not has_payer_transfer_expired:
         iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,
@@ -1353,8 +1367,6 @@ def handle_lock_expired(
         if not channel_state:
             return TransitionResult(mediator_state, list())
 
-        import pdb
-        pdb.set_trace()
         result = channel.handle_receive_lock_expired(
             channel_state=channel_state,
             state_change=state_change,
