@@ -10,7 +10,7 @@ from raiden.transfer.state import (
     RouteState,
     balanceproof_from_envelope,
 )
-from raiden.utils import pex, serialization, sha3, typing
+from raiden.utils import pex, serialization, sha3, sized, typing
 
 
 def lockedtransfersigned_from_message(message):
@@ -678,14 +678,14 @@ class MediationPairState(State):
     def __init__(
             self,
             payer_transfer: LockedTransferSignedState,
-            payee_address: typing.Address,
+            payee_address: sized.Address,
             payee_transfer: LockedTransferUnsignedState,
     ):
         if not isinstance(payer_transfer, LockedTransferSignedState):
             raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
 
-        if not isinstance(payee_address, typing.T_Address):
-            raise ValueError('payee_address must be an address')
+        if not isinstance(payee_address, sized.Address):
+            raise ValueError('payee_address must be a sized address')
 
         if not isinstance(payee_transfer, LockedTransferUnsignedState):
             raise ValueError('payee_transfer must be a LockedTransferUnsignedState instance')

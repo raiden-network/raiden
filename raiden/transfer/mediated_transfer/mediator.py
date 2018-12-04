@@ -37,7 +37,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
-from raiden.utils import typing
+from raiden.utils import sized, typing
 
 STATE_SECRET_KNOWN = (
     'payee_secret_revealed',
@@ -375,7 +375,7 @@ def forward_transfer_pair(
 
         transfer_pair = MediationPairState(
             payer_transfer,
-            payee_channel.partner_state.address,
+            sized.Address(payee_channel.partner_state.address),
             lockedtransfer_event.transfer,
         )
 
@@ -433,7 +433,7 @@ def backward_transfer_pair(
 
         transfer_pair = MediationPairState(
             payer_transfer,
-            backward_channel.partner_state.address,
+            sized.Address(backward_channel.partner_state.address),
             refund_transfer.transfer,
         )
 

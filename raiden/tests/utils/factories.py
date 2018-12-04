@@ -28,7 +28,14 @@ from raiden.transfer.state import (
     message_identifier_from_prng,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import privatekey_to_address, publickey_to_address, random_secret, sha3, typing
+from raiden.utils import (
+    privatekey_to_address,
+    publickey_to_address,
+    random_secret,
+    sha3,
+    sized,
+    typing,
+)
 from raiden.utils.signing import eth_sign
 
 EMPTY = object()
@@ -552,7 +559,7 @@ def make_transfers_pair(privatekeys, amount, block_number):
 
         pair = MediationPairState(
             received_transfer,
-            lockedtransfer_event.recipient,
+            sized.Address(lockedtransfer_event.recipient),
             sent_transfer,
         )
         transfers_pair.append(pair)
