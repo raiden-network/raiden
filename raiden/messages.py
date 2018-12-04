@@ -39,6 +39,7 @@ from raiden.utils.typing import (
     PaymentID,
     Secret,
     SecretHash,
+    TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
 )
@@ -245,7 +246,7 @@ class SignedMessage(Message):
         message_signature = self.signature
 
         try:
-            address = eth_recover(
+            address: Optional[Address] = eth_recover(
                 data=data_that_was_signed,
                 signature=message_signature,
             )
@@ -315,7 +316,7 @@ class EnvelopeMessage(SignedMessage):
             balance_hash=balance_hash,
             additional_hash=self.message_hash,
             channel_identifier=self.channel_identifier,
-            token_network_identifier=self.token_network_address,
+            token_network_identifier=typing.TokenNetworkID(self.token_network_address),
             chain_id=self.chain_id,
         )
         return balance_proof_packed
@@ -565,7 +566,7 @@ class Secret(EnvelopeMessage):
             message_identifier: MessageID,
             payment_identifier: PaymentID,
             nonce: int,
-            token_network_address: Address,
+            token_network_address: TokenNetworkAddress,
             channel_identifier: ChannelID,
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
@@ -878,8 +879,8 @@ class LockedTransferBase(EnvelopeMessage):
             message_identifier: MessageID,
             payment_identifier: PaymentID,
             nonce: int,
-            token_network_address: Address,
-            token: Address,
+            token_network_address: TokenNetworkAddress,
+            token: TokenAddress,
             channel_identifier: ChannelID,
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
@@ -978,8 +979,8 @@ class LockedTransfer(LockedTransferBase):
             message_identifier: MessageID,
             payment_identifier: PaymentID,
             nonce: int,
-            token_network_address: Address,
-            token: Address,
+            token_network_address: TokenNetworkAddress,
+            token: TokenAddress,
             channel_identifier: ChannelID,
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
@@ -1113,7 +1114,7 @@ class LockedTransfer(LockedTransferBase):
             message_identifier=event.message_identifier,
             payment_identifier=transfer.payment_identifier,
             nonce=balance_proof.nonce,
-            token_network_address=balance_proof.token_network_identifier,
+            token_network_address=TokenNetworkAddress(balance_proof.token_network_identifier),
             token=transfer.token,
             channel_identifier=balance_proof.channel_identifier,
             transferred_amount=balance_proof.transferred_amount,
