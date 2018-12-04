@@ -1,6 +1,7 @@
 # pylint: disable=too-many-arguments
 import random
 import string
+from copy import deepcopy
 from typing import NamedTuple
 
 from coincurve import PrivateKey
@@ -236,7 +237,7 @@ def make_transfer(
         channel_identifier: typing.ChannelID = EMPTY,
         locksroot: typing.Locksroot = EMPTY,
         token: typing.TargetAddress = EMPTY,
-):
+) -> LockedTransferUnsignedState:
     amount = if_empty(amount, UNIT_TRANSFER_AMOUNT)
     initiator = if_empty(initiator, make_address())
     target = if_empty(target, make_address())
@@ -636,7 +637,7 @@ RANDOM_FACTORIES = {
 }
 
 
-def make_merkletree_leaves(width: int):
+def make_merkletree_leaves(width: int) -> typing.List[typing.Secret]:
     return [make_secret() for _ in range(width)]
 
 
@@ -682,7 +683,7 @@ class NettingChannelStateRecord(NamedTuple):
     our_state: NettingChannelEndStateRecord = None
     partner_state: NettingChannelEndStateRecord = None
 
-    open_transaction: TransactionExecutionStatus = None
+    open_transaction: TransactionExecutionStatus = make_transaction_execution_status()
     close_transaction: TransactionExecutionStatus = None
     settle_transaction: TransactionExecutionStatus = None
 
@@ -703,20 +704,42 @@ def make_netting_channel_end_state(
     return make_netting_channel_end_state_record(base, **kwargs).create()
 
 
+def _base_to_dict(base: typing.Union[None, typing.Dict, typing.NamedTuple]) -> typing.Dict:
+    if base is None:
+        return dict()
+    elif isinstance(base, dict):
+        return base
+    else:
+        return base._asdict()
+
+
 def make_record_netting_channel_state(
         base: NettingChannelStateRecord = None,
         **kwargs,
 ) -> NettingChannelStateRecord:
-    parameters = base._asdict() if base is not None else dict()
+    parameters = _base_to_dict(base)
     parameters.update(**kwargs)
     return NettingChannelStateRecord(**parameters)
+
+
+def _create_end_state(
+        data: typing.Union[typing.Dict, NettingChannelEndStateRecord, NettingChannelEndState],
+) -> NettingChannelEndState:
+
+    if data is None:
+        data = dict()
+    if isinstance(data, dict):
+        data = make_netting_channel_end_state_record(**data)
+    if isinstance(data, NettingChannelEndStateRecord):
+        data = data.create()
+    return data
 
 
 def _record_to_channel_state(record: NettingChannelStateRecord) -> NettingChannelState:
     parameters = record._asdict()
 
-    parameters['our_state'] = record.our_state.create()
-    parameters['partner_state'] = record.partner_state.create()
+    parameters['our_state'] = _create_end_state(record.our_state)
+    parameters['partner_state'] = _create_end_state(record.partner_state)
 
     state = NettingChannelState(**parameters)
 
@@ -728,3 +751,66 @@ def make_netting_channel_state(
         **kwargs,
 ) -> NettingChannelState:
     return _record_to_channel_state(make_record_netting_channel_state(base, **kwargs))
+
+
+class ChannelSet:
+    """Manage a list of channels from one address to different partner addresses.
+
+    The channels can be accessed by subscript
+    """
+    DEFAULT_PARTNER_PKEYS = (HOP1_KEY, HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY)
+    DEFAULT_PARTNER_ADDRESSES = (HOP1, HOP2, HOP3, HOP4, HOP5)
+
+    def __init__(
+            self,
+            channels: typing.List[NettingChannelState],
+            privatekeys: typing.List[PrivateKey],
+    ):
+        self.channels = channels
+        self.privatekeys = privatekeys
+
+    @property
+    def channel_map(self) -> typing.ChannelMap:
+        return {channel.identifier: channel for channel in self.channels}
+
+    @property
+    def our_address(self) -> typing.Address:
+        return self.channels[0].our_state.address
+
+    def partner_address(self, index: int) -> typing.Address:
+        return self.channels[index].partner_state.address
+
+    def partner_privatekey(self, index: int) -> PrivateKey:
+        return self.privatekeys[index]
+
+    def get_route(self, channel_index: int) -> RouteState:
+        return route_from_channel(self.channels[channel_index])
+
+    def get_routes(self, *args) -> typing.List[RouteState]:
+        return [self.get_route(channel_index) for channel_index in args]
+
+    def __getitem__(self, item: int) -> NettingChannelState:
+        return self.channels[item]
+
+
+def make_channel_set2(
+    channel_parameters: typing.List[typing.Dict],
+    base: NettingChannelStateRecord = None,
+    number_of_channels: int = 0,
+) -> ChannelSet:
+    channels = list()
+    pkeys = list()
+
+    for i in range(max(number_of_channels, len(channel_parameters))):
+        parameters = deepcopy(channel_parameters[i])
+        parameters.setdefault('identifier', make_channel_identifier())
+        parameters.setdefault('partner_state', dict())
+
+        if 'address' not in parameters['partner_state']:
+            parameters['partner_state'] = {'address': ChannelSet.DEFAULT_PARTNER_ADDRESSES[i]}
+            pkeys.append(ChannelSet.DEFAULT_PARTNER_PKEYS[i])
+        else:
+            pkeys.append(None)
+        channels.append(make_netting_channel_state(base, **parameters))
+
+    return ChannelSet(channels, pkeys)
