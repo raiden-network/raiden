@@ -18,6 +18,7 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     lockedtransfersigned_from_message,
 )
+from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
 from raiden.transfer.merkle_tree import compute_layers, merkleroot
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
@@ -496,6 +497,21 @@ def make_signed_transfer_for(
     return mediated_transfer
 
 
+def make_default_signed_transfer_for(
+        channel_state: NettingChannelState,
+        **kwargs,
+) -> LockedTransferSignedState:
+    parameters = {
+        'amount': UNIT_TRANSFER_AMOUNT,
+        'initiator': UNIT_TRANSFER_SENDER,
+        'target': HOP2,
+        'expiration': UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT,
+        'secret': UNIT_SECRET,
+    }
+    parameters.update(kwargs)
+    return make_signed_transfer_for(channel_state, **parameters)
+
+
 def make_transfers_pair(privatekeys, amount, block_number):
     transfers_pair = list()
     channel_map = dict()
@@ -793,10 +809,10 @@ class ChannelSet:
         return self.channels[item]
 
 
-def make_channel_set2(
-    channel_parameters: typing.List[typing.Dict],
-    base: NettingChannelStateRecord = None,
-    number_of_channels: int = 0,
+def make_channel_set(
+        channel_parameters: typing.List[typing.Dict],
+        base: NettingChannelStateRecord = None,
+        number_of_channels: int = 0,
 ) -> ChannelSet:
     channels = list()
     pkeys = list()
@@ -814,3 +830,23 @@ def make_channel_set2(
         channels.append(make_netting_channel_state(base, **parameters))
 
     return ChannelSet(channels, pkeys)
+
+
+def mediator_make_channel_pair(
+        base: NettingChannelStateRecord = None,
+        amount: typing.TokenAmount = UNIT_TRANSFER_AMOUNT,
+) -> ChannelSet:
+    return make_channel_set(
+        [
+            {'partner_state': {'address': UNIT_TRANSFER_SENDER, 'balance': amount}},
+            {'our_state': {'balance': amount}},
+        ],
+        base,
+    )
+
+
+def mediator_make_init_action(
+        channels: ChannelSet,
+        transfer: LockedTransferSignedState,
+) -> ActionInitMediator:
+    return ActionInitMediator(channels.get_routes(1), channels.get_route(0), transfer)

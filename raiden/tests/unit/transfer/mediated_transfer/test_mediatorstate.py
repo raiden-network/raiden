@@ -34,6 +34,8 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_PKEY,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
+    mediator_make_channel_pair,
+    mediator_make_init_action,
 )
 from raiden.transfer import channel
 from raiden.transfer.events import (
@@ -128,100 +130,70 @@ def test_is_safe_to_wait():
 
 def test_next_route_amount():
     """ Routes that dont have enough available_balance must be ignored. """
-    amount = 10
     reveal_timeout = 30
     timeout_blocks = reveal_timeout + 10
     amount = UNIT_TRANSFER_AMOUNT
-    channel1 = factories.make_channel(our_balance=amount)
-    channel2 = factories.make_channel(our_balance=0)
-    channel3 = factories.make_channel(our_balance=amount)
 
-    channel_map = {
-        channel1.identifier: channel1,
-        channel2.identifier: channel2,
-        channel3.identifier: channel3,
-    }
+    channels = factories.make_channel_set([
+        {'our_state': {'balance': amount}},
+        {'our_state': {'balance': 0}},
+        {'our_state': {'balance': amount}},
+    ])
 
     # the first available route should be used
-    available_routes = [factories.route_from_channel(channel1)]
     chosen_channel = mediator.next_channel_from_routes(
-        available_routes,
-        channel_map,
+        channels.get_routes(0),
+        channels.channel_map,
         amount,
         timeout_blocks,
     )
-    assert chosen_channel.identifier == channel1.identifier
+    assert chosen_channel.identifier == channels[0].identifier
 
     # additional routes do not change the order
-    available_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
-    ]
     chosen_channel = mediator.next_channel_from_routes(
-        available_routes,
-        channel_map,
+        channels.get_routes(0, 1),
+        channels.channel_map,
         amount,
         timeout_blocks,
     )
-    assert chosen_channel.identifier == channel1.identifier
+    assert chosen_channel.identifier == channels[0].identifier
 
-    available_routes = [
-        factories.route_from_channel(channel3),
-        factories.route_from_channel(channel1),
-    ]
     chosen_channel = mediator.next_channel_from_routes(
-        available_routes,
-        channel_map,
+        channels.get_routes(2, 0),
+        channels.channel_map,
         amount,
         timeout_blocks,
     )
-    assert chosen_channel.identifier == channel3.identifier
+    assert chosen_channel.identifier == channels[2].identifier
 
     # a channel without capacity must be skipped
-    available_routes = [
-        factories.route_from_channel(channel2),
-        factories.route_from_channel(channel1),
-    ]
     chosen_channel = mediator.next_channel_from_routes(
-        available_routes,
-        channel_map,
+        channels.get_routes(1, 0),
+        channels.channel_map,
         amount,
         timeout_blocks,
     )
-    assert chosen_channel.identifier == channel1.identifier
+    assert chosen_channel.identifier == channels[0].identifier
 
 
 def test_next_route_reveal_timeout():
     """ Routes with a larger reveal timeout than timeout_blocks must be ignored. """
-    amount = 10
-    balance = 20
     timeout_blocks = 10
 
-    channel1 = factories.make_channel(our_balance=balance, reveal_timeout=timeout_blocks * 2)
-    channel2 = factories.make_channel(our_balance=balance, reveal_timeout=timeout_blocks + 1)
-    channel3 = factories.make_channel(our_balance=balance, reveal_timeout=timeout_blocks // 2)
-    channel4 = factories.make_channel(our_balance=balance, reveal_timeout=timeout_blocks)
+    channels = factories.make_channel_set([
+        {'reveal_timeout': timeout_blocks * 2},
+        {'reveal_timeout': timeout_blocks + 1},
+        {'reveal_timeout': timeout_blocks // 2},
+        {'reveal_timeout': timeout_blocks},
+    ])
 
-    channel_map = {
-        channel1.identifier: channel1,
-        channel2.identifier: channel2,
-        channel3.identifier: channel3,
-        channel4.identifier: channel4,
-    }
-
-    available_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
-        factories.route_from_channel(channel3),
-        factories.route_from_channel(channel4),
-    ]
     chosen_channel = mediator.next_channel_from_routes(
-        available_routes,
-        channel_map,
-        amount,
+        channels.get_routes(0, 1, 2, 3),
+        channels.channel_map,
+        UNIT_TRANSFER_AMOUNT,
         timeout_blocks,
     )
-    assert chosen_channel.identifier == channel3.identifier
+    assert chosen_channel.identifier == channels[2].identifier
 
 
 def test_next_transfer_pair():
@@ -241,20 +213,18 @@ def test_next_transfer_pair():
         secret,
     )
 
-    channel1 = factories.make_channel(our_balance=balance, token_address=UNIT_TOKEN_ADDRESS)
-    channel_map = {channel1.identifier: channel1}
-    available_routes = [factories.route_from_channel(channel1)]
+    channels = factories.make_channel_set([{'our_state': {'balance': balance}}])
 
     pair, events = mediator.forward_transfer_pair(
         payer_transfer,
-        available_routes,
-        channel_map,
+        channels.get_routes(0),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
 
     assert pair.payer_transfer == payer_transfer
-    assert pair.payee_address == channel1.partner_state.address
+    assert pair.payee_address == channels[0].partner_state.address
     assert pair.payee_transfer.lock.expiration == pair.payer_transfer.lock.expiration
 
     assert must_contain_entry(events, SendLockedTransfer, {
@@ -923,69 +893,37 @@ def test_events_for_onchain_secretreveal_once():
 
 
 def test_secret_learned():
-    amount = UNIT_TRANSFER_AMOUNT
-    target = HOP2
-    from_expiration = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    from_route = factories.route_from_channel(from_channel)
+    channels = mediator_make_channel_pair()
 
-    from_transfer = factories.make_signed_transfer_for(
-        from_channel,
-        amount,
-        HOP1,
-        target,
-        from_expiration,
-        UNIT_SECRET,
-    )
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    available_routes = [factories.route_from_channel(channel1)]
-    channel_map = {
-        from_channel.identifier: from_channel,
-        channel1.identifier: channel1,
-    }
+    from_transfer = factories.make_default_signed_transfer_for(channels[0])
 
     block_number = 1
-    init_state_change = ActionInitMediator(
-        available_routes,
-        from_route,
-        from_transfer,
-    )
-
-    initial_state = None
     iteration = mediator.state_transition(
-        initial_state,
-        init_state_change,
-        channel_map,
+        None,
+        mediator_make_init_action(channels, from_transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
 
     iteration = mediator.secret_learned(
         iteration.new_state,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
         UNIT_SECRET,
         UNIT_SECRETHASH,
-        channel1.partner_state.address,
+        channels[1].partner_state.address,
     )
     transfer_pair = iteration.new_state.transfers_pair[0]
 
     assert from_transfer.lock.expiration == transfer_pair.payee_transfer.lock.expiration
     assert mediator.is_send_transfer_almost_equal(transfer_pair.payee_transfer, from_transfer)
-    assert transfer_pair.payee_address == available_routes[0].node_address
+    assert transfer_pair.payee_address == channels.get_route(1).node_address
 
-    assert transfer_pair.payer_transfer.balance_proof.sender == from_route.node_address
+    assert transfer_pair.payer_transfer.balance_proof.sender == channels.get_route(0).node_address
     assert transfer_pair.payer_transfer == from_transfer
 
     assert iteration.new_state.secret == UNIT_SECRET
@@ -1050,50 +988,25 @@ def test_secret_learned_with_refund():
 
 
 def test_mediate_transfer():
-    amount = 10
     block_number = 5
-    target = HOP2
-    expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-
-    payer_transfer = factories.make_signed_transfer_for(
-        payer_channel,
-        amount,
-        HOP1,
-        target,
-        expiration,
-        UNIT_SECRET,
-    )
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    channel_map = {
-        channel1.identifier: channel1,
-        payer_channel.identifier: payer_channel,
-    }
-    possible_routes = [factories.route_from_channel(channel1)]
+    channels = mediator_make_channel_pair()
+    payer_transfer = factories.make_default_signed_transfer_for(channels[0], expiration=30)
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     iteration = mediator.mediate_transfer(
         mediator_state,
-        possible_routes,
-        payer_channel,
-        channel_map,
+        channels.get_routes(1),
+        channels[0],
+        channels.channel_map,
         pseudo_random_generator,
         payer_transfer,
         block_number,
     )
 
     assert must_contain_entry(iteration.events, SendLockedTransfer, {
-        'recipient': channel1.partner_state.address,
+        'recipient': channels[1].partner_state.address,
         'transfer': {
             'payment_identifier': payer_transfer.payment_identifier,
             'token': payer_transfer.token,
@@ -1108,50 +1021,16 @@ def test_mediate_transfer():
 
 
 def test_init_mediator():
-    amount = UNIT_TRANSFER_AMOUNT
-    target = HOP2
-    from_expiration = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    from_route = factories.route_from_channel(from_channel)
-
-    from_transfer = factories.make_signed_transfer_for(
-        from_channel,
-        amount,
-        HOP1,
-        target,
-        from_expiration,
-        UNIT_SECRET,
-    )
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        partner_address=HOP2,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    available_routes = [factories.route_from_channel(channel1)]
-    channel_map = {
-        from_channel.identifier: from_channel,
-        channel1.identifier: channel1,
-    }
+    channels = mediator_make_channel_pair()
+    from_transfer = factories.make_default_signed_transfer_for(channels[0])
 
     block_number = 1
-    init_state_change = ActionInitMediator(
-        available_routes,
-        from_route,
-        from_transfer,
-    )
-
-    mediator_state = None
     iteration = mediator.state_transition(
-        mediator_state,
-        init_state_change,
-        channel_map,
+        None,
+        mediator_make_init_action(channels, from_transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -1171,51 +1050,21 @@ def test_init_mediator():
 
 
 def test_mediator_reject_keccak_empty_hash():
-    amount = UNIT_TRANSFER_AMOUNT
-    target = HOP2
-    from_expiration = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    from_route = factories.route_from_channel(from_channel)
-
-    from_transfer = factories.make_signed_transfer_for(
-        channel_state=from_channel,
-        amount=amount,
+    channels = mediator_make_channel_pair()
+    from_transfer = factories.make_default_signed_transfer_for(
+        channel_state=channels[0],
         initiator=HOP1,
-        target=target,
-        expiration=from_expiration,
         secret=EMPTY_HASH,
         allow_invalid=True,
     )
 
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        partner_address=HOP2,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    available_routes = [factories.route_from_channel(channel1)]
-    channel_map = {
-        from_channel.identifier: from_channel,
-        channel1.identifier: channel1,
-    }
-
     block_number = 1
-    init_state_change = ActionInitMediator(
-        available_routes,
-        from_route,
-        from_transfer,
-    )
-
-    mediator_state = None
     iteration = mediator.state_transition(
-        mediator_state,
-        init_state_change,
-        channel_map,
+        None,
+        mediator_make_init_action(channels, from_transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -1224,50 +1073,16 @@ def test_mediator_reject_keccak_empty_hash():
 
 
 def test_mediator_secret_reveal_empty_hash():
-    amount = UNIT_TRANSFER_AMOUNT
-    target = HOP2
-    from_expiration = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    from_route = factories.route_from_channel(from_channel)
-
-    from_transfer = factories.make_signed_transfer_for(
-        from_channel,
-        amount,
-        HOP1,
-        target,
-        from_expiration,
-        UNIT_SECRET,
-    )
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        partner_address=HOP2,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    available_routes = [factories.route_from_channel(channel1)]
-    channel_map = {
-        from_channel.identifier: from_channel,
-        channel1.identifier: channel1,
-    }
+    channels = mediator_make_channel_pair()
+    from_transfer = factories.make_default_signed_transfer_for(channels[0], initiator=HOP1)
 
     block_number = 1
-    init_state_change = ActionInitMediator(
-        available_routes,
-        from_route,
-        from_transfer,
-    )
-
-    mediator_state = None
     iteration = mediator.state_transition(
-        mediator_state,
-        init_state_change,
-        channel_map,
+        None,
+        mediator_make_init_action(channels, from_transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -1276,14 +1091,11 @@ def test_mediator_secret_reveal_empty_hash():
     current_state = iteration.new_state
 
     # an empty hash offchain secret reveal should be rejected
-    receive_secret = ReceiveSecretReveal(
-        EMPTY_HASH,
-        HOP2,
-    )
+    receive_secret = ReceiveSecretReveal(EMPTY_HASH, HOP2)
     iteration = mediator.state_transition(
         current_state,
         receive_secret,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_number + 1,
     )
@@ -1301,66 +1113,35 @@ def test_mediator_secret_reveal_empty_hash():
     iteration = mediator.state_transition(
         current_state,
         onchain_reveal,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_number + 1,
     )
-    assert secrethash not in from_channel.partner_state.secrethashes_to_onchain_unlockedlocks
+    assert secrethash not in channels[0].partner_state.secrethashes_to_onchain_unlockedlocks
 
 
 def test_no_valid_routes():
-    amount = UNIT_TRANSFER_AMOUNT
-    target = HOP2
-    from_expiration = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        our_balance=amount,
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    from_route = factories.route_from_channel(from_channel)
+    channels = factories.make_channel_set([
+        {
+            'partner_state': {
+                'balance': UNIT_TRANSFER_AMOUNT,
+                'address': UNIT_TRANSFER_SENDER,
+            },
+            'our_state': {'balance': UNIT_TRANSFER_AMOUNT},
+        },
+        {'our_state': {'balance': UNIT_TRANSFER_AMOUNT - 1}},
+        {'our_state': {'balance': 0}},
+    ])
 
-    from_transfer = factories.make_signed_transfer_for(
-        from_channel,
-        amount,
-        HOP1,
-        target,
-        from_expiration,
-        UNIT_SECRET,
-    )
-
-    channel1 = factories.make_channel(
-        our_balance=amount - 1,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    channel2 = factories.make_channel(
-        our_balance=0,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    available_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
-    ]
-    channel_map = {
-        from_channel.identifier: from_channel,
-        channel1.identifier: channel1,
-        channel2.identifier: channel2,
-    }
+    from_transfer = factories.make_default_signed_transfer_for(channels[0], initiator=HOP1)
 
     block_number = 1
-    init_state_change = ActionInitMediator(
-        available_routes,
-        from_route,
-        from_transfer,
-    )
-
-    mediator_state = None
     iteration = mediator.state_transition(
-        mediator_state,
-        init_state_change,
-        channel_map,
+        None,
+        mediator_make_init_action(channels, from_transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -1405,64 +1186,30 @@ def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
     # (block=5) C call unlock on channel B-C (C is forced to unlock)
     # (block=6) B learns the secret
     # (block=7) B call unlock on channel A-B (settle_timeout is over)
-    amount = UNIT_TRANSFER_AMOUNT
-    target = HOP2
     high_expiration = 20
-    low_reveal_timeout = 5
-    low_settlement_expiration = 10
+    base = {
+        'reveal_timeout': 5,
+        'settle_timeout': 10,
+    }
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        our_balance=amount,
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-        reveal_timeout=low_reveal_timeout,
-        settle_timeout=low_settlement_expiration,
-    )
-    from_route = factories.route_from_channel(from_channel)
-
-    from_transfer = factories.make_signed_transfer_for(
-        from_channel,
-        amount,
-        HOP1,
-        target,
-        high_expiration,
-        UNIT_SECRET,
+    channels = mediator_make_channel_pair(base=base)
+    from_transfer = factories.make_default_signed_transfer_for(
+        channels[0],
+        initiator=HOP1,
+        expiration=high_expiration,
         allow_invalid=True,
     )
 
     # Assert the precondition for the test. The message is still valid, and the
     # recipient cannot control the received lock expiration
-    assert from_transfer.lock.expiration >= from_channel.settle_timeout
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-        reveal_timeout=low_reveal_timeout,
-        settle_timeout=low_settlement_expiration,
-    )
-
-    available_routes = [
-        factories.route_from_channel(channel1),
-    ]
-    channel_map = {
-        from_channel.identifier: from_channel,
-        channel1.identifier: channel1,
-    }
+    assert from_transfer.lock.expiration >= channels[0].settle_timeout
 
     block_number = 1
-    init_state_change = ActionInitMediator(
-        available_routes,
-        from_route,
-        from_transfer,
-    )
-
-    mediator_state = None
     iteration = mediator.state_transition(
-        mediator_state,
-        init_state_change,
-        channel_map,
+        None,
+        mediator_make_init_action(channels, from_transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -1500,7 +1247,6 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     #   has enough time to follow the protocol without closing the channel B-C.
     amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
-    from_expiration = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
     pseudo_random_generator = random.Random()
 
     # C's channel with the Attacker node A2
@@ -1518,13 +1264,10 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     )
     from_route = factories.route_from_channel(bc_channel)
 
-    from_transfer = factories.make_signed_transfer_for(
+    from_transfer = factories.make_default_signed_transfer_for(
         bc_channel,
-        amount,
-        HOP1,
-        target_attacker2,
-        from_expiration,
-        UNIT_SECRET,
+        initiator=HOP1,
+        target=target_attacker2,
     )
 
     available_routes = [
@@ -1656,40 +1399,17 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
     # The race is depending on the handling of 3 before 4.
     #
     block_number = 5
-    expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=UNIT_TRANSFER_AMOUNT,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-
-    payer_transfer = factories.make_signed_transfer_for(
-        payer_channel,
-        UNIT_TRANSFER_AMOUNT,
-        HOP1,
-        UNIT_TRANSFER_TARGET,
-        expiration,
-        UNIT_SECRET,
-    )
-
-    channel1 = factories.make_channel(
-        our_balance=UNIT_TRANSFER_AMOUNT,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    channel_map = {
-        channel1.identifier: channel1,
-        payer_channel.identifier: payer_channel,
-    }
-    possible_routes = [factories.route_from_channel(channel1)]
+    channels = mediator_make_channel_pair()
+    payer_transfer = factories.make_default_signed_transfer_for(channels[0], expiration=30)
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     iteration = mediator.mediate_transfer(
         mediator_state,
-        possible_routes,
-        payer_channel,
-        channel_map,
+        channels.get_routes(1),
+        channels[0],
+        channels.channel_map,
         pseudo_random_generator,
         payer_transfer,
         block_number,
@@ -1761,57 +1481,33 @@ def test_set_offchain_secret():
 
 
 def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
-    amount = UNIT_TRANSFER_AMOUNT
-    target = HOP2
-    from_expiration = UNIT_SETTLE_TIMEOUT
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        partner_balance=2 * MAXIMUM_PENDING_TRANSFERS * amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    from_route = factories.route_from_channel(from_channel)
-
-    channel1 = factories.make_channel(
-        our_balance=2 * MAXIMUM_PENDING_TRANSFERS * amount,
-        partner_address=HOP2,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    available_routes = [factories.route_from_channel(channel1)]
-
-    channel_map = {
-        from_channel.identifier: from_channel,
-        channel1.identifier: channel1,
-    }
+    balance = 2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT
+    channels = factories.make_channel_set([
+        {'partner_state': {'balance': balance, 'address': UNIT_TRANSFER_SENDER}},
+        {'our_state': {'balance': balance}},
+    ])
 
     iterations = []
     for index in range(1, MAXIMUM_PENDING_TRANSFERS + 2):
-        from_transfer = factories.make_signed_transfer_for(
-            from_channel,
-            amount,
-            HOP1,
-            target,
-            from_expiration,
-            random_secret(),
+        from_transfer = factories.make_default_signed_transfer_for(
+            channels[0],
+            initiator=HOP1,
+            expiration=UNIT_SETTLE_TIMEOUT,
+            secret=random_secret(),
             identifier=index,
             nonce=index,
-            locked_amount=index * amount,
+            locked_amount=index * UNIT_TRANSFER_AMOUNT,
             compute_locksroot=True,
             allow_invalid=True,
         )
 
         block_number = 1
-        init_state_change = ActionInitMediator(
-            available_routes,
-            from_route,
-            from_transfer,
-        )
-
         iterations.append(mediator.state_transition(
             None,
-            init_state_change,
-            channel_map,
+            mediator_make_init_action(channels, from_transfer),
+            channels.channel_map,
             pseudo_random_generator,
             block_number,
         ))
@@ -1831,43 +1527,23 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
 
 
 def test_mediator_lock_expired_with_new_block():
-    amount = 10
     block_number = 5
-    target = HOP2
-    expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
+    channels = mediator_make_channel_pair()
 
-    payer_transfer = factories.make_signed_transfer_for(
-        payer_channel,
-        amount,
-        HOP1,
-        target,
-        expiration,
-        UNIT_SECRET,
+    payer_transfer = factories.make_default_signed_transfer_for(
+        channels[0],
+        initiator=HOP1,
+        expiration=30,
     )
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    channel_map = {
-        channel1.identifier: channel1,
-        payer_channel.identifier: payer_channel,
-    }
-    possible_routes = [factories.route_from_channel(channel1)]
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     iteration = mediator.mediate_transfer(
         mediator_state,
-        possible_routes,
-        payer_channel,
-        channel_map,
+        channels.get_routes(1),
+        channels[0],
+        channels.channel_map,
         pseudo_random_generator,
         payer_transfer,
         block_number,
@@ -1888,7 +1564,7 @@ def test_mediator_lock_expired_with_new_block():
     iteration = mediator.state_transition(
         mediator_state,
         block,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_expiration_number,
     )
@@ -1900,64 +1576,31 @@ def test_mediator_lock_expired_with_new_block():
     assert must_contain_entry(iteration.events, EventUnlockFailed, {
         'secrethash': transfer.lock.secrethash,
     })
-    assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
+    assert transfer.lock.secrethash not in channels[1].our_state.secrethashes_to_lockedlocks
 
 
 def test_mediator_lock_expired_with_receive_lock_expired():
-    amount = 10
     block_number = 5
-    target = HOP2
     expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-
-    payer_transfer = factories.make_signed_transfer_for(
-        payer_channel,
-        amount,
-        UNIT_TRANSFER_SENDER,
-        target,
-        expiration,
-        UNIT_SECRET,
-    )
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-        partner_address=target,
-    )
-    channel_map = {
-        channel1.identifier: channel1,
-        payer_channel.identifier: payer_channel,
-    }
-    possible_routes = [factories.route_from_channel(channel1)]
-
-    init_mediator = ActionInitMediator(
-        possible_routes,
-        factories.route_from_channel(payer_channel),
-        payer_transfer,
-    )
+    channels = mediator_make_channel_pair()
+    transfer = factories.make_default_signed_transfer_for(channels[0], expiration=expiration)
 
     iteration = mediator.state_transition(
         None,
-        init_mediator,
-        channel_map,
+        mediator_make_init_action(channels, transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
 
-    transfer = payer_transfer
-
     assert must_contain_entry(iteration.events, SendLockedTransfer, {
-        'recipient': target,
+        'recipient': HOP2,
         'transfer': {
             'lock': {
                 'amount': 10,
-                'expiration': 30,
+                'expiration': expiration,
                 'secrethash': transfer.lock.secrethash,
             },
             'balance_proof': {
@@ -1974,7 +1617,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         transfer.balance_proof.transferred_amount,
         0,
         transfer.balance_proof.token_network_identifier,
-        payer_channel.identifier,
+        channels[0].identifier,
         EMPTY_MERKLE_ROOT,
         transfer.lock.secrethash,
         sender_address=UNIT_TRANSFER_SENDER,
@@ -1991,7 +1634,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     iteration = mediator.state_transition(
         iteration.new_state,
         lock_expired_state_change,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_before_confirmed_expiration,
     )
@@ -2001,7 +1644,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     iteration = mediator.state_transition(
         iteration.new_state,
         lock_expired_state_change,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_lock_expired,
     )
@@ -2024,80 +1667,48 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     - M should remove the lock from both secrethashes_to_lockedlocks
       and secrethashes_to_unlocklocks.
     """
-    amount = 10
     block_number = 5
-    target = HOP2
     expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-
-    payer_transfer = factories.make_signed_transfer_for(
-        payer_channel,
-        amount,
-        UNIT_TRANSFER_SENDER,
-        target,
-        expiration,
-        UNIT_SECRET,
-    )
-
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-        partner_address=target,
-    )
-    channel_map = {
-        channel1.identifier: channel1,
-        payer_channel.identifier: payer_channel,
-    }
-    possible_routes = [factories.route_from_channel(channel1)]
-
-    init_mediator = ActionInitMediator(
-        possible_routes,
-        factories.route_from_channel(payer_channel),
-        payer_transfer,
-    )
+    channels = mediator_make_channel_pair()
+    transfer = factories.make_default_signed_transfer_for(channels[0], expiration=expiration)
 
     iteration = mediator.state_transition(
         None,
-        init_mediator,
-        channel_map,
+        mediator_make_init_action(channels, transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
 
-    transfer = payer_transfer
     secrethash = transfer.lock.secrethash
 
     block_lock_expired = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 
-    assert secrethash in payer_channel.partner_state.secrethashes_to_lockedlocks
+    assert secrethash in channels[0].partner_state.secrethashes_to_lockedlocks
 
     # Reveal secret just before the lock expires
-    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, target)
+    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, HOP2)
 
     iteration = mediator.state_transition(
         iteration.new_state,
         secret_reveal,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_lock_expired,
     )
 
     # Make sure the lock was moved
-    assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
-    assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
+    assert secrethash not in channels[0].partner_state.secrethashes_to_lockedlocks
+    assert secrethash in channels[0].partner_state.secrethashes_to_unlockedlocks
 
     balance_proof = factories.make_signed_balance_proof(
         nonce=2,
         transferred_amount=transfer.balance_proof.transferred_amount,
         locked_amount=0,
         token_network_address=transfer.balance_proof.token_network_identifier,
-        channel_identifier=payer_channel.identifier,
+        channel_identifier=channels[0].identifier,
         locksroot=EMPTY_MERKLE_ROOT,
         extra_hash=transfer.lock.secrethash,
         sender_address=UNIT_TRANSFER_SENDER,
@@ -2113,14 +1724,14 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     iteration = mediator.state_transition(
         iteration.new_state,
         lock_expired_state_change,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_lock_expired + 1,
     )
 
     # LockExpired should remove the lock from both lockedlocks and unlockedlocks
-    assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
-    assert secrethash not in payer_channel.partner_state.secrethashes_to_unlockedlocks
+    assert secrethash not in channels[0].partner_state.secrethashes_to_lockedlocks
+    assert secrethash not in channels[0].partner_state.secrethashes_to_unlockedlocks
 
 
 def test_mediator_lock_expired_after_receive_secret_reveal():
@@ -2135,66 +1746,34 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     - M should remove the lock from both secrethashes_to_lockedlocks
       and secrethashes_to_unlocklocks.
     """
-    amount = 10
     block_number = 5
-    target = HOP2
     expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-
-    payer_transfer = factories.make_signed_transfer_for(
-        payer_channel,
-        amount,
-        UNIT_TRANSFER_SENDER,
-        target,
-        expiration,
-        UNIT_SECRET,
-    )
-
-    payee_channel = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-        partner_address=target,
-    )
-    channel_map = {
-        payee_channel.identifier: payee_channel,
-        payer_channel.identifier: payer_channel,
-    }
-    possible_routes = [factories.route_from_channel(payee_channel)]
-
-    init_mediator = ActionInitMediator(
-        possible_routes,
-        factories.route_from_channel(payer_channel),
-        payer_transfer,
-    )
+    channels = mediator_make_channel_pair()
+    transfer = factories.make_default_signed_transfer_for(channels[0], expiration=30)
 
     iteration = mediator.state_transition(
         None,
-        init_mediator,
-        channel_map,
+        mediator_make_init_action(channels, transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
 
-    transfer = payer_transfer
     secrethash = transfer.lock.secrethash
 
     block_lock_expired = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 
-    assert secrethash in payer_channel.partner_state.secrethashes_to_lockedlocks
+    assert secrethash in channels[0].partner_state.secrethashes_to_lockedlocks
 
     # Reveal secret just before the lock expires
-    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, target)
+    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, HOP2)
 
     iteration = mediator.state_transition(
         iteration.new_state,
         secret_reveal,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_lock_expired,
     )
@@ -2203,6 +1782,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     assert must_contain_entry(iteration.events, SendBalanceProof, {}) is None
 
     # Make sure the lock was moved
+    payer_channel, payee_channel = channels[0], channels[1]
     assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
     assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
 
@@ -2219,10 +1799,10 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     iteration = mediator.state_transition(
         iteration.new_state,
         block,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_expiration_number,
     )
 
-    assert secrethash not in payer_channel.our_state.secrethashes_to_unlockedlocks
+    assert secrethash not in channels[0].our_state.secrethashes_to_unlockedlocks
     assert must_contain_entry(iteration.events, SendLockExpired, {})
