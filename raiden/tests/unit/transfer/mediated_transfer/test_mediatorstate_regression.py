@@ -495,26 +495,13 @@ def test_regression_mediator_not_update_payer_state_twice():
         block_number,
     )
     assert iteration.new_state is not None
+
     current_state = iteration.new_state
     send_transfer = must_contain_entry(iteration.events, SendLockedTransfer, {})
     assert send_transfer
+
     transfer = send_transfer.transfer
     block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
-
-    receive_secret = ReceiveSecretReveal(
-        UNIT_SECRET,
-        payee_channel.partner_state.address,
-    )
-    iteration = mediator.state_transition(
-        current_state,
-        receive_secret,
-        channel_map,
-        pseudo_random_generator,
-        transfer.lock.expiration - 2,
-    )
-    current_state = iteration.new_state
-    secrethash = payer_transfer.lock.secrethash
-    assert secrethash not in payer_channel.partner_state.secrethashes_to_lockedlocks
 
     # # Playing with also receiving a lock expired message from the initiator
     # send_lock_expired, _ = channel.create_sendexpiredlock(
@@ -567,8 +554,33 @@ def test_regression_mediator_not_update_payer_state_twice():
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
-    # import pdb
-    # pdb.set_trace()
+
+    receive_secret = ReceiveSecretReveal(
+        UNIT_SECRET,
+        payee_channel.partner_state.address,
+    )
+    iteration = mediator.state_transition(
+        current_state,
+        receive_secret,
+        channel_map,
+        pseudo_random_generator,
+        block_expiration_number + 2,
+    )
+    current_state = iteration.new_state
+    lock = payer_transfer.lock
+    secrethash = lock.secrethash
+    assert secrethash in payer_channel.partner_state.secrethashes_to_lockedlocks
+    assert current_state.transfers_pair[0].payee_state == 'payee_expired'
+    assert not channel.is_secret_known(payer_channel.partner_state, secrethash)
+
+    safe_to_wait, _ = mediator.is_safe_to_wait(
+        lock.expiration,
+        payer_channel.reveal_timeout,
+        lock.expiration + 10,
+    )
+
+    assert not safe_to_wait
+
     iteration = mediator.state_transition(
         current_state,
         block,
