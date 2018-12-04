@@ -750,8 +750,6 @@ def events_for_balanceproof(
             # payee_channel_open check above. So let mypy know about this
             assert payee_channel
             payee_channel = cast(NettingChannelState, payee_channel)
-            # import pdb
-            # pdb.set_trace()
             pair.payee_state = 'payee_balance_proof'
 
             message_identifier = message_identifier_from_prng(pseudo_random_generator)

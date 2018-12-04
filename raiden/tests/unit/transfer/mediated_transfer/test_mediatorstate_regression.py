@@ -503,35 +503,6 @@ def test_regression_mediator_not_update_payer_state_twice():
     transfer = send_transfer.transfer
     block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
 
-    # # Playing with also receiving a lock expired message from the initiator
-    # send_lock_expired, _ = channel.create_sendexpiredlock(
-    #     sender_end_state=payer_channel.partner_state,
-    #     locked_lock=transfer.lock,
-    #     pseudo_random_generator=pseudo_random_generator,
-    #     chain_id=payer_channel.chain_id,
-    #     token_network_identifier=payer_channel.token_network_identifier,
-    #     channel_identifier=payer_channel.identifier,
-    #     recipient=payer_channel.our_state.address,
-    # )
-    # assert send_lock_expired
-    # lock_expired_message = message_from_sendevent(send_lock_expired, HOP1)
-    # lock_expired_message.sign(initiator_key)
-    # balance_proof = balanceproof_from_envelope(lock_expired_message)
-
-    # message_identifier = message_identifier_from_prng(pseudo_random_generator)
-    # iteration = mediator.state_transition(
-    #     current_state,
-    #     ReceiveLockExpired(
-    #         balance_proof=balance_proof,
-    #         secrethash=payer_transfer.lock.secrethash,
-    #         message_identifier=message_identifier,
-    #     ),
-    #     channel_map,
-    #     pseudo_random_generator,
-    #     block_expiration_number,
-    # )
-    # current_state = iteration.new_state
-
     block = Block(
         block_number=block_expiration_number,
         gas_limit=1,
