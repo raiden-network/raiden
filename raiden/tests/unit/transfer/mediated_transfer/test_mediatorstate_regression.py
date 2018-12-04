@@ -19,7 +19,6 @@ from raiden.tests.utils.factories import (
     UNIT_TOKEN_ADDRESS,
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
-    UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
 )
 from raiden.transfer import channel
@@ -50,48 +49,21 @@ def test_payer_enter_danger_zone_with_transfer_payed():
 
     Issue: https://github.com/raiden-network/raiden/issues/1013
     """
-    amount = 10
     block_number = 5
-    target = HOP2
-    expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    payer_route = factories.route_from_channel(payer_channel)
+    channels = factories.mediator_make_channel_pair()
 
-    payer_transfer = factories.make_signed_transfer_for(
-        payer_channel,
-        amount,
-        HOP1,
-        target,
-        expiration,
-        UNIT_SECRET,
+    payer_transfer = factories.make_default_signed_transfer_for(
+        channels[0],
+        initiator=HOP1,
+        expiration=30,
     )
 
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    channel_map = {
-        channel1.identifier: channel1,
-        payer_channel.identifier: payer_channel,
-    }
-    possible_routes = [factories.route_from_channel(channel1)]
-
-    init_state_change = ActionInitMediator(
-        possible_routes,
-        payer_route,
-        payer_transfer,
-    )
-    initial_state = None
     initial_iteration = mediator.state_transition(
-        initial_state,
-        init_state_change,
-        channel_map,
+        None,
+        factories.mediator_make_init_action(channels, payer_transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -102,7 +74,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     lock_expiration = send_transfer.transfer.lock.expiration
 
     new_state = initial_iteration.new_state
-    for block_number in range(block_number, lock_expiration - channel1.reveal_timeout):
+    for block_number in range(block_number, lock_expiration - channels[1].reveal_timeout):
         block_state_change = Block(
             block_number=block_number,
             gas_limit=1,
@@ -112,7 +84,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         block_iteration = mediator.handle_block(
             new_state,
             block_state_change,
-            channel_map,
+            channels.channel_map,
             pseudo_random_generator,
         )
         new_state = block_iteration.new_state
@@ -121,12 +93,12 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     assert new_state.transfers_pair[0].payee_state == 'payee_pending'
     receive_secret = ReceiveSecretReveal(
         UNIT_SECRET,
-        channel1.partner_state.address,
+        channels[1].partner_state.address,
     )
     paid_iteration = mediator.state_transition(
         new_state,
         receive_secret,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -144,7 +116,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     block_iteration = mediator.handle_block(
         paid_state,
         expired_block_state_change,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
     )
 
@@ -242,48 +214,20 @@ def test_regression_mediator_send_lock_expired_with_new_block():
     """ The mediator must send the lock expired, but it must **not** clear
     itself if it has not **received** the corresponding message.
     """
-    amount = 10
     block_number = 5
-    target = HOP2
-    expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    payer_route = factories.route_from_channel(payer_channel)
-
-    payer_transfer = factories.make_signed_transfer_for(
-        payer_channel,
-        amount,
-        HOP1,
-        target,
-        expiration,
-        UNIT_SECRET,
+    channels = factories.mediator_make_channel_pair()
+    payer_transfer = factories.make_default_signed_transfer_for(
+        channels[0],
+        initiator=HOP1,
+        expiration=30,
     )
 
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
-    available_routes = [factories.route_from_channel(channel1)]
-    channel_map = {
-        channel1.identifier: channel1,
-        payer_channel.identifier: payer_channel,
-    }
-
-    init_state_change = ActionInitMediator(
-        available_routes,
-        payer_route,
-        payer_transfer,
-    )
-    initial_state = None
     init_iteration = mediator.state_transition(
-        initial_state,
-        init_state_change,
-        channel_map,
+        None,
+        factories.mediator_make_init_action(channels, payer_transfer),
+        channels.channel_map,
         pseudo_random_generator,
         block_number,
     )
@@ -302,7 +246,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
     iteration = mediator.state_transition(
         init_iteration.new_state,
         block,
-        channel_map,
+        channels.channel_map,
         pseudo_random_generator,
         block_expiration_number,
     )
@@ -311,7 +255,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         "The payer's lock has also expired, "
         "but it must not be removed locally (without an Expired lock)"
     )
-    assert transfer.lock.secrethash in payer_channel.partner_state.secrethashes_to_lockedlocks, msg
+    assert transfer.lock.secrethash in channels[0].partner_state.secrethashes_to_lockedlocks, msg
 
     msg = 'The payer has not yet sent an expired lock, the task can not be cleared yet'
     assert iteration.new_state is not None, msg
@@ -319,7 +263,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
     assert must_contain_entry(iteration.events, SendLockExpired, {
         'secrethash': transfer.lock.secrethash,
     })
-    assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
+    assert transfer.lock.secrethash not in channels[1].our_state.secrethashes_to_lockedlocks
 
 
 def test_regression_mediator_task_no_routes():
