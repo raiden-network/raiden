@@ -2,8 +2,8 @@
 from copy import deepcopy
 
 from raiden.transfer.queue_identifier import QueueIdentifier
+from raiden.utils import sized
 from raiden.utils.typing import (
-    Address,
     BlockExpiration,
     BlockNumber,
     ChannelID,
@@ -108,7 +108,7 @@ class SendMessageEvent(Event):
 
     def __init__(
             self,
-            recipient: Address,
+            recipient: sized.Address,
             channel_identifier: ChannelID,
             message_identifier: MessageID,
     ):

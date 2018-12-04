@@ -8,7 +8,7 @@ from raiden.transfer.architecture import (
     SendMessageEvent,
 )
 from raiden.transfer.state import BalanceProofSignedState, BalanceProofUnsignedState
-from raiden.utils import pex, serialization, sha3, typing
+from raiden.utils import pex, serialization, sha3, sized, typing
 
 # pylint: disable=too-many-arguments,too-few-public-methods
 
@@ -780,7 +780,7 @@ class SendDirectTransfer(SendMessageEvent):
             token_address: typing.TokenAddress,
     ):
 
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(sized.Address(recipient), channel_identifier, message_identifier)
 
         self.payment_identifier = payment_identifier
         self.balance_proof = balance_proof

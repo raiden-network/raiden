@@ -4,7 +4,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
-from raiden.utils import pex, serialization, sha3, typing
+from raiden.utils import pex, serialization, sha3, sized, typing
 
 # According to the smart contracts as of 07/08:
 # https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213
@@ -31,7 +31,11 @@ class SendLockExpired(SendMessageEvent):
             balance_proof: BalanceProofUnsignedState,
             secrethash: typing.SecretHash,
     ):
-        super().__init__(recipient, balance_proof.channel_identifier, message_identifier)
+        super().__init__(
+            sized.Address(recipient),
+            balance_proof.channel_identifier,
+            message_identifier,
+        )
 
         self.balance_proof = balance_proof
         self.secrethash = secrethash
@@ -83,7 +87,7 @@ class SendLockedTransfer(SendMessageEvent):
 
     def __init__(
             self,
-            recipient: typing.Address,
+            recipient: sized.Address,
             channel_identifier: typing.ChannelID,
             message_identifier: typing.MessageID,
             transfer: LockedTransferUnsignedState,
@@ -177,7 +181,7 @@ class SendSecretReveal(SendMessageEvent):
     ):
         secrethash = sha3(secret)
 
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(sized.Address(recipient), channel_identifier, message_identifier)
 
         self.secret = secret
         self.secrethash = secrethash
@@ -250,7 +254,7 @@ class SendBalanceProof(SendMessageEvent):
             secret: typing.Secret,
             balance_proof: BalanceProofUnsignedState,
     ):
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(sized.Address(recipient), channel_identifier, message_identifier)
 
         self.payment_identifier = payment_identifier
         self.token = token_address
@@ -331,7 +335,7 @@ class SendSecretRequest(SendMessageEvent):
             secrethash: typing.SecretHash,
     ):
 
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(sized.Address(recipient), channel_identifier, message_identifier)
 
         self.payment_identifier = payment_identifier
         self.amount = amount
@@ -409,7 +413,7 @@ class SendRefundTransfer(SendMessageEvent):
             transfer: LockedTransferUnsignedState,
     ):
 
-        super().__init__(recipient, channel_identifier, message_identifier)
+        super().__init__(sized.Address(recipient), channel_identifier, message_identifier)
 
         self.transfer = transfer
 

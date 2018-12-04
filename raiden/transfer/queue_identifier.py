@@ -1,12 +1,12 @@
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.utils import pex, typing
+from raiden.utils import pex, sized, typing
 
 
 class QueueIdentifier:
     def __init__(
             self,
-            recipient: typing.Address,
+            recipient: sized.Address,
             channel_identifier: typing.ChannelID,
     ):
         self.recipient = recipient

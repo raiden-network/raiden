@@ -77,7 +77,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import pex, typing
+from raiden.utils import pex, sized, typing
 from raiden.utils.signing import eth_recover
 
 # This should be changed to `Union[str, MerkleTreeState]`
@@ -1260,7 +1260,7 @@ def create_sendlockedtransfer(
     )
 
     lockedtransfer = SendLockedTransfer(
-        recipient=recipient,
+        recipient=sized.Address(recipient),
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier,
         transfer=locked_transfer,
@@ -1786,7 +1786,7 @@ def handle_refundtransfer(
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
         send_processed = SendProcessed(
-            recipient=refund.transfer.balance_proof.sender,
+            recipient=sized.Address(refund.transfer.balance_proof.sender),
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=refund.transfer.message_identifier,
         )
@@ -1864,7 +1864,7 @@ def handle_receive_lockedtransfer(
         channel_state.partner_state.secrethashes_to_lockedlocks[lock.secrethash] = lock
 
         send_processed = SendProcessed(
-            recipient=mediated_transfer.balance_proof.sender,
+            recipient=sized.Address(mediated_transfer.balance_proof.sender),
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=mediated_transfer.message_identifier,
         )
