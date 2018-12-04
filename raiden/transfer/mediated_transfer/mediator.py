@@ -206,11 +206,7 @@ def payer_transfer_expired(
         block_number=block_number,
         lock_expiration_threshold=payer_lock_expiration_threshold,
     )
-    has_payer_transfer_expired = (
-        has_payer_lock_expired and
-        pair.payer_state != 'payer_expired'
-    )
-    return has_payer_transfer_expired
+    return has_payer_lock_expired
 
 
 def get_payee_channel(
