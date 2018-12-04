@@ -99,7 +99,7 @@ def handle_inittarget(
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             recipient = transfer.initiator
             secret_request = SendSecretRequest(
-                recipient=recipient,
+                recipient=typing.Address(recipient),
                 channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
                 message_identifier=message_identifier,
                 payment_identifier=transfer.payment_identifier,
