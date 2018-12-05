@@ -4,13 +4,12 @@ import time
 from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
-from operator import attrgetter, itemgetter
+from operator import itemgetter
 from random import Random
 from urllib.parse import urlparse
 
 import gevent
 import structlog
-from cachetools import LRUCache, TTLCache, cached, cachedmethod
 from eth_utils import (
     decode_hex,
     encode_hex,
@@ -113,6 +112,7 @@ class _RetryQueue(Runnable):
         self._notify_event = gevent.event.Event()
         self._lock = gevent.lock.Semaphore()
         super().__init__()
+        self.greenlet.name = f'RetryQueue:{pex(receiver)}'
 
     @property
     def log(self):
@@ -121,7 +121,7 @@ class _RetryQueue(Runnable):
     @staticmethod
     def _expiration_generator(
             timeout_generator: Iterable[float],
-            now: Callable[[], float]=time.time,
+            now: Callable[[], float] = time.time,
     ) -> Iterator[bool]:
         """Stateful generator that yields True if more than timeout has passed since previous True,
         False otherwise.
@@ -189,7 +189,9 @@ class _RetryQueue(Runnable):
         present in the respective SendMessageEvent queue anymore
         """
         if self.transport._stop_event.ready() or not self.transport.greenlet:
+            self.log.error("Can't retry - stopped")
             return
+        self.log.debug('Retrying message', receiver=to_normalized_address(self.receiver))
         status = self.transport._address_to_presence.get(self.receiver)
         if status not in _PRESENCE_REACHABLE_STATES:
             # if partner is not reachable, return
@@ -261,12 +263,17 @@ class _RetryQueue(Runnable):
             # wait up to retry_interval (or to be notified) before checking again
             self._notify_event.wait(self.transport._config['retry_interval'])
 
+    def __str__(self):
+        return self.greenlet.name
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} for {to_normalized_address(self.receiver)}>'
+
 
 class MatrixTransport(Runnable):
     _room_prefix = 'raiden'
     _room_sep = '_'
     _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
-    _addresses_cache = LRUCache(512)  # deterministic thus shared
     log = log
 
     def __init__(self, config: dict):
@@ -329,9 +336,9 @@ class MatrixTransport(Runnable):
 
         self._client.set_post_sync_hook(self._post_sync)
 
-        self._messages_cache = TTLCache(32, 4)
         self._health_lock = Semaphore()
         self._getroom_lock = Semaphore()
+        self._account_data_lock = Semaphore()
 
     def start(
         self,
@@ -353,7 +360,7 @@ class MatrixTransport(Runnable):
         if fetch_since_token:
             prev_server, _, prev_sync_token = fetch_since_token.partition('/')
             if prev_server == self._server_name:
-                self._client.sync_token = prev_sync_token
+                self._client.set_sync_token(prev_sync_token)
 
         self.log.debug('Start: handle thread', handle_thread=self._client._handle_thread)
         if self._client._handle_thread:
@@ -366,13 +373,14 @@ class MatrixTransport(Runnable):
         self._client.start_listener_thread()
         self._client.sync_thread.link_exception(self.on_error)
         # no need to link_value on long-lived sync_thread, as it shouldn't succeed but on stop
-        # cleint's sync thread may also crash self/main greenlet
+        # client's sync thread may also crash self/main greenlet
         self.greenlets = [self._client.sync_thread]
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
         # (re)start any _RetryQueue which was initialized before start
         for retrier in self._address_to_retrier.values():
             if not retrier:
+                self.log.debug('Starting retrier', retrier=retrier)
                 retrier.start()
 
         self.log.debug('Matrix started', config=self._config)
@@ -445,6 +453,7 @@ class MatrixTransport(Runnable):
         This may be called before transport is started, to ensure events generated during
         start are handled properly.
         """
+        self.log.debug('Whitelist', address=to_normalized_address(address))
         self._address_to_userids.setdefault(address, set())
 
     def start_health_check(self, node_address):
@@ -649,6 +658,7 @@ class MatrixTransport(Runnable):
                 'Room',
                 room=room,
                 aliases=room.aliases,
+                members=room.get_joined_members(),
             )
 
     def _handle_invite(self, room_id: _RoomID, state: dict):
@@ -656,6 +666,7 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return
 
+        self.log.debug('Got invite', room_id=room_id)
         invite_events = [
             event
             for event in state['events']
@@ -664,6 +675,7 @@ class MatrixTransport(Runnable):
             event['state_key'] == self._user_id
         ]
         if not invite_events:
+            self.log.debug('Invite: no invite event found', room_id=room_id)
             return  # there should always be one and only one invite membership event for us
         invite_event = invite_events[0]
         sender = invite_event['sender']
@@ -676,6 +688,7 @@ class MatrixTransport(Runnable):
             event['state_key'] == sender
         ]
         if not sender_join_events:
+            self.log.debug('Invite: no sender join event', room_id=room_id)
             return  # there should always be one and only one join membership event for the sender
         sender_join_event = sender_join_events[0]
 
@@ -710,43 +723,35 @@ class MatrixTransport(Runnable):
             join_rules_event = join_rules_events[0]
             private_room: bool = join_rules_event['content'].get('join_rule') == 'invite'
 
-        # join room async, so it doesn't block handling loop
-        def join_room():
-            # we join room and _set_room_id_for_address despite room privacy and requirements,
-            # _get_room_ids_for_address will take care of returning only matching rooms and
-            # _leave_unused_rooms will clear it in the future, if and when needed
-            last_ex = None
-            for _ in range(_JOIN_RETRIES):
-                try:
-                    room = self._client.join_room(room_id)
-                except MatrixRequestError as e:
-                    last_ex = e
-                else:
-                    break
+        # we join room and _set_room_id_for_address despite room privacy and requirements,
+        # _get_room_ids_for_address will take care of returning only matching rooms and
+        # _leave_unused_rooms will clear it in the future, if and when needed
+        last_ex = None
+        for _ in range(_JOIN_RETRIES):
+            try:
+                room = self._client.join_room(room_id)
+            except MatrixRequestError as e:
+                last_ex = e
             else:
-                raise last_ex  # re-raise if couldn't succeed in retries
+                break
+        else:
+            raise last_ex  # re-raise if couldn't succeed in retries
 
-            if not room.listeners:
-                room.add_listener(self._handle_message, 'm.room.message')
+        if not room.listeners:
+            room.add_listener(self._handle_message, 'm.room.message')
 
-            # room state may not populated yet, so we populate 'invite_only' from event
-            room.invite_only = private_room
+        # room state may not populated yet, so we populate 'invite_only' from event
+        room.invite_only = private_room
 
-            self._set_room_id_for_address(peer_address, room_id)
+        self._set_room_id_for_address(address=peer_address, room_id=room_id)
 
-            self.log.debug(
-                'Invited and joined a room',
-                room_id=room_id,
-                aliases=room.aliases,
-                peer=to_checksum_address(peer_address),
-            )
+        self.log.debug(
+            'Joined from invite',
+            room_id=room_id,
+            aliases=room.aliases,
+            peer=to_checksum_address(peer_address),
+        )
 
-        self._spawn(join_room)
-
-    @cachedmethod(
-        attrgetter('_messages_cache'),
-        key=lambda _, room, event: (room.room_id, event['type'], event['content'].get('body')),
-    )
     def _handle_message(self, room, event) -> bool:
         """ Handle text messages sent to listening rooms """
         if (
@@ -787,21 +792,25 @@ class MatrixTransport(Runnable):
         # rooms we created and invited user, or were invited specifically by them
         room_ids = self._get_room_ids_for_address(peer_address)
 
-        if room.room_id not in room_ids:
+        # TODO: Remove clause after `and` and check if things still don't hang
+        if room.room_id not in room_ids and bool(room.invite_only) < self._private_rooms:
             # this should not happen, but is not fatal, as we may not know user yet
             if bool(room.invite_only) < self._private_rooms:
                 reason = 'required private room, but received message in a public'
             else:
                 reason = 'unknown room for user'
             self.log.debug(
-                'Received peer message in an invalid room - ignoring',
+                'Ignoring invalid message',
                 peer_user=user.user_id,
                 peer_address=pex(peer_address),
                 room=room,
+                expected_room_ids=room_ids,
                 reason=reason,
             )
             return False
 
+        # TODO: With the condition in the TODO above restored this one won't have an effect, check
+        #       if it can be removed after the above is solved
         if not room_ids or room.room_id != room_ids[0]:
             self.log.debug(
                 'Received message triggered new comms room for peer',
@@ -811,6 +820,14 @@ class MatrixTransport(Runnable):
                 room=room,
             )
             self._set_room_id_for_address(peer_address, room.room_id)
+
+        is_peer_reachable = (
+            self._userid_to_presence.get(sender_id) in _PRESENCE_REACHABLE_STATES and
+            self._address_to_presence.get(peer_address) in _PRESENCE_REACHABLE_STATES
+        )
+        if not is_peer_reachable:
+            self.log.debug('Forcing presence update', peer_address=peer_address, user_id=sender_id)
+            self._update_address_presence(peer_address)
 
         data = event['content']['body']
         if not isinstance(data, str):
@@ -892,8 +909,8 @@ class MatrixTransport(Runnable):
             return False
 
         self.log.debug(
-            'Message data',
-            data=data,
+            'Incoming messages',
+            messages=messages,
             sender=pex(peer_address),
             sender_user=user,
             room=room,
@@ -971,8 +988,17 @@ class MatrixTransport(Runnable):
         with self._getroom_lock:
             room = self._get_room_for_address(receiver_address)
         if not room:
+            self.log.error(
+                'No room for receiver',
+                receiver=to_normalized_address(receiver_address),
+            )
             return
-        self.log.debug('Send', receiver=pex(receiver_address), room=room, data=data)
+        self.log.debug(
+            'Send raw',
+            receiver=pex(receiver_address),
+            room=room,
+            data=data.replace('\n', '\\n'),
+        )
         room.send_text(data)
 
     def _get_room_for_address(
@@ -1051,7 +1077,8 @@ class MatrixTransport(Runnable):
             except MatrixRequestError as error:
                 if error.code == 404:
                     self.log.debug(
-                        f'Room {room_name_full} not found, trying to create it.',
+                        f'No room for peer, trying to create',
+                        room_name=room_name_full,
                         error=error,
                     )
                 else:
@@ -1062,6 +1089,12 @@ class MatrixTransport(Runnable):
                         error_code=error.code,
                     )
             else:
+                # Invite users to existing room
+                member_ids = {user.user_id for user in room.get_joined_members()}
+                users_to_invite = set(invitees_uids) - member_ids
+                self.log.debug('Inviting users', room=room, invitee_ids=users_to_invite)
+                for invitee_id in users_to_invite:
+                    room.invite_user(invitee_id)
                 self.log.debug('Room joined successfully', room=room)
                 break
 
@@ -1132,8 +1165,6 @@ class MatrixTransport(Runnable):
         if address not in self._address_to_userids:
             return
         self._address_to_userids[address].add(user_id)
-        # maybe inviting user used to also possibly invite user's from discovery presence changes
-        self._spawn(self._maybe_invite_user, user)
 
         new_state = UserPresence(event['content']['presence'])
         if new_state == self._userid_to_presence.get(user_id):
@@ -1141,6 +1172,8 @@ class MatrixTransport(Runnable):
 
         self._userid_to_presence[user_id] = new_state
         self._update_address_presence(address)
+        # maybe inviting user used to also possibly invite user's from discovery presence changes
+        self._spawn(self._maybe_invite_user, user)
 
     def _get_user_presence(self, user_id: str) -> UserPresence:
         if user_id not in self._userid_to_presence:
@@ -1267,7 +1300,6 @@ class MatrixTransport(Runnable):
             signature=signature,
         )
 
-    @cached(_addresses_cache, key=lambda _, user: (user.user_id, user.displayname))
     def _validate_userid_signature(self, user: User) -> Optional[Address]:
         """ Validate a userId format and signature on displayName, and return its address"""
         # display_name should be an address in the self._userid_re format
@@ -1311,7 +1343,7 @@ class MatrixTransport(Runnable):
             user = self._client.get_user(user_id)
         return user
 
-    def _set_room_id_for_address(self, address: Address, room_id: Optional[_RoomID]):
+    def _set_room_id_for_address(self, address: Address, room_id: Optional[_RoomID] = None):
         """ Uses GMatrixClient.set_account_data to keep updated mapping of addresses->rooms
 
         If room_id is falsy, clean list of rooms. Else, push room_id to front of the list """
@@ -1321,26 +1353,27 @@ class MatrixTransport(Runnable):
         # filter_private=False to preserve public rooms on the list, even if we require privacy
         room_ids = self._get_room_ids_for_address(address, filter_private=False)
 
-        # no need to deepcopy, we don't modify lists in-place
-        _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = self._client.account_data.get(
-            'network.raiden.rooms',
-            {},
-        ).copy()
+        with self._account_data_lock:
+            # no need to deepcopy, we don't modify lists in-place
+            _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = self._client.account_data.get(
+                'network.raiden.rooms',
+                {},
+            ).copy()
 
-        changed = False
-        if not room_id:  # falsy room_id => clear list
-            changed = address_hex in _address_to_room_ids
-            _address_to_room_ids.pop(address_hex, None)
-        else:
-            # push to front
-            room_ids = [room_id] + [r for r in room_ids if r != room_id]
-            if room_ids != _address_to_room_ids.get(address_hex):
-                _address_to_room_ids[address_hex] = room_ids
-                changed = True
+            changed = False
+            if not room_id:  # falsy room_id => clear list
+                changed = address_hex in _address_to_room_ids
+                _address_to_room_ids.pop(address_hex, None)
+            else:
+                # push to front
+                room_ids = [room_id] + [r for r in room_ids if r != room_id]
+                if room_ids != _address_to_room_ids.get(address_hex):
+                    _address_to_room_ids[address_hex] = room_ids
+                    changed = True
 
-        if changed:
-            # dict will be set at the end of _clean_unused_rooms
-            self._leave_unused_rooms(_address_to_room_ids)
+            if changed:
+                # dict will be set at the end of _clean_unused_rooms
+                self._leave_unused_rooms(_address_to_room_ids)
 
     def _get_room_ids_for_address(
             self,
@@ -1354,51 +1387,54 @@ class MatrixTransport(Runnable):
         If filter_private=None, filter according to self._private_rooms
         """
         address_hex: AddressHex = to_checksum_address(address)
-        room_ids = self._client.account_data.get(
-            'network.raiden.rooms',
-            {},
-        ).get(address_hex)
-        if not room_ids:  # None or empty
-            room_ids = list()
-        if not isinstance(room_ids, list):  # old version, single room
-            room_ids = [room_ids]
+        with self._account_data_lock:
+            room_ids = self._client.account_data.get(
+                'network.raiden.rooms',
+                {},
+            ).get(address_hex)
+            self.log.debug('acct data get', room_ids=room_ids, for_address=address_hex)
+            if not room_ids:  # None or empty
+                room_ids = list()
+            if not isinstance(room_ids, list):  # old version, single room
+                room_ids = [room_ids]
 
-        if filter_private is None:
-            filter_private = self._private_rooms
-        if not filter_private:
-            # existing rooms
-            room_ids = [
-                room_id
-                for room_id in room_ids
-                if room_id in self._client.rooms
-            ]
-        else:
-            # existing and private rooms
-            room_ids = [
-                room_id
-                for room_id in room_ids
-                if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
-            ]
+            if filter_private is None:
+                filter_private = self._private_rooms
+            if not filter_private:
+                # existing rooms
+                room_ids = [
+                    room_id
+                    for room_id in room_ids
+                    if room_id in self._client.rooms
+                ]
+            else:
+                # existing and private rooms
+                room_ids = [
+                    room_id
+                    for room_id in room_ids
+                    if room_id in self._client.rooms and self._client.rooms[room_id].invite_only
+                ]
 
-        return room_ids
+            return room_ids
 
-    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = None):
-        """ Checks for rooms we've joined and which partner isn't health-checked and leave"""
+    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]):
+        """
+        Checks for rooms we've joined and which partner isn't health-checked and leave.
+
+        **MUST** be called from a context that holds the `_account_data_lock`.
+        """
+        _msg = '_leave_unused_rooms called without account data lock'
+        assert self._account_data_lock.locked(), _msg
+
+        # TODO: Remove the next two lines and check if transfers start hanging again
+        self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
+        return
+
         # cache in a set all whitelisted addresses
         whitelisted_hex_addresses: Set[AddressHex] = {
             to_checksum_address(address)
             for address in self._address_to_userids
         }
-
-        changed = False
-        if _address_to_room_ids is None:
-            _address_to_room_ids = self._client.account_data.get(
-                'network.raiden.rooms',
-                {},
-            ).copy()
-        else:
-            # if received _address_to_room_ids, assume it was already modified
-            changed = True
 
         keep_rooms: Set[_RoomID] = set()
 
@@ -1410,7 +1446,6 @@ class MatrixTransport(Runnable):
 
             if address_hex not in whitelisted_hex_addresses:
                 _address_to_room_ids.pop(address_hex)
-                changed = True
                 continue
 
             counters = [0, 0]  # public, private
@@ -1431,17 +1466,20 @@ class MatrixTransport(Runnable):
             keep_rooms |= set(new_room_ids)
             if room_ids != new_room_ids:
                 _address_to_room_ids[address_hex] = new_room_ids
-                changed = True
 
         rooms: List[Tuple[_RoomID, Room]] = list(self._client.rooms.items())
 
-        if changed:
-            self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
+        self.log.debug(
+            'Updated address room mapping',
+            address_to_room_ids=_address_to_room_ids,
+        )
+        self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
 
         def leave(room: Room):
             """A race between /leave and /sync may remove the room before
             del on _client.rooms key. Suppress it, as the end result is the same: no more room"""
             try:
+                self.log.debug('Leaving unused room', room=room)
                 return room.leave()
             except KeyError:
                 return True
