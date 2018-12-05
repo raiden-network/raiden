@@ -1084,7 +1084,7 @@ def test_mediator_secret_reveal_empty_hash():
     current_state = iteration.new_state
 
     # an empty hash offchain secret reveal should be rejected
-    receive_secret = ReceiveSecretReveal(EMPTY_HASH, HOP2)
+    receive_secret = ReceiveSecretReveal(EMPTY_HASH, UNIT_TRANSFER_TARGET)
     iteration = mediator.state_transition(
         mediator_state=current_state,
         state_change=receive_secret,
@@ -1580,7 +1580,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     )
 
     assert must_contain_entry(iteration.events, SendLockedTransfer, {
-        'recipient': HOP2,
+        'recipient': UNIT_TRANSFER_TARGET,
         'transfer': {
             'lock': {
                 'amount': 10,
@@ -1672,7 +1672,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     assert secrethash in channels[0].partner_state.secrethashes_to_lockedlocks
 
     # Reveal secret just before the lock expires
-    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, HOP2)
+    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, UNIT_TRANSFER_TARGET)
 
     iteration = mediator.state_transition(
         mediator_state=iteration.new_state,
@@ -1750,7 +1750,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     assert secrethash in channels[0].partner_state.secrethashes_to_lockedlocks
 
     # Reveal secret just before the lock expires
-    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, HOP2)
+    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, UNIT_TRANSFER_TARGET)
 
     iteration = mediator.state_transition(
         mediator_state=iteration.new_state,
