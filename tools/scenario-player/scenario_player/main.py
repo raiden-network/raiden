@@ -16,7 +16,7 @@ from urwid import ExitMainLoop
 from web3.utils.transactions import TRANSACTION_DEFAULTS
 
 from raiden.accounts import Account
-from raiden.log_config import configure_logging
+from raiden.log_config import _FIRST_PARTY_PACKAGES, configure_logging
 from scenario_player import tasks
 from scenario_player.exceptions import ScenarioAssertionError, ScenarioError
 from scenario_player.runner import ScenarioRunner
@@ -85,7 +85,7 @@ def main(
     configure_logging(
         {'': 'INFO', 'raiden': 'DEBUG', 'scenario_player': 'DEBUG'},
         debug_log_file_name=log_file_name,
-        _first_party_packages=frozenset(['raiden', 'scenario_player']),
+        _first_party_packages=_FIRST_PARTY_PACKAGES | frozenset(['scenario_player']),
     )
 
     log_buffer = None
@@ -143,7 +143,7 @@ def main(
                 str(ex),
                 mailgun_api_key,
             )
-        except ScenarioError as ex:
+        except ScenarioError:
             log.exception('Run finished', result='scenario error')
             send_notification_mail(
                 runner.notification_email,

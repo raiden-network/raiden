@@ -68,6 +68,7 @@ nodes:
 ## - stop_node
 ## - kill_node
 ## - start_node
+## - update_node_options
 ## - assert
 ## - assert_all
 ## - wait
@@ -125,6 +126,12 @@ scenario:
             - assert: {from: 2, to: 1, total_deposit: 10, balance: 12, state: "opened"}
 
 # More examples:
+#      ## All Raiden API tasks take a `timeout` parameter. If the timeout passes without the request returning successfully the task will fail.
+#      - transfer: {from: 0, to: 1, amount: 1, timeout: 30}
+#      ## Node options can be updated during a scenario run (but only while nodes are stopped):
+#      - stop_node: 0
+#      - update_node_options: {node: 0, options: {matrix-server: "https://..."}}
+#      - start_node: 0
 #      ## Assert on multiple channels without knowing the explicit peers
 #      - assert_all: {from: 0, count: 2, balances: [10, 10], total_deposits: [10, 10], states: ['opened', 'opened']}
 #      ## Open channel to arbitrary address

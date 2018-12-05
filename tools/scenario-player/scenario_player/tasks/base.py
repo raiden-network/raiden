@@ -60,7 +60,6 @@ class Task:
 
         runner.task_cache[self.id] = self
         runner.task_count += 1
-        log.debug('Task initialized', task=self)
 
     def __call__(self, *args, **kwargs):
         log.info('Starting task', task=self)
@@ -153,7 +152,6 @@ def get_task_class_for_type(task_type) -> T_Task:
 
 def register_task(task_name, task):
     global NAME_TO_TASK
-    log.debug(f'Registered task: {task_name}')
     NAME_TO_TASK[task_name] = task
 
 

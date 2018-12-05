@@ -11,6 +11,7 @@ from datetime import timedelta
 from enum import Enum
 from pathlib import Path
 from tarfile import TarFile
+from typing import Any, Dict
 from zipfile import ZipFile
 
 import gevent
@@ -170,22 +171,7 @@ class NodeRunner:
         if options.pop('_clean', False):
             shutil.rmtree(self._datadir)
         self._datadir.mkdir(parents=True, exist_ok=True)
-
-        for option_name, option_value in options.items():
-            if option_name.startswith('no-'):
-                option_name = option_name.replace('no-', '')
-            if option_name in MANAGED_CONFIG_OPTIONS:
-                raise ScenarioError(
-                    f'Raiden node option "{option_name}" is managed by the scenario player '
-                    f'and cannot be changed.',
-                )
-            if option_name in MANAGED_CONFIG_OPTIONS_OVERRIDABLE:
-                log.warning(
-                    'Overriding managed option',
-                    option_name=option_name,
-                    option_value=option_value,
-                    node=self._index,
-                )
+        self._validate_options(options)
 
     def initialize(self):
         # Access properties to ensure they're initialized
@@ -239,6 +225,13 @@ class NodeRunner:
         self.state = NodeState.STOPPED
         return self.executor.kill()
 
+    def update_options(self, new_options: Dict[str, Any]):
+        if self.state is not NodeState.STOPPED:
+            raise ScenarioError("Can't update node options while node is running.")
+        self._validate_options(new_options)
+        self._options.update(new_options)
+        self._executor = None
+
     @property
     def address(self):
         if not self._address:
@@ -289,7 +282,14 @@ class NodeRunner:
             '--eth-rpc-endpoint',
             self.eth_rpc_endpoint,
             '--log-config',
-            ':info,raiden:debug,raiden.api.rest.pywsgi:warning',
+            (
+                ':info,'
+                'raiden:debug,'
+                'raiden_libs:debug,'
+                'raiden_contracts:debug,'
+                'raiden.api.rest.pywsgi:warning'
+            ),
+            '--log-json',
             '--log-file',
             self._log_file,
             '--disable-debug-logfile',
@@ -360,6 +360,23 @@ class NodeRunner:
     @property
     def _stderr_file(self):
         return self._datadir.joinpath(f'run-{self._runner.run_number:03d}.stderr')
+
+    def _validate_options(self, options: Dict[str, Any]):
+        for option_name, option_value in options.items():
+            if option_name.startswith('no-'):
+                option_name = option_name.replace('no-', '')
+            if option_name in MANAGED_CONFIG_OPTIONS:
+                raise ScenarioError(
+                    f'Raiden node option "{option_name}" is managed by the scenario player '
+                    f'and cannot be changed.',
+                )
+            if option_name in MANAGED_CONFIG_OPTIONS_OVERRIDABLE:
+                log.warning(
+                    'Overriding managed option',
+                    option_name=option_name,
+                    option_value=option_value,
+                    node=self._index,
+                )
 
 
 class NodeController:
