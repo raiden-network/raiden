@@ -23,12 +23,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import balanceproof_from_envelope
-from raiden.transfer.state_change import (
-    ReceiveDelivered,
-    ReceiveProcessed,
-    ReceiveTransferDirect,
-    ReceiveUnlock,
-)
+from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils import pex, random_secret
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name

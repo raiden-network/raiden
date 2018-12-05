@@ -247,7 +247,6 @@ The `Delivered <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401
 The `Processed <https://github.com/raiden-network/raiden/blob/761bedfee2ee326401ad5ec95d55b1ab458a5213/raiden/messages.py#L328>`_ message is sent for the following cases (essentially messages containing a BP):
 
 - Succesfully handling a valid unlock (aka Secret) message at both target and mediator.
-- Receiving a direct transfer
 - Handling a valid refund transfer message
 - Handling a valid lock expired message
 - Handling a valid locked transfer message

@@ -6,7 +6,7 @@ from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.network.proxies import TokenNetwork
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import direct_transfer, get_channelstate
+from raiden.tests.utils.transfer import get_channelstate, mediated_transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 
@@ -34,7 +34,7 @@ def test_invalid_close(
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
     # make a transfer from app0 to app1 so that app1 is supposed to have a non empty balance hash
-    direct_transfer(
+    mediated_transfer(
         initiator_app=app0,
         target_app=app1,
         token_network_identifier=token_network_identifier,
@@ -107,7 +107,7 @@ def test_invalid_update_transfer(
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
     # make a transfer
-    direct_transfer(
+    mediated_transfer(
         initiator_app=app0,
         target_app=app1,
         token_network_identifier=token_network_identifier,

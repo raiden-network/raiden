@@ -14,7 +14,6 @@ PING = 1
 PONG = 2
 SECRETREQUEST = 3
 SECRET = 4
-DIRECTTRANSFER = 5
 LOCKEDTRANSFER = 7
 REFUNDTRANSFER = 8
 REVEALSECRET = 11
@@ -141,26 +140,6 @@ RevealSecret = namedbuffer(
     ],
 )
 
-DirectTransfer = namedbuffer(
-    'direct_transfer',
-    [
-        cmdid(DIRECTTRANSFER),
-        pad(3),
-        nonce,
-        chain_id,
-        message_identifier,
-        payment_identifier,
-        token_network_address,
-        token,
-        channel_identifier,
-        recipient,
-        transferred_amount,
-        locked_amount,
-        locksroot,
-        signature,
-    ],
-)
-
 LockedTransfer = namedbuffer(
     'mediated_transfer',
     [
@@ -250,7 +229,6 @@ CMDID_MESSAGE = {
     SECRETREQUEST: SecretRequest,
     SECRET: Secret,
     REVEALSECRET: RevealSecret,
-    DIRECTTRANSFER: DirectTransfer,
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
     DELIVERED: Delivered,

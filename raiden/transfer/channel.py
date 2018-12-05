@@ -17,10 +17,6 @@ from raiden.transfer.events import (
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
     EventInvalidReceivedUnlock,
-    EventPaymentReceivedSuccess,
-    EventPaymentSentFailed,
-    EventTransferReceivedInvalidDirectTransfer,
-    SendDirectTransfer,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
@@ -66,14 +62,12 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
-    ActionTransferDirect,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveUpdateTransfer,
-    ReceiveTransferDirect,
     ReceiveUnlock,
 )
 from raiden.transfer.utils import hash_balance_data
@@ -372,94 +366,6 @@ def is_balance_proof_usable_onchain(
         # The signature must be valid, otherwise the balance proof cannot be
         # used onchain.
         result = (False, signature_msg)
-
-    else:
-        result = (True, None)
-
-    return result
-
-
-def is_valid_directtransfer(
-        direct_transfer: ReceiveTransferDirect,
-        channel_state: NettingChannelState,
-        sender_state: NettingChannelEndState,
-        receiver_state: NettingChannelEndState,
-) -> typing.SuccessOrError:
-    received_balance_proof = direct_transfer.balance_proof
-
-    (
-        current_locksroot,
-        _,
-        current_transferred_amount,
-        current_locked_amount,
-    ) = get_current_balanceproof(sender_state)
-
-    distributable = get_distributable(sender_state, receiver_state)
-    amount = received_balance_proof.transferred_amount - current_transferred_amount
-
-    is_balance_proof_usable, invalid_balance_proof_msg = is_balance_proof_usable_onchain(
-        received_balance_proof=received_balance_proof,
-        channel_state=channel_state,
-        sender_state=sender_state,
-    )
-
-    if not is_balance_proof_usable:
-        msg = 'Invalid DirectTransfer message. {}'.format(invalid_balance_proof_msg)
-        result = (False, msg)
-
-    elif received_balance_proof.locksroot != current_locksroot:
-        # Direct transfers do not use hash time lock, so it cannot change the
-        # locksroot, otherwise a lock could be removed.
-        msg = (
-            "Invalid DirectTransfer message. "
-            "Balance proof's locksroot changed, expected: {} got: {}."
-        ).format(
-            encode_hex(current_locksroot),
-            encode_hex(received_balance_proof.locksroot),
-        )
-
-        result = (False, msg)
-
-    elif received_balance_proof.transferred_amount <= current_transferred_amount:
-        # Direct transfers must increase the transferred_amount, otherwise the
-        # sender is trying to play the protocol and steal token.
-        msg = (
-            "Invalid DirectTransfer message. "
-            "Balance proof's transferred_amount decreased, expected larger than: {} got: {}."
-        ).format(
-            current_transferred_amount,
-            received_balance_proof.transferred_amount,
-        )
-
-        result = (False, msg)
-
-    elif received_balance_proof.locked_amount != current_locked_amount:
-        # Direct transfers must not change the locked_amount. Otherwise the
-        # sender is trying to play the protocol and steal token.
-        msg = (
-            "Invalid DirectTransfer message. "
-            "Balance proof's locked_amount is invalid, expected: {} got: {}."
-        ).format(
-            current_locked_amount,
-            received_balance_proof.locked_amount,
-        )
-
-        result = (False, msg)
-
-    elif amount > distributable:
-        # Direct transfer are limited to the current available balance,
-        # otherwise the sender is doing a trying to play the protocol and do a
-        # double spend.
-        msg = (
-            'Invalid DirectTransfer message. '
-            'Transfer amount larger than the available distributable, '
-            'transfer amount: {} maximum distributable: {}'
-        ).format(
-            amount,
-            distributable,
-        )
-
-        result = (False, msg)
 
     else:
         result = (True, None)
@@ -1139,59 +1045,6 @@ def compute_merkletree_without(
     return result
 
 
-def create_senddirecttransfer(
-        channel_state: NettingChannelState,
-        amount: typing.PaymentAmount,
-        message_identifier: typing.MessageID,
-        payment_identifier: typing.PaymentID,
-) -> SendDirectTransfer:
-    our_state = channel_state.our_state
-    partner_state = channel_state.partner_state
-
-    msg = 'caller must make sure there is enough balance'
-    assert amount <= get_distributable(our_state, partner_state), msg
-
-    msg = 'caller must make sure the channel is open'
-    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
-
-    our_balance_proof = channel_state.our_state.balance_proof
-
-    if our_balance_proof:
-        transferred_amount = amount + our_balance_proof.transferred_amount
-        locksroot = our_balance_proof.locksroot
-    else:
-        transferred_amount = amount
-        locksroot = EMPTY_MERKLE_ROOT
-
-    msg = 'caller must make sure the result wont overflow'
-    assert transferred_amount <= UINT256_MAX, msg
-
-    nonce = get_next_nonce(our_state)
-    recipient = partner_state.address
-    locked_amount = get_amount_locked(our_state)
-
-    balance_proof = BalanceProofUnsignedState(
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        locksroot=locksroot,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
-        chain_id=channel_state.chain_id,
-    )
-
-    direct_transfer = SendDirectTransfer(
-        recipient=recipient,
-        channel_identifier=channel_state.identifier,
-        message_identifier=message_identifier,
-        payment_identifier=payment_identifier,
-        balance_proof=balance_proof,
-        token_address=channel_state.token_address,
-    )
-
-    return direct_transfer
-
-
 def create_sendlockedtransfer(
         channel_state: NettingChannelState,
         initiator: typing.InitiatorAddress,
@@ -1322,24 +1175,6 @@ def create_unlock(
     )
 
     return unlock_lock, merkletree
-
-
-def send_directtransfer(
-        channel_state: NettingChannelState,
-        amount: typing.PaymentAmount,
-        message_identifier: typing.MessageID,
-        payment_identifier: typing.PaymentID,
-) -> SendDirectTransfer:
-    direct_transfer = create_senddirecttransfer(
-        channel_state,
-        amount,
-        message_identifier,
-        payment_identifier,
-    )
-
-    channel_state.our_state.balance_proof = direct_transfer.balance_proof
-
-    return direct_transfer
 
 
 def send_lockedtransfer(
@@ -1623,90 +1458,6 @@ def register_onchain_secret(
     )
 
 
-def handle_send_directtransfer(
-        channel_state: NettingChannelState,
-        state_change: ActionTransferDirect,
-        pseudo_random_generator: typing.Any,
-) -> TransitionResult:
-    events: typing.List[Event] = list()
-
-    amount = state_change.amount
-    payment_identifier = state_change.payment_identifier
-    target_address = typing.TargetAddress(state_change.receiver_address)
-    distributable_amount = get_distributable(channel_state.our_state, channel_state.partner_state)
-
-    (
-        _,
-        _,
-        current_transferred_amount,
-        current_locked_amount,
-    ) = get_current_balanceproof(channel_state.our_state)
-
-    transferred_amount_after_unlock = (
-        current_transferred_amount +
-        amount +
-        current_locked_amount
-    )
-
-    is_open = get_status(channel_state) == CHANNEL_STATE_OPENED
-    is_valid = (
-        amount > 0 and
-        transferred_amount_after_unlock < UINT256_MAX
-    )
-    can_pay = amount <= distributable_amount
-
-    if is_open and is_valid and can_pay:
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        direct_transfer = send_directtransfer(
-            channel_state,
-            amount,
-            message_identifier,
-            payment_identifier,
-        )
-        events.append(direct_transfer)
-    else:
-        if not is_open:
-            failure = EventPaymentSentFailed(
-                payment_network_identifier=channel_state.payment_network_identifier,
-                token_network_identifier=channel_state.token_network_identifier,
-                identifier=payment_identifier,
-                target=target_address,
-                reason='Channel is not opened',
-            )
-            events.append(failure)
-
-        elif not is_valid:
-            msg = 'Payment amount is invalid. Transfer: {}'.format(amount)
-            failure = EventPaymentSentFailed(
-                payment_network_identifier=channel_state.payment_network_identifier,
-                token_network_identifier=channel_state.token_network_identifier,
-                identifier=payment_identifier,
-                target=target_address,
-                reason=msg,
-            )
-            events.append(failure)
-
-        elif not can_pay:
-            msg = (
-                'Payment amount exceeds the available capacity. '
-                'Capacity: {}, Transfer: {}'
-            ).format(
-                distributable_amount,
-                amount,
-            )
-
-            failure = EventPaymentSentFailed(
-                payment_network_identifier=channel_state.payment_network_identifier,
-                token_network_identifier=channel_state.token_network_identifier,
-                identifier=payment_identifier,
-                target=target_address,
-                reason=msg,
-            )
-            events.append(failure)
-
-    return TransitionResult(channel_state, events)
-
-
 def handle_action_close(
         channel_state: NettingChannelState,
         close: ActionChannelClose,
@@ -1716,53 +1467,6 @@ def handle_action_close(
     assert channel_state.identifier == close.channel_identifier, msg
 
     events = events_for_close(channel_state, block_number)
-    return TransitionResult(channel_state, events)
-
-
-def handle_receive_directtransfer(
-        channel_state: NettingChannelState,
-        direct_transfer: ReceiveTransferDirect,
-) -> TransitionResult:
-    is_valid, msg = is_valid_directtransfer(
-        direct_transfer,
-        channel_state,
-        channel_state.partner_state,
-        channel_state.our_state,
-    )
-
-    if is_valid:
-        (
-            _,
-            _,
-            previous_transferred_amount,
-            _,
-        ) = get_current_balanceproof(channel_state.partner_state)
-
-        new_transferred_amount = direct_transfer.balance_proof.transferred_amount
-        transfer_amount = new_transferred_amount - previous_transferred_amount
-
-        channel_state.partner_state.balance_proof = direct_transfer.balance_proof
-        payment_received_success = EventPaymentReceivedSuccess(
-            payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifier=channel_state.token_network_identifier,
-            identifier=direct_transfer.payment_identifier,
-            amount=transfer_amount,
-            initiator=typing.InitiatorAddress(channel_state.partner_state.address),
-        )
-
-        send_processed = SendProcessed(
-            recipient=direct_transfer.balance_proof.sender,
-            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-            message_identifier=direct_transfer.message_identifier,
-        )
-        events = [payment_received_success, send_processed]
-    else:
-        transfer_invalid_event = EventTransferReceivedInvalidDirectTransfer(
-            direct_transfer.payment_identifier,
-            reason=msg,
-        )
-        events = [transfer_invalid_event]
-
     return TransitionResult(channel_state, events)
 
 
@@ -2116,12 +1820,6 @@ def state_transition(
             state_change,
             block_number,
         )
-    elif type(state_change) == ActionTransferDirect:
-        iteration = handle_send_directtransfer(
-            channel_state,
-            state_change,
-            pseudo_random_generator,
-        )
     elif type(state_change) == ContractReceiveChannelClosed:
         iteration = handle_channel_closed(
             channel_state,
@@ -2147,11 +1845,6 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         iteration = handle_channel_batch_unlock(
-            channel_state,
-            state_change,
-        )
-    elif type(state_change) == ReceiveTransferDirect:
-        iteration = handle_receive_directtransfer(
             channel_state,
             state_change,
         )

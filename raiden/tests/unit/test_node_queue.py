@@ -2,7 +2,7 @@ import random
 
 from raiden.constants import EMPTY_HASH
 from raiden.tests.utils import factories
-from raiden.tests.utils.messages import make_direct_transfer
+from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.transfer import node, state, state_change
 from raiden.transfer.mediated_transfer import events
 from raiden.transfer.queue_identifier import QueueIdentifier
@@ -118,9 +118,8 @@ def test_channel_closed_must_clear_ordered_messages(
     # Regression test:
     # The code delivered_message handler worked only with a queue of one
     # element
-    message = make_direct_transfer(
+    message = make_mediated_transfer(
         message_identifier=message_identifier,
-        registry_address=payment_network_state.address,
         token=token_network_state.token_address,
         channel_identifier=channel_identifier,
         transferred_amount=amount,

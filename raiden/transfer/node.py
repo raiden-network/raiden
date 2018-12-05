@@ -13,7 +13,6 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
-    EventPaymentSentSuccess,
 )
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
@@ -42,7 +41,6 @@ from raiden.transfer.state_change import (
     ActionInitChain,
     ActionLeaveAllNetworks,
     ActionNewTokenNetwork,
-    ActionTransferDirect,
     ActionUpdateTransportSyncToken,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -58,7 +56,6 @@ from raiden.transfer.state_change import (
     ContractReceiveUpdateTransfer,
     ReceiveDelivered,
     ReceiveProcessed,
-    ReceiveTransferDirect,
     ReceiveUnlock,
 )
 from raiden.utils import typing
@@ -707,28 +704,6 @@ def handle_processed(
         state_change: ReceiveProcessed,
 ) -> TransitionResult:
     events = list()
-
-    for queue in chain_state.queueids_to_queues.values():
-        for message in queue:
-            message_found = (
-                message.message_identifier == state_change.message_identifier and
-                message.recipient == state_change.sender
-            )
-            if message_found:
-                if type(message) == SendDirectTransfer:
-                    channel_state = views.get_channelstate_by_token_network_and_partner(
-                        chain_state,
-                        message.balance_proof.token_network_identifier,
-                        message.recipient,
-                    )
-                    events.append(EventPaymentSentSuccess(
-                        channel_state.payment_network_identifier,
-                        channel_state.token_network_identifier,
-                        message.payment_identifier,
-                        message.balance_proof.transferred_amount,
-                        message.recipient,
-                    ))
-
     # Clean up message queue
     for queueid in list(chain_state.queueids_to_queues.keys()):
         inplace_delete_message_queue(chain_state, state_change, queueid)
@@ -775,11 +750,6 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
         )
     elif type(state_change) == ActionChangeNodeNetworkState:
         iteration = handle_node_change_network_state(
-            chain_state,
-            state_change,
-        )
-    elif type(state_change) == ActionTransferDirect:
-        iteration = handle_token_network_action(
             chain_state,
             state_change,
         )
@@ -864,11 +834,6 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
         )
     elif type(state_change) == ReceiveDelivered:
         iteration = handle_delivered(
-            chain_state,
-            state_change,
-        )
-    elif type(state_change) == ReceiveTransferDirect:
-        iteration = handle_token_network_action(
             chain_state,
             state_change,
         )
