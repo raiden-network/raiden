@@ -358,8 +358,8 @@ class MatrixTransport(Runnable):
 
         # Initialize the point from which the client will sync messages
         if fetch_since_token:
-            prev_server, _, prev_sync_token = fetch_since_token.partition('/')
-            if prev_server == self._server_name:
+            prev_user_id, _, prev_sync_token = fetch_since_token.partition('/')
+            if prev_user_id == self._user_id:
                 self._client.set_sync_token(prev_sync_token)
 
         self.log.debug('Start: handle thread', handle_thread=self._client._handle_thread)
@@ -431,7 +431,7 @@ class MatrixTransport(Runnable):
         so that the token is used as a starting point from which
         messages are fetched from the matrix server.
         """
-        state_change = ActionUpdateTransportSyncToken(f'{self._server_name}/{next_batch}')
+        state_change = ActionUpdateTransportSyncToken(f'{self._user_id}/{next_batch}')
         self._raiden_service.handle_state_change(state_change)
 
     def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:
@@ -793,9 +793,9 @@ class MatrixTransport(Runnable):
         room_ids = self._get_room_ids_for_address(peer_address)
 
         # TODO: Remove clause after `and` and check if things still don't hang
-        if room.room_id not in room_ids and bool(room.invite_only) < self._private_rooms:
+        if room.room_id not in room_ids and (self._private_rooms and not room.invite_only):
             # this should not happen, but is not fatal, as we may not know user yet
-            if bool(room.invite_only) < self._private_rooms:
+            if self._private_rooms and not room.invite_only:
                 reason = 'required private room, but received message in a public'
             else:
                 reason = 'unknown room for user'
