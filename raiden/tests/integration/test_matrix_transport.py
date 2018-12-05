@@ -64,7 +64,7 @@ def mock_matrix(
     )
 
     transport = MatrixTransport(config)
-    transport.raiden = MockRaidenService()
+    transport._raiden_service = MockRaidenService()
     transport._stop_event.clear()
     transport._address_to_userids[HOP1] = USERID1
 
