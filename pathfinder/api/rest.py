@@ -8,7 +8,7 @@ from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
 from jsonschema.exceptions import ValidationError
-from raiden_libs.messages import FeeInfo, Message, BalanceProof
+from raiden_libs.messages import FeeInfo, Message
 from raiden_libs.exceptions import MessageTypeError
 from raiden_libs.types import Address
 
@@ -52,61 +52,6 @@ class PathfinderResource(Resource):
             return {'error': id_error.format(channel_id)}, 400
 
         return None
-
-
-class ChannelBalanceResource(PathfinderResource):
-
-    def put(self, token_network_address: str, channel_id: str):
-        token_network_error = self._validate_token_network_argument(token_network_address)
-        if token_network_error is not None:
-            return token_network_error
-
-        channel_id_error = self._validate_channel_id_argument(channel_id)
-        if channel_id_error is not None:
-            return channel_id_error
-
-        body = request.json
-        try:
-            balance_proof: BalanceProof = Message.deserialize(body, BalanceProof)
-        except MessageTypeError:
-            return {'error', 'Not a BalanceProof message'}, 400
-        except ValidationError as val_err:
-            return {'error': val_err.message}, 400
-
-        # token_network_address and channel_id info is duplicate
-        # check that both versions match
-        if not is_same_address(token_network_address, balance_proof.token_network_address):
-            error = 'The token network address from the balance proof ({}) ' \
-                    'and the request ({}) do not match'
-            return {
-                'error': error.format(
-                    balance_proof.token_network_address,
-                    token_network_address
-                )
-            }, 400
-
-        if not channel_id == str(balance_proof.channel_identifier):
-            error = 'The channel identifier from the balance proof ({}) ' \
-                    'and the request ({}) do not match'
-            return {
-                'error': error.format(
-                    balance_proof.channel_identifier,
-                    channel_id
-                )
-            }, 400
-
-        # Note: signature check is performed by the PathfindingService
-        if not self.pathfinding_service.follows_token_network(balance_proof.token_network_address):
-            return {
-                'error': 'Unsupported token network: {}'.format(token_network_address)
-            }, 400
-
-        try:
-            self.pathfinding_service.on_balance_proof_message(balance_proof)
-        except ValueError as error:
-            return {
-                'error': 'Error while updating balance proof: {}'.format(str(error))
-            }, 400
 
 
 class ChannelFeeResource(PathfinderResource):
@@ -232,7 +177,6 @@ class ServiceApi:
         self.server_greenlet: Greenlet = None
 
         resources: List[Tuple[str, Resource, Dict]] = [
-            ('/<token_network_address>/<channel_id>/balance', ChannelBalanceResource, {}),
             ('/<token_network_address>/<channel_id>/fee', ChannelFeeResource, {}),
             ('/<token_network_address>/paths', PathsResource, {}),
         ]
