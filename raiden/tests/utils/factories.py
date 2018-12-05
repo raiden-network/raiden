@@ -836,13 +836,11 @@ def mediator_make_channel_pair(
         base: NettingChannelStateRecord = None,
         amount: typing.TokenAmount = UNIT_TRANSFER_AMOUNT,
 ) -> ChannelSet:
-    return make_channel_set(
-        [
-            {'partner_state': {'address': UNIT_TRANSFER_SENDER, 'balance': amount}},
-            {'our_state': {'balance': amount}},
-        ],
-        base,
-    )
+    channel_data = [
+        {'partner_state': {'address': UNIT_TRANSFER_SENDER, 'balance': amount}},
+        {'our_state': {'balance': amount}, 'partner_state': {'address': UNIT_TRANSFER_TARGET}},
+    ]
+    return make_channel_set(channel_data, base)
 
 
 def mediator_make_init_action(
