@@ -1,11 +1,10 @@
 import copy
 import random
 
-from raiden.constants import UINT64_MAX
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
-from raiden.transfer import channel, node, token_network, views
+from raiden.transfer import node, token_network, views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
@@ -54,16 +53,6 @@ def test_contract_receive_channelnew_must_be_idempotent():
         block_number,
     )
 
-    # change the existing channel
-    payment_identifier = 1
-    message_identifier = random.randint(0, UINT64_MAX)
-    channel.send_directtransfer(
-        channel_state1,
-        amount,
-        message_identifier,
-        payment_identifier,
-    )
-
     state_change2 = ContractReceiveChannelNew(
         factories.make_transaction_hash(),
         token_network_id,
@@ -80,7 +69,7 @@ def test_contract_receive_channelnew_must_be_idempotent():
         block_number,
     )
 
-    msg = 'the channel must not been overwritten'
+    msg = 'the channel must not have been overwritten'
     channelmap_by_id = iteration.new_state.channelidentifiers_to_channels
     assert channelmap_by_id[channel_state1.identifier] == channel_state1, msg
 

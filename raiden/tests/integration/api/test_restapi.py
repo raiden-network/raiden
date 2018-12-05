@@ -14,7 +14,7 @@ from raiden.tests.utils import assert_dicts_are_equal
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import must_have_event, must_have_events
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.tests.utils.transfer import direct_transfer
+from raiden.tests.utils.transfer import mediated_transfer
 from raiden.transfer import views
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
 from raiden.waiting import wait_for_transfer_success
@@ -951,7 +951,7 @@ def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses
     ])
     assert all(response.status_code == HTTPStatus.OK for response in responses)
 
-    # two transfers of different type (direct/mediated) with same identifier: payment conflict
+    # two transfers with same identifier: payment conflict
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
@@ -959,7 +959,14 @@ def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses
     )
 
     app1.stop()
-    direct_transfer(app0, app1, token_network_identifier, amount=80, identifier=42, timeout=.1)
+    mediated_transfer(
+        initiator_app=app0,
+        target_app=app1,
+        token_network_identifier=token_network_identifier,
+        amount=80,
+        identifier=42,
+        timeout=.1,
+    )
 
     request = grequests.post(payment_url, json={'amount': 80, 'identifier': 42})
     assert_payment_conflict([request.send().response])

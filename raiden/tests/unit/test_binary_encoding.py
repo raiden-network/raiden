@@ -6,11 +6,7 @@ from raiden import constants
 from raiden.exceptions import InvalidSignature
 from raiden.messages import Ping, Processed, decode
 from raiden.tests.utils.factories import make_privkey_address
-from raiden.tests.utils.messages import (
-    make_direct_transfer,
-    make_mediated_transfer,
-    make_refund_transfer,
-)
+from raiden.tests.utils.messages import make_mediated_transfer, make_refund_transfer
 from raiden.utils import sha3
 from raiden.utils.signing import eth_recover, eth_sign
 
@@ -79,21 +75,6 @@ def test_processed():
     assert processed_message.message_identifier == message_identifier
     assert decoded_processed_message.sender == processed_message.sender
     assert sha3(decoded_processed_message.encode()) == sha3(data)
-
-
-@pytest.mark.parametrize('payment_identifier', [0, constants.UINT64_MAX])
-@pytest.mark.parametrize('nonce', [1, constants.UINT64_MAX])
-@pytest.mark.parametrize('transferred_amount', [0, constants.UINT256_MAX])
-def test_direct_transfer_min_max(payment_identifier, nonce, transferred_amount):
-    direct_transfer = make_direct_transfer(
-        payment_identifier=payment_identifier,
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-    )
-
-    direct_transfer.sign(PRIVKEY)
-    assert direct_transfer.sender == ADDRESS
-    assert decode(direct_transfer.encode()) == direct_transfer
 
 
 @pytest.mark.parametrize('amount', [0, constants.UINT256_MAX])

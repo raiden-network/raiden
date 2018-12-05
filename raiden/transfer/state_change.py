@@ -214,62 +214,6 @@ class ActionCancelTransfer(StateChange):
         )
 
 
-class ActionTransferDirect(StateChange):
-    def __init__(
-            self,
-            token_network_identifier: typing.TokenNetworkID,
-            receiver_address: typing.Address,
-            payment_identifier: typing.PaymentID,
-            amount: typing.PaymentAmount,
-    ):
-        if not isinstance(receiver_address, typing.T_Address):
-            raise ValueError('receiver_address must be address')
-
-        if not isinstance(amount, int):
-            raise ValueError('amount must be int')
-
-        self.token_network_identifier = token_network_identifier
-        self.amount = amount
-        self.receiver_address = receiver_address
-        self.payment_identifier = payment_identifier
-
-    def __repr__(self):
-        return '<ActionTransferDirect receiver_address:{} identifier:{} amount:{}>'.format(
-            pex(self.receiver_address),
-            self.payment_identifier,
-            self.amount,
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ActionTransferDirect) and
-            self.token_network_identifier == other.token_network_identifier and
-            self.receiver_address == other.receiver_address and
-            self.payment_identifier == other.payment_identifier and
-            self.amount == other.amount
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
-        return {
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'receiver_address': to_checksum_address(self.receiver_address),
-            'payment_identifier': str(self.payment_identifier),
-            'amount': str(self.amount),
-        }
-
-    @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ActionTransferDirect':
-        return cls(
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            receiver_address=to_canonical_address(data['receiver_address']),
-            payment_identifier=int(data['payment_identifier']),
-            amount=int(data['amount']),
-        )
-
-
 class ContractReceiveChannelNew(ContractReceiveStateChange):
     """ A new channel was created and this node IS a participant. """
 
@@ -1103,65 +1047,6 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
             channel_identifier=int(data['channel_identifier']),
             nonce=int(data['nonce']),
             block_number=typing.BlockNumber(int(data['block_number'])),
-        )
-
-
-class ReceiveTransferDirect(BalanceProofStateChange):
-    def __init__(
-            self,
-            token_network_identifier: typing.TokenNetworkID,
-            message_identifier: typing.MessageID,
-            payment_identifier: typing.PaymentID,
-            balance_proof: BalanceProofSignedState,
-    ):
-        if not isinstance(balance_proof, BalanceProofSignedState):
-            raise ValueError('balance_proof must be a BalanceProofSignedState instance')
-
-        super().__init__(balance_proof)
-
-        self.token_network_identifier = token_network_identifier
-        self.message_identifier = message_identifier
-        self.payment_identifier = payment_identifier
-
-    def __repr__(self):
-        return (
-            '<ReceiveTransferDirect'
-            ' token_network:{} msgid:{} paymentid:{} balance_proof:{}'
-            '>'
-        ).format(
-            pex(self.token_network_identifier),
-            self.message_identifier,
-            self.payment_identifier,
-            self.balance_proof,
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ReceiveTransferDirect) and
-            self.token_network_identifier == other.token_network_identifier and
-            self.message_identifier == other.message_identifier and
-            self.payment_identifier == other.payment_identifier and
-            super().__eq__(other)
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
-        return {
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'message_identifier': str(self.message_identifier),
-            'payment_identifier': str(self.payment_identifier),
-            'balance_proof': self.balance_proof,
-        }
-
-    @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ReceiveTransferDirect':
-        return cls(
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            message_identifier=int(data['message_identifier']),
-            payment_identifier=int(data['payment_identifier']),
-            balance_proof=data['balance_proof'],
         )
 
 

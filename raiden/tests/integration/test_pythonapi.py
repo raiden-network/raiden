@@ -17,8 +17,8 @@ from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
-    direct_transfer,
     get_channelstate,
+    mediated_transfer,
 )
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
@@ -291,11 +291,11 @@ def test_api_channel_events(raiden_chain, token_addresses):
     )
 
     amount = 30
-    direct_transfer(
-        app0,
-        app1,
-        token_network_identifier,
-        amount,
+    mediated_transfer(
+        initiator_app=app0,
+        target_app=app1,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
         identifier=1,
     )
 

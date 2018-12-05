@@ -15,8 +15,8 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
-    direct_transfer,
     get_channelstate,
+    mediated_transfer,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.state import UnlockProofState
@@ -445,11 +445,11 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         secrethash,
     )
 
-    direct_transfer(
-        app0,
-        app1,
-        token_network_identifier,
-        amount,
+    mediated_transfer(
+        initiator_app=app0,
+        target_app=app1,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
         identifier=2,
     )
 
@@ -472,7 +472,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
         channelstate_0_1.identifier,
     )
 
-    # The direct transfer locksroot must not contain the unlocked lock, the
+    # The transfer locksroot must not contain the unlocked lock, the
     # unlock must fail.
     with pytest.raises(Exception):
         netting_channel.unlock(
@@ -661,27 +661,27 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 
     amount0_1 = 10
-    direct_transfer(
-        app0,
-        app1,
-        token_network_identifier,
-        amount0_1,
+    mediated_transfer(
+        initiator_app=app0,
+        target_app=app1,
+        token_network_identifier=token_network_identifier,
+        amount=amount0_1,
     )
 
     amount1_1 = 50
-    direct_transfer(
-        app1,
-        app0,
-        token_network_identifier,
-        amount1_1,
+    mediated_transfer(
+        initiator_app=app1,
+        target_app=app0,
+        token_network_identifier=token_network_identifier,
+        amount=amount1_1,
     )
 
     amount0_2 = 60
-    direct_transfer(
-        app0,
-        app1,
-        token_network_identifier,
-        amount0_2,
+    mediated_transfer(
+        initiator_app=app0,
+        target_app=app1,
+        token_network_identifier=token_network_identifier,
+        amount=amount0_2,
     )
 
     # Alice can only provide one of Bob's transfer, so she is incentivized to

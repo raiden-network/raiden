@@ -14,7 +14,6 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
     UNIT_CHAIN_ID,
-    UNIT_REGISTRY_IDENTIFIER,
     UNIT_SECRET,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_SENDER,
@@ -26,7 +25,6 @@ from raiden.transfer import channel
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelUpdateTransfer,
-    EventPaymentReceivedSuccess,
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import (
@@ -56,10 +54,9 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelNewBalance,
     ContractReceiveChannelSettled,
     ContractReceiveUpdateTransfer,
-    ReceiveTransferDirect,
     ReceiveUnlock,
 )
-from raiden.utils import privatekey_to_address, random_secret, sha3
+from raiden.utils import random_secret, sha3
 
 PartnerStateModel = namedtuple(
     'PartnerStateModel',
@@ -436,39 +433,6 @@ def test_channelstate_send_lockedtransfer():
         merkletree_leaves=[lock.lockhash],
     )
     partner_model2 = partner_model1
-
-    assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
-    assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
-
-
-def test_channelstate_send_direct_transfer():
-    """Sending a direct transfer must update the participant state.
-
-    This tests only the state of the sending node, without synchronisation.
-    """
-    our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
-
-    amount = 30
-    payment_identifier = 1
-    message_identifier = random.randint(0, UINT64_MAX)
-    channel.send_directtransfer(
-        channel_state,
-        amount,
-        message_identifier,
-        payment_identifier,
-    )
-
-    our_model2 = our_model1._replace(
-        distributable=our_model1.distributable - amount,
-        balance=our_model1.balance - amount,
-        next_nonce=2,
-    )
-    partner_model2 = partner_model1._replace(
-        distributable=partner_model1.distributable + amount,
-        balance=partner_model1.balance + amount,
-    )
 
     assert_partner_state(channel_state.our_state, channel_state.partner_state, our_model2)
     assert_partner_state(channel_state.partner_state, channel_state.our_state, partner_model2)
@@ -1337,31 +1301,6 @@ def test_receive_lockedtransfer_before_deposit():
 
     # this node partner has enough balance, the transfer must be accepted
     assert is_valid, msg
-
-
-def test_receive_directdtransfer_before_deposit():
-    """Regression test that ensures that we accept incoming direct transfers,
-    even if we don't have any balance on the channel.
-    """
-    our_model1, _ = create_model(0)  # our deposit is 0
-    partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
-
-    nonce = 1
-    transferred_amount = 30
-    receive_directtransfer = make_receive_transfer_direct(
-        channel_state,
-        privkey2,
-        nonce,
-        transferred_amount,
-    )
-
-    # this node partner has enough balance, the transfer must be accepted
-    iteration = channel.handle_receive_directtransfer(
-        channel_state,
-        receive_directtransfer,
-    )
-    assert must_contain_entry(iteration.events, EventPaymentReceivedSuccess, {})
 
 
 def test_channelstate_unlock_without_locks():

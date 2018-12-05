@@ -7,7 +7,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import assert_synced_channel_state, direct_transfer
+from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
 from raiden.transfer import views
 
 
@@ -33,18 +33,18 @@ def test_send_queued_messages(
         token_address,
     )
 
-    # stop app1 - direct transfer must be left unconfirmed
+    # stop app1 - transfer must be left unconfirmed
     app1.stop()
 
     # make a few transfers from app0 to app2
     amount = 1
     spent_amount = 7
     for _ in range(spent_amount):
-        direct_transfer(
-            app0,
-            app1,
-            token_network_identifier,
-            amount,
+        mediated_transfer(
+            initiator_app=app0,
+            target_app=app1,
+            token_network_identifier=token_network_identifier,
+            amount=amount,
             timeout=network_wait * number_of_nodes,
         )
 

@@ -5,7 +5,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.transfer.state_change import ActionCancelPayment, ActionTransferDirect, Block
+from raiden.transfer.state_change import ActionCancelPayment, Block
 from raiden.utils import sha3
 
 ADDRESS = sha3(b'foo')[:20]
@@ -44,31 +44,6 @@ def test_transfer_statechange_operators():
     a = ActionCancelPayment(2)
     b = ActionCancelPayment(2)
     c = ActionCancelPayment(3)
-
-    assert a == b
-    assert not a != b
-    assert a != c
-    assert not a == c
-
-    token_network_identifier = factories.make_address()
-    a = ActionTransferDirect(
-        token_network_identifier,
-        receiver_address=ADDRESS,
-        payment_identifier=2,
-        amount=2,
-    )
-    b = ActionTransferDirect(
-        token_network_identifier,
-        receiver_address=ADDRESS,
-        payment_identifier=2,
-        amount=2,
-    )
-    c = ActionTransferDirect(
-        token_network_identifier,
-        receiver_address=ADDRESS2,  # different recipient
-        payment_identifier=2,
-        amount=2,
-    )
 
     assert a == b
     assert not a != b

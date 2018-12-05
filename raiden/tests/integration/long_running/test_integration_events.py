@@ -585,13 +585,13 @@ def test_clear_closed_queue(raiden_network, token_addresses, deposit):
     app1.raiden.transport.stop()
     app1.raiden.transport.get()
 
-    # make a direct transfer to ensure the nodes have communicated
+    # make a transfer to ensure the nodes have communicated
     amount = 10
     payment_identifier = 1337
-    app0.raiden.direct_transfer_async(
-        token_network_identifier,
-        amount,
-        app1.raiden.address,
+    app0.raiden.mediated_transfer_async(
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        target=app1.raiden.address,
         identifier=payment_identifier,
     )
 

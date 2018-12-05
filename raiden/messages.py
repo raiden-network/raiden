@@ -15,7 +15,7 @@ from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.balance_proof import pack_balance_proof
-from raiden.transfer.events import SendDirectTransfer, SendProcessed
+from raiden.transfer.events import SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
@@ -45,7 +45,6 @@ from raiden.utils.typing import (
 
 __all__ = (
     'Delivered',
-    'DirectTransfer',
     'Lock',
     'LockedTransfer',
     'LockedTransferBase',
@@ -139,8 +138,6 @@ def from_dict(data: dict) -> 'Message':
 def message_from_sendevent(send_event: SendMessageEvent, our_address: Address) -> 'Message':
     if type(send_event) == SendLockedTransfer:
         message = LockedTransfer.from_event(send_event)
-    elif type(send_event) == SendDirectTransfer:
-        message = DirectTransfer.from_event(send_event)
     elif type(send_event) == SendSecretReveal:
         message = RevealSecret.from_event(send_event)
     elif type(send_event) == SendBalanceProof:
@@ -772,173 +769,6 @@ class RevealSecret(SignedMessage):
         )
         reveal_secret.signature = decode_hex(data['signature'])
         return reveal_secret
-
-
-class DirectTransfer(EnvelopeMessage):
-    """ A direct token exchange, used when both participants have a previously
-    opened channel.
-
-    Signs the unidirectional settled `balance` of `token` to `recipient` plus
-    locked transfers.
-
-    Settled refers to the inclusion of formerly locked amounts.
-    Locked amounts are not included in the balance yet, but represented
-    by the `locksroot`.
-
-    Args:
-        nonce: A sequential nonce, used to protected against replay attacks and
-            to give a total order for the messages. This nonce is per
-            participant, not shared.
-        token: The address of the token being exchanged in the channel.
-        transferred_amount: The total amount of token that was transferred to
-            the channel partner. This value is monotonically increasing and can
-            be larger than a channels deposit, since the channels are
-            bidirecional.
-        recipient: The address of the raiden node participating in the channel.
-        locksroot: The root of a merkle tree which records the current
-            outstanding locks.
-    """
-
-    cmdid = messages.DIRECTTRANSFER
-
-    def __init__(
-            self,
-            chain_id: ChainID,
-            message_identifier: MessageID,
-            payment_identifier: PaymentID,
-            nonce: int,
-            token_network_address: Address,
-            token: Address,
-            channel_identifier: ChannelID,
-            transferred_amount: TokenAmount,
-            locked_amount: TokenAmount,
-            recipient: Address,
-            locksroot: Locksroot,
-    ):
-
-        super().__init__(
-            chain_id=chain_id,
-            nonce=nonce,
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount,
-            locksroot=locksroot,
-            channel_identifier=channel_identifier,
-            token_network_address=token_network_address,
-        )
-        assert_transfer_values(payment_identifier, token, recipient)
-        self.message_identifier = message_identifier
-        self.payment_identifier = payment_identifier
-        self.token = token
-        self.recipient = recipient  #: partner's address
-
-    @classmethod
-    def unpack(cls, packed):
-        transfer = cls(
-            chain_id=packed.chain_id,
-            message_identifier=packed.message_identifier,
-            payment_identifier=packed.payment_identifier,
-            nonce=packed.nonce,
-            token_network_address=packed.token_network_address,
-            token=packed.token,
-            channel_identifier=packed.channel_identifier,
-            transferred_amount=packed.transferred_amount,
-            recipient=packed.recipient,
-            locked_amount=packed.locked_amount,
-            locksroot=packed.locksroot,
-        )
-        transfer.signature = packed.signature
-
-        return transfer
-
-    def pack(self, packed):
-        packed.chain_id = self.chain_id
-        packed.message_identifier = self.message_identifier
-        packed.payment_identifier = self.payment_identifier
-        packed.nonce = self.nonce
-        packed.token = self.token
-        packed.token_network_address = self.token_network_address
-        packed.channel_identifier = self.channel_identifier
-        packed.transferred_amount = self.transferred_amount
-        packed.locked_amount = self.locked_amount
-        packed.recipient = self.recipient
-        packed.locksroot = self.locksroot
-        packed.signature = self.signature
-
-    @classmethod
-    def from_event(cls, event):
-        balance_proof = event.balance_proof
-
-        return cls(
-            chain_id=balance_proof.chain_id,
-            message_identifier=event.message_identifier,
-            payment_identifier=event.payment_identifier,
-            nonce=balance_proof.nonce,
-            token_network_address=balance_proof.token_network_identifier,
-            token=event.token,
-            channel_identifier=balance_proof.channel_identifier,
-            transferred_amount=balance_proof.transferred_amount,
-            locked_amount=balance_proof.locked_amount,
-            recipient=event.recipient,
-            locksroot=balance_proof.locksroot,
-        )
-
-    def __repr__(self):
-        representation = (
-            '<{} ['
-            'chainid:{} msgid:{} paymentid:{} token_network:{} channel_identifier:{} nonce:{} '
-            'transferred_amount:{} locked_amount:{} locksroot:{} hash:{}'
-            ']>'
-        ).format(
-            self.__class__.__name__,
-            self.chain_id,
-            self.message_identifier,
-            self.payment_identifier,
-            pex(self.token_network_address),
-            self.channel_identifier,
-            self.nonce,
-            self.transferred_amount,
-            self.locked_amount,
-            pex(self.locksroot),
-            pex(self.hash),
-        )
-
-        return representation
-
-    def to_dict(self):
-        return {
-            'type': self.__class__.__name__,
-            'chain_id': self.chain_id,
-            'message_identifier': self.message_identifier,
-            'payment_identifier': self.payment_identifier,
-            'nonce': self.nonce,
-            'token_network_address': to_normalized_address(self.token_network_address),
-            'token': to_normalized_address(self.token),
-            'channel_identifier': self.channel_identifier,
-            'transferred_amount': self.transferred_amount,
-            'locked_amount': self.locked_amount,
-            'recipient': to_normalized_address(self.recipient),
-            'locksroot': encode_hex(self.locksroot),
-            'signature': encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        assert data['type'] == cls.__name__
-        direct_transfer = cls(
-            chain_id=data['chain_id'],
-            message_identifier=data['message_identifier'],
-            payment_identifier=data['payment_identifier'],
-            nonce=data['nonce'],
-            token_network_address=to_canonical_address(data['token_network_address']),
-            token=to_canonical_address(data['token']),
-            channel_identifier=data['channel_identifier'],
-            transferred_amount=data['transferred_amount'],
-            recipient=to_canonical_address(data['recipient']),
-            locked_amount=data['locked_amount'],
-            locksroot=decode_hex(data['locksroot']),
-        )
-        direct_transfer.signature = decode_hex(data['signature'])
-        return direct_transfer
 
 
 class Lock:
@@ -1587,7 +1417,6 @@ class LockExpired(EnvelopeMessage):
 
 CMDID_TO_CLASS = {
     messages.DELIVERED: Delivered,
-    messages.DIRECTTRANSFER: DirectTransfer,
     messages.LOCKEDTRANSFER: LockedTransfer,
     messages.PING: Ping,
     messages.PONG: Pong,

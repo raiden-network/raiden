@@ -3,11 +3,7 @@ import pytest
 
 from raiden.tests.utils.events import raiden_events_must_contain_entry
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    direct_transfer,
-    mediated_transfer,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
 from raiden.transfer.state import lockstate_from_lock
@@ -31,7 +27,13 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 
     # Exhaust the channel App1 <-> App2 (to force the refund transfer)
     exhaust_amount = deposit
-    direct_transfer(app1, app2, token_network_identifier, exhaust_amount, identifier=1)
+    mediated_transfer(
+        initiator_app=app1,
+        target_app=app2,
+        token_network_identifier=token_network_identifier,
+        amount=exhaust_amount,
+        identifier=1,
+    )
 
     refund_amount = deposit // 2
     identifier = 1
@@ -108,12 +110,12 @@ def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit
     # drain the channel app1 -> app2
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
-    direct_transfer(
-        app1,
-        app2,
-        token_network_identifier,
-        amount_drain,
-        identifier_drain,
+    mediated_transfer(
+        initiator_app=app1,
+        target_app=app2,
+        token_network_identifier=token_network_identifier,
+        amount=amount_drain,
+        identifier=identifier_drain,
         timeout=network_wait,
     )
 
@@ -205,23 +207,23 @@ def test_refund_transfer_after_2nd_hop(
     identifier_path = 1
     amount_path = 1
     mediated_transfer(
-        app0,
-        app3,
-        token_network_identifier,
-        amount_path,
-        identifier_path,
+        initiator_app=app0,
+        target_app=app3,
+        token_network_identifier=token_network_identifier,
+        amount=amount_path,
+        identifier=identifier_path,
         timeout=network_wait * number_of_nodes,
     )
 
     # drain the channel app2 -> app3
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
-    direct_transfer(
-        app2,
-        app3,
-        token_network_identifier,
-        amount_drain,
-        identifier_drain,
+    mediated_transfer(
+        initiator_app=app2,
+        target_app=app3,
+        token_network_identifier=token_network_identifier,
+        amount=amount_drain,
+        identifier=identifier_drain,
         timeout=network_wait,
     )
 
