@@ -6,15 +6,16 @@ import re
 import sys
 from functools import wraps
 from traceback import TracebackException
-from typing import Callable, Dict, FrozenSet, List, Pattern, Tuple
+from typing import Any, Callable, Dict, FrozenSet, List, Pattern, Tuple
 
+import gevent
 import structlog
 
 DEFAULT_LOG_LEVEL = 'INFO'
 MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
 LOG_BACKUP_COUNT = 3
 
-_FIRST_PARTY_PACKAGES = frozenset(['raiden'])
+_FIRST_PARTY_PACKAGES = frozenset(['raiden', 'raiden_libs', 'raiden_contracts'])
 
 
 def _chain(first_func, *funcs) -> Callable:
@@ -102,6 +103,17 @@ class RaidenFilter(logging.Filter):
         return self._log_filter.should_log(record.name, record.levelname)
 
 
+def add_greenlet_name(logger: str, method_name: str, event_dict: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Add greenlet_name to the event dict for greenlets that have a non-default name.
+    """
+    current_greenlet = gevent.getcurrent()
+    greenlet_name = getattr(current_greenlet, 'name', None)
+    if greenlet_name is not None and not greenlet_name.startswith('Greenlet-'):
+        event_dict['greenlet_name'] = greenlet_name
+    return event_dict
+
+
 def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
     """Returns a function which transforms a str, replacing all matches for its replacement"""
     def processor_wrapper(msg: str) -> str:
@@ -147,8 +159,9 @@ def configure_logging(
     processors = [
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
+        add_greenlet_name,
         structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S.%f"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
     ]
