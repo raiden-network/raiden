@@ -130,8 +130,6 @@ def populate_token_networks_random(
             private_key1, private_key2 = random.sample(private_keys, 2)
             address1 = Address(private_key_to_address(private_key1))
             address2 = Address(private_key_to_address(private_key2))
-            fee1 = random.randint(100, 10000)
-            fee2 = random.randint(100, 10000)
             token_network.handle_channel_opened_event(
                 channel_id,
                 address1,
@@ -150,21 +148,6 @@ def populate_token_networks_random(
                 channel_id,
                 address2,
                 deposit2
-            )
-            # cuts negative values of probability distribution, fix with > 0 distribution
-
-            token_network.update_fee(
-                channel_id,
-                address1,
-                channel_id + 1,
-                fee1
-            )
-
-            token_network.update_fee(
-                channel_id,
-                address2,
-                channel_id + 1,
-                fee2
             )
 
 
@@ -203,34 +186,6 @@ def populate_token_networks() -> Callable:
                     ChannelIdentifier(channel_id),
                     addresses[p2_index],
                     p2_deposit
-                )
-
-                token_network.update_balance(
-                    ChannelIdentifier(channel_id),
-                    addresses[p1_index],
-                    1,
-                    p1_transferred_amount,
-                    0
-                )
-                token_network.update_balance(
-                    ChannelIdentifier(channel_id),
-                    addresses[p2_index],
-                    1,
-                    p2_transferred_amount,
-                    0
-                )
-
-                token_network.update_fee(
-                    channel_identifier=ChannelIdentifier(channel_id),
-                    signer=addresses[p1_index],
-                    nonce=channel_id + 1,
-                    relative_fee=p1_fee
-                )
-                token_network.update_fee(
-                    channel_identifier=ChannelIdentifier(channel_id),
-                    signer=addresses[p2_index],
-                    nonce=channel_id + 1,
-                    relative_fee=p2_fee
                 )
 
     return populate_token_networks
@@ -279,10 +234,9 @@ def pathfinding_service_full_mock(
 ) -> PathfindingService:
     pathfinding_service = PathfindingService(
         contracts_manager,
-        transport=Mock(),  # type: ignore
         token_network_listener=Mock(),  # type: ignore
+        token_network_registry_listener=Mock(),  # type: ignore
         chain_id=1,
-        token_network_registry_listener=Mock()  # type: ignore
     )
     pathfinding_service.token_networks = {
         token_network.address: token_network
@@ -299,10 +253,9 @@ def pathfinding_service_mocked_listeners(
     """ Returns a PathfindingService with mocked blockchain listeners. """
     pathfinding_service = PathfindingService(
         contracts_manager,
-        transport=Mock(),  # type: ignore
         token_network_listener=BlockchainListenerMock(),  # type: ignore
+        token_network_registry_listener=BlockchainListenerMock(),  # type: ignore
         chain_id=1,
-        token_network_registry_listener=BlockchainListenerMock()  # type: ignore
     )
 
     return pathfinding_service

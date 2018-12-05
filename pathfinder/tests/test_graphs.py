@@ -11,6 +11,7 @@ from raiden_libs.types import Address
 
 import pathfinder.model.token_network
 from pathfinder.model import ChannelView, TokenNetwork
+from pathfinder.config import DEFAULT_PERCENTAGE_FEE
 
 
 def test_routing_benchmark(
@@ -52,19 +53,19 @@ def test_routing_simple(
     view10: ChannelView = token_network.G[addresses[1]][addresses[0]]['view']
 
     assert view01.deposit == 100
-    assert view01.transferred_amount == 20
+    assert view01.transferred_amount == 0
     assert view01.locked_amount == 0
-    assert isclose(view01._relative_fee, 10)
-    assert view01.capacity == 90
-    assert view10.capacity == 60
+    assert isclose(view01.relative_fee, DEFAULT_PERCENTAGE_FEE)
+    assert view01.capacity == 100
+    assert view10.capacity == 50
 
     # 0->1->4->3 is as short as 0->1->2->3 but the shortcut 1->4 is a lot more expensive.
     # 0->2->3 would be shorter but 0->2 is degraded.
     paths = token_network.get_paths(addresses[0], addresses[3], value=10, k=1, hop_bias=0)
     assert len(paths) == 1
     assert paths[0] == {
-        'path': [addresses[0], addresses[1], addresses[2], addresses[3]],
-        'estimated_fee': 25
+        'path': [addresses[0], addresses[2], addresses[3]],
+        'estimated_fee': 2000
     }
 
     # Bottleneck should be 0->1 and 2->3 with a capacity of 90.
@@ -89,12 +90,12 @@ def test_routing_disjoint_case1(
     paths = token_network.get_paths(addresses[0], addresses[2], value=10, k=3)
     assert len(paths) == 2
     assert paths[0] == {
-        'path': [addresses[0], addresses[1], addresses[2]],
-        'estimated_fee': 18,
+        'path': [addresses[0], addresses[2]],
+        'estimated_fee': 1000,
     }
     assert paths[1] == {
-        'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
-        'estimated_fee': 131
+        'path': [addresses[0], addresses[1], addresses[2]],
+        'estimated_fee': 2000
     }
 
 
@@ -109,27 +110,27 @@ def test_routing_disjoint_case2(
     # test default diversity penalty
     paths = token_network.get_paths(addresses[0], addresses[4], value=10, k=3)
     assert len(paths) == 3
-    assert paths[0]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
-    assert paths[0]['estimated_fee'] == 3000
+    assert paths[0]['path'] == [addresses[0], addresses[1], addresses[4]]
+    assert paths[0]['estimated_fee'] == 2000
 
     assert paths[1]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
-    assert paths[1]['estimated_fee'] == 3500
+    assert paths[1]['estimated_fee'] == 3000
 
-    assert paths[2]['path'] == [addresses[0], addresses[1], addresses[4]]
-    assert paths[2]['estimated_fee'] == 5000
+    assert paths[2]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
+    assert paths[2]['estimated_fee'] == 3000
 
     # set diversity penalty higher
     monkeypatch.setattr(pathfinder.model.token_network, 'DIVERSITY_PEN_DEFAULT', 10000)
     paths = token_network.get_paths(addresses[0], addresses[4], value=10, k=3)
     assert len(paths) == 3
-    assert paths[0]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
-    assert paths[0]['estimated_fee'] == 3000
+    assert paths[0]['path'] == [addresses[0], addresses[1], addresses[4]]
+    assert paths[0]['estimated_fee'] == 2000
 
-    assert paths[1]['path'] == [addresses[0], addresses[1], addresses[4]]
-    assert paths[1]['estimated_fee'] == 5000
+    assert paths[1]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
+    assert paths[1]['estimated_fee'] == 3000
 
-    assert paths[2]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
-    assert paths[2]['estimated_fee'] == 3500
+    assert paths[2]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
+    assert paths[2]['estimated_fee'] == 3000
 
 
 def test_routing_hop_fee_balance(
@@ -143,12 +144,12 @@ def test_routing_hop_fee_balance(
     # Prefer cheap over fast.
     paths = token_network.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=0)
     assert paths[0] == {
-        'path': [addresses[1], addresses[2], addresses[3], addresses[4]],
-        'estimated_fee': 26
+        'path': [addresses[1], addresses[4]],
+        'estimated_fee': 1000
     }
     # Prefer fast over cheap.
     paths = token_network.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=1)
     assert paths[0] == {
         'path': [addresses[1], addresses[4]],
-        'estimated_fee': 100
+        'estimated_fee': 1000
     }

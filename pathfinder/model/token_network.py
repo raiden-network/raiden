@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Tuple
 
 import networkx as nx
 from networkx import DiGraph
-from eth_utils import is_checksum_address, is_same_address
+from eth_utils import is_checksum_address
 from raiden_libs.types import Address, ChannelIdentifier
 
 from pathfinder.config import (
@@ -101,93 +101,6 @@ class TokenNetwork:
                     channel_identifier
                 )
             )
-
-    #
-    # pathfinding endpoints
-    #
-    def update_balance(
-        self,
-        channel_identifier: ChannelIdentifier,
-        signer: Address,
-        nonce: int,
-        transferred_amount: int,
-        locked_amount: int,
-    ):
-        """ Update the channel balance with the new balance proof.
-        This needs to check that the balance proof is valid.
-
-        Called by the public interface. """
-
-        participant1, participant2 = self.channel_id_to_addresses.get(
-            channel_identifier,
-            (None, None)
-        )
-
-        if is_same_address(participant1, signer):
-            receiver = participant2
-        elif is_same_address(participant2, signer):
-            receiver = participant1
-        else:
-            raise ValueError('Balance proof signature does not match any of the participants.')
-
-        view1: ChannelView = self.G[signer][receiver]['view']
-        view2: ChannelView = self.G[receiver][signer]['view']
-
-        if nonce <= view1.balance_proof_nonce:
-            raise ValueError('Outdated balance proof.')
-
-        view1.update_capacity(
-            nonce=nonce,
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount
-        )
-        view2.update_capacity(
-            received_amount=transferred_amount
-        )
-
-    def update_fee(
-        self,
-        channel_identifier: ChannelIdentifier,
-        signer: Address,
-        nonce: int,
-        relative_fee: int,
-    ):
-        """ Update the channel with a new fee.
-
-        Validation of the data must happen before this method is called.
-        """
-
-        participant1, participant2 = self.channel_id_to_addresses.get(
-            channel_identifier,
-            (None, None)
-        )
-        if is_same_address(participant1, signer):
-            sender = participant1
-            receiver = participant2
-        elif is_same_address(participant2, signer):
-            sender = participant2
-            receiver = participant1
-        else:
-            raise ValueError('Fee update signature does not match any of the participants.')
-
-        channel_view: ChannelView = self.G[sender][receiver]['view']
-
-        if nonce <= channel_view.fee_info_nonce:
-            raise ValueError('Outdated fee info.')
-
-        if relative_fee >= self.max_relative_fee:
-            # Equal case is included to avoid a recalculation of the max fee.
-            self.max_relative_fee = relative_fee
-            channel_view._relative_fee = relative_fee
-        elif channel_view._relative_fee == self.max_relative_fee:
-            # O(n) operation but rarely called, amortized likely constant.
-            channel_view._relative_fee = relative_fee
-            self.max_relative_fee = max(
-                edge_data['view'].relative_fee
-                for _, _, edge_data in self.G.edges(data=True)
-            )
-
-        channel_view.update_fee(nonce, relative_fee)
 
     def get_paths(
         self,

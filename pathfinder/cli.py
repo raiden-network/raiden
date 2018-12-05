@@ -13,7 +13,6 @@ from raiden_libs.no_ssl_patch import no_ssl_verification
 from requests.exceptions import ConnectionError
 
 from pathfinder.pathfinding_service import PathfindingService
-from raiden_libs.transport import MatrixTransport
 
 log = logging.getLogger(__name__)
 
@@ -25,34 +24,8 @@ log = logging.getLogger(__name__)
     type=str,
     help='Ethereum node RPC URI'
 )
-@click.option(
-    '--monitoring-channel',
-    default='#monitor_test:transport01.raiden.network',
-    help='Location of the monitoring channel to connect to'
-)
-@click.option(
-    '--matrix-homeserver',
-    default='https://transport01.raiden.network',
-    help='Matrix homeserver'
-)
-@click.option(
-    '--matrix-username',
-    default=None,
-    required=True,
-    help='Matrix username'
-)
-@click.option(
-    '--matrix-password',
-    default=None,
-    required=True,
-    help='Matrix password'
-)
 def main(
     eth_rpc,
-    monitoring_channel,
-    matrix_homeserver,
-    matrix_username,
-    matrix_password,
 ):
     """Console script for pathfinder."""
 
@@ -75,14 +48,6 @@ def main(
     with no_ssl_verification():
         service = None
         try:
-            log.info('Starting Matrix Transport...')
-            transport = MatrixTransport(
-                homeserver=matrix_homeserver,
-                username=matrix_username,
-                password=matrix_password,
-                matrix_room=monitoring_channel
-            )
-
             log.info('Starting TokenNetwork Listener...')
             token_network_listener = BlockchainListener(
                 web3=web3,
@@ -100,7 +65,6 @@ def main(
             log.info('Starting Pathfinding Service...')
             service = PathfindingService(
                 contract_manager=CONTRACT_MANAGER,
-                transport=transport,
                 token_network_listener=token_network_listener,
                 token_network_registry_listener=token_network_registry_listener,
                 chain_id=int(web3.net.version),

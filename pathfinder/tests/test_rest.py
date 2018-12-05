@@ -121,15 +121,19 @@ def test_get_paths(
     response = requests.get(url)
     assert response.status_code == 200
     paths = response.json()['result']
-    assert len(paths) == 2
+    assert len(paths) == 3
     assert paths == [
         {
+            'path': [addresses[0], addresses[2]],
+            'estimated_fee': 1000
+        },
+        {
             'path': [addresses[0], addresses[1], addresses[2]],
-            'estimated_fee': 18
+            'estimated_fee': 2000
         },
         {
             'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
-            'estimated_fee': 131
+            'estimated_fee': 4000
         }
     ]
 

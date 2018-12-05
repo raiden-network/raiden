@@ -4,11 +4,9 @@ import traceback
 from typing import Dict, Optional
 
 import gevent
-from eth_utils import is_checksum_address, to_checksum_address
+from eth_utils import is_checksum_address
 from raiden_libs.blockchain import BlockchainListener
-from raiden_libs.messages import Message, FeeInfo, BalanceProof, PathsRequest, PathsReply
 from raiden_libs.gevent_error_handler import register_error_handler
-from raiden_libs.transport import MatrixTransport
 from raiden_libs.types import Address
 from raiden_contracts.contract_manager import ContractManager
 from raiden_contracts.constants import ChannelEvent
@@ -44,7 +42,6 @@ class PathfindingService(gevent.Greenlet):
     def __init__(
         self,
         contract_manager: ContractManager,
-        transport: MatrixTransport,
         token_network_listener: BlockchainListener,
         token_network_registry_listener: BlockchainListener,
         chain_id: int,
@@ -53,20 +50,17 @@ class PathfindingService(gevent.Greenlet):
 
         Args:
             contract_manager: A contract manager
-            transport: A transport object
             token_network_listener: A blockchain listener object
             token_network_registry_listener: A blockchain listener object for the network registry
             chain_id: The id of the chain the PFS runs on
         """
         super().__init__()
         self.contract_manager = contract_manager
-        self.transport = transport
         self.token_network_listener = token_network_listener
         self.token_network_registry_listener = token_network_registry_listener
         self.chain_id = chain_id
 
         self.is_running = gevent.event.Event()
-        self.transport.add_message_callback(self.on_message_event)
         self.token_networks: Dict[Address, TokenNetwork] = {}
 
         assert self.token_network_listener is not None
@@ -102,24 +96,6 @@ class PathfindingService(gevent.Greenlet):
 
     def stop(self):
         self.is_running.set()
-
-    def on_message_event(self, message: Message):
-        """This handles messages received over the Transport"""
-        if not isinstance(message, Message):
-            log.warning('Received invalid parameter')
-            return
-
-        try:
-            if isinstance(message, FeeInfo):
-                self.on_fee_info_message(message)
-            elif isinstance(message, BalanceProof):
-                self.on_balance_proof_message(message)
-            elif isinstance(message, PathsRequest):
-                self.on_paths_request_message(message)
-            else:
-                log.error("Ignoring unknown message of type '%s'", (type(message)))
-        except ValueError as error:
-            log.error('Could not handle message properly: %s', str(error))
 
     def follows_token_network(self, token_network_address: Address) -> bool:
         """ Checks if a token network is followed by the pathfinding service. """
@@ -194,88 +170,6 @@ class PathfindingService(gevent.Greenlet):
         channel_identifier = event['args']['channel_identifier']
 
         token_network.handle_channel_closed_event(channel_identifier)
-
-    def on_fee_info_message(self, fee_info: FeeInfo):
-        try:
-            self._check_chain_id(fee_info.chain_id)
-        except ValueError as error:
-            log.error('FeeInfo chain_id does not match: %s', str(error))
-            return
-
-        token_network = self._get_token_network(fee_info.token_network_address)
-
-        if token_network is None:
-            return
-
-        log.debug('Received FeeInfo message for token network {}'.format(
-            token_network.address
-        ))
-
-        token_network.update_fee(
-            fee_info.channel_identifier,
-            Address(to_checksum_address(fee_info.signer)),
-            fee_info.nonce,
-            fee_info.relative_fee
-        )
-
-    def on_balance_proof_message(self, balance_proof: BalanceProof):
-        try:
-            self._check_chain_id(balance_proof.chain_id)
-        except ValueError as error:
-            log.error('BalanceProof chain_id does not match: %s', str(error))
-            return
-
-        token_network = self._get_token_network(balance_proof.token_network_address)
-
-        if token_network is None:
-            return
-
-        log.debug('Received BalanceProof message for token network {}'.format(
-            token_network.address
-        ))
-
-        token_network.update_balance(
-            balance_proof.channel_identifier,
-            Address(to_checksum_address(balance_proof.signer)),
-            balance_proof.nonce,
-            balance_proof.transferred_amount,
-            balance_proof.locked_amount,
-        )
-
-    def on_paths_request_message(self, paths_request: PathsRequest):
-        try:
-            self._check_chain_id(paths_request.chain_id)
-        except ValueError as error:
-            log.error('PathsRequest chain_id does not match: %s', str(error))
-            return
-
-        token_network = self._get_token_network(paths_request.token_network_address)
-
-        if token_network is None:
-            return
-
-        log.debug('Received PathsRequest message for token network {}'.format(
-            token_network.address
-        ))
-        paths_reply: PathsReply = PathsReply(
-            paths_request.token_network_address,
-            paths_request.target_address,
-            paths_request.value,
-            paths_request.chain_id,
-            nonce=1,
-            paths_and_fees=token_network.get_paths(
-                paths_request.source_address,
-                paths_request.target_address,
-                paths_request.value,
-                paths_request.num_paths,
-
-            ),
-            signature=''
-        )
-
-        # FIXME: Verify Signature and Nonce, see PFS Issue #51
-
-        self.transport.send_message(paths_reply, paths_request.source_address)
 
     def handle_token_network_created(self, event):
         token_network_address = event['args']['token_network_address']
