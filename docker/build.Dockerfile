@@ -16,13 +16,6 @@ RUN wget -nv -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && \
     tar xf geth.tar.gz && \
     mv geth-linux-amd64-*/geth /usr/bin/geth && \
     rm geth.tar.gz
-RUN cd /tmp && \
-    wget -nv ${NODE_DOWNLOAD_URL} && \
-    mkdir node && \
-    tar -xf node*.tar.* --strip 1 -C node && \
-    mkdir /tmp/node_modules && \
-    chmod -R a+rwX /tmp/node_modules && \
-    rm node*.tar.*
 
 ADD . /raiden
 
@@ -33,12 +26,6 @@ RUN pip install -r requirements.txt -c constraints.txt
 
 # build contracts and web_ui
 RUN python setup.py build
-RUN USER=root \
-    NPM_CONFIG_PREFIX=/tmp/node_modules \
-    NODE_PATH=/tmp/node_modules \
-    PATH=/tmp/node/bin:$PATH \
-    RAIDEN_NPM_MISSING_FATAL=1 \
-    python setup.py compile_webui
 
 # install raiden and pyinstaller
 RUN pip install .
