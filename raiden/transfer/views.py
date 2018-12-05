@@ -150,8 +150,8 @@ def get_token_network_registry_by_token_network_identifier(
 
 def get_token_network_identifier_by_token_address(
         chain_state: ChainState,
-        payment_network_id: typing.Address,
-        token_address: typing.Address,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
 ) -> typing.Address:
     token_network = get_token_network_by_token_address(
         chain_state,
@@ -234,7 +234,7 @@ def total_token_network_channels(
 def get_token_network_by_token_address(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.Address,
+        token_address: typing.TokenAddress,
 ) -> typing.Optional[TokenNetworkState]:
 
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
@@ -251,7 +251,7 @@ def get_token_network_by_token_address(
 
 def get_token_network_by_identifier(
         chain_state: ChainState,
-        token_network_id: typing.TokenAddress,
+        token_network_id: typing.TokenNetworkID,
 ) -> typing.Optional[TokenNetworkState]:
 
     token_network_state = None
@@ -297,7 +297,7 @@ def get_channelstate_for(
 
 def get_channelstate_by_token_network_and_partner(
         chain_state: ChainState,
-        token_network_id: typing.Address,
+        token_network_id: typing.TokenNetworkID,
         partner_address: typing.Address,
 ) -> typing.Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
@@ -324,7 +324,7 @@ def get_channelstate_by_token_network_and_partner(
 
 def get_channelstate_by_token_network_identifier(
         chain_state: ChainState,
-        token_network_id: typing.Address,
+        token_network_id: typing.TokenNetworkID,
         channel_id: typing.ChannelID,
 ) -> typing.Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
