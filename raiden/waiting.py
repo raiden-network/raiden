@@ -146,7 +146,7 @@ def wait_for_payment_balance(
 def wait_for_close(
         raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.Address,
+        token_address: typing.TokenAddress,
         channel_ids: typing.List[typing.ChannelID],
         retry_timeout: float,
 ) -> None:

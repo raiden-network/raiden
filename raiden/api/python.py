@@ -742,7 +742,7 @@ class RaidenAPI:
 
     def get_blockchain_events_network(
             self,
-            registry_address: typing.PaymentNetworkID,
+            registry_address: typing.Address,
             from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
             to_block: typing.BlockSpecification = 'latest',
     ):

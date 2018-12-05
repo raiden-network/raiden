@@ -5,7 +5,7 @@ import re
 import sys
 import time
 from itertools import zip_longest
-from typing import Iterable, List, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import gevent
 from coincurve import PrivateKey
@@ -271,7 +271,9 @@ def merge_dict(to_update: dict, other_dict: dict):
             to_update[key] = value
 
 
-def optional_address_to_string(address: typing.Address = None) -> typing.Optional[str]:
+def optional_address_to_string(
+        address: Optional[Union[typing.Address, typing.TokenAddress]] = None,
+) -> typing.Optional[str]:
     if address is None:
         return None
 
