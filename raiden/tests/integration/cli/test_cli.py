@@ -179,7 +179,7 @@ def test_cli_registry_address_without_deployed_contract(cli_args):
 
 @pytest.mark.timeout(65)
 @pytest.mark.parametrize('changed_args', [{
-    'environment-type': Environment.DEVELOPMENT.value,
+    'environment_type': Environment.DEVELOPMENT.value,
 }])
 def test_cli_change_environment_type(cli_args):
     child = spawn_raiden(cli_args)
