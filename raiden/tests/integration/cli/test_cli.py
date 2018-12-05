@@ -49,14 +49,16 @@ def expect_cli_until_account_selection(child):
     child.sendline('0')
 
 
-def expect_cli_normal_startup(child, mode):
-    expect_cli_until_acknowledgment(child)
-    child.expect('The following accounts were found in your machine:')
-    child.expect('Select one of them by index to continue: ')
-    child.sendline('0')
+def expect_cli_successful_connected(child, mode):
     child.expect(f'Raiden is running in {mode} mode')
     child.expect('You are connected')
     child.expect('The Raiden API RPC server is now running')
+
+
+def expect_cli_normal_startup(child, mode):
+    expect_cli_until_acknowledgment(child)
+    expect_cli_until_account_selection(child)
+    expect_cli_successful_connected(child, mode)
 
 
 @pytest.mark.timeout(65)
@@ -94,8 +96,7 @@ def test_cli_missing_password_file_enter_password(blockchain_provider, cli_args)
         with open(blockchain_provider['password_file'], 'r') as password_file:
             password = password_file.readline()
             child.sendline(password)
-        child.expect('You are connected')
-        child.expect('The Raiden API RPC server is now running')
+        expect_cli_successful_connected(child, EXPECTED_DEFAULT_ENVIRONMENT_VALUE)
     except pexpect.TIMEOUT as e:
         print('Timed out at', e)
     finally:
