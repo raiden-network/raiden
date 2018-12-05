@@ -345,12 +345,17 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         self._message_handler = message_handler
 
-        # Initialize the point from which the client will sync messages
-        self._client.sync_token = fetch_since_token
-
+        # Initial login sync will be performed w/o sync token to get all meta events
         self._login_or_register()
         self.log = log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
 
+        # Initialize the point from which the client will sync messages
+        if fetch_since_token:
+            prev_server, _, prev_sync_token = fetch_since_token.partition('/')
+            if prev_server == self._server_name:
+                self._client.sync_token = prev_sync_token
+
+        self.log.debug('Start: handle thread', handle_thread=self._client._handle_thread)
         if self._client._handle_thread:
             # wait on _handle_thread for initial sync
             # this is needed so the rooms are populated before we _inventory_rooms
@@ -418,7 +423,7 @@ class MatrixTransport(Runnable):
         so that the token is used as a starting point from which
         messages are fetched from the matrix server.
         """
-        state_change = ActionUpdateTransportSyncToken(next_batch)
+        state_change = ActionUpdateTransportSyncToken(f'{self._server_name}/{next_batch}')
         self._raiden_service.handle_state_change(state_change)
 
     def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:
@@ -537,7 +542,7 @@ class MatrixTransport(Runnable):
 
             try:
                 self._client.sync_token = None
-                self._client.login(username, password, sync=False)
+                self._client.login(username, password, limit=0)
                 self.log.debug(
                     'Login',
                     homeserver=self._server_name,
