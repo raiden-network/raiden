@@ -116,45 +116,44 @@ def blockchain_registry_listener(web3, contracts_manager):
 
 
 @pytest.fixture
-def populate_token_networks_random(
-        token_networks: List[TokenNetwork],
+def populate_token_network_random(
+        token_network_model: TokenNetwork,
         private_keys: List[str],
 ) -> None:
     # seed for pseudo-randomness from config constant, that changes from time to time
     random.seed(NUMBER_OF_CHANNELS)
 
-    for token_network in token_networks:
-        for channel_id_int in range(NUMBER_OF_CHANNELS):
-            channel_id = ChannelIdentifier(channel_id_int)
+    for channel_id_int in range(NUMBER_OF_CHANNELS):
+        channel_id = ChannelIdentifier(channel_id_int)
 
-            private_key1, private_key2 = random.sample(private_keys, 2)
-            address1 = Address(private_key_to_address(private_key1))
-            address2 = Address(private_key_to_address(private_key2))
-            token_network.handle_channel_opened_event(
-                channel_id,
-                address1,
-                address2
-            )
+        private_key1, private_key2 = random.sample(private_keys, 2)
+        address1 = Address(private_key_to_address(private_key1))
+        address2 = Address(private_key_to_address(private_key2))
+        token_network_model.handle_channel_opened_event(
+            channel_id,
+            address1,
+            address2
+        )
 
-            # deposit to channels
-            deposit1, deposit2 = random.sample(range(1000), 2)
-            address1, address2 = token_network.channel_id_to_addresses[channel_id]
-            token_network.handle_channel_new_deposit_event(
-                channel_id,
-                address1,
-                deposit1
-            )
-            token_network.handle_channel_new_deposit_event(
-                channel_id,
-                address2,
-                deposit2
-            )
+        # deposit to channels
+        deposit1, deposit2 = random.sample(range(1000), 2)
+        address1, address2 = token_network_model.channel_id_to_addresses[channel_id]
+        token_network_model.handle_channel_new_deposit_event(
+            channel_id,
+            address1,
+            deposit1
+        )
+        token_network_model.handle_channel_new_deposit_event(
+            channel_id,
+            address2,
+            deposit2
+        )
 
 
 @pytest.fixture
-def populate_token_networks() -> Callable:
-    def populate_token_networks(
-        token_networks: List[TokenNetwork],
+def populate_token_network() -> Callable:
+    def populate_token_network(
+        token_network: TokenNetwork,
         private_keys: List[str],
         addresses: List[Address],
         web3: Web3,
@@ -170,38 +169,37 @@ def populate_token_networks() -> Callable:
             p2_transferred_amount,
             p2_fee
         ) in enumerate(channel_descriptions):
-            for token_network in token_networks:
-                token_network.handle_channel_opened_event(
-                    ChannelIdentifier(channel_id),
-                    addresses[p1_index],
-                    addresses[p2_index]
-                )
+            token_network.handle_channel_opened_event(
+                ChannelIdentifier(channel_id),
+                addresses[p1_index],
+                addresses[p2_index]
+            )
 
-                token_network.handle_channel_new_deposit_event(
-                    ChannelIdentifier(channel_id),
-                    addresses[p1_index],
-                    p1_deposit
-                )
-                token_network.handle_channel_new_deposit_event(
-                    ChannelIdentifier(channel_id),
-                    addresses[p2_index],
-                    p2_deposit
-                )
+            token_network.handle_channel_new_deposit_event(
+                ChannelIdentifier(channel_id),
+                addresses[p1_index],
+                p1_deposit
+            )
+            token_network.handle_channel_new_deposit_event(
+                ChannelIdentifier(channel_id),
+                addresses[p2_index],
+                p2_deposit
+            )
 
-    return populate_token_networks
+    return populate_token_network
 
 
 @pytest.fixture
-def populate_token_networks_case_1(
-    populate_token_networks: Callable,
-    token_networks: List[TokenNetwork],
+def populate_token_network_case_1(
+    populate_token_network: Callable,
+    token_network_model: TokenNetwork,
     private_keys: List[str],
     addresses: List[Address],
     web3: Web3,
     channel_descriptions_case_1: List
 ):
-    populate_token_networks(
-        token_networks,
+    populate_token_network(
+        token_network_model,
         private_keys,
         addresses,
         web3,
@@ -210,16 +208,16 @@ def populate_token_networks_case_1(
 
 
 @pytest.fixture
-def populate_token_networks_case_2(
-    populate_token_networks: Callable,
-    token_networks: List[TokenNetwork],
+def populate_token_network_case_2(
+    populate_token_network: Callable,
+    token_network_model: TokenNetwork,
     private_keys: List[str],
     addresses: List[Address],
     web3: Web3,
     channel_descriptions_case_2: List
 ):
-    populate_token_networks(
-        token_networks,
+    populate_token_network(
+        token_network_model,
         private_keys,
         addresses,
         web3,
@@ -230,7 +228,7 @@ def populate_token_networks_case_2(
 @pytest.fixture
 def pathfinding_service_full_mock(
     contracts_manager: ContractManager,
-    token_networks: List[TokenNetwork],
+    token_network_model: TokenNetwork,
 ) -> PathfindingService:
     pathfinding_service = PathfindingService(
         contracts_manager,
@@ -239,8 +237,7 @@ def pathfinding_service_full_mock(
         chain_id=1,
     )
     pathfinding_service.token_networks = {
-        token_network.address: token_network
-        for token_network in token_networks
+        token_network_model.address: token_network_model
     }
 
     return pathfinding_service

@@ -7,7 +7,7 @@ import sys
 
 import click
 from raiden_libs.blockchain import BlockchainListener
-from raiden_contracts.contract_manager import CONTRACT_MANAGER
+from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 from web3 import HTTPProvider, Web3
 from raiden_libs.no_ssl_patch import no_ssl_verification
 from requests.exceptions import ConnectionError
@@ -15,6 +15,7 @@ from requests.exceptions import ConnectionError
 from pathfinder.pathfinding_service import PathfindingService
 
 log = logging.getLogger(__name__)
+contract_manager = ContractManager(contracts_precompiled_path())
 
 
 @click.command()
@@ -51,20 +52,20 @@ def main(
             log.info('Starting TokenNetwork Listener...')
             token_network_listener = BlockchainListener(
                 web3=web3,
-                contract_manager=CONTRACT_MANAGER,
+                contract_manager=contract_manager,
                 contract_name='TokenNetwork',
             )
 
             log.info('Starting TokenNetworkRegistry Listener...')
             token_network_registry_listener = BlockchainListener(
                 web3=web3,
-                contract_manager=CONTRACT_MANAGER,
+                contract_manager=contract_manager,
                 contract_name='TokenNetworkRegistry',
             )
 
             log.info('Starting Pathfinding Service...')
             service = PathfindingService(
-                contract_manager=CONTRACT_MANAGER,
+                contract_manager=contract_manager,
                 token_network_listener=token_network_listener,
                 token_network_registry_listener=token_network_registry_listener,
                 chain_id=int(web3.net.version),

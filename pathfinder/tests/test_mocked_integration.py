@@ -14,7 +14,7 @@ from pathfinder.pathfinding_service import PathfindingService
 
 
 def test_pfs_with_mocked_events(
-    token_networks: List[TokenNetwork],  # just used for addresses
+    token_network_model: TokenNetwork,
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService,
     channel_descriptions_case_1: List
@@ -23,7 +23,7 @@ def test_pfs_with_mocked_events(
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
     assert registry_listener
 
-    token_network_address = token_networks[0].address
+    token_network_address = token_network_model.address
 
     # this is a new pathfinding service, there should be no token networks registered
     assert len(pathfinding_service_mocked_listeners.token_networks.keys()) == 0
@@ -137,7 +137,7 @@ def test_pfs_with_mocked_events(
 
 
 def test_pfs_idempotency_of_channel_openings(
-    token_networks: List[TokenNetwork],  # just used for addresses
+    token_network_model: TokenNetwork,
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService
 ):
@@ -145,7 +145,7 @@ def test_pfs_idempotency_of_channel_openings(
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
     assert registry_listener
 
-    token_network_address = token_networks[0].address
+    token_network_address = token_network_model.address
 
     # this is a new Pathfinding Service, there should be no token networks registered
     assert len(pathfinding_service_mocked_listeners.token_networks.keys()) == 0
@@ -192,7 +192,7 @@ def test_pfs_idempotency_of_channel_openings(
 
 
 def test_pfs_multiple_channels_for_two_participants_opened(
-    token_networks: List[TokenNetwork],  # just used for addresses
+    token_network_model: TokenNetwork,
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService
 ):
@@ -200,7 +200,7 @@ def test_pfs_multiple_channels_for_two_participants_opened(
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
     assert registry_listener
 
-    token_network_address = token_networks[0].address
+    token_network_address = token_network_model.address
 
     # this is a new Pathfinding Service, there should be no token networks registered
     assert len(pathfinding_service_mocked_listeners.token_networks.keys()) == 0

@@ -5,6 +5,7 @@ from eth_utils import to_normalized_address
 from raiden_libs.types import Address
 
 from pathfinder.api.rest import ServiceApi
+from pathfinder.model import TokenNetwork
 
 ID_12 = 12
 ID_123 = 123
@@ -18,9 +19,9 @@ def test_get_paths_validation(
     api_url: str,
     initiator_address: str,
     target_address: str,
-    token_network_addresses: List[Address]
+    token_network_model: TokenNetwork
 ):
-    base_url = api_url + '/{}/paths'.format(token_network_addresses[0])
+    base_url = api_url + f'/{token_network_model.address}/paths'
 
     url = base_url
     response = requests.get(url)
@@ -77,7 +78,6 @@ def test_get_paths_validation(
 def test_get_paths_path_validation(
     api_sut: ServiceApi,
     api_url: str,
-    token_network_addresses: List[Address]
 ):
     url = api_url + '/1234abc/paths'
     response = requests.get(url)
@@ -110,9 +110,9 @@ def test_get_paths(
     api_sut: ServiceApi,
     api_url: str,
     addresses: List[Address],
-    token_network_addresses: List[Address]
+    token_network_model: TokenNetwork
 ):
-    base_url = api_url + '/{}/paths'.format(token_network_addresses[0])
+    base_url = api_url + f'/{token_network_model.address}/paths'
 
     url = base_url + '?from={}&to={}&value=10&num_paths=3'.format(
         addresses[0],

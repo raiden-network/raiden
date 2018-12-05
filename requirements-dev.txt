@@ -18,4 +18,5 @@ pdbpp
 psutil
 numpy
 
-eth-tester[py-evm]==0.1.0-beta.28
+eth-tester[py-evm]>=0.1.0-beta.28
+eth-typing<2.0.0
