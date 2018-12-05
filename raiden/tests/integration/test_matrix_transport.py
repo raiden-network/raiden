@@ -226,7 +226,7 @@ def test_matrix_message_sync(
 
     latest_sync_token = None
 
-    received_messages = []
+    received_messages = set()
 
     def hook(sync_token):
         nonlocal latest_sync_token
@@ -235,7 +235,7 @@ def test_matrix_message_sync(
     class MessageHandler:
         def on_message(self, _, message):
             nonlocal received_messages
-            received_messages.append(message)
+            received_messages.add(message)
 
     transport0._client.set_post_sync_hook(hook)
     message_handler = MessageHandler()
@@ -273,12 +273,13 @@ def test_matrix_message_sync(
 
     gevent.sleep(2)
 
+    latest_sync_token = f'{transport1._user_id}/{latest_sync_token}'
     update_transport_sync_token = ActionUpdateTransportSyncToken(latest_sync_token)
     raiden_service1.handle_state_change.assert_called_with(update_transport_sync_token)
 
     assert len(received_messages) == 10
     for i in range(5):
-        assert received_messages[i].message_identifier == i
+        assert any(getattr(m, 'message_identifier', -1) == i for m in received_messages)
 
     transport1.stop()
 
@@ -302,9 +303,9 @@ def test_matrix_message_sync(
 
     gevent.sleep(2)
 
-    assert len(received_messages) == 20
+    assert len(set(received_messages)) == 20
     for i in range(10, 15):
-        assert received_messages[i].message_identifier == i
+        assert any(getattr(m, 'message_identifier', -1) == i for m in received_messages)
 
     transport0.stop()
     transport1.stop()
