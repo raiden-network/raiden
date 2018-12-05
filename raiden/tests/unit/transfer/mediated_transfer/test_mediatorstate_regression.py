@@ -451,7 +451,6 @@ def test_regression_mediator_not_update_payer_state_twice():
     payer_channel = factories.make_channel(
         partner_balance=amount,
         our_balance=amount,
-        # partner_address=UNIT_TRANSFER_SENDER,
         our_address=mediator_address,
         partner_address=initiator,
         token_address=UNIT_TOKEN_ADDRESS,
@@ -482,17 +481,17 @@ def test_regression_mediator_not_update_payer_state_twice():
     }
 
     init_state_change = ActionInitMediator(
-        available_routes,
-        payer_route,
-        payer_transfer,
+        routes=available_routes,
+        from_route=payer_route,
+        from_transfer=payer_transfer,
     )
     initial_state = None
     iteration = mediator.state_transition(
-        initial_state,
-        init_state_change,
-        channel_map,
-        pseudo_random_generator,
-        block_number,
+        mediator_state=initial_state,
+        state_change=init_state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
     assert iteration.new_state is not None
 
@@ -509,33 +508,34 @@ def test_regression_mediator_not_update_payer_state_twice():
         block_hash=factories.make_transaction_hash(),
     )
     iteration = mediator.state_transition(
-        current_state,
-        block,
-        channel_map,
-        pseudo_random_generator,
-        block_expiration_number,
+        mediator_state=current_state,
+        state_change=block,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_expiration_number,
     )
 
     msg = 'At the expiration block we should get an EventUnlockClaimFailed'
     assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {}), msg
 
     current_state = iteration.new_state
-    block = Block(
+    next_block = Block(
         block_number=block_expiration_number + 1,
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
 
+    # Initiator receives the secret reveal after the lock expired
     receive_secret = ReceiveSecretReveal(
-        UNIT_SECRET,
-        payee_channel.partner_state.address,
+        secret=UNIT_SECRET,
+        sender=payee_channel.partner_state.address,
     )
     iteration = mediator.state_transition(
-        current_state,
-        receive_secret,
-        channel_map,
-        pseudo_random_generator,
-        block_expiration_number + 2,
+        mediator_state=current_state,
+        state_change=receive_secret,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=next_block.block_number,
     )
     current_state = iteration.new_state
     lock = payer_transfer.lock
@@ -545,19 +545,19 @@ def test_regression_mediator_not_update_payer_state_twice():
     assert not channel.is_secret_known(payer_channel.partner_state, secrethash)
 
     safe_to_wait, _ = mediator.is_safe_to_wait(
-        lock.expiration,
-        payer_channel.reveal_timeout,
-        lock.expiration + 10,
+        lock_expiration=lock.expiration,
+        reveal_timeout=payer_channel.reveal_timeout,
+        block_number=lock.expiration + 10,
     )
 
     assert not safe_to_wait
 
     iteration = mediator.state_transition(
-        current_state,
-        block,
-        channel_map,
-        pseudo_random_generator,
-        block_expiration_number,
+        mediator_state=current_state,
+        state_change=next_block,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_expiration_number,
     )
     msg = 'At the next block we should not get the same event'
     assert not must_contain_entry(iteration.events, EventUnlockClaimFailed, {}), msg
