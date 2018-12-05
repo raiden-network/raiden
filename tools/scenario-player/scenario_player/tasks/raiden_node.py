@@ -53,3 +53,12 @@ class StopNodeTask(ProcessTask):
 class KillNodeTask(ProcessTask):
     _name = 'kill_node'
     _command = 'kill'
+
+
+class UpdateNodeOptionsTask(Task):
+    _name = 'update_node_options'
+
+    def _run(self, *args, **kwargs):
+        if not self._runner.is_managed:
+            raise ScenarioError("Can't update node options in 'external' mode.")
+        self._runner.node_controller[self._config['node']].update_options(self._config['options'])

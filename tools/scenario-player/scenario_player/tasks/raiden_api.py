@@ -2,9 +2,9 @@ import re
 from typing import Any, Union
 
 import structlog
-from requests import RequestException
+from requests import ConnectTimeout, ReadTimeout, RequestException
 
-from scenario_player.exceptions import RESTAPIError, RESTAPIStatusMismatchError
+from scenario_player.exceptions import RESTAPIError, RESTAPIStatusMismatchError, TransferFailed
 from scenario_player.runner import ScenarioRunner
 
 from .base import Task
@@ -29,6 +29,7 @@ class RaidenAPIActionTask(Task):
 
         self._expected_http_status = config.get('expected_http_status', self._expected_http_status)
         self._http_status_re = re.compile(f'^{self._expected_http_status}$')
+        self._timeout = config.get('timeout')
 
     @property
     def _request_params(self):
@@ -53,7 +54,16 @@ class RaidenAPIActionTask(Task):
         )
         log.debug('Requesting', url=url, method=self._method)
         try:
-            resp = self._runner.session.request(self._method, url, json=self._request_params)
+            resp = self._runner.session.request(
+                method=self._method,
+                url=url,
+                json=self._request_params,
+                timeout=self._timeout,
+            )
+        except (ReadTimeout, ConnectTimeout) as ex:
+            raise TransferFailed(
+                f"Transfer didn't complete within timeout of {self._timeout}",
+            ) from ex
         except RequestException as ex:
             raise RESTAPIError(f'Error performing REST-API call: {self._name}') from ex
         if not self._http_status_re.match(str(resp.status_code)):
