@@ -1,15 +1,12 @@
 from typing import Optional, Tuple, Dict, List
 
 import gevent
-from eth_utils import is_address, is_checksum_address, is_same_address
-from flask import Flask, request
+from eth_utils import is_address, is_checksum_address
+from flask import Flask
 from flask_restful import Api, Resource, reqparse
 from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
-from jsonschema.exceptions import ValidationError
-from raiden_libs.messages import FeeInfo, Message
-from raiden_libs.exceptions import MessageTypeError
 from raiden_libs.types import Address
 
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
@@ -52,55 +49,6 @@ class PathfinderResource(Resource):
             return {'error': id_error.format(channel_id)}, 400
 
         return None
-
-
-class ChannelFeeResource(PathfinderResource):
-
-    def put(self, token_network_address: str, channel_id: str):
-        token_network_error = self._validate_token_network_argument(token_network_address)
-        if token_network_error is not None:
-            return token_network_error
-
-        channel_id_error = self._validate_channel_id_argument(channel_id)
-        if channel_id_error is not None:
-            return channel_id_error
-
-        body = request.json
-        try:
-            fee_info: FeeInfo = Message.deserialize(body, FeeInfo)
-        except MessageTypeError:
-            return {'error', 'Not a FeeInfo message'}, 400
-        except ValidationError as val_err:
-            return {'error': val_err.message}, 400
-
-        # token_network_address and channel_id info is duplicate
-        # check that both versions match
-        if not is_same_address(token_network_address, fee_info.token_network_address):
-            error = 'The token network address from the fee info ({}) ' \
-                    'and the request ({}) do not match'
-            return {
-                'error': error.format(fee_info.token_network_address, token_network_address)
-            }, 400
-
-        if not channel_id == str(fee_info.channel_identifier):
-            error = 'The channel identifier from the fee info ({}) ' \
-                    'and the request ({}) do not match'
-            return {
-                'error': error.format(fee_info.channel_identifier, channel_id)
-            }, 400
-
-        # Note: signature check is performed by the PathfindingService
-        if not self.pathfinding_service.follows_token_network(fee_info.token_network_address):
-            return {
-                'error': 'Unsupported token network: {}'.format(token_network_address)
-            }, 400
-
-        try:
-            self.pathfinding_service.on_fee_info_message(fee_info)
-        except ValueError as error:
-            return {
-                'error': 'Error while updating fee info: {}'.format(str(error))
-            }, 400
 
 
 class PathsResource(PathfinderResource):
@@ -177,7 +125,6 @@ class ServiceApi:
         self.server_greenlet: Greenlet = None
 
         resources: List[Tuple[str, Resource, Dict]] = [
-            ('/<token_network_address>/<channel_id>/fee', ChannelFeeResource, {}),
             ('/<token_network_address>/paths', PathsResource, {}),
         ]
 
