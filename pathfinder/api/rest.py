@@ -224,10 +224,6 @@ class PathsResource(PathfinderResource):
         return {'result': paths}, 200
 
 
-class PaymentInfoResource(Resource):
-    pass
-
-
 class ServiceApi:
     def __init__(self, pathfinding_service: PathfindingService) -> None:
         self.flask_app = Flask(__name__)
@@ -239,7 +235,6 @@ class ServiceApi:
             ('/<token_network_address>/<channel_id>/balance', ChannelBalanceResource, {}),
             ('/<token_network_address>/<channel_id>/fee', ChannelFeeResource, {}),
             ('/<token_network_address>/paths', PathsResource, {}),
-            ('/<token_network_address>/payment/info', PaymentInfoResource, {})
         ]
 
         for endpoint_url, resource, kwargs in resources:
