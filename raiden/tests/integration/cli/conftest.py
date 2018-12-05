@@ -44,8 +44,7 @@ def cli_args(blockchain_provider, removed_args, changed_args):
 
     if changed_args is not None:
         for k, v in changed_args.items():
-            if k in initial_args:
-                initial_args[k] = v
+            initial_args[k] = v
 
     args = [
         '--no-sync-check',
@@ -62,5 +61,6 @@ def cli_args(blockchain_provider, removed_args, changed_args):
     append_arg_if_existing('datadir', initial_args, args)
     append_arg_if_existing('network_id', initial_args, args)
     append_arg_if_existing('eth_rpc_endpoint', initial_args, args)
+    append_arg_if_existing('environment_type', initial_args, args)
 
     return args
