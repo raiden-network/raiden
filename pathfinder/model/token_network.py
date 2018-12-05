@@ -126,7 +126,7 @@ class TokenNetwork:
                 return None
             else:
                 return hop_bias * self.max_relative_fee + \
-                       (1 - hop_bias) * view._relative_fee + \
+                       (1 - hop_bias) * view.relative_fee + \
                        visited.get(
                             view.channel_id,
                             0
