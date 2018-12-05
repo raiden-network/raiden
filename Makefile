@@ -48,9 +48,9 @@ lint:
 	python setup.py check --restructuredtext --strict
 
 mypy:
-	# We are starting small with a few files here, but mypy should run on the
-	# whole codebase soon.
-	mypy raiden/transfer/mediated_transfer/target.py raiden/messages.py \
+	# We are starting small with a few files and directories here,
+	# but mypy should run on the whole codebase soon.
+	mypy raiden/transfer raiden/messages.py \
 	--ignore-missing-imports | grep error > mypy-out.txt || true
 	# Expecting status code 1 from `grep`, which indicates no match.
 	# Again, we are starting small, detecting only 'BlockNumber' and 'Address'
