@@ -548,7 +548,7 @@ class TokenNetwork:
                     f'Current total deposit ({previous_total_deposit}) is already larger '
                     f'than the requested total deposit amount ({total_deposit})'
                 )
-                log.info(f'setTotalDeposit failed, {msg}', **log_details)
+                log.info('setTotalDeposit failed', reason=msg, **log_details)
                 raise DepositMismatch(msg)
 
             if amount_to_deposit <= 0:
@@ -557,7 +557,7 @@ class TokenNetwork:
                     f'new_total_deposit={total_deposit} '
                     f'previous_total_deposit={previous_total_deposit}'
                 )
-                log.info(f'setTotalDeposit failed, {msg}', **log_details)
+                log.info('setTotalDeposit failed', reason=msg, **log_details)
                 raise DepositMismatch(msg)
 
             # A node may be setting up multiple channels for the same token
@@ -579,7 +579,7 @@ class TokenNetwork:
                     f'be larger than the available balance {current_balance}, '
                     f'for token at address {pex(token_address)}'
                 )
-                log.info(f'setTotalDeposit failed, {msg}', **log_details)
+                log.info('setTotalDeposit failed', reason=msg, **log_details)
                 raise DepositMismatch(msg)
 
             # If there are channels being set up concurrenlty either the
@@ -632,18 +632,18 @@ class TokenNetwork:
 
                 if token.allowance(self.node_address, self.address) < amount_to_deposit:
                     log_msg = (
-                        'setTotalDeposit failed. The allowance is insufficient, '
+                        'The allowance is insufficient, '
                         'check concurrent deposits for the same token network '
                         'but different proxies.'
                     )
                 elif token.balance_of(self.node_address) < amount_to_deposit:
-                    log_msg = 'setTotalDeposit failed. The address doesnt have funds'
+                    log_msg = "The address doesn't have enough funds"
                 elif latest_deposit < total_deposit:
-                    log_msg = 'setTotalDeposit failed. The tokens were not transferred'
+                    log_msg = 'The tokens were not transferred'
                 else:
-                    log_msg = 'setTotalDeposit failed'
+                    log_msg = 'unknown'
 
-                log.critical(log_msg, **log_details)
+                log.critical('setTotalDeposit failed', reason=log_msg, **log_details)
 
                 self._check_channel_state_for_deposit(
                     self.node_address,
