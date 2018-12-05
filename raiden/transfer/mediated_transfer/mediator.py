@@ -75,7 +75,7 @@ def is_safe_to_wait(
         reveal_timeout: typing.BlockTimeout,
         block_number: typing.BlockNumber,
 ) -> typing.SuccessOrError:
-    """ True if waiting safe, i.e. there are more than enough blocks to safely
+    """ True if waiting is safe, i.e. there are more than enough blocks to safely
     unlock on chain.
     """
     # reveal timeout will not ever be larger than the lock_expiration otherwise
@@ -189,6 +189,24 @@ def filter_used_routes(
             del channelid_to_route[channelid]
 
     return list(channelid_to_route.values())
+
+
+def payer_transfer_expired(
+        payer_channel: NettingChannelState,
+        pair: MediationPairState,
+        block_number: typing.BlockNumber,
+) -> bool:
+    payer_lock_expiration_threshold = typing.BlockNumber(
+        pair.payer_transfer.lock.expiration +
+        DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+    )
+    has_payer_lock_expired, _ = channel.is_lock_expired(
+        end_state=payer_channel.our_state,
+        lock=pair.payer_transfer.lock,
+        block_number=block_number,
+        lock_expiration_threshold=payer_lock_expiration_threshold,
+    )
+    return has_payer_lock_expired
 
 
 def get_payee_channel(
@@ -585,19 +603,10 @@ def events_for_expired_pairs(
         if not payer_channel:
             continue
 
-        payer_lock_expiration_threshold = typing.BlockNumber(
-            pair.payer_transfer.lock.expiration +
-            DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
-        )
-        has_payer_lock_expired, _ = channel.is_lock_expired(
-            end_state=payer_channel.our_state,
-            lock=pair.payer_transfer.lock,
+        has_payer_transfer_expired = payer_transfer_expired(
+            payer_channel=payer_channel,
+            pair=pair,
             block_number=block_number,
-            lock_expiration_threshold=payer_lock_expiration_threshold,
-        )
-        has_payer_transfer_expired = (
-            has_payer_lock_expired and
-            pair.payer_state != 'payer_expired'
         )
 
         if has_payer_transfer_expired:
@@ -737,7 +746,7 @@ def events_for_balanceproof(
         )
 
         if should_send_balanceproof_to_payee:
-            # At this point we are sure that payee_channel due to the
+            # At this point we are sure that payee_channel exists due to the
             # payee_channel_open check above. So let mypy know about this
             assert payee_channel
             payee_channel = cast(NettingChannelState, payee_channel)
@@ -1222,7 +1231,23 @@ def handle_offchain_secretreveal(
     )
     is_secret_unknown = mediator_state.secret is None
 
-    if is_secret_unknown and is_valid_reveal:
+    # a SecretReveal should be rejected if the payer transfer
+    # has expired. To check for this, we use the last
+    # transfer pair.
+    transfer_pair = mediator_state.transfers_pair[-1]
+    payer_transfer = transfer_pair.payer_transfer
+    channel_identifier = payer_transfer.balance_proof.channel_identifier
+    payer_channel = channelidentifiers_to_channels.get(channel_identifier)
+    if not payer_channel:
+        return TransitionResult(mediator_state, list())
+
+    has_payer_transfer_expired = payer_transfer_expired(
+        payer_channel=payer_channel,
+        pair=transfer_pair,
+        block_number=block_number,
+    )
+
+    if is_secret_unknown and is_valid_reveal and not has_payer_transfer_expired:
         iteration = secret_learned(
             mediator_state,
             channelidentifiers_to_channels,

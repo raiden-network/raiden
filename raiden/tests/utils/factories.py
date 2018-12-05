@@ -407,7 +407,7 @@ def make_signed_transfer_for(
         sender: typing.Address = EMPTY,
         compute_locksroot: typing.Locksroot = EMPTY,
         allow_invalid: bool = EMPTY,
-):
+) -> LockedTransferSignedState:
 
     channel_state = if_empty(channel_state, make_channel_state())
     amount = if_empty(amount, 0)
@@ -471,10 +471,10 @@ def make_signed_transfer_for(
     # Do *not* register the transfer here
     if not allow_invalid:
         is_valid, msg, _ = channel.is_valid_lockedtransfer(
-            mediated_transfer,
-            channel_state,
-            channel_state.partner_state,
-            channel_state.our_state,
+            transfer_state=mediated_transfer,
+            channel_state=channel_state,
+            sender_state=channel_state.partner_state,
+            receiver_state=channel_state.our_state,
         )
         assert is_valid, msg
 
