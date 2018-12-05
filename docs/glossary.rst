@@ -16,9 +16,6 @@ Raiden Glossary
    target
        In a payment the target is the raiden node for which the payment sent by the initiator is intended
 
-   DirectTransfer
-       A direct transfer is a non-locked transfer, which means a transfer that does not rely on a lock to complete. Once they are sent they should be considered as completed.
-
    MediatedTransfer
        A mediated transfer is a hashlocked transfer between an initiator and a target propagated through nodes in the network.
 

@@ -5,7 +5,6 @@ from raiden.messages import Lock
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils import factories
-from raiden.transfer.events import SendDirectTransfer
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
@@ -20,7 +19,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import BalanceProofUnsignedState
-from raiden.transfer.state_change import ReceiveTransferDirect, ReceiveUnlock
+from raiden.transfer.state_change import ReceiveUnlock
 from raiden.transfer.utils import get_event_with_balance_proof, get_state_change_with_balance_proof
 from raiden.utils import sha3
 
@@ -138,12 +137,6 @@ def test_get_state_change_with_balance_proof():
         secrethash=sha3(factories.make_secret(next(counter))),
         message_identifier=next(counter),
     )
-    transfer_direct = ReceiveTransferDirect(
-        token_network_identifier=factories.make_address(),
-        message_identifier=next(counter),
-        payment_identifier=next(counter),
-        balance_proof=make_signed_balance_proof_from_counter(counter),
-    )
     unlock = ReceiveUnlock(
         message_identifier=next(counter),
         secret=sha3(factories.make_secret(next(counter))),
@@ -172,7 +165,6 @@ def test_get_state_change_with_balance_proof():
 
     statechanges_balanceproofs = [
         (lock_expired, lock_expired.balance_proof),
-        (transfer_direct, transfer_direct.balance_proof),
         (unlock, unlock.balance_proof),
         (transfer_refund, transfer_refund.transfer.balance_proof),
         (transfer_refund_cancel_route, transfer_refund_cancel_route.transfer.balance_proof),
@@ -205,14 +197,6 @@ def test_get_event_with_balance_proof():
     storage = SQLiteStorage(':memory:', serializer)
     counter = itertools.count()
 
-    direct_transfer = SendDirectTransfer(
-        recipient=factories.make_address(),
-        channel_identifier=next(counter),
-        message_identifier=next(counter),
-        payment_identifier=next(counter),
-        balance_proof=make_balance_proof_from_counter(counter),
-        token_address=factories.make_address(),
-    )
     lock_expired = SendLockExpired(
         recipient=factories.make_address(),
         message_identifier=next(counter),
@@ -242,7 +226,6 @@ def test_get_event_with_balance_proof():
     )
 
     events_balanceproofs = [
-        (direct_transfer, direct_transfer.balance_proof),
         (lock_expired, lock_expired.balance_proof),
         (locked_transfer, locked_transfer.balance_proof),
         (balance_proof, balance_proof.balance_proof),

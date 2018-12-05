@@ -30,7 +30,6 @@ from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
-from raiden.transfer.events import SendDirectTransfer
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
@@ -46,7 +45,6 @@ from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionInitChain,
     ActionLeaveAllNetworks,
-    ActionTransferDirect,
     Block,
     ContractReceiveNewPaymentNetwork,
 )
@@ -626,14 +624,7 @@ class RaidenService(Runnable):
                     event.transfer.initiator == self.address
                 )
 
-                if type(event) == SendDirectTransfer:
-                    self._register_payment_status(
-                        target=event.recipient,
-                        identifier=event.payment_identifier,
-                        payment_type=PaymentType.DIRECT,
-                        balance_proof=event.balance_proof,
-                    )
-                elif is_initiator:
+                if is_initiator:
                     self._register_payment_status(
                         target=event.transfer.target,
                         identifier=event.transfer.payment_identifier,
@@ -768,62 +759,6 @@ class RaidenService(Runnable):
         )
 
         return async_result
-
-    def direct_transfer_async(self, token_network_identifier, amount, target, identifier):
-        """ Do a direct transfer with target.
-
-        Direct transfers are non cancellable and non expirable, since these
-        transfers are a signed balance proof with the transferred amount
-        incremented.
-
-        Because the transfer is non cancellable, there is a level of trust with
-        the target. After the message is sent the target is effectively paid
-        and then it is not possible to revert.
-
-        The async result will be set to False iff there is no direct channel
-        with the target or the payer does not have balance to complete the
-        transfer, otherwise because the transfer is non expirable the async
-        result *will never be set to False* and if the message is sent it will
-        hang until the target node acknowledge the message.
-
-        This transfer should be used as an optimization, since only two packets
-        are required to complete the transfer (from the payers perspective),
-        whereas the mediated transfer requires 6 messages.
-        """
-
-        self.start_health_check_for(target)
-
-        if identifier is None:
-            identifier = create_default_identifier()
-
-        payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
-        if payment_status:
-            if not payment_status.matches(PaymentType.DIRECT, token_network_identifier, amount):
-                raise PaymentConflict(
-                    'Another payment with the same id is in flight',
-                )
-
-            return payment_status.payment_done
-
-        direct_transfer = ActionTransferDirect(
-            token_network_identifier,
-            target,
-            identifier,
-            amount,
-        )
-
-        payment_status = PaymentStatus(
-            payment_type=PaymentType.DIRECT,
-            payment_identifier=identifier,
-            amount=amount,
-            token_network_identifier=token_network_identifier,
-            payment_done=AsyncResult(),
-        )
-        self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
-
-        self.handle_state_change(direct_transfer)
-
-        return payment_status.payment_done
 
     def start_mediated_transfer_with_secret(
             self,

@@ -7,7 +7,7 @@ from raiden.transfer.architecture import (
     Event,
     SendMessageEvent,
 )
-from raiden.transfer.state import BalanceProofSignedState, BalanceProofUnsignedState
+from raiden.transfer.state import BalanceProofSignedState
 from raiden.utils import pex, serialization, sha3, typing
 
 # pylint: disable=too-many-arguments,too-few-public-methods

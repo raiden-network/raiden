@@ -288,7 +288,7 @@ def wait_for_transfer_success(
         amount: typing.PaymentAmount,
         retry_timeout: float,
 ) -> None:
-    """Wait until a direct transfer with a specific identifier and amount
+    """Wait until a transfer with a specific identifier and amount
     is seen in the WAL.
 
     Note:

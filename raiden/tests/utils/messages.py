@@ -34,13 +34,6 @@ SECRETHASHES_FOR_MERKLETREE = [
 
 # zero is used to indicate novalue in solidity, that is why it's an invalid
 # nonce value
-DIRECT_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
-    'nonce': [-1, 0, UINT64_MAX + 1],
-    'payment_identifier': [-1, UINT64_MAX + 1],
-    'token': INVALID_ADDRESSES,
-    'recipient': INVALID_ADDRESSES,
-    'transferred_amount': [-1, UINT256_MAX + 1],
-}))
 
 REFUND_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
     'nonce': [-1, 0, UINT64_MAX + 1],
