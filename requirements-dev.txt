@@ -1,16 +1,16 @@
 -r requirements.txt
 
-pip>=18.0.0
+pip>=18.1.0
 bumpversion>=0.5.3
 wheel>=0.30.0
 watchdog>=0.8.3
-flake8>=3.5.0
-mypy>=0.620
-coverage>=4.5.1
-Sphinx>=1.7.1
-sphinx_rtd_theme>=0.2.4
+flake8>=3.6.0
+mypy>=0.641
+coverage>=4.5.2
+Sphinx>=1.8.2
+sphinx_rtd_theme>=0.4.2
 
-pytest>=3.7.0
+pytest>=4.0.1
 pytest-runner
 pytest-cov
 ipython
