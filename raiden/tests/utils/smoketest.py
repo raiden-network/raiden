@@ -196,7 +196,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
 
     ensure_executable('geth')
 
-    free_port = get_free_port('127.0.0.1', 27854)
+    free_port = get_free_port('::', 27854)
     rpc_port = next(free_port)
     p2p_port = next(free_port)
     base_datadir = os.environ['RST_DATADIR']
