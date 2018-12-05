@@ -152,7 +152,7 @@ def get_token_network_identifier_by_token_address(
         chain_state: ChainState,
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
-) -> typing.Address:
+) -> typing.TokenNetworkID:
     token_network = get_token_network_by_token_address(
         chain_state,
         payment_network_id,

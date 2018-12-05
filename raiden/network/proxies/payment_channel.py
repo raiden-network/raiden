@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from typing import Optional
 
 from eth_utils import decode_hex
 from gevent.lock import RLock
@@ -141,7 +142,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def closing_address(self) -> typing.Address:
+    def closing_address(self) -> Optional[typing.Address]:
         """ Returns the address of the closer of the channel. """
         return self.token_network.closing_address(
             participant1=self.participant1,
