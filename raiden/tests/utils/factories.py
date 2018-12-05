@@ -435,12 +435,8 @@ def make_signed_transfer_for(
     assert sender in (channel_state.our_state.address, channel_state.partner_state.address)
     if sender == channel_state.our_state.address:
         recipient = channel_state.partner_state.address
-        # sender_state = channel_state.our_state
-        # receiver_state = channel_state.partner_state
     else:
         recipient = channel_state.our_state.address
-        # sender_state = channel_state.partner_state
-        # receiver_state = channel_state.our_state
 
     channel_identifier = channel_state.identifier
     token_address = channel_state.token_address
@@ -479,8 +475,6 @@ def make_signed_transfer_for(
             channel_state=channel_state,
             sender_state=channel_state.partner_state,
             receiver_state=channel_state.our_state,
-            # sender_state=sender_state,
-            # receiver_state=receiver_state,
         )
         assert is_valid, msg
 
