@@ -20,6 +20,7 @@ def test_pfs_with_mocked_client(
     ethereum_tester,
     contracts_manager: ContractManager,
     blockchain_listener: BlockchainListener,
+    blockchain_registry_listener: BlockchainListener,
     channel_descriptions_case_1: List,
     generate_dummy_network,
     get_random_address
@@ -35,12 +36,15 @@ def test_pfs_with_mocked_client(
     token_network_address = clients[0].contract.address
 
     pfs = PathfindingService(
-        contracts_manager,
+        contract_manager=contracts_manager,
         transport=pfs_transport,
         chain_id=int(web3.net.version),
         token_network_listener=blockchain_listener,
-        follow_networks=[token_network_address]
+        token_network_registry_listener=blockchain_registry_listener,
     )
+
+    # Need a context switch for the network to be picked up
+    gevent.sleep(0)
 
     token_network = pfs.token_networks[token_network_address]
     graph = token_network.G

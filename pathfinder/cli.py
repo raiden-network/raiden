@@ -102,8 +102,8 @@ def main(
                 contract_manager=CONTRACT_MANAGER,
                 transport=transport,
                 token_network_listener=token_network_listener,
-                chain_id=int(web3.net.version),
                 token_network_registry_listener=token_network_registry_listener,
+                chain_id=int(web3.net.version),
             )
 
             service.run()

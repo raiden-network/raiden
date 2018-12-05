@@ -102,6 +102,20 @@ def blockchain_listener(web3, contracts_manager):
 
 
 @pytest.fixture
+def blockchain_registry_listener(web3, contracts_manager):
+    blockchain_registry_listener = BlockchainListener(
+        web3,
+        contracts_manager,
+        'TokenNetworkRegistry',
+        poll_interval=0,
+    )
+    blockchain_registry_listener.required_confirmations = 1
+    blockchain_registry_listener.start()
+    yield blockchain_registry_listener
+    blockchain_registry_listener.stop()
+
+
+@pytest.fixture
 def populate_token_networks_random(
         token_networks: List[TokenNetwork],
         private_keys: List[str],

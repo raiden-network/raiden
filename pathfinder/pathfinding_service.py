@@ -1,7 +1,7 @@
 import logging
 import sys
 import traceback
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 
 import gevent
 from eth_utils import is_checksum_address, to_checksum_address
@@ -46,10 +46,8 @@ class PathfindingService(gevent.Greenlet):
         contract_manager: ContractManager,
         transport: MatrixTransport,
         token_network_listener: BlockchainListener,
-        *,
-        chain_id: int = 1,
-        follow_networks: List[Address] = None,
-        token_network_registry_listener: BlockchainListener = None,
+        token_network_registry_listener: BlockchainListener,
+        chain_id: int,
     ) -> None:
         """ Creates a new pathfinding service
 
@@ -57,27 +55,27 @@ class PathfindingService(gevent.Greenlet):
             contract_manager: A contract manager
             transport: A transport object
             token_network_listener: A blockchain listener object
-            follow_networks: A list of token network addresses to follow. This has precedence over
-                the `token_network_registry_listener`
             token_network_registry_listener: A blockchain listener object for the network registry
+            chain_id: The id of the chain the PFS runs on
         """
         super().__init__()
         self.contract_manager = contract_manager
         self.transport = transport
         self.token_network_listener = token_network_listener
-        self.chain_id = chain_id
-
         self.token_network_registry_listener = token_network_registry_listener
-        self.follow_networks = follow_networks
+        self.chain_id = chain_id
 
         self.is_running = gevent.event.Event()
         self.transport.add_message_callback(self.on_message_event)
         self.token_networks: Dict[Address, TokenNetwork] = {}
 
-        assert (
-            self.follow_networks is not None or self.token_network_registry_listener is not None
+        assert self.token_network_listener is not None
+        assert self.token_network_registry_listener is not None
+
+        self.token_network_registry_listener.add_confirmed_listener(
+            'TokenNetworkCreated',
+            self.handle_token_network_created
         )
-        self._setup_token_networks()
 
         # subscribe to event notifications from blockchain listener
         self.token_network_listener.add_confirmed_listener(
@@ -92,16 +90,6 @@ class PathfindingService(gevent.Greenlet):
             ChannelEvent.CLOSED,
             self.handle_channel_closed
         )
-
-    def _setup_token_networks(self):
-        if self.follow_networks:
-            for network_address in self.follow_networks:
-                self.create_token_network_for_address(network_address)
-        else:
-            self.token_network_registry_listener.add_confirmed_listener(
-                'TokenNetworkCreated',
-                self.handle_token_network_created
-            )
 
     def _run(self):
         register_error_handler(error_handler)
@@ -294,11 +282,7 @@ class PathfindingService(gevent.Greenlet):
         assert is_checksum_address(token_network_address)
 
         if not self.follows_token_network(token_network_address):
-            log.info(f'Found new token network at {token_network_address}')
-            self.create_token_network_for_address(token_network_address)
+            log.info(f'Following new token network at {token_network_address}')
 
-    def create_token_network_for_address(self, token_network_address: Address):
-        log.info(f'Following token network at {token_network_address}')
-
-        token_network = TokenNetwork(token_network_address)
-        self.token_networks[token_network_address] = token_network
+            token_network = TokenNetwork(token_network_address)
+            self.token_networks[token_network_address] = token_network
