@@ -41,15 +41,6 @@ class PathfinderResource(Resource):
 
         return None
 
-    def _validate_channel_id_argument(self, channel_id: str) -> Optional[Tuple[Dict, int]]:
-        try:
-            int(channel_id)
-        except Exception:
-            id_error = 'Channel Id is not an int: {}'
-            return {'error': id_error.format(channel_id)}, 400
-
-        return None
-
 
 class PathsResource(PathfinderResource):
     @staticmethod
