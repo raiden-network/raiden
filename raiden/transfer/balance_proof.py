@@ -12,6 +12,11 @@ def pack_balance_proof(
         chain_id: typing.ChainID,
         msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF,
 ) -> bytes:
+    """Packs balance proof data to be signed
+
+    Packs the given arguments in a byte array in the same configuration the
+    contracts expect the signed data to have.
+    """
     return pack_data([
         'address',
         'uint256',
@@ -40,6 +45,11 @@ def pack_balance_proof_update(
         chain_id: typing.ChainID,
         partner_signature: typing.Signature,
 ) -> bytes:
+    """Packs balance proof data to be signed for updateNonClosingBalanceProof
+
+    Packs the given arguments in a byte array in the same configuration the
+    contracts expect the signed data for updateNonClosingBalanceProof to have.
+    """
     return pack_balance_proof(
         nonce=nonce,
         balance_hash=balance_hash,

@@ -305,11 +305,11 @@ class RaidenEventHandler:
 
             try:
                 channel.update_transfer(
-                    balance_proof.nonce,
-                    balance_proof.balance_hash,
-                    balance_proof.message_hash,
-                    balance_proof.signature,
-                    our_signature,
+                    nonce=balance_proof.nonce,
+                    balance_hash=balance_proof.balance_hash,
+                    additional_hash=balance_proof.message_hash,
+                    partner_signature=balance_proof.signature,
+                    signature=our_signature,
                 )
             except ChannelOutdatedError as e:
                 log.error(
