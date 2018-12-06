@@ -48,7 +48,7 @@ lint:
 	python setup.py check --restructuredtext --strict
 
 mypy:
-	# We are starting small with a single file here, but mypy should run on the
+	# We are starting small with a few files here, but mypy should run on the
 	# whole codebase soon.
 	mypy raiden/transfer/mediated_transfer/target.py raiden/messages.py \
 	--ignore-missing-imports | grep error > mypy-out.txt || true
