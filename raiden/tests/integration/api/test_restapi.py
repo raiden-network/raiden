@@ -951,26 +951,6 @@ def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses
     ])
     assert all(response.status_code == HTTPStatus.OK for response in responses)
 
-    # two transfers with same identifier: payment conflict
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_address,
-    )
-
-    app1.stop()
-    mediated_transfer(
-        initiator_app=app0,
-        target_app=app1,
-        token_network_identifier=token_network_identifier,
-        amount=80,
-        identifier=42,
-        timeout=.1,
-    )
-
-    request = grequests.post(payment_url, json={'amount': 80, 'identifier': 42})
-    assert_payment_conflict([request.send().response])
-
 
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
