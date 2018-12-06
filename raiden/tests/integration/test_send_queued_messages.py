@@ -7,7 +7,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
+from raiden.tests.utils.transfer import assert_synced_channel_state
 from raiden.transfer import views
 
 
@@ -36,17 +36,18 @@ def test_send_queued_messages(
     # stop app1 - transfer must be left unconfirmed
     app1.stop()
 
-    # make a few transfers from app0 to app2
+    # make a few transfers from app0 to app1
     amount = 1
     spent_amount = 7
+    identifier = 1
     for _ in range(spent_amount):
-        mediated_transfer(
-            initiator_app=app0,
-            target_app=app1,
+        app0.raiden.mediated_transfer_async(
             token_network_identifier=token_network_identifier,
             amount=amount,
-            timeout=network_wait * number_of_nodes,
+            target=app1.raiden.address,
+            identifier=identifier,
         )
+        identifier += 1
 
     # restart app0
     app0.raiden.stop()
@@ -90,32 +91,32 @@ def test_send_queued_messages(
     exception = RuntimeError('Timeout while waiting for new channel')
     with gevent.Timeout(5, exception=exception):
         waiting.wait_for_newchannel(
-            app0_restart.raiden,
-            payment_network_id,
-            token_address,
-            app1.raiden.address,
-            network_wait,
+            raiden=app0_restart.raiden,
+            payment_network_id=payment_network_id,
+            token_address=token_address,
+            partner_address=app1.raiden.address,
+            retry_timeout=network_wait,
         )
     exception = RuntimeError('Timeout while waiting for balance update for app0')
     with gevent.Timeout(30, exception=exception):
         waiting.wait_for_payment_balance(
-            app0_restart.raiden,
-            payment_network_id,
-            token_address,
-            app1.raiden.address,
-            app1.raiden.address,
-            spent_amount,
-            network_wait,
+            raiden=app0_restart.raiden,
+            payment_network_id=payment_network_id,
+            token_address=token_address,
+            partner_address=app1.raiden.address,
+            target_address=app1.raiden.address,
+            target_balance=spent_amount,
+            retry_timeout=network_wait,
         )
 
     waiting.wait_for_payment_balance(
-        app1.raiden,
-        payment_network_id,
-        token_address,
-        app0_restart.raiden.address,
-        app1.raiden.address,
-        spent_amount,
-        network_wait,
+        raiden=app1.raiden,
+        payment_network_id=payment_network_id,
+        token_address=token_address,
+        partner_address=app0_restart.raiden.address,
+        target_address=app1.raiden.address,
+        target_balance=spent_amount,
+        retry_timeout=network_wait,
     )
 
     assert_synced_channel_state(

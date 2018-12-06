@@ -14,8 +14,6 @@ from raiden.tests.utils import assert_dicts_are_equal
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import must_have_event, must_have_events
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.tests.utils.transfer import mediated_transfer
-from raiden.transfer import views
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
 from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
