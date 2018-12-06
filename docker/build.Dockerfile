@@ -3,7 +3,6 @@ FROM python:3.6
 # these are defined in .travis.yml and passed here in the makefile
 ARG SOLC_URL_LINUX
 ARG GETH_URL_LINUX
-ARG NODE_DOWNLOAD_URL=https://nodejs.org/dist/v10.9.0/node-v10.9.0-linux-x64.tar.xz
 
 # install dependencies
 RUN apt-get update
