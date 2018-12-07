@@ -1,4 +1,5 @@
 from typing import Dict, List
+from unittest.mock import patch
 
 import gevent
 import pytest
@@ -17,13 +18,14 @@ from raiden.blockchain.events import (
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.tests.utils.events import must_have_event
+from raiden.tests.utils.events import must_contain_entry, must_have_event
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
 from raiden.transfer import channel, views
-from raiden.utils import sha3
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
+from raiden.utils import sha3, wait_until
 from raiden.utils.typing import Address, BlockSpecification, ChannelID
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -560,7 +562,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, token_addresses)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_clear_closed_queue(raiden_network, token_addresses, deposit):
+def test_clear_closed_queue(raiden_network, token_addresses, deposit, network_wait):
     """ Closing a channel clears the respective message queue. """
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
@@ -582,18 +584,34 @@ def test_clear_closed_queue(raiden_network, token_addresses, deposit):
         app1.raiden.address
     ]
 
-    app1.raiden.transport.stop()
-    app1.raiden.transport.get()
+    def do_nothing(raiden, message):
+        pass
 
-    # make a transfer to ensure the nodes have communicated
-    amount = 10
-    payment_identifier = 1337
-    app0.raiden.mediated_transfer_async(
-        token_network_identifier=token_network_identifier,
-        amount=amount,
-        target=app1.raiden.address,
-        identifier=payment_identifier,
+    mocked_context = patch.object(
+        app0.raiden.message_handler,
+        'handle_message_secretrequest',
+        side_effect=do_nothing,
     )
+    with mocked_context:
+        # make a transfer to ensure the nodes have communicated
+        amount = 10
+        payment_identifier = 1337
+        app0.raiden.mediated_transfer_async(
+            token_network_identifier=token_network_identifier,
+            amount=amount,
+            target=app1.raiden.address,
+            identifier=payment_identifier,
+        )
+
+        app1.raiden.transport.stop()
+        app1.raiden.transport.get()
+
+        # make sure to wait until the queue is created
+        def has_initiator_events():
+            initiator_events = app0.raiden.wal.storage.get_events()
+            return must_contain_entry(initiator_events, SendLockedTransfer, {})
+
+        assert wait_until(has_initiator_events, network_wait)
 
     # assert the specific queue is present
     chain_state0 = views.state_from_app(app0)
