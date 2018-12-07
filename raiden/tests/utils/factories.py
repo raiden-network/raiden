@@ -668,6 +668,7 @@ def make_transaction_execution_status(
 
 class NettingChannelEndStateRecord(NamedTuple):
     address: typing.Address = None
+    privatekey: PrivateKey = None
     balance: typing.TokenAmount = 100
     merkletree_leaves: typing.MerkleTreeLeaves = None
     merkletree_width: int = 0
@@ -724,7 +725,7 @@ def _base_to_dict(base: typing.Union[None, typing.Dict, typing.NamedTuple]) -> t
     if base is None:
         return dict()
     elif isinstance(base, dict):
-        return base
+        return deepcopy(base)
     else:
         return base._asdict()
 
@@ -770,34 +771,29 @@ def make_netting_channel_state(
 
 
 class ChannelSet:
-    """Manage a list of channels from one address to different partner addresses.
-
-    The channels can be accessed by subscript
-    """
-    DEFAULT_PARTNER_PKEYS = (HOP1_KEY, HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY)
-    DEFAULT_PARTNER_ADDRESSES = (HOP1, HOP2, HOP3, HOP4, HOP5)
+    """Manage a list of channels. The channels can be accessed by subscript."""
+    PKEYS = (HOP1_KEY, HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY)
+    ADDRESSES = (HOP1, HOP2, HOP3, HOP4, HOP5)
 
     def __init__(
             self,
             channels: typing.List[NettingChannelState],
-            privatekeys: typing.List[PrivateKey],
+            our_privatekeys: typing.List[PrivateKey],
+            partner_privatekeys: typing.List[PrivateKey],
     ):
         self.channels = channels
-        self.privatekeys = privatekeys
+        self.our_privatekeys = our_privatekeys
+        self.partner_privatekeys = partner_privatekeys
 
     @property
     def channel_map(self) -> typing.ChannelMap:
         return {channel.identifier: channel for channel in self.channels}
 
-    @property
-    def our_address(self) -> typing.Address:
-        return self.channels[0].our_state.address
+    def our_address(self, index: int) -> typing.Address:
+        return self.channels[index].our_state.address
 
     def partner_address(self, index: int) -> typing.Address:
         return self.channels[index].partner_state.address
-
-    def partner_privatekey(self, index: int) -> PrivateKey:
-        return self.privatekeys[index]
 
     def get_route(self, channel_index: int) -> RouteState:
         return route_from_channel(self.channels[channel_index])
@@ -810,26 +806,43 @@ class ChannelSet:
 
 
 def make_channel_set(
-        channel_parameters: typing.List[typing.Dict],
+        channel_parameters: typing.List[typing.Dict] = None,
         base: NettingChannelStateRecord = None,
-        number_of_channels: int = 0,
+        number_of_channels: int = None,
 ) -> ChannelSet:
+    if number_of_channels is None:
+        number_of_channels = len(channel_parameters)
     channels = list()
-    pkeys = list()
+    our_privatekeys = [None] * number_of_channels
+    partner_privatekeys = [None] * number_of_channels
 
-    for i in range(max(number_of_channels, len(channel_parameters))):
-        parameters = deepcopy(channel_parameters[i])
-        parameters.setdefault('identifier', make_channel_identifier())
+    if channel_parameters is None:
+        channel_parameters = list()
+    while len(channel_parameters) < number_of_channels:
+        channel_parameters.append(dict())
+
+    for i in range(number_of_channels):
+        parameters = _base_to_dict(base)
+        parameters.update(channel_parameters[i])
+        parameters['identifier'] = make_channel_identifier()
         parameters.setdefault('partner_state', dict())
+        parameters.setdefault('our_state', dict())
 
-        if 'address' not in parameters['partner_state']:
-            parameters['partner_state'] = {'address': ChannelSet.DEFAULT_PARTNER_ADDRESSES[i]}
-            pkeys.append(ChannelSet.DEFAULT_PARTNER_PKEYS[i])
+        if 'address' in parameters['partner_state']:
+            partner_privatekeys[i] = parameters['partner_state'].get('privatekey', None)
         else:
-            pkeys.append(None)
+            parameters['partner_state']['address'] = ChannelSet.ADDRESSES[i]
+            parameters['partner_state']['privatekey'] = ChannelSet.PKEYS[i]
+
+        if 'address' in parameters['our_state']:
+            our_privatekeys[i] = parameters['our_state'].get('privatekey', None)
+        else:
+            parameters['our_state']['address'] = UNIT_TRANSFER_SENDER
+            parameters['our_state']['privatekey'] = UNIT_TRANSFER_PKEY
+
         channels.append(make_netting_channel_state(base, **parameters))
 
-    return ChannelSet(channels, pkeys)
+    return ChannelSet(channels, our_privatekeys, partner_privatekeys)
 
 
 def mediator_make_channel_pair(
