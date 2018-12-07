@@ -131,7 +131,7 @@ def filter_records(
 ):
     for record in log_records:
         drop = (
-            record.event.lower in drop_events or
+            record.event.lower() in drop_events or
             record.logger in drop_loggers
         )
         if not drop:
