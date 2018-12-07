@@ -11,15 +11,7 @@ from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     ADDR,
     HOP1,
-    HOP1_KEY,
-    HOP2,
-    HOP2_KEY,
-    HOP3,
-    HOP3_KEY,
-    HOP4,
-    HOP4_KEY,
     HOP5,
-    HOP5_KEY,
     UNIT_CHAIN_ID,
     UNIT_REVEAL_TIMEOUT,
     UNIT_SECRET,
@@ -242,17 +234,8 @@ def test_next_transfer_pair():
 
 
 def test_set_payee():
-    amount = 10
-    block_number = 1
-    _, transfers_pair = factories.make_transfers_pair(
-        [
-            HOP2_KEY,
-            HOP3_KEY,
-            HOP4_KEY,
-        ],
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(3)
+    transfers_pair = setup.transfers_pair
 
     # assert pre conditions
     assert transfers_pair[0].payer_state == 'payer_pending'
@@ -261,7 +244,7 @@ def test_set_payee():
     assert transfers_pair[1].payer_state == 'payer_pending'
     assert transfers_pair[1].payee_state == 'payee_pending'
 
-    mediator.set_offchain_reveal_state(transfers_pair, HOP2)
+    mediator.set_offchain_reveal_state(transfers_pair, setup.channels.partner_address(0))
 
     # payer address was used, no payee state should change
     assert transfers_pair[0].payer_state == 'payer_pending'
@@ -270,7 +253,7 @@ def test_set_payee():
     assert transfers_pair[1].payer_state == 'payer_pending'
     assert transfers_pair[1].payee_state == 'payee_pending'
 
-    mediator.set_offchain_reveal_state(transfers_pair, HOP3)
+    mediator.set_offchain_reveal_state(transfers_pair, setup.channels.partner_address(1))
 
     # only the transfer where the address is a payee should change
     assert transfers_pair[0].payer_state == 'payer_pending'
@@ -282,21 +265,14 @@ def test_set_payee():
 
 def test_events_for_expired_pairs():
     """ The transfer pair must switch to expired at the right block. """
-    amount = 10
-    block_number = 1
-    channelmap, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY],
-        amount,
-        block_number,
-    )
-
-    pair = transfers_pair[0]
+    setup = factories.make_transfers_pair(2)
+    pair = setup.transfers_pair[0]
 
     first_unsafe_block = pair.payer_transfer.lock.expiration - UNIT_REVEAL_TIMEOUT
 
     mediator.events_for_expired_pairs(
-        channelmap,
-        transfers_pair,
+        setup.channel_map,
+        setup.transfers_pair,
         None,
         first_unsafe_block,
     )
@@ -305,8 +281,8 @@ def test_events_for_expired_pairs():
     # edge case for the lock expiration
     payee_expiration_block = pair.payee_transfer.lock.expiration
     mediator.events_for_expired_pairs(
-        channelmap,
-        transfers_pair,
+        setup.channel_map,
+        setup.transfers_pair,
         None,
         payee_expiration_block,
     )
@@ -318,8 +294,8 @@ def test_events_for_expired_pairs():
         DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
     )
     mediator.events_for_expired_pairs(
-        channelmap,
-        transfers_pair,
+        setup.channel_map,
+        setup.transfers_pair,
         None,
         payer_lock_expiration_threshold,
     )
@@ -379,18 +355,11 @@ def test_events_for_secretreveal():
     SecretReveal.
     """
     our_address = ADDR
-    amount = 10
     pseudo_random_generator = random.Random()
-    block_number = 1
-
-    _, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY, HOP4_KEY],
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(3)
 
     events = mediator.events_for_secretreveal(
-        transfers_pair,
+        setup.transfers_pair,
         our_address,
         pseudo_random_generator,
     )
@@ -399,12 +368,12 @@ def test_events_for_secretreveal():
     # state, do nothing
     assert not events
 
-    first_pair = transfers_pair[0]
-    last_pair = transfers_pair[1]
+    first_pair = setup.transfers_pair[0]
+    last_pair = setup.transfers_pair[1]
 
     last_pair.payee_state = 'payee_secret_revealed'
     events = mediator.events_for_secretreveal(
-        transfers_pair,
+        setup.transfers_pair,
         UNIT_SECRET,
         pseudo_random_generator,
     )
@@ -418,7 +387,7 @@ def test_events_for_secretreveal():
     assert last_pair.payer_state == 'payer_secret_revealed'
 
     events = mediator.events_for_secretreveal(
-        transfers_pair,
+        setup.transfers_pair,
         our_address,
         pseudo_random_generator,
     )
@@ -429,7 +398,7 @@ def test_events_for_secretreveal():
 
     first_pair.payee_state = 'payee_secret_revealed'
     events = mediator.events_for_secretreveal(
-        transfers_pair,
+        setup.transfers_pair,
         UNIT_SECRET,
         pseudo_random_generator,
     )
@@ -443,18 +412,12 @@ def test_events_for_secretreveal():
 
 def test_events_for_secretreveal_secret_unknown():
     """ When the secret is not known there is nothing to do. """
-    amount = 10
     pseudo_random_generator = random.Random()
-    block_number = 1
 
-    _, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY, HOP4_KEY],
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(3)
 
     events = mediator.events_for_secretreveal(
-        transfers_pair,
+        setup.transfers_pair,
         ADDR,
         pseudo_random_generator,
     )
@@ -472,28 +435,22 @@ def test_events_for_secretreveal_all_states():
         'payee_balance_proof',
     )
     pseudo_random_generator = random.Random()
-    block_number = 1
 
-    amount = 10
     for state in payee_secret_known:
-        _, transfers_pair = factories.make_transfers_pair(
-            [HOP2_KEY, HOP3_KEY],
-            amount,
-            block_number,
-        )
+        setup = factories.make_transfers_pair(2)
 
-        pair = transfers_pair[0]
+        pair = setup.transfers_pair[0]
         pair.payee_state = state
 
         events = mediator.events_for_secretreveal(
-            transfers_pair,
+            setup.transfers_pair,
             UNIT_SECRET,
             pseudo_random_generator,
         )
 
         assert must_contain_entry(events, SendSecretReveal, {
             'secret': UNIT_SECRET,
-            'recipient': HOP2,
+            'recipient': setup.channels.partner_address(0),
         })
 
 
@@ -501,31 +458,25 @@ def test_events_for_balanceproof():
     """ Test the simple case where the last hop has learned the secret and sent
     it to the mediator node.
     """
-    amount = 10
     pseudo_random_generator = random.Random()
-    block_number = 1
 
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        [HOP1_KEY, HOP2_KEY],
-        amount,
-        block_number,
-    )
-    last_pair = transfers_pair[-1]
+    setup = factories.make_transfers_pair(2, amount=10, block_number=1)
+    last_pair = setup.transfers_pair[-1]
     last_pair.payee_state = 'payee_secret_revealed'
 
     # the lock is not in the danger zone yet
-    payer_channel = mediator.get_payer_channel(channel_map, last_pair)
-    payee_channel = mediator.get_payee_channel(channel_map, last_pair)
-    block_number = last_pair.payee_transfer.lock.expiration - payer_channel.reveal_timeout - 1
+    payer_channel = mediator.get_payer_channel(setup.channel_map, last_pair)
+    payee_channel = mediator.get_payee_channel(setup.channel_map, last_pair)
+    safe_block = last_pair.payee_transfer.lock.expiration - payer_channel.reveal_timeout - 1
 
     prng_copy = deepcopy(pseudo_random_generator)
     msg_identifier = message_identifier_from_prng(prng_copy)
 
     events = mediator.events_for_balanceproof(
-        channel_map,
-        transfers_pair,
+        setup.channel_map,
+        setup.transfers_pair,
         pseudo_random_generator,
-        block_number,
+        safe_block,
         UNIT_SECRET,
         UNIT_SECRETHASH,
     )
@@ -565,32 +516,24 @@ def test_events_for_balanceproof_channel_closed():
     needs to go on-chain and use the latest known balance proof which includes
     this lock in the locksroot.
     """
-    amount = 10
-    block_number = 5
     pseudo_random_generator = random.Random()
 
     for invalid_state in (CHANNEL_STATE_CLOSED, CHANNEL_STATE_SETTLED):
-        channel_map, transfers_pair = factories.make_transfers_pair(
-            [HOP2_KEY, HOP3_KEY],
-            amount,
-            block_number,
-        )
-
-        last_pair = transfers_pair[-1]
-        channel_identifier = last_pair.payee_transfer.balance_proof.channel_identifier
-        last_channel = channel_map[channel_identifier]
+        setup = factories.make_transfers_pair(2)
+        last_pair = setup.transfers_pair[-1]
+        last_channel = mediator.get_payee_channel(setup.channel_map, last_pair)
 
         if invalid_state == CHANNEL_STATE_CLOSED:
-            channel.set_closed(last_channel, block_number)
+            channel.set_closed(last_channel, setup.block_number)
         else:
-            channel.set_settled(last_channel, block_number)
+            channel.set_settled(last_channel, setup.block_number)
 
         last_pair.payee_state = 'payee_secret_revealed'
         events = mediator.events_for_balanceproof(
-            channel_map,
-            transfers_pair,
+            setup.channel_map,
+            setup.transfers_pair,
             pseudo_random_generator,
-            block_number,
+            setup.block_number,
             UNIT_SECRET,
             UNIT_SECRETHASH,
         )
@@ -606,24 +549,17 @@ def test_events_for_balanceproof_middle_secret():
     This can be done safely because the secret is known to the mediator and
     there is `reveal_timeout` blocks to unlock the lock on-chain with the payer.
     """
-    amount = 10
     pseudo_random_generator = random.Random()
-    block_number = 1
 
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
-        amount,
-        block_number,
-    )
-
-    middle_pair = transfers_pair[1]
+    setup = factories.make_transfers_pair(4, block_number=1)
+    middle_pair = setup.transfers_pair[1]
     middle_pair.payee_state = 'payee_secret_revealed'
 
     events = mediator.events_for_balanceproof(
-        channel_map,
-        transfers_pair,
+        setup.channel_map,
+        setup.transfers_pair,
         pseudo_random_generator,
-        block_number,
+        setup.block_number,
         UNIT_SECRET,
         UNIT_SECRETHASH,
     )
@@ -637,22 +573,15 @@ def test_events_for_balanceproof_middle_secret():
 
 def test_events_for_balanceproof_secret_unknown():
     """ Nothing to do if the secret is not known. """
-    block_number = 1
-    amount = 10
     pseudo_random_generator = random.Random()
-
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY, HOP4_KEY],
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(3, block_number=1)
 
     # the secret is not known, so no event should be used
     events = mediator.events_for_balanceproof(
-        channel_map,
-        transfers_pair,
+        setup.channel_map,
+        setup.transfers_pair,
         pseudo_random_generator,
-        block_number,
+        setup.block_number,
         UNIT_SECRET,
         UNIT_SECRETHASH,
     )
@@ -661,24 +590,17 @@ def test_events_for_balanceproof_secret_unknown():
 
 def test_events_for_balanceproof_lock_expired():
     """ The balance proof should not be sent if the lock has expired. """
-    amount = 10
     pseudo_random_generator = random.Random()
-    block_number = 1
-
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
-        amount,
-        block_number,
-    )
-
-    last_pair = transfers_pair[-1]
+    setup = factories.make_transfers_pair(4, block_number=1)
+    last_pair = setup.transfers_pair[-1]
     last_pair.payee_state = 'payee_secret_revealed'
+
     block_number = last_pair.payee_transfer.lock.expiration + 1
 
     # the lock has expired, do not send a balance proof
     events = mediator.events_for_balanceproof(
-        channel_map,
-        transfers_pair,
+        setup.channel_map,
+        setup.transfers_pair,
         pseudo_random_generator,
         block_number,
         UNIT_SECRET,
@@ -686,15 +608,15 @@ def test_events_for_balanceproof_lock_expired():
     )
     assert not events
 
-    middle_pair = transfers_pair[-2]
+    middle_pair = setup.transfers_pair[-2]
     middle_pair.payee_state = 'payee_secret_revealed'
 
     # The channel doesn't need to be closed to do a on-chain unlock, therefor
     # it's not required to send a balance proof to the payee if the lock is
     # near expiration
     events = mediator.events_for_balanceproof(
-        channel_map,
-        transfers_pair,
+        setup.channel_map,
+        setup.transfers_pair,
         pseudo_random_generator,
         block_number,
         UNIT_SECRET,
@@ -707,20 +629,12 @@ def test_events_for_onchain_secretreveal():
     """ Secret must be registered on-chain when the unsafe region is reached and
     the secret is known.
     """
-    amount = 10
-    block_number = 1
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY],
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(2, block_number=1)
+    pair = setup.transfers_pair[0]
 
-    pair = transfers_pair[0]
-    channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
-    channel_state = channel_map[channel_identifier]
-
+    channel_state = mediator.get_payer_channel(setup.channel_map, pair)
     # Reveal the secret off-chain
-    for channel_state in channel_map.values():
+    for channel_state in setup.channel_map.values():
         channel.register_offchain_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
 
     block_number = (
@@ -729,18 +643,18 @@ def test_events_for_onchain_secretreveal():
 
     # If we are not in the unsafe region, we must NOT emit ContractSendSecretReveal
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        channel_map,
+        setup.channel_map,
         UNIT_SECRETHASH,
-        transfers_pair,
+        setup.transfers_pair,
         block_number - 1,
     )
     assert not events
 
     # If we are in the unsafe region, we must emit ContractSendSecretReveal
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        channel_map,
+        setup.channel_map,
         UNIT_SECRETHASH,
-        transfers_pair,
+        setup.transfers_pair,
         block_number,
     )
 
@@ -751,19 +665,11 @@ def test_events_for_onchain_secretreveal():
 
 def test_events_for_onchain_secretreveal_once():
     """ Secret must be registered on-chain only once. """
-    amount = 10
-    block_number = 1
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY],
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(4, block_number=1)
+    pair = setup.transfers_pair[0]
+    channel_state = mediator.get_payer_channel(setup.channel_map, pair)
 
-    pair = transfers_pair[0]
-    channel_identifier = pair.payer_transfer.balance_proof.channel_identifier
-    channel_state = channel_map[channel_identifier]
-
-    for channel_state in channel_map.values():
+    for channel_state in setup.channel_map.values():
         channel.register_offchain_secret(channel_state, UNIT_SECRET, UNIT_SECRETHASH)
 
     start_danger_zone_block_number = (
@@ -771,14 +677,14 @@ def test_events_for_onchain_secretreveal_once():
     )
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        channel_map,
+        setup.channel_map,
         UNIT_SECRETHASH,
-        transfers_pair,
+        setup.transfers_pair,
         start_danger_zone_block_number,
     )
     assert len(events) == 1
 
-    for pair in transfers_pair:
+    for pair in setup.transfers_pair:
         assert pair.payer_state == 'payer_waiting_secret_reveal'
 
     end_danger_zone_block_number = (
@@ -786,25 +692,25 @@ def test_events_for_onchain_secretreveal_once():
     )
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        channel_map,
+        setup.channel_map,
         UNIT_SECRETHASH,
-        transfers_pair,
+        setup.transfers_pair,
         end_danger_zone_block_number,
     )
     assert not events
 
-    for pair in transfers_pair:
+    for pair in setup.transfers_pair:
         assert pair.payer_state == 'payer_waiting_secret_reveal'
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        channel_map,
+        setup.channel_map,
         UNIT_SECRETHASH,
-        transfers_pair,
+        setup.transfers_pair,
         pair.payer_transfer.lock.expiration,
     )
     assert not events
 
-    for pair in transfers_pair:
+    for pair in setup.transfers_pair:
         assert pair.payer_state == 'payer_waiting_secret_reveal'
 
 
@@ -851,30 +757,15 @@ def test_secret_learned():
 
 
 def test_secret_learned_with_refund():
-    amount = 10
-    privatekeys = [HOP2_KEY, HOP3_KEY, HOP4_KEY]
-    addresses = [HOP2, HOP3, HOP4]
-    block_number = 1
-
     #                                             /-> HOP3
     # Emulate HOP2(Initiator) -> HOP1 (This node)
     #                                             \-> HOP4 -> HOP5
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        privatekeys,
-        amount,
-        block_number,
-    )
-
-    # Map HOP1 channel partner addresses to their channel states
-    partner_to_channel = {
-        channel_state.partner_state.address: channel_state
-        for channel_state in channel_map.values()
-    }
+    setup = factories.make_transfers_pair(3, block_number=1)
+    channel_map, transfers_pair = setup.channel_map, setup.transfers_pair
 
     # Make sure that our state is updated once transfers are sent.
-    for address in addresses[1:]:
-        channel_state = partner_to_channel[address]
-        assert channel.is_lock_locked(channel_state.our_state, UNIT_SECRETHASH)
+    assert channel.is_lock_locked(setup.channels[1].our_state, UNIT_SECRETHASH)
+    assert channel.is_lock_locked(setup.channels[2].our_state, UNIT_SECRETHASH)
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
     mediator_state.transfers_pair = transfers_pair
@@ -890,16 +781,12 @@ def test_secret_learned_with_refund():
     )
 
     assert not transition_result.events
-
     assert mediator_state.secret == UNIT_SECRET
 
-    for address in addresses[:-1]:
-        channel_state = partner_to_channel[address]
-        assert channel.is_secret_known(channel_state.partner_state, UNIT_SECRETHASH)
-
-    for address in addresses[1:]:
-        channel_state = partner_to_channel[address]
-        assert channel.is_secret_known(channel_state.our_state, UNIT_SECRETHASH)
+    assert channel.is_secret_known(setup.channels[0].partner_state, UNIT_SECRETHASH)
+    assert channel.is_secret_known(setup.channels[1].partner_state, UNIT_SECRETHASH)
+    assert channel.is_secret_known(setup.channels[1].our_state, UNIT_SECRETHASH)
+    assert channel.is_secret_known(setup.channels[2].our_state, UNIT_SECRETHASH)
 
 
 def test_mediate_transfer():
@@ -1333,53 +1220,41 @@ def test_set_offchain_secret():
     assert mediator_state.secret is None
     assert mediator_state.secrethash == UNIT_SECRETHASH
 
-    amount = 10
-    block_number = 1
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        [
-            HOP2_KEY,
-            HOP3_KEY,
-        ],
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(2, block_number=1)
+    channel_map = setup.channel_map
+    transfers_pair = setup.transfers_pair
     mediator_state.transfers_pair = transfers_pair
 
-    payer_channelid = transfers_pair[0].payer_transfer.balance_proof.channel_identifier
-    payee_channelid = transfers_pair[0].payee_transfer.balance_proof.channel_identifier
+    payee_channel = mediator.get_payee_channel(channel_map, transfers_pair[0])
+    payer_channel = mediator.get_payer_channel(channel_map, transfers_pair[0])
 
-    payer_channel_our_state = channel_map[payer_channelid].our_state
-    payer_channel_partner_state = channel_map[payer_channelid].partner_state
-    payee_channel_our_state = channel_map[payee_channelid].our_state
-    payee_channel_partner_state = channel_map[payee_channelid].partner_state
+    assert payer_channel.our_state.secrethashes_to_lockedlocks == dict()
+    assert payer_channel.our_state.secrethashes_to_unlockedlocks == dict()
 
-    assert payer_channel_our_state.secrethashes_to_lockedlocks == dict()
-    assert payer_channel_our_state.secrethashes_to_unlockedlocks == dict()
+    assert UNIT_SECRETHASH in payer_channel.partner_state.secrethashes_to_lockedlocks.keys()
+    assert payer_channel.partner_state.secrethashes_to_unlockedlocks == dict()
 
-    assert UNIT_SECRETHASH in payer_channel_partner_state.secrethashes_to_lockedlocks.keys()
-    assert payer_channel_partner_state.secrethashes_to_unlockedlocks == dict()
+    assert UNIT_SECRETHASH in payee_channel.our_state.secrethashes_to_lockedlocks.keys()
+    assert payee_channel.our_state.secrethashes_to_unlockedlocks == dict()
 
-    assert UNIT_SECRETHASH in payee_channel_our_state.secrethashes_to_lockedlocks.keys()
-    assert payee_channel_our_state.secrethashes_to_unlockedlocks == dict()
-
-    assert payee_channel_partner_state.secrethashes_to_lockedlocks == dict()
-    assert payee_channel_partner_state.secrethashes_to_unlockedlocks == dict()
+    assert payee_channel.partner_state.secrethashes_to_lockedlocks == dict()
+    assert payee_channel.partner_state.secrethashes_to_unlockedlocks == dict()
 
     set_offchain_secret(mediator_state, channel_map, UNIT_SECRET, UNIT_SECRETHASH)
 
     assert mediator_state.secret == UNIT_SECRET
 
-    assert payer_channel_our_state.secrethashes_to_lockedlocks == dict()
-    assert payer_channel_our_state.secrethashes_to_unlockedlocks == dict()
+    assert payer_channel.our_state.secrethashes_to_lockedlocks == dict()
+    assert payer_channel.our_state.secrethashes_to_unlockedlocks == dict()
 
-    assert payer_channel_partner_state.secrethashes_to_lockedlocks == dict()
-    assert UNIT_SECRETHASH in payer_channel_partner_state.secrethashes_to_unlockedlocks.keys()
+    assert payer_channel.partner_state.secrethashes_to_lockedlocks == dict()
+    assert UNIT_SECRETHASH in payer_channel.partner_state.secrethashes_to_unlockedlocks.keys()
 
-    assert payee_channel_our_state.secrethashes_to_lockedlocks == dict()
-    assert UNIT_SECRETHASH in payee_channel_our_state.secrethashes_to_unlockedlocks.keys()
+    assert payee_channel.our_state.secrethashes_to_lockedlocks == dict()
+    assert UNIT_SECRETHASH in payee_channel.our_state.secrethashes_to_unlockedlocks.keys()
 
-    assert payee_channel_partner_state.secrethashes_to_lockedlocks == dict()
-    assert payee_channel_partner_state.secrethashes_to_unlockedlocks == dict()
+    assert payee_channel.partner_state.secrethashes_to_lockedlocks == dict()
+    assert payee_channel.partner_state.secrethashes_to_unlockedlocks == dict()
 
 
 def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
