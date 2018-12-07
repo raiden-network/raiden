@@ -11,12 +11,10 @@ from raiden.tests.utils.factories import (
     HOP2,
     HOP2_KEY,
     HOP3,
-    HOP3_KEY,
-    HOP4,
-    HOP4_KEY,
     UNIT_SECRET,
     UNIT_SECRETHASH,
     UNIT_TOKEN_ADDRESS,
+    UNIT_TRANSFER_AMOUNT,
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
@@ -128,34 +126,26 @@ def test_regression_send_refund():
     machine, which led to the state being updated but the message to the
     partner was never sent.
     """
-    amount = 10
-    privatekeys = [HOP2_KEY, HOP3_KEY, HOP4_KEY]
     pseudo_random_generator = random.Random()
-    block_number = 5
-
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        privatekeys,
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(3)
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
-    mediator_state.transfers_pair = transfers_pair
+    mediator_state.transfers_pair = setup.transfers_pair
 
-    last_pair = transfers_pair[-1]
+    last_pair = setup.transfers_pair[-1]
     channel_identifier = last_pair.payee_transfer.balance_proof.channel_identifier
     lock_expiration = last_pair.payee_transfer.lock.expiration
 
     received_transfer = factories.make_signed_transfer(
-        amount=amount,
+        amount=UNIT_TRANSFER_AMOUNT,
         initiator=UNIT_TRANSFER_INITIATOR,
         target=UNIT_TRANSFER_TARGET,
         expiration=lock_expiration,
         secret=UNIT_SECRET,
         payment_identifier=UNIT_TRANSFER_IDENTIFIER,
         channel_identifier=channel_identifier,
-        pkey=HOP4_KEY,
-        sender=HOP4,
+        pkey=setup.channels.partner_privatekeys[2],
+        sender=setup.channels.partner_address(2),
     )
 
     # All three channels have been used
@@ -169,23 +159,23 @@ def test_regression_send_refund():
     iteration = mediator.handle_refundtransfer(
         mediator_state=mediator_state,
         mediator_state_change=refund_state_change,
-        channelidentifiers_to_channels=channel_map,
+        channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
+        block_number=setup.block_number,
     )
 
-    first_pair = transfers_pair[0]
+    first_pair = setup.transfers_pair[0]
     first_payer_transfer = first_pair.payer_transfer
-    payer_channel = mediator.get_payer_channel(channel_map, first_pair)
+    payer_channel = mediator.get_payer_channel(setup.channel_map, first_pair)
     lock = channel.get_lock(
         end_state=payer_channel.partner_state,
         secrethash=UNIT_SECRETHASH,
     )
     token_network_identifier = first_payer_transfer.balance_proof.token_network_identifier
     assert must_contain_entry(iteration.events, SendRefundTransfer, {
-        'recipient': HOP2,
+        'recipient': setup.channels.partner_address(0),
         'queue_identifier': {
-            'recipient': HOP2,
+            'recipient': setup.channels.partner_address(0),
             'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
         },
         'transfer': {
@@ -500,33 +490,25 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     """ If a secret is learned off-chain and then on-chain, the state of the
     lock must be updated in the channel.
     """
-    amount = 10
-    block_number = 10
     pseudo_random_generator = random.Random()
 
-    channel_map, transfers_pair = factories.make_transfers_pair(
-        [HOP2_KEY, HOP3_KEY],
-        amount,
-        block_number,
-    )
+    setup = factories.make_transfers_pair(2, block_number=10)
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH)
-    mediator_state.transfers_pair = transfers_pair
+    mediator_state.transfers_pair = setup.transfers_pair
 
     secret = UNIT_SECRET
     secrethash = UNIT_SECRETHASH
-    payer_channelid = transfers_pair[0].payer_transfer.balance_proof.channel_identifier
-    payee_channelid = transfers_pair[0].payee_transfer.balance_proof.channel_identifier
-    payer_channel = channel_map[payer_channelid]
-    payee_channel = channel_map[payee_channelid]
+    payer_channel = mediator.get_payer_channel(setup.channel_map, setup.transfers_pair[0])
+    payee_channel = mediator.get_payee_channel(setup.channel_map, setup.transfers_pair[0])
     lock = payer_channel.partner_state.secrethashes_to_lockedlocks[secrethash]
 
     mediator.state_transition(
         mediator_state=mediator_state,
         state_change=ReceiveSecretReveal(secret, payee_channel.partner_state.address),
-        channelidentifiers_to_channels=channel_map,
+        channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
+        block_number=setup.block_number,
     )
     assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
 
@@ -539,11 +521,11 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
             secret_registry_address,
             secrethash,
             secret,
-            block_number,
+            setup.block_number,
         ),
-        channelidentifiers_to_channels=channel_map,
+        channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
+        block_number=setup.block_number,
     )
     assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
 
@@ -558,9 +540,9 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         recipient=payer_channel.our_state.address,
     )
     assert send_lock_expired
-    lock_expired_message = message_from_sendevent(send_lock_expired, HOP1)
-    lock_expired_message.sign(HOP2_KEY)
-    balance_proof = balanceproof_from_envelope(lock_expired_message)
+    expired_message = message_from_sendevent(send_lock_expired, setup.channels.our_address(0))
+    expired_message.sign(setup.channels.partner_privatekeys[0])
+    balance_proof = balanceproof_from_envelope(expired_message)
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
     expired_block_number = lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
@@ -571,7 +553,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
             secrethash=secrethash,
             message_identifier=message_identifier,
         ),
-        channelidentifiers_to_channels=channel_map,
+        channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
     )
