@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.18.1 <2018-12-07>`
 * :bug:`2779` Fixes a long standing bug that could cause payments to hang indefinitely.
 * :bug:`3103` Fixes a bug in matrix which prevented retries of messages.
 * :bug:`3094` Raiden will now properly return payment failure and no longer hang if a payment times out due to a lock expiration.
