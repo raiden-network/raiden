@@ -512,91 +512,6 @@ def make_default_signed_transfer_for(
     return make_signed_transfer_for(channel_state, **parameters)
 
 
-def make_transfers_pair(privatekeys, amount, block_number):
-    transfers_pair = list()
-    channel_map = dict()
-    pseudo_random_generator = random.Random()
-
-    addresses = list()
-    for pkey in privatekeys:
-        pubkey = pkey.public_key.format(compressed=False)
-        address = publickey_to_address(pubkey)
-        addresses.append(address)
-
-    key_address = list(zip(privatekeys, addresses))
-
-    deposit_amount = amount * 5
-    channels_state = {
-        address: make_channel(
-            our_address=HOP1,
-            our_balance=deposit_amount,
-            partner_balance=deposit_amount,
-            partner_address=address,
-            token_address=UNIT_TOKEN_ADDRESS,
-            token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-        )
-        for address in addresses
-    }
-
-    lock_expiration = block_number + UNIT_REVEAL_TIMEOUT * 2
-    for (payer_key, payer_address), payee_address in zip(key_address[:-1], addresses[1:]):
-        pay_channel = channels_state[payee_address]
-        receive_channel = channels_state[payer_address]
-
-        received_transfer = make_signed_transfer(
-            amount=amount,
-            initiator=UNIT_TRANSFER_INITIATOR,
-            target=UNIT_TRANSFER_TARGET,
-            expiration=lock_expiration,
-            secret=UNIT_SECRET,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            channel_identifier=receive_channel.identifier,
-            pkey=payer_key,
-            sender=payer_address,
-        )
-
-        is_valid, _, msg = channel.handle_receive_lockedtransfer(
-            receive_channel,
-            received_transfer,
-        )
-        assert is_valid, msg
-
-        message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        lockedtransfer_event = channel.send_lockedtransfer(
-            channel_state=pay_channel,
-            initiator=UNIT_TRANSFER_INITIATOR,
-            target=UNIT_TRANSFER_TARGET,
-            amount=amount,
-            message_identifier=message_identifier,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            expiration=lock_expiration,
-            secrethash=UNIT_SECRETHASH,
-        )
-        assert lockedtransfer_event
-        lock_timeout = lock_expiration - block_number
-        assert mediator.is_channel_usable(
-            candidate_channel_state=pay_channel,
-            transfer_amount=amount,
-            lock_timeout=lock_timeout,
-        )
-        sent_transfer = lockedtransfer_event.transfer
-
-        pair = MediationPairState(
-            received_transfer,
-            lockedtransfer_event.recipient,
-            sent_transfer,
-        )
-        transfers_pair.append(pair)
-
-        channel_map[receive_channel.identifier] = receive_channel
-        channel_map[pay_channel.identifier] = pay_channel
-
-        assert channel.is_lock_locked(receive_channel.partner_state, UNIT_SECRETHASH)
-        assert channel.is_lock_locked(pay_channel.our_state, UNIT_SECRETHASH)
-
-    return channel_map, transfers_pair
-
-
 # ALIASES
 make_channel = make_channel_state
 route_from_channel = make_route_from_channel
@@ -861,3 +776,98 @@ def mediator_make_init_action(
         transfer: LockedTransferSignedState,
 ) -> ActionInitMediator:
     return ActionInitMediator(channels.get_routes(1), channels.get_route(0), transfer)
+
+
+class MediatorTransfersPair(NamedTuple):
+    channels: ChannelSet
+    transfers_pair: typing.List[MediationPairState]
+    amount: int
+    block_number: int
+
+    @property
+    def channel_map(self) -> typing.ChannelMap:
+        return self.channels.channel_map
+
+
+def make_transfers_pair(
+        number_of_channels: int,
+        amount: int = UNIT_TRANSFER_AMOUNT,
+        block_number: int = 5,
+) -> MediatorTransfersPair:
+
+    deposit = 5 * amount
+    base = make_record_netting_channel_state(
+        our_state={'balance': deposit},
+        partner_state={'balance': deposit},
+        open_transaction=make_transaction_execution_status(finished_block_number=10),
+    )
+    channel_parameters = [
+        {
+            'our_state': {
+                'address': ChannelSet.ADDRESSES[0],
+                'privatekey': ChannelSet.PKEYS[0],
+            },
+            'partner_state': {
+                'address': ChannelSet.ADDRESSES[i + 1],
+                'privatekey': ChannelSet.PKEYS[i + 1],
+            },
+        }
+        for i in range(0, number_of_channels)
+    ]
+    channels = make_channel_set(channel_parameters=channel_parameters, base=base)
+
+    lock_expiration = block_number + UNIT_REVEAL_TIMEOUT * 2
+    pseudo_random_generator = random.Random()
+    transfers_pairs = list()
+
+    for payer_index in range(number_of_channels - 1):
+        payee_index = payer_index + 1
+
+        receiver_channel = channels[payer_index]
+        received_transfer = make_signed_transfer(
+            amount=amount,
+            initiator=UNIT_TRANSFER_INITIATOR,
+            target=UNIT_TRANSFER_TARGET,
+            expiration=lock_expiration,
+            secret=UNIT_SECRET,
+            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+            channel_identifier=receiver_channel.identifier,
+            pkey=channels.partner_privatekeys[payer_index],
+            sender=channels.partner_address(payer_index),
+        )
+
+        is_valid, _, msg = channel.handle_receive_lockedtransfer(
+            receiver_channel,
+            received_transfer,
+        )
+        assert is_valid, msg
+
+        message_identifier = message_identifier_from_prng(pseudo_random_generator)
+        lockedtransfer_event = channel.send_lockedtransfer(
+            channel_state=channels[payee_index],
+            initiator=UNIT_TRANSFER_INITIATOR,
+            target=UNIT_TRANSFER_TARGET,
+            amount=amount,
+            message_identifier=message_identifier,
+            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+            expiration=lock_expiration,
+            secrethash=UNIT_SECRETHASH,
+        )
+        assert lockedtransfer_event
+
+        lock_timeout = lock_expiration - block_number
+        assert mediator.is_channel_usable(
+            candidate_channel_state=channels[payee_index],
+            transfer_amount=amount,
+            lock_timeout=lock_timeout,
+        )
+        sent_transfer = lockedtransfer_event.transfer
+
+        pair = MediationPairState(
+            received_transfer,
+            lockedtransfer_event.recipient,
+            sent_transfer,
+        )
+        transfers_pairs.append(pair)
+
+    return MediatorTransfersPair(channels, transfers_pairs, amount, block_number)
