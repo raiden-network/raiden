@@ -1,5 +1,4 @@
 from typing import Dict, List
-from unittest.mock import patch
 
 import gevent
 import pytest
@@ -21,7 +20,7 @@ from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import must_contain_entry, must_have_event
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldOffChainSecretRequest
+from raiden.tests.utils.protocol import HoldOffChainSecretRequest, dont_handle_secret_request_mock
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
 from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
@@ -584,16 +583,8 @@ def test_clear_closed_queue(raiden_network, token_addresses, deposit, network_wa
         app1.raiden.address
     ]
 
-    def do_nothing(raiden, message):
-        pass
-
-    mocked_context = patch.object(
-        app0.raiden.message_handler,
-        'handle_message_secretrequest',
-        side_effect=do_nothing,
-    )
-    with mocked_context:
-        # make a transfer to ensure the nodes have communicated
+    with dont_handle_secret_request_mock(app0):
+        # make an unconfirmed transfer to ensure the nodes have communicated
         amount = 10
         payment_identifier = 1337
         app0.raiden.mediated_transfer_async(
