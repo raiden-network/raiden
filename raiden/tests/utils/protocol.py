@@ -1,4 +1,5 @@
 from collections import defaultdict
+from unittest.mock import patch
 
 import structlog
 from gevent.event import Event
@@ -8,6 +9,7 @@ from raiden.messages import Message
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs
+from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.utils import pex, typing
 
@@ -98,3 +100,41 @@ class HoldOffChainSecretRequest(RaidenEventHandler):
                 f'SecretRequest for {pex(secret_request_event.secrethash)} held.',
                 node=pex(raiden.address),
             )
+
+
+def dont_handle_secret_request_mock(app):
+    """Takes in a raiden app and returns a mock context where secret request is not processed
+
+    Example usage:
+
+    mock = dont_handle_secret_request_mock(app)
+    with mock:
+        # here we know that the transfer will not complete as long as we are
+        # inside the with context block
+        app.raiden.mediated_transfer_async(
+            token_network_identifier=token_network_identifier,
+            amount=amount,
+            target=target,
+            identifier=payment_identifier,
+        )
+    """
+    def do_nothing(raiden, message):
+        pass
+
+    return patch.object(
+        app.raiden.message_handler,
+        'handle_message_secretrequest',
+        side_effect=do_nothing,
+    )
+
+
+def dont_handle_node_change_network_state():
+    """Returns a mock context where ActionChangeNodeNetworkState is not processed
+    """
+    def empty_state_transition(chain_state, state_change):
+        return TransitionResult(chain_state, list())
+
+    return patch(
+        'raiden.transfer.node.handle_node_change_network_state',
+        empty_state_transition,
+    )

@@ -7,6 +7,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.protocol import dont_handle_node_change_network_state
 from raiden.tests.utils.transfer import assert_synced_channel_state
 from raiden.transfer import views
 
@@ -33,21 +34,22 @@ def test_send_queued_messages(
         token_address,
     )
 
-    # stop app1 - transfer must be left unconfirmed
-    app1.stop()
+    with dont_handle_node_change_network_state():
+        # stop app1 - transfer must be left unconfirmed
+        app1.stop()
 
-    # make a few transfers from app0 to app1
-    amount = 1
-    spent_amount = 7
-    identifier = 1
-    for _ in range(spent_amount):
-        app0.raiden.mediated_transfer_async(
-            token_network_identifier=token_network_identifier,
-            amount=amount,
-            target=app1.raiden.address,
-            identifier=identifier,
-        )
-        identifier += 1
+        # make a few transfers from app0 to app1
+        amount = 1
+        spent_amount = 7
+        identifier = 1
+        for _ in range(spent_amount):
+            app0.raiden.mediated_transfer_async(
+                token_network_identifier=token_network_identifier,
+                amount=amount,
+                target=app1.raiden.address,
+                identifier=identifier,
+            )
+            identifier += 1
 
     # restart app0
     app0.raiden.stop()
