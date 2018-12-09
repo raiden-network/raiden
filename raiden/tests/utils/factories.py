@@ -1,7 +1,7 @@
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,no-member
 import random
 import string
-from copy import deepcopy
+from functools import singledispatch
 from typing import NamedTuple
 
 from coincurve import PrivateKey
@@ -116,7 +116,7 @@ def make_privatekey_address(
     privatekey = if_empty(privatekey, make_privatekey())
     publickey = privatekey.public_key.format(compressed=False)
     address = publickey_to_address(publickey)
-    return (privatekey, address)
+    return privatekey, address
 
 
 def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
@@ -572,117 +572,154 @@ def make_merkletree_leaves(width: int) -> typing.List[typing.Secret]:
     return [make_secret() for _ in range(width)]
 
 
-def make_transaction_execution_status(
-        started_block_number: typing.BlockNumber = None,
-        finished_block_number: typing.BlockNumber = None,
-        success: bool = True,
-) -> TransactionExecutionStatus:
-    status = TransactionExecutionStatus.SUCCESS if success else TransactionExecutionStatus.FAILURE
-    return TransactionExecutionStatus(started_block_number, finished_block_number, status)
+@singledispatch
+def create(properties: typing.Any, defaults=None) -> typing.Any:
+    """Create objects from their associated property class.
+
+    E. g. a NettingChannelState from NettingChannelStateProperties. For any field in
+    properties set to EMPTY a default will be used. The default values can be changed
+    by giving another object of the same property type as the defaults argument.
+    """
+    return properties
 
 
-class NettingChannelEndStateRecord(NamedTuple):
-    address: typing.Address = None
-    privatekey: PrivateKey = None
-    balance: typing.TokenAmount = 100
-    merkletree_leaves: typing.MerkleTreeLeaves = None
-    merkletree_width: int = 0
-
-    def create(self) -> NettingChannelEndState:
-        state = NettingChannelEndState(self.address or make_address(), self.balance)
-
-        merkletree_leaves = (
-            self.merkletree_leaves or
-            make_merkletree_leaves(self.merkletree_width) or
-            None
-        )
-        if merkletree_leaves:
-            state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
-
-        return state
+def _args_from_properties(properties: NamedTuple, defaults: NamedTuple):
+    defaults_dict = defaults._asdict()
+    return {
+        key: create(if_empty(value, defaults_dict[key]))
+        for key, value in properties._asdict().items()
+    }
 
 
-class NettingChannelStateRecord(NamedTuple):
-    identifier: typing.ChannelID = UNIT_CHANNEL_ID
-    chain_id: typing.ChainID = UNIT_CHAIN_ID
-    token_address: typing.TokenAddress = UNIT_TOKEN_ADDRESS
-    payment_network_identifier: typing.PaymentNetworkID = UNIT_PAYMENT_NETWORK_IDENTIFIER
-    token_network_identifier: typing.TokenNetworkID = UNIT_TOKEN_NETWORK_ADDRESS
-
-    reveal_timeout: typing.BlockTimeout = UNIT_REVEAL_TIMEOUT
-    settle_timeout: typing.BlockTimeout = UNIT_SETTLE_TIMEOUT
-
-    our_state: NettingChannelEndStateRecord = None
-    partner_state: NettingChannelEndStateRecord = None
-
-    open_transaction: TransactionExecutionStatus = make_transaction_execution_status()
-    close_transaction: TransactionExecutionStatus = None
-    settle_transaction: TransactionExecutionStatus = None
+class TransactionExecutionStatusProperties(NamedTuple):
+    started_block_number: typing.BlockNumber = EMPTY
+    finished_block_number: typing.BlockNumber = EMPTY
+    result: str = EMPTY
 
 
-def make_netting_channel_end_state_record(
-        base: NettingChannelEndStateRecord = None,
-        **kwargs,
-) -> NettingChannelEndStateRecord:
-    parameters = base._asdict() if base is not None else dict()
-    parameters.update(**kwargs)
-    return NettingChannelEndStateRecord(**parameters)
+TRANSACTION_EXECUTION_STATUS_DEFAULTS = TransactionExecutionStatusProperties(
+    started_block_number=None,
+    finished_block_number=None,
+    result=TransactionExecutionStatus.SUCCESS,
+)
 
 
-def make_netting_channel_end_state(
-        base: NettingChannelEndStateRecord = None,
-        **kwargs,
-) -> NettingChannelEndState:
-    return make_netting_channel_end_state_record(base, **kwargs).create()
+@create.register(TransactionExecutionStatusProperties)  # noqa: F811
+def _(properties, defaults=None) -> TransactionExecutionStatus:
+    return TransactionExecutionStatus(
+        **_args_from_properties(properties, defaults or TRANSACTION_EXECUTION_STATUS_DEFAULTS),
+    )
 
 
-def _base_to_dict(base: typing.Union[None, typing.Dict, typing.NamedTuple]) -> typing.Dict:
-    if base is None:
-        return dict()
-    elif isinstance(base, dict):
-        return deepcopy(base)
-    else:
-        return base._asdict()
+class NettingChannelEndStateProperties(NamedTuple):
+    address: typing.Address = EMPTY
+    privatekey: PrivateKey = EMPTY
+    balance: typing.TokenAmount = EMPTY
+    merkletree_leaves: typing.MerkleTreeLeaves = EMPTY
+    merkletree_width: int = EMPTY
 
 
-def make_record_netting_channel_state(
-        base: NettingChannelStateRecord = None,
-        **kwargs,
-) -> NettingChannelStateRecord:
-    parameters = _base_to_dict(base)
-    parameters.update(**kwargs)
-    return NettingChannelStateRecord(**parameters)
+NETTING_CHANNEL_END_STATE_DEFAULTS = NettingChannelEndStateProperties(
+    address=None,
+    privatekey=None,
+    balance=100,
+    merkletree_leaves=None,
+    merkletree_width=0,
+)
 
 
-def _create_end_state(
-        data: typing.Union[typing.Dict, NettingChannelEndStateRecord, NettingChannelEndState],
-) -> NettingChannelEndState:
+@create.register(NettingChannelEndStateProperties)  # noqa: F811
+def _(properties, defaults=None) -> NettingChannelEndState:
+    args = _args_from_properties(properties, defaults or NETTING_CHANNEL_END_STATE_DEFAULTS)
+    state = NettingChannelEndState(args['address'] or make_address(), args['balance'])
 
-    if data is None:
-        data = dict()
-    if isinstance(data, dict):
-        data = make_netting_channel_end_state_record(**data)
-    if isinstance(data, NettingChannelEndStateRecord):
-        data = data.create()
-    return data
-
-
-def _record_to_channel_state(record: NettingChannelStateRecord) -> NettingChannelState:
-    parameters = record._asdict()
-
-    parameters['our_state'] = _create_end_state(record.our_state)
-    parameters['partner_state'] = _create_end_state(record.partner_state)
-
-    state = NettingChannelState(**parameters)
+    merkletree_leaves = (
+        args['merkletree_leaves'] or
+        make_merkletree_leaves(args['merkletree_width']) or
+        None
+    )
+    if merkletree_leaves:
+        state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
 
     return state
 
 
-def make_netting_channel_state(
-        base: NettingChannelStateRecord = None,
-        **kwargs,
-) -> NettingChannelState:
-    return _record_to_channel_state(make_record_netting_channel_state(base, **kwargs))
+class NettingChannelStateProperties(NamedTuple):
+    identifier: typing.ChannelID = EMPTY
+    chain_id: typing.ChainID = EMPTY
+    token_address: typing.TokenAddress = EMPTY
+    payment_network_identifier: typing.PaymentNetworkID = EMPTY
+    token_network_identifier: typing.TokenNetworkID = EMPTY
+
+    reveal_timeout: typing.BlockTimeout = EMPTY
+    settle_timeout: typing.BlockTimeout = EMPTY
+
+    our_state: NettingChannelEndStateProperties = EMPTY
+    partner_state: NettingChannelEndStateProperties = EMPTY
+
+    open_transaction: TransactionExecutionStatusProperties = EMPTY
+    close_transaction: TransactionExecutionStatusProperties = EMPTY
+    settle_transaction: TransactionExecutionStatusProperties = EMPTY
+
+
+NETTING_CHANNEL_STATE_DEFAULTS = NettingChannelStateProperties(
+    identifier=UNIT_CHANNEL_ID,
+    chain_id=UNIT_CHAIN_ID,
+    token_address=UNIT_TOKEN_ADDRESS,
+    payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
+    token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    reveal_timeout=UNIT_REVEAL_TIMEOUT,
+    settle_timeout=UNIT_SETTLE_TIMEOUT,
+    our_state=NETTING_CHANNEL_END_STATE_DEFAULTS,
+    partner_state=NETTING_CHANNEL_END_STATE_DEFAULTS,
+    open_transaction=TRANSACTION_EXECUTION_STATUS_DEFAULTS,
+    close_transaction=None,
+    settle_transaction=None,
+)
+
+
+@create.register(NettingChannelStateProperties)  # noqa: F811
+def _(properties, defaults=None) -> NettingChannelState:
+    return NettingChannelState(
+        **_args_from_properties(properties, defaults or NETTING_CHANNEL_STATE_DEFAULTS),
+    )
+
+
+DEFAULTS_BY_TYPE = {
+    TransactionExecutionStatusProperties: TRANSACTION_EXECUTION_STATUS_DEFAULTS,
+    NettingChannelEndStateProperties: NETTING_CHANNEL_END_STATE_DEFAULTS,
+    NettingChannelStateProperties: NETTING_CHANNEL_STATE_DEFAULTS,
+}
+
+
+def create_properties(properties: NamedTuple, defaults: NamedTuple = None) -> NamedTuple:
+    parameters = (defaults or DEFAULTS_BY_TYPE[type(properties)])._asdict()
+    for key, value in properties._asdict().items():
+        if type(value) in DEFAULTS_BY_TYPE.keys():
+            parameters[key] = create_properties(value, parameters[key])
+        elif value is not EMPTY:
+            parameters[key] = value
+    return type(properties)(**parameters)
+
+
+def pkeys_from_channel_state(
+        properties: NettingChannelStateProperties,
+        defaults: NettingChannelStateProperties = NETTING_CHANNEL_STATE_DEFAULTS,
+) -> typing.Tuple[typing.Optional[PrivateKey], typing.Optional[PrivateKey]]:
+
+    our_key = None
+    if properties.our_state is not EMPTY:
+        our_key = properties.our_state.privatekey
+    elif defaults is not None:
+        our_key = defaults.our_state.privatekey
+
+    partner_key = None
+    if properties.partner_state is not EMPTY:
+        partner_key = properties.partner_state.privatekey
+    elif defaults is not None:
+        partner_key = defaults.partner_state.privatekey
+
+    return our_key, partner_key
 
 
 class ChannelSet:
@@ -721,54 +758,50 @@ class ChannelSet:
 
 
 def make_channel_set(
-        channel_parameters: typing.List[typing.Dict] = None,
-        base: NettingChannelStateRecord = None,
-        number_of_channels: int = None,
+    properties: typing.List[NettingChannelStateProperties] = None,
+    defaults: NettingChannelStateProperties = NETTING_CHANNEL_STATE_DEFAULTS,
+    number_of_channels: int = None,
 ) -> ChannelSet:
-    if number_of_channels is None:
-        number_of_channels = len(channel_parameters)
-    channels = list()
-    our_privatekeys = [None] * number_of_channels
-    partner_privatekeys = [None] * number_of_channels
 
-    if channel_parameters is None:
-        channel_parameters = list()
-    while len(channel_parameters) < number_of_channels:
-        channel_parameters.append(dict())
+    if number_of_channels is None:
+        number_of_channels = len(properties)
+
+    channels = list()
+    our_pkeys = [None] * number_of_channels
+    partner_pkeys = [None] * number_of_channels
+
+    if properties is None:
+        properties = list()
+    while len(properties) < number_of_channels:
+        properties.append(NettingChannelStateProperties())
 
     for i in range(number_of_channels):
-        parameters = _base_to_dict(base)
-        parameters.update(channel_parameters[i])
-        parameters['identifier'] = make_channel_identifier()
-        parameters.setdefault('partner_state', dict())
-        parameters.setdefault('our_state', dict())
+        our_pkeys[i], partner_pkeys[i] = pkeys_from_channel_state(properties[i], defaults)
+        channels.append(create(properties[i], defaults))
 
-        if 'address' in parameters['partner_state']:
-            partner_privatekeys[i] = parameters['partner_state'].get('privatekey', None)
-        else:
-            parameters['partner_state']['address'] = ChannelSet.ADDRESSES[i]
-            parameters['partner_state']['privatekey'] = ChannelSet.PKEYS[i]
-
-        if 'address' in parameters['our_state']:
-            our_privatekeys[i] = parameters['our_state'].get('privatekey', None)
-        else:
-            parameters['our_state']['address'] = UNIT_TRANSFER_SENDER
-            parameters['our_state']['privatekey'] = UNIT_TRANSFER_PKEY
-
-        channels.append(make_netting_channel_state(base, **parameters))
-
-    return ChannelSet(channels, our_privatekeys, partner_privatekeys)
+    return ChannelSet(channels, our_pkeys, partner_pkeys)
 
 
 def mediator_make_channel_pair(
-        base: NettingChannelStateRecord = None,
+        defaults: NettingChannelStateProperties = None,
         amount: typing.TokenAmount = UNIT_TRANSFER_AMOUNT,
 ) -> ChannelSet:
-    channel_data = [
-        {'partner_state': {'address': UNIT_TRANSFER_SENDER, 'balance': amount}},
-        {'our_state': {'balance': amount}, 'partner_state': {'address': UNIT_TRANSFER_TARGET}},
+    properties_list = [
+        NettingChannelStateProperties(
+            identifier=1,
+            partner_state=NettingChannelEndStateProperties(
+                address=UNIT_TRANSFER_SENDER,
+                balance=amount,
+            ),
+        ),
+        NettingChannelStateProperties(
+            identifier=2,
+            our_state=NettingChannelEndStateProperties(balance=amount),
+            partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_TARGET),
+        ),
     ]
-    return make_channel_set(channel_data, base)
+
+    return make_channel_set(properties_list, defaults)
 
 
 def mediator_make_init_action(
@@ -796,25 +829,26 @@ def make_transfers_pair(
 ) -> MediatorTransfersPair:
 
     deposit = 5 * amount
-    base = make_record_netting_channel_state(
-        our_state={'balance': deposit},
-        partner_state={'balance': deposit},
-        open_transaction=make_transaction_execution_status(finished_block_number=10),
-    )
-    channel_parameters = [
-        {
-            'our_state': {
-                'address': ChannelSet.ADDRESSES[0],
-                'privatekey': ChannelSet.PKEYS[0],
-            },
-            'partner_state': {
-                'address': ChannelSet.ADDRESSES[i + 1],
-                'privatekey': ChannelSet.PKEYS[i + 1],
-            },
-        }
-        for i in range(0, number_of_channels)
+    defaults = create_properties(NettingChannelStateProperties(
+        our_state=NettingChannelEndStateProperties(balance=deposit),
+        partner_state=NettingChannelEndStateProperties(balance=deposit),
+        open_transaction=TransactionExecutionStatusProperties(finished_block_number=10),
+    ))
+    properties_list = [
+        NettingChannelStateProperties(
+            identifier=i,
+            our_state=NettingChannelEndStateProperties(
+                address=ChannelSet.ADDRESSES[0],
+                privatekey=ChannelSet.PKEYS[0],
+            ),
+            partner_state=NettingChannelEndStateProperties(
+                address=ChannelSet.ADDRESSES[i + 1],
+                privatekey=ChannelSet.PKEYS[i + 1],
+            ),
+        )
+        for i in range(number_of_channels)
     ]
-    channels = make_channel_set(channel_parameters=channel_parameters, base=base)
+    channels = make_channel_set(properties_list, defaults)
 
     lock_expiration = block_number + UNIT_REVEAL_TIMEOUT * 2
     pseudo_random_generator = random.Random()

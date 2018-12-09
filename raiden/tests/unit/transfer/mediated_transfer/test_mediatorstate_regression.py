@@ -18,6 +18,9 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
+    NettingChannelEndStateProperties,
+    NettingChannelStateProperties,
+    make_channel_set,
 )
 from raiden.transfer import channel
 from raiden.transfer.mediated_transfer import mediator
@@ -267,14 +270,11 @@ def test_regression_mediator_task_no_routes():
     """
     pseudo_random_generator = random.Random()
 
-    channels = factories.make_channel_set([
-        {
-            'our_state': {'balance': 0},
-            'partner_state': {'balance': 10, 'address': HOP2},
-            'open_transaction': factories.make_transaction_execution_status(
-                finished_block_number=10,
-            ),
-        },
+    channels = make_channel_set([
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=0),
+            partner_state=NettingChannelEndStateProperties(balance=10, address=HOP2),
+        ),
     ])
 
     payer_transfer = factories.make_default_signed_transfer_for(
