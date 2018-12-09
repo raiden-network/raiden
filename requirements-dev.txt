@@ -7,6 +7,7 @@
 pytest-cov==2.5.1
 pytest-random==0.02
 pytest-timeout==1.2.1
+pytest-select==0.1.2
 grequests==0.3.0
 pexpect==4.6.0
 
