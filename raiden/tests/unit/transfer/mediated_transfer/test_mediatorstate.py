@@ -25,6 +25,10 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_PKEY,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
+    NettingChannelEndStateProperties,
+    NettingChannelStateProperties,
+    create_properties,
+    make_channel_set,
     mediator_make_channel_pair,
     mediator_make_init_action,
 )
@@ -125,9 +129,9 @@ def test_next_route_amount():
     amount = UNIT_TRANSFER_AMOUNT
 
     channels = factories.make_channel_set([
-        {'our_state': {'balance': amount}},
-        {'our_state': {'balance': 0}},
-        {'our_state': {'balance': amount}},
+        NettingChannelStateProperties(our_state=NettingChannelEndStateProperties(balance=amount)),
+        NettingChannelStateProperties(our_state=NettingChannelEndStateProperties(balance=0)),
+        NettingChannelStateProperties(our_state=NettingChannelEndStateProperties(balance=amount)),
     ])
 
     # the first available route should be used
@@ -170,11 +174,11 @@ def test_next_route_reveal_timeout():
     """ Routes with a larger reveal timeout than timeout_blocks must be ignored. """
     timeout_blocks = 10
 
-    channels = factories.make_channel_set([
-        {'reveal_timeout': timeout_blocks * 2},
-        {'reveal_timeout': timeout_blocks + 1},
-        {'reveal_timeout': timeout_blocks // 2},
-        {'reveal_timeout': timeout_blocks},
+    channels = make_channel_set([
+        NettingChannelStateProperties(identifier=1, reveal_timeout=timeout_blocks * 2),
+        NettingChannelStateProperties(identifier=2, reveal_timeout=timeout_blocks + 1),
+        NettingChannelStateProperties(identifier=3, reveal_timeout=timeout_blocks // 2),
+        NettingChannelStateProperties(identifier=4, reveal_timeout=timeout_blocks),
     ])
 
     chosen_channel = mediator.next_channel_from_routes(
@@ -203,7 +207,11 @@ def test_next_transfer_pair():
         secret,
     )
 
-    channels = factories.make_channel_set([{'our_state': {'balance': balance}}])
+    channels = make_channel_set([
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=balance),
+        ),
+    ])
 
     pair, events = mediator.forward_transfer_pair(
         payer_transfer,
@@ -917,16 +925,22 @@ def test_mediator_secret_reveal_empty_hash():
 
 
 def test_no_valid_routes():
-    channels = factories.make_channel_set([
-        {
-            'partner_state': {
-                'balance': UNIT_TRANSFER_AMOUNT,
-                'address': UNIT_TRANSFER_SENDER,
-            },
-            'our_state': {'balance': UNIT_TRANSFER_AMOUNT},
-        },
-        {'our_state': {'balance': UNIT_TRANSFER_AMOUNT - 1}},
-        {'our_state': {'balance': 0}},
+    channels = make_channel_set([
+        NettingChannelStateProperties(
+            identifier=1,
+            partner_state=NettingChannelEndStateProperties(
+                balance=UNIT_TRANSFER_AMOUNT,
+                address=UNIT_TRANSFER_SENDER,
+            ),
+        ),
+        NettingChannelStateProperties(
+            identifier=2,
+            our_state=NettingChannelEndStateProperties(balance=UNIT_TRANSFER_AMOUNT - 1),
+        ),
+        NettingChannelStateProperties(
+            identifier=3,
+            our_state=NettingChannelEndStateProperties(balance=0),
+        ),
     ])
     from_transfer = factories.make_default_signed_transfer_for(channels[0], initiator=HOP1)
 
@@ -979,12 +993,11 @@ def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
     # (block=6) B learns the secret
     # (block=7) B call unlock on channel A-B (settle_timeout is over)
     high_expiration = 20
-    base = {
-        'reveal_timeout': 5,
-        'settle_timeout': 10,
-    }
+    channel_defaults = create_properties(
+        NettingChannelStateProperties(reveal_timeout=5, settle_timeout=10),
+    )
 
-    channels = mediator_make_channel_pair(base=base)
+    channels = mediator_make_channel_pair(defaults=channel_defaults)
     from_transfer = factories.make_default_signed_transfer_for(
         channels[0],
         initiator=HOP1,
@@ -1261,9 +1274,18 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
     pseudo_random_generator = random.Random()
 
     balance = 2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT
-    channels = factories.make_channel_set([
-        {'partner_state': {'balance': balance, 'address': UNIT_TRANSFER_SENDER}},
-        {'our_state': {'balance': balance}},
+    channels = make_channel_set([
+        NettingChannelStateProperties(
+            identifier=1,
+            partner_state=NettingChannelEndStateProperties(
+                balance=balance,
+                address=UNIT_TRANSFER_SENDER,
+            ),
+        ),
+        NettingChannelStateProperties(
+            identifier=2,
+            our_state=NettingChannelEndStateProperties(balance=balance),
+        ),
     ])
 
     iterations = []

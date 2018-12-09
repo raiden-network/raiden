@@ -1,4 +1,4 @@
-# pylint: disable=too-many-locals,too-many-statements,too-many-lines
+# pylint: disable=too-many-locals,too-many-statements,too-many-lines,no-member
 import random
 from collections import namedtuple
 from copy import deepcopy
@@ -18,6 +18,10 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
+    NettingChannelEndStateProperties,
+    NettingChannelStateProperties,
+    TransactionExecutionStatusProperties,
+    create,
     make_secret,
 )
 from raiden.tests.utils.transfer import make_receive_expired_lock, make_receive_transfer_mediated
@@ -103,21 +107,21 @@ def create_model(balance, merkletree_width=0):
 
 def create_channel_from_models(our_model, partner_model):
     """Utility to instantiate state objects used throughout the tests."""
-    channel_state = factories.make_netting_channel_state(
+    channel_state = create(NettingChannelStateProperties(
         reveal_timeout=10,
         settle_timeout=100,
-        our_state=factories.make_netting_channel_end_state_record(
+        our_state=NettingChannelEndStateProperties(
             address=our_model.participant_address,
             balance=our_model.balance,
             merkletree_leaves=our_model.merkletree_leaves,
         ),
-        partner_state=factories.make_netting_channel_end_state_record(
+        partner_state=NettingChannelEndStateProperties(
             address=partner_model.participant_address,
             balance=partner_model.balance,
             merkletree_leaves=partner_model.merkletree_leaves,
         ),
-        open_transaction=factories.make_transaction_execution_status(finished_block_number=1),
-    )
+        open_transaction=TransactionExecutionStatusProperties(finished_block_number=1),
+    ))
 
     assert channel_state.our_total_deposit == our_model.contract_balance
     assert channel_state.partner_total_deposit == partner_model.contract_balance
