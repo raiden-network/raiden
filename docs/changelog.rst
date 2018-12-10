@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`3135` In development mode if more than 100 * (10^18) tokens are deposited then raiden no longer crashes.
+
 * :release:`0.18.1 <2018-12-07>`
 * :bug:`2779` Fixes a long standing bug that could cause payments to hang indefinitely.
 * :bug:`3103` Fixes a bug in matrix which prevented retries of messages.
