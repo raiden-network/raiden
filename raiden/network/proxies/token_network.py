@@ -1147,7 +1147,9 @@ class TokenNetwork:
                 'Channel is already closed',
             )
         elif participant_details.our_details.deposit < deposit_amount:
-            raise RaidenUnrecoverableError('Deposit amount decreased')
+            raise RaidenUnrecoverableError(
+                'Deposit amount did not increase after deposit transaction',
+            )
 
     def _check_channel_state_for_settle(self, participant1, participant2, channel_identifier):
         channel_data = self.detail_channel(participant1, participant2, channel_identifier)
