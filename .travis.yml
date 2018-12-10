@@ -18,7 +18,7 @@ before_install:
 
 install:
   - pip install -r requirements-dev.txt
-  - python setup.py develop
+  - pip install -e .
 
 script:
   - make lint
