@@ -8,12 +8,14 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import Environment
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
+    DepositOverLimit,
     InsufficientFunds,
     InsufficientGasReserve,
     InvalidAddress,
 )
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
+from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
@@ -407,3 +409,62 @@ def test_payment_timing_out_if_partner_does_not_respond(
         )
         greenlet.join(timeout=5)
         assert not greenlet.value
+
+
+@pytest.mark.parametrize('privatekey_seed', ['test_set_deposit_limit_crash:{}'])
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize('token_amount', [90000000000000000000000])
+@pytest.mark.parametrize('environment_type', [Environment.DEVELOPMENT])
+def test_set_deposit_limit_crash(raiden_network, token_amount, contract_manager, retry_timeout):
+    """The development contracts as of 10/12/2018 were crashing if more than an amount was given
+    Regression test for https://github.com/raiden-network/raiden/issues/3135
+    """
+    app1 = raiden_network[0]
+
+    registry_address = app1.raiden.default_registry.address
+
+    token_address = deploy_contract_web3(
+        contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
+        deploy_client=app1.raiden.chain.client,
+        contract_manager=contract_manager,
+        constructor_arguments=(
+            token_amount,
+            2,
+            'raiden',
+            'Rd',
+        ),
+    )
+
+    api1 = RaidenAPI(app1.raiden)
+    assert token_address not in api1.get_tokens_list(registry_address)
+
+    api1.token_network_register(registry_address, token_address)
+    exception = RuntimeError('Did not see the token registration within 30 seconds')
+    with gevent.Timeout(seconds=30, exception=exception):
+        wait_for_state_change(
+            app1.raiden,
+            ContractReceiveNewTokenNetwork,
+            {
+                'token_network': {
+                    'token_address': token_address,
+                },
+            },
+            retry_timeout,
+        )
+    assert token_address in api1.get_tokens_list(registry_address)
+
+    partner_address = make_address()
+    api1.channel_open(
+        registry_address=app1.raiden.default_registry.address,
+        token_address=token_address,
+        partner_address=partner_address,
+    )
+    with pytest.raises(DepositOverLimit):
+        api1.set_total_channel_deposit(
+            registry_address=app1.raiden.default_registry.address,
+            token_address=token_address,
+            partner_address=partner_address,
+            total_deposit=10000000000000000000000,
+        )
