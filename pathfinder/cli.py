@@ -31,8 +31,9 @@ def main(
     """Console script for pathfinder."""
 
     # setup logging
-    logging.basicConfig(level=logging.INFO)
-    # logging.getLogger('urllib3.connectionpool').setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('web3').setLevel(logging.INFO)
+    logging.getLogger('urllib3.connectionpool').setLevel(logging.INFO)
 
     log.info("Starting Raiden Pathfinding Service")
 
