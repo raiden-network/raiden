@@ -4,12 +4,17 @@ from gevent import monkey
 monkey.patch_all()
 
 if True:
+    import os
     import re
     import sys
+    import tempfile
+    from pathlib import Path
 
     import gevent
-    import py
     import pytest
+
+    from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
+    from _pytest.tmpdir import get_user
 
     from raiden.log_config import configure_logging
     from raiden.tests.fixtures.variables import *  # noqa: F401,F403
@@ -207,33 +212,36 @@ if sys.platform == 'darwin':
     @pytest.fixture(scope='session', autouse=True)
     def _tmpdir_short(request):
         """Shorten tmpdir paths"""
-        from _pytest.tmpdir import TempdirFactory
+        from _pytest.tmpdir import TempPathFactory
 
         def getbasetemp(self):
             """ return base temporary directory. """
-            # pylint: disable=no-member
-            try:
-                return self._basetemp
-            except AttributeError:
-                basetemp = self.config.option.basetemp
-                if basetemp:
-                    basetemp = py.path.local(basetemp)
-                    if basetemp.check():
-                        basetemp.remove()
-                    basetemp.mkdir()
+            if self._basetemp is None:
+                if self._given_basetemp is not None:
+                    basetemp = Path(self._given_basetemp)
+                    ensure_reset_dir(basetemp)
                 else:
-                    rootdir = py.path.local.get_temproot()
-                    rootdir.ensure(dir=1)
-                    basetemp = py.path.local.make_numbered_dir(prefix='pyt', rootdir=rootdir)
-                self._basetemp = t = basetemp.realpath()
-                self.trace('new basetemp', t)
+                    from_env = os.environ.get("PYTEST_DEBUG_TEMPROOT")
+                    temproot = Path(from_env or tempfile.gettempdir())
+                    user = get_user() or "unknown"
+                    # use a sub-directory in the temproot to speed-up
+                    # make_numbered_dir() call
+                    rootdir = temproot.joinpath("pyt-{}".format(user))
+                    rootdir.mkdir(exist_ok=True)
+                    basetemp = make_numbered_dir_with_cleanup(
+                        prefix="",
+                        root=rootdir,
+                        keep=3,
+                        lock_timeout=LOCK_TIMEOUT,
+                    )
+                assert basetemp is not None
+                self._basetemp = t = basetemp
+                self._trace("new basetemp", t)
                 return t
+            else:
+                return self._basetemp
 
-        TempdirFactory.getbasetemp = getbasetemp
-        try:
-            delattr(request.config._tmpdirhandler, '_basetemp')
-        except AttributeError:
-            pass
+        TempPathFactory.getbasetemp = getbasetemp
 
     @pytest.fixture
     def tmpdir(request, tmpdir_factory):
@@ -248,4 +256,5 @@ if sys.platform == 'darwin':
         MAXVAL = 15
         if len(name) > MAXVAL:
             name = name[:MAXVAL]
-        return tmpdir_factory.mktemp(name, numbered=True)
+        tdir = tmpdir_factory.mktemp(name, numbered=True)
+        return tdir

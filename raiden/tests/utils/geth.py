@@ -274,7 +274,8 @@ def geth_node_to_datadir(node_config, base_datadir):
 
 def geth_prepare_datadir(datadir, genesis_file):
     node_genesis_path = os.path.join(datadir, 'custom_genesis.json')
-    assert len(datadir + '/geth.ipc') <= 104, 'geth data path is too large'
+    ipc_path = datadir + '/geth.ipc'
+    assert len(ipc_path) <= 104, f'geth data path "{ipc_path}" is too large'
 
     os.makedirs(datadir)
     shutil.copy(genesis_file, node_genesis_path)
