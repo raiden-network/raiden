@@ -395,13 +395,19 @@ class RaidenAPI:
                 token_network_proxy.proxy.contract.functions.
                 channel_participant_deposit_limit().call()
             )
-            if total_deposit > deposit_limit:
-                raise DepositOverLimit(
-                    'The deposit of {} is bigger than the current limit of {}'.format(
-                        total_deposit,
-                        deposit_limit,
-                    ),
-                )
+        elif self.raiden.config['environment_type'] == Environment.DEVELOPMENT:
+            deposit_limit = (
+                token_network_proxy.proxy.contract.functions.
+                deposit_limit().call()
+            )
+
+        if total_deposit > deposit_limit:
+            raise DepositOverLimit(
+                'The deposit of {} is bigger than the current limit of {}'.format(
+                    total_deposit,
+                    deposit_limit,
+                ),
+            )
 
         addendum = total_deposit - channel_state.our_state.contract_balance
 
