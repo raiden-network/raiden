@@ -16,7 +16,9 @@ before_install:
   - ./.travis/download_solc.sh
   - pip install codecov
 
-install: pip install -r requirements-dev.txt
+install:
+  - pip install -r requirements-dev.txt
+  - python setup.py develop
 
 script:
   - make lint
