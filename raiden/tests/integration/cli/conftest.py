@@ -12,9 +12,10 @@ def append_arg_if_existing(argname, initial_args, new_args):
 @pytest.fixture(scope='session')
 def blockchain_provider():
     result = setup_testchain_and_raiden(
-        'matrix',
-        'auto',
-        lambda x: None,
+        transport='matrix',
+        matrix_server='auto',
+        print_step=lambda x: None,
+        contracts_version=None,  # cli tests should work with production contracts
     )
     args = result['args']
     # The setup of the testchain returns a TextIOWrapper but

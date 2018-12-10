@@ -297,12 +297,10 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
-    config['contracts_path'] = contracts_precompiled_path()
-
+    contracts_version = 'pre_limits' if environment_type == Environment.DEVELOPMENT else None
+    config['contracts_path'] = contracts_precompiled_path(contracts_version)
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
-        contracts_version = 'pre_limits' if environment_type == Environment.DEVELOPMENT else None
         deployment_data = get_contracts_deployed(node_network_id, contracts_version)
-        config['contracts_path'] = contracts_precompiled_path(contracts_version)
         not_allowed = (  # for now we only disallow mainnet with test configuration
             network_id == 1 and
             environment_type == Environment.DEVELOPMENT

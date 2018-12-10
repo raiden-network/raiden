@@ -191,7 +191,7 @@ def get_private_key(keystore):
     return accmgr.get_privkey(addresses[0], DEFAULT_PASSPHRASE)
 
 
-def setup_testchain_and_raiden(transport, matrix_server, print_step):
+def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_version):
     print_step('Starting Ethereum node')
 
     ensure_executable('geth')
@@ -261,8 +261,9 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step):
     print_step('Deploying Raiden contracts')
 
     client = JSONRPCClient(web3, get_private_key(keystore))
-    # for smoketest use the precompiled contracts
-    contract_manager = ContractManager(contracts_precompiled_path())
+    contract_manager = ContractManager(
+        contracts_precompiled_path(contracts_version),
+    )
 
     contract_addresses = deploy_smoketest_contracts(
         client=client,

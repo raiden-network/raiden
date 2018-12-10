@@ -516,6 +516,7 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         ctx.parent.params['transport'],
         ctx.parent.params['matrix_server'],
         print_step,
+        'pre_limits',  # smoke test should work with pre-limits contract version
     )
     args = result['args']
     contract_addresses = result['contract_addresses']
