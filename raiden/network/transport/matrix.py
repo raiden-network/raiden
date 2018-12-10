@@ -1392,7 +1392,7 @@ class MatrixTransport(Runnable):
                 'network.raiden.rooms',
                 {},
             ).get(address_hex)
-            self.log.debug('acct data get', room_ids=room_ids, for_address=address_hex)
+            self.log.debug('matrix get account data', room_ids=room_ids, for_address=address_hex)
             if not room_ids:  # None or empty
                 room_ids = list()
             if not isinstance(room_ids, list):  # old version, single room
