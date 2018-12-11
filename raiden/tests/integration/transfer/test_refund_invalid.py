@@ -48,7 +48,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     )
     sign_and_inject(refund_transfer_message, other_key, other_address, app0)
 
-    secret = Unlock(
+    unlock = Unlock(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=1,
@@ -60,7 +60,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         locksroot=UNIT_SECRETHASH,
         secret=UNIT_SECRET,
     )
-    sign_and_inject(secret, other_key, other_address, app0)
+    sign_and_inject(unlock, other_key, other_address, app0)
 
     secret_request_message = SecretRequest(
         message_identifier=random.randint(0, UINT64_MAX),

@@ -505,7 +505,7 @@ def test_channelstate_receive_lockedtransfer():
     transferred_amount = 0
     message_identifier = random.randint(0, UINT64_MAX)
     token_network_identifier = channel_state.token_network_identifier
-    secret_message = Unlock(
+    unlock_message = Unlock(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=1,
@@ -517,9 +517,9 @@ def test_channelstate_receive_lockedtransfer():
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
     )
-    secret_message.sign(privkey2)
+    unlock_message.sign(privkey2)
     # Let's also create an invalid secret to test unlock with invalid chain id
-    invalid_secret_message = Unlock(
+    invalid_unlock_message = Unlock(
         chain_id=UNIT_CHAIN_ID + 1,
         message_identifier=message_identifier,
         payment_identifier=1,
@@ -531,9 +531,9 @@ def test_channelstate_receive_lockedtransfer():
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
     )
-    invalid_secret_message.sign(privkey2)
+    invalid_unlock_message.sign(privkey2)
 
-    balance_proof = balanceproof_from_envelope(secret_message)
+    balance_proof = balanceproof_from_envelope(unlock_message)
     unlock_state_change = ReceiveUnlock(
         message_identifier=random.randint(0, UINT64_MAX),
         secret=lock_secret,
@@ -541,7 +541,7 @@ def test_channelstate_receive_lockedtransfer():
     )
 
     # First test that unlock with invalid chain_id fails
-    invalid_balance_proof = balanceproof_from_envelope(invalid_secret_message)
+    invalid_balance_proof = balanceproof_from_envelope(invalid_unlock_message)
     invalid_unlock_state_change = ReceiveUnlock(
         message_identifier=random.randint(0, UINT64_MAX),
         secret=lock_secret,
@@ -918,7 +918,7 @@ def test_interwoven_transfers():
             )
 
             message_identifier = random.randint(0, UINT64_MAX)
-            secret_message = Unlock(
+            unlock_message = Unlock(
                 chain_id=UNIT_CHAIN_ID,
                 message_identifier=message_identifier,
                 payment_identifier=nonce,
@@ -930,9 +930,9 @@ def test_interwoven_transfers():
                 locksroot=locksroot,
                 secret=lock_secret,
             )
-            secret_message.sign(privkey2)
+            unlock_message.sign(privkey2)
 
-            balance_proof = balanceproof_from_envelope(secret_message)
+            balance_proof = balanceproof_from_envelope(unlock_message)
             unlock_state_change = ReceiveUnlock(
                 message_identifier=random.randint(0, UINT64_MAX),
                 secret=lock_secret,
