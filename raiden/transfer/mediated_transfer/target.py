@@ -130,6 +130,7 @@ def handle_offchain_secretreveal(
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
+        block_number: typing.BlockNumber,
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = is_valid_secret_reveal(
@@ -137,8 +138,13 @@ def handle_offchain_secretreveal(
         transfer_secrethash=target_state.transfer.lock.secrethash,
         secret=state_change.secret,
     )
+    has_transfer_expired = channel.transfer_expired(
+        transfer=target_state.transfer,
+        affected_channel=channel_state,
+        block_number=block_number,
+    )
 
-    if valid_secret:
+    if valid_secret and not has_transfer_expired:
         channel.register_offchain_secret(
             channel_state=channel_state,
             secret=state_change.secret,
@@ -331,10 +337,11 @@ def state_transition(
         )
     elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_offchain_secretreveal(
-            target_state,
-            state_change,
-            channel_state,
-            pseudo_random_generator,
+            target_state=target_state,
+            state_change=state_change,
+            channel_state=channel_state,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
     elif type(state_change) == ContractReceiveSecretReveal:
         iteration = handle_onchain_secretreveal(

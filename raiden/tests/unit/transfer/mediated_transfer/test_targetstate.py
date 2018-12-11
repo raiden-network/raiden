@@ -226,10 +226,11 @@ def test_handle_offchain_secretreveal():
     )
     state_change = ReceiveSecretReveal(secret, initiator)
     iteration = target.handle_offchain_secretreveal(
-        state,
-        state_change,
-        channel_state,
-        pseudo_random_generator,
+        target_state=state,
+        state_change=state_change,
+        channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
     assert len(iteration.events) == 1
 
@@ -244,10 +245,11 @@ def test_handle_offchain_secretreveal():
     secret = EMPTY_HASH
     state_change = ReceiveSecretReveal(secret, initiator)
     iteration = target.handle_offchain_secretreveal(
-        state,
-        state_change,
-        channel_state,
-        pseudo_random_generator,
+        target_state=state,
+        state_change=state_change,
+        channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
     assert len(iteration.events) == 0
 
@@ -548,7 +550,7 @@ def test_state_transition():
         secret_reveal,
         from_channel,
         pseudo_random_generator,
-        first_new_block,
+        first_new_block.block_number,
     )
     assert reveal_iteration.events
 
@@ -714,8 +716,6 @@ def test_target_receive_lock_expired():
         pseudo_random_generator,
         block_before_confirmed_expiration,
     )
-    import pdb
-    pdb.set_trace()
     assert not must_contain_entry(iteration.events, SendProcessed, {})
 
     block_lock_expired = block_before_confirmed_expiration + 1
