@@ -589,12 +589,24 @@ def _create_or_echo(properties, defaults=None):
     return created if created is not None else properties
 
 
-def _args_from_properties(properties: NamedTuple, defaults: NamedTuple) -> typing.Dict:
+def _properties_to_dict(properties: NamedTuple, defaults: NamedTuple) -> typing.Dict:
     defaults_dict = defaults._asdict()
     return {
-        key: _create_or_echo(if_empty(value, defaults_dict[key]))
+        key: if_empty(value, defaults_dict[key])
         for key, value in properties._asdict().items()
     }
+
+
+def _dict_to_kwargs(properties_dict: typing.Dict) -> typing.Dict:
+    return {key: _create_or_echo(value) for key, value in properties_dict.items()}
+
+
+def _properties_to_kwargs(properties: NamedTuple, defaults: NamedTuple) -> typing.Dict:
+    return _dict_to_kwargs(_properties_to_dict(properties, defaults))
+
+
+def _partial_dict(full_dict: typing.Dict, *args) -> typing.Dict:
+    return {key: full_dict[key] for key in args}
 
 
 class TransactionExecutionStatusProperties(NamedTuple):
@@ -613,7 +625,7 @@ TRANSACTION_EXECUTION_STATUS_DEFAULTS = TransactionExecutionStatusProperties(
 @create.register(TransactionExecutionStatusProperties)  # noqa: F811
 def _(properties, defaults=None) -> TransactionExecutionStatus:
     return TransactionExecutionStatus(
-        **_args_from_properties(properties, defaults or TRANSACTION_EXECUTION_STATUS_DEFAULTS),
+        **_properties_to_kwargs(properties, defaults or TRANSACTION_EXECUTION_STATUS_DEFAULTS),
     )
 
 
@@ -636,7 +648,7 @@ NETTING_CHANNEL_END_STATE_DEFAULTS = NettingChannelEndStateProperties(
 
 @create.register(NettingChannelEndStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> NettingChannelEndState:
-    args = _args_from_properties(properties, defaults or NETTING_CHANNEL_END_STATE_DEFAULTS)
+    args = _properties_to_kwargs(properties, defaults or NETTING_CHANNEL_END_STATE_DEFAULTS)
     state = NettingChannelEndState(args['address'] or make_address(), args['balance'])
 
     merkletree_leaves = (
@@ -687,14 +699,179 @@ NETTING_CHANNEL_STATE_DEFAULTS = NettingChannelStateProperties(
 @create.register(NettingChannelStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> NettingChannelState:
     return NettingChannelState(
-        **_args_from_properties(properties, defaults or NETTING_CHANNEL_STATE_DEFAULTS),
+        **_properties_to_kwargs(properties, defaults or NETTING_CHANNEL_STATE_DEFAULTS),
     )
+
+
+class BalanceProofProperties(NamedTuple):
+    nonce: typing.Nonce = EMPTY
+    transferred_amount: typing.TokenAmount = EMPTY
+    locked_amount: typing.TokenAmount = EMPTY
+    locksroot: typing.Locksroot = EMPTY
+    token_network_identifier: typing.TokenNetworkID = EMPTY
+    channel_identifier: typing.ChannelID = EMPTY
+    chain_id: typing.ChainID = EMPTY
+
+
+BALANCE_PROOF_DEFAULTS = BalanceProofProperties(
+    nonce=1,
+    transferred_amount=UNIT_TRANSFER_AMOUNT,
+    locked_amount=0,
+    locksroot=make_32bytes(),  # TODO: EMPTY?
+    token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel_identifier=UNIT_CHANNEL_ID,
+    chain_id=UNIT_CHAIN_ID,
+)
+
+
+@create.register(BalanceProofProperties)  # noqa: F811
+def _(properties, defaults=None) -> BalanceProofUnsignedState:
+    return BalanceProofUnsignedState(
+        **_properties_to_kwargs(properties, defaults or BALANCE_PROOF_DEFAULTS),
+    )
+
+
+class BalanceProofSignedStateProperties(NamedTuple):
+    balance_proof: BalanceProofProperties = EMPTY
+    message_hash: typing.AdditionalHash = EMPTY
+    signature: typing.Signature = EMPTY
+    sender: typing.Address = EMPTY
+    pkey: PrivateKey = EMPTY
+
+
+BALANCE_PROOF_SIGNED_STATE_DEFAULTS = BalanceProofSignedStateProperties(
+    balance_proof=BALANCE_PROOF_DEFAULTS,
+    sender=UNIT_TRANSFER_SENDER,
+    pkey=UNIT_TRANSFER_PKEY,
+)
+
+
+@create.register(BalanceProofSignedStateProperties)  # noqa: F811
+def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalanceProofSignedState:
+    defaults = defaults or BALANCE_PROOF_SIGNED_STATE_DEFAULTS
+    params = _properties_to_dict(properties, defaults)
+    params.update(
+        _properties_to_dict(params.pop('balance_proof'), defaults.balance_proof),
+    )
+
+    if params['signature'] is EMPTY:
+        keys = ('transferred_amount', 'locked_amount', 'locksroot')
+        balance_hash = hash_balance_data(**_partial_dict(params, *keys))
+
+        keys = ('nonce', 'channel_identifier', 'token_network_identifier')
+        data_to_sign = balance_proof.pack_balance_proof(
+            balance_hash=balance_hash,
+            additional_hash=params['message_hash'],
+            chain_id=UNIT_CHAIN_ID,
+            **_partial_dict(params, *keys),
+        )
+
+        params['signature'] = eth_sign(privkey=params.pop('pkey'), data=data_to_sign)
+
+    return BalanceProofSignedState(**params)
+
+
+class LockedTransferProperties(NamedTuple):
+    balance_proof: BalanceProofProperties = EMPTY
+    amount: typing.TokenAmount = EMPTY
+    expiration: typing.BlockExpiration = EMPTY
+    initiator: typing.InitiatorAddress = EMPTY
+    target: typing.TargetAddress = EMPTY
+    payment_identifier: typing.PaymentID = EMPTY
+    token: typing.TokenAddress = EMPTY
+    secret: typing.Secret = EMPTY
+
+
+LOCKED_TRANSFER_DEFAULTS = LockedTransferProperties(
+    balance_proof=BALANCE_PROOF_DEFAULTS,
+    amount=UNIT_TRANSFER_AMOUNT,
+    expiration=UNIT_REVEAL_TIMEOUT,
+    initiator=UNIT_TRANSFER_INITIATOR,
+    target=UNIT_TRANSFER_TARGET,
+    payment_identifier=1,
+    token=UNIT_TOKEN_ADDRESS,
+    secret=UNIT_SECRET,
+)
+
+
+@create.register(LockedTransferProperties)  # noqa: F811
+def _(properties, defaults=None) -> LockedTransferUnsignedState:
+    defaults = defaults or LOCKED_TRANSFER_DEFAULTS
+    parameters = _properties_to_dict(properties, defaults)
+
+    lock = HashTimeLockState(
+        amount=parameters.pop('amount'),
+        expiration=parameters.pop('expiration'),
+        secrethash=sha3(parameters.pop('secret')),
+    )
+
+    balance_proof_parameters = _properties_to_dict(
+        parameters.pop('balance_proof'),
+        defaults.balance_proof,
+    )
+    balance_proof_parameters['locksroot'] = lock.lockhash
+    balance_proof = BalanceProofUnsignedState(**balance_proof_parameters)
+
+    return LockedTransferUnsignedState(balance_proof=balance_proof, lock=lock, **parameters)
+
+
+class LockedTransferSignedStateProperties(NamedTuple):
+    transfer: LockedTransferProperties = EMPTY
+    sender: typing.Address = EMPTY
+    recipient: typing.Address = EMPTY
+    pkey: PrivateKey = EMPTY
+    message_identifier: typing.MessageID = EMPTY
+
+
+LOCKED_TRANSFER_SIGNED_STATE_DEFAULTS = LockedTransferSignedStateProperties(
+    transfer=LOCKED_TRANSFER_DEFAULTS,
+    sender=UNIT_TRANSFER_SENDER,
+    recipient=UNIT_TRANSFER_TARGET,
+    pkey=UNIT_TRANSFER_PKEY,
+    message_identifier=1,
+)
+
+
+@create.register(LockedTransferSignedStateProperties)  # noqa: F811
+def _(properties, defaults=None) -> LockedTransferSignedState:
+    defaults = defaults or LOCKED_TRANSFER_SIGNED_STATE_DEFAULTS
+    params = _properties_to_dict(properties, defaults)
+
+    transfer_params = _properties_to_dict(params.pop('transfer'), defaults.transfer)
+    balance_proof_params = _properties_to_dict(
+        transfer_params.pop('balance_proof'),
+        defaults.transfer.balance_proof,
+    )
+
+    lock = Lock(
+        amount=transfer_params.pop('amount'),
+        expiration=transfer_params.pop('expiration'),
+        secrethash=sha3(transfer_params.pop('secret')),
+    )
+
+    pkey = params.pop('pkey')
+    sender = params.pop('sender')
+    params.update(transfer_params)
+    params.update(balance_proof_params)
+    params['token_network_address'] = params.pop('token_network_identifier')
+    params['locksroot'] = lock.lockhash  # TODO set decent default
+
+    locked_transfer = LockedTransfer(lock=lock, **params)
+    locked_transfer.sign(pkey)
+
+    assert locked_transfer.sender == sender
+
+    return lockedtransfersigned_from_message(locked_transfer)
 
 
 DEFAULTS_BY_TYPE = {
     TransactionExecutionStatusProperties: TRANSACTION_EXECUTION_STATUS_DEFAULTS,
     NettingChannelEndStateProperties: NETTING_CHANNEL_END_STATE_DEFAULTS,
     NettingChannelStateProperties: NETTING_CHANNEL_STATE_DEFAULTS,
+    BalanceProofProperties: BALANCE_PROOF_DEFAULTS,
+    BalanceProofSignedStateProperties: BALANCE_PROOF_SIGNED_STATE_DEFAULTS,
+    LockedTransferProperties: LOCKED_TRANSFER_DEFAULTS,
+    LockedTransferSignedStateProperties: LOCKED_TRANSFER_SIGNED_STATE_DEFAULTS,
 }
 
 
