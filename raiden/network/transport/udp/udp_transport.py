@@ -200,7 +200,7 @@ class UDPTransport(Runnable):
             self,
             raiden_service: RaidenService,
             message_handler: MessageHandler,
-            fetch_since_token: str,
+            prev_auth_data: str,
     ):
         if not self.event_stop.ready():
             raise RuntimeError('UDPTransport started while running')

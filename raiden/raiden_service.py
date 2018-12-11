@@ -380,7 +380,7 @@ class RaidenService(Runnable):
         self.transport.start(
             raiden_service=self,
             message_handler=self.message_handler,
-            fetch_since_token=chain_state.last_transport_synctoken,
+            prev_auth_data=chain_state.last_transport_authdata,
         )
 
         # First run has been called above!
