@@ -19,9 +19,8 @@ def test_pfs_with_mocked_events(
     pathfinding_service_mocked_listeners: PathfindingService,
     channel_descriptions_case_1: List
 ):
-    network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
-    assert registry_listener
+    # assert registry_listener
 
     token_network_address = token_network_model.address
 
@@ -30,15 +29,20 @@ def test_pfs_with_mocked_events(
 
     # emit a TokenNetworkCreated event
     registry_listener.emit_event(dict(
-        name='TokenNetworkCreated',
+        event='TokenNetworkCreated',
+        blockNumber=12,
         args=dict(
-            token_network_address=token_network_address
+            token_network_address=token_network_address,
+            token_address=token_network_model.token_address
         )
     ))
 
     # now there should be a token network registered
     assert token_network_address in pathfinding_service_mocked_listeners.token_networks
     token_network = pathfinding_service_mocked_listeners.token_networks[token_network_address]
+
+    assert len(pathfinding_service_mocked_listeners.token_network_listeners) == 1
+    network_listener = pathfinding_service_mocked_listeners.token_network_listeners[0]
 
     # Now initialize some channels in this network.
     for index, (
@@ -53,7 +57,7 @@ def test_pfs_with_mocked_events(
     ) in enumerate(channel_descriptions_case_1):
         network_listener.emit_event(dict(
             address=token_network_address,
-            name='ChannelOpened',
+            event='ChannelOpened',
             args=dict(
                 channel_identifier=index,
                 participant1=addresses[p1_index],
@@ -63,7 +67,7 @@ def test_pfs_with_mocked_events(
 
         network_listener.emit_event(dict(
             address=token_network_address,
-            name='ChannelNewDeposit',
+            event='ChannelNewDeposit',
             args=dict(
                 channel_identifier=index,
                 participant=addresses[p1_index],
@@ -73,7 +77,7 @@ def test_pfs_with_mocked_events(
 
         network_listener.emit_event(dict(
             address=token_network_address,
-            name='ChannelNewDeposit',
+            event='ChannelNewDeposit',
             args=dict(
                 channel_identifier=index,
                 participant=addresses[p2_index],
@@ -125,7 +129,7 @@ def test_pfs_with_mocked_events(
     ) in enumerate(channel_descriptions_case_1):
         network_listener.emit_event(dict(
             address=token_network_address,
-            name='ChannelClosed',
+            event='ChannelClosed',
             args=dict(
                 channel_identifier=index,
                 closing_participant=addresses[p1_index]
@@ -141,20 +145,21 @@ def test_pfs_idempotency_of_channel_openings(
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService
 ):
-    network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
-    assert registry_listener
+    # assert registry_listener
 
     token_network_address = token_network_model.address
 
-    # this is a new Pathfinding Service, there should be no token networks registered
+    # this is a new pathfinding service, there should be no token networks registered
     assert len(pathfinding_service_mocked_listeners.token_networks.keys()) == 0
 
     # emit a TokenNetworkCreated event
     registry_listener.emit_event(dict(
-        name='TokenNetworkCreated',
+        event='TokenNetworkCreated',
+        blockNumber=12,
         args=dict(
-            token_network_address=token_network_address
+            token_network_address=token_network_address,
+            token_address=token_network_model.token_address
         )
     ))
 
@@ -162,11 +167,14 @@ def test_pfs_idempotency_of_channel_openings(
     assert token_network_address in pathfinding_service_mocked_listeners.token_networks
     token_network = pathfinding_service_mocked_listeners.token_networks[token_network_address]
 
+    assert len(pathfinding_service_mocked_listeners.token_network_listeners) == 1
+    network_listener = pathfinding_service_mocked_listeners.token_network_listeners[0]
+
     # create same channel 5 times
     for _ in range(5):
         network_listener.emit_event(dict(
             address=token_network_address,
-            name='ChannelOpened',
+            event='ChannelOpened',
             args=dict(
                 channel_identifier=decode_hex('0x%064x' % 1),
                 participant1=addresses[0],
@@ -180,7 +188,7 @@ def test_pfs_idempotency_of_channel_openings(
     # now close the channel
     network_listener.emit_event(dict(
         address=token_network_address,
-        name='ChannelClosed',
+        event='ChannelClosed',
         args=dict(
             channel_identifier=decode_hex('0x%064x' % 1),
             closing_participant=addresses[0]
@@ -196,20 +204,21 @@ def test_pfs_multiple_channels_for_two_participants_opened(
     addresses: List[Address],
     pathfinding_service_mocked_listeners: PathfindingService
 ):
-    network_listener = pathfinding_service_mocked_listeners.token_network_listener
     registry_listener = pathfinding_service_mocked_listeners.token_network_registry_listener
-    assert registry_listener
+    # assert registry_listener
 
     token_network_address = token_network_model.address
 
-    # this is a new Pathfinding Service, there should be no token networks registered
+    # this is a new pathfinding service, there should be no token networks registered
     assert len(pathfinding_service_mocked_listeners.token_networks.keys()) == 0
 
     # emit a TokenNetworkCreated event
     registry_listener.emit_event(dict(
-        name='TokenNetworkCreated',
+        event='TokenNetworkCreated',
+        blockNumber=12,
         args=dict(
-            token_network_address=token_network_address
+            token_network_address=token_network_address,
+            token_address=token_network_model.token_address
         )
     ))
 
@@ -217,10 +226,13 @@ def test_pfs_multiple_channels_for_two_participants_opened(
     assert token_network_address in pathfinding_service_mocked_listeners.token_networks
     token_network = pathfinding_service_mocked_listeners.token_networks[token_network_address]
 
+    assert len(pathfinding_service_mocked_listeners.token_network_listeners) == 1
+    network_listener = pathfinding_service_mocked_listeners.token_network_listeners[0]
+
     # create a channel
     network_listener.emit_event(dict(
         address=token_network_address,
-        name='ChannelOpened',
+        event='ChannelOpened',
         args=dict(
             channel_identifier=decode_hex('0x%064x' % 1),
             participant1=addresses[0],
@@ -231,7 +243,7 @@ def test_pfs_multiple_channels_for_two_participants_opened(
     # create a channel
     network_listener.emit_event(dict(
         address=token_network_address,
-        name='ChannelOpened',
+        event='ChannelOpened',
         args=dict(
             channel_identifier=decode_hex('0x%064x' % 2),
             participant1=addresses[1],
@@ -245,7 +257,7 @@ def test_pfs_multiple_channels_for_two_participants_opened(
     # now close one channel
     network_listener.emit_event(dict(
         address=token_network_address,
-        name='ChannelClosed',
+        event='ChannelClosed',
         args=dict(
             channel_identifier=decode_hex('0x%064x' % 1),
             closing_participant=addresses[0]

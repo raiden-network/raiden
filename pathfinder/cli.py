@@ -6,8 +6,13 @@ import logging
 import sys
 
 import click
-from raiden_libs.blockchain import BlockchainListener
-from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
+from eth_utils import is_checksum_address
+from raiden_contracts.contract_manager import (
+    ContractManager,
+    contracts_precompiled_path,
+    get_contracts_deployed,
+)
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
 from web3 import HTTPProvider, Web3
 from raiden_libs.no_ssl_patch import no_ssl_verification
 from requests.exceptions import ConnectionError
@@ -17,6 +22,8 @@ from pathfinder.pathfinding_service import PathfindingService
 log = logging.getLogger(__name__)
 contract_manager = ContractManager(contracts_precompiled_path())
 
+DEFAULT_REQUIRED_CONFIRMATIONS = 8  # ~2min with 15s blocks
+
 
 @click.command()
 @click.option(
@@ -25,17 +32,45 @@ contract_manager = ContractManager(contracts_precompiled_path())
     type=str,
     help='Ethereum node RPC URI'
 )
+@click.option(
+    '--registry-address',
+    type=str,
+    help='Address of the token network registry'
+)
+@click.option(
+    '--start-block',
+    default=0,
+    type=int,
+    help='Block to start syncing at'
+)
+@click.option(
+    '--confirmations',
+    default=DEFAULT_REQUIRED_CONFIRMATIONS,
+    type=int,
+    help='Number of block confirmations to wait for'
+)
 def main(
     eth_rpc,
+    registry_address,
+    start_block,
+    confirmations,
 ):
     """Console script for pathfinder."""
 
     # setup logging
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%m-%d %H:%M:%S',
+    )
+
     logging.getLogger('web3').setLevel(logging.INFO)
-    logging.getLogger('urllib3.connectionpool').setLevel(logging.INFO)
+    logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 
     log.info("Starting Raiden Pathfinding Service")
+
+    contracts_version = 'pre_limits'
+    log.info(f'Using contracts version: {contracts_version}')
 
     try:
         log.info(f'Starting Web3 client for node at {eth_rpc}')
@@ -48,28 +83,29 @@ def main(
         sys.exit()
 
     with no_ssl_verification():
+        valid_params_given = is_checksum_address(registry_address) and start_block >= 0
+        if not valid_params_given:
+            try:
+                contract_data = get_contracts_deployed(int(web3.net.version), contracts_version)
+                token_network_registry_info = contract_data['contracts'][CONTRACT_TOKEN_NETWORK_REGISTRY]  # noqa
+                registry_address = token_network_registry_info['address']
+                start_block = max(0, token_network_registry_info['block_number'] - 100)
+            except ValueError:
+                log.error(
+                    'Provided registry address or start block are not valid and '
+                    'no deployed contracts were found'
+                )
+                sys.exit(1)
+
         service = None
         try:
-            log.info('Starting TokenNetwork Listener...')
-            token_network_listener = BlockchainListener(
-                web3=web3,
-                contract_manager=contract_manager,
-                contract_name='TokenNetwork',
-            )
-
-            log.info('Starting TokenNetworkRegistry Listener...')
-            token_network_registry_listener = BlockchainListener(
-                web3=web3,
-                contract_manager=contract_manager,
-                contract_name='TokenNetworkRegistry',
-            )
-
             log.info('Starting Pathfinding Service...')
             service = PathfindingService(
+                web3=web3,
                 contract_manager=contract_manager,
-                token_network_listener=token_network_listener,
-                token_network_registry_listener=token_network_registry_listener,
-                chain_id=int(web3.net.version),
+                registry_address=registry_address,
+                sync_start_block=start_block,
+                required_confirmations=confirmations,
             )
 
             service.run()
@@ -84,4 +120,4 @@ def main(
 
 
 if __name__ == "__main__":
-    sys.exit(main())  # pragma: no cover
+    main(auto_envvar_prefix='PFS')  # pragma: no cover

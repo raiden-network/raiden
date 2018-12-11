@@ -7,35 +7,36 @@ Therefore, usually mocked_integration should be used.
 from typing import List
 
 import gevent
+import pytest
+
 from raiden_contracts.contract_manager import ContractManager
-from raiden_libs.blockchain import BlockchainListener
 
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.model import ChannelView
 
 
+@pytest.mark.skip(reason="Needs more work")
 def test_pfs_with_mocked_client(
     web3,
     ethereum_tester,
     contracts_manager: ContractManager,
-    blockchain_listener: BlockchainListener,
-    blockchain_registry_listener: BlockchainListener,
+    token_network_registry_contract,
     channel_descriptions_case_1: List,
     generate_raiden_clients,
-    get_random_address
+    get_random_address,
 ):
     """Instantiates a DummyNetwork some Mockclients and the pathfinding service exchange messages
     over. Mocks blockchain events to setup a token network with a given topology, specified in
     the channel_description fixture. Tests all PFS methods w.r.t. to that topology"""
 
+    print(token_network_registry_contract.address)
     clients = generate_raiden_clients(7)
     token_network_address = clients[0].contract.address
 
     pfs = PathfindingService(
+        web3=web3,
         contract_manager=contracts_manager,
-        chain_id=int(web3.net.version),
-        token_network_listener=blockchain_listener,
-        token_network_registry_listener=blockchain_registry_listener,
+        registry_address=token_network_registry_contract.address,
     )
 
     # Need a context switch for the network to be picked up

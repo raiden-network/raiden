@@ -21,10 +21,11 @@ log = logging.getLogger(__name__)
 class TokenNetwork:
     """ Manages a token network for pathfinding. """
 
-    def __init__(self, token_network_address: Address) -> None:
+    def __init__(self, token_network_address: Address, token_address: Address) -> None:
         """ Initializes a new TokenNetwork. """
 
         self.address = token_network_address
+        self.token_address = token_address
         self.channel_id_to_addresses: Dict[ChannelIdentifier, Tuple[Address, Address]] = dict()
         self.G = DiGraph()
         self.max_relative_fee = 0

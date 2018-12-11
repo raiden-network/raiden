@@ -1,15 +1,14 @@
 import random
-from typing import List, Callable
+from typing import List, Callable, Generator
 
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import pytest
 from web3 import Web3
 from raiden_contracts.contract_manager import ContractManager
-from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.utils import private_key_to_address
-from raiden_libs.test.mocks.blockchain import BlockchainListenerMock
 from raiden_libs.types import Address, ChannelIdentifier
 
+from pathfinder.tests.mocks.blockchain_listener import BlockchainListenerMock
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
 from pathfinder.model.token_network import TokenNetwork
@@ -85,34 +84,6 @@ def channel_descriptions_case_2() -> List:
         (5, 500, 900, 1000, 4, 750, 950, 1000),  # capacities 550 -- 700
     ]
     return channel_descriptions
-
-
-@pytest.fixture
-def blockchain_listener(web3, contracts_manager):
-    blockchain_listener = BlockchainListener(
-        web3,
-        contracts_manager,
-        'TokenNetwork',
-        poll_interval=0,
-    )
-    blockchain_listener.required_confirmations = 1
-    blockchain_listener.start()
-    yield blockchain_listener
-    blockchain_listener.stop()
-
-
-@pytest.fixture
-def blockchain_registry_listener(web3, contracts_manager):
-    blockchain_registry_listener = BlockchainListener(
-        web3,
-        contracts_manager,
-        'TokenNetworkRegistry',
-        poll_interval=0,
-    )
-    blockchain_registry_listener.required_confirmations = 1
-    blockchain_registry_listener.start()
-    yield blockchain_registry_listener
-    blockchain_registry_listener.stop()
 
 
 @pytest.fixture
@@ -229,30 +200,35 @@ def populate_token_network_case_2(
 def pathfinding_service_full_mock(
     contracts_manager: ContractManager,
     token_network_model: TokenNetwork,
-) -> PathfindingService:
-    pathfinding_service = PathfindingService(
-        contracts_manager,
-        token_network_listener=Mock(),  # type: ignore
-        token_network_registry_listener=Mock(),  # type: ignore
-        chain_id=1,
-    )
-    pathfinding_service.token_networks = {
-        token_network_model.address: token_network_model
-    }
+    monkeypatch
+) -> Generator[PathfindingService, None, None]:
+    with patch('pathfinder.pathfinding_service.BlockchainListener', new=Mock):
+        web3_mock = Mock()
+        web3_mock.net.version = '1'
 
-    return pathfinding_service
+        pathfinding_service = PathfindingService(
+            web3=web3_mock,
+            contract_manager=contracts_manager,
+            registry_address='',
+        )
+        pathfinding_service.token_networks = {
+            token_network_model.address: token_network_model
+        }
+
+        yield pathfinding_service
 
 
 @pytest.fixture
 def pathfinding_service_mocked_listeners(
-    contracts_manager: ContractManager
-) -> PathfindingService:
+    contracts_manager: ContractManager,
+    web3: Web3,
+) -> Generator[PathfindingService, None, None]:
     """ Returns a PathfindingService with mocked blockchain listeners. """
-    pathfinding_service = PathfindingService(
-        contracts_manager,
-        token_network_listener=BlockchainListenerMock(),  # type: ignore
-        token_network_registry_listener=BlockchainListenerMock(),  # type: ignore
-        chain_id=1,
-    )
+    with patch('pathfinder.pathfinding_service.BlockchainListener', new=BlockchainListenerMock):
+        pathfinding_service = PathfindingService(
+            web3=web3,
+            contract_manager=contracts_manager,
+            registry_address='',
+        )
 
-    return pathfinding_service
+        yield pathfinding_service

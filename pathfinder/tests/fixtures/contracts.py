@@ -26,4 +26,4 @@ def token_network_model(
         token_name='PFSTestToken',
         token_symbol='PFS'
     )
-    return TokenNetwork(token.address)
+    return TokenNetwork(token.address, token.address)

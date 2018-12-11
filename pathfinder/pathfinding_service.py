@@ -1,18 +1,28 @@
 import logging
 import sys
 import traceback
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import gevent
 from eth_utils import is_checksum_address
-from raiden_libs.blockchain import BlockchainListener
 from raiden_libs.gevent_error_handler import register_error_handler
 from raiden_libs.types import Address
 from raiden_contracts.contract_manager import ContractManager
-from raiden_contracts.constants import ChannelEvent
 from matrix_client.errors import MatrixRequestError
 
 from pathfinder.model import TokenNetwork
+from raiden_contracts.constants import (
+    ChannelEvent,
+    CONTRACT_TOKEN_NETWORK,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+)
+from web3 import Web3
+
+from pathfinder.utils.blockchain_listener import (
+    BlockchainListener,
+    create_registry_event_topics,
+    create_channel_event_topics,
+)
 
 log = logging.getLogger(__name__)
 
@@ -41,10 +51,11 @@ def error_handler(context, exc_info):
 class PathfindingService(gevent.Greenlet):
     def __init__(
         self,
+        web3: Web3,
         contract_manager: ContractManager,
-        token_network_listener: BlockchainListener,
-        token_network_registry_listener: BlockchainListener,
-        chain_id: int,
+        registry_address: Address,
+        sync_start_block: int = 0,
+        required_confirmations: int = 8,
     ) -> None:
         """ Creates a new pathfinding service
 
@@ -55,40 +66,46 @@ class PathfindingService(gevent.Greenlet):
             chain_id: The id of the chain the PFS runs on
         """
         super().__init__()
+        self.web3 = web3
         self.contract_manager = contract_manager
-        self.token_network_listener = token_network_listener
-        self.token_network_registry_listener = token_network_registry_listener
-        self.chain_id = chain_id
+        self.registry_address = registry_address
+        self.sync_start_block = sync_start_block
+        self.required_confirmations = required_confirmations
+        self.chain_id = int(web3.net.version)
 
         self.is_running = gevent.event.Event()
         self.token_networks: Dict[Address, TokenNetwork] = {}
+        self.token_network_listeners: List[BlockchainListener] = []
 
-        assert self.token_network_listener is not None
-        assert self.token_network_registry_listener is not None
+        self.is_running = gevent.event.Event()
 
+        log.info('Starting TokenNetworkRegistry Listener (required confirmations: {})...'.format(
+            self.required_confirmations,
+        ))
+        self.token_network_registry_listener = BlockchainListener(
+            web3=web3,
+            contract_manager=self.contract_manager,
+            contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
+            contract_address=self.registry_address,
+            sync_start_block=self.sync_start_block,
+            required_confirmations=self.required_confirmations,
+        )
+        log.info(
+            f'Listening to token network registry @ {registry_address} '
+            f'from block {sync_start_block}'
+        )
+        self._setup_token_networks()
+
+    def _setup_token_networks(self):
         self.token_network_registry_listener.add_confirmed_listener(
-            'TokenNetworkCreated',
+            create_registry_event_topics(self.contract_manager),
             self.handle_token_network_created
-        )
-
-        # subscribe to event notifications from blockchain listener
-        self.token_network_listener.add_confirmed_listener(
-            ChannelEvent.OPENED,
-            self.handle_channel_opened
-        )
-        self.token_network_listener.add_confirmed_listener(
-            ChannelEvent.DEPOSIT,
-            self.handle_channel_new_deposit
-        )
-        self.token_network_listener.add_confirmed_listener(
-            ChannelEvent.CLOSED,
-            self.handle_channel_closed
         )
 
     def _run(self):
         register_error_handler(error_handler)
-        self.token_network_listener.start()
-        if self.token_network_registry_listener:
+
+        if self.token_network_registry_listener is not None:
             self.token_network_registry_listener.start()
 
         self.is_running.wait()
@@ -115,6 +132,18 @@ class PathfindingService(gevent.Greenlet):
     def _check_chain_id(self, received_chain_id: int):
         if not received_chain_id == self.chain_id:
             raise ValueError('Chain id does not match')
+
+    def handle_channel_event(self, event: Dict):
+        event_name = event['event']
+
+        if event_name == ChannelEvent.OPENED:
+            self.handle_channel_opened(event)
+        elif event_name == ChannelEvent.DEPOSIT:
+            self.handle_channel_new_deposit(event)
+        elif event_name == ChannelEvent.CLOSED:
+            self.handle_channel_closed(event)
+        else:
+            log.info('Unhandled event: %s', event_name)
 
     def handle_channel_opened(self, event: Dict):
         token_network = self._get_token_network(event['address'])
@@ -172,10 +201,43 @@ class PathfindingService(gevent.Greenlet):
 
     def handle_token_network_created(self, event):
         token_network_address = event['args']['token_network_address']
+        token_address = event['args']['token_address']
+        event_block_number = event['blockNumber']
+
         assert is_checksum_address(token_network_address)
+        assert is_checksum_address(token_address)
 
         if not self.follows_token_network(token_network_address):
-            log.info(f'Following new token network at {token_network_address}')
+            log.info(f'Found token network for token {token_address} @ {token_network_address}')
+            self.create_token_network_for_address(
+                token_network_address,
+                token_address,
+                event_block_number,
+            )
 
-            token_network = TokenNetwork(token_network_address)
-            self.token_networks[token_network_address] = token_network
+    def create_token_network_for_address(
+        self,
+        token_network_address: Address,
+        token_address: Address,
+        block_number: int = 0,
+    ):
+        token_network = TokenNetwork(token_network_address, token_address)
+        self.token_networks[token_network_address] = token_network
+
+        log.info('Creating token network for %s', token_network_address)
+        token_network_listener = BlockchainListener(
+            web3=self.web3,
+            contract_manager=self.contract_manager,
+            contract_address=token_network_address,
+            contract_name=CONTRACT_TOKEN_NETWORK,
+            sync_start_block=block_number,
+            required_confirmations=self.required_confirmations,
+        )
+
+        # subscribe to event notifications from blockchain listener
+        token_network_listener.add_confirmed_listener(
+            create_channel_event_topics(),
+            self.handle_channel_event,
+        )
+        token_network_listener.start()
+        self.token_network_listeners.append(token_network_listener)
