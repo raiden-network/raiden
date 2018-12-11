@@ -13,7 +13,7 @@ PROCESSED = 0
 PING = 1
 PONG = 2
 SECRETREQUEST = 3
-SECRET = 4
+UNLOCK = 4
 LOCKEDTRANSFER = 7
 REFUNDTRANSFER = 8
 REVEALSECRET = 11
@@ -110,10 +110,10 @@ SecretRequest = namedbuffer(
     ],
 )
 
-Secret = namedbuffer(
-    'secret',
+Unlock = namedbuffer(
+    'unlock',
     [
-        cmdid(SECRET),
+        cmdid(UNLOCK),
         pad(3),
         chain_id,
         message_identifier,
@@ -227,7 +227,7 @@ CMDID_MESSAGE = {
     PING: Ping,
     PONG: Pong,
     SECRETREQUEST: SecretRequest,
-    SECRET: Secret,
+    UNLOCK: Unlock,
     REVEALSECRET: RevealSecret,
     LOCKEDTRANSFER: LockedTransfer,
     REFUNDTRANSFER: RefundTransfer,
