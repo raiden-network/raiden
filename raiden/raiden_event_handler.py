@@ -147,11 +147,11 @@ class RaidenEventHandler:
             raiden: RaidenService,
             balance_proof_event: SendBalanceProof,
     ):
-        secret_message = message_from_sendevent(balance_proof_event, raiden.address)
-        raiden.sign(secret_message)
+        unlock_message = message_from_sendevent(balance_proof_event, raiden.address)
+        raiden.sign(unlock_message)
         raiden.transport.send_async(
             balance_proof_event.queue_identifier,
-            secret_message,
+            unlock_message,
         )
 
     def handle_send_secretrequest(

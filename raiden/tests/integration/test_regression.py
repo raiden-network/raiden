@@ -208,7 +208,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     app0.raiden.sign(reveal_secret)
 
     token_network_identifier = channelstate_0_1.token_network_identifier
-    secret = Unlock(
+    unlock = Unlock(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
@@ -220,11 +220,11 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
         locksroot=EMPTY_MERKLE_ROOT,
         secret=secret,
     )
-    app0.raiden.sign(secret)
+    app0.raiden.sign(unlock)
 
     if transport_protocol is TransportProtocol.UDP:
         messages = [
-            secret.encode(),
+            unlock.encode(),
             reveal_secret.encode(),
         ]
         host_port = None
@@ -240,7 +240,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
         ]
     elif transport_protocol is TransportProtocol.MATRIX:
         messages = [
-            secret,
+            unlock,
             reveal_secret,
         ]
         receive_method = app1.raiden.transport._receive_message
