@@ -191,24 +191,6 @@ def filter_used_routes(
     return list(channelid_to_route.values())
 
 
-def payer_transfer_expired(
-        payer_channel: NettingChannelState,
-        pair: MediationPairState,
-        block_number: typing.BlockNumber,
-) -> bool:
-    payer_lock_expiration_threshold = typing.BlockNumber(
-        pair.payer_transfer.lock.expiration +
-        DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
-    )
-    has_payer_lock_expired, _ = channel.is_lock_expired(
-        end_state=payer_channel.our_state,
-        lock=pair.payer_transfer.lock,
-        block_number=block_number,
-        lock_expiration_threshold=payer_lock_expiration_threshold,
-    )
-    return has_payer_lock_expired
-
-
 def get_payee_channel(
         channelidentifiers_to_channels: typing.ChannelMap,
         transfer_pair: MediationPairState,
@@ -603,9 +585,9 @@ def events_for_expired_pairs(
         if not payer_channel:
             continue
 
-        has_payer_transfer_expired = payer_transfer_expired(
-            payer_channel=payer_channel,
-            pair=pair,
+        has_payer_transfer_expired = channel.transfer_expired(
+            transfer=pair.payer_transfer,
+            affected_channel=payer_channel,
             block_number=block_number,
         )
 
@@ -1241,9 +1223,9 @@ def handle_offchain_secretreveal(
     if not payer_channel:
         return TransitionResult(mediator_state, list())
 
-    has_payer_transfer_expired = payer_transfer_expired(
-        payer_channel=payer_channel,
-        pair=transfer_pair,
+    has_payer_transfer_expired = channel.transfer_expired(
+        transfer=transfer_pair.payer_transfer,
+        affected_channel=payer_channel,
         block_number=block_number,
     )
 
