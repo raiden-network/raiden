@@ -252,6 +252,72 @@ def test_handle_offchain_secretreveal():
     assert len(iteration.events) == 0
 
 
+def test_handle_offchain_secretreveal_after_lock_expired():
+    """Test that getting the secret revealed after lock expiration for the
+    target does not end up continuoysly emitting EventUnlockClaimFailed
+
+    Target part for https://github.com/raiden-network/raiden/issues/3086
+    """
+    amount = 3
+    block_number = 1
+    expiration = block_number + factories.UNIT_REVEAL_TIMEOUT
+    initiator = factories.HOP1
+    our_address = factories.ADDR
+    secret = factories.UNIT_SECRET
+    pseudo_random_generator = random.Random()
+
+    channel_state, state = make_target_state(
+        our_address,
+        amount,
+        block_number,
+        initiator,
+        expiration,
+    )
+
+    lock_expiration = state.transfer.lock.expiration
+    lock_expiration_block_number = lock_expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    lock_expiration_block = Block(
+        block_number=lock_expiration_block_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    iteration = target.state_transition(
+        target_state=state,
+        state_change=lock_expiration_block,
+        channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=lock_expiration_block_number,
+    )
+    state = iteration.new_state
+
+    msg = 'At the expiration block we should get an EventUnlockClaimFailed'
+    assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {}), msg
+
+    iteration = target.state_transition(
+        target_state=state,
+        state_change=ReceiveSecretReveal(secret, initiator),
+        channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=lock_expiration_block_number + 1,
+    )
+    state = iteration.new_state
+
+    next_block = Block(
+        block_number=lock_expiration_block_number + 1,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    iteration = target.state_transition(
+        target_state=state,
+        state_change=next_block,
+        channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=lock_expiration_block_number + 1,
+    )
+    msg = 'At the next block we should not get the same event'
+    assert not must_contain_entry(iteration.events, EventUnlockClaimFailed, {}), msg
+
+
 def test_handle_onchain_secretreveal():
     """ The target node must update the lock state when the secret is
     registered in the blockchain.
@@ -648,6 +714,8 @@ def test_target_receive_lock_expired():
         pseudo_random_generator,
         block_before_confirmed_expiration,
     )
+    import pdb
+    pdb.set_trace()
     assert not must_contain_entry(iteration.events, SendProcessed, {})
 
     block_lock_expired = block_before_confirmed_expiration + 1
