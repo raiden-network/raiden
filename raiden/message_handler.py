@@ -40,7 +40,7 @@ class MessageHandler:
         elif type(message) == RevealSecret:
             self.handle_message_revealsecret(raiden, message)
         elif type(message) == Unlock:
-            self.handle_message_secret(raiden, message)
+            self.handle_message_unlock(raiden, message)
         elif type(message) == LockExpired:
             self.handle_message_lockexpired(raiden, message)
         elif type(message) == RefundTransfer:
@@ -71,7 +71,7 @@ class MessageHandler:
         )
         raiden.handle_state_change(state_change)
 
-    def handle_message_secret(self, raiden: RaidenService, message: Unlock):
+    def handle_message_unlock(self, raiden: RaidenService, message: Unlock):
         balance_proof = balanceproof_from_envelope(message)
         state_change = ReceiveUnlock(
             message_identifier=message.message_identifier,
