@@ -24,7 +24,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
-from raiden.utils import pex, random_secret
+from raiden.utils import pex, random_secret, typing
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -96,8 +96,8 @@ class MessageHandler:
 
         routes = get_best_routes(
             chain_state,
-            token_network_address,
-            raiden.address,
+            typing.TokenNetworkID(token_network_address),
+            typing.InitiatorAddress(raiden.address),
             from_transfer.target,
             from_transfer.lock.amount,
             message.sender,
