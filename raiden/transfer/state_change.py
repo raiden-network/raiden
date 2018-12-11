@@ -73,41 +73,6 @@ class Block(StateChange):
         )
 
 
-class ActionUpdateTransportSyncToken(StateChange):
-    """ Holds the last "timestamp" at which we synced
-    with the transport. The timestamp could be a date/time value
-    or any other value provided by the transport backend.
-    Can be used later to filter the messages which have not been processed.
-    """
-    def __init__(self, sync_token: str):
-        self.sync_token = sync_token
-
-    def __repr__(self) -> str:
-        return '<ActionUpdateTransportSyncToken value:{}>'.format(
-            self.sync_token,
-        )
-
-    def __eq__(self, other: 'ActionUpdateTransportSyncToken') -> bool:
-        return (
-            isinstance(other, ActionUpdateTransportSyncToken) and
-            self.sync_token == other.sync_token
-        )
-
-    def __ne__(self, other: 'ActionUpdateTransportSyncToken') -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
-        return {
-            'sync_token': str(self.sync_token),
-        }
-
-    @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ActionUpdateTransportSyncToken':
-        return cls(
-            sync_token=data['sync_token'],
-        )
-
-
 class ActionUpdateTransportAuthData(StateChange):
     """ Holds the last "timestamp" at which we synced
     with the transport. The timestamp could be a date/time value
