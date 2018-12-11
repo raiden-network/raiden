@@ -19,11 +19,11 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 def get_best_routes(
         chain_state: ChainState,
-        token_network_id: typing.Address,
-        from_address: typing.Address,
-        to_address: typing.Address,
+        token_network_id: typing.TokenNetworkID,
+        from_address: typing.InitiatorAddress,
+        to_address: typing.TargetAddress,
         amount: int,
-        previous_address: typing.Address,
+        previous_address: typing.Optional[typing.Address],
 ) -> List[RouteState]:
     """ Returns a list of channels that can be used to make a transfer.
 

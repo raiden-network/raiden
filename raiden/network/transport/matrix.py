@@ -1307,7 +1307,7 @@ class MatrixTransport(Runnable):
         if not match:
             return None
 
-        encoded_address: AddressHex = match.group(1)
+        encoded_address = match.group(1)
         address: Address = to_canonical_address(encoded_address)
 
         try:
