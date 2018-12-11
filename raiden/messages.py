@@ -555,7 +555,7 @@ class Unlock(EnvelopeMessage):
     """ Message used to do state changes on a partner Raiden Channel.
 
     Locksroot changes need to be synchronized among both participants, the
-    protocol is for only the side unlocking to send the Secret message allowing
+    protocol is for only the side unlocking to send the Unlock message allowing
     the other party to claim the unlocked lock.
     """
     cmdid = messages.UNLOCK
