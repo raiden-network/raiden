@@ -60,8 +60,6 @@ def decode_event(abi: Dict, log: Dict):
 
 def get_events(
         web3: Web3,
-        contract_manager: ContractManager,
-        contract_name: str,
         contract_address: str,
         topics: List,
         from_block: Union[int, str] = 0,
@@ -268,8 +266,6 @@ class BlockchainListener(gevent.Greenlet):
         for id, (topics, callback) in name_to_callback.items():
             events = get_events(
                 web3=self.web3,
-                contract_manager=self.contract_manager,
-                contract_name=self.contract_name,
                 contract_address=self.contract_address,
                 topics=topics,
                 **filter_params,

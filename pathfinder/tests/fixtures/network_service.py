@@ -200,7 +200,6 @@ def populate_token_network_case_2(
 def pathfinding_service_full_mock(
     contracts_manager: ContractManager,
     token_network_model: TokenNetwork,
-    monkeypatch
 ) -> Generator[PathfindingService, None, None]:
     with patch('pathfinder.pathfinding_service.BlockchainListener', new=Mock):
         web3_mock = Mock()
