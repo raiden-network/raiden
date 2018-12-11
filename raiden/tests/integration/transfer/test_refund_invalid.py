@@ -3,7 +3,7 @@ import random
 import pytest
 
 from raiden.constants import UINT64_MAX
-from raiden.messages import RevealSecret, Secret, SecretRequest
+from raiden.messages import RevealSecret, SecretRequest, Unlock
 from raiden.tests.utils.factories import (
     HOP1,
     HOP1_KEY,
@@ -48,7 +48,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     )
     sign_and_inject(refund_transfer_message, other_key, other_address, app0)
 
-    secret = Secret(
+    secret = Unlock(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=1,

@@ -8,8 +8,8 @@ from raiden.messages import (
     Processed,
     RefundTransfer,
     RevealSecret,
-    Secret,
     SecretRequest,
+    Unlock,
 )
 from raiden.raiden_service import RaidenService
 from raiden.routing import get_best_routes
@@ -39,7 +39,7 @@ class MessageHandler:
             self.handle_message_secretrequest(raiden, message)
         elif type(message) == RevealSecret:
             self.handle_message_revealsecret(raiden, message)
-        elif type(message) == Secret:
+        elif type(message) == Unlock:
             self.handle_message_secret(raiden, message)
         elif type(message) == LockExpired:
             self.handle_message_lockexpired(raiden, message)
@@ -71,7 +71,7 @@ class MessageHandler:
         )
         raiden.handle_state_change(state_change)
 
-    def handle_message_secret(self, raiden: RaidenService, message: Secret):
+    def handle_message_secret(self, raiden: RaidenService, message: Unlock):
         balance_proof = balanceproof_from_envelope(message)
         state_change = ReceiveUnlock(
             message_identifier=message.message_identifier,

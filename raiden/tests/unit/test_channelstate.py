@@ -7,7 +7,7 @@ from itertools import cycle
 import pytest
 
 from raiden.constants import UINT64_MAX
-from raiden.messages import Secret
+from raiden.messages import Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -505,7 +505,7 @@ def test_channelstate_receive_lockedtransfer():
     transferred_amount = 0
     message_identifier = random.randint(0, UINT64_MAX)
     token_network_identifier = channel_state.token_network_identifier
-    secret_message = Secret(
+    secret_message = Unlock(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=1,
@@ -519,7 +519,7 @@ def test_channelstate_receive_lockedtransfer():
     )
     secret_message.sign(privkey2)
     # Let's also create an invalid secret to test unlock with invalid chain id
-    invalid_secret_message = Secret(
+    invalid_secret_message = Unlock(
         chain_id=UNIT_CHAIN_ID + 1,
         message_identifier=message_identifier,
         payment_identifier=1,
@@ -918,7 +918,7 @@ def test_interwoven_transfers():
             )
 
             message_identifier = random.randint(0, UINT64_MAX)
-            secret_message = Secret(
+            secret_message = Unlock(
                 chain_id=UNIT_CHAIN_ID,
                 message_identifier=message_identifier,
                 payment_identifier=nonce,
