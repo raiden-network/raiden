@@ -2,6 +2,8 @@ from typing import List
 
 import requests
 import socket
+import pathfinder
+import pkg_resources
 from eth_utils import to_normalized_address
 
 from pathfinder.api.rest import ServiceApi
@@ -161,8 +163,9 @@ def test_get_info(
     response = requests.get(url)
     assert response.status_code == 200
     assert response.json() == {
-            'IP': socket.gethostbyname(socket.gethostname()),
-            'Settings': 'PLACEHOLDER',
-            'Version': '0.1',
-            'Dude who runs it': 'Dominik',
+            'ip': socket.gethostbyname(socket.gethostname()),
+            'settings': 'PLACEHOLDER',
+            'version': pkg_resources.require(pathfinder.__name__)[0].version,
+            'operator': 'Dominik',
+            'message': 'This is for Paul'
         }

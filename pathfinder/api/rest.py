@@ -2,6 +2,8 @@ from typing import Dict, List, Optional, Tuple
 
 import gevent
 import socket
+import pathfinder
+import pkg_resources
 from eth_utils import is_address, is_checksum_address
 from flask import Flask
 from flask_restful import Api, Resource, reqparse
@@ -108,14 +110,22 @@ class PathsResource(PathfinderResource):
 
         return {'result': paths}, 200
 
+
 class InfoResource(PathfinderResource):
     def get(self):
-        ip = socket.gethostbyname(socket.gethostname()) ## this is the internal IP address, which is a feature that will be scoped out soon anyway
+        ip = socket.gethostbyname(socket.gethostname())
+        # this is the internal IP address, scoped out soon anyway
         settings = 'PLACEHOLDER'
-        version = '0.1'
-        dude_who_runs_it = 'Dominik'
+        version = pkg_resources.require(pathfinder.__name__)[0].version
+        operator = 'Dominik'
+        message = 'This is for Paul'
 
-        return {'IP': ip, 'Settings': settings, 'Version': version, 'Dude who runs it': dude_who_runs_it}, 200
+        return {'ip': ip,
+                'settings': settings,
+                'version': version,
+                'operator': operator,
+                'message': message}, 200
+
 
 class ServiceApi:
     def __init__(self, pathfinding_service: PathfindingService) -> None:
@@ -137,5 +147,3 @@ class ServiceApi:
     def run(self, port: int = API_DEFAULT_PORT):
         self.rest_server = WSGIServer((API_HOST, port), self.flask_app)
         self.server_greenlet = gevent.spawn(self.rest_server.serve_forever)
-
-
