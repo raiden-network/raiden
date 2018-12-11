@@ -1,21 +1,18 @@
 import logging
 import sys
-import requests
-from typing import Callable, Dict, Union, List, Tuple
+from typing import Callable, Dict, List, Tuple, Union
 
+import gevent
+import gevent.event
+import requests
+from eth_utils import decode_hex, encode_hex, to_checksum_address
+from eth_utils.abi import event_abi_to_log_topic
 from web3 import Web3
 from web3.contract import get_event_data
 from web3.utils.abi import filter_by_type
-from eth_utils import to_checksum_address, encode_hex, decode_hex
-from eth_utils.abi import event_abi_to_log_topic
-import gevent
-import gevent.event
-from raiden_contracts.contract_manager import ContractManager
-from raiden_contracts.constants import (
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-    EVENT_TOKEN_NETWORK_CREATED,
-)
 
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
+from raiden_contracts.contract_manager import ContractManager
 
 log = logging.getLogger(__name__)
 
@@ -263,7 +260,7 @@ class BlockchainListener(gevent.Greenlet):
             name_to_callback: dict that maps event name to callbacks executed
                 if the event is emmited
         """
-        for id, (topics, callback) in name_to_callback.items():
+        for _, (topics, callback) in name_to_callback.items():
             events = get_events(
                 web3=self.web3,
                 contract_address=self.contract_address,

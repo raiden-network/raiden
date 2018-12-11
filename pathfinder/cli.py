@@ -7,17 +7,17 @@ import sys
 
 import click
 from eth_utils import is_checksum_address
+from requests.exceptions import ConnectionError
+from web3 import HTTPProvider, Web3
+
+from pathfinder.pathfinding_service import PathfindingService
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
 from raiden_contracts.contract_manager import (
     ContractManager,
     contracts_precompiled_path,
     get_contracts_deployed,
 )
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
-from web3 import HTTPProvider, Web3
 from raiden_libs.no_ssl_patch import no_ssl_verification
-from requests.exceptions import ConnectionError
-
-from pathfinder.pathfinding_service import PathfindingService
 
 log = logging.getLogger(__name__)
 contract_manager = ContractManager(contracts_precompiled_path())
@@ -30,24 +30,24 @@ DEFAULT_REQUIRED_CONFIRMATIONS = 8  # ~2min with 15s blocks
     '--eth-rpc',
     default='http://localhost:8545',
     type=str,
-    help='Ethereum node RPC URI'
+    help='Ethereum node RPC URI',
 )
 @click.option(
     '--registry-address',
     type=str,
-    help='Address of the token network registry'
+    help='Address of the token network registry',
 )
 @click.option(
     '--start-block',
     default=0,
     type=int,
-    help='Block to start syncing at'
+    help='Block to start syncing at',
 )
 @click.option(
     '--confirmations',
     default=DEFAULT_REQUIRED_CONFIRMATIONS,
     type=int,
-    help='Number of block confirmations to wait for'
+    help='Number of block confirmations to wait for',
 )
 def main(
     eth_rpc,
@@ -78,7 +78,7 @@ def main(
     except ConnectionError:
         log.error(
             'Can not connect to the Ethereum client. Please check that it is running and that '
-            'your settings are correct.'
+            'your settings are correct.',
         )
         sys.exit()
 
@@ -93,7 +93,7 @@ def main(
             except ValueError:
                 log.error(
                     'Provided registry address or start block are not valid and '
-                    'no deployed contracts were found'
+                    'no deployed contracts were found',
                 )
                 sys.exit(1)
 

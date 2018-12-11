@@ -1,9 +1,9 @@
 from typing import Callable
 
 import pytest
-from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
 from pathfinder.model.token_network import TokenNetwork
+from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
 
 @pytest.fixture
@@ -24,6 +24,6 @@ def token_network_model(
         initial_amount=1000000,
         decimals=18,
         token_name='PFSTestToken',
-        token_symbol='PFS'
+        token_symbol='PFS',
     )
     return TokenNetwork(token.address, token.address)

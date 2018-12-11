@@ -2,10 +2,10 @@ from typing import List
 
 import requests
 from eth_utils import to_normalized_address
-from raiden_libs.types import Address
 
 from pathfinder.api.rest import ServiceApi
 from pathfinder.model import TokenNetwork
+from raiden_libs.types import Address
 
 ID_12 = 12
 ID_123 = 123
@@ -19,7 +19,7 @@ def test_get_paths_validation(
     api_url: str,
     initiator_address: str,
     target_address: str,
-    token_network_model: TokenNetwork
+    token_network_model: TokenNetwork,
 ):
     base_url = api_url + f'/{token_network_model.address}/paths'
 
@@ -40,27 +40,27 @@ def test_get_paths_validation(
 
     url = base_url + '?from={}&to={}&value=5&num_paths=3'.format(
         to_normalized_address(initiator_address),
-        target_address
+        target_address,
     )
     response = requests.get(url)
     assert response.status_code == 400
     assert response.json()['error'] == 'Initiator address not checksummed: {}'.format(
-        to_normalized_address(initiator_address)
+        to_normalized_address(initiator_address),
     )
 
     url = base_url + '?from={}&to={}&value=5&num_paths=3'.format(
         initiator_address,
-        to_normalized_address(target_address)
+        to_normalized_address(target_address),
     )
     response = requests.get(url)
     assert response.status_code == 400
     assert response.json()['error'] == 'Target address not checksummed: {}'.format(
-        to_normalized_address(target_address)
+        to_normalized_address(target_address),
     )
 
     url = base_url + '?from={}&to={}&value=-10&num_paths=3'.format(
         initiator_address,
-        target_address
+        target_address,
     )
     response = requests.get(url)
     assert response.status_code == 400
@@ -68,7 +68,7 @@ def test_get_paths_validation(
 
     url = base_url + '?from={}&to={}&value=10&num_paths=-1'.format(
         initiator_address,
-        target_address
+        target_address,
     )
     response = requests.get(url)
     assert response.status_code == 400
@@ -88,21 +88,21 @@ def test_get_paths_path_validation(
     response = requests.get(url)
     assert response.status_code == 400
     assert response.json()['error'] == 'Token network address not checksummed: {}'.format(
-        'df173a5173c3d0ae5ba11dae84470c5d3f1a8413'
+        'df173a5173c3d0ae5ba11dae84470c5d3f1a8413',
     )
 
     url = api_url + '/0xdf173a5173c3d0ae5ba11dae84470c5d3f1a8413/paths'
     response = requests.get(url)
     assert response.status_code == 400
     assert response.json()['error'] == 'Token network address not checksummed: {}'.format(
-        '0xdf173a5173c3d0ae5ba11dae84470c5d3f1a8413'
+        '0xdf173a5173c3d0ae5ba11dae84470c5d3f1a8413',
     )
 
     url = api_url + '/0x0000000000000000000000000000000000000000/paths'
     response = requests.get(url)
     assert response.status_code == 400
     assert response.json()['error'] == 'Unsupported token network: {}'.format(
-        '0x0000000000000000000000000000000000000000'
+        '0x0000000000000000000000000000000000000000',
     )
 
 
@@ -110,13 +110,13 @@ def test_get_paths(
     api_sut: ServiceApi,
     api_url: str,
     addresses: List[Address],
-    token_network_model: TokenNetwork
+    token_network_model: TokenNetwork,
 ):
     base_url = api_url + f'/{token_network_model.address}/paths'
 
     url = base_url + '?from={}&to={}&value=10&num_paths=3'.format(
         addresses[0],
-        addresses[2]
+        addresses[2],
     )
     response = requests.get(url)
     assert response.status_code == 200
@@ -125,22 +125,22 @@ def test_get_paths(
     assert paths == [
         {
             'path': [addresses[0], addresses[2]],
-            'estimated_fee': 1000
+            'estimated_fee': 1000,
         },
         {
             'path': [addresses[0], addresses[1], addresses[2]],
-            'estimated_fee': 2000
+            'estimated_fee': 2000,
         },
         {
             'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
-            'estimated_fee': 4000
-        }
+            'estimated_fee': 4000,
+        },
     ]
 
     # there is no connection between 0 and 5, this should return an error
     url = base_url + '?from={}&to={}&value=10&num_paths=3'.format(
         addresses[0],
-        addresses[5]
+        addresses[5],
     )
     response = requests.get(url)
     assert response.status_code == 400

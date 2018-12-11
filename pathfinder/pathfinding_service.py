@@ -1,28 +1,27 @@
 import logging
 import sys
 import traceback
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
 import gevent
 from eth_utils import is_checksum_address
-from raiden_libs.gevent_error_handler import register_error_handler
-from raiden_libs.types import Address
-from raiden_contracts.contract_manager import ContractManager
 from matrix_client.errors import MatrixRequestError
-
-from pathfinder.model import TokenNetwork
-from raiden_contracts.constants import (
-    ChannelEvent,
-    CONTRACT_TOKEN_NETWORK,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
-)
 from web3 import Web3
 
+from pathfinder.model import TokenNetwork
 from pathfinder.utils.blockchain_listener import (
     BlockchainListener,
-    create_registry_event_topics,
     create_channel_event_topics,
+    create_registry_event_topics,
 )
+from raiden_contracts.constants import (
+    CONTRACT_TOKEN_NETWORK,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    ChannelEvent,
+)
+from raiden_contracts.contract_manager import ContractManager
+from raiden_libs.gevent_error_handler import register_error_handler
+from raiden_libs.types import Address
 
 log = logging.getLogger(__name__)
 
@@ -31,19 +30,19 @@ def error_handler(context, exc_info):
     if exc_info[0] == MatrixRequestError:
         log.error(
             'Can not connect to the matrix system. Please check your settings. '
-            'Detailed error message: %s', exc_info[1]
+            'Detailed error message: %s', exc_info[1],
         )
         sys.exit()
     else:
         log.fatal(
             'Unhandled exception. Terminating the program...'
             'Please report this issue at '
-            'https://github.com/raiden-network/raiden-pathfinding-service/issues'
+            'https://github.com/raiden-network/raiden-pathfinding-service/issues',
         )
         traceback.print_exception(
             etype=exc_info[0],
             value=exc_info[1],
-            tb=exc_info[2]
+            tb=exc_info[2],
         )
         sys.exit()
 
@@ -92,14 +91,14 @@ class PathfindingService(gevent.Greenlet):
         )
         log.info(
             f'Listening to token network registry @ {registry_address} '
-            f'from block {sync_start_block}'
+            f'from block {sync_start_block}',
         )
         self._setup_token_networks()
 
     def _setup_token_networks(self):
         self.token_network_registry_listener.add_confirmed_listener(
             create_registry_event_topics(self.contract_manager),
-            self.handle_token_network_created
+            self.handle_token_network_created,
         )
 
     def _run(self):
@@ -151,7 +150,7 @@ class PathfindingService(gevent.Greenlet):
             return
 
         log.debug('Received ChannelOpened event for token network {}'.format(
-            token_network.address
+            token_network.address,
         ))
 
         channel_identifier = event['args']['channel_identifier']
@@ -161,7 +160,7 @@ class PathfindingService(gevent.Greenlet):
         token_network.handle_channel_opened_event(
             channel_identifier,
             participant1,
-            participant2
+            participant2,
         )
 
     def handle_channel_new_deposit(self, event: Dict):
@@ -171,7 +170,7 @@ class PathfindingService(gevent.Greenlet):
             return
 
         log.debug('Received ChannelNewDeposit event for token network {}'.format(
-            token_network.address
+            token_network.address,
         ))
 
         channel_identifier = event['args']['channel_identifier']
@@ -181,7 +180,7 @@ class PathfindingService(gevent.Greenlet):
         token_network.handle_channel_new_deposit_event(
             channel_identifier,
             participant_address,
-            total_deposit
+            total_deposit,
         )
 
     def handle_channel_closed(self, event: Dict):
@@ -191,7 +190,7 @@ class PathfindingService(gevent.Greenlet):
             return
 
         log.debug('Received ChannelClosed event for token network {}'.format(
-            token_network.address
+            token_network.address,
         ))
 
         channel_identifier = event['args']['channel_identifier']

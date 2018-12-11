@@ -1,19 +1,18 @@
 import logging
-from typing import List, Dict, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 import networkx as nx
-from networkx import DiGraph
 from eth_utils import is_checksum_address
-from raiden_libs.types import Address, ChannelIdentifier
+from networkx import DiGraph
 
 from pathfinder.config import (
     DIVERSITY_PEN_DEFAULT,
+    MAX_PATHS_PER_REQUEST,
     MIN_PATH_REDUNDANCY,
     PATH_REDUNDANCY_FACTOR,
-    MAX_PATHS_PER_REQUEST
 )
 from pathfinder.model import ChannelView
-
+from raiden_libs.types import Address, ChannelIdentifier
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +57,7 @@ class TokenNetwork:
         self,
         channel_identifier: ChannelIdentifier,
         receiver: Address,
-        total_deposit: int
+        total_deposit: int,
     ):
         """ Register a new balance for the beneficiary.
 
@@ -75,13 +74,13 @@ class TokenNetwork:
                 self.G[participant2][participant1]['view'].update_capacity(deposit=total_deposit)
             else:
                 log.error(
-                    "Receiver in ChannelNewDeposit does not fit the internal channel"
+                    "Receiver in ChannelNewDeposit does not fit the internal channel",
                 )
         except KeyError:
             log.error(
                 "Received ChannelNewDeposit event for unknown channel '{}'".format(
-                    channel_identifier
-                )
+                    channel_identifier,
+                ),
             )
 
     def handle_channel_closed_event(self, channel_identifier: ChannelIdentifier):
@@ -99,8 +98,8 @@ class TokenNetwork:
         except KeyError:
             log.error(
                 "Received ChannelClosed event for unknown channel '{}'".format(
-                    channel_identifier
-                )
+                    channel_identifier,
+                ),
             )
 
     def get_paths(
@@ -109,7 +108,7 @@ class TokenNetwork:
         target: Address,
         value: int,
         k: int,
-        **kwargs
+        **kwargs,
     ):
         k = min(k, MAX_PATHS_PER_REQUEST)
         visited: Dict[ChannelIdentifier, float] = {}
@@ -120,7 +119,7 @@ class TokenNetwork:
         def weight(
             u: Address,
             v: Address,
-            attr: Dict[str, Any]
+            attr: Dict[str, Any],
         ):
             view: ChannelView = attr['view']
             if view.capacity < value:
@@ -130,7 +129,7 @@ class TokenNetwork:
                        (1 - hop_bias) * view.relative_fee + \
                        visited.get(
                             view.channel_id,
-                            0
+                            0,
                        )
 
         max_iterations = max(MIN_PATH_REDUNDANCY, PATH_REDUNDANCY_FACTOR * k)
@@ -157,7 +156,7 @@ class TokenNetwork:
 
             result.append(dict(
                 path=path,
-                estimated_fee=fee
+                estimated_fee=fee,
             ))
 
         return result

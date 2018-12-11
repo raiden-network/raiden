@@ -49,11 +49,17 @@ clean-test: ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 
-lint: ## check style with flake8
-	flake8 pathfinder tests
+ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive pathfinder/ -sg */node_modules/*
 
-typecheck: ## static analysis with mypy
+lint: mypy ## check style with flake8
+	flake8 pathfinder tests
+	isort $(ISORT_PARAMS) --diff --check-only
+
+mypy: ## static analysis with mypy
 	mypy --ignore-missing-imports pathfinder
+
+isort: ## sort import with isort
+	isort $(ISORT_PARAMS)
 
 test: ## run tests quickly with the default Python
 	py.test -v

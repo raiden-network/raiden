@@ -76,7 +76,7 @@ def api_url(api_schema: str, free_port: int) -> str:
 def api_sut(
     pathfinding_service_full_mock: PathfindingService,
     free_port: int,
-    populate_token_network_case_1: None
+    populate_token_network_case_1: None,
 ) -> ServiceApi:
     api = ServiceApi(pathfinding_service_full_mock)
     api.run(port=free_port)

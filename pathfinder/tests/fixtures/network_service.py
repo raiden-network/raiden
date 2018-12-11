@@ -1,17 +1,17 @@
 import random
-from typing import List, Callable, Generator
-
+from typing import Callable, Generator, List
 from unittest.mock import Mock, patch
+
 import pytest
 from web3 import Web3
-from raiden_contracts.contract_manager import ContractManager
-from raiden_libs.utils import private_key_to_address
-from raiden_libs.types import Address, ChannelIdentifier
 
-from pathfinder.tests.mocks.blockchain_listener import BlockchainListenerMock
+from pathfinder.model.token_network import TokenNetwork
 from pathfinder.pathfinding_service import PathfindingService
 from pathfinder.tests.config import NUMBER_OF_CHANNELS
-from pathfinder.model.token_network import TokenNetwork
+from pathfinder.tests.mocks.blockchain_listener import BlockchainListenerMock
+from raiden_contracts.contract_manager import ContractManager
+from raiden_libs.types import Address, ChannelIdentifier
+from raiden_libs.utils import private_key_to_address
 
 
 @pytest.fixture
@@ -103,7 +103,7 @@ def populate_token_network_random(
         token_network_model.handle_channel_opened_event(
             channel_id,
             address1,
-            address2
+            address2,
         )
 
         # deposit to channels
@@ -112,12 +112,12 @@ def populate_token_network_random(
         token_network_model.handle_channel_new_deposit_event(
             channel_id,
             address1,
-            deposit1
+            deposit1,
         )
         token_network_model.handle_channel_new_deposit_event(
             channel_id,
             address2,
-            deposit2
+            deposit2,
         )
 
 
@@ -128,33 +128,33 @@ def populate_token_network() -> Callable:
         private_keys: List[str],
         addresses: List[Address],
         web3: Web3,
-        channel_descriptions: List
+        channel_descriptions: List,
     ):
         for channel_id, (
             p1_index,
             p1_deposit,
-            p1_transferred_amount,
-            p1_fee,
+            _p1_transferred_amount,
+            _p1_fee,
             p2_index,
             p2_deposit,
-            p2_transferred_amount,
-            p2_fee
+            _p2_transferred_amount,
+            _p2_fee,
         ) in enumerate(channel_descriptions):
             token_network.handle_channel_opened_event(
                 ChannelIdentifier(channel_id),
                 addresses[p1_index],
-                addresses[p2_index]
+                addresses[p2_index],
             )
 
             token_network.handle_channel_new_deposit_event(
                 ChannelIdentifier(channel_id),
                 addresses[p1_index],
-                p1_deposit
+                p1_deposit,
             )
             token_network.handle_channel_new_deposit_event(
                 ChannelIdentifier(channel_id),
                 addresses[p2_index],
-                p2_deposit
+                p2_deposit,
             )
 
     return populate_token_network
@@ -167,7 +167,7 @@ def populate_token_network_case_1(
     private_keys: List[str],
     addresses: List[Address],
     web3: Web3,
-    channel_descriptions_case_1: List
+    channel_descriptions_case_1: List,
 ):
     populate_token_network(
         token_network_model,
@@ -185,7 +185,7 @@ def populate_token_network_case_2(
     private_keys: List[str],
     addresses: List[Address],
     web3: Web3,
-    channel_descriptions_case_2: List
+    channel_descriptions_case_2: List,
 ):
     populate_token_network(
         token_network_model,
@@ -211,7 +211,7 @@ def pathfinding_service_full_mock(
             registry_address='',
         )
         pathfinding_service.token_networks = {
-            token_network_model.address: token_network_model
+            token_network_model.address: token_network_model,
         }
 
         yield pathfinding_service

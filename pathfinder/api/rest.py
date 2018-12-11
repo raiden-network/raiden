@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Dict, List
+from typing import Dict, List, Optional, Tuple
 
 import gevent
 from eth_utils import is_address, is_checksum_address
@@ -7,10 +7,10 @@ from flask_restful import Api, Resource, reqparse
 from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
-from raiden_libs.types import Address
 
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
 from pathfinder.pathfinding_service import PathfindingService
+from raiden_libs.types import Address
 
 
 class PathfinderResource(Resource):
@@ -20,7 +20,7 @@ class PathfinderResource(Resource):
 
     def _validate_token_network_argument(
         self,
-        token_network_address: str
+        token_network_address: str,
     ) -> Optional[Tuple[Dict, int]]:
 
         if not is_address(token_network_address):
@@ -32,11 +32,11 @@ class PathfinderResource(Resource):
             return {'error': address_error.format(token_network_address)}, 400
 
         token_network = self.pathfinding_service.token_networks.get(
-            Address(token_network_address)
+            Address(token_network_address),
         )
         if token_network is None:
             return {
-                'error': 'Unsupported token network: {}'.format(token_network_address)
+                'error': 'Unsupported token network: {}'.format(token_network_address),
             }, 400
 
         return None
@@ -87,22 +87,22 @@ class PathsResource(PathfinderResource):
             return error
 
         token_network = self.pathfinding_service.token_networks.get(
-            Address(token_network_address)
+            Address(token_network_address),
         )
         if not token_network:
             return {'error': 'Token network {} not found.'.format(
-                token_network_address
+                token_network_address,
             )}, 400
         try:
             paths = token_network.get_paths(
                 source=args['from'],
                 target=args['to'],
                 value=args.value,
-                k=args.num_paths
+                k=args.num_paths,
             )
         except NetworkXNoPath:
             return {'error': 'No suitable path found for transfer from {} to {}.'.format(
-                args['from'], args['to']
+                args['from'], args['to'],
             )}, 400
 
         return {'result': paths}, 200

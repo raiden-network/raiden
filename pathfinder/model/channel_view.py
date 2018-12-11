@@ -1,9 +1,9 @@
 from enum import Enum
 
 from eth_utils import is_checksum_address
-from raiden_libs.types import Address, ChannelIdentifier
 
 from pathfinder.config import DEFAULT_PERCENTAGE_FEE
+from raiden_libs.types import Address, ChannelIdentifier
 
 
 class ChannelView:
@@ -11,8 +11,8 @@ class ChannelView:
     Unidirectional view of a bidirectional channel.
     """
     class State(Enum):
-        OPEN = 1,
-        SETTLING = 2,
+        OPEN = 1
+        SETTLING = 2
         SETTLED = 3
 
     def __init__(
@@ -20,7 +20,7 @@ class ChannelView:
         channel_id: ChannelIdentifier,
         participant1: Address,
         participant2: Address,
-        deposit: int = 0
+        deposit: int = 0,
     ) -> None:
         assert is_checksum_address(participant1)
         assert is_checksum_address(participant2)
@@ -42,7 +42,7 @@ class ChannelView:
         deposit: int = None,
         transferred_amount: int = None,
         received_amount: int = None,
-        locked_amount: int = None
+        locked_amount: int = None,
     ):
         if deposit is not None:
             self._deposit = deposit
@@ -79,5 +79,5 @@ class ChannelView:
         return '<ChannelView from={} to={} capacity={}>'.format(
             self.self,
             self.partner,
-            self.capacity
+            self.capacity,
         )

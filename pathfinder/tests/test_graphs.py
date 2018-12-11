@@ -1,28 +1,28 @@
 import random
+import time
 from math import isclose
 from typing import List
-import time
 
 import numpy as np
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 from networkx import NetworkXNoPath
-from raiden_libs.types import Address
 
 import pathfinder.model.token_network
-from pathfinder.model import ChannelView, TokenNetwork
 from pathfinder.config import DEFAULT_PERCENTAGE_FEE
+from pathfinder.model import ChannelView, TokenNetwork
+from raiden_libs.types import Address
 
 
 def test_routing_benchmark(
     token_network_model: TokenNetwork,
-    populate_token_network_random: None
+    populate_token_network_random: None,
 ):
     value = 100
     G = token_network_model.G
     times = []
     start = time.time()
-    for i in range(100):
+    for _ in range(100):
         tic = time.time()
         source, target = random.sample(G.nodes, 2)
         paths = token_network_model.get_paths(source, target, value=value, k=5, bias=0.0)
@@ -44,7 +44,7 @@ def test_routing_benchmark(
 def test_routing_simple(
     token_network_model: TokenNetwork,
     populate_token_network_case_1: None,
-    addresses: List[Address]
+    addresses: List[Address],
 ):
     view01: ChannelView = token_network_model.G[addresses[0]][addresses[1]]['view']
     view10: ChannelView = token_network_model.G[addresses[1]][addresses[0]]['view']
@@ -62,7 +62,7 @@ def test_routing_simple(
     assert len(paths) == 1
     assert paths[0] == {
         'path': [addresses[0], addresses[2], addresses[3]],
-        'estimated_fee': 2000
+        'estimated_fee': 2000,
     }
 
     # Bottleneck should be 0->1 and 2->3 with a capacity of 90.
@@ -78,7 +78,7 @@ def test_routing_disjoint_case1(
     token_network_model: TokenNetwork,
     populate_token_network_case_1: None,
     addresses: List[Address],
-    monkeypatch: MonkeyPatch
+    monkeypatch: MonkeyPatch,
 ):
     # Paths should be "as disjoint as possible". There are only 2 different paths though.
     monkeypatch.setattr(pathfinder.model.token_network, 'DIVERSITY_PEN_DEFAULT', 1)
@@ -90,7 +90,7 @@ def test_routing_disjoint_case1(
     }
     assert paths[1] == {
         'path': [addresses[0], addresses[1], addresses[2]],
-        'estimated_fee': 2000
+        'estimated_fee': 2000,
     }
 
 
@@ -98,7 +98,7 @@ def test_routing_disjoint_case2(
     token_network_model: TokenNetwork,
     populate_token_network_case_2: None,
     addresses: List[Address],
-    monkeypatch: MonkeyPatch
+    monkeypatch: MonkeyPatch,
 ):
     # test default diversity penalty
     paths = token_network_model.get_paths(addresses[0], addresses[4], value=10, k=3)
@@ -129,18 +129,18 @@ def test_routing_disjoint_case2(
 def test_routing_hop_fee_balance(
     token_network_model: TokenNetwork,
     populate_token_network_case_1: None,
-    addresses: List[Address]
+    addresses: List[Address],
 ):
     # 1->4 has an extremely high fee, so 1->2->3->4 would be cheaper but slower.
     # Prefer cheap over fast.
     paths = token_network_model.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=0)
     assert paths[0] == {
         'path': [addresses[1], addresses[4]],
-        'estimated_fee': 1000
+        'estimated_fee': 1000,
     }
     # Prefer fast over cheap.
     paths = token_network_model.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=1)
     assert paths[0] == {
         'path': [addresses[1], addresses[4]],
-        'estimated_fee': 1000
+        'estimated_fee': 1000,
     }
