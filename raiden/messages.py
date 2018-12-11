@@ -52,7 +52,7 @@ __all__ = (
     'Ping',
     'Processed',
     'RefundTransfer',
-    'Secret',
+    'Unlock',
     'SecretRequest',
     'SignedMessage',
     'decode',
@@ -142,7 +142,7 @@ def message_from_sendevent(send_event: SendMessageEvent, our_address: Address) -
     elif type(send_event) == SendSecretReveal:
         message = RevealSecret.from_event(send_event)
     elif type(send_event) == SendBalanceProof:
-        message = Secret.from_event(send_event)
+        message = Unlock.from_event(send_event)
     elif type(send_event) == SendSecretRequest:
         message = SecretRequest.from_event(send_event)
     elif type(send_event) == SendRefundTransfer:
@@ -551,14 +551,14 @@ class SecretRequest(SignedMessage):
         return secret_request
 
 
-class Secret(EnvelopeMessage):
+class Unlock(EnvelopeMessage):
     """ Message used to do state changes on a partner Raiden Channel.
 
     Locksroot changes need to be synchronized among both participants, the
     protocol is for only the side unlocking to send the Secret message allowing
     the other party to claim the unlocked lock.
     """
-    cmdid = messages.SECRET
+    cmdid = messages.UNLOCK
 
     def __init__(
             self,
@@ -1424,7 +1424,7 @@ CMDID_TO_CLASS = {
     messages.PROCESSED: Processed,
     messages.REFUNDTRANSFER: RefundTransfer,
     messages.REVEALSECRET: RevealSecret,
-    messages.SECRET: Secret,
+    messages.UNLOCK: Unlock,
     messages.SECRETREQUEST: SecretRequest,
     messages.LOCKEXPIRED: LockExpired,
 }
