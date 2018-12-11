@@ -245,7 +245,6 @@ class ChainState(State):
         'pending_transactions',
         'pseudo_random_generator',
         'queueids_to_queues',
-        'last_transport_synctoken',
         'last_transport_authdata',
     )
 
@@ -271,8 +270,6 @@ class ChainState(State):
         self.pending_transactions = list()
         self.pseudo_random_generator = pseudo_random_generator
         self.queueids_to_queues: QueueIdsToQueues = dict()
-        # TODO: remove last_Transport_synctoken on next db version bump
-        self.last_transport_synctoken = None
         self.last_transport_authdata = None
 
     def __repr__(self):
