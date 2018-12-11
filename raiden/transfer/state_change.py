@@ -108,6 +108,41 @@ class ActionUpdateTransportSyncToken(StateChange):
         )
 
 
+class ActionUpdateTransportAuthData(StateChange):
+    """ Holds the last "timestamp" at which we synced
+    with the transport. The timestamp could be a date/time value
+    or any other value provided by the transport backend.
+    Can be used later to filter the messages which have not been processed.
+    """
+    def __init__(self, auth_data: str):
+        self.auth_data = auth_data
+
+    def __repr__(self) -> str:
+        return '<ActionUpdateTransportAuthData value:{}>'.format(
+            self.auth_data,
+        )
+
+    def __eq__(self, other: 'ActionUpdateTransportAuthData') -> bool:
+        return (
+            isinstance(other, ActionUpdateTransportAuthData) and
+            self.auth_data == other.auth_data
+        )
+
+    def __ne__(self, other: 'ActionUpdateTransportAuthData') -> bool:
+        return not self.__eq__(other)
+
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return {
+            'auth_data': str(self.auth_data),
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ActionUpdateTransportAuthData':
+        return cls(
+            auth_data=data['auth_data'],
+        )
+
+
 class ActionCancelPayment(StateChange):
     """ The user requests the transfer to be cancelled.
     This state change can fail, it depends on the node's role and the current
