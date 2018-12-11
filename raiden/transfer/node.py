@@ -41,6 +41,7 @@ from raiden.transfer.state_change import (
     ActionInitChain,
     ActionLeaveAllNetworks,
     ActionNewTokenNetwork,
+    ActionUpdateTransportAuthData,
     ActionUpdateTransportSyncToken,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -723,7 +724,16 @@ def handle_update_transport_synctoken(
         chain_state: ChainState,
         state_change: ActionUpdateTransportSyncToken,
 ) -> TransitionResult:
+    # TODO: remove on next db version bump
     chain_state.last_transport_synctoken = state_change.sync_token
+    return TransitionResult(chain_state, list())
+
+
+def handle_update_transport_authdata(
+        chain_state: ChainState,
+        state_change: ActionUpdateTransportAuthData,
+) -> TransitionResult:
+    chain_state.last_transport_authdata = state_change.auth_data
     return TransitionResult(chain_state, list())
 
 
@@ -773,7 +783,13 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             state_change,
         )
     elif type(state_change) == ActionUpdateTransportSyncToken:
+        # TODO: deprecated, remove on next db version bump
         iteration = handle_update_transport_synctoken(
+            chain_state,
+            state_change,
+        )
+    elif type(state_change) == ActionUpdateTransportAuthData:
+        iteration = handle_update_transport_authdata(
             chain_state,
             state_change,
         )

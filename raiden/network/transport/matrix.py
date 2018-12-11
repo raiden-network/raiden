@@ -55,7 +55,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
-    ActionUpdateTransportSyncToken,
+    ActionUpdateTransportAuthData,
 )
 from raiden.utils import pex
 from raiden.utils.runnable import Runnable
@@ -334,8 +334,6 @@ class MatrixTransport(Runnable):
         self._client.add_invite_listener(self._handle_invite)
         self._client.add_presence_listener(self._handle_presence_change)
 
-        self._client.set_post_sync_hook(self._post_sync)
-
         self._health_lock = Semaphore()
         self._getroom_lock = Semaphore()
         self._account_data_lock = Semaphore()
@@ -344,7 +342,7 @@ class MatrixTransport(Runnable):
         self,
         raiden_service: RaidenService,
         message_handler: MessageHandler,
-        fetch_since_token: str,
+        prev_auth_data: str,
     ):
         if not self._stop_event.ready():
             raise RuntimeError(f'{self!r} already started')
@@ -353,16 +351,14 @@ class MatrixTransport(Runnable):
         self._message_handler = message_handler
 
         # Initialize the point from which the client will sync messages
-        if fetch_since_token and fetch_since_token.count('/') == 2:
-            prev_user_id, prev_access_token, prev_sync_token = fetch_since_token.split('/')
+        if prev_auth_data and prev_auth_data.count('/') == 1:
+            prev_user_id, prev_access_token = prev_auth_data.split('/')
         else:
-            prev_user_id = prev_access_token = prev_sync_token = None
+            prev_user_id = prev_access_token = None
 
-        # Initial login sync will be performed w/o sync token to get all meta events
         self._login_or_register(
             prev_user_id=prev_user_id,
             prev_access_token=prev_access_token,
-            prev_sync_token=prev_sync_token,
         )
         self.log = log.bind(current_user=self._user_id, node=pex(self._raiden_service.address))
 
@@ -393,6 +389,11 @@ class MatrixTransport(Runnable):
 
     def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
+        # dispatch auth data on first scheduling after start
+        state_change = ActionUpdateTransportAuthData(
+            f'{self._user_id}/{self._client.api.token}',
+        )
+        self._raiden_service.handle_state_change(state_change)
         try:
             # children crashes should throw an exception here
             self._stop_event.wait()
@@ -427,17 +428,6 @@ class MatrixTransport(Runnable):
         del self.log
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
         # we don't call it here to avoid deadlock when self crashes and calls stop() on finally
-
-    def _post_sync(self, next_batch):
-        """ This function gets called after every "sync" performed.
-        This is needed to make sure we store the last sync token
-        so that the token is used as a starting point from which
-        messages are fetched from the matrix server.
-        """
-        state_change = ActionUpdateTransportSyncToken(
-            f'{self._user_id}/{self._client.api.token}/{next_batch}',
-        )
-        self._raiden_service.handle_state_change(state_change)
 
     def _spawn(self, func: Callable, *args, **kwargs) -> gevent.Greenlet:
         """ Spawn a sub-task and ensures an error on it crashes self/main greenlet """
@@ -541,7 +531,7 @@ class MatrixTransport(Runnable):
     def _private_rooms(self) -> bool:
         return bool(self._config.get('private_rooms'))
 
-    def _login_or_register(self, prev_user_id=None, prev_access_token=None, prev_sync_token=None):
+    def _login_or_register(self, prev_user_id=None, prev_access_token=None):
         base_username = to_normalized_address(self._raiden_service.address)
         _match_user = re.match(
             f'^@{re.escape(base_username)}.*:{re.escape(self._server_name)}$',
@@ -549,30 +539,26 @@ class MatrixTransport(Runnable):
         )
         if _match_user:  # same user as before
             self.log.debug('Trying previous user login', user_id=prev_user_id)
-            self._client.user_id = prev_user_id
-            self._client.token = self._client.api.token = prev_access_token
-            self._client.hs = self._server_name
+            self._client.set_access_token(user_id=prev_user_id, token=prev_access_token)
 
             # test previous user credentials with quick /sync call
             try:
-                self._client.api.sync(prev_sync_token, timeout_ms=1)
+                self._client.api.get_devices()
             except MatrixRequestError as ex:
                 self.log.debug(
-                    'Couldn\'t use previous login credentials, re-logging',
+                    'Couldn\'t use previous login credentials, discarding',
                     prev_user_id=prev_user_id,
                     _exception=ex,
                 )
             else:
-                prev_sync_filter = self._client.sync_filter
-                self._client.sync_filter = '{ "room": { "timeline" : { "limit" : 0 } } }'
-                self._client._sync()  # when re-using credentials, do initial_sync with limit=0
-                self._client.sync_token = prev_sync_token
-                self._client.sync_filter = prev_sync_filter
+                prev_sync_limit = self._client.set_sync_limit(0)
+                self._client._sync()
+                self._client.set_sync_limit(prev_sync_limit)
                 self.log.debug('Success. Valid previous credentials', user_id=prev_user_id)
                 return
         elif prev_user_id:
             self.log.debug(
-                'Different server or account, re-logging',
+                'Different server or account, discarding',
                 prev_user_id=prev_user_id,
                 current_account=base_username,
                 current_server=self._server_name,
@@ -590,12 +576,10 @@ class MatrixTransport(Runnable):
                 username = f'{username}.{rand.randint(0, 0xffffffff):08x}'
 
             try:
-                self._client.sync_token = None
-                prev_sync_filter = self._client.sync_filter
-                # initial_sync limit=0
-                self._client.login(username, password, limit=0)
-                # reset sync_filter with limit>0 to ensure it'll pick up messages
-                self._client.sync_filter = prev_sync_filter
+                self._client.login(username, password, sync=False)
+                prev_sync_limit = self._client.set_sync_limit(0)
+                self._client._sync()  # when logging, do initial_sync with limit=0
+                self._client.set_sync_limit(prev_sync_limit)
                 self.log.debug(
                     'Login',
                     homeserver=self._server_name,

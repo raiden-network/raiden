@@ -13,7 +13,7 @@ from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_a
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
-from raiden.transfer.state_change import ActionUpdateTransportSyncToken
+from raiden.transfer.state_change import ActionUpdateTransportAuthData
 from raiden.utils import pex
 from raiden.utils.typing import Address, List, Optional, Union
 
@@ -224,20 +224,15 @@ def test_matrix_message_sync(
         'private_rooms': private_rooms,
     })
 
-    latest_sync_token = None
+    latest_auth_data = None
 
     received_messages = set()
-
-    def hook(sync_token):
-        nonlocal latest_sync_token
-        latest_sync_token = sync_token
 
     class MessageHandler:
         def on_message(self, _, message):
             nonlocal received_messages
             received_messages.add(message)
 
-    transport0._client.set_post_sync_hook(hook)
     message_handler = MessageHandler()
     raiden_service0 = MockRaidenService(message_handler)
     raiden_service1 = MockRaidenService(message_handler)
@@ -254,6 +249,12 @@ def test_matrix_message_sync(
         message_handler,
         None,
     )
+
+    gevent.sleep(1)
+
+    latest_auth_data = f'{transport1._user_id}/{transport1._client.api.token}'
+    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data)
+    raiden_service1.handle_state_change.assert_called_with(update_transport_auth_data)
 
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
@@ -273,17 +274,13 @@ def test_matrix_message_sync(
 
     gevent.sleep(2)
 
-    latest_sync_token = f'{transport1._user_id}/{latest_sync_token}'
-    update_transport_sync_token = ActionUpdateTransportSyncToken(latest_sync_token)
-    raiden_service1.handle_state_change.assert_called_with(update_transport_sync_token)
-
     assert len(received_messages) == 10
     for i in range(5):
         assert any(getattr(m, 'message_identifier', -1) == i for m in received_messages)
 
     transport1.stop()
 
-    assert latest_sync_token
+    assert latest_auth_data
 
     # Send more messages while the other end is offline
     for i in range(10, 15):
@@ -298,7 +295,7 @@ def test_matrix_message_sync(
     transport1.start(
         transport1._raiden_service,
         message_handler,
-        latest_sync_token,
+        latest_auth_data,
     )
 
     gevent.sleep(2)
