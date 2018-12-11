@@ -19,7 +19,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import data_decoder, pex
+from raiden.utils import data_decoder, pex, typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -41,7 +41,9 @@ def handle_tokennetwork_new(raiden, event: Event):
         from_block=data['blockNumber'],
     )
 
-    token_address = data_decoder(event.event_data['args']['token_address'])
+    token_address = typing.TokenAddress(
+        data_decoder(event.event_data['args']['token_address']),
+    )
 
     token_network_state = TokenNetworkState(
         token_network_address,

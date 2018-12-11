@@ -102,7 +102,7 @@ def initiator_init(
         transfer_identifier,
         transfer_amount,
         token_network_identifier,
-        raiden.address,
+        typing.InitiatorAddress(raiden.address),
         target_address,
         transfer_secret,
     )
@@ -110,7 +110,7 @@ def initiator_init(
     routes = routing.get_best_routes(
         views.state_from_raiden(raiden),
         token_network_identifier,
-        raiden.address,
+        typing.InitiatorAddress(raiden.address),
         target_address,
         transfer_amount,
         previous_address,
@@ -687,7 +687,7 @@ class RaidenService(Runnable):
             )
 
             for token_network in token_networks:
-                token_network_proxy = self.chain.token_network(token_network)
+                token_network_proxy = self.chain.token_network(typing.Address(token_network))
                 self.blockchain_events.add_token_network_listener(
                     token_network_proxy=token_network_proxy,
                     contract_manager=self.contract_manager,
@@ -735,7 +735,7 @@ class RaidenService(Runnable):
             self,
             token_network_identifier: typing.TokenNetworkID,
             amount: typing.TokenAmount,
-            target: typing.Address,
+            target: typing.TargetAddress,
             identifier: typing.PaymentID,
     ):
         """ Transfer `amount` between this node and `target`.
@@ -764,7 +764,7 @@ class RaidenService(Runnable):
             self,
             token_network_identifier: typing.TokenNetworkID,
             amount: typing.TokenAmount,
-            target: typing.Address,
+            target: typing.TargetAddress,
             identifier: typing.PaymentID,
             secret: typing.Secret,
     ):
