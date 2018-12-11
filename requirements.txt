@@ -4,6 +4,7 @@ coincurve>=8.0.0,<9.0.0
 web3==4.8.2
 eth-utils==1.4.0
 eth-abi==1.2.0
+py_ecc!=1.4.5
 
 flask
 flask_restful
