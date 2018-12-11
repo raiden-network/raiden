@@ -13,7 +13,7 @@ from raiden.utils.filters import (
     decode_event,
     get_filter_args_for_all_events_from_channel,
 )
-from raiden.utils.typing import Address, BlockSpecification, ChannelID
+from raiden.utils.typing import Address, BlockSpecification, ChannelID, PaymentNetworkID
 from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
@@ -74,7 +74,7 @@ def get_contract_events(
 
 def get_token_network_registry_events(
         chain: BlockChainService,
-        token_network_registry_address: Address,
+        token_network_registry_address: PaymentNetworkID,
         contract_manager: ContractManager,
         events: List[str] = ALL_EVENTS,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
@@ -84,7 +84,7 @@ def get_token_network_registry_events(
     return get_contract_events(
         chain,
         contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-        token_network_registry_address,
+        Address(token_network_registry_address),
         events,
         from_block,
         to_block,
