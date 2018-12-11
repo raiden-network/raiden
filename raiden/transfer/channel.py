@@ -149,6 +149,24 @@ def is_lock_expired(
     return (True, None)
 
 
+def transfer_expired(
+        transfer: LockedTransferSignedState,
+        affected_channel: NettingChannelState,
+        block_number: typing.BlockNumber,
+) -> bool:
+    lock_expiration_threshold = typing.BlockNumber(
+        transfer.lock.expiration +
+        DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+    )
+    has_lock_expired, _ = is_lock_expired(
+        end_state=affected_channel.our_state,
+        lock=transfer.lock,
+        block_number=block_number,
+        lock_expiration_threshold=lock_expiration_threshold,
+    )
+    return has_lock_expired
+
+
 def is_secret_known(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
