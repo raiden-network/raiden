@@ -1,4 +1,4 @@
-# pylint: disable=too-many-locals,too-many-statements,too-many-lines,no-member
+# pylint: disable=too-many-locals,too-many-statements,too-many-lines
 import random
 from collections import namedtuple
 from copy import deepcopy
