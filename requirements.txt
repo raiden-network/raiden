@@ -12,5 +12,5 @@ gevent
 networkx
 requests
 
-raiden-libs==0.1.13
+raiden-libs==0.1.16
 raiden-contracts==0.8.0
