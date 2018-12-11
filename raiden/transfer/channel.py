@@ -766,7 +766,7 @@ def is_valid_unlock(
         result = (False, msg, None)
 
     elif received_balance_proof.locksroot != locksroot_without_lock:
-        # Secret messages remove a known lock, the new locksroot must have only
+        # Unlock messages remove a known lock, the new locksroot must have only
         # that lock removed, otherwise the sender may be trying to remove
         # additional locks.
         msg = (
@@ -780,7 +780,7 @@ def is_valid_unlock(
         result = (False, msg, None)
 
     elif received_balance_proof.transferred_amount != expected_transferred_amount:
-        # Secret messages must increase the transferred_amount by lock amount,
+        # Unlock messages must increase the transferred_amount by lock amount,
         # otherwise the sender is trying to play the protocol and steal token.
         msg = (
             "Invalid Unlock message. "
@@ -793,7 +793,7 @@ def is_valid_unlock(
         result = (False, msg, None)
 
     elif received_balance_proof.locked_amount != expected_locked_amount:
-        # Secret messages must increase the transferred_amount by lock amount,
+        # Unlock messages must increase the transferred_amount by lock amount,
         # otherwise the sender is trying to play the protocol and steal token.
         msg = (
             "Invalid Unlock message. "
