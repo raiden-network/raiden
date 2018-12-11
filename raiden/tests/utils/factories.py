@@ -1,4 +1,4 @@
-# pylint: disable=too-many-arguments,no-member
+# pylint: disable=too-many-arguments
 import random
 import string
 from functools import singledispatch
@@ -573,20 +573,26 @@ def make_merkletree_leaves(width: int) -> typing.List[typing.Secret]:
 
 
 @singledispatch
-def create(properties: typing.Any, defaults=None) -> typing.Any:
+def create(properties, defaults=None):
     """Create objects from their associated property class.
 
     E. g. a NettingChannelState from NettingChannelStateProperties. For any field in
     properties set to EMPTY a default will be used. The default values can be changed
     by giving another object of the same property type as the defaults argument.
     """
-    return properties
+    return None
 
 
-def _args_from_properties(properties: NamedTuple, defaults: NamedTuple):
+# the default implementation of create() must return None to not confuse pylint.
+def _create_or_echo(properties, defaults=None):
+    created = create(properties, defaults)
+    return created if created is not None else properties
+
+
+def _args_from_properties(properties: NamedTuple, defaults: NamedTuple) -> typing.Dict:
     defaults_dict = defaults._asdict()
     return {
-        key: create(if_empty(value, defaults_dict[key]))
+        key: _create_or_echo(if_empty(value, defaults_dict[key]))
         for key, value in properties._asdict().items()
     }
 
