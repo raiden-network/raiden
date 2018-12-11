@@ -1,6 +1,7 @@
 from typing import List
 
 import requests
+import socket
 from eth_utils import to_normalized_address
 
 from pathfinder.api.rest import ServiceApi
@@ -145,3 +146,23 @@ def test_get_paths(
     response = requests.get(url)
     assert response.status_code == 400
     assert response.json()['error'].startswith('No suitable path found for transfer from')
+
+
+#
+# tests for /info endpoint
+#
+
+def test_get_info(
+    api_sut: ServiceApi,
+    api_url: str,
+):
+    url = api_url + f'/info'
+
+    response = requests.get(url)
+    assert response.status_code == 200
+    assert response.json() == {
+            'IP': socket.gethostbyname(socket.gethostname()),
+            'Settings': 'PLACEHOLDER',
+            'Version': '0.1',
+            'Dude who runs it': 'Dominik',
+        }
