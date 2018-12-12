@@ -357,7 +357,16 @@ class RaidenEventHandler:
             )
             state_change_identifier = event_record.state_change_identifier
         else:
-            state_change_identifier = 0
+            # In the case that someone else sent the unlock we do nothing
+            # Check https://github.com/raiden-network/raiden/issues/3152
+            # for more details
+            log.warning(
+                'Onchain unlock already mined',
+                token_address=token_address,
+                channel_identifier=channel_identifier,
+                participant=participant,
+            )
+            return
 
         if not state_change_identifier:
             raise RaidenUnrecoverableError(
