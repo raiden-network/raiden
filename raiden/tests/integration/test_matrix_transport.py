@@ -10,7 +10,7 @@ from raiden.messages import Processed, SecretRequest
 from raiden.network.transport import MatrixTransport
 from raiden.network.transport.matrix import UserPresence, _RetryQueue
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
-from raiden.tests.utils.transport import MockRaidenService
+from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state_change import ActionUpdateTransportSyncToken
