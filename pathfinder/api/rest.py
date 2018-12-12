@@ -1,9 +1,11 @@
+import socket
 from typing import Dict, List, Optional, Tuple
 
 import gevent
-import socket
-import pathfinder
+import matplotlib.pyplot as plt
+import networkx as nx
 import pkg_resources
+
 from eth_utils import is_address, is_checksum_address
 from flask import Flask
 from flask_restful import Api, Resource, reqparse
@@ -11,6 +13,7 @@ from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
 
+import pathfinder
 from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_libs.types import Address
@@ -115,16 +118,23 @@ class InfoResource(PathfinderResource):
     def get(self):
         ip = socket.gethostbyname(socket.gethostname())
         # this is the internal IP address, scoped out soon anyway
-        settings = 'PLACEHOLDER'
+        settings = 'PLACEHOLDER FOR PATHFINDER SETTINGS'
         version = pkg_resources.require(pathfinder.__name__)[0].version
-        operator = 'Dominik'
-        message = 'This is for Paul'
+        operator = 'PLACEHOLDER FOR PATHFINDER OPERATOR'
+        message = 'PLACEHOLDER FOR ADDITIONAL MESSAGE BY THE PFS'
 
-        return {'ip': ip,
-                'settings': settings,
-                'version': version,
-                'operator': operator,
-                'message': message}, 200
+        for token_network in self.pathfinding_service.token_networks.values():
+            nx.draw(token_network.G)  # networkx draw()
+            plt.draw()  # pyplot draw()
+            plt.savefig(f'Graph-{token_network.address}.png', dpi=100)
+
+        return {
+            'ip': ip,
+            'settings': settings,
+            'version': version,
+            'operator': operator,
+            'message': message,
+        }, 200
 
 
 class ServiceApi:

@@ -1,11 +1,11 @@
+import socket
 from typing import List
 
-import requests
-import socket
-import pathfinder
 import pkg_resources
+import requests
 from eth_utils import to_normalized_address
 
+import pathfinder
 from pathfinder.api.rest import ServiceApi
 from pathfinder.model import TokenNetwork
 from raiden_libs.types import Address
@@ -158,14 +158,14 @@ def test_get_info(
     api_sut: ServiceApi,
     api_url: str,
 ):
-    url = api_url + f'/info'
+    url = api_url + '/info'
 
     response = requests.get(url)
     assert response.status_code == 200
     assert response.json() == {
             'ip': socket.gethostbyname(socket.gethostname()),
-            'settings': 'PLACEHOLDER',
+            'settings': 'PLACEHOLDER FOR PATHFINDER SETTINGS',
             'version': pkg_resources.require(pathfinder.__name__)[0].version,
-            'operator': 'Dominik',
-            'message': 'This is for Paul'
+            'operator': 'PLACEHOLDER FOR PATHFINDER OPERATOR',
+            'message': 'PLACEHOLDER FOR ADDITIONAL MESSAGE BY THE PFS',
         }

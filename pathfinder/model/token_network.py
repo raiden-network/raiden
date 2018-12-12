@@ -29,9 +29,13 @@ class TokenNetwork:
         self.G = DiGraph()
         self.max_relative_fee = 0
 
+    def __repr__(self):
+        return f'<TokenNetwork address = {self.address} ' \
+            f'num_channels = {len(self.channel_id_to_addresses)}>'
     #
     # Contract event listener functions
     #
+
     def handle_channel_opened_event(
         self,
         channel_identifier: ChannelIdentifier,
