@@ -2,6 +2,11 @@
 Pathfinder
 ==========
 
+.. image:: https://img.shields.io/travis/raiden-network/raiden-pathfinding-service.svg
+        :alt: abc
+.. image:: https://img.shields.io/codecov/c/github/raiden-network/raiden-pathfinding-service.svg
+        :alt: abc
+
 Pathfinding service for the Raiden Network
 
 Running
