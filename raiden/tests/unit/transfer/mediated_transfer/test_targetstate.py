@@ -256,7 +256,7 @@ def test_handle_offchain_secretreveal():
 
 def test_handle_offchain_secretreveal_after_lock_expired():
     """Test that getting the secret revealed after lock expiration for the
-    target does not end up continuoysly emitting EventUnlockClaimFailed
+    target does not end up continuously emitting EventUnlockClaimFailed
 
     Target part for https://github.com/raiden-network/raiden/issues/3086
     """
