@@ -21,12 +21,15 @@ from raiden.tests.utils.factories import (
     UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
     UNIT_TRANSFER_IDENTIFIER,
-    UNIT_TRANSFER_INITIATOR,
-    UNIT_TRANSFER_PKEY,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
+    BalanceProofProperties,
+    BalanceProofSignedStateProperties,
+    LockedTransferProperties,
+    LockedTransferSignedStateProperties,
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
+    create,
     create_properties,
     make_channel_set,
     mediator_make_channel_pair,
@@ -193,19 +196,16 @@ def test_next_route_reveal_timeout():
 def test_next_transfer_pair():
     block_number = 3
     balance = 10
-    initiator = HOP1
-    target = ADDR
-    expiration = 50
-    secret = UNIT_SECRET
     pseudo_random_generator = random.Random()
 
-    payer_transfer = factories.make_signed_transfer(
-        balance,
-        initiator,
-        target,
-        expiration,
-        secret,
-    )
+    payer_transfer = create(LockedTransferSignedStateProperties(
+        transfer=LockedTransferProperties(
+            amount=balance,
+            initiator=HOP1,
+            target=ADDR,
+            expiration=50,
+        )
+    ))
 
     channels = make_channel_set([
         NettingChannelStateProperties(
@@ -322,15 +322,19 @@ def test_events_for_refund():
         partner_address=UNIT_TRANSFER_SENDER,
     )
 
-    received_transfer = factories.make_signed_transfer(
-        amount,
-        UNIT_TRANSFER_INITIATOR,
-        UNIT_TRANSFER_TARGET,
-        expiration,
-        UNIT_SECRET,
-        channel_identifier=refund_channel.identifier,
-        token_network_address=refund_channel.token_network_identifier,
+    transfer_data = LockedTransferSignedStateProperties(
+        transfer=LockedTransferProperties(
+            amount=amount,
+            expiration=expiration,
+            balance_proof=BalanceProofProperties(
+                channel_identifier=refund_channel.identifier,
+                token_network_identifier=refund_channel.token_network_identifier,
+                transferred_amount=0,   # TODO decent defaults
+                locked_amount=10,   # TODO decent defaults
+            ),
+        ),
     )
+    received_transfer = create(transfer_data)
 
     is_valid, _, msg = channel.handle_receive_lockedtransfer(
         refund_channel,
@@ -1409,17 +1413,17 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         },
     })
 
-    balance_proof = factories.make_signed_balance_proof(
-        nonce=2,
-        transferred_amount=transfer.balance_proof.transferred_amount,
-        locked_amount=0,
-        token_network_address=transfer.balance_proof.token_network_identifier,
-        channel_identifier=channels[0].identifier,
-        locksroot=EMPTY_MERKLE_ROOT,
-        extra_hash=transfer.lock.secrethash,
-        sender_address=UNIT_TRANSFER_SENDER,
-        private_key=UNIT_TRANSFER_PKEY,
+    balance_proof_data = BalanceProofSignedStateProperties(
+        balance_proof=BalanceProofProperties(
+            nonce=2,
+            transferred_amount=transfer.balance_proof.transferred_amount,
+            token_network_identifier=transfer.balance_proof.token_network_identifier,
+            channel_identifier=channels[0].identifier,
+            locksroot=EMPTY_MERKLE_ROOT,  # TODO default?
+        ),
+        message_hash=transfer.lock.secrethash,
     )
+    balance_proof = create(balance_proof_data)
 
     lock_expired_state_change = ReceiveLockExpired(
         balance_proof=balance_proof,
@@ -1499,17 +1503,18 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     assert secrethash not in channels[0].partner_state.secrethashes_to_lockedlocks
     assert secrethash in channels[0].partner_state.secrethashes_to_unlockedlocks
 
-    balance_proof = factories.make_signed_balance_proof(
-        nonce=2,
-        transferred_amount=transfer.balance_proof.transferred_amount,
-        locked_amount=0,
-        token_network_address=transfer.balance_proof.token_network_identifier,
-        channel_identifier=channels[0].identifier,
-        locksroot=EMPTY_MERKLE_ROOT,
-        extra_hash=transfer.lock.secrethash,
-        sender_address=UNIT_TRANSFER_SENDER,
-        private_key=UNIT_TRANSFER_PKEY,
+    balance_proof_properties = BalanceProofSignedStateProperties(
+        balance_proof=BalanceProofProperties(
+            nonce=2,
+            transferred_amount=transfer.balance_proof.transferred_amount,
+            locked_amount=0,
+            token_network_identifier=transfer.balance_proof.token_network_identifier,
+            channel_identifier=channels[0].identifier,
+            locksroot=EMPTY_MERKLE_ROOT,  # TODO set as default?
+        ),
+        message_hash=transfer.lock.secrethash,
     )
+    balance_proof = create(balance_proof_properties)
 
     lock_expired_state_change = ReceiveLockExpired(
         balance_proof=balance_proof,
