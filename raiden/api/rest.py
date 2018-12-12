@@ -557,7 +557,13 @@ class RestAPI:
             token_address=to_checksum_address(token_address),
             settle_timeout=settle_timeout,
         )
-        token = self.raiden_api.raiden.chain.token(token_address)
+        try:
+            token = self.raiden_api.raiden.chain.token(token_address)
+        except AddressWithoutCode as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.CONFLICT,
+            )
         balance = token.balance_of(self.raiden_api.raiden.address)
 
         if total_deposit is not None and total_deposit > balance:
@@ -578,8 +584,7 @@ class RestAPI:
                 partner_address,
                 settle_timeout,
             )
-        except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
-                AddressWithoutCode, DuplicatedChannelError, TokenNotRegistered) as e:
+        except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress, AddressWithoutCode, DuplicatedChannelError, TokenNotRegistered) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
