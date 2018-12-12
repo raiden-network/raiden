@@ -1,5 +1,6 @@
 # pylint: disable=invalid-name,too-many-locals
 import random
+from typing import NamedTuple
 
 import pytest
 
@@ -8,12 +9,19 @@ from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
-    HOP1,
     UNIT_SECRET,
     UNIT_SECRETHASH,
-    UNIT_TRANSFER_PKEY,
+    UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
+    BalanceProofProperties,
+    BalanceProofSignedStateProperties,
+    LockedTransferProperties,
+    LockedTransferSignedStateProperties,
+    NettingChannelEndStateProperties,
+    NettingChannelStateProperties,
+    create,
+    make_channel_set,
 )
 from raiden.transfer import channel
 from raiden.transfer.events import ContractSendSecretReveal, SendProcessed
@@ -31,30 +39,45 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
+from raiden.utils import typing
+
+
+class TargetStateSetup(NamedTuple):
+    channel: typing.ChannelState
+    new_state: TargetTransferState
+    our_address: typing.Address
+    initiator: typing.Address
+    amount: typing.TokenAmount
+    block_number: typing.BlockNumber
+    expiration: typing.BlockExpiration
+    pseudo_random_generator: random.Random
 
 
 def make_target_state(
-        our_address,
-        amount,
-        block_number,
-        initiator,
+        our_address=factories.ADDR,
+        amount=3,
+        block_number=1,
+        initiator=UNIT_TRANSFER_INITIATOR,
         expiration=None,
         pseudo_random_generator=None,
 ):
     pseudo_random_generator = pseudo_random_generator or random.Random()
 
-    from_channel = factories.make_channel(
-        our_address=our_address,
-        partner_address=UNIT_TRANSFER_SENDER,
-        partner_balance=amount,
-    )
-    from_route = factories.route_from_channel(from_channel)
+    channels = make_channel_set([
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(address=our_address),
+            partner_state=NettingChannelEndStateProperties(
+                address=UNIT_TRANSFER_SENDER,
+                balance=amount,
+            ),
+        ),
+    ])
 
     if expiration is None:
-        expiration = from_channel.reveal_timeout + block_number + 1
+        expiration = channels[0].reveal_timeout + block_number + 1
 
     from_transfer = factories.make_signed_transfer_for(
-        from_channel,
+        channels[0],
         amount,
         initiator,
         our_address,
@@ -62,57 +85,68 @@ def make_target_state(
         UNIT_SECRET,
     )
 
-    state_change = ActionInitTarget(from_route, from_transfer)
+    state_change = ActionInitTarget(channels.get_route(0), from_transfer)
     iteration = target.handle_inittarget(
         state_change,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_number,
     )
-    return from_channel, iteration.new_state
+
+    return TargetStateSetup(
+        channel=channels[0],
+        new_state=iteration.new_state,
+        our_address=our_address,
+        initiator=initiator,
+        expiration=expiration,
+        amount=amount,
+        block_number=block_number,
+        pseudo_random_generator=pseudo_random_generator,
+    )
+
+
+channel_properties = NettingChannelStateProperties(
+    our_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_TARGET),
+    partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_SENDER, balance=3),
+)
+
+channel_properties2 = NettingChannelStateProperties(
+    our_state=NettingChannelEndStateProperties(address=factories.make_address(), balance=100),
+    partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_SENDER, balance=130),
+)
 
 
 def test_events_for_onchain_secretreveal():
     """ Secret must be registered on-chain when the unsafe region is reached and
     the secret is known.
     """
-    amount = 3
     block_number = 10
     expiration = block_number + 30
-    initiator = HOP1
-    target_address = UNIT_TRANSFER_TARGET
 
-    from_channel = factories.make_channel(
-        our_address=target_address,
-        partner_address=UNIT_TRANSFER_SENDER,
-        partner_balance=amount,
-    )
-    from_route = factories.route_from_channel(from_channel)
+    channels = make_channel_set([channel_properties])
+    amount = channels[0].partner_state.contract_balance
 
     from_transfer = factories.make_signed_transfer_for(
-        from_channel,
+        channels[0],
         amount,
-        initiator,
-        target_address,
+        UNIT_TRANSFER_INITIATOR,
+        UNIT_TRANSFER_TARGET,
         expiration,
         UNIT_SECRET,
     )
 
-    channel.handle_receive_lockedtransfer(
-        from_channel,
-        from_transfer,
-    )
+    channel.handle_receive_lockedtransfer(channels[0], from_transfer)
 
-    channel.register_offchain_secret(from_channel, UNIT_SECRET, UNIT_SECRETHASH)
+    channel.register_offchain_secret(channels[0], UNIT_SECRET, UNIT_SECRETHASH)
 
-    safe_to_wait = expiration - from_channel.reveal_timeout - 1
-    unsafe_to_wait = expiration - from_channel.reveal_timeout
+    safe_to_wait = expiration - channels[0].reveal_timeout - 1
+    unsafe_to_wait = expiration - channels[0].reveal_timeout
 
-    state = TargetTransferState(from_route, from_transfer)
-    events = target.events_for_onchain_secretreveal(state, from_channel, safe_to_wait)
+    state = TargetTransferState(channels.get_route(0), from_transfer)
+    events = target.events_for_onchain_secretreveal(state, channels[0], safe_to_wait)
     assert not events
 
-    events = target.events_for_onchain_secretreveal(state, from_channel, unsafe_to_wait)
+    events = target.events_for_onchain_secretreveal(state, channels[0], unsafe_to_wait)
     assert events
     assert isinstance(events[0], ContractSendSecretReveal)
     assert events[0].secret == UNIT_SECRET
@@ -120,38 +154,30 @@ def test_events_for_onchain_secretreveal():
 
 def test_handle_inittarget():
     """ Init transfer must send a secret request if the expiration is valid. """
-    amount = 3
     block_number = 1
-    initiator = factories.HOP1
-    target_address = UNIT_TRANSFER_TARGET
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        our_address=target_address,
-        partner_address=UNIT_TRANSFER_SENDER,
-        partner_balance=amount,
-    )
-    from_route = factories.route_from_channel(from_channel)
+    channels = make_channel_set([channel_properties])
 
-    expiration = from_channel.reveal_timeout + block_number + 1
-    from_transfer = factories.make_signed_transfer(
-        amount,
-        initiator,
-        target_address,
-        expiration,
-        UNIT_SECRET,
-        channel_identifier=from_channel.identifier,
-        token_network_address=from_channel.token_network_identifier,
+    transfer_properties = LockedTransferSignedStateProperties(
+        transfer=LockedTransferProperties(
+            amount=channels[0].partner_state.contract_balance,
+            expiration=channels[0].reveal_timeout + block_number + 1,
+            balance_proof=BalanceProofProperties(
+                channel_identifier=channels[0].identifier,
+                token_network_identifier=channels[0].token_network_identifier,
+                transferred_amount=0,  # TODO defaults?
+                locked_amount=channels[0].partner_state.contract_balance,
+            ),
+        ),
     )
+    from_transfer = create(transfer_properties)
 
-    state_change = ActionInitTarget(
-        from_route,
-        from_transfer,
-    )
+    state_change = ActionInitTarget(channels.get_route(0), from_transfer)
 
     iteration = target.handle_inittarget(
         state_change,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_number,
     )
@@ -160,7 +186,7 @@ def test_handle_inittarget():
         'payment_identifier': from_transfer.payment_identifier,
         'amount': from_transfer.lock.amount,
         'secrethash': from_transfer.lock.secrethash,
-        'recipient': initiator,
+        'recipient': UNIT_TRANSFER_INITIATOR,
     })
     assert must_contain_entry(iteration.events, SendProcessed, {})
 
@@ -168,37 +194,27 @@ def test_handle_inittarget():
 def test_handle_inittarget_bad_expiration():
     """ Init transfer must do nothing if the expiration is bad. """
     block_number = 1
-    amount = 3
-    initiator = factories.HOP1
-    target_address = UNIT_TRANSFER_TARGET
     pseudo_random_generator = random.Random()
 
-    from_channel = factories.make_channel(
-        our_address=target_address,
-        partner_address=UNIT_TRANSFER_SENDER,
-        partner_balance=amount,
-    )
-    from_route = factories.route_from_channel(from_channel)
+    channels = make_channel_set([channel_properties])
+    amount = channels[0].partner_state.contract_balance
 
-    expiration = from_channel.reveal_timeout + block_number + 1
+    expiration = channels[0].reveal_timeout + block_number + 1
     from_transfer = factories.make_signed_transfer_for(
-        from_channel,
+        channels[0],
         amount,
-        initiator,
-        target_address,
+        UNIT_TRANSFER_INITIATOR,
+        UNIT_TRANSFER_TARGET,
         expiration,
         UNIT_SECRET,
     )
 
-    channel.handle_receive_lockedtransfer(
-        from_channel,
-        from_transfer,
-    )
+    channel.handle_receive_lockedtransfer(channels[0], from_transfer)
 
-    state_change = ActionInitTarget(from_route, from_transfer)
+    state_change = ActionInitTarget(channels.get_route(0), from_transfer)
     iteration = target.handle_inittarget(
         state_change,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_number,
     )
@@ -209,28 +225,14 @@ def test_handle_offchain_secretreveal():
     """ The target node needs to inform the secret to the previous node to
     receive an updated balance proof.
     """
-    amount = 3
-    block_number = 1
-    expiration = block_number + factories.UNIT_REVEAL_TIMEOUT
-    initiator = factories.HOP1
-    our_address = factories.ADDR
-    secret = factories.UNIT_SECRET
-    pseudo_random_generator = random.Random()
-
-    channel_state, state = make_target_state(
-        our_address,
-        amount,
-        block_number,
-        initiator,
-        expiration,
-    )
-    state_change = ReceiveSecretReveal(secret, initiator)
+    setup = make_target_state()
+    state_change = ReceiveSecretReveal(UNIT_SECRET, setup.initiator)
     iteration = target.handle_offchain_secretreveal(
-        target_state=state,
+        target_state=setup.new_state,
         state_change=state_change,
-        channel_state=channel_state,
-        pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
+        block_number=setup.block_number,
     )
     assert len(iteration.events) == 1
 
@@ -238,18 +240,18 @@ def test_handle_offchain_secretreveal():
     assert isinstance(reveal, SendSecretReveal)
 
     assert iteration.new_state.state == 'reveal_secret'
-    assert reveal.secret == secret
-    assert reveal.recipient == state.route.node_address
+    assert reveal.secret == UNIT_SECRET
+    assert reveal.recipient == setup.new_state.route.node_address
 
     # if we get an empty hash secret make sure it's rejected
     secret = EMPTY_HASH
-    state_change = ReceiveSecretReveal(secret, initiator)
+    state_change = ReceiveSecretReveal(secret, setup.initiator)
     iteration = target.handle_offchain_secretreveal(
-        target_state=state,
+        target_state=setup.new_state,
         state_change=state_change,
-        channel_state=channel_state,
-        pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
+        block_number=setup.block_number,
     )
     assert len(iteration.events) == 0
 
@@ -260,23 +262,9 @@ def test_handle_offchain_secretreveal_after_lock_expired():
 
     Target part for https://github.com/raiden-network/raiden/issues/3086
     """
-    amount = 3
-    block_number = 1
-    expiration = block_number + factories.UNIT_REVEAL_TIMEOUT
-    initiator = factories.HOP1
-    our_address = factories.ADDR
-    secret = factories.UNIT_SECRET
-    pseudo_random_generator = random.Random()
+    setup = make_target_state()
 
-    channel_state, state = make_target_state(
-        our_address,
-        amount,
-        block_number,
-        initiator,
-        expiration,
-    )
-
-    lock_expiration = state.transfer.lock.expiration
+    lock_expiration = setup.new_state.transfer.lock.expiration
     lock_expiration_block_number = lock_expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
     lock_expiration_block = Block(
         block_number=lock_expiration_block_number,
@@ -284,10 +272,10 @@ def test_handle_offchain_secretreveal_after_lock_expired():
         block_hash=factories.make_transaction_hash(),
     )
     iteration = target.state_transition(
-        target_state=state,
+        target_state=(setup.new_state),
         state_change=lock_expiration_block,
-        channel_state=channel_state,
-        pseudo_random_generator=pseudo_random_generator,
+        channel_state=(setup.channel),
+        pseudo_random_generator=(setup.pseudo_random_generator),
         block_number=lock_expiration_block_number,
     )
     state = iteration.new_state
@@ -297,9 +285,9 @@ def test_handle_offchain_secretreveal_after_lock_expired():
 
     iteration = target.state_transition(
         target_state=state,
-        state_change=ReceiveSecretReveal(secret, initiator),
-        channel_state=channel_state,
-        pseudo_random_generator=pseudo_random_generator,
+        state_change=ReceiveSecretReveal(UNIT_SECRET, setup.initiator),
+        channel_state=(setup.channel),
+        pseudo_random_generator=(setup.pseudo_random_generator),
         block_number=lock_expiration_block_number + 1,
     )
     state = iteration.new_state
@@ -312,8 +300,8 @@ def test_handle_offchain_secretreveal_after_lock_expired():
     iteration = target.state_transition(
         target_state=state,
         state_change=next_block,
-        channel_state=channel_state,
-        pseudo_random_generator=pseudo_random_generator,
+        channel_state=(setup.channel),
+        pseudo_random_generator=(setup.pseudo_random_generator),
         block_number=lock_expiration_block_number + 1,
     )
     msg = 'At the next block we should not get the same event'
@@ -324,35 +312,24 @@ def test_handle_onchain_secretreveal():
     """ The target node must update the lock state when the secret is
     registered in the blockchain.
     """
-    amount = 3
-    block_number = 1
-    expiration = block_number + factories.UNIT_REVEAL_TIMEOUT
-    initiator = factories.HOP1
-    our_address = factories.ADDR
-    secret = factories.UNIT_SECRET
-    pseudo_random_generator = random.Random()
-
-    channel_state, state = make_target_state(
-        our_address,
-        amount,
-        block_number,
-        initiator,
-        expiration,
+    setup = make_target_state(
+        block_number=1,
+        expiration=1 + factories.UNIT_REVEAL_TIMEOUT,
     )
-    assert factories.UNIT_SECRETHASH in channel_state.partner_state.secrethashes_to_lockedlocks
+    assert factories.UNIT_SECRETHASH in setup.channel.partner_state.secrethashes_to_lockedlocks
 
     offchain_secret_reveal_iteration = target.state_transition(
-        state,
-        ReceiveSecretReveal(secret, initiator),
-        channel_state,
-        pseudo_random_generator,
-        block_number,
+        setup.new_state,
+        ReceiveSecretReveal(UNIT_SECRET, setup.initiator),
+        setup.channel,
+        setup.pseudo_random_generator,
+        setup.block_number,
     )
-    assert factories.UNIT_SECRETHASH in channel_state.partner_state.secrethashes_to_unlockedlocks
-    assert factories.UNIT_SECRETHASH not in channel_state.partner_state.secrethashes_to_lockedlocks
+    assert UNIT_SECRETHASH in setup.channel.partner_state.secrethashes_to_unlockedlocks
+    assert UNIT_SECRETHASH not in setup.channel.partner_state.secrethashes_to_lockedlocks
 
     # Make sure that an emptyhash on chain reveal is rejected.
-    block_number_prior_the_expiration = expiration - 2
+    block_number_prior_the_expiration = setup.expiration - 2
     onchain_reveal = ContractReceiveSecretReveal(
         transaction_hash=factories.make_address(),
         secret_registry_address=factories.make_address(),
@@ -363,31 +340,31 @@ def test_handle_onchain_secretreveal():
     onchain_secret_reveal_iteration = target.state_transition(
         offchain_secret_reveal_iteration.new_state,
         onchain_reveal,
-        channel_state,
-        pseudo_random_generator,
+        setup.channel,
+        setup.pseudo_random_generator,
         block_number_prior_the_expiration,
     )
-    unlocked_onchain = channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
+    unlocked_onchain = setup.channel.partner_state.secrethashes_to_onchain_unlockedlocks
     assert EMPTY_HASH_KECCAK not in unlocked_onchain
 
     # now let's go for the actual secret
-    onchain_reveal.secret = secret
-    onchain_reveal.secrethash = factories.UNIT_SECRETHASH
+    onchain_reveal.secret = UNIT_SECRET
+    onchain_reveal.secrethash = UNIT_SECRETHASH
     onchain_secret_reveal_iteration = target.state_transition(
         offchain_secret_reveal_iteration.new_state,
         onchain_reveal,
-        channel_state,
-        pseudo_random_generator,
+        setup.channel,
+        setup.pseudo_random_generator,
         block_number_prior_the_expiration,
     )
-    unlocked_onchain = channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
-    assert factories.UNIT_SECRETHASH in unlocked_onchain
+    unlocked_onchain = setup.channel.partner_state.secrethashes_to_onchain_unlockedlocks
+    assert UNIT_SECRETHASH in unlocked_onchain
 
     # Check that after we register a lock on-chain handling the block again will
     # not cause us to attempt an onchain re-register
     extra_block_handle_transition = target.handle_block(
         onchain_secret_reveal_iteration.new_state,
-        channel_state,
+        setup.channel,
         block_number_prior_the_expiration + 1,
     )
     assert len(extra_block_handle_transition.events) == 0
@@ -395,91 +372,62 @@ def test_handle_onchain_secretreveal():
 
 def test_handle_block():
     """ Increase the block number. """
-    initiator = factories.HOP6
-    our_address = factories.ADDR
-    amount = 3
-    block_number = 1
-    pseudo_random_generator = random.Random()
-
-    from_channel, state = make_target_state(
-        our_address,
-        amount,
-        block_number,
-        initiator,
-    )
+    setup = make_target_state()
 
     new_block = Block(
-        block_number=block_number + 1,
+        block_number=setup.block_number + 1,
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
+
     iteration = target.state_transition(
-        state,
+        setup.new_state,
         new_block,
-        from_channel,
-        pseudo_random_generator,
+        setup.channel,
+        setup.pseudo_random_generator,
         new_block.block_number,
     )
+
     assert iteration.new_state
     assert not iteration.events
 
 
 def test_handle_block_equal_block_number():
     """ Nothing changes. """
-    initiator = factories.HOP6
-    our_address = factories.ADDR
-    amount = 3
-    block_number = 1
-    pseudo_random_generator = random.Random()
-
-    from_channel, state = make_target_state(
-        our_address,
-        amount,
-        block_number,
-        initiator,
-    )
+    setup = make_target_state()
 
     new_block = Block(
-        block_number=block_number,
+        block_number=1,
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
+
     iteration = target.state_transition(
-        state,
+        setup.new_state,
         new_block,
-        from_channel,
-        pseudo_random_generator,
+        setup.channel,
+        random.Random(),
         new_block.block_number,
     )
+
     assert iteration.new_state
     assert not iteration.events
 
 
 def test_handle_block_lower_block_number():
     """ Nothing changes. """
-    initiator = factories.HOP6
-    our_address = factories.ADDR
-    amount = 3
-    block_number = 10
-    pseudo_random_generator = random.Random()
-
-    from_channel, state = make_target_state(
-        our_address,
-        amount,
-        block_number,
-        initiator,
-    )
+    setup = make_target_state(block_number=10)
 
     new_block = Block(
-        block_number=block_number - 1,
+        block_number=setup.block_number - 1,
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
     iteration = target.state_transition(
-        state,
+        setup.new_state,
         new_block,
-        from_channel,
-        pseudo_random_generator,
+        setup.channel,
+        setup.pseudo_random_generator,
         new_block.block_number,
     )
     assert iteration.new_state
@@ -493,42 +441,29 @@ def test_state_transition():
     initiator = factories.HOP6
     pseudo_random_generator = random.Random()
 
-    our_balance = 100
-    our_address = factories.make_address()
-    partner_balance = 130
-
-    from_channel = factories.make_channel(
-        our_address=our_address,
-        our_balance=our_balance,
-        partner_address=UNIT_TRANSFER_SENDER,
-        partner_balance=partner_balance,
-    )
-    from_route = factories.route_from_channel(from_channel)
-    expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
+    channels = make_channel_set([channel_properties2])
+    expiration = block_number + channels[0].settle_timeout - channels[0].reveal_timeout
 
     from_transfer = factories.make_signed_transfer_for(
-        from_channel,
+        channels[0],
         lock_amount,
         initiator,
-        our_address,
+        channels.our_address(0),
         expiration,
         UNIT_SECRET,
     )
 
-    init = ActionInitTarget(
-        from_route,
-        from_transfer,
-    )
+    init = ActionInitTarget(channels.get_route(0), from_transfer)
 
     init_transition = target.state_transition(
         None,
         init,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_number,
     )
     assert init_transition.new_state is not None
-    assert init_transition.new_state.route == from_route
+    assert init_transition.new_state.route == channels.get_route(0)
     assert init_transition.new_state.transfer == from_transfer
 
     first_new_block = Block(
@@ -539,7 +474,7 @@ def test_state_transition():
     first_block_iteration = target.state_transition(
         init_transition.new_state,
         first_new_block,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         first_new_block.block_number,
     )
@@ -548,7 +483,7 @@ def test_state_transition():
     reveal_iteration = target.state_transition(
         first_block_iteration.new_state,
         secret_reveal,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         first_new_block.block_number,
     )
@@ -562,29 +497,23 @@ def test_state_transition():
     iteration = target.state_transition(
         init_transition.new_state,
         second_new_block,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         second_new_block.block_number,
     )
     assert not iteration.events
 
-    nonce = from_transfer.balance_proof.nonce + 1
-    transferred_amount = lock_amount
-    locksroot = EMPTY_MERKLE_ROOT
-    invalid_message_hash = b'\x00' * 32
-    locked_amount = 0
-
-    balance_proof = factories.make_signed_balance_proof(
-        nonce,
-        transferred_amount,
-        locked_amount,
-        from_channel.token_network_identifier,
-        from_route.channel_identifier,
-        locksroot,
-        invalid_message_hash,
-        UNIT_TRANSFER_PKEY,
-        UNIT_TRANSFER_SENDER,
-    )
+    balance_proof = create(BalanceProofSignedStateProperties(
+        balance_proof=BalanceProofProperties(
+            nonce=from_transfer.balance_proof.nonce + 1,
+            transferred_amount=lock_amount,
+            locked_amount=0,
+            token_network_identifier=channels[0].token_network_identifier,
+            channel_identifier=channels.get_route(0).channel_identifier,
+            locksroot=EMPTY_MERKLE_ROOT,
+        ),
+        message_hash=b'\x00' * 32,  # invalid
+    ))
 
     balance_proof_state_change = ReceiveUnlock(
         message_identifier=random.randint(0, UINT64_MAX),
@@ -595,7 +524,7 @@ def test_state_transition():
     proof_iteration = target.state_transition(
         init_transition.new_state,
         balance_proof_state_change,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_number + 2,
     )
@@ -605,41 +534,27 @@ def test_state_transition():
 def test_target_reject_keccak_empty_hash():
     lock_amount = 7
     block_number = 1
-    initiator = factories.HOP6
     pseudo_random_generator = random.Random()
 
-    our_balance = 100
-    our_address = factories.make_address()
-    partner_balance = 130
-
-    from_channel = factories.make_channel(
-        our_address=our_address,
-        our_balance=our_balance,
-        partner_address=UNIT_TRANSFER_SENDER,
-        partner_balance=partner_balance,
-    )
-    from_route = factories.route_from_channel(from_channel)
-    expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
+    channels = make_channel_set([channel_properties2])
+    expiration = block_number + channels[0].settle_timeout - channels[0].reveal_timeout
 
     from_transfer = factories.make_signed_transfer_for(
-        channel_state=from_channel,
+        channel_state=channels[0],
         amount=lock_amount,
-        initiator=initiator,
-        target=our_address,
+        initiator=UNIT_TRANSFER_INITIATOR,
+        target=channels.our_address(0),
         expiration=expiration,
         secret=EMPTY_HASH,
         allow_invalid=True,
     )
 
-    init = ActionInitTarget(
-        route=from_route,
-        transfer=from_transfer,
-    )
+    init = ActionInitTarget(route=channels.get_route(0), transfer=from_transfer)
 
     init_transition = target.state_transition(
         None,
         init,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_number,
     )
@@ -649,58 +564,44 @@ def test_target_reject_keccak_empty_hash():
 def test_target_receive_lock_expired():
     lock_amount = 7
     block_number = 1
-    initiator = factories.HOP6
     pseudo_random_generator = random.Random()
 
-    our_balance = 100
-    our_address = factories.make_address()
-    partner_balance = 130
-
-    from_channel = factories.make_channel(
-        our_address=our_address,
-        our_balance=our_balance,
-        partner_address=UNIT_TRANSFER_SENDER,
-        partner_balance=partner_balance,
-    )
-    from_route = factories.route_from_channel(from_channel)
-    expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
+    channels = make_channel_set([channel_properties2])
+    expiration = block_number + channels[0].settle_timeout - channels[0].reveal_timeout
 
     from_transfer = factories.make_signed_transfer_for(
-        channel_state=from_channel,
+        channel_state=channels[0],
         amount=lock_amount,
-        initiator=initiator,
-        target=our_address,
+        initiator=UNIT_TRANSFER_INITIATOR,
+        target=channels.our_address(0),
         expiration=expiration,
         secret=UNIT_SECRET,
     )
 
-    init = ActionInitTarget(
-        from_route,
-        from_transfer,
-    )
+    init = ActionInitTarget(channels.get_route(0), from_transfer)
 
     init_transition = target.state_transition(
         None,
         init,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_number,
     )
     assert init_transition.new_state is not None
-    assert init_transition.new_state.route == from_route
+    assert init_transition.new_state.route == channels.get_route(0)
     assert init_transition.new_state.transfer == from_transfer
 
-    balance_proof = factories.make_signed_balance_proof(
-        2,
-        from_transfer.balance_proof.transferred_amount,
-        0,
-        from_transfer.balance_proof.token_network_identifier,
-        from_channel.identifier,
-        EMPTY_MERKLE_ROOT,
-        from_transfer.lock.secrethash,
-        sender_address=UNIT_TRANSFER_SENDER,
-        private_key=UNIT_TRANSFER_PKEY,
-    )
+    balance_proof = create(BalanceProofSignedStateProperties(
+        balance_proof=BalanceProofProperties(
+            nonce=2,
+            transferred_amount=from_transfer.balance_proof.transferred_amount,
+            locked_amount=0,
+            token_network_identifier=from_transfer.balance_proof.token_network_identifier,
+            channel_identifier=channels[0].identifier,
+            locksroot=EMPTY_MERKLE_ROOT,  # TODO default?
+        ),
+        message_hash=from_transfer.lock.secrethash,
+    ))
 
     lock_expired_state_change = ReceiveLockExpired(
         balance_proof=balance_proof,
@@ -712,7 +613,7 @@ def test_target_receive_lock_expired():
     iteration = target.state_transition(
         init_transition.new_state,
         lock_expired_state_change,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_before_confirmed_expiration,
     )
@@ -722,7 +623,7 @@ def test_target_receive_lock_expired():
     iteration = target.state_transition(
         init_transition.new_state,
         lock_expired_state_change,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_lock_expired,
     )
@@ -732,40 +633,26 @@ def test_target_receive_lock_expired():
 def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
     lock_amount = 7
     block_number = 1
-    initiator = factories.HOP6
     pseudo_random_generator = random.Random()
 
-    our_balance = 100
-    our_address = factories.make_address()
-    partner_balance = 130
-
-    from_channel = factories.make_channel(
-        our_address=our_address,
-        our_balance=our_balance,
-        partner_address=UNIT_TRANSFER_SENDER,
-        partner_balance=partner_balance,
-    )
-    from_route = factories.route_from_channel(from_channel)
-    expiration = block_number + from_channel.settle_timeout - from_channel.reveal_timeout
+    channels = make_channel_set([channel_properties2])
+    expiration = block_number + channels[0].settle_timeout - channels[0].reveal_timeout
 
     from_transfer = factories.make_signed_transfer_for(
-        from_channel,
+        channels[0],
         lock_amount,
-        initiator,
-        our_address,
+        UNIT_TRANSFER_INITIATOR,
+        channels.our_address(0),
         expiration,
         UNIT_SECRET,
     )
 
-    init = ActionInitTarget(
-        from_route,
-        from_transfer,
-    )
+    init = ActionInitTarget(channels.get_route(0), from_transfer)
 
     init_transition = target.state_transition(
         None,
         init,
-        from_channel,
+        channels[0],
         pseudo_random_generator,
         block_number,
     )
@@ -773,8 +660,8 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
 
     secret_reveal_iteration = target.state_transition(
         target_state=init_transition.new_state,
-        state_change=ReceiveSecretReveal(UNIT_SECRET, from_channel.partner_state.address),
-        channel_state=from_channel,
+        state_change=ReceiveSecretReveal(UNIT_SECRET, channels[0].partner_state.address),
+        channel_state=channels[0],
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -783,7 +670,7 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
     iteration = target.state_transition(
         target_state=secret_reveal_iteration.new_state,
         state_change=Block(expired_block_number, None, None),
-        channel_state=from_channel,
+        channel_state=channels[0],
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
     )
