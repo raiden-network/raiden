@@ -10,6 +10,7 @@ from eth_utils import is_checksum_address
 from requests.exceptions import ConnectionError
 from web3 import HTTPProvider, Web3
 
+from pathfinder.api.rest import ServiceApi
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
 from raiden_contracts.contract_manager import (
@@ -107,6 +108,9 @@ def main(
                 sync_start_block=start_block,
                 required_confirmations=confirmations,
             )
+
+            api = ServiceApi(service)
+            api.run()
 
             service.run()
         except (KeyboardInterrupt, SystemExit):
