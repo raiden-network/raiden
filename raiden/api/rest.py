@@ -584,7 +584,8 @@ class RestAPI:
                 partner_address,
                 settle_timeout,
             )
-        except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress, AddressWithoutCode, DuplicatedChannelError, TokenNotRegistered) as e:
+        except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
+                AddressWithoutCode, DuplicatedChannelError, TokenNotRegistered) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
