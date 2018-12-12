@@ -13,6 +13,7 @@ from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import assert_dicts_are_equal
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import must_have_event, must_have_events
+from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
 from raiden.waiting import wait_for_transfer_success
@@ -643,6 +644,18 @@ def test_api_open_channel_invalid_input(
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
     channel_data_obj['settle_timeout'] = TEST_SETTLE_TIMEOUT_MAX + 1
+    request = grequests.put(
+        api_url_for(
+            test_api_server,
+            'channelsresource',
+        ),
+        json=channel_data_obj,
+    )
+    response = request.send().response
+    assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
+
+    channel_data_obj['settle_timeout'] = TEST_SETTLE_TIMEOUT_MAX - 1
+    channel_data_obj['token_address'] = to_checksum_address(make_address())
     request = grequests.put(
         api_url_for(
             test_api_server,
