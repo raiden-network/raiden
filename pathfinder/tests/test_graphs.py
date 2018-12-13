@@ -80,3 +80,25 @@ def test_routing_simple(
     # Not connected.
     with pytest.raises(NetworkXNoPath):
         token_network_model.get_paths(addresses[0], addresses[5], value=10, k=1)
+
+
+def test_routing_result_order(
+    token_network_model: TokenNetwork,
+    populate_token_network_case_1: None,
+    addresses: List[Address],
+):
+    paths = token_network_model.get_paths(addresses[0], addresses[2], value=10, k=5, hop_bias=1)
+    # 5 paths requested, but only 3 are available
+    assert len(paths) == 3
+    assert paths[0] == {
+        'path': [addresses[0], addresses[2]],
+        'estimated_fee': 0,
+    }
+    assert paths[1] == {
+        'path': [addresses[0], addresses[1], addresses[2]],
+        'estimated_fee': 0,
+    }
+    assert paths[2] == {
+        'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
+        'estimated_fee': 0,
+    }
