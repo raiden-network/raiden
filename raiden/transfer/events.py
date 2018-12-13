@@ -195,11 +195,13 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             token_network_identifier: typing.TokenNetworkID,
             channel_identifier: typing.ChannelID,
             participant: typing.Address,
+            block_number: typing.BlockNumber,
     ):
         self.token_address = token_address
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
         self.participant = participant
+        self.block_number = block_number
 
     def __repr__(self):
         return (
@@ -219,7 +221,8 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             self.token_address == other.token_address and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.participant == other.participant
+            self.participant == other.participant and
+            self.block_number == other.block_number
         )
 
     def __ne__(self, other):
@@ -231,6 +234,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': str(self.channel_identifier),
             'participant': to_checksum_address(self.participant),
+            'block_number': self.block_number,
         }
 
         return result
@@ -242,6 +246,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=int(data['channel_identifier']),
             participant=to_canonical_address(data['participant']),
+            block_number=data['block_number'],
         )
 
         return restored
