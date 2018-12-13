@@ -23,7 +23,7 @@ A good way to check that Raiden was started correctly before proceeding is to ch
 
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/address HTTP/1.1
+   GET /api/v1/address HTTP/1.1
    Host: localhost:5001
 
 If this returns the same address, we know that the Raiden node is up and running correctly.
@@ -43,7 +43,7 @@ One way of checking if a token is already registered is to get the list of all r
 
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/tokens HTTP/1.1
+   GET /api/v1/tokens HTTP/1.1
    Host: localhost:5001
 
 If the address of the token exists in the list, see the :ref:`Joining an already existing token network scenario <joining-existing-token-network>`.
@@ -63,7 +63,7 @@ To register a token simply use the endpoint listed below:
 
 .. http:example:: curl wget httpie python-requests
 
-   PUT /api/1/tokens/0x9aBa529db3FF2D8409A1da4C9eB148879b046700 HTTP/1.1
+   PUT /api/v1/tokens/0x9aBa529db3FF2D8409A1da4C9eB148879b046700 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -89,7 +89,7 @@ To open a channel with another Raiden node four things are needed: the address o
 
 .. http:example:: curl wget httpie python-requests
 
-   PUT /api/1/channels HTTP/1.1
+   PUT /api/v1/channels HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -134,7 +134,7 @@ A payment channel is now open between the user's node and a counterparty. Howeve
 
 .. http:example:: curl wget httpie python-requests
 
-   PATCH /api/1/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+   PATCH /api/v1/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -149,7 +149,7 @@ To see if and when the counterparty deposited tokens, the channel can be queried
 
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/events/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
+   GET /api/v1/events/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
    Host: localhost:5001
 
 This returns a list of events that has happened in the specific payment channel. The relevant event in this case is::
@@ -167,7 +167,7 @@ It is possible for both parties to query the state of the specific payment chann
 
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+   GET /api/v1/channels/0x9aBa529db3FF2D8409A1da4C9eB148879b046700/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
 
 This gives a result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
@@ -198,7 +198,7 @@ Connecting to an already existing token network is quite simple. All that is nee
 
 .. http:example:: curl wget httpie python-requests
 
-    PUT /api/1/connections/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
+    PUT /api/v1/connections/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -222,7 +222,7 @@ If at some point it is desired to leave the token network, the ``leave`` endpoin
 
 .. http:example:: curl wget httpie python-requests
 
-    DELETE /api/1/connections/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
+    DELETE /api/v1/connections/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -244,7 +244,7 @@ Paying tokens to another node is quite easy. The address of the token desired fo
 
 .. http:example:: curl wget httpie python-requests
 
-    POST /api/1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    POST /api/v1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -258,7 +258,7 @@ If there is a path in the network with enough capacity and the address sending t
 
 .. http:example:: curl wget httpie python-requests
 
-   GET /api/1/events/channels/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
+   GET /api/v1/events/channels/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9?from_block=1337 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -275,7 +275,7 @@ If at any point in time it is desired to close a specific channel it can be done
 
 .. http:example:: curl wget httpie python-requests
 
-   PATCH /api/1/channels/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+   PATCH /api/v1/channels/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -340,7 +340,7 @@ Then you can send a payment to it via the payments endpoint:
 
 .. http:example:: curl wget httpie python-requests
 
-   POST /api/1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x02f4b6BC65561A792836212Ebc54434Db0Ab759a HTTP/1.1
+   POST /api/v1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x02f4b6BC65561A792836212Ebc54434Db0Ab759a HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 

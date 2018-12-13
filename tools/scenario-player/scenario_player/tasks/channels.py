@@ -14,7 +14,7 @@ log = structlog.get_logger(__name__)
 
 class OpenChannelTask(RaidenAPIActionTask):
     _name = 'open_channel'
-    _url_template = '{protocol}://{target_host}/api/1/channels'
+    _url_template = '{protocol}://{target_host}/api/v1/channels'
     _method = 'put'
 
     @property
@@ -37,7 +37,7 @@ class OpenChannelTask(RaidenAPIActionTask):
 
 
 class ChannelActionTask(RaidenAPIActionTask):
-    _url_template = '{protocol}://{target_host}/api/1/channels/{token_address}/{partner_address}'
+    _url_template = '{protocol}://{target_host}/api/v1/channels/{token_address}/{partner_address}'
     _method = 'patch'
 
     @property
@@ -71,7 +71,7 @@ class DepositTask(ChannelActionTask):
 
 class TransferTask(ChannelActionTask):
     _name = 'transfer'
-    _url_template = '{protocol}://{target_host}/api/1/payments/{token_address}/{partner_address}'
+    _url_template = '{protocol}://{target_host}/api/v1/payments/{token_address}/{partner_address}'
     _method = 'post'
     _transfer_count = 0
 
@@ -129,7 +129,7 @@ class AssertTask(ChannelActionTask):
 
 class AssertAllTask(ChannelActionTask):
     _name = 'assert_all'
-    _url_template = '{protocol}://{target_host}/api/1/channels/{token_address}'
+    _url_template = '{protocol}://{target_host}/api/v1/channels/{token_address}'
     _method = 'get'
 
     @property

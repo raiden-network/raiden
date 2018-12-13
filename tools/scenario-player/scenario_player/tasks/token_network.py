@@ -3,7 +3,7 @@ from .raiden_api import RaidenAPIActionTask
 
 class JoinTokenNetwork(RaidenAPIActionTask):
     _name = 'join_network'
-    _url_template = '{protocol}://{target_host}/api/1/connections/{token_address}'
+    _url_template = '{protocol}://{target_host}/api/v1/connections/{token_address}'
     _method = 'put'
 
     @property
@@ -31,7 +31,7 @@ class JoinTokenNetwork(RaidenAPIActionTask):
 
 class LeaveTokenNetwork(RaidenAPIActionTask):
     _name = 'leave_network'
-    _url_template = '{protocol}://{target_host}/api/1/connections/{token_address}'
+    _url_template = '{protocol}://{target_host}/api/v1/connections/{token_address}'
     _method = 'delete'
 
     @property

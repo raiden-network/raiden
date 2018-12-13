@@ -92,7 +92,7 @@ Querying Information About Your Raiden Node
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/address HTTP/1.1
+      GET /api/v1/address HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -119,7 +119,7 @@ Deploying
 
    .. http:example:: curl wget httpie python-requests
 
-      PUT /api/1/tokens/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
+      PUT /api/v1/tokens/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -153,7 +153,7 @@ Querying Information About Channels and Tokens
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/channels HTTP/1.1
+      GET /api/v1/channels HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -188,7 +188,7 @@ Querying Information About Channels and Tokens
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
+      GET /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -224,7 +224,7 @@ Querying Information About Channels and Tokens
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      GET /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -260,7 +260,7 @@ Querying Information About Channels and Tokens
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/tokens HTTP/1.1
+      GET /api/v1/tokens HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -286,7 +286,7 @@ Querying Information About Channels and Tokens
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/tokens/0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6/partners HTTP/1.1
+      GET /api/v1/tokens/0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6/partners HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -323,7 +323,7 @@ Channel Management
 
    .. http:example:: curl wget httpie python-requests
 
-      PUT /api/1/channels HTTP/1.1
+      PUT /api/v1/channels HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -382,7 +382,7 @@ Channel Management
 
    .. http:example:: curl wget httpie python-requests
 
-      PATCH /api/1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -394,7 +394,7 @@ Channel Management
 
    .. http:example:: curl wget httpie python-requests
 
-      PATCH /api/1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      PATCH /api/v1/channels/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -455,7 +455,7 @@ Connection Management
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/connections HTTP/1.1
+      GET /api/v1/connections HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -497,7 +497,7 @@ Connection Management
 
    .. http:example:: curl wget httpie python-requests
 
-      PUT /api/1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
+      PUT /api/v1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -526,7 +526,7 @@ Connection Management
 
    .. http:example:: curl wget httpie python-requests
 
-      DELETE /api/1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
+      DELETE /api/v1/connections/0x2a65Aca4D5fC5B5C859090a6c34d164135398226 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -565,7 +565,7 @@ Payments
 
    .. http:example:: curl wget httpie python-requests
 
-      POST /api/1/payments/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+      POST /api/v1/payments/0x2a65Aca4D5fC5B5C859090a6c34d164135398226/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
       Host: localhost:5001
       Content-Type: application/json
 
@@ -635,7 +635,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/_debug/blockchain_events/network HTTP/1.1
+      GET /api/v1/_debug/blockchain_events/network HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -674,7 +674,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/_debug/blockchain_events/tokens/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
+      GET /api/v1/_debug/blockchain_events/tokens/0x0f114A1E9Db192502E7856309cc899952b3db1ED HTTP/1.1
       Host: localhost:5001
 
    **Example Response**:
@@ -731,7 +731,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/_debug/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels HTTP/1.1
+      GET /api/v1/_debug/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -763,7 +763,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
    .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/_debug/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/0x82641569b2062B545431cF6D7F0A418582865ba7 HTTP/1.1
+      GET /api/v1/_debug/blockchain_events/payment_networks/0x0f114A1E9Db192502E7856309cc899952b3db1ED/channels/0x82641569b2062B545431cF6D7F0A418582865ba7 HTTP/1.1
       Host: localhost:5001
 
   **Example Response**:
@@ -798,7 +798,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
   :statuscode 409: If the given block number argument is invalid
   :statuscode 500: Internal Raiden node error
 
-.. http:get:: /api/1/payments/(token_address)/(target_address)
+.. http:get:: /api/v1/payments/(token_address)/(target_address)
 
      Query the payment history. This includes successful (EventPaymentSentSuccess) and failed (EventPaymentSentFailed) sent payments as well as received payments (EventPaymentReceivedSuccess).
      ``token_address`` and ``target_address`` are optional and will filter the list of events accordingly.
@@ -807,7 +807,7 @@ The format of ``log_time`` is ISO8601 with milliseconds.
 
     .. http:example:: curl wget httpie python-requests
 
-       GET /api/1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x82641569b2062B545431cF6D7F0A418582865ba7  HTTP/1.1
+       GET /api/v1/payments/0x0f114A1E9Db192502E7856309cc899952b3db1ED/0x82641569b2062B545431cF6D7F0A418582865ba7  HTTP/1.1
        Host: localhost:5001
 
     **Example Response**:
@@ -857,7 +857,7 @@ Now for the internal Raiden events:
 
     .. http:example:: curl wget httpie python-requests
 
-      GET /api/1/_debug/raiden_events HTTP/1.1
+      GET /api/v1/_debug/raiden_events HTTP/1.1
       Host: localhost:5001
 
 
