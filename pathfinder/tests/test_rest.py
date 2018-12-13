@@ -128,15 +128,15 @@ def test_get_paths(
     assert paths == [
         {
             'path': [addresses[0], addresses[2]],
-            'estimated_fee': 1000,
+            'estimated_fee': 0,
         },
         {
             'path': [addresses[0], addresses[1], addresses[2]],
-            'estimated_fee': 2000,
+            'estimated_fee': 0,
         },
         {
             'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
-            'estimated_fee': 4000,
+            'estimated_fee': 0,
         },
     ]
 

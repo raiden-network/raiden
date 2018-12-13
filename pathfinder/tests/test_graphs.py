@@ -58,11 +58,11 @@ def test_routing_simple(
 
     # 0->1->4->3 is as short as 0->1->2->3 but the shortcut 1->4 is a lot more expensive.
     # 0->2->3 would be shorter but 0->2 is degraded.
-    paths = token_network_model.get_paths(addresses[0], addresses[3], value=10, k=1, hop_bias=0)
+    paths = token_network_model.get_paths(addresses[0], addresses[3], value=10, k=1, hop_bias=1)
     assert len(paths) == 1
     assert paths[0] == {
         'path': [addresses[0], addresses[2], addresses[3]],
-        'estimated_fee': 2000,
+        'estimated_fee': 0,
     }
 
     # Bottleneck should be 0->1 and 2->3 with a capacity of 90.
@@ -72,75 +72,3 @@ def test_routing_simple(
     # Not connected.
     with pytest.raises(NetworkXNoPath):
         token_network_model.get_paths(addresses[0], addresses[5], value=10, k=1)
-
-
-def test_routing_disjoint_case1(
-    token_network_model: TokenNetwork,
-    populate_token_network_case_1: None,
-    addresses: List[Address],
-    monkeypatch: MonkeyPatch,
-):
-    # Paths should be "as disjoint as possible". There are only 2 different paths though.
-    monkeypatch.setattr(pathfinder.model.token_network, 'DIVERSITY_PEN_DEFAULT', 1)
-    paths = token_network_model.get_paths(addresses[0], addresses[2], value=10, k=3)
-    assert len(paths) == 2
-    assert paths[0] == {
-        'path': [addresses[0], addresses[2]],
-        'estimated_fee': 1000,
-    }
-    assert paths[1] == {
-        'path': [addresses[0], addresses[1], addresses[2]],
-        'estimated_fee': 2000,
-    }
-
-
-def test_routing_disjoint_case2(
-    token_network_model: TokenNetwork,
-    populate_token_network_case_2: None,
-    addresses: List[Address],
-    monkeypatch: MonkeyPatch,
-):
-    # test default diversity penalty
-    paths = token_network_model.get_paths(addresses[0], addresses[4], value=10, k=3)
-    assert len(paths) == 3
-    assert paths[0]['path'] == [addresses[0], addresses[1], addresses[4]]
-    assert paths[0]['estimated_fee'] == 2000
-
-    assert paths[1]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
-    assert paths[1]['estimated_fee'] == 3000
-
-    assert paths[2]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
-    assert paths[2]['estimated_fee'] == 3000
-
-    # set diversity penalty higher
-    monkeypatch.setattr(pathfinder.model.token_network, 'DIVERSITY_PEN_DEFAULT', 10000)
-    paths = token_network_model.get_paths(addresses[0], addresses[4], value=10, k=3)
-    assert len(paths) == 3
-    assert paths[0]['path'] == [addresses[0], addresses[1], addresses[4]]
-    assert paths[0]['estimated_fee'] == 2000
-
-    assert paths[1]['path'] == [addresses[0], addresses[2], addresses[3], addresses[4]]
-    assert paths[1]['estimated_fee'] == 3000
-
-    assert paths[2]['path'] == [addresses[0], addresses[2], addresses[5], addresses[4]]
-    assert paths[2]['estimated_fee'] == 3000
-
-
-def test_routing_hop_fee_balance(
-    token_network_model: TokenNetwork,
-    populate_token_network_case_1: None,
-    addresses: List[Address],
-):
-    # 1->4 has an extremely high fee, so 1->2->3->4 would be cheaper but slower.
-    # Prefer cheap over fast.
-    paths = token_network_model.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=0)
-    assert paths[0] == {
-        'path': [addresses[1], addresses[4]],
-        'estimated_fee': 1000,
-    }
-    # Prefer fast over cheap.
-    paths = token_network_model.get_paths(addresses[1], addresses[4], value=10, k=1, hop_bias=1)
-    assert paths[0] == {
-        'path': [addresses[1], addresses[4]],
-        'estimated_fee': 1000,
-    }

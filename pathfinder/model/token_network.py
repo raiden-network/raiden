@@ -117,8 +117,8 @@ class TokenNetwork:
         k = min(k, MAX_PATHS_PER_REQUEST)
         visited: Dict[ChannelIdentifier, float] = {}
         paths: List[List[Address]] = []
-        hop_bias = kwargs.get('hop_bias', 0)
-        assert 0 <= hop_bias <= 1
+        hop_bias = kwargs.get('hop_bias', 1)
+        assert hop_bias == 1, 'Only hop_bias 1 is supported'
 
         def weight(
             u: Address,
@@ -129,9 +129,7 @@ class TokenNetwork:
             if view.capacity < value:
                 return None
             else:
-                return hop_bias * self.max_relative_fee + \
-                       (1 - hop_bias) * view.relative_fee + \
-                       visited.get(
+                return 1 + visited.get(
                             view.channel_id,
                             0,
                        )
@@ -160,7 +158,7 @@ class TokenNetwork:
 
             result.append(dict(
                 path=path,
-                estimated_fee=fee,
+                estimated_fee=0,
             ))
 
         return result
