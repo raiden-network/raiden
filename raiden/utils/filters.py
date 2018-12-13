@@ -6,13 +6,13 @@ from web3.utils.events import get_event_data
 from web3.utils.filters import LogFilter, construct_event_filter_params
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
-from raiden.utils.typing import Address, BlockSpecification, ChannelID, Dict
+from raiden.utils.typing import BlockSpecification, ChannelID, Dict, TokenNetworkAddress
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
 
 def get_filter_args_for_specific_event_from_channel(
-        token_network_address: Address,
+        token_network_address: TokenNetworkAddress,
         channel_identifier: ChannelID,
         event_name: str,
         contract_manager: ContractManager,
@@ -42,7 +42,7 @@ def get_filter_args_for_specific_event_from_channel(
 
 
 def get_filter_args_for_all_events_from_channel(
-        token_network_address: Address,
+        token_network_address: TokenNetworkAddress,
         channel_identifier: ChannelID,
         contract_manager: ContractManager,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
