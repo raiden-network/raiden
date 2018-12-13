@@ -91,7 +91,7 @@ def token_network_contract(
 def token_network_proxy(deploy_client, token_network_contract, contract_manager):
     return TokenNetwork(
         jsonrpc_client=deploy_client,
-        manager_address=to_canonical_address(token_network_contract.contract.address),
+        token_network_address=to_canonical_address(token_network_contract.contract.address),
         contract_manager=contract_manager,
     )
 

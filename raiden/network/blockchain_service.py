@@ -157,7 +157,7 @@ class BlockChainService:
             if address not in self.address_to_token_network:
                 self.address_to_token_network[address] = TokenNetwork(
                     jsonrpc_client=self.client,
-                    manager_address=address,
+                    token_network_address=address,
                     contract_manager=self.contract_manager,
                 )
 

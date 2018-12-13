@@ -45,7 +45,7 @@ def test_invalid_close(
     app1.stop()
     token_network_contract = TokenNetwork(
         jsonrpc_client=app1.raiden.chain.client,
-        manager_address=token_network_identifier,
+        token_network_address=token_network_identifier,
         contract_manager=app1.raiden.contract_manager,
     )
 
