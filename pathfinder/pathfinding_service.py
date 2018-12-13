@@ -55,6 +55,7 @@ class PathfindingService(gevent.Greenlet):
         registry_address: Address,
         sync_start_block: int = 0,
         required_confirmations: int = 8,
+        poll_interval: int = 10,
     ) -> None:
         """ Creates a new pathfinding service
 
@@ -70,6 +71,7 @@ class PathfindingService(gevent.Greenlet):
         self.registry_address = registry_address
         self.sync_start_block = sync_start_block
         self.required_confirmations = required_confirmations
+        self.poll_interval = poll_interval
         self.chain_id = int(web3.net.version)
 
         self.is_running = gevent.event.Event()
@@ -86,8 +88,9 @@ class PathfindingService(gevent.Greenlet):
             contract_manager=self.contract_manager,
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
             contract_address=self.registry_address,
-            sync_start_block=self.sync_start_block,
             required_confirmations=self.required_confirmations,
+            poll_interval=self.poll_interval,
+            sync_start_block=self.sync_start_block,
         )
         log.info(
             f'Listening to token network registry @ {registry_address} '
@@ -231,8 +234,9 @@ class PathfindingService(gevent.Greenlet):
             contract_manager=self.contract_manager,
             contract_address=token_network_address,
             contract_name=CONTRACT_TOKEN_NETWORK,
-            sync_start_block=block_number,
             required_confirmations=self.required_confirmations,
+            poll_interval=self.poll_interval,
+            sync_start_block=block_number,
         )
 
         # subscribe to event notifications from blockchain listener

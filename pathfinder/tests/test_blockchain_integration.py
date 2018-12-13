@@ -7,14 +7,12 @@ Therefore, usually mocked_integration should be used.
 from typing import List
 
 import gevent
-import pytest
 
 from pathfinder.model import ChannelView
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_contracts.contract_manager import ContractManager
 
 
-@pytest.mark.skip(reason="Needs more work")
 def test_pfs_with_mocked_client(
     web3,
     ethereum_tester,
@@ -23,12 +21,13 @@ def test_pfs_with_mocked_client(
     channel_descriptions_case_1: List,
     generate_raiden_clients,
     get_random_address,
+    wait_for_blocks,
 ):
-    """Instantiates a DummyNetwork some Mockclients and the pathfinding service exchange messages
-    over. Mocks blockchain events to setup a token network with a given topology, specified in
-    the channel_description fixture. Tests all PFS methods w.r.t. to that topology"""
+    """ Instantiates some MockClients and the PathfindingService.
 
-    print(token_network_registry_contract.address)
+    Mocks blockchain events to setup a token network with a given topology, specified in
+    the channel_description fixture. Tests all PFS methods w.r.t. to that topology
+    """
     clients = generate_raiden_clients(7)
     token_network_address = clients[0].contract.address
 
@@ -36,19 +35,21 @@ def test_pfs_with_mocked_client(
         web3=web3,
         contract_manager=contracts_manager,
         registry_address=token_network_registry_contract.address,
+        required_confirmations=1,
+        poll_interval=0,
     )
 
-    # Need a context switch for the network to be picked up
+    # greenlet needs to be started and context switched to
+    pfs.start()
+    wait_for_blocks(1)
     gevent.sleep(0)
-
-    token_network = pfs.token_networks[token_network_address]
-    graph = token_network.G
 
     # there should be one token network registered
     assert len(pfs.token_networks) == 1
 
+    token_network = pfs.token_networks[token_network_address]
+    graph = token_network.G
     channel_identifiers = []
-
     for (
         p1_index,
         p1_deposit,
@@ -67,7 +68,7 @@ def test_pfs_with_mocked_client(
         clients[p2_index].deposit_to_channel(clients[p1_index].address, p2_deposit)
         gevent.sleep()
 
-    ethereum_tester.mine_blocks(1)
+    wait_for_blocks(1)
     gevent.sleep(0)
 
     # there should be as many open channels as described
@@ -113,8 +114,8 @@ def test_pfs_with_mocked_client(
         )
         clients[p1_index].close_channel(clients[p2_index].address, balance_proof)
 
-    ethereum_tester.mine_blocks(1)
-    gevent.sleep(0)
+    wait_for_blocks(1)
+    gevent.sleep()
 
     # there should be no channels
     assert len(token_network.channel_id_to_addresses.keys()) == 0
