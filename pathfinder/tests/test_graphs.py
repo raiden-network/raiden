@@ -12,6 +12,21 @@ from pathfinder.model import ChannelView, TokenNetwork
 from raiden_libs.types import Address
 
 
+# This test is boring right now, but should get more interesting as the routing
+# gets more options.
+def test_edge_weight(addresses):
+    a = addresses[0]
+    b = addresses[1]
+    view = ChannelView(1, a, b)
+
+    assert TokenNetwork.edge_weight(
+        dict(),
+        a,
+        b,
+        dict(view=view),
+    ) == 1
+
+
 def test_routing_benchmark(
     token_network_model: TokenNetwork,
     populate_token_network_random: None,

@@ -106,6 +106,19 @@ class TokenNetwork:
                 ),
             )
 
+    @staticmethod
+    def edge_weight(
+        visited: Dict[ChannelIdentifier, float],
+        u: Address,
+        v: Address,
+        attr: Dict[str, Any],
+    ):
+        view: ChannelView = attr['view']
+        return 1 + visited.get(
+                    view.channel_id,
+                    0,
+               )
+
     def get_paths(
         self,
         source: Address,
@@ -120,16 +133,8 @@ class TokenNetwork:
         hop_bias = kwargs.get('hop_bias', 1)
         assert hop_bias == 1, 'Only hop_bias 1 is supported'
 
-        def weight(
-            u: Address,
-            v: Address,
-            attr: Dict[str, Any],
-        ):
-            view: ChannelView = attr['view']
-            return 1 + visited.get(
-                        view.channel_id,
-                        0,
-                   )
+        def weight(*args):
+            return self.edge_weight(visited, *args)
 
         max_iterations = max(MIN_PATH_REDUNDANCY, PATH_REDUNDANCY_FACTOR * k)
         for _ in range(max_iterations):
