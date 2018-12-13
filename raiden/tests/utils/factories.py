@@ -717,7 +717,7 @@ BALANCE_PROOF_DEFAULTS = BalanceProofProperties(
     nonce=1,
     transferred_amount=UNIT_TRANSFER_AMOUNT,
     locked_amount=0,
-    locksroot=make_32bytes(),  # TODO: EMPTY?
+    locksroot=EMPTY_MERKLE_ROOT,
     token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     channel_identifier=UNIT_CHANNEL_ID,
     chain_id=UNIT_CHAIN_ID,
@@ -809,7 +809,8 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         parameters.pop('balance_proof'),
         defaults.balance_proof,
     )
-    balance_proof_parameters['locksroot'] = lock.lockhash
+    if balance_proof_parameters['locksroot'] == EMPTY_MERKLE_ROOT:
+        balance_proof_parameters['locksroot'] = lock.lockhash
     balance_proof = BalanceProofUnsignedState(**balance_proof_parameters)
 
     return LockedTransferUnsignedState(balance_proof=balance_proof, lock=lock, **parameters)
@@ -854,7 +855,8 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     params.update(transfer_params)
     params.update(balance_proof_params)
     params['token_network_address'] = params.pop('token_network_identifier')
-    params['locksroot'] = lock.lockhash  # TODO set decent default
+    if params['locksroot'] == EMPTY_MERKLE_ROOT:
+        params['locksroot'] = lock.lockhash
 
     locked_transfer = LockedTransfer(lock=lock, **params)
     locked_transfer.sign(pkey)
@@ -883,6 +885,89 @@ def create_properties(properties: NamedTuple, defaults: NamedTuple = None) -> Na
         elif value is not EMPTY:
             parameters[key] = value
     return type(properties)(**parameters)
+
+
+SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(LockedTransferSignedStateProperties(
+    transfer=LockedTransferProperties(expiration=UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT),
+))
+
+
+def make_signed_transfer_for2(
+    channel_state: NettingChannelState = EMPTY,
+    properties: LockedTransferSignedStateProperties = None,
+    defaults: LockedTransferSignedStateProperties = None,
+    compute_locksroot: bool = False,
+    allow_invalid: bool = False,
+    only_transfer: bool = True,
+) -> LockedTransferSignedState:
+    properties: LockedTransferSignedStateProperties = create_properties(
+        properties or LockedTransferSignedStateProperties(),
+        defaults or SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS,
+    )
+
+    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
+
+    if not allow_invalid:
+        expiration = properties.transfer.expiration
+        valid = channel_state.reveal_timeout < expiration < channel_state.settle_timeout
+        assert valid, 'Expiration must be between reveal_timeout and settle_timeout.'
+
+    pubkey = properties.pkey.public_key.format(compressed=False)
+    assert publickey_to_address(pubkey) == properties.sender
+
+    if properties.sender == channel_state.our_state.address:
+        recipient = channel_state.partner_state.address
+    elif properties.sender == channel_state.partner_state.address:
+        recipient = channel_state.our_state.address
+    else:
+        assert False, 'Given sender does not participate in given channel.'
+
+    if compute_locksroot:
+        locksroot = merkleroot(channel.compute_merkletree_with(
+            channel_state.partner_state.merkletree,
+            sha3(
+                Lock(
+                    properties.transfer.amount,
+                    properties.transfer.expiration,
+                    sha3(properties.transfer.secret),
+                ).as_bytes,
+            ),
+        ))
+    else:
+        locksroot = properties.transfer.balance_proof.locksroot
+
+    if only_transfer:
+        balance_proof_properties = BalanceProofProperties(
+            locksroot=locksroot,
+            channel_identifier=channel_state.identifier,
+            transferred_amount=0,
+            locked_amount=properties.transfer.amount,
+        )
+    else:
+        balance_proof_properties = BalanceProofProperties(
+            locksroot=locksroot,
+            channel_identifier=channel_state.identifier,
+        )
+    transfer = create(
+        LockedTransferSignedStateProperties(
+            recipient=recipient,
+            transfer=LockedTransferProperties(
+                balance_proof=balance_proof_properties,
+            ),
+        ),
+        defaults=properties,
+    )
+
+    if not allow_invalid:
+        is_valid, msg, _ = channel.is_valid_lockedtransfer(
+            transfer_state=transfer,
+            channel_state=channel_state,
+            sender_state=channel_state.partner_state,
+            receiver_state=channel_state.our_state,
+        )
+        assert is_valid, msg
+
+    return transfer
 
 
 def pkeys_from_channel_state(
