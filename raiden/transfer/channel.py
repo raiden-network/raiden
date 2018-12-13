@@ -210,6 +210,28 @@ def get_secret(
     return None
 
 
+def exclude_expired_locks(
+        end_state: NettingChannelEndState,
+        secrethashes_to_locks: typing.Dict[typing.SecretHash, HashTimeLockState],
+        block_number: typing.BlockNumber,
+) -> typing.Dict[typing.SecretHash, HashTimeLockState]:
+    """ Return a dictionary containing all locks which have no yet expired. """
+    valid_locks = {}
+    for secrethash, lock in secrethashes_to_locks.items():
+        has_expired, _ = is_lock_expired(
+            end_state=end_state,
+            lock=lock,
+            block_number=block_number,
+            lock_expiration_threshold=typing.BlockNumber(
+                lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+            ),
+        )
+        if has_expired:
+            continue
+        valid_locks[secrethash] = lock
+    return valid_locks
+
+
 def is_transaction_confirmed(
         transaction_block_number: typing.BlockNumber,
         blockchain_block_number: typing.BlockNumber,
@@ -846,6 +868,7 @@ def get_distributable(
 
 def get_batch_unlock(
         end_state: NettingChannelEndState,
+        block_number: typing.BlockNumber,
 ) -> typing.Optional[typing.MerkleTreeLeaves]:
     """ Unlock proof for an entire merkle tree of pending locks
 
@@ -859,11 +882,19 @@ def get_batch_unlock(
     lockhashes_to_locks = dict()
     lockhashes_to_locks.update({
         lock.lockhash: lock
-        for secrethash, lock in end_state.secrethashes_to_lockedlocks.items()
+        for secrethash, lock in exclude_expired_locks(
+            end_state,
+            end_state.secrethashes_to_lockedlocks,
+            block_number,
+        ).items()
     })
     lockhashes_to_locks.update({
         proof.lock.lockhash: proof.lock
-        for secrethash, proof in end_state.secrethashes_to_unlockedlocks.items()
+        for secrethash, proof in exclude_expired_locks(
+            end_state,
+            end_state.secrethashes_to_unlockedlocks,
+            block_number,
+        ).items()
     })
     lockhashes_to_locks.update({
         proof.lock.lockhash: proof.lock
@@ -873,6 +904,7 @@ def get_batch_unlock(
     ordered_locks = [
         lockhashes_to_locks[lockhash]
         for lockhash in end_state.merkletree.layers[LEAVES]
+        if lockhash in lockhashes_to_locks
     ]
 
     return ordered_locks
@@ -1745,10 +1777,11 @@ def handle_channel_settled(
 
         if not is_settle_pending and merkle_tree_leaves:
             onchain_unlock = ContractSendChannelBatchUnlock(
-                channel_state.token_address,
-                channel_state.token_network_identifier,
-                channel_state.identifier,
-                channel_state.partner_state.address,
+                token_address=channel_state.token_address,
+                token_network_identifier=channel_state.token_network_identifier,
+                channel_identifier=channel_state.identifier,
+                participant=channel_state.partner_state.address,
+                block_number=block_number,
             )
             events.append(onchain_unlock)
 
