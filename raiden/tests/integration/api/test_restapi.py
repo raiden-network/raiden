@@ -133,7 +133,7 @@ def test_payload_with_invalid_addresses(test_api_server, rest_api_port_number):
     assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
     url_without_prefix = (
-        'http://localhost:{port}/api/1/'
+        'http://localhost:{port}/api/v1/'
         'channels/ea674fdde714fd979de3edf0f56aa9716b898ec8'
     ).format(port=rest_api_port_number)
 
@@ -877,13 +877,13 @@ def test_query_partners_by_token(test_api_server, blockchain_services, token_add
     expected_response = [
         {
             'partner_address': first_partner_address,
-            'channel': '/api/1/channels/{}/{}'.format(
+            'channel': '/api/v1/channels/{}/{}'.format(
                 to_checksum_address(token_address),
                 to_checksum_address(first_partner_address),
             ),
         }, {
             'partner_address': second_partner_address,
-            'channel': '/api/1/channels/{}/{}'.format(
+            'channel': '/api/v1/channels/{}/{}'.format(
                 to_checksum_address(token_address),
                 to_checksum_address(second_partner_address),
             ),
