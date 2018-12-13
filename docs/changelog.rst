@@ -4,6 +4,7 @@ Changelog
 
 * :bug:`3153` If a non-contract address is given for token_address in the channel open REST API call, the client no longer crashes.
 * :bug:`3152` If the onchain unlock has already been mined when we try to send the transaction don't crash Raiden.
+* :feature:`3157` Change REST api version prefix from 1 to v1.
 * :bug:`3135` In development mode if more than 100 * (10^18) tokens are deposited then raiden no longer crashes.
 
 * :release:`0.18.1 <2018-12-07>`
