@@ -134,14 +134,11 @@ class TokenNetwork:
         max_iterations = max(MIN_PATH_REDUNDANCY, PATH_REDUNDANCY_FACTOR * k)
         for _ in range(max_iterations):
             path = nx.dijkstra_path(self.G, source, target, weight=weight)
-            duplicate = path in paths
             for node1, node2 in zip(path[:-1], path[1:]):
                 channel_id = self.G[node1][node2]['view'].channel_id
-                if duplicate:
-                    visited[channel_id] *= 2
-                else:
-                    visited[channel_id] = visited.get(channel_id, 0) + DIVERSITY_PEN_DEFAULT
+                visited[channel_id] = visited.get(channel_id, 0) + DIVERSITY_PEN_DEFAULT
 
+            duplicate = path in paths
             if not duplicate:
                 paths.append(path)
             if len(paths) >= k:
