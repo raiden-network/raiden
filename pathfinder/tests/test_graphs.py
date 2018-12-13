@@ -5,10 +5,8 @@ from typing import List
 
 import numpy as np
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
 from networkx import NetworkXNoPath
 
-import pathfinder.model.token_network
 from pathfinder.config import DEFAULT_PERCENTAGE_FEE
 from pathfinder.model import ChannelView, TokenNetwork
 from raiden_libs.types import Address
@@ -56,18 +54,13 @@ def test_routing_simple(
     assert view01.capacity == 100
     assert view10.capacity == 50
 
-    # 0->1->4->3 is as short as 0->1->2->3 but the shortcut 1->4 is a lot more expensive.
-    # 0->2->3 would be shorter but 0->2 is degraded.
+    # 0->2->3 is the shortest path
     paths = token_network_model.get_paths(addresses[0], addresses[3], value=10, k=1, hop_bias=1)
     assert len(paths) == 1
     assert paths[0] == {
         'path': [addresses[0], addresses[2], addresses[3]],
         'estimated_fee': 0,
     }
-
-    # Bottleneck should be 0->1 and 2->3 with a capacity of 90.
-    with pytest.raises(NetworkXNoPath):
-        token_network_model.get_paths(addresses[0], addresses[3], value=100, k=1)
 
     # Not connected.
     with pytest.raises(NetworkXNoPath):

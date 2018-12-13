@@ -126,13 +126,10 @@ class TokenNetwork:
             attr: Dict[str, Any],
         ):
             view: ChannelView = attr['view']
-            if view.capacity < value:
-                return None
-            else:
-                return 1 + visited.get(
-                            view.channel_id,
-                            0,
-                       )
+            return 1 + visited.get(
+                        view.channel_id,
+                        0,
+                   )
 
         max_iterations = max(MIN_PATH_REDUNDANCY, PATH_REDUNDANCY_FACTOR * k)
         for _ in range(max_iterations):
