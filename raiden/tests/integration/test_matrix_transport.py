@@ -306,6 +306,8 @@ def test_matrix_message_sync(
 
     transport0.stop()
     transport1.stop()
+    transport0.get()
+    transport1.get()
 
 
 def test_matrix_message_retry(
@@ -353,8 +355,8 @@ def test_matrix_message_retry(
     )
     chain_state = raiden_service.wal.state_manager.current_state
 
-    retry_queue = _RetryQueue(transport, partner_address)
-    retry_queue.start()
+    retry_queue: _RetryQueue = transport._get_retrier(partner_address)
+    assert bool(retry_queue), 'retry_queue not running'
 
     # Send the initial message
     message = Processed(0)
@@ -387,3 +389,6 @@ def test_matrix_message_retry(
 
     # Retrier now should have sent the message again
     assert transport._send_raw.call_count == 2
+
+    transport.stop()
+    transport.get()
