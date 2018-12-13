@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 import pytest
 from web3 import Web3
 
@@ -15,16 +17,16 @@ def test_blockchain_listener(
     blockchain_listener.start()
     blockchain_listener.wait_sync()
 
-    unconfirmed_channel_open_events = []
-    confirmed_channel_open_events = []
+    unconfirmed_channel_open_events: List[Dict] = []
+    confirmed_channel_open_events: List[Dict] = []
 
     blockchain_listener.add_unconfirmed_listener(
         create_channel_event_topics(),
-        lambda e: unconfirmed_channel_open_events.append(e),
+        unconfirmed_channel_open_events.append,
     )
     blockchain_listener.add_confirmed_listener(
         create_channel_event_topics(),
-        lambda e: confirmed_channel_open_events.append(e),
+        confirmed_channel_open_events.append,
     )
 
     # create unconfirmed channel
@@ -38,6 +40,7 @@ def test_blockchain_listener(
     assert unconfirmed_channel_open_events[0]['args']['participant2'] == c2.address
 
     # the confirmed event should be available after 4 more blocks as set above
+    assert len(confirmed_channel_open_events) == 0
     wait_for_blocks(4)
     assert len(confirmed_channel_open_events) == 1
     assert confirmed_channel_open_events[0]['args']['participant1'] == c1.address
@@ -58,27 +61,27 @@ def test_blockchain_listener_nonexistant_contract(
     blockchain_listener.start()
     blockchain_listener.wait_sync()
 
-    unconfirmed_channel_open_events = []
-    confirmed_channel_open_events = []
+    unconfirmed_channel_open_events: List[Dict] = []
+    confirmed_channel_open_events: List[Dict] = []
 
     blockchain_listener.add_unconfirmed_listener(
         create_channel_event_topics(),
-        lambda e: unconfirmed_channel_open_events.append(e),
+        unconfirmed_channel_open_events.append,
     )
     blockchain_listener.add_confirmed_listener(
         create_channel_event_topics(),
-        lambda e: confirmed_channel_open_events.append(e),
+        confirmed_channel_open_events.append,
     )
 
     # create unconfirmed channel
     c1, c2 = generate_raiden_clients(2)
     c1.open_channel(c2.address)
 
-    # the unconfirmed event should be available directly
+    # no unconfirmed event should be available
     wait_for_blocks(0)
     assert len(unconfirmed_channel_open_events) == 0
 
-    # the confirmed event should be available after 4 more blocks as set above
+    # no confirmed event should be available after 4 more blocks
     wait_for_blocks(4)
     assert len(confirmed_channel_open_events) == 0
 
@@ -96,10 +99,10 @@ def test_reorg(
     blockchain_listener.start()
     blockchain_listener.wait_sync()
 
-    unconfirmed_channel_open_events = []
+    unconfirmed_channel_open_events: List[Dict] = []
     blockchain_listener.add_unconfirmed_listener(
         create_channel_event_topics(),
-        lambda e: unconfirmed_channel_open_events.append(e),
+        unconfirmed_channel_open_events.append,
     )
 
     c1, c2 = generate_raiden_clients(2)
@@ -140,10 +143,10 @@ def test_reorg(
     web3.testing.revert(snapshot_id)
 
     # test a big chain reorg (> required_confirmations)
-    confirmed_channel_open_events = []
+    confirmed_channel_open_events: List[Dict] = []
     blockchain_listener.add_confirmed_listener(
         create_channel_event_topics(),
-        lambda e: confirmed_channel_open_events.append(e),
+        confirmed_channel_open_events.append,
     )
     c1.open_channel(c2.address)
 
