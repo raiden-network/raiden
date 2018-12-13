@@ -79,32 +79,32 @@ class TokenNetwork:
     def __init__(
             self,
             jsonrpc_client,
-            manager_address: typing.TokenNetworkAddress,
+            token_network_address: typing.TokenNetworkAddress,
             contract_manager: ContractManager,
     ):
-        if not is_binary_address(manager_address):
+        if not is_binary_address(token_network_address):
             raise InvalidAddress('Expected binary address format for token nework')
 
         check_address_has_code(
             jsonrpc_client,
-            typing.Address(manager_address),
+            typing.Address(token_network_address),
             CONTRACT_TOKEN_NETWORK,
         )
 
         self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
             self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            to_normalized_address(manager_address),
+            to_normalized_address(token_network_address),
         )
 
         compare_contract_versions(
             proxy=proxy,
             expected_version=contract_manager.contracts_version,
             contract_name=CONTRACT_TOKEN_NETWORK,
-            address=typing.Address(manager_address),
+            address=typing.Address(token_network_address),
         )
 
-        self.address = manager_address
+        self.address = token_network_address
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)

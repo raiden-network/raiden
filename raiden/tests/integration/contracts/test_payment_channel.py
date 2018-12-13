@@ -26,12 +26,12 @@ def test_payment_channel_proxy_basics(
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
-        manager_address=token_network_address,
+        token_network_address=token_network_address,
         contract_manager=contract_manager,
     )
     c2_token_network_proxy = TokenNetwork(
         jsonrpc_client=c2_client,
-        manager_address=token_network_address,
+        token_network_address=token_network_address,
         contract_manager=contract_manager,
     )
 
@@ -155,7 +155,7 @@ def test_payment_channel_outdated_channel_close(
     client = JSONRPCClient(web3, private_keys[1])
     token_network_proxy = TokenNetwork(
         jsonrpc_client=client,
-        manager_address=token_network_address,
+        token_network_address=token_network_address,
         contract_manager=contract_manager,
     )
     start_block = web3.eth.blockNumber
