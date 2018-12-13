@@ -1363,7 +1363,10 @@ def test_channelstate_get_unlock_proof():
     end_state.secrethashes_to_unlockedlocks = unlocked_locks
     end_state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
 
-    unlock_proof = channel.get_batch_unlock(end_state)
+    unlock_proof = channel.get_batch_unlock(
+        end_state=end_state,
+        block_number=block_number,
+    )
     assert len(unlock_proof) == len(end_state.merkletree.layers[LEAVES])
     leaves_packed = b''.join(lock.encoded for lock in unlock_proof)
 
@@ -1809,3 +1812,133 @@ def test_valid_lock_expired_for_unlocked_lock():
 
     assert not is_valid
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_unlockedlocks
+
+
+def test_batch_unlock_excludes_expired_locks():
+    """ This test makes sure that locked/unlocked-unclaimed
+    locks which are expired are excluded from get_batch_unlock
+    """
+    our_model1, _ = create_model(70)
+    partner_model1, privkey2 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1)
+
+    lock_secret = sha3(b'test_valid_lock_expired_for_unlocked_lock')
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        amount=20,
+        expiration=100,
+        secrethash=lock_secrethash,
+    )
+
+    nonce = 1
+    transferred_amount = 0
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        lock=lock,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state=channel_state,
+        mediated_transfer=receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
+
+    pseudo_random_generator = random.Random()
+    block = Block(
+        block_number=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    iteration = channel.state_transition(
+        channel_state=channel_state,
+        state_change=block,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block.block_number,
+    )
+    new_state = iteration.new_state
+
+    assert lock.secrethash in new_state.partner_state.secrethashes_to_lockedlocks
+
+    assert 0 == len(channel.get_batch_unlock(
+        end_state=new_state.partner_state,
+        block_number=block.block_number,
+    ))
+
+    merkletree_leaves = [lock.lockhash]
+
+    transfer_1_expiration = 200
+
+    lock_secret = sha3(b'transfer_1')
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        amount=30,
+        expiration=transfer_1_expiration,
+        secrethash=lock_secrethash,
+    )
+
+    merkletree_leaves.append(lock.lockhash)
+
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=2,
+        transferred_amount=0,
+        locked_amount=50,
+        lock=lock,
+        merkletree_leaves=merkletree_leaves,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state=channel_state,
+        mediated_transfer=receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    lock_secret = sha3(b'transfer_2')
+    lock_secrethash = sha3(lock_secret)
+    lock = HashTimeLockState(
+        amount=50,
+        expiration=transfer_1_expiration + 1,
+        secrethash=lock_secrethash,
+    )
+
+    merkletree_leaves.append(lock.lockhash)
+
+    receive_lockedtransfer = make_receive_transfer_mediated(
+        channel_state=channel_state,
+        privkey=privkey2,
+        nonce=3,
+        transferred_amount=0,
+        locked_amount=100,
+        lock=lock,
+        merkletree_leaves=merkletree_leaves,
+    )
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        channel_state=channel_state,
+        mediated_transfer=receive_lockedtransfer,
+    )
+    assert is_valid, msg
+
+    # No transfers expired yet
+    assert 2 == len(channel.get_batch_unlock(
+        end_state=new_state.partner_state,
+        block_number=transfer_1_expiration,
+    ))
+
+    # First transfer expires
+    assert 1 == len(channel.get_batch_unlock(
+        end_state=new_state.partner_state,
+        block_number=transfer_1_expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+    ))
+
+    # second transfer expires
+    assert 0 == len(channel.get_batch_unlock(
+        end_state=new_state.partner_state,
+        block_number=transfer_1_expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2 + 1,
+    ))

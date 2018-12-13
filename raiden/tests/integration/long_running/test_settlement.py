@@ -437,7 +437,10 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 
     # Save the merkle tree leaves from the pending transfer, used to test the unlock
     channelstate_0_1 = get_channelstate(app0, app1, token_network_identifier)
-    batch_unlock = channel.get_batch_unlock(channelstate_0_1.our_state)
+    batch_unlock = channel.get_batch_unlock(
+        end_state=channelstate_0_1.our_state,
+        block_number=app0.raiden.chain.block_number(),
+    )
     assert batch_unlock
 
     hold_event_handler.release_secretrequest_for(
