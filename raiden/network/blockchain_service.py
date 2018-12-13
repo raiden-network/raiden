@@ -13,7 +13,7 @@ from raiden.network.proxies import (
 )
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import privatekey_to_address
-from raiden.utils.typing import Address, ChannelID, T_ChannelID
+from raiden.utils.typing import Address, ChannelID, T_ChannelID, TokenNetworkAddress
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -149,7 +149,7 @@ class BlockChainService:
 
         return self.address_to_token_network_registry[address]
 
-    def token_network(self, address: Address) -> TokenNetwork:
+    def token_network(self, address: TokenNetworkAddress) -> TokenNetwork:
         if not is_binary_address(address):
             raise ValueError('address must be a valid address')
 
@@ -179,7 +179,7 @@ class BlockChainService:
 
     def payment_channel(
             self,
-            token_network_address: Address,
+            token_network_address: TokenNetworkAddress,
             channel_id: ChannelID,
     ) -> PaymentChannel:
 

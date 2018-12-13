@@ -687,7 +687,9 @@ class RaidenService(Runnable):
             )
 
             for token_network in token_networks:
-                token_network_proxy = self.chain.token_network(typing.Address(token_network))
+                token_network_proxy = self.chain.token_network(
+                    typing.TokenNetworkAddress(token_network),
+                )
                 self.blockchain_events.add_token_network_listener(
                     token_network_proxy=token_network_proxy,
                     contract_manager=self.contract_manager,
