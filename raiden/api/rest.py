@@ -315,8 +315,6 @@ class APIServer(Runnable):
         # run the server greenlet
         api_server.start('127.0.0.1', 5001)
     """
-
-    _api_prefix = '/api/1'
     kwargs = {'host': '127.0.0.1', 'port': 5001}
 
     def __init__(self, rest_api, cors_domain_list=None, web_ui=False, eth_rpc_endpoint=None):
@@ -325,6 +323,7 @@ class APIServer(Runnable):
             raise ValueError(
                 'Invalid api version: {}'.format(rest_api.version),
             )
+        self._api_prefix = f'/api/v{rest_api.version}'
 
         flask_app = Flask(__name__)
         if cors_domain_list:
