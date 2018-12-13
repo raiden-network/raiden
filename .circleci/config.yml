@@ -507,7 +507,7 @@ workflows:
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 8
+          parallelism: 1
           requires:
             - smoketest-udp-3.6
           filters:
@@ -522,7 +522,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 8
+          parallelism: 1
           requires:
             - smoketest-matrix-3.6
           filters:
@@ -585,7 +585,7 @@ workflows:
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 8
+          parallelism: 1
           requires:
             - smoketest-udp-3.7
           filters:
@@ -599,7 +599,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 8
+          parallelism: 1
           requires:
             - smoketest-matrix-3.7
           filters:
@@ -715,7 +715,7 @@ workflows:
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 8
+          parallelism: 1
           requires:
             - smoketest-udp-3.6
 
@@ -727,7 +727,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 8
+          parallelism: 1
           requires:
             - smoketest-matrix-3.6
 
@@ -775,7 +775,7 @@ workflows:
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 8
+          parallelism: 1
           requires:
             - smoketest-udp-3.7
 
@@ -787,7 +787,7 @@ workflows:
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 8
+          parallelism: 1
           requires:
             - smoketest-matrix-3.7
 
