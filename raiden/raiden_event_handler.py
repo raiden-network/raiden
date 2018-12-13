@@ -383,9 +383,15 @@ class RaidenEventHandler:
         our_state = restored_channel_state.our_state
         partner_state = restored_channel_state.partner_state
         if partner_state.address == participant:
-            merkle_tree_leaves = get_batch_unlock(partner_state)
+            merkle_tree_leaves = get_batch_unlock(
+                end_state=partner_state,
+                block_number=channel_unlock_event.block_number,
+            )
         elif our_state.address == participant:
-            merkle_tree_leaves = get_batch_unlock(our_state)
+            merkle_tree_leaves = get_batch_unlock(
+                end_state=our_state,
+                block_number=channel_unlock_event.block_number,
+            )
 
         try:
             payment_channel.unlock(merkle_tree_leaves)

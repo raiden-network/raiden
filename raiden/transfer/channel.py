@@ -1773,7 +1773,10 @@ def handle_channel_settled(
         set_settled(channel_state, state_change.block_number)
 
         is_settle_pending = channel_state.our_unlock_transaction is not None
-        merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
+        merkle_tree_leaves = get_batch_unlock(
+            end_state=channel_state.partner_state,
+            block_number=block_number,
+        )
 
         if not is_settle_pending and merkle_tree_leaves:
             onchain_unlock = ContractSendChannelBatchUnlock(
