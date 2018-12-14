@@ -29,7 +29,7 @@ def test_token_addresses(raiden_network, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_config):
+def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_protocol):
     node1, node2 = raiden_network
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(

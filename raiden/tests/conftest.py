@@ -1,17 +1,19 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
-import re
-import sys
-
-import gevent
-import py
 from gevent import monkey
 
 monkey.patch_all()
 
 if True:
+    import re
+    import sys
+
+    import gevent
+    import py
     import pytest
+
     from raiden.log_config import configure_logging
     from raiden.tests.fixtures.variables import *  # noqa: F401,F403
+    from raiden.tests.utils.transport import make_requests_insecure
     from raiden.utils.cli import LogLevelConfigType
 
 
@@ -20,13 +22,6 @@ def pytest_addoption(parser):
         '--blockchain-type',
         choices=['geth'],
         default='geth',
-    )
-
-    parser.addoption(
-        '--initial-port',
-        type=int,
-        default=29870,
-        help='Base port number used to avoid conflicts while running parallel tests.',
     )
 
     parser.addoption(
@@ -48,22 +43,6 @@ def pytest_addoption(parser):
         choices=('none', 'udp', 'matrix', 'all'),
         default='matrix',
         help='Run integration tests with udp, with matrix, with both or not at all.',
-    )
-
-    parser.addoption(
-        '--local-matrix',
-        dest='local_matrix',
-        default='.synapse/run_synapse.sh',
-        help="Command to run the local matrix server, or 'none', "
-             "default: '.synapse/run_synapse.sh'",
-    )
-
-    parser.addoption(
-        '--matrix-server',
-        action='store',
-        dest='matrix_server',
-        default='http://localhost:8008',
-        help="Host name of local matrix server if used, default: 'http://localhost:8008'",
     )
 
     parser.addoption(
@@ -186,6 +165,11 @@ def dont_exit_pytest():
     """
     gevent.get_hub().SYSTEM_ERROR = BaseException
     gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def insecure_tls():
+    make_requests_insecure()
 
 
 if sys.platform == 'darwin':

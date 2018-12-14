@@ -196,7 +196,7 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_v
 
     ensure_executable('geth')
 
-    free_port = get_free_port('127.0.0.1', 27854)
+    free_port = get_free_port('127.0.0.1')
     rpc_port = next(free_port)
     p2p_port = next(free_port)
     base_datadir = os.environ['RST_DATADIR']
@@ -286,9 +286,6 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_v
     registry.add_token(to_canonical_address(token.contract.address))
 
     print_step('Setting up Raiden')
-
-    if matrix_server == 'auto':
-        matrix_server = 'http://localhost:8008'
 
     endpoint_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_ENDPOINT_REGISTRY],

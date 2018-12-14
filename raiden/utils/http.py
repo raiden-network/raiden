@@ -1,7 +1,9 @@
 import os
 import platform
 import socket
+import ssl
 import subprocess
+from http.client import HTTPSConnection
 
 from mirakuru.base import ENV_UUID
 from mirakuru.exceptions import AlreadyRunning, ProcessExitedWithError
@@ -11,15 +13,25 @@ from mirakuru.http import HTTPConnection, HTTPException, HTTPExecutor as MiHTTPE
 class HTTPExecutor(MiHTTPExecutor):
     """ Subclass off mirakuru.HTTPExecutor, which allows other methods than HEAD """
 
-    def __init__(self, *args, method='HEAD', io=None, **kwargs):
+    def __init__(self, *args, method='HEAD', io=None, cwd=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.method = method
         self.stdio = io
+        self.cwd = cwd
 
     def after_start_check(self):
         """ Check if defined URL returns expected status to a <method> request. """
         try:
-            conn = HTTPConnection(self.host, self.port)
+            if self.url.scheme == 'http':
+                conn = HTTPConnection(self.host, self.port)
+            elif self.url.scheme == 'https':
+                conn = HTTPSConnection(
+                    self.host,
+                    self.port,
+                    context=ssl._create_unverified_context(),
+                )
+            else:
+                raise ValueError(f'Unsupported URL scheme: "{self.url.scheme}"')
 
             conn.request(self.method, self.url.path)
             status = str(conn.getresponse().status)
@@ -32,7 +44,8 @@ class HTTPExecutor(MiHTTPExecutor):
             return False
 
     def start(self):
-        """ Reimplements Executor and SimpleExecutor start by allowing setting stdin/stdout/stderr
+        """
+        Reimplements Executor and SimpleExecutor start to allow setting stdin/stdout/stderr/cwd
 
         It may break input/output/communicate, but will ensure child output redirects won't
         break parent process by filling the PIPE.
@@ -60,6 +73,7 @@ class HTTPExecutor(MiHTTPExecutor):
                 'stderr': stderr,
                 'universal_newlines': True,
                 'env': env,
+                'cwd': self.cwd,
             }
             if platform.system() != 'Windows':
                 popen_kwargs['preexec_fn'] = os.setsid

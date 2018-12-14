@@ -134,7 +134,7 @@ def channels_per_node():
 @pytest.fixture
 def retry_interval(request):
     if request.config.option.transport == 'matrix':
-        return 5
+        return 2
     else:
         return 0.5
 
@@ -244,9 +244,9 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
 
 
 @pytest.fixture(scope='session')
-def port_generator(request):
+def port_generator():
     """ count generator used to get a unique port number. """
-    return get_free_port('127.0.0.1', request.config.option.initial_port)
+    return get_free_port('127.0.0.1')
 
 
 @pytest.fixture
