@@ -13,6 +13,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
+from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import privatekey_to_address, sha3
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
@@ -132,8 +133,8 @@ def channels_per_node():
 
 
 @pytest.fixture
-def retry_interval(request):
-    if request.config.option.transport == 'matrix':
+def retry_interval(transport_protocol):
+    if transport_protocol is TransportProtocol.MATRIX:
         return 2
     else:
         return 0.5

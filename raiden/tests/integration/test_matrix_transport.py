@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import gevent
 import pytest
+from gevent import Timeout
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import Processed, SecretRequest
@@ -436,3 +437,57 @@ def test_join_invalid_discovery(
 
     transport.stop()
     transport.get()
+
+
+@pytest.mark.parametrize('matrix_server_count', [2])
+def test_matrix_cross_server(skip_if_not_matrix, matrix_transports, retry_interval):
+    transport0, transport1 = matrix_transports
+
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
+
+    transport1.start_health_check(raiden_service0.address)
+    transport0.start_health_check(raiden_service1.address)
+
+    queueid = QueueIdentifier(
+        recipient=raiden_service1.address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+    message = Processed(0)
+    message.sign(raiden_service0.private_key)
+
+    transport0.send_async(queueid, message)
+
+    with Timeout(retry_interval * 10, exception=False):
+        while not (len(received_messages0) == 1 and len(received_messages1) == 1):
+            gevent.sleep(.1)
+
+    assert len(received_messages0) == 1
+    assert len(received_messages1) == 1
+
+
+def test_matrix_discovery_room_offline_server(
+    local_matrix_servers,
+    retries_before_backoff,
+    retry_interval,
+    private_rooms,
+):
+
+    transport = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [local_matrix_servers[0], 'https://localhost:1'],
+        'private_rooms': private_rooms,
+    })
+    transport.start(MockRaidenService(None), MessageHandler(set()), '')
