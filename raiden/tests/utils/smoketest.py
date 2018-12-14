@@ -73,7 +73,7 @@ def ensure_executable(cmd):
 
 def run_restapi_smoketests():
     """Test if REST api works. """
-    url = 'http://localhost:{port}/api/1/channels'.format(port=5001)
+    url = 'http://localhost:{port}/api/v1/channels'.format(port=5001)
 
     response = requests.get(url)
     assert response.status_code == HTTPStatus.OK

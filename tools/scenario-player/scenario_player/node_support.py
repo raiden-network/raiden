@@ -258,7 +258,7 @@ class NodeRunner:
     @property
     def executor(self):
         if not self._executor:
-            self._executor = HTTPExecutor(self._command, f'http://{self.base_url}/api/1/address')
+            self._executor = HTTPExecutor(self._command, f'http://{self.base_url}/api/v1/address')
         return self._executor
 
     @property
