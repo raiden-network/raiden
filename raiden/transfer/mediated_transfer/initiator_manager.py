@@ -135,6 +135,7 @@ def handle_cancelroute(
 ) -> TransitionResult:
     events: typing.List[Event] = list()
     if can_cancel(payment_state):
+        old_initiator_route = payment_state.initiator
         transfer_description = payment_state.initiator.transfer_description
         cancel_events = cancel_current_route(payment_state)
 
@@ -155,7 +156,12 @@ def handle_cancelroute(
         if sub_iteration.new_state:
             payment_state.initiator = sub_iteration.new_state
         else:
-            payment_state = None
+            # Here we don't delete the initiator state, but instead let it live.
+            # It will be deleted when the lock expires. We do that so that we
+            # still have an initiator payment task around to process the
+            # LockExpired message that our partner will send us.
+            # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
+            payment_state.initiator = old_initiator_route
 
     iteration = TransitionResult(payment_state, events)
 

@@ -208,8 +208,11 @@ class RaidenEventHandler:
             payment_sent_failed_event.identifier,
             None,
         )
-        assert payment_status is not None
-        payment_status.payment_done.set(False)
+        # In the case of a refund transfer the payment fails earlier
+        # but the lock expiration will generate a second
+        # EventPaymentSentFailed message which we can ignore here
+        if payment_status:
+            payment_status.payment_done.set(False)
 
     def handle_unlockfailed(
             self,
