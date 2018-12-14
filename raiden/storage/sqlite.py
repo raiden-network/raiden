@@ -306,13 +306,13 @@ class SQLiteStorage:
 
         if to_identifier == 'latest':
             cursor.execute(
-                'SELECT data FROM state_changes WHERE identifier >= ?',
+                'SELECT data FROM state_changes WHERE identifier >= ? ORDER BY identifier ASC',
                 (from_identifier,),
             )
         else:
             cursor.execute(
                 'SELECT data FROM state_changes WHERE identifier '
-                'BETWEEN ? AND ?', (from_identifier, to_identifier),
+                'BETWEEN ? AND ? ORDER BY identifier ASC', (from_identifier, to_identifier),
             )
 
         try:
