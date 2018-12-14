@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :bug:`3170` If the same refund transfer is received multiple times, the mediator state machine will reject subsequent ones rather than clearing up the mediator task.
+* :bug:`3146` If a refund transfer is received and there are no other routes keep the payment task so that the channel does not hang when mediator sends a LockExpired.
 
 * :release:`0.19.0 <2018-12-14>`
 * :bug:`3153` If a non-contract address is given for token_address in the channel open REST API call, the client no longer crashes.
