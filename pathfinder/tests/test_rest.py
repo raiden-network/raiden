@@ -6,7 +6,7 @@ import requests
 from eth_utils import to_normalized_address
 
 import pathfinder
-from pathfinder.api.rest import ServiceApi
+from pathfinder.api.rest import DEFAULT_NUM_PATHS, ServiceApi
 from pathfinder.model import TokenNetwork
 from raiden_libs.types import Address
 
@@ -117,9 +117,10 @@ def test_get_paths(
 ):
     base_url = api_url + f'/{token_network_model.address}/paths'
 
-    url = base_url + '?from={}&to={}&value=10&num_paths=3'.format(
+    url = base_url + '?from={}&to={}&value=10&num_paths={}'.format(
         addresses[0],
         addresses[2],
+        DEFAULT_NUM_PATHS,
     )
     response = requests.get(url)
     assert response.status_code == 200
@@ -139,6 +140,14 @@ def test_get_paths(
             'estimated_fee': 0,
         },
     ]
+
+    # check default value for num_path
+    url = base_url + '?from={}&to={}&value=10'.format(
+        addresses[0],
+        addresses[2],
+    )
+    default_response = requests.get(url)
+    assert default_response.json()['result'] == response.json()['result']
 
     # there is no connection between 0 and 5, this should return an error
     url = base_url + '?from={}&to={}&value=10&num_paths=3'.format(

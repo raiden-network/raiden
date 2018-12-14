@@ -6,7 +6,6 @@ import gevent
 import matplotlib.pyplot as plt
 import networkx as nx
 import pkg_resources
-
 from eth_utils import is_address, is_checksum_address
 from flask import Flask
 from flask_restful import Api, Resource, reqparse
@@ -20,6 +19,7 @@ from pathfinder.pathfinding_service import PathfindingService
 from raiden_libs.types import Address
 
 log = logging.getLogger(__name__)
+DEFAULT_NUM_PATHS = 5  # number of paths return when no `num_path` argument is given
 
 
 class PathfinderResource(Resource):
@@ -88,7 +88,12 @@ class PathsResource(PathfinderResource):
         parser.add_argument('from', type=str, help='Payment initiator address.')
         parser.add_argument('to', type=str, help='Payment target address.')
         parser.add_argument('value', type=int, help='Maximum payment value.')
-        parser.add_argument('num_paths', type=int, help='Number of paths requested.')
+        parser.add_argument(
+            'num_paths',
+            type=int,
+            help='Number of paths requested.',
+            default=DEFAULT_NUM_PATHS,
+        )
 
         args = parser.parse_args()
         error = self._validate_args(args)
