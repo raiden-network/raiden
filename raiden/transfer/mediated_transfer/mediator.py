@@ -1179,7 +1179,7 @@ def handle_refundtransfer(
             refund=mediator_state_change,
         )
         if not is_valid:
-            return TransitionResult(None, channel_events)
+            return TransitionResult(mediator_state, channel_events)
 
         iteration = mediate_transfer(
             mediator_state,
