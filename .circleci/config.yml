@@ -17,7 +17,7 @@ templates:
         description: "resource type for underlying VM"
         default: "medium"
         type: enum
-        enum: ["small", "medium", "large", "xlarge"]
+        enum: ["small", "medium", "medium+", "large", "xlarge"]
     transport-layer:
       description: "transmission protocol used, udp or matrix"
       default: "udp"
@@ -36,7 +36,7 @@ executors:
         description: "resource type for underlying VM"
         default: "medium"
         type: enum
-        enum: ["small", "medium", "large", "xlarge"]
+        enum: ["small", "medium", "medium+", "large", "xlarge"]
     working_directory: ~/raiden
     docker:
     - image: circleci/python:<< parameters.py-version >>
@@ -120,28 +120,6 @@ jobs:
           paths:
             - .local
             - raiden
-
-  build-synapse:
-    executor:
-      name: base-executor
-      py-version: "2.7"
-    steps:
-    - attach_workspace:
-        at: '~'
-    - restore_cache:
-        key: synapse-cache-{{ checksum "~/raiden/tools/install_synapse.sh" }}
-    - run:
-        name: installing synapse
-        command: |
-          tools/install_synapse.sh
-    - save_cache:
-        key: synapse-cache-{{ checksum "~/raiden/tools/install_synapse.sh" }}
-        paths:
-        - ~/raiden/.synapse
-    - persist_to_workspace:
-        root: '~'
-        paths:
-          - raiden/.synapse/
 
   prepare-python:
     parameters:
@@ -283,6 +261,7 @@ jobs:
       BLOCKCHAIN_TYPE_ARG: "--blockchain-type=<< parameters.blockchain-type >>"
       TRANSPORT_OPTION: << parameters.transport-layer >>
       TRANSPORT_OPTION_ARG: "--transport=<< parameters.transport-layer >>"
+      RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
 
     parallelism: << parameters.parallelism >>
 
@@ -292,6 +271,10 @@ jobs:
     - config-path
     - restore_cache:
         key: ethash-{{ checksum "~/.local/bin/geth" }}
+    - restore_cache:
+        keys:
+          - synapse-keys-v1
+          - synapse-keys-
     - run:
         name: Running tests
         #coverage run -m pytest \
@@ -312,6 +295,11 @@ jobs:
         key: ethash-{{ checksum "~/.local/bin/geth" }}
         paths:
         - "~/.ethash"
+
+    - save_cache:
+        key: synapse-keys-v1
+        paths:
+          - "~/.cache/synapse"
 
     - store_test_results:
         path: test-reports
@@ -415,10 +403,6 @@ workflows:
     jobs:
       - prepare-system
 
-      - build-synapse:
-          requires:
-            - prepare-system
-
       - prepare-python:
           name: prepare-python-3.6
           py-version: '3.6'
@@ -442,11 +426,6 @@ workflows:
           py-version: "3.6"
           requires:
             - prepare-python-3.6
-          filters:
-            tags:
-              only: /^v\d+\.\d+\.\d+$/
-            branches:
-              only: /.*/
 
       - smoketest:
           name: smoketest-udp-3.6
@@ -459,10 +438,8 @@ workflows:
           name: smoketest-matrix-3.6
           py-version: "3.6"
           transport-layer: "matrix"
-          additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
           requires:
             - prepare-python-3.6
-            - build-synapse
 
       - test:
           name: test-unit-3.6
@@ -471,7 +448,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - prepare-python-3.6
-            - build-synapse
 
       - finalize:
           requires:
@@ -489,7 +465,6 @@ workflows:
       - test:
           name: test-integration-udp-3.6
           py-version: "3.6"
-          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
@@ -500,11 +475,9 @@ workflows:
       - test:
           name: test-integration-matrix-3.6
           py-version: "3.6"
-          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
-          additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
           parallelism: 16
           requires:
             - smoketest-matrix-3.6
@@ -520,11 +493,6 @@ workflows:
           py-version: "3.7"
           requires:
             - prepare-python-3.7
-          filters:
-            tags:
-              only: /^v\d+\.\d+\.\d+$/
-            branches:
-              only: /.*/
 
       - smoketest:
           name: smoketest-udp-3.7
@@ -537,10 +505,8 @@ workflows:
           name: smoketest-matrix-3.7
           py-version: "3.7"
           transport-layer: "matrix"
-          additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
           requires:
             - prepare-python-3.7
-            - build-synapse
 
       - test:
           name: test-unit-3.7
@@ -549,11 +515,9 @@ workflows:
           blockchain-type: "geth"
           requires:
             - prepare-python-3.7
-            - build-synapse
 
       - test:
           name: test-integration-udp-3.7
-          resource: "large"
           py-version: "3.7"
           test-type: "integration"
           blockchain-type: "geth"
@@ -565,11 +529,9 @@ workflows:
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
-          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
-          additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
           parallelism: 16
           requires:
             - smoketest-matrix-3.7
@@ -621,10 +583,6 @@ workflows:
     jobs:
       - prepare-system
 
-      - build-synapse:
-          requires:
-            - prepare-system
-
       - prepare-python:
           name: prepare-python-3.6
           py-version: '3.6'
@@ -660,10 +618,8 @@ workflows:
           name: smoketest-matrix-3.6
           py-version: "3.6"
           transport-layer: "matrix"
-          additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
           requires:
             - prepare-python-3.6
-            - build-synapse
 
       - test:
           name: test-unit-3.6
@@ -672,7 +628,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - prepare-python-3.6
-            - build-synapse
 
       - finalize:
           requires:
@@ -690,7 +645,6 @@ workflows:
       - test:
           name: test-integration-udp-3.6
           py-version: "3.6"
-          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
@@ -701,11 +655,9 @@ workflows:
       - test:
           name: test-integration-matrix-3.6
           py-version: "3.6"
-          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
-          additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
           parallelism: 16
           requires:
             - smoketest-matrix-3.6
@@ -733,10 +685,8 @@ workflows:
           name: smoketest-matrix-3.7
           py-version: "3.7"
           transport-layer: "matrix"
-          additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
           requires:
             - prepare-python-3.7
-            - build-synapse
 
       - test:
           name: test-unit-3.7
@@ -745,12 +695,10 @@ workflows:
           blockchain-type: "geth"
           requires:
             - prepare-python-3.7
-            - build-synapse
 
       - test:
           name: test-integration-udp-3.7
           py-version: "3.7"
-          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
@@ -761,11 +709,9 @@ workflows:
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
-          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
-          additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
           parallelism: 16
           requires:
             - smoketest-matrix-3.7
