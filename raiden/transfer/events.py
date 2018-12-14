@@ -412,7 +412,7 @@ class EventPaymentSentFailed(Event):
             pex(self.payment_network_identifier),
             pex(self.token_network_identifier),
             self.identifier,
-            self.target,
+            pex(self.target),
             self.reason,
         )
 
