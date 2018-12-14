@@ -578,7 +578,11 @@ def test_refund_transfer_no_more_routes():
         setup.prng,
         setup.block_number,
     )
-    assert iteration.new_state is None
+    # As per the description of the issue here:
+    # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
+    # We can fail the payment but can't delete the payment task if there are no
+    # more routes, but we have to wait for the lock expiration
+    assert iteration.new_state is not None
 
     unlocked_failed = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
     sent_failed = next(e for e in iteration.events if isinstance(e, EventPaymentSentFailed))

@@ -1,12 +1,19 @@
 import gevent
 import pytest
 
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import raiden_events_must_contain_entry
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
 from raiden.transfer import views
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendRefundTransfer
+from raiden.transfer.mediated_transfer.events import (
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
+)
 from raiden.transfer.state import lockstate_from_lock
+from raiden.transfer.views import state_from_raiden
+from raiden.waiting import wait_for_block
 
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -75,7 +82,14 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit, network_wait):
+def test_refund_transfer(
+        raiden_chain,
+        number_of_nodes,
+        token_addresses,
+        deposit,
+        network_wait,
+        retry_timeout,
+):
     """A failed transfer must send a refund back.
 
     TODO:
@@ -155,6 +169,7 @@ def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit
         {'transfer': {'lock': {'amount': amount_refund}}},
     )
     assert send_locked
+    secrethash = send_locked.transfer.lock.secrethash
 
     send_refund = raiden_events_must_contain_entry(app1.raiden, SendRefundTransfer, {})
     assert send_refund
@@ -164,6 +179,7 @@ def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit
     assert lock.amount == refund_lock.amount
     assert lock.secrethash
     assert lock.expiration
+    assert lock.secrethash == refund_lock.secrethash
 
     # Both channels have the amount locked because of the refund message
     assert_synced_channel_state(
@@ -176,6 +192,31 @@ def test_refund_transfer(raiden_chain, number_of_nodes, token_addresses, deposit
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
     )
+
+    # Additional checks for LockExpired causing nonce mismatch after refund transfer:
+    # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
+    # At this point make sure that the initiator has not deleted the payment task
+    assert state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task[secrethash]
+
+    # now wait for lock expiration
+    wait_for_block(
+        raiden=app0.raiden,
+        block_number=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2 + 1,
+        retry_timeout=retry_timeout,
+    )
+
+    # make sure that app1 sent a lock expired message for the secrethash
+    send_lock_expired = raiden_events_must_contain_entry(
+        app1.raiden,
+        SendLockExpired,
+        {'secrethash': secrethash},
+    )
+    assert send_lock_expired
+
+    # and since the lock expired message has been sent then the
+    # payment task should have been deleted from both nodes
+    assert secrethash not in state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task
+    assert secrethash not in state_from_raiden(app1.raiden).payment_mapping.secrethashes_to_task
 
 
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
