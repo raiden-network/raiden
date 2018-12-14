@@ -40,7 +40,7 @@ class SendLockExpired(SendMessageEvent):
         return '<SendLockExpired msgid:{} balance_proof:{} secrethash:{} recipient:{}>'.format(
             self.message_identifier,
             self.balance_proof,
-            self.secrethash,
+            pex(self.secrethash),
             pex(self.recipient),
         )
 
@@ -417,7 +417,7 @@ class SendRefundTransfer(SendMessageEvent):
         return (
             f'<'
             f'SendRefundTransfer msgid:{self.message_identifier} transfer:{self.transfer} '
-            f'recipient:{self.recipient} '
+            f'recipient:{pex(self.recipient)} '
             f'>'
         )
 
