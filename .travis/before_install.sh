@@ -7,7 +7,3 @@ set -x
 
 .travis/download_solc.sh
 .travis/download_geth.sh
-
-if [ "$RUN_SYNAPSE" ]; then
-    tools/install_synapse.sh
-fi
