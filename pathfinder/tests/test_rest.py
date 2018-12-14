@@ -6,7 +6,7 @@ import requests
 from eth_utils import to_normalized_address
 
 import pathfinder
-from pathfinder.api.rest import DEFAULT_NUM_PATHS, ServiceApi
+from pathfinder.api.rest import DEFAULT_MAX_PATHS, ServiceApi
 from pathfinder.model import TokenNetwork
 from raiden_libs.types import Address
 
@@ -31,17 +31,17 @@ def test_get_paths_validation(
     assert response.status_code == 400
     assert response.json()['errors'].startswith('Required parameters:')
 
-    url = base_url + '?from=notanaddress&to={}&value=5&num_paths=3'.format(target_address)
+    url = base_url + '?from=notanaddress&to={}&value=5&max_paths=3'.format(target_address)
     response = requests.get(url)
     assert response.status_code == 400
     assert response.json()['errors'] == 'Invalid initiator address: notanaddress'
 
-    url = base_url + '?from={}&to=notanaddress&value=5&num_paths=3'.format(initiator_address)
+    url = base_url + '?from={}&to=notanaddress&value=5&max_paths=3'.format(initiator_address)
     response = requests.get(url)
     assert response.status_code == 400
     assert response.json()['errors'] == 'Invalid target address: notanaddress'
 
-    url = base_url + '?from={}&to={}&value=5&num_paths=3'.format(
+    url = base_url + '?from={}&to={}&value=5&max_paths=3'.format(
         to_normalized_address(initiator_address),
         target_address,
     )
@@ -51,7 +51,7 @@ def test_get_paths_validation(
         to_normalized_address(initiator_address),
     )
 
-    url = base_url + '?from={}&to={}&value=5&num_paths=3'.format(
+    url = base_url + '?from={}&to={}&value=5&max_paths=3'.format(
         initiator_address,
         to_normalized_address(target_address),
     )
@@ -61,7 +61,7 @@ def test_get_paths_validation(
         to_normalized_address(target_address),
     )
 
-    url = base_url + '?from={}&to={}&value=-10&num_paths=3'.format(
+    url = base_url + '?from={}&to={}&value=-10&max_paths=3'.format(
         initiator_address,
         target_address,
     )
@@ -69,7 +69,7 @@ def test_get_paths_validation(
     assert response.status_code == 400
     assert response.json()['errors'] == 'Payment value must be non-negative: -10'
 
-    url = base_url + '?from={}&to={}&value=10&num_paths=-1'.format(
+    url = base_url + '?from={}&to={}&value=10&max_paths=-1'.format(
         initiator_address,
         target_address,
     )
@@ -117,10 +117,10 @@ def test_get_paths(
 ):
     base_url = api_url + f'/{token_network_model.address}/paths'
 
-    url = base_url + '?from={}&to={}&value=10&num_paths={}'.format(
+    url = base_url + '?from={}&to={}&value=10&max_paths={}'.format(
         addresses[0],
         addresses[2],
-        DEFAULT_NUM_PATHS,
+        DEFAULT_MAX_PATHS,
     )
     response = requests.get(url)
     assert response.status_code == 200
@@ -150,7 +150,7 @@ def test_get_paths(
     assert default_response.json()['result'] == response.json()['result']
 
     # there is no connection between 0 and 5, this should return an error
-    url = base_url + '?from={}&to={}&value=10&num_paths=3'.format(
+    url = base_url + '?from={}&to={}&value=10&max_paths=3'.format(
         addresses[0],
         addresses[5],
     )

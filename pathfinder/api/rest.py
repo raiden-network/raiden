@@ -19,7 +19,7 @@ from pathfinder.pathfinding_service import PathfindingService
 from raiden_libs.types import Address
 
 log = logging.getLogger(__name__)
-DEFAULT_NUM_PATHS = 5  # number of paths return when no `num_path` argument is given
+DEFAULT_MAX_PATHS = 5  # number of paths return when no `num_path` argument is given
 
 
 class PathfinderResource(Resource):
@@ -54,7 +54,7 @@ class PathfinderResource(Resource):
 class PathsResource(PathfinderResource):
     @staticmethod
     def _validate_args(args):
-        required_args = ['from', 'to', 'value', 'num_paths']
+        required_args = ['from', 'to', 'value', 'max_paths']
         if not all(args[arg] is not None for arg in required_args):
             return {'errors': 'Required parameters: {}'.format(required_args)}, 400
 
@@ -73,8 +73,8 @@ class PathsResource(PathfinderResource):
         if args.value < 0:
             return {'errors': 'Payment value must be non-negative: {}'.format(args.value)}, 400
 
-        if args.num_paths <= 0:
-            return {'errors': 'Number of paths must be positive: {}'.format(args.num_paths)}, 400
+        if args.max_paths <= 0:
+            return {'errors': 'Number of paths must be positive: {}'.format(args.max_paths)}, 400
 
         return None
 
@@ -89,10 +89,10 @@ class PathsResource(PathfinderResource):
         parser.add_argument('to', type=str, help='Payment target address.')
         parser.add_argument('value', type=int, help='Maximum payment value.')
         parser.add_argument(
-            'num_paths',
+            'max_paths',
             type=int,
             help='Number of paths requested.',
-            default=DEFAULT_NUM_PATHS,
+            default=DEFAULT_MAX_PATHS,
         )
 
         args = parser.parse_args()
@@ -112,7 +112,7 @@ class PathsResource(PathfinderResource):
                 source=args['from'],
                 target=args['to'],
                 value=args.value,
-                k=args.num_paths,
+                k=args.max_paths,
             )
         except NetworkXNoPath:
             return {'errors': 'No suitable path found for transfer from {} to {}.'.format(
