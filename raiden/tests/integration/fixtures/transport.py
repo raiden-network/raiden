@@ -1,13 +1,9 @@
-from collections import namedtuple
 from enum import Enum
-from urllib.parse import urljoin
 
 import pytest
 
-from raiden.utils.http import HTTPExecutor
-
-TransportConfig = namedtuple('TransportConfig', 'protocol parameters')
-MatrixTransportConfig = namedtuple('MatrixTransportConfig', 'command server')
+from raiden.network.transport import MatrixTransport
+from raiden.tests.utils.transport import generate_synapse_config, matrix_server_starter
 
 
 class TransportProtocol(Enum):
@@ -22,21 +18,8 @@ def transport(request):
 
 
 @pytest.fixture
-def transport_config(request, transport):
-    if transport == 'udp':
-        return TransportConfig(protocol=TransportProtocol.UDP, parameters=None)
-    elif transport == 'matrix':
-        command = request.config.getoption('local_matrix')
-        return TransportConfig(
-            protocol=TransportProtocol.MATRIX,
-            parameters=MatrixTransportConfig(
-                command=command,
-                server=request.config.getoption('matrix_server'),
-            ),
-        )
-    else:
-        return None
-    # can be changed with command line options, see tests/conftest.py
+def transport_protocol(transport):
+    return TransportProtocol(transport)
 
 
 @pytest.fixture
@@ -62,25 +45,48 @@ def public_and_private_rooms():
     return True
 
 
+@pytest.fixture(scope='session')
+def synapse_config_generator():
+    with generate_synapse_config() as generator:
+        yield generator
+
+
 @pytest.fixture
-def local_matrix_server(transport_config):
-    if not transport_config.protocol == TransportProtocol.MATRIX:
-        yield None
+def matrix_server_count():
+    return 1
+
+
+@pytest.fixture
+def local_matrix_servers(transport_protocol, matrix_server_count, synapse_config_generator):
+    if transport_protocol is not TransportProtocol.MATRIX:
+        yield [None]
         return
 
-    server = transport_config.parameters.server
+    starter = matrix_server_starter(
+        count=matrix_server_count,
+        config_generator=synapse_config_generator,
+    )
+    with starter as server_urls:
+        yield server_urls
 
-    # if command is none, assume server is already running
-    if transport_config.parameters.command in (None, 'none'):
-        yield server
-        return
 
-    # otherwise, run our own local server
-    with HTTPExecutor(
-        transport_config.parameters.command,
-        url=urljoin(server, '/_matrix/client/versions'),
-        method='GET',
-        timeout=30,
-        shell=True,
-    ):
-        yield server
+@pytest.fixture
+def matrix_transports(local_matrix_servers, retries_before_backoff, retry_interval, private_rooms):
+    transports = []
+    for server in local_matrix_servers:
+        transports.append(
+            MatrixTransport({
+                'discovery_room': 'discovery',
+                'retries_before_backoff': retries_before_backoff,
+                'retry_interval': retry_interval,
+                'server': server,
+                'server_name': server.netloc,
+                'available_servers': local_matrix_servers,
+                'private_rooms': private_rooms,
+            }),
+        )
+
+    yield transports
+
+    for transport in transports:
+        transport.stop()

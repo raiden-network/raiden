@@ -1,47 +1,47 @@
-from itertools import count
+import errno
+import socket
+from itertools import count, repeat
+from socket import SocketKind
 from time import sleep
 from typing import Optional
 
-import psutil
 import requests
 from requests import RequestException
 
 
-def get_free_port(address: str, initial_port: int):
-    """Find an unused TCP port in a specified range. This should not
-      be used in misson-critical applications - a race condition may
-      occur if someone grabs the port before caller of this function
-      has chance to use it.
-      Parameters:
-          address : an ip address of interface to use
-          initial_port : port to start iteration with
-      Return:
-          Iterator that will return next unused port on a specified
-          interface
+def get_free_port(
+    bind_address: str = '127.0.0.1',
+    initial_port: int = 0,
+    socket_kind: SocketKind = SocketKind.SOCK_STREAM,
+):
+    """
+    Find an unused TCP port.
+    This should not be used in misson-critical applications - a race condition may occur if
+    someone grabs the port before caller of this function has chance to use it.
+
+    If `initial_port` is passed the function will try to find a port as close as possible.
+    Otherwise a random port is chosen by the OS.
+
+    Returns an iterator that will return an unused port on the specified interface.
     """
 
-    try:
-        # On OSX this function requires root privileges
-        psutil.net_connections()
-    except psutil.AccessDenied:
-        return count(initial_port)
+    def _port_generator():
+        if initial_port == 0:
+            next_port = repeat(0)
+        else:
+            next_port = count(start=initial_port)
+        for i in next_port:
+            sock = socket.socket(socket.AF_INET, socket_kind)
+            try:
+                sock.bind((bind_address, i))
+            except OSError as ex:
+                if ex.errno == errno.EADDRINUSE:
+                    continue
+            port = sock.getsockname()[1]
+            sock.close()
+            yield port
 
-    def _unused_ports():
-        for port in count(initial_port):
-            # check if the port is being used
-            connect_using_port = (
-                conn
-                for conn in psutil.net_connections()
-                if hasattr(conn, 'laddr') and
-                conn.laddr[0] == address and
-                conn.laddr[1] == port
-            )
-
-            # only generate unused ports
-            if not any(connect_using_port):
-                yield port
-
-    return _unused_ports()
+    return _port_generator()
 
 
 def get_http_rtt(

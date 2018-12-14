@@ -21,12 +21,20 @@ from raiden_libs.network.matrix import Room
 USERID1 = '@Alice:Wonderland'
 
 
+class MessageHandler:
+    def __init__(self, bag: set):
+        self.bag = bag
+
+    def on_message(self, _, message):
+        self.bag.add(message)
+
+
 @pytest.fixture
 def mock_matrix(
         monkeypatch,
         retry_interval,
         retries_before_backoff,
-        local_matrix_server,
+        local_matrix_servers,
         private_rooms,
 ):
 
@@ -57,8 +65,8 @@ def mock_matrix(
     config = dict(
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,
-        server=local_matrix_server,
-        server_name='matrix.local.raiden',
+        server=local_matrix_servers[0],
+        server_name=local_matrix_servers[0].netloc,
         available_servers=[],
         discovery_room='discovery',
         private_rooms=private_rooms,
@@ -201,7 +209,7 @@ def test_processing_invalid_message_cmdid_hex(
 
 def test_matrix_message_sync(
         skip_if_not_matrix,
-        local_matrix_server,
+        local_matrix_servers,
         private_rooms,
         retry_interval,
         retries_before_backoff,
@@ -210,8 +218,8 @@ def test_matrix_message_sync(
         'discovery_room': 'discovery',
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
-        'server': local_matrix_server,
-        'server_name': 'matrix.local.raiden',
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
         'private_rooms': private_rooms,
     })
@@ -219,8 +227,8 @@ def test_matrix_message_sync(
         'discovery_room': 'discovery',
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
-        'server': local_matrix_server,
-        'server_name': 'matrix.local.raiden',
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
         'private_rooms': private_rooms,
     })
@@ -229,12 +237,7 @@ def test_matrix_message_sync(
 
     received_messages = set()
 
-    class MessageHandler:
-        def on_message(self, _, message):
-            nonlocal received_messages
-            received_messages.add(message)
-
-    message_handler = MessageHandler()
+    message_handler = MessageHandler(received_messages)
     raiden_service0 = MockRaidenService(message_handler)
     raiden_service1 = MockRaidenService(message_handler)
 
@@ -313,7 +316,7 @@ def test_matrix_message_sync(
 
 def test_matrix_message_retry(
     skip_if_not_matrix,
-    local_matrix_server,
+    local_matrix_servers,
     private_rooms,
     retry_interval,
     retries_before_backoff,
@@ -332,8 +335,8 @@ def test_matrix_message_retry(
         'discovery_room': 'discovery',
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
-        'server': local_matrix_server,
-        'server_name': 'matrix.local.raiden',
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
         'private_rooms': private_rooms,
     })
@@ -397,7 +400,7 @@ def test_matrix_message_retry(
 
 def test_join_invalid_discovery(
     skip_if_not_matrix,
-    local_matrix_server,
+    local_matrix_servers,
     private_rooms,
     retry_interval,
     retries_before_backoff,
@@ -412,8 +415,8 @@ def test_join_invalid_discovery(
         'discovery_room': 'discovery',
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
-        'server': local_matrix_server,
-        'server_name': 'matrix.local.raiden',
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
         'available_servers': ['http://invalid.server'],
         'private_rooms': private_rooms,
     })
