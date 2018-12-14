@@ -417,7 +417,7 @@ class SendRefundTransfer(SendMessageEvent):
         return (
             f'<'
             f'SendRefundTransfer msgid:{self.message_identifier} transfer:{self.transfer} '
-            f'recipient:{self.recipient} '
+            f'recipient:{pex(self.recipient)} '
             f'>'
         )
 
