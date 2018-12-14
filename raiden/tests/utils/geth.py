@@ -127,6 +127,8 @@ def geth_create_account(datadir: str, privkey: bytes):
         ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],
         stdin=subprocess.PIPE,
         universal_newlines=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
 
     create.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
@@ -330,7 +332,6 @@ def geth_run_nodes(
         log_path = os.path.join(logdir, str(pos))
         logfile = open(log_path, 'w')
         stdout = logfile
-        stderr = logfile
 
         if '--unlock' in cmd:
             process = subprocess.Popen(
@@ -338,7 +339,7 @@ def geth_run_nodes(
                 universal_newlines=True,
                 stdin=subprocess.PIPE,
                 stdout=stdout,
-                stderr=stderr,
+                stderr=subprocess.STDOUT,
             )
 
             # --password wont work, write password to unlock
@@ -349,7 +350,7 @@ def geth_run_nodes(
                 cmd,
                 universal_newlines=True,
                 stdout=stdout,
-                stderr=stderr,
+                stderr=subprocess.STDOUT,
             )
 
         processes_list.append(process)

@@ -1,18 +1,19 @@
+import contextlib
 import json
 import os
 import sys
 import textwrap
 import traceback
 from copy import deepcopy
-from pathlib import Path
-from subprocess import DEVNULL
+from io import StringIO
 from tempfile import mktemp
-from urllib.parse import urljoin
 
 import click
 import structlog
+import urllib3
 from eth_utils import to_canonical_address, to_checksum_address
 from mirakuru import ProcessExitedWithError
+from urllib3.exceptions import InsecureRequestWarning
 
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
@@ -22,6 +23,7 @@ from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.settings import INITIAL_PORT
+from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
 from raiden.utils import get_system_spec, merge_dict, split_endpoint
 from raiden.utils.cli import (
     ADDRESS_TYPE,
@@ -37,7 +39,6 @@ from raiden.utils.cli import (
     option,
     option_group,
 )
-from raiden.utils.http import HTTPExecutor
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY, CONTRACT_TOKEN_NETWORK_REGISTRY
 
 from .app import run_app
@@ -469,14 +470,8 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
     is_flag=True,
     help='Drop into pdb on errors.',
 )
-@option(
-    '--local-matrix',
-    help='Command-line to be used to run a local matrix server (or "none")',
-    default=str(Path(__file__).parent.parent.parent.joinpath('.synapse', 'run_synapse.sh')),
-    show_default=True,
-)
 @click.pass_context
-def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-argument
+def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
     """ Test, that the raiden installation is sane. """
     from raiden.api.python import RaidenAPI
     from raiden.tests.utils.smoketest import (
@@ -555,50 +550,53 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
             del args['extra_config']
         args['config'] = config
 
-        # invoke the raiden app
-        app = run_app(**args)
+        raiden_stdout = StringIO()
+        with contextlib.redirect_stdout(raiden_stdout):
+            # invoke the raiden app
+            app = run_app(**args)
 
-        raiden_api = RaidenAPI(app.raiden)
-        rest_api = RestAPI(raiden_api)
-        api_server = APIServer(rest_api)
-        (api_host, api_port) = split_endpoint(args['api_address'])
-        api_server.start(api_host, api_port)
+            raiden_api = RaidenAPI(app.raiden)
+            rest_api = RestAPI(raiden_api)
+            api_server = APIServer(rest_api)
+            (api_host, api_port) = split_endpoint(args['api_address'])
+            api_server.start(api_host, api_port)
 
-        raiden_api.channel_open(
-            registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-            token_address=to_canonical_address(token.contract.address),
-            partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
-        )
-        raiden_api.set_total_channel_deposit(
-            contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-            to_canonical_address(token.contract.address),
-            to_canonical_address(TEST_PARTNER_ADDRESS),
-            TEST_DEPOSIT_AMOUNT,
-        )
-        token_addresses = [to_checksum_address(token.contract.address)]
-
-        success = False
-        try:
-            print_step('Running smoketest')
-            error = run_smoketests(
-                app.raiden,
-                args['transport'],
-                token_addresses,
-                contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
-                debug=debug,
+            raiden_api.channel_open(
+                registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+                token_address=to_canonical_address(token.contract.address),
+                partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
             )
-            if error is not None:
-                append_report('Smoketest assertion error', error)
-            else:
-                success = True
-        finally:
-            app.stop()
-            node = ethereum[0]
-            node.send_signal(2)
-            err, out = node.communicate()
+            raiden_api.set_total_channel_deposit(
+                contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+                to_canonical_address(token.contract.address),
+                to_canonical_address(TEST_PARTNER_ADDRESS),
+                TEST_DEPOSIT_AMOUNT,
+            )
+            token_addresses = [to_checksum_address(token.contract.address)]
 
-            append_report('Ethereum stdout', out)
-            append_report('Ethereum stderr', err)
+            success = False
+            try:
+                print_step('Running smoketest')
+                error = run_smoketests(
+                    app.raiden,
+                    args['transport'],
+                    token_addresses,
+                    contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+                    debug=debug,
+                )
+                if error is not None:
+                    append_report('Smoketest assertion error', error)
+                else:
+                    success = True
+            finally:
+                app.stop()
+                node = ethereum[0]
+                node.send_signal(2)
+                err, out = node.communicate()
+
+                append_report('Ethereum stdout', out)
+                append_report('Ethereum stderr', err)
+        append_report('Raiden Node stdout', raiden_stdout.getvalue())
         if success:
             print_step(f'Smoketest successful')
         else:
@@ -609,23 +607,18 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
         with SocketFactory('127.0.0.1', port, strategy='none') as mapped_socket:
             args['mapped_socket'] = mapped_socket
             success = _run_smoketest()
-    elif args['transport'] == 'matrix' and local_matrix.lower() != 'none':
+    elif args['transport'] == 'matrix':
         args['mapped_socket'] = None
         print_step('Starting Matrix transport')
         try:
-            with HTTPExecutor(
-                local_matrix,
-                url=urljoin(args['matrix_server'], '/_matrix/client/versions'),
-                method='GET',
-                io=DEVNULL,
-                timeout=30,
-                shell=True,
-            ):
+            with matrix_server_starter() as server_urls:
+                # Disable TLS verification so we can connect to the self signed certificate
+                make_requests_insecure()
+                urllib3.disable_warnings(InsecureRequestWarning)
                 args['extra_config'] = {
                     'transport': {
                         'matrix': {
-                            'server_name': 'matrix.local.raiden',
-                            'available_servers': [],
+                            'available_servers': server_urls,
                         },
                     },
                 }
@@ -637,17 +630,6 @@ def smoketest(ctx, debug, local_matrix, **kwargs):  # pylint: disable=unused-arg
                 error=True,
             )
             success = False
-    elif args['transport'] == 'matrix' and local_matrix.lower() == "none":
-        args['mapped_socket'] = None
-        args['extra_config'] = {
-            'transport': {
-                'matrix': {
-                    'server_name': 'matrix.local.raiden',
-                    'available_servers': [],
-                },
-            },
-        }
-        success = _run_smoketest()
     else:
         # Shouldn't happen
         raise RuntimeError(f"Invalid transport type '{args['transport']}'")
