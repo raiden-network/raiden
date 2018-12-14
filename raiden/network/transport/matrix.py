@@ -350,9 +350,8 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         self._message_handler = message_handler
 
-        # Initialize the point from which the client will sync messages
         if prev_auth_data and prev_auth_data.count('/') == 1:
-            prev_user_id, prev_access_token = prev_auth_data.split('/')
+            prev_user_id, _, prev_access_token = prev_auth_data.partition('/')
         else:
             prev_user_id = prev_access_token = None
 
@@ -541,7 +540,6 @@ class MatrixTransport(Runnable):
             self.log.debug('Trying previous user login', user_id=prev_user_id)
             self._client.set_access_token(user_id=prev_user_id, token=prev_access_token)
 
-            # test previous user credentials with quick /sync call
             try:
                 self._client.api.get_devices()
             except MatrixRequestError as ex:
@@ -560,7 +558,7 @@ class MatrixTransport(Runnable):
             self.log.debug(
                 'Different server or account, discarding',
                 prev_user_id=prev_user_id,
-                current_account=base_username,
+                current_address=base_username,
                 current_server=self._server_name,
             )
 
