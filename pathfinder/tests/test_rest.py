@@ -29,17 +29,17 @@ def test_get_paths_validation(
     url = base_url
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'].startswith('Required parameters:')
+    assert response.json()['errors'].startswith('Required parameters:')
 
     url = base_url + '?from=notanaddress&to={}&value=5&num_paths=3'.format(target_address)
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Invalid initiator address: notanaddress'
+    assert response.json()['errors'] == 'Invalid initiator address: notanaddress'
 
     url = base_url + '?from={}&to=notanaddress&value=5&num_paths=3'.format(initiator_address)
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Invalid target address: notanaddress'
+    assert response.json()['errors'] == 'Invalid target address: notanaddress'
 
     url = base_url + '?from={}&to={}&value=5&num_paths=3'.format(
         to_normalized_address(initiator_address),
@@ -47,7 +47,7 @@ def test_get_paths_validation(
     )
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Initiator address not checksummed: {}'.format(
+    assert response.json()['errors'] == 'Initiator address not checksummed: {}'.format(
         to_normalized_address(initiator_address),
     )
 
@@ -57,7 +57,7 @@ def test_get_paths_validation(
     )
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Target address not checksummed: {}'.format(
+    assert response.json()['errors'] == 'Target address not checksummed: {}'.format(
         to_normalized_address(target_address),
     )
 
@@ -67,7 +67,7 @@ def test_get_paths_validation(
     )
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Payment value must be non-negative: -10'
+    assert response.json()['errors'] == 'Payment value must be non-negative: -10'
 
     url = base_url + '?from={}&to={}&value=10&num_paths=-1'.format(
         initiator_address,
@@ -75,7 +75,7 @@ def test_get_paths_validation(
     )
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Number of paths must be positive: -1'
+    assert response.json()['errors'] == 'Number of paths must be positive: -1'
 
 
 def test_get_paths_path_validation(
@@ -85,26 +85,26 @@ def test_get_paths_path_validation(
     url = api_url + '/1234abc/paths'
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Invalid token network address: 1234abc'
+    assert response.json()['errors'] == 'Invalid token network address: 1234abc'
 
     url = api_url + '/df173a5173c3d0ae5ba11dae84470c5d3f1a8413/paths'
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Token network address not checksummed: {}'.format(
+    assert response.json()['errors'] == 'Token network address not checksummed: {}'.format(
         'df173a5173c3d0ae5ba11dae84470c5d3f1a8413',
     )
 
     url = api_url + '/0xdf173a5173c3d0ae5ba11dae84470c5d3f1a8413/paths'
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Token network address not checksummed: {}'.format(
+    assert response.json()['errors'] == 'Token network address not checksummed: {}'.format(
         '0xdf173a5173c3d0ae5ba11dae84470c5d3f1a8413',
     )
 
     url = api_url + '/0x0000000000000000000000000000000000000000/paths'
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'] == 'Unsupported token network: {}'.format(
+    assert response.json()['errors'] == 'Unsupported token network: {}'.format(
         '0x0000000000000000000000000000000000000000',
     )
 
@@ -156,7 +156,7 @@ def test_get_paths(
     )
     response = requests.get(url)
     assert response.status_code == 400
-    assert response.json()['error'].startswith('No suitable path found for transfer from')
+    assert response.json()['errors'].startswith('No suitable path found for transfer from')
 
 
 #

@@ -34,18 +34,18 @@ class PathfinderResource(Resource):
 
         if not is_address(token_network_address):
             no_address_message = 'Invalid token network address: {}'
-            return {'error': no_address_message.format(token_network_address)}, 400
+            return {'errors': no_address_message.format(token_network_address)}, 400
 
         if not is_checksum_address(token_network_address):
             address_error = 'Token network address not checksummed: {}'
-            return {'error': address_error.format(token_network_address)}, 400
+            return {'errors': address_error.format(token_network_address)}, 400
 
         token_network = self.pathfinding_service.token_networks.get(
             Address(token_network_address),
         )
         if token_network is None:
             return {
-                'error': 'Unsupported token network: {}'.format(token_network_address),
+                'errors': 'Unsupported token network: {}'.format(token_network_address),
             }, 400
 
         return None
@@ -56,25 +56,25 @@ class PathsResource(PathfinderResource):
     def _validate_args(args):
         required_args = ['from', 'to', 'value', 'num_paths']
         if not all(args[arg] is not None for arg in required_args):
-            return {'error': 'Required parameters: {}'.format(required_args)}, 400
+            return {'errors': 'Required parameters: {}'.format(required_args)}, 400
 
         address_error = 'Invalid {} address: {}'
         if not is_address(args['from']):
-            return {'error': address_error.format('initiator', args['from'])}, 400
+            return {'errors': address_error.format('initiator', args['from'])}, 400
         if not is_address(args['to']):
-            return {'error': address_error.format('target', args['to'])}, 400
+            return {'errors': address_error.format('target', args['to'])}, 400
 
         address_error = '{} address not checksummed: {}'
         if not is_checksum_address(args['from']):
-            return {'error': address_error.format('Initiator', args['from'])}, 400
+            return {'errors': address_error.format('Initiator', args['from'])}, 400
         if not is_checksum_address(args['to']):
-            return {'error': address_error.format('Target', args['to'])}, 400
+            return {'errors': address_error.format('Target', args['to'])}, 400
 
         if args.value < 0:
-            return {'error': 'Payment value must be non-negative: {}'.format(args.value)}, 400
+            return {'errors': 'Payment value must be non-negative: {}'.format(args.value)}, 400
 
         if args.num_paths <= 0:
-            return {'error': 'Number of paths must be positive: {}'.format(args.num_paths)}, 400
+            return {'errors': 'Number of paths must be positive: {}'.format(args.num_paths)}, 400
 
         return None
 
@@ -104,7 +104,7 @@ class PathsResource(PathfinderResource):
             Address(token_network_address),
         )
         if not token_network:
-            return {'error': 'Token network {} not found.'.format(
+            return {'errors': 'Token network {} not found.'.format(
                 token_network_address,
             )}, 400
         try:
@@ -115,7 +115,7 @@ class PathsResource(PathfinderResource):
                 k=args.num_paths,
             )
         except NetworkXNoPath:
-            return {'error': 'No suitable path found for transfer from {} to {}.'.format(
+            return {'errors': 'No suitable path found for transfer from {} to {}.'.format(
                 args['from'], args['to'],
             )}, 400
 
