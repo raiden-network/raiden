@@ -1,5 +1,6 @@
 import itertools
-from datetime import datetime
+from datetime import datetime, timedelta
+from unittest.mock import patch
 
 from raiden.messages import Lock
 from raiden.storage.serialize import JSONSerializer
@@ -177,6 +178,20 @@ def test_get_state_change_with_balance_proof():
     for state_change, _ in statechanges_balanceproofs:
         storage.write_state_change(state_change, timestamp)
 
+    # Make sure state changes are returned in the correct order in which they were stored
+    stored_statechanges = storage.get_statechanges_by_identifier(1, 'latest')
+    assert isinstance(stored_statechanges[0], ReceiveLockExpired)
+    assert isinstance(stored_statechanges[1], ReceiveUnlock)
+    assert isinstance(stored_statechanges[2], ReceiveTransferRefund)
+    assert isinstance(stored_statechanges[3], ReceiveTransferRefundCancelRoute)
+    assert isinstance(stored_statechanges[4], ActionInitMediator)
+    assert isinstance(stored_statechanges[5], ActionInitTarget)
+
+    # Make sure state changes are returned in the correct order in which they were stored
+    stored_statechanges = storage.get_statechanges_by_identifier(1, 2)
+    assert isinstance(stored_statechanges[0], ReceiveLockExpired)
+    assert isinstance(stored_statechanges[1], ReceiveUnlock)
+
     for state_change, balance_proof in statechanges_balanceproofs:
         state_change_record = get_state_change_with_balance_proof(
             storage=storage,
@@ -254,3 +269,15 @@ def test_get_event_with_balance_proof():
             balance_hash=balance_proof.balance_hash,
         )
         assert event_record.data == event
+
+
+def test_log_raiden_run():
+    with patch('raiden.storage.sqlite.get_system_spec') as get_speck_mock:
+        get_speck_mock.return_value = dict(raiden='1.2.3')
+        store = SQLiteStorage(':memory:', None)
+    cursor = store.conn.cursor()
+    cursor.execute('SELECT started_at, raiden_version FROM runs')
+    run = cursor.fetchone()
+    now = datetime.utcnow()
+    assert now - timedelta(seconds=2) <= run[0] <= now, f'{run[0]} not right before {now}'
+    assert run[1] == '1.2.3'
