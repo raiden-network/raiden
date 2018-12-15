@@ -128,6 +128,12 @@ def test_regression_send_refund():
     The handle_refundtransfer used to discard events from the channel state
     machine, which led to the state being updated but the message to the
     partner was never sent.
+
+    Also, for issue: https://github.com/raiden-network/raiden/issues/3170
+    It was noticed that when receiving the same refund transfer twice, the mediator
+    would detect an invalid refund and clear the mediator state. So the test also
+    checks that mediator rejects the duplicate transfer and keeps the mediator
+    state unchanged.
     """
     pseudo_random_generator = random.Random()
     setup = factories.make_transfers_pair(3)
@@ -201,6 +207,19 @@ def test_regression_send_refund():
             'target': UNIT_TRANSFER_TARGET,
         },
     })
+
+    duplicate_iteration = mediator.handle_refundtransfer(
+        mediator_state=iteration.new_state,
+        mediator_state_change=refund_state_change,
+        channelidentifiers_to_channels=setup.channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=setup.block_number,
+    )
+
+    assert must_contain_entry(duplicate_iteration.events, SendRefundTransfer, {}) is None
+
+    assert duplicate_iteration.new_state is not None
+    assert duplicate_iteration.new_state == iteration.new_state
 
 
 def test_regression_mediator_send_lock_expired_with_new_block():
