@@ -161,6 +161,7 @@ def next_channel_from_routes(
 
 
 def try_new_route(
+        old_initiator_state: typing.Optional[InitiatorTransferState],
         channelidentifiers_to_channels: typing.ChannelMap,
         available_routes: typing.List[RouteState],
         transfer_description: TransferDescriptionWithSecretState,
@@ -189,8 +190,12 @@ def try_new_route(
             reason=reason,
         )
         events.append(transfer_failed)
-
-        initiator_state = None
+        # Here we don't delete the initiator state, but instead let it live.
+        # It will be deleted when the lock expires. We do that so that we
+        # still have an initiator payment task around to process the
+        # LockExpired message that our partner will send us.
+        # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
+        initiator_state = old_initiator_state
 
     else:
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
