@@ -700,9 +700,9 @@ class MediationPairState(State):
         self.payee_state = 'payee_pending'
 
     def __repr__(self):
-        return '<MediationPairState payee:{} {} payer:{}>'.format(
-            self.payer_transfer,
+        return '<MediationPairState payee_address:{} payee_transfer:{} payer_transfer{}>'.format(
             pex(self.payee_address),
+            self.payer_transfer,
             self.payee_transfer,
         )
 
