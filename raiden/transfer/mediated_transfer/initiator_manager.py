@@ -109,11 +109,12 @@ def handle_init(
     events: typing.List[Event]
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
-            channelidentifiers_to_channels,
-            state_change.routes,
-            state_change.transfer,
-            pseudo_random_generator,
-            block_number,
+            old_initiator_state=None,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            available_routes=state_change.routes,
+            transfer_description=state_change.transfer,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
 
         events = sub_iteration.events
@@ -135,6 +136,7 @@ def handle_cancelroute(
 ) -> TransitionResult:
     events: typing.List[Event] = list()
     if can_cancel(payment_state):
+        old_initiator_state = payment_state.initiator
         transfer_description = payment_state.initiator.transfer_description
         cancel_events = cancel_current_route(payment_state)
 
@@ -142,20 +144,18 @@ def handle_cancelroute(
         assert payment_state.initiator is None, msg
 
         sub_iteration = initiator.try_new_route(
-            channelidentifiers_to_channels,
-            state_change.routes,
-            transfer_description,
-            pseudo_random_generator,
-            block_number,
+            old_initiator_state=old_initiator_state,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            available_routes=state_change.routes,
+            transfer_description=transfer_description,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
 
         events.extend(cancel_events)
         events.extend(sub_iteration.events)
-
-        if sub_iteration.new_state:
-            payment_state.initiator = sub_iteration.new_state
-        else:
-            payment_state = None
+        assert sub_iteration.new_state
+        payment_state.initiator = sub_iteration.new_state
 
     iteration = TransitionResult(payment_state, events)
 
