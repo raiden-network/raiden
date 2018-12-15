@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`3170` If the same refund transfer is received multiple times, the mediator state machine will reject subsequent ones rather than clearing up the mediator task.
+
 * :release:`0.19.0 <2018-12-14>`
 * :bug:`3153` If a non-contract address is given for token_address in the channel open REST API call, the client no longer crashes.
 * :bug:`3152` If the onchain unlock has already been mined when we try to send the transaction don't crash Raiden.
