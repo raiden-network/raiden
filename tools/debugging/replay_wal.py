@@ -3,7 +3,7 @@ This script is meant to be used as a template to step through a provided DB file
 for debugging a specific issue.
 It constructs the chain_state through the state_manager and uses the WAL
 to replay all state changes through the state machines until all state changes are consumed.
-The parameters (token_network_identifier and partner_address) will help filter our all
+The parameters (token_network_identifier and partner_address) will help filter out all
 state changes until a channel is found with the provided token network address and partner.
 The ignored state changes will still be applied, but they will just not be printed out.
 """
@@ -69,6 +69,8 @@ def replay_wal(storage, token_network_identifier, partner_address):
 
         ###
         # Customize this to filter things further somewhere around here.
+        # An example would be to add `import pdb; pdb.set_trace()`
+        # and inspect the state.
         ###
 
         print_state_change(state_change)
