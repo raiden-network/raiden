@@ -196,7 +196,7 @@ def test_refund_transfer(
     # Additional checks for LockExpired causing nonce mismatch after refund transfer:
     # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
     # At this point make sure that the initiator has not deleted the payment task
-    assert state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task[secrethash]
+    assert secrethash in state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task
 
     # now wait for lock expiration
     wait_for_block(
