@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3175` If Github checking of latest version returns unexpected response do not let Raiden crash.
 * :bug:`3170` If the same refund transfer is received multiple times, the mediator state machine will reject subsequent ones rather than clearing up the mediator task.
 * :bug:`3146` If a refund transfer is received and there are no other routes, keep the payment task so that the channel does not hang when mediator sends a LockExpired.
 
