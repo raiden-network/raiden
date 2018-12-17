@@ -413,6 +413,10 @@ class SendRefundTransfer(SendMessageEvent):
 
         self.transfer = transfer
 
+    @property
+    def balance_proof(self):
+        return self.transfer.balance_proof
+
     def __repr__(self):
         return (
             f'<'
