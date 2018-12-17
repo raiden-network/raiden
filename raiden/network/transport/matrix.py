@@ -631,7 +631,7 @@ class MatrixTransport(Runnable):
             try:
                 discovery_room = self._client.join_room(discovery_room_alias_full)
             except MatrixRequestError as ex:
-                if ex.code not in (404, 403):
+                if ex.code not in (403, 404, 500):
                     raise
                 self.log.debug(
                     'Could not join discovery room',
