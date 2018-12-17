@@ -269,6 +269,9 @@ def test_get_event_with_balance_proof():
             balance_hash=balance_proof.balance_hash,
         )
         assert event_record.data == event
+        # Checking that balance proof attribute can be accessed for all events.
+        # Issue https://github.com/raiden-network/raiden/issues/3179
+        assert event_record.data.balance_proof == event.balance_proof
 
 
 def test_log_raiden_run():
