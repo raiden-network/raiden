@@ -109,6 +109,9 @@ class PathfindingService(gevent.Greenlet):
         self.is_running.wait()
 
     def stop(self):
+        self.token_network_registry_listener.stop()
+        for task in self.token_network_listeners:
+            task.stop()
         self.is_running.set()
 
     def follows_token_network(self, token_network_address: Address) -> bool:

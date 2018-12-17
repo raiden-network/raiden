@@ -118,3 +118,4 @@ def test_pfs_with_mocked_client(
 
     # there should be no channels
     assert len(token_network.channel_id_to_addresses.keys()) == 0
+    pfs.stop()
