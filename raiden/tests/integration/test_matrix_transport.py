@@ -16,6 +16,7 @@ from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state_change import ActionUpdateTransportAuthData
 from raiden.utils import pex
 from raiden.utils.typing import Address, List, Optional, Union
+from raiden_libs.network.matrix import Room
 
 USERID1 = '@Alice:Wonderland'
 
@@ -389,6 +390,46 @@ def test_matrix_message_retry(
 
     # Retrier now should have sent the message again
     assert transport._send_raw.call_count == 2
+
+    transport.stop()
+    transport.get()
+
+
+def test_join_invalid_discovery(
+    skip_if_not_matrix,
+    local_matrix_server,
+    private_rooms,
+    retry_interval,
+    retries_before_backoff,
+):
+    """_join_discovery_room tries to join on all servers on available_servers config
+
+    If any of the servers isn't reachable by synapse, it'll return a 500 response, which needs
+    to be handled, and if no discovery room is found on any of the available_servers, one in
+    our current server should be created
+    """
+    transport = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_server,
+        'server_name': 'matrix.local.raiden',
+        'available_servers': ['http://invalid.server'],
+        'private_rooms': private_rooms,
+    })
+    transport._client.api.retry_timeout = 0
+    transport._send_raw = MagicMock()
+    raiden_service = MockRaidenService(None)
+
+    transport.start(
+        raiden_service,
+        raiden_service.message_handler,
+        None,
+    )
+    transport.log = MagicMock()
+
+    transport._join_discovery_room()
+    assert isinstance(transport._discovery_room, Room)
 
     transport.stop()
     transport.get()
