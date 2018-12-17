@@ -55,3 +55,21 @@ Ready to contribute? Here's how to set up `raiden-pathfinding-service` for local
     $ git push origin name-of-your-bugfix-or-feature
 
 4. Submit a pull request through the GitHub website.
+
+Command Line Arguments
+----------------------
+
+Note: There are additional command line arguments that can be added starting the PFS with `pathfinder`
+
+==================  =================================================================
+Argument            Description
+==================  =================================================================
+--eth-rpc           | Ethereum node RPC URI (e.g. to use a infura node)
+                    | default is 'http://localhost:8545'
+--registry-address  | Address of the token network registry contract
+--start-block       | Block to start syncing at
+                    | default is '0'
+--confirmations     | Number of block confirmations until a block is considered safe
+                    | default is '8'
+==================  =================================================================
+
