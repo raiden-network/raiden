@@ -273,7 +273,7 @@ def spawn_and_link_with_parent(func, *args, **kwargs):
 
     # closure for the parent greenlet
     def on_error(subtask):
-        parent.kill(exception=subtask.exception)
+        parent.throw(subtask.exception)
 
     greenlet = gevent.spawn(func, *args, **kwargs)
     greenlet.link_exception(on_error)
