@@ -58,6 +58,7 @@ mypy:
 	# related errors, but all mypy errors should be detected soon.
 	grep BlockNumber mypy-out.txt; [ $$? -eq 1 ]
 	grep Address mypy-out.txt; [ $$? -eq 1 ]
+	grep ChannelID mypy-out.txt; [ $$? -eq 1 ]
 
 isort:
 	isort $(ISORT_PARAMS)
