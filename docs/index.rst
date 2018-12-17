@@ -25,6 +25,7 @@ Contents
   webui_tutorial
   config_file
   onboarding
+  state_machines
   changelog
   glossary
   trademarks
