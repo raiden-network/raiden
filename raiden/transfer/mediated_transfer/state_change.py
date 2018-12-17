@@ -228,7 +228,7 @@ class ActionCancelRoute(StateChange):
     def from_dict(cls, data) -> 'ActionCancelRoute':
         return cls(
             registry_address=to_canonical_address(data['registry_address']),
-            channel_identifier=int(data['identifier']),
+            channel_identifier=typing.ChannelID(int(data['identifier'])),
             routes=data['routes'],
         )
 

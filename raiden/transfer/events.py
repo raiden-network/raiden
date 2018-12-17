@@ -66,7 +66,7 @@ class ContractSendChannelClose(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelClose':
         restored = cls(
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
@@ -120,7 +120,7 @@ class ContractSendChannelSettle(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelSettle':
         restored = cls(
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
         )
 
@@ -178,7 +178,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelUpdateTransfer':
         restored = cls(
             expiration=int(data['expiration']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
         )
@@ -240,7 +240,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         restored = cls(
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             participant=to_canonical_address(data['participant']),
         )
 
@@ -754,7 +754,7 @@ class SendProcessed(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendProcessed':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             message_identifier=int(data['message_identifier']),
         )
 

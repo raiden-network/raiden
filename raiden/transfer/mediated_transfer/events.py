@@ -11,7 +11,7 @@ from raiden.utils import pex, serialization, sha3, typing
 # channel_identifier can never be 0. We make this a requirement in the client and use this fact
 # to signify that a channel_identifier of `0` passed to the messages adds them to the
 # global queue
-CHANNEL_IDENTIFIER_GLOBAL_QUEUE: typing.ChannelID = 0
+CHANNEL_IDENTIFIER_GLOBAL_QUEUE = typing.ChannelID(0)
 
 
 def refund_from_sendmediated(send_lockedtransfer_event):
@@ -131,7 +131,7 @@ class SendLockedTransfer(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendLockedTransfer':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             message_identifier=int(data['message_identifier']),
             transfer=data['transfer'],
         )
@@ -214,7 +214,7 @@ class SendSecretReveal(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendSecretReveal':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             message_identifier=int(data['message_identifier']),
             secret=serialization.deserialize_bytes(data['secret']),
         )
@@ -304,7 +304,7 @@ class SendBalanceProof(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendBalanceProof':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
             token_address=to_canonical_address(data['token_address']),
@@ -383,7 +383,7 @@ class SendSecretRequest(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendSecretRequest':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             message_identifier=int(data['message_identifier']),
             payment_identifier=int(data['payment_identifier']),
             amount=int(data['amount']),
@@ -446,7 +446,7 @@ class SendRefundTransfer(SendMessageEvent):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendRefundTransfer':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             message_identifier=int(data['message_identifier']),
             transfer=data['transfer'],
         )

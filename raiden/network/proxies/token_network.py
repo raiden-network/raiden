@@ -193,8 +193,11 @@ class TokenNetwork:
             log.critical('new_netting_channel failed', **log_details)
             raise RaidenUnrecoverableError('creating new channel failed')
 
-        channel_identifier = self.detail_channel(self.node_address, partner).channel_identifier
-        log_details['channel_identifier'] = channel_identifier
+        channel_identifier: typing.ChannelID = self.detail_channel(
+            self.node_address,
+            partner,
+        ).channel_identifier
+        log_details['channel_identifier'] = str(channel_identifier)
         log.info('new_netting_channel successful', **log_details)
 
         return channel_identifier
@@ -468,7 +471,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
+            channel_identifier: typing.ChannelID,
     ) -> bool:
         """ Returns True if the channel is opened and the node has deposit in
         it.
