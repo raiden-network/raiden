@@ -12,7 +12,7 @@ For information on coding style, commit rules and other development rules please
 The Raiden Protocol
 ===================
 
-In this section we will have the general explanation of how the Raiden protocol works, starting from the smart contracts and ending with the offchain messages that are exchanged between Raiden nodes.
+In this section we will have the general explanation of how the Raiden protocol works, starting from the smart contracts and ending with the offchain messages that are exchanged between Raiden nodes. For a quick overview, please watch the `video "Raiden Network Protocol Explained" <https://www.youtube.com/watch?v=jlcYmQHHutU>`_.
 For a more formal definition of the protocol please refer to the `specification <https://raiden-network-specification.readthedocs.io/en/latest/>`_.
 
 Smart contracts
