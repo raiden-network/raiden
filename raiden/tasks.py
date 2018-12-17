@@ -22,25 +22,38 @@ REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def _do_check_version(current_version: str):
+    content = requests.get(LATEST).json()
+    if 'tag_name' not in content:
+        # probably API rate limit exceeded
+        click.secho(
+            'Error while contacting github for latest version. API rate limit exceeded?',
+            fg='red',
+        )
+        return False
+    # getting the latest release version
+    latest_release = parse_version(content['tag_name'])
+    security_message = re.search(SECURITY_EXPRESSION, content['body'])
+    if security_message:
+        click.secho(security_message.group(0), fg='red')
+        # comparing it to the user's application
+    if current_version < latest_release:
+        msg = "You're running version {}. The latest version is {}".format(
+            current_version,
+            latest_release,
+        )
+        click.secho(msg, fg='red')
+        click.secho("It's time to update! Releases: {}".format(RELEASE_PAGE), fg='red')
+        return False
+    return True
+
+
 def check_version(current_version: str):
     """ Check periodically for a new release """
     app_version = parse_version(current_version)
     while True:
         try:
-            content = requests.get(LATEST).json()
-            # getting the latest release version
-            latest_release = parse_version(content['tag_name'])
-            security_message = re.search(SECURITY_EXPRESSION, content['body'])
-            if security_message:
-                click.secho(security_message.group(0), fg='red')
-            # comparing it to the user's application
-            if app_version < latest_release:
-                msg = "You're running version {}. The latest version is {}".format(
-                    app_version,
-                    latest_release,
-                )
-                click.secho(msg, fg='red')
-                click.secho("It's time to update! Releases: {}".format(RELEASE_PAGE), fg='red')
+            _do_check_version(app_version)
         except requests.exceptions.HTTPError as herr:
             click.secho('Error while checking for version', fg='red')
             print(herr)
