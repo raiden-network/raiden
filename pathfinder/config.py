@@ -10,3 +10,4 @@ DIVERSITY_PEN_DEFAULT: int = 1000
 MAX_PATHS_PER_REQUEST: int = 25
 MIN_PATH_REDUNDANCY: int = 20
 PATH_REDUNDANCY_FACTOR: int = 4
+DEFAULT_MAX_PATHS: int = 5  # number of paths return when no `max_path` argument is given

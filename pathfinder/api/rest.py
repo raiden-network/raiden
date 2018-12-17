@@ -14,12 +14,11 @@ from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
 
 import pathfinder
-from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH
+from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH, DEFAULT_MAX_PATHS
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_libs.types import Address
 
 log = logging.getLogger(__name__)
-DEFAULT_MAX_PATHS = 5  # number of paths return when no `num_path` argument is given
 
 
 class PathfinderResource(Resource):
