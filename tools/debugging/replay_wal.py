@@ -14,7 +14,6 @@ from raiden.storage import serialize, sqlite
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import StateManager
-from raiden.transfer.state_change import ActionUpdateTransportSyncToken
 
 
 def print_attributes(data):
@@ -52,9 +51,6 @@ def replay_wal(storage, token_network_identifier, partner_address):
         wal = WriteAheadLog(state_manager, storage)
 
         events = wal.state_manager.dispatch(state_change)
-
-        if isinstance(state_change, ActionUpdateTransportSyncToken):
-            continue
 
         chain_state = wal.state_manager.current_state
 
