@@ -220,7 +220,7 @@ class TargetTask(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TargetTask':
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             target_state=data['target_state'],
         )
 
@@ -676,7 +676,7 @@ class RouteState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'RouteState':
         restored = cls(
             node_address=to_canonical_address(data['node_address']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
         )
 
         return restored
@@ -809,7 +809,7 @@ class BalanceProofUnsignedState(State):
             locked_amount=int(data['locked_amount']),
             locksroot=serialization.deserialize_bytes(data['locksroot']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             chain_id=data['chain_id'],
         )
 
@@ -982,7 +982,7 @@ class BalanceProofSignedState(State):
             locked_amount=int(data['locked_amount']),
             locksroot=serialization.deserialize_bytes(data['locksroot']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             message_hash=serialization.deserialize_bytes(data['message_hash']),
             signature=serialization.deserialize_bytes(data['signature']),
             sender=to_canonical_address(data['sender']),
@@ -1585,7 +1585,7 @@ class NettingChannelState(State):
     @classmethod
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelState':
         restored = cls(
-            identifier=int(data['identifier']),
+            identifier=typing.ChannelID(int(data['identifier'])),
             chain_id=data['chain_id'],
             token_address=to_canonical_address(data['token_address']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),

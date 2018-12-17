@@ -152,7 +152,7 @@ class InitiatorTransferState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTransferState':
         restored = cls(
             transfer_description=data['transfer_description'],
-            channel_identifier=int(data['channel_identifier']),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             transfer=data['transfer'],
             revealsecret=data['revealsecret'],
             received_secret_request=data['received_secret_request'],
