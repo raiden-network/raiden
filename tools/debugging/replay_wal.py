@@ -14,7 +14,29 @@ from raiden.storage import serialize, sqlite
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import StateManager
-from raiden.transfer.state_change import ActionUpdateTransportSyncToken
+from raiden.transfer.state_change import Block
+
+
+def state_change_contains_secrethash(obj, secrethash):
+    return (
+        (hasattr(obj, 'secrethash') and obj.secrethash == secrethash) or
+        (hasattr(obj, 'transfer') and (
+            (
+                hasattr(obj.transfer, 'secrethash') and obj.transfer.secrethash == secrethash
+            ) or (
+                hasattr(obj.transfer, 'lock') and obj.transfer.lock.secrethash == secrethash
+            )
+        ))
+    )
+
+
+def state_change_with_nonce(obj, nonce, channel_identifier, sender):
+    return (
+        hasattr(obj, 'balance_proof') and
+        obj.balance_proof.nonce == nonce and
+        obj.balance_proof.channel_identifier == channel_identifier and
+        obj.balance_proof.sender == to_canonical_address(sender)
+    )
 
 
 def print_attributes(data):
@@ -52,9 +74,6 @@ def replay_wal(storage, token_network_identifier, partner_address):
         wal = WriteAheadLog(state_manager, storage)
 
         events = wal.state_manager.dispatch(state_change)
-
-        if isinstance(state_change, ActionUpdateTransportSyncToken):
-            continue
 
         chain_state = wal.state_manager.current_state
 
