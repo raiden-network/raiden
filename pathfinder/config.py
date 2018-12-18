@@ -1,4 +1,4 @@
-API_PATH: str = '/api/1'
+API_PATH: str = '/api/v1'
 API_HOST: str = 'localhost'
 API_DEFAULT_PORT: int = 5002
 
