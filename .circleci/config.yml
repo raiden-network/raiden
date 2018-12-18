@@ -2,9 +2,11 @@ version: 2.1
 
 templates:
 
-  filter-tag-templates: &filter-version-regex
+  filter-tag-templates: &only-tagged-version-filter
     tags:
       only: /^v\d+\.\d+\.\d+$/
+    branches:
+      ignore: /.*/
 
   parameter-templates: &parameter-templates
     py-version: &py-version-template
@@ -375,7 +377,7 @@ jobs:
       - attach_workspace:
           at: "~"
       - when:
-          condition: ${CIRCLE_TAG}
+          condition: ${CIRCLE_TAG} && ${GITHUB_TOKEN}
           steps:
             - run:
                 name: "Publish Release on GitHub"
@@ -383,6 +385,7 @@ jobs:
                   echo "TAG: ${CIRCLE_TAG}"
                   RAIDEN_VERSION=${CIRCLE_TAG}
                   ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${RAIDEN_VERSION} build/archive/
+
   deploy-pypi:
     executor:
       name: base-executor
@@ -406,42 +409,33 @@ jobs:
           name: "upload to pypi"
           command: |
             twine upload -u $PYPI_USER -p $PYPI_PASSWORD --repository-url $PYPI_URL dist/*
+
 workflows:
   raiden-default:
     jobs:
-      - prepare-system:
-          filters:
-            <<: *filter-version-regex
+      - prepare-system
 
       - build-synapse:
           requires:
             - prepare-system
-          filters:
-            <<: *filter-version-regex
 
       - prepare-python:
           name: prepare-python-3.6
           py-version: '3.6'
           requires:
             - prepare-system
-          filters:
-            <<: *filter-version-regex
 
       - prepare-python:
           name: prepare-python-3.7
           py-version: '3.7'
           requires:
             - prepare-system
-          filters:
-            <<: *filter-version-regex
 
       - lint:
           name: lint-3.6
           py-version: "3.6"
           requires:
             - prepare-python-3.6
-          filters:
-            <<: *filter-version-regex
 
       - mypy:
           name: mypy-3.6
@@ -460,8 +454,6 @@ workflows:
           transport-layer: "udp"
           requires:
             - prepare-python-3.6
-          filters:
-            <<: *filter-version-regex
 
       - smoketest:
           name: smoketest-matrix-3.6
@@ -471,8 +463,6 @@ workflows:
           requires:
             - prepare-python-3.6
             - build-synapse
-          filters:
-            <<: *filter-version-regex
 
       - test:
           name: test-unit-3.6
@@ -482,8 +472,6 @@ workflows:
           requires:
             - prepare-python-3.6
             - build-synapse
-          filters:
-            <<: *filter-version-regex
 
       - finalize:
           requires:
@@ -497,44 +485,35 @@ workflows:
             - test-unit-3.7
             - test-integration-udp-3.7
             - test-integration-matrix-3.7
-          filters:
-            <<: *filter-version-regex
 
       - test:
           name: test-integration-udp-3.6
           py-version: "3.6"
-          resource: "xlarge"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 16
           requires:
             - smoketest-udp-3.6
-          filters:
-            <<: *filter-version-regex
-
 
       - test:
           name: test-integration-matrix-3.6
           py-version: "3.6"
-          resource: "xlarge"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 16
           requires:
             - smoketest-matrix-3.6
-          filters:
-            <<: *filter-version-regex
 
       - lint:
           name: lint-3.7
           py-version: "3.7"
           requires:
             - prepare-python-3.7
-          filters:
-            <<: *filter-version-regex
 
       - mypy:
           name: mypy-3.7
@@ -553,8 +532,6 @@ workflows:
           transport-layer: "udp"
           requires:
             - prepare-python-3.7
-          filters:
-            <<: *filter-version-regex
 
       - smoketest:
           name: smoketest-matrix-3.7
@@ -564,8 +541,6 @@ workflows:
           requires:
             - prepare-python-3.7
             - build-synapse
-          filters:
-            <<: *filter-version-regex
 
       - test:
           name: test-unit-3.7
@@ -575,69 +550,73 @@ workflows:
           requires:
             - prepare-python-3.7
             - build-synapse
-          filters:
-            <<: *filter-version-regex
 
       - test:
           name: test-integration-udp-3.7
-          resource: "xlarge"
+          resource: "large"
           py-version: "3.7"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 16
           requires:
             - smoketest-udp-3.7
-          filters:
-            <<: *filter-version-regex
 
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
-          resource: "xlarge"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 16
           requires:
             - smoketest-matrix-3.7
+
+  deploy-release:
+
+    jobs:
+      - prepare-system:
           filters:
-            <<: *filter-version-regex
+            <<: *only-tagged-version-filter
+
+      - prepare-python:
+          py-version: '3.7'
+          requires:
+            - prepare-system
+          filters:
+            <<: *only-tagged-version-filter
 
       - build-dist:
           requires:
-          - finalize
+            - prepare-python
           filters:
-            <<: *filter-version-regex
-            branches:
-              ignore: /.*/
+            <<: *only-tagged-version-filter
+
 
       - deploy-digitalocean:
+          context: "Raiden Context"
           requires:
             - build-dist
           filters:
-            <<: *filter-version-regex
-            branches:
-              ignore: /.*/
+            <<: *only-tagged-version-filter
 
       - deploy-github-release:
+          context: "Raiden Context"
           requires:
           - build-dist
           filters:
-            <<: *filter-version-regex
-            branches:
-              ignore: /.*/
+            <<: *only-tagged-version-filter
 
       - deploy-pypi:
+          context: "Raiden Context"
           requires:
           - build-dist
           filters:
-            <<: *filter-version-regex
-            branches:
-              ignore: /.*/
+            <<: *only-tagged-version-filter
 
-  nightly-deployment:
+  nightly:
 
     jobs:
       - prepare-system
@@ -711,23 +690,23 @@ workflows:
       - test:
           name: test-integration-udp-3.6
           py-version: "3.6"
-          resource: "xlarge"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 16
           requires:
             - smoketest-udp-3.6
 
       - test:
           name: test-integration-matrix-3.6
           py-version: "3.6"
-          resource: "xlarge"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 16
           requires:
             - smoketest-matrix-3.6
 
@@ -771,23 +750,23 @@ workflows:
       - test:
           name: test-integration-udp-3.7
           py-version: "3.7"
-          resource: "xlarge"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 2
+          parallelism: 16
           requires:
             - smoketest-udp-3.7
 
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
-          resource: "xlarge"
+          resource: "large"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
           additional-args: "--local-matrix='~/raiden/.synapse/run_synapse.sh'"
-          parallelism: 2
+          parallelism: 16
           requires:
             - smoketest-matrix-3.7
 
@@ -796,6 +775,7 @@ workflows:
             - finalize
 
       - deploy-digitalocean:
+          context: "Raiden Context"
           requires:
             - build-dist
 
