@@ -307,3 +307,22 @@ def wait_for_transfer_success(
                 break
 
         gevent.sleep(retry_timeout)
+
+
+def wait_for_events_in_wal(
+        raiden: RaidenService,
+        event_type: typing.Any,
+        count: int,
+        retry_timeout: float,
+) -> None:
+    """Wait until `count` occurences of `event_type`
+    are seen in the WAL.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    found = []
+    while len(found) < count:
+        state_events = raiden.wal.storage.get_events()
+        found = list(filter(lambda e: isinstance(e, event_type), state_events))
+        gevent.sleep(retry_timeout)
