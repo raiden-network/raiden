@@ -21,7 +21,12 @@ from raiden.tests.utils.factories import (
 )
 from raiden.transfer import channel
 from raiden.transfer.architecture import State
-from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
+from raiden.transfer.events import (
+    EventInvalidReceivedLockExpired,
+    EventPaymentSentFailed,
+    EventPaymentSentSuccess,
+    SendProcessed,
+)
 from raiden.transfer.mediated_transfer import initiator, initiator_manager
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
@@ -36,11 +41,13 @@ from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionCancelRoute,
     ActionInitInitiator,
+    ReceiveLockExpired,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import (
+    EMPTY_MERKLE_ROOT,
     HashTimeLockState,
     NettingChannelState,
     RouteState,
@@ -578,6 +585,7 @@ def test_refund_transfer_no_more_routes():
         setup.prng,
         setup.block_number,
     )
+    current_state = iteration.new_state
     # As per the description of the issue here:
     # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
     # We can fail the payment but can't delete the payment task if there are no
@@ -589,6 +597,114 @@ def test_refund_transfer_no_more_routes():
 
     assert unlocked_failed
     assert sent_failed
+
+    invalid_balance_proof = factories.make_signed_balance_proof(
+        nonce=2,
+        transferred_amount=original_transfer.balance_proof.transferred_amount,
+        locked_amount=0,
+        token_network_address=original_transfer.balance_proof.token_network_identifier,
+        channel_identifier=setup.channel.identifier,
+        locksroot=EMPTY_MERKLE_ROOT,
+        extra_hash=original_transfer.lock.secrethash,
+        sender_address=refund_address,
+    )
+    balance_proof = factories.make_signed_balance_proof(
+        nonce=2,
+        transferred_amount=original_transfer.balance_proof.transferred_amount,
+        locked_amount=0,
+        token_network_address=original_transfer.balance_proof.token_network_identifier,
+        channel_identifier=setup.channel.identifier,
+        locksroot=EMPTY_MERKLE_ROOT,
+        extra_hash=original_transfer.lock.secrethash,
+        sender_address=refund_address,
+        private_key=refund_pkey,
+    )
+    invalid_lock_expired_state_change = ReceiveLockExpired(
+        invalid_balance_proof,
+        secrethash=original_transfer.lock.secrethash,
+        message_identifier=5,
+    )
+    lock_expired_state_change = ReceiveLockExpired(
+        balance_proof,
+        secrethash=original_transfer.lock.secrethash,
+        message_identifier=5,
+    )
+    before_expiry_block = original_transfer.lock.expiration - 1
+    expiry_block = original_transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+
+    # a block before lock expiration, no events should be emitted
+    current_state = iteration.new_state
+    state_change = Block(
+        block_number=before_expiry_block,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    iteration = initiator_manager.state_transition(
+        current_state,
+        state_change,
+        setup.channel_map,
+        setup.prng,
+        expiry_block,
+    )
+    assert not iteration.events
+    assert iteration.new_state, 'payment task should not be deleted at this block'
+
+    # process an invalid lock expired message before lock expiration
+    current_state = iteration.new_state
+    iteration = initiator_manager.state_transition(
+        current_state,
+        invalid_lock_expired_state_change,
+        setup.channel_map,
+        setup.prng,
+        before_expiry_block,
+    )
+    assert iteration.new_state, 'payment task should not be deleted at this lock expired'
+    # should not be accepted
+    assert not events.must_contain_entry(iteration.events, SendProcessed, {})
+    assert events.must_contain_entry(iteration.events, EventInvalidReceivedLockExpired, {})
+
+    # process a valid lock expired message before lock expiration
+    current_state = iteration.new_state
+    iteration = initiator_manager.state_transition(
+        current_state,
+        lock_expired_state_change,
+        setup.channel_map,
+        setup.prng,
+        before_expiry_block,
+    )
+    assert iteration.new_state, 'payment task should not be deleted at this lock expired'
+    # should not be accepted
+    assert not events.must_contain_entry(iteration.events, SendProcessed, {})
+
+    # now we get to the lock expiration block
+    current_state = iteration.new_state
+    state_change = Block(
+        block_number=expiry_block,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    iteration = initiator_manager.state_transition(
+        current_state,
+        state_change,
+        setup.channel_map,
+        setup.prng,
+        expiry_block,
+    )
+    # Since there was a refund transfer the payment task must not have been deleted
+    assert iteration.new_state is not None
+
+    # process the lock expired message after lock expiration
+    current_state = iteration.new_state
+    iteration = initiator_manager.state_transition(
+        current_state,
+        lock_expired_state_change,
+        setup.channel_map,
+        setup.prng,
+        expiry_block,
+    )
+    # should be accepted
+    assert events.must_contain_entry(iteration.events, SendProcessed, {})
+    assert iteration.new_state is None, 'payment task should have been deleted'
 
 
 def test_cancel_transfer():
@@ -824,6 +940,8 @@ def test_initiator_lock_expired():
     })
 
     assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
+    msg = 'the initiator payment task must be deleted at block of the lock expiration'
+    assert not iteration.new_state, msg
 
     # Create 2 other transfers
     transfer2_state = make_initiator_manager_state(
