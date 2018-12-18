@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3183` If as initiator our nodes receives a RefundTransfer then do not delete the payment task at the lock expiration block but wait for a LockExpired message. Solves one hanging transfer case.
 * :bug:`3179` Properly process a SendRefundTransfer event if it's the last one before settlement and not crash the client.
 * :bug:`3175` If Github checking of latest version returns unexpected response do not let Raiden crash.
 * :bug:`3170` If the same refund transfer is received multiple times, the mediator state machine will reject subsequent ones rather than clearing up the mediator task.
