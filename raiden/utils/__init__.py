@@ -273,7 +273,12 @@ def spawn_and_link_with_parent(func, *args, **kwargs):
 
     # closure for the parent greenlet
     def on_error(subtask):
-        parent.throw(subtask.exception)
+        assert parent is not None
+        # in case the parent task already finished, we escalate to the hub
+        if parent.ready():
+            gevent.get_hub().throw(subtask.exception)
+        else:
+            parent.throw(subtask.exception)
 
     greenlet = gevent.spawn(func, *args, **kwargs)
     greenlet.link_exception(on_error)
