@@ -2,8 +2,13 @@ import gevent
 import pytest
 
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.tests.utils.events import raiden_events_must_contain_entry
+from raiden.tests.utils.events import (
+    must_contain_entry,
+    raiden_events_must_contain_entry,
+    wait_for_state_change,
+)
 from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.protocol import dont_handle_locked_expired_mock
 from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import (
@@ -11,6 +16,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockExpired,
     SendRefundTransfer,
 )
+from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state import lockstate_from_lock
 from raiden.transfer.views import state_from_raiden
 from raiden.waiting import wait_for_block
@@ -89,6 +95,9 @@ def test_refund_transfer(
         deposit,
         network_wait,
         retry_timeout,
+        # UDP does not seem to retry messages until processed
+        # https://github.com/raiden-network/raiden/issues/3185
+        skip_if_not_matrix,
 ):
     """A failed transfer must send a refund back.
 
@@ -198,23 +207,55 @@ def test_refund_transfer(
     # At this point make sure that the initiator has not deleted the payment task
     assert secrethash in state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task
 
-    # now wait for lock expiration
-    wait_for_block(
-        raiden=app0.raiden,
-        block_number=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2 + 1,
-        retry_timeout=retry_timeout,
-    )
+    # Wait for lock lock expiration but make sure app0 never processes LockExpired
+    with dont_handle_locked_expired_mock(app0):
+        wait_for_block(
+            raiden=app0.raiden,
+            block_number=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2 + 1,
+            retry_timeout=retry_timeout,
+        )
+        # make sure that app0 still has the payment task for the secrethash
+        # https://github.com/raiden-network/raiden/issues/3183
+        assert secrethash in state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task
 
-    # make sure that app1 sent a lock expired message for the secrethash
-    send_lock_expired = raiden_events_must_contain_entry(
-        app1.raiden,
-        SendLockExpired,
+        # make sure that app1 sent a lock expired message for the secrethash
+        send_lock_expired = raiden_events_must_contain_entry(
+            app1.raiden,
+            SendLockExpired,
+            {'secrethash': secrethash},
+        )
+        assert send_lock_expired
+        # make sure that app0 never got it
+        state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(0, 'latest')
+        assert not must_contain_entry(
+            state_changes,
+            ReceiveLockExpired,
+            {'secrethash': secrethash},
+        )
+
+    # Out of the handicapped app0 transport.
+    # Now wait till app0 receives and processes LockExpired
+    wait_for_state_change(
+        app0.raiden,
+        ReceiveLockExpired,
         {'secrethash': secrethash},
+        retry_timeout,
     )
-    assert send_lock_expired
 
-    # and since the lock expired message has been sent then the
+    # make sure app1 queue has cleared the SendLockExpired
+    chain_state1 = views.state_from_app(app1)
+    queues1 = views.get_all_messagequeues(chain_state=chain_state1)
+    result = [
+        (queue_id, queue)
+        for queue_id, queue in queues1.items()
+        if queue_id.recipient == app0.raiden.address and
+        queue
+    ]
+    assert not result
+
+    # and since the lock expired message has been sent and processed then the
     # payment task should have been deleted from both nodes
+    # https://github.com/raiden-network/raiden/issues/3183
     assert secrethash not in state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task
     assert secrethash not in state_from_raiden(app1.raiden).payment_mapping.secrethashes_to_task
 
