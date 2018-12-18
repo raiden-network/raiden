@@ -27,6 +27,27 @@ contract_manager = ContractManager(contracts_precompiled_path())
 DEFAULT_REQUIRED_CONFIRMATIONS = 8  # ~2min with 15s blocks
 
 
+def validate_address(ctx, param, value):
+    if value is None:
+        # None as default value allowed
+        return
+    if not is_checksum_address(value):
+        raise click.BadParameter('not an EIP-55 checksummed address')
+    return value
+
+
+def get_default_registry_and_start_block(net_version, contracts_version):
+    try:
+        contract_data = get_contracts_deployed(net_version, contracts_version)
+        token_network_registry_info = contract_data['contracts'][CONTRACT_TOKEN_NETWORK_REGISTRY]  # noqa
+        registry_address = token_network_registry_info['address']
+        start_block = max(0, token_network_registry_info['block_number'] - 100)
+        return registry_address, start_block
+    except ValueError:
+        log.error('No deployed contracts were found at the default registry')
+        sys.exit(1)
+
+
 @click.command()
 @click.option(
     '--eth-rpc',
@@ -38,17 +59,18 @@ DEFAULT_REQUIRED_CONFIRMATIONS = 8  # ~2min with 15s blocks
     '--registry-address',
     type=str,
     help='Address of the token network registry',
+    callback=validate_address,
 )
 @click.option(
     '--start-block',
     default=0,
-    type=int,
+    type=click.IntRange(min=0),
     help='Block to start syncing at',
 )
 @click.option(
     '--confirmations',
     default=DEFAULT_REQUIRED_CONFIRMATIONS,
-    type=int,
+    type=click.IntRange(min=0),
     help='Number of block confirmations to wait for',
 )
 @click.option(
@@ -90,22 +112,12 @@ def main(
             'Can not connect to the Ethereum client. Please check that it is running and that '
             'your settings are correct.',
         )
-        sys.exit()
+        sys.exit(1)
 
     with no_ssl_verification():
-        valid_params_given = is_checksum_address(registry_address) and start_block >= 0
-        if not valid_params_given:
-            try:
-                contract_data = get_contracts_deployed(net_version, contracts_version)
-                token_network_registry_info = contract_data['contracts'][CONTRACT_TOKEN_NETWORK_REGISTRY]  # noqa
-                registry_address = token_network_registry_info['address']
-                start_block = max(0, token_network_registry_info['block_number'] - 100)
-            except ValueError:
-                log.error(
-                    'Provided registry address or start block are not valid and '
-                    'no deployed contracts were found',
-                )
-                sys.exit(1)
+        if registry_address is None:
+            registry_address, start_block = \
+                    get_default_registry_and_start_block(net_version, contracts_version)
 
         service = None
         try:
@@ -128,6 +140,7 @@ def main(
             if service:
                 log.info('Stopping Pathfinding Service...')
                 service.stop()
+                api.stop()
 
     return 0
 
