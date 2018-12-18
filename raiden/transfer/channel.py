@@ -881,7 +881,7 @@ def get_batch_unlock(
 def get_lock(
         end_state: NettingChannelEndState,
         secrethash: typing.SecretHash,
-) -> HashTimeLockState:
+) -> typing.Optional[HashTimeLockState]:
     """Return the lock correspoding to `secrethash` or None if the lock is
     unknown.
     """
@@ -898,6 +898,17 @@ def get_lock(
 
     assert isinstance(lock, HashTimeLockState) or lock is None
     return lock
+
+
+def lock_exists_in_either_channel_side(
+        channel_state: NettingChannelState,
+        secrethash: typing.SecretHash,
+) -> bool:
+    """Check if the lock with `secrethash` exists in either our state or the partner's state"""
+    lock = get_lock(channel_state.our_state, secrethash)
+    if not lock:
+        lock = get_lock(channel_state.partner_state, secrethash)
+    return lock is not None
 
 
 def get_next_nonce(end_state: NettingChannelEndState) -> typing.Nonce:

@@ -92,7 +92,6 @@ def handle_block(
 
     sub_iteration = initiator.handle_block(
         initiator_state=payment_state.initiator,
-        had_canceled_payments=len(payment_state.cancelled_channels) != 0,
         state_change=state_change,
         channel_state=channel_state,
         pseudo_random_generator=pseudo_random_generator,
@@ -255,7 +254,7 @@ def handle_transferrefundcancelroute(
 
 def handle_lock_expired(
         payment_state: InitiatorPaymentState,
-        state_change: ReceiveSecretReveal,
+        state_change: ReceiveLockExpired,
         channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: typing.BlockNumber,
@@ -289,7 +288,6 @@ def handle_lock_expired(
             reason='Lock expired',
         )
         result.events.append(unlock_failed)
-        return TransitionResult(None, result.events)
 
     return TransitionResult(payment_state, result.events)
 

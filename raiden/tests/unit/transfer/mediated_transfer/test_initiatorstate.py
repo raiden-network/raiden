@@ -690,6 +690,7 @@ def test_refund_transfer_no_more_routes():
         setup.prng,
         expiry_block,
     )
+    assert events.must_contain_entry(iteration.events, SendLockExpired, {})
     # Since there was a refund transfer the payment task must not have been deleted
     assert iteration.new_state is not None
 
@@ -704,7 +705,23 @@ def test_refund_transfer_no_more_routes():
     )
     # should be accepted
     assert events.must_contain_entry(iteration.events, SendProcessed, {})
-    assert iteration.new_state is None, 'payment task should have been deleted'
+    assert iteration.new_state, 'payment task should be there waiting for next block'
+
+    # process the the block after lock expiration
+    current_state = iteration.new_state
+    state_change = Block(
+        block_number=expiry_block + 1,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    iteration = initiator_manager.state_transition(
+        current_state,
+        state_change,
+        setup.channel_map,
+        setup.prng,
+        expiry_block + 1,
+    )
+    assert iteration.new_state is None, 'from this point on the payment task should go'
 
 
 def test_cancel_transfer():
