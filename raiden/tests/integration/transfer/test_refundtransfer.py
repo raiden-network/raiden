@@ -18,6 +18,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state import lockstate_from_lock
+from raiden.transfer.state_change import ReceiveProcessed
 from raiden.transfer.views import state_from_raiden
 from raiden.waiting import wait_for_block
 
@@ -235,10 +236,17 @@ def test_refund_transfer(
 
     # Out of the handicapped app0 transport.
     # Now wait till app0 receives and processes LockExpired
-    wait_for_state_change(
+    receive_lock_expired = wait_for_state_change(
         app0.raiden,
         ReceiveLockExpired,
         {'secrethash': secrethash},
+        retry_timeout,
+    )
+    # And also till app1 received the processed
+    wait_for_state_change(
+        app1.raiden,
+        ReceiveProcessed,
+        {'message_identifier': receive_lock_expired.message_identifier},
         retry_timeout,
     )
 
