@@ -4,7 +4,7 @@ from raiden.transfer import channel
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer import initiator
-from raiden.transfer.mediated_transfer.events import EventUnlockFailed
+from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, EventUnlockFailed
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
     TransferDescriptionWithSecretState,
@@ -12,6 +12,7 @@ from raiden.transfer.mediated_transfer.state import (
 from raiden.transfer.mediated_transfer.state_change import (
     ActionCancelRoute,
     ActionInitInitiator,
+    ReceiveLockExpired,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
@@ -90,10 +91,11 @@ def handle_block(
         return TransitionResult(payment_state, list())
 
     sub_iteration = initiator.handle_block(
-        payment_state.initiator,
-        state_change,
-        channel_state,
-        pseudo_random_generator,
+        initiator_state=payment_state.initiator,
+        had_canceled_payments=len(payment_state.cancelled_channels) != 0,
+        state_change=state_change,
+        channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
     )
     iteration = iteration_from_sub(payment_state, sub_iteration)
     return iteration
@@ -251,6 +253,47 @@ def handle_transferrefundcancelroute(
     return iteration
 
 
+def handle_lock_expired(
+        payment_state: InitiatorPaymentState,
+        state_change: ReceiveSecretReveal,
+        channelidentifiers_to_channels: typing.ChannelMap,
+        pseudo_random_generator: random.Random,
+        block_number: typing.BlockNumber,
+) -> TransitionResult:
+    """Initiator also needs to handle LockExpired messages when refund transfers are involved.
+
+    A -> B -> C
+
+    - A sends locked transfer to B
+    - B attempted to forward to C but has not enough capacity
+    - B sends a refund transfer with the same secrethash back to A
+    - When the lock expires B will also send a LockExpired message to A
+    - A needs to be able to properly process it
+
+    Related issue: https://github.com/raiden-network/raiden/issues/3183
+"""
+    channel_identifier = payment_state.initiator.channel_identifier
+    channel_state = channelidentifiers_to_channels[channel_identifier]
+    secrethash = payment_state.initiator.transfer.lock.secrethash
+    result = channel.handle_receive_lock_expired(
+        channel_state=channel_state,
+        state_change=state_change,
+        block_number=block_number,
+    )
+
+    if not channel.get_lock(result.new_state.partner_state, secrethash):
+        transfer = payment_state.initiator.transfer
+        unlock_failed = EventUnlockClaimFailed(
+            identifier=transfer.payment_identifier,
+            secrethash=transfer.lock.secrethash,
+            reason='Lock expired',
+        )
+        result.events.append(unlock_failed)
+        return TransitionResult(None, result.events)
+
+    return TransitionResult(payment_state, result.events)
+
+
 def handle_offchain_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
@@ -349,6 +392,14 @@ def state_transition(
             state_change,
             channelidentifiers_to_channels,
             pseudo_random_generator,
+        )
+    elif type(state_change) == ReceiveLockExpired:
+        iteration = handle_lock_expired(
+            payment_state,
+            state_change,
+            channelidentifiers_to_channels,
+            pseudo_random_generator,
+            block_number,
         )
     elif type(state_change) == ContractReceiveSecretReveal:
         iteration = handle_onchain_secretreveal(

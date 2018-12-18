@@ -68,6 +68,7 @@ def events_for_unlock_lock(
 
 def handle_block(
         initiator_state: InitiatorTransferState,
+        had_canceled_payments: bool,
         state_change: Block,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
@@ -109,7 +110,10 @@ def handle_block(
         )
         expired_lock_events.append(transfer_failed)
         return TransitionResult(
-            None,
+            # If there were any refund transfers we need to keep the payment
+            # task around to wait for the LockExpired message.
+            # Check https://github.com/raiden-network/raiden/issues/3183
+            initiator_state if had_canceled_payments else None,
             typing.cast(typing.List[Event], expired_lock_events),
         )
     else:
