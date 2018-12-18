@@ -261,6 +261,13 @@ def test_refund_transfer(
     ]
     assert not result
 
+    # and now wait for 1 more block so that the payment task can be deleted
+    wait_for_block(
+        raiden=app0.raiden,
+        block_number=app0.raiden.get_block_number() + 1,
+        retry_timeout=retry_timeout,
+    )
+
     # and since the lock expired message has been sent and processed then the
     # payment task should have been deleted from both nodes
     # https://github.com/raiden-network/raiden/issues/3183

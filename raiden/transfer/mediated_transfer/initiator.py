@@ -68,7 +68,6 @@ def events_for_unlock_lock(
 
 def handle_block(
         initiator_state: InitiatorTransferState,
-        had_canceled_payments: bool,
         state_change: Block,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
@@ -77,7 +76,12 @@ def handle_block(
     locked_lock = channel_state.our_state.secrethashes_to_lockedlocks.get(secrethash)
 
     if not locked_lock:
-        return TransitionResult(initiator_state, list())
+        if channel_state.partner_state.secrethashes_to_lockedlocks.get(secrethash):
+            return TransitionResult(initiator_state, list())
+        else:
+            # if lock is not in our or our partner's locked locks then the
+            # task can go
+            return TransitionResult(None, list())
 
     lock_expiration_threshold = typing.BlockNumber(
         locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
@@ -109,11 +113,16 @@ def handle_block(
             reason="transfer's lock has expired",
         )
         expired_lock_events.append(transfer_failed)
+        lock_exists = channel.lock_exists_in_either_channel_side(
+            channel_state=channel_state,
+            secrethash=secrethash,
+        )
+
         return TransitionResult(
-            # If there were any refund transfers we need to keep the payment
-            # task around to wait for the LockExpired message.
+            # If the lock is either in our state or partner state we keep the
+            # task around to wait for the LockExpired messages to sync.
             # Check https://github.com/raiden-network/raiden/issues/3183
-            initiator_state if had_canceled_payments else None,
+            initiator_state if lock_exists else None,
             typing.cast(typing.List[Event], expired_lock_events),
         )
     else:
