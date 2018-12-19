@@ -281,6 +281,7 @@ class RaidenService(Runnable):
 
         self.event_poll_lock = gevent.lock.Semaphore()
         self.gas_reserve_lock = gevent.lock.Semaphore()
+        self.payment_identifier_lock = gevent.lock.Semaphore()
 
     def start(self):
         """ Start the node synchronously. Raises directly if anything went wrong on startup """
@@ -472,6 +473,15 @@ class RaidenService(Runnable):
     def get_block_number(self) -> BlockNumber:
         return views.block_number(self.wal.state_manager.current_state)
 
+    def pop_payment_status(
+            self,
+            target: typing.TargetAddress,
+            payment_identifier: typing.PaymentID,
+    ) -> typing.Optional[PaymentStatus]:
+        with self.payment_identifier_lock:
+            status = self.targets_to_identifiers_to_statuses[target].pop(payment_identifier, None)
+        return status
+
     def on_message(self, message: Message):
         self.message_handler.on_message(self, message)
 
@@ -593,13 +603,14 @@ class RaidenService(Runnable):
             payment_type: PaymentType,
             balance_proof: BalanceProofUnsignedState,
     ):
-        self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
-            payment_type=payment_type,
-            payment_identifier=identifier,
-            amount=balance_proof.transferred_amount,
-            token_network_identifier=balance_proof.token_network_identifier,
-            payment_done=AsyncResult(),
-        )
+        with self.payment_identifier_lock:
+            self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
+                payment_type=payment_type,
+                payment_identifier=identifier,
+                amount=balance_proof.transferred_amount,
+                token_network_identifier=balance_proof.token_network_identifier,
+                payment_done=AsyncResult(),
+            )
 
     def _initialize_transactions_queues(self, chain_state: ChainState):
         pending_transactions = views.get_pending_transactions(chain_state)
@@ -805,23 +816,29 @@ class RaidenService(Runnable):
         if identifier is None:
             identifier = create_default_identifier()
 
-        payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
-        if payment_status:
-            if not payment_status.matches(PaymentType.MEDIATED, token_network_identifier, amount):
-                raise PaymentConflict(
-                    'Another payment with the same id is in flight',
+        with self.payment_identifier_lock:
+            payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
+            if payment_status:
+                payment_status_matches = payment_status.matches(
+                    PaymentType.MEDIATED,
+                    token_network_identifier,
+                    amount,
                 )
+                if not payment_status_matches:
+                    raise PaymentConflict(
+                        'Another payment with the same id is in flight',
+                    )
 
-            return payment_status.payment_done
+                return payment_status.payment_done
 
-        payment_status = PaymentStatus(
-            payment_type=PaymentType.MEDIATED,
-            payment_identifier=identifier,
-            amount=amount,
-            token_network_identifier=token_network_identifier,
-            payment_done=AsyncResult(),
-        )
-        self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
+            payment_status = PaymentStatus(
+                payment_type=PaymentType.MEDIATED,
+                payment_identifier=identifier,
+                amount=amount,
+                token_network_identifier=token_network_identifier,
+                payment_done=AsyncResult(),
+            )
+            self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
         init_initiator_statechange = initiator_init(
             raiden=self,
