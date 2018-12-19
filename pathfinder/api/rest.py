@@ -14,7 +14,7 @@ from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
 
 import pathfinder
-from pathfinder.config import API_DEFAULT_PORT, API_HOST, API_PATH, DEFAULT_MAX_PATHS
+from pathfinder.config import API_PATH, DEFAULT_API_HOST, DEFAULT_API_PORT, DEFAULT_MAX_PATHS
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_libs.types import Address
 
@@ -162,8 +162,8 @@ class ServiceApi:
             kwargs['pathfinding_service'] = pathfinding_service
             self.api.add_resource(resource, endpoint_url, resource_class_kwargs=kwargs)
 
-    def run(self, port: int = API_DEFAULT_PORT):
-        self.rest_server = WSGIServer((API_HOST, port), self.flask_app)
+    def run(self, host: str = DEFAULT_API_HOST, port: int = DEFAULT_API_PORT):
+        self.rest_server = WSGIServer((host, port), self.flask_app)
         self.server_greenlet = gevent.spawn(self.rest_server.serve_forever)
 
-        log.info(f'Running endpoint at {API_HOST}:{port}')
+        log.info(f'Running endpoint at {host}:{port}')

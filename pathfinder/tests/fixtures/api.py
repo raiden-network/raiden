@@ -5,7 +5,7 @@ import psutil
 import pytest
 
 from pathfinder.api.rest import ServiceApi
-from pathfinder.config import API_DEFAULT_PORT, API_PATH
+from pathfinder.config import API_PATH, DEFAULT_API_PORT
 from pathfinder.pathfinding_service import PathfindingService
 
 
@@ -53,13 +53,13 @@ def api_schema() -> str:
 
 @pytest.fixture(scope='session')
 def api_port() -> int:
-    return API_DEFAULT_PORT
+    return DEFAULT_API_PORT
 
 
 @pytest.fixture(scope='session')
 def port_generator(request):
     """ count generator used to get a unique port number. """
-    return get_free_port('localhost', API_DEFAULT_PORT)
+    return get_free_port('localhost', DEFAULT_API_PORT)
 
 
 @pytest.fixture

@@ -11,6 +11,7 @@ from requests.exceptions import ConnectionError
 from web3 import HTTPProvider, Web3
 
 from pathfinder.api.rest import ServiceApi
+from pathfinder.config import DEFAULT_API_HOST
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
 from raiden_contracts.contract_manager import (
@@ -50,11 +51,18 @@ DEFAULT_REQUIRED_CONFIRMATIONS = 8  # ~2min with 15s blocks
     type=int,
     help='Number of block confirmations to wait for',
 )
+@click.option(
+    '--host',
+    default=DEFAULT_API_HOST,
+    type=str,
+    help='The host to use for serving the REST API',
+)
 def main(
     eth_rpc,
     registry_address,
     start_block,
     confirmations,
+    host,
 ):
     """Console script for pathfinder."""
 
@@ -111,7 +119,7 @@ def main(
             )
 
             api = ServiceApi(service)
-            api.run()
+            api.run(host=host)
 
             service.run()
         except (KeyboardInterrupt, SystemExit):
