@@ -29,7 +29,7 @@ If it's a bug please describe what was the unexpected thing that occured and wha
 expected behaviour.
 
 Raiden also logs debug information to the `raiden-debug.log` file. Please attach it to the
-issue as it may help us find the source of the issue faster.
+issue as it may help us find the source of the issue faster. It would also help if you provide us with the database located under `~/.raiden/node_xxxxxx/netid_x/network_xxxx/`. If you are on the mainnet and would like to keep your data private you can encrypt them and send it to us via email. Read [here](https://github.com/raiden-network/raiden/blob/master/CONTRIBUTING.md#including-sensitive-data-in-your-issue-reports) to see how the process works.
 
 ### System Description
 
