@@ -128,6 +128,19 @@ def dont_handle_secret_request_mock(app):
     )
 
 
+def dont_handle_locked_expired_mock(app):
+    """Takes in a raiden app and returns a mock context where locke expired is not processed
+    """
+    def do_nothing(raiden, message):
+        pass
+
+    return patch.object(
+        app.raiden.message_handler,
+        'handle_message_lockexpired',
+        side_effect=do_nothing,
+    )
+
+
 def dont_handle_node_change_network_state():
     """Returns a mock context where ActionChangeNodeNetworkState is not processed
     """

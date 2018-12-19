@@ -123,3 +123,5 @@ def wait_for_state_change(
             break
 
         gevent.sleep(retry_timeout)
+
+    return found
