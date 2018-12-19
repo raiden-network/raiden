@@ -195,12 +195,20 @@ class RaidenEventHandler:
             payment_sent_success_event: EventPaymentSentSuccess,
     ):
         target = payment_sent_success_event.target
-        payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
-            payment_sent_success_event.identifier,
-            None,
+        payment_status = raiden.pop_payment_status(
+            target=target,
+            payment_identifier=payment_sent_success_event.identifier,
         )
-        assert payment_status is not None
-        payment_status.payment_done.set(True)
+
+        if payment_status:
+            payment_status.payment_done.set(True)
+        else:
+            # can happen: See
+            # https://github.com/raiden-network/raiden/issues/3121#issuecomment-448664092
+            log.warning(
+                'Payment success without payment status',
+                event=payment_sent_success_event,
+            )
 
     def handle_paymentsentfailed(
             self,
@@ -208,9 +216,9 @@ class RaidenEventHandler:
             payment_sent_failed_event: EventPaymentSentFailed,
     ):
         target = payment_sent_failed_event.target
-        payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
-            payment_sent_failed_event.identifier,
-            None,
+        payment_status = raiden.pop_payment_status(
+            target=target,
+            payment_identifier=payment_sent_failed_event.identifier,
         )
         # In the case of a refund transfer the payment fails earlier
         # but the lock expiration will generate a second
