@@ -37,6 +37,19 @@ contain:
 - What was the exact unexpected thing that occured.
 - What you were expecting to happen instead.
 
+#### Including sensitive data in your issue reports
+
+In most cases we would need to see the debug logs and the database of your raiden node to be able to determine what happened and help debug the issue. If your issue occured on the mainnet and you would like to keep the data private you can encrypt the logs with a special pgp key we provide and send them to RaidenErrors@brainbot.li . A short guide on how to do this follows:
+
+1. Check [this](https://linuxconfig.org/how-to-encrypt-and-decrypt-individual-files-with-gpg) guide for how to install gpg and for general info on how to encrypt and decrypt files.
+2. Get the raiden pgp key from [github](https://github.com/raiden-network/raiden/blob/master/raiden_errors_key.gpg).
+3. Import the key by: `$: gpg --import path/to/raiden_errors_key.gpg`
+4. Find the relevant debug logs and the DB and put them in an archive: `$: tar -cvf debug_data.tar path/to/debug.log path/to/raiden.db`
+5. Encrypt the archive with our public key: `$: gpg -e -u "Enter your name here" -r "RaidenErrors@brainbot.li" debug_data.tar`
+6. You should now have a file called `debug_data.tar.gpg` in your current directory.
+7. Take the above file and email it to RaidenErrors@brainbot.li
+
+
 ### Creating a Pull Request
 
 If you have some coding abilities and would like to contribute to the actual
