@@ -3,9 +3,11 @@ Pathfinder
 ==========
 
 .. image:: https://img.shields.io/travis/raiden-network/raiden-pathfinding-service.svg
-        :alt: abc
+        :alt: https://travis-ci.org/raiden-network/raiden-pathfinding-service
+        :target: https://travis-ci.org/raiden-network/raiden-pathfinding-service
 .. image:: https://img.shields.io/codecov/c/github/raiden-network/raiden-pathfinding-service.svg
-        :alt: abc
+        :alt: https://codecov.io/gh/raiden-network/raiden-pathfinding-service/
+        :target: https://codecov.io/gh/raiden-network/raiden-pathfinding-service/
 
 Pathfinding service for the Raiden Network
 
@@ -71,5 +73,7 @@ Argument            Description
                     | default is '0'
 --confirmations     | Number of block confirmations until a block is considered safe
                     | default is '8'
+--host              | The host to use for serving the REST API
+                    | default is 'localhost'
 ==================  =================================================================
 
