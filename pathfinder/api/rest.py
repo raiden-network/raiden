@@ -134,6 +134,7 @@ class InfoResource(PathfinderResource):
             nx.draw(token_network.G)  # networkx draw()
             plt.draw()  # pyplot draw()
             plt.savefig(f'Graph-{token_network.address}.png', dpi=100)
+            plt.clf()
 
         return {
             'ip': ip,
