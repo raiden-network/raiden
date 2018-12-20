@@ -1,6 +1,5 @@
 from unittest.mock import DEFAULT, Mock, patch
 
-import pytest
 from click.testing import CliRunner
 from web3 import Web3
 
@@ -89,10 +88,9 @@ def test_confirmations():
         assert mocks['PathfindingService'].call_args[1]['required_confirmations'] == confirmations
 
 
-@pytest.mark.skip  # TODO: add a fixture provides the required contracts
-def test_default_registry(web3):
+def test_default_registry(token_network_registry_contract):
     """ We can fall back to a default registry if none if specified """
-    net_version = int(web3.net.version)
+    net_version = 3
     contracts_version = 'pre_limits'
     registry_address, block_number = get_default_registry_and_start_block(
             net_version,
