@@ -87,6 +87,51 @@ def channel_descriptions_case_2() -> List:
 
 
 @pytest.fixture
+def channel_descriptions_case_3() -> List:
+    """ Creates a network partly overlapping paths from 0 to 8 """
+
+    # Now initialize some channels in this network.
+    # The tuples in channel_descriptions define the following:
+    # (
+    #     p1_index,
+    #     p1_deposit,
+    #     p1_transferred_amount,
+    #     p1_fee,
+    #     p2_index,
+    #     p2_deposit,
+    #     p2_transferred_amount,
+    #     p2_fee
+    # )
+    # Topology:
+    #    /- 1 - 2 - 3 - 4 --\
+    #   /          /-- 5 -\ |
+    #  /      /--- 6 ---\ / |
+    # 0----- 7 --------- 8 -/
+    #         \- 9 - 10 -/
+
+    channel_descriptions = [
+        (a, 100, 0, 0, b, 100, 0, 0)
+        for a, b in [
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 4),
+            (4, 8),
+            (0, 7),
+            (7, 6),
+            (7, 8),
+            (7, 9),
+            (9, 10),
+            (10, 8),
+            (5, 8),
+            (6, 5),
+            (6, 8),
+        ]
+    ]
+    return channel_descriptions
+
+
+@pytest.fixture
 def populate_token_network_random(
         token_network_model: TokenNetwork,
         private_keys: List[str],
@@ -193,6 +238,24 @@ def populate_token_network_case_2(
         addresses,
         web3,
         channel_descriptions_case_2,
+    )
+
+
+@pytest.fixture
+def populate_token_network_case_3(
+    populate_token_network: Callable,
+    token_network_model: TokenNetwork,
+    private_keys: List[str],
+    addresses: List[Address],
+    web3: Web3,
+    channel_descriptions_case_3: List,
+):
+    populate_token_network(
+        token_network_model,
+        private_keys,
+        addresses,
+        web3,
+        channel_descriptions_case_3,
     )
 
 

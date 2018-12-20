@@ -111,10 +111,17 @@ def test_pfs_with_mocked_events(
 
     # check pathfinding
     paths = token_network.get_paths(addresses[0], addresses[3], 10, 5)
-    assert len(paths) == 3
+    assert len(paths) == 4
     assert paths[0]['path'] == [addresses[0], addresses[2], addresses[3]]
     assert paths[1]['path'] == [addresses[0], addresses[1], addresses[4], addresses[3]]
     assert paths[2]['path'] == [addresses[0], addresses[1], addresses[2], addresses[3]]
+    assert paths[3]['path'] == [
+        addresses[0],
+        addresses[2],
+        addresses[1],
+        addresses[4],
+        addresses[3],
+    ]
 
     # wow close all channels
     for index, (

@@ -5,12 +5,7 @@ import networkx as nx
 from eth_utils import is_checksum_address
 from networkx import DiGraph
 
-from pathfinder.config import (
-    DIVERSITY_PEN_DEFAULT,
-    MAX_PATHS_PER_REQUEST,
-    MIN_PATH_REDUNDANCY,
-    PATH_REDUNDANCY_FACTOR,
-)
+from pathfinder.config import DIVERSITY_PEN_DEFAULT, MAX_PATHS_PER_REQUEST
 from pathfinder.model import ChannelView
 from raiden_libs.types import Address, ChannelIdentifier
 
@@ -109,8 +104,6 @@ class TokenNetwork:
     @staticmethod
     def edge_weight(
         visited: Dict[ChannelIdentifier, float],
-        u: Address,
-        v: Address,
         attr: Dict[str, Any],
     ):
         view: ChannelView = attr['view']
@@ -125,27 +118,36 @@ class TokenNetwork:
         target: Address,
         value: int,
         k: int,
+        diversity_penalty: float = DIVERSITY_PEN_DEFAULT,
+        hop_bias: float = 1,
         **kwargs,
     ):
+        assert hop_bias == 1, 'Only hop_bias 1 is supported'
         k = min(k, MAX_PATHS_PER_REQUEST)
         visited: Dict[ChannelIdentifier, float] = {}
         paths: List[List[Address]] = []
-        hop_bias = kwargs.get('hop_bias', 1)
-        assert hop_bias == 1, 'Only hop_bias 1 is supported'
 
-        def weight(*args):
-            return self.edge_weight(visited, *args)
+        for _ in range(k):
+            # update edge weights
+            for node1, node2 in self.G.edges():
+                edge = self.G[node1][node2]
+                edge['weight'] = self.edge_weight(visited, edge)
 
-        max_iterations = max(MIN_PATH_REDUNDANCY, PATH_REDUNDANCY_FACTOR * k)
-        for _ in range(max_iterations):
-            path = nx.dijkstra_path(self.G, source, target, weight=weight)
+            # find next path
+            all_paths = nx.shortest_simple_paths(self.G, source, target, weight='weight')
+            try:
+                path = next(all_paths)
+                while path in paths:  # skip duplicates
+                    path = next(all_paths)
+            except StopIteration:
+                break
+
+            # update visited penalty dict
             for node1, node2 in zip(path[:-1], path[1:]):
                 channel_id = self.G[node1][node2]['view'].channel_id
-                visited[channel_id] = visited.get(channel_id, 0) + DIVERSITY_PEN_DEFAULT
+                visited[channel_id] = visited.get(channel_id, 0) + diversity_penalty
 
-            duplicate = path in paths
-            if not duplicate:
-                paths.append(path)
+            paths.append(path)
             if len(paths) >= k:
                 break
 

@@ -20,8 +20,6 @@ def test_edge_weight(addresses):
 
     assert TokenNetwork.edge_weight(
         dict(),
-        a,
-        b,
         dict(view=view),
     ) == 1
 
@@ -103,3 +101,52 @@ def test_routing_result_order(
         'path': [addresses[0], addresses[1], addresses[4], addresses[3], addresses[2]],
         'estimated_fee': 0,
     }
+
+
+def addresses_to_indexes(path, addresses):
+    index_of_address = {a: i for i, a in enumerate(addresses)}
+    return [index_of_address[a] for a in path]
+
+
+def test_diversity_penalty(
+    token_network_model: TokenNetwork,
+    populate_token_network_case_3: None,
+    addresses: List[Address],
+):
+    """ Check changes in routing when increasing diversity penalty """
+
+    def get_paths(diversity_penalty):
+        paths = token_network_model.get_paths(
+            addresses[0],
+            addresses[8],
+            value=10,
+            k=5,
+            hop_bias=1,
+            diversity_penalty=diversity_penalty,
+        )
+        index_paths = [addresses_to_indexes(p['path'], addresses) for p in paths]
+        return index_paths
+
+    assert get_paths(0.1) == [
+        [0, 7, 8],
+        [0, 7, 6, 8],
+        [0, 7, 9, 10, 8],
+        [0, 7, 6, 5, 8],
+        [0, 1, 2, 3, 4, 8],
+    ]
+
+    assert get_paths(1.1) == [
+        [0, 7, 8],
+        [0, 7, 6, 8],
+        [0, 1, 2, 3, 4, 8],
+        [0, 7, 9, 10, 8],
+        [0, 7, 6, 5, 8],
+    ]
+
+    assert get_paths(10) == [
+        [0, 7, 8],
+        [0, 1, 2, 3, 4, 8],
+        [0, 7, 6, 8],
+        [0, 7, 9, 10, 8],
+        [0, 7, 6, 5, 8],
+    ]
