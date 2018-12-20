@@ -167,3 +167,6 @@ class ServiceApi:
         self.server_greenlet = gevent.spawn(self.rest_server.serve_forever)
 
         log.info(f'Running endpoint at {host}:{port}')
+
+    def stop(self):
+        self.server_greenlet.kill()

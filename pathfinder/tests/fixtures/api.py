@@ -77,7 +77,8 @@ def api_sut(
     pathfinding_service_full_mock: PathfindingService,
     free_port: int,
     populate_token_network_case_1: None,
-) -> ServiceApi:
+) -> Iterator[ServiceApi]:
     api = ServiceApi(pathfinding_service_full_mock)
     api.run(port=free_port)
-    return api
+    yield api
+    api.stop()
