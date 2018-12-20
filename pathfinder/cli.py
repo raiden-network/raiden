@@ -30,7 +30,7 @@ DEFAULT_REQUIRED_CONFIRMATIONS = 8  # ~2min with 15s blocks
 def validate_address(ctx, param, value):
     if value is None:
         # None as default value allowed
-        return
+        return None
     if not is_checksum_address(value):
         raise click.BadParameter('not an EIP-55 checksummed address')
     return value
@@ -39,7 +39,7 @@ def validate_address(ctx, param, value):
 def get_default_registry_and_start_block(net_version, contracts_version):
     try:
         contract_data = get_contracts_deployed(net_version, contracts_version)
-        token_network_registry_info = contract_data['contracts'][CONTRACT_TOKEN_NETWORK_REGISTRY]  # noqa
+        token_network_registry_info = contract_data['contracts'][CONTRACT_TOKEN_NETWORK_REGISTRY]
         registry_address = token_network_registry_info['address']
         start_block = max(0, token_network_registry_info['block_number'] - 100)
         return registry_address, start_block
@@ -116,8 +116,10 @@ def main(
 
     with no_ssl_verification():
         if registry_address is None:
-            registry_address, start_block = \
-                    get_default_registry_and_start_block(net_version, contracts_version)
+            registry_address, start_block = get_default_registry_and_start_block(
+                    net_version,
+                    contracts_version,
+            )
 
         service = None
         try:

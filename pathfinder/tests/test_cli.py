@@ -16,8 +16,7 @@ patch_args = dict(
 
 
 def test_bad_eth_client(caplog):
-    """ Giving a bad `eth-rpc` value should yield a concise error message
-    """
+    """ Giving a bad `eth-rpc` value should yield a concise error message """
     runner = CliRunner()
     with patch('pathfinder.cli.PathfindingService'):
         result = runner.invoke(main, ['--eth-rpc', 'http://localhost:12345'])
@@ -26,8 +25,7 @@ def test_bad_eth_client(caplog):
 
 
 def test_success():
-    """ Calling the pathfinder with default args should succeed after heavy mocking
-    """
+    """ Calling the pathfinder with default args should succeed after heavy mocking """
     runner = CliRunner()
     with patch.multiple(**patch_args) as mocks:
         mocks['get_default_registry_and_start_block'].return_value = Mock(), Mock()
@@ -36,8 +34,7 @@ def test_success():
 
 
 def test_eth_rpc():
-    """ The `eth-rpc` parameter must reach the `HTTPProvider`
-    """
+    """ The `eth-rpc` parameter must reach the `HTTPProvider` """
     runner = CliRunner()
     eth_rpc = 'example.com:1234'
     with patch('pathfinder.cli.HTTPProvider') as provider:
@@ -46,8 +43,7 @@ def test_eth_rpc():
 
 
 def test_registry_address():
-    """ The `registry_address` parameter must reach the `PathfindingService`
-    """
+    """ The `registry_address` parameter must reach the `PathfindingService` """
     runner = CliRunner()
     with patch.multiple(**patch_args) as mocks:
         address = Web3.toChecksumAddress('0x' + '1' * 40)
@@ -83,8 +79,7 @@ def test_start_block():
 
 
 def test_confirmations():
-    """ The `confirmations` parameter must reach the `PathfindingService`
-    """
+    """ The `confirmations` parameter must reach the `PathfindingService` """
     runner = CliRunner()
     with patch.multiple(**patch_args) as mocks:
         mocks['get_default_registry_and_start_block'].return_value = Mock(), Mock()
@@ -96,17 +91,17 @@ def test_confirmations():
 
 @pytest.mark.skip  # TODO: add a fixture provides the required contracts
 def test_default_registry(web3):
-    """ We can fall back to a default registry if none if specified
-    """
+    """ We can fall back to a default registry if none if specified """
     net_version = int(web3.net.version)
     contracts_version = 'pre_limits'
-    registry_address, block_number = \
-        get_default_registry_and_start_block(net_version, contracts_version)
+    registry_address, block_number = get_default_registry_and_start_block(
+            net_version,
+            contracts_version,
+    )
 
 
 def test_shutdown():
-    """ Clean shutdown after KeyboardInterrupt
-    """
+    """ Clean shutdown after KeyboardInterrupt """
     runner = CliRunner()
     with patch.multiple(**patch_args) as mocks:
         mocks['get_default_registry_and_start_block'].return_value = Mock(), Mock()
