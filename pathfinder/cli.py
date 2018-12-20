@@ -20,6 +20,7 @@ from raiden_contracts.contract_manager import (
     get_contracts_deployed,
 )
 from raiden_libs.no_ssl_patch import no_ssl_verification
+from raiden_libs.types import Address
 
 log = logging.getLogger(__name__)
 contract_manager = ContractManager(contracts_precompiled_path())
@@ -36,7 +37,10 @@ def validate_address(ctx, param, value):
     return value
 
 
-def get_default_registry_and_start_block(net_version, contracts_version):
+def get_default_registry_and_start_block(
+    net_version: int,
+    contracts_version: str,
+):
     try:
         contract_data = get_contracts_deployed(net_version, contracts_version)
         token_network_registry_info = contract_data['contracts'][CONTRACT_TOKEN_NETWORK_REGISTRY]
@@ -80,11 +84,11 @@ def get_default_registry_and_start_block(net_version, contracts_version):
     help='The host to use for serving the REST API',
 )
 def main(
-    eth_rpc,
-    registry_address,
-    start_block,
-    confirmations,
-    host,
+    eth_rpc: str,
+    registry_address: Address,
+    start_block: int,
+    confirmations: int,
+    host: str,
 ):
     """Console script for pathfinder."""
 

@@ -1,6 +1,7 @@
 from unittest.mock import DEFAULT, Mock, patch
 
 from click.testing import CliRunner
+from eth_utils import is_checksum_address
 from web3 import Web3
 
 from pathfinder.cli import get_default_registry_and_start_block, main
@@ -93,9 +94,11 @@ def test_default_registry(token_network_registry_contract):
     net_version = 3
     contracts_version = 'pre_limits'
     registry_address, block_number = get_default_registry_and_start_block(
-            net_version,
-            contracts_version,
+        net_version,
+        contracts_version,
     )
+    assert is_checksum_address(registry_address)
+    assert block_number > 0
 
 
 def test_shutdown():
