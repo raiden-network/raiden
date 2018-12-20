@@ -190,7 +190,7 @@ class ChannelStateSchema(BaseSchema):
         return to_checksum_address(channel_state.partner_state.address)
 
     def get_balance(self, channel_state):  # pylint: disable=no-self-use
-        return channel.get_balance(
+        return channel.get_distributable(
             channel_state.our_state,
             channel_state.partner_state,
         )
