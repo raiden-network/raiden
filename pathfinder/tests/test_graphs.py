@@ -3,7 +3,6 @@ import time
 from math import isclose
 from typing import List
 
-import numpy as np
 import pytest
 from networkx import NetworkXNoPath
 
@@ -49,9 +48,11 @@ def test_routing_benchmark(
             view: ChannelView = G[node1][node2]['view']
             print('fee = ', view.relative_fee, 'capacity = ', view.capacity)
         print('fee sum = ', fees)
-    print(paths)
-    print(np.mean(np.array(times)), np.min(np.array(times)), np.max(np.array(times)))
-    print("total_runtime = {}".format(end-start))
+    print('Paths: ', paths)
+    print('Mean runtime: ', sum(times) / len(times))
+    print('Min runtime: ', min(times))
+    print('Max runtime: ', max(times))
+    print('Total runtime: ', end - start)
 
 
 def test_routing_simple(
