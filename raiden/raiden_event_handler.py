@@ -36,7 +36,11 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.utils import get_event_with_balance_proof, get_state_change_with_balance_proof
+from raiden.transfer.utils import (
+    get_event_with_balance_proof,
+    get_state_change_or_event_with_balance_proof,
+    get_state_change_with_balance_proof,
+)
 from raiden.utils import pex
 from raiden.utils.signing import eth_sign
 
@@ -340,26 +344,7 @@ class RaidenEventHandler:
             our_locksroot != EMPTY_HASH
         )
 
-        if is_partner_unlock:
-            state_change_record = get_state_change_with_balance_proof(
-                storage=raiden.wal.storage,
-                chain_id=raiden.chain.network_id,
-                token_network_identifier=token_network_identifier,
-                channel_identifier=channel_identifier,
-                balance_hash=partner_details.balance_hash,
-                sender=participants_details.partner_details.address,
-            )
-            state_change_identifier = state_change_record.state_change_identifier
-        elif is_our_unlock:
-            event_record = get_event_with_balance_proof(
-                storage=raiden.wal.storage,
-                chain_id=raiden.chain.network_id,
-                token_network_identifier=token_network_identifier,
-                channel_identifier=channel_identifier,
-                balance_hash=our_details.balance_hash,
-            )
-            state_change_identifier = event_record.state_change_identifier
-        else:
+        if not is_partner_unlock and not is_our_unlock:
             # In the case that someone else sent the unlock we do nothing
             # Check https://github.com/raiden-network/raiden/issues/3152
             # for more details
@@ -370,6 +355,18 @@ class RaidenEventHandler:
                 participant=participant,
             )
             return
+
+        state_change_identifier = get_state_change_or_event_with_balance_proof(
+            storage=raiden.wal.storage,
+            chain_id=raiden.chain.network_id,
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            is_our_unlock=is_our_unlock,
+            is_partner_unlock=is_partner_unlock,
+            our_balance_hash=our_details.balance_hash,
+            partner_balance_hash=partner_details.balance_hash,
+            sender=participants_details.partner_details.address,
+        )
 
         if not state_change_identifier:
             raise RaidenUnrecoverableError(
