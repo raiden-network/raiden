@@ -20,7 +20,6 @@ from raiden_contracts.contract_manager import (
     contracts_precompiled_path,
     get_contracts_deployed,
 )
-from raiden_libs.no_ssl_patch import no_ssl_verification
 from raiden_libs.types import Address
 
 log = logging.getLogger(__name__)
@@ -126,35 +125,36 @@ def main(
         http_retry_with_backoff_middleware,
     )
 
-    with no_ssl_verification():
-        if registry_address is None:
-            registry_address, start_block = get_default_registry_and_start_block(
-                    net_version,
-                    contracts_version,
-            )
+    if registry_address is None:
+        registry_address, start_block = get_default_registry_and_start_block(
+                net_version,
+                contracts_version,
+        )
 
-        service = None
-        try:
-            log.info('Starting Pathfinding Service...')
-            service = PathfindingService(
-                web3=web3,
-                contract_manager=contract_manager,
-                registry_address=registry_address,
-                sync_start_block=start_block,
-                required_confirmations=confirmations,
-            )
+    service = None
+    api = None
+    try:
+        log.info('Starting Pathfinding Service...')
+        service = PathfindingService(
+            web3=web3,
+            contract_manager=contract_manager,
+            registry_address=registry_address,
+            sync_start_block=start_block,
+            required_confirmations=confirmations,
+        )
 
-            api = ServiceApi(service)
-            api.run(host=host)
+        api = ServiceApi(service)
+        api.run(host=host)
 
-            service.run()
-        except (KeyboardInterrupt, SystemExit):
-            print('Exiting...')
-        finally:
-            if service:
-                log.info('Stopping Pathfinding Service...')
-                service.stop()
-                api.stop()
+        service.run()
+    except (KeyboardInterrupt, SystemExit):
+        print('Exiting...')
+    finally:
+        log.info('Stopping Pathfinding Service...')
+        if api:
+            api.stop()
+        if service:
+            service.stop()
 
     return 0
 
