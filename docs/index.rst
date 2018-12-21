@@ -21,6 +21,7 @@ Contents
   overview_and_guide
   api_walkthrough
   rest_api
+  red_eyes_mainnet_tutorial
   webui_tutorial
   config_file
   onboarding
