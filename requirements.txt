@@ -1,7 +1,7 @@
 Click==7.0
 coincurve==8.0.2
 
-web3==4.8.2
+web3==4.8.1
 eth-utils==1.4.0
 eth-abi==1.2.0
 py_ecc!=1.4.5
