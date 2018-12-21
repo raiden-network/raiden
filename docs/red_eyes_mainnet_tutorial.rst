@@ -29,13 +29,13 @@ Joining a token network
 ==============================
 The first thing we need to do is to join a token network. In this case we want to join the (`W-ETH <https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2>`_) network.
 
-*Note*: 1 W-ETH == 2**18 wei. For the sake of readability and simplicity all token values in this tutorial are denominated in wei and not W-ETH.
+*Note*: 1 W-ETH == 10**18 wei. For the sake of readability and simplicity all token values in this tutorial are denominated in wei and not W-ETH.
 
 In order to do so, we need the address of the token and the initial amount of tokens that we want to join the network with:
 
 .. http:example:: curl wget httpie python-requests
 
-    PUT /api/1/connections/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 HTTP/1.1
+    PUT /api/v1/connections/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -51,7 +51,7 @@ In case we know of a specific address in the network that we will do frequent pa
 
 .. http:example:: curl wget httpie python-requests
 
-   PUT /api/1/channels HTTP/1.1
+   PUT /api/v1/channels HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -91,7 +91,7 @@ Now that we have joined a token network, we can start making payments. For this,
 
 .. http:example:: curl wget httpie python-requests
 
-    POST /api/1/payments/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    POST /api/v1/payments/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -107,7 +107,7 @@ Let's say we know someone with the address ``0x00014853D700AE1F39BA9dbAbdeC1c868
 
 .. http:example:: curl wget httpie python-requests
 
-    POST /api/1/payments/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A HTTP/1.1
+    POST /api/v1/payments/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x00014853D700AE1F39BA9dbAbdeC1c8683CF1b2A HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
@@ -125,7 +125,7 @@ If we spend more tokens than we receive and hence deplete our channels, it it po
 
 .. http:example:: curl wget httpie python-requests
 
-   PATCH /api/1/channels/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+   PATCH /api/v1/channels/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
    Host: localhost:5001
    Content-Type: application/json
 
@@ -143,7 +143,7 @@ We can at any point in time see things like how many tokens we have spent in a s
 
 .. http:example:: curl wget httpie python-requests
 
-    GET /api/1/channels/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
+    GET /api/v1/channels/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2/0x61C808D82A3Ac53231750daDc13c777b59310bD9 HTTP/1.1
     Host: localhost:5001
     Content-Type: application/json
 
