@@ -35,7 +35,7 @@ def test_routing_benchmark(
     for _ in range(100):
         tic = time.time()
         source, target = random.sample(G.nodes, 2)
-        paths = token_network_model.get_paths(source, target, value=value, k=5, bias=0.0)
+        paths = token_network_model.get_paths(source, target, value=value, max_paths=5, bias=0.0)
         toc = time.time()
         times.append(toc - tic)
     end = time.time()
@@ -69,7 +69,13 @@ def test_routing_simple(
     assert view10.capacity == 50
 
     # 0->2->3 is the shortest path
-    paths = token_network_model.get_paths(addresses[0], addresses[3], value=10, k=1, hop_bias=1)
+    paths = token_network_model.get_paths(
+        addresses[0],
+        addresses[3],
+        value=10,
+        max_paths=1,
+        hop_bias=1,
+    )
     assert len(paths) == 1
     assert paths[0] == {
         'path': [addresses[0], addresses[2], addresses[3]],
@@ -78,7 +84,7 @@ def test_routing_simple(
 
     # Not connected.
     with pytest.raises(NetworkXNoPath):
-        token_network_model.get_paths(addresses[0], addresses[5], value=10, k=1)
+        token_network_model.get_paths(addresses[0], addresses[5], value=10, max_paths=1)
 
 
 def test_routing_result_order(
@@ -86,7 +92,13 @@ def test_routing_result_order(
     populate_token_network_case_1: None,
     addresses: List[Address],
 ):
-    paths = token_network_model.get_paths(addresses[0], addresses[2], value=10, k=5, hop_bias=1)
+    paths = token_network_model.get_paths(
+        addresses[0],
+        addresses[2],
+        value=10,
+        max_paths=5,
+        hop_bias=1,
+    )
     # 5 paths requested, but only 3 are available
     assert len(paths) == 3
     assert paths[0] == {
@@ -120,7 +132,7 @@ def test_diversity_penalty(
             addresses[0],
             addresses[8],
             value=10,
-            k=5,
+            max_paths=5,
             hop_bias=1,
             diversity_penalty=diversity_penalty,
         )

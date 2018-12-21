@@ -117,17 +117,17 @@ class TokenNetwork:
         source: Address,
         target: Address,
         value: int,
-        k: int,
+        max_paths: int,
         diversity_penalty: float = DIVERSITY_PEN_DEFAULT,
         hop_bias: float = 1,
         **kwargs,
     ):
         assert hop_bias == 1, 'Only hop_bias 1 is supported'
-        k = min(k, MAX_PATHS_PER_REQUEST)
+        max_paths = min(max_paths, MAX_PATHS_PER_REQUEST)
         visited: Dict[ChannelIdentifier, float] = {}
         paths: List[List[Address]] = []
 
-        for _ in range(k):
+        for _ in range(max_paths):
             # update edge weights
             for node1, node2 in self.G.edges():
                 edge = self.G[node1][node2]
@@ -148,7 +148,7 @@ class TokenNetwork:
                 visited[channel_id] = visited.get(channel_id, 0) + diversity_penalty
 
             paths.append(path)
-            if len(paths) >= k:
+            if len(paths) >= max_paths:
                 break
 
         result = []

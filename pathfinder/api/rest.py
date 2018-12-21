@@ -111,7 +111,7 @@ class PathsResource(PathfinderResource):
                 source=args['from'],
                 target=args['to'],
                 value=args.value,
-                k=args.max_paths,
+                max_paths=args.max_paths,
             )
         except NetworkXNoPath:
             return {'errors': 'No suitable path found for transfer from {} to {}.'.format(
