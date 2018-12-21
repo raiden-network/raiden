@@ -81,7 +81,7 @@ def cancel_current_route(payment_state: InitiatorPaymentState) -> typing.List[Ev
 
 def handle_block(
         payment_state: InitiatorPaymentState,
-        state_change: ReceiveSecretReveal,
+        state_change: Block,
         channelidentifiers_to_channels: typing.ChannelMap,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
