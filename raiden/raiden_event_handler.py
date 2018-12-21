@@ -356,7 +356,7 @@ class RaidenEventHandler:
             )
             return
 
-        state_change_identifier = get_state_change_or_event_with_balance_proof(
+        record = get_state_change_or_event_with_balance_proof(
             storage=raiden.wal.storage,
             chain_id=raiden.chain.network_id,
             token_network_identifier=token_network_identifier,
@@ -368,7 +368,7 @@ class RaidenEventHandler:
             sender=participants_details.partner_details.address,
         )
 
-        if not state_change_identifier:
+        if not record.state_change_identifier:
             raise RaidenUnrecoverableError(
                 f'Failed to find state/event that match current channel locksroots. '
                 f'token:{to_checksum_address(token_address)} '
@@ -386,7 +386,7 @@ class RaidenEventHandler:
             payment_network_identifier=raiden.default_registry.address,
             token_address=token_address,
             channel_identifier=channel_identifier,
-            state_change_identifier=state_change_identifier,
+            state_change_identifier=record.state_change_identifier,
         )
 
         our_state = restored_channel_state.our_state
