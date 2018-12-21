@@ -12,6 +12,7 @@ from web3 import HTTPProvider, Web3
 
 from pathfinder.api.rest import ServiceApi
 from pathfinder.config import DEFAULT_API_HOST
+from pathfinder.middleware import http_retry_with_backoff_middleware
 from pathfinder.pathfinding_service import PathfindingService
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
 from raiden_contracts.contract_manager import (
@@ -109,7 +110,8 @@ def main(
 
     try:
         log.info(f'Starting Web3 client for node at {eth_rpc}')
-        web3 = Web3(HTTPProvider(eth_rpc))
+        provider = HTTPProvider(eth_rpc)
+        web3 = Web3(provider)
         net_version = int(web3.net.version)  # Will throw ConnectionError on bad Ethereum client
     except ConnectionError:
         log.error(
@@ -117,6 +119,12 @@ def main(
             'your settings are correct.',
         )
         sys.exit(1)
+
+    # give web3 some time between retries before failing
+    provider.middlewares.replace(
+        'http_retry_request',
+        http_retry_with_backoff_middleware,
+    )
 
     with no_ssl_verification():
         if registry_address is None:
