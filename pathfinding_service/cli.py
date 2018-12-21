@@ -52,6 +52,17 @@ def get_default_registry_and_start_block(
         sys.exit(1)
 
 
+def setup_logging(log_level: str):
+    level = getattr(logging, log_level)
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%m-%d %H:%M:%S',
+    )
+    logging.getLogger('web3').setLevel(level)
+    logging.getLogger('urllib3.connectionpool').setLevel(level)
+
+
 @click.command()
 @click.option(
     '--eth-rpc',
@@ -83,24 +94,23 @@ def get_default_registry_and_start_block(
     type=str,
     help='The host to use for serving the REST API',
 )
+@click.option(
+    '--log-level',
+    default='INFO',
+    type=click.Choice(['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']),
+    help='Print log messages of this level and more important ones',
+)
 def main(
     eth_rpc: str,
     registry_address: Address,
     start_block: int,
     confirmations: int,
     host: str,
+    log_level: str,
 ):
     """Console script for pathfinding_service."""
 
-    # setup logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%m-%d %H:%M:%S',
-    )
-
-    logging.getLogger('web3').setLevel(logging.INFO)
-    logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
+    setup_logging(log_level)
 
     log.info("Starting Raiden Pathfinding Service")
 
