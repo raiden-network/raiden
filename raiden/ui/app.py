@@ -251,14 +251,6 @@ def run_app(
         # since we first need blockchain service to calculate the network id
     )
 
-    if network_id == 1:
-        # temporarily until red eyes disallow raiden on the mainnet
-        click.secho(
-            'Running Raiden on the mainnet is currently not supported.',
-            fg='red',
-        )
-        sys.exit(1)
-
     given_network_id = network_id
     node_network_id = blockchain_service.network_id
     known_given_network_id = given_network_id in ID_TO_NETWORKNAME
