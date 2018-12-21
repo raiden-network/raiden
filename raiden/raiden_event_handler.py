@@ -370,7 +370,7 @@ class RaidenEventHandler:
 
         if not record.state_change_identifier:
             log.warning(
-                f'Unlock not done',
+                f'Unlock not done. '
                 f'Failed to find state/event that match current channel locksroots. '
                 f'token:{to_checksum_address(token_address)} '
                 f'token_network:{to_checksum_address(token_network_identifier)} '
