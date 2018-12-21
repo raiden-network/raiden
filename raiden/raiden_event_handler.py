@@ -369,7 +369,8 @@ class RaidenEventHandler:
         )
 
         if not record.state_change_identifier:
-            raise RaidenUnrecoverableError(
+            log.warning(
+                f'Unlock not done',
                 f'Failed to find state/event that match current channel locksroots. '
                 f'token:{to_checksum_address(token_address)} '
                 f'token_network:{to_checksum_address(token_network_identifier)} '
@@ -378,6 +379,7 @@ class RaidenEventHandler:
                 f'our_locksroot:{to_hex(our_locksroot)} '
                 f'partner_locksroot:{to_hex(partner_locksroot)} ',
             )
+            return
 
         # Replay state changes until a channel state is reached where
         # this channel state has the participants balance hash.
