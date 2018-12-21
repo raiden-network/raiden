@@ -19,7 +19,7 @@ def get_state_change_or_event_with_balance_proof(
         our_balance_hash: typing.BalanceHash,
         partner_balance_hash: typing.BalanceHash,
         sender: typing.Address,
-) -> int:
+) -> sqlite.Record:
     """ Returns the state change or event which contains the corresponding balance
     proof depending on who's balance hash we're looking for.
     """
@@ -35,7 +35,7 @@ def get_state_change_or_event_with_balance_proof(
         state_change_identifier = state_change_record.state_change_identifier
 
         if state_change_identifier:
-            return state_change_identifier
+            return state_change_record
 
         event_record = get_event_with_balance_proof(
             storage=storage,
@@ -45,7 +45,7 @@ def get_state_change_or_event_with_balance_proof(
             balance_hash=partner_balance_hash,
         )
 
-        return event_record.state_change_identifier
+        return event_record
     elif is_our_unlock:
         event_record = get_event_with_balance_proof(
             storage=storage,
@@ -57,7 +57,7 @@ def get_state_change_or_event_with_balance_proof(
         state_change_identifier = event_record.state_change_identifier
 
         if state_change_identifier:
-            return state_change_identifier
+            return event_record
 
         state_change_record = get_state_change_with_balance_proof(
             storage=storage,
@@ -68,7 +68,7 @@ def get_state_change_or_event_with_balance_proof(
             sender=sender,
         )
 
-        return state_change_record.state_change_identifier
+        return state_change_record
     return 0
 
 
