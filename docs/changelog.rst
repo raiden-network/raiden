@@ -2,7 +2,7 @@
 Changelog
 =========
 
-* :release:`0.100.0 <2018-12-21>`
+* :release:`0.100.1 <2018-12-21>`
 * :bug:`3171` Do not crash raiden if the Matrix server is offline when joining a discovery room.
 * :bug:`3196` If our partner updates onchain with earlier balance proof find the event in the DB and properly perform the unlock onchain.
 * :bug:`3193` Channel balance shown to the user now takes locked amount into account.
