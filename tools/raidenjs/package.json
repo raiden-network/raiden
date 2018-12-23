@@ -1,0 +1,21 @@
+{
+  "name": "raiden-js",
+  "version": "0.1.0",
+  "description": "js library to interact with raiden node",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "none"
+  },
+  "author": "Giulio Rebuffo",
+  "license": "MIT",
+  "dependencies": {
+    "request": "^2.88.0",
+    "socket.io": "^2.1.1",
+    "web3": "^1.0.0-beta.36",
+    "xmlhttprequest": "^1.8.0"
+  }
+}
