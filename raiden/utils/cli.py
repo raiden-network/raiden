@@ -419,7 +419,7 @@ def apply_config_file(
 def get_matrix_servers(url: str) -> List[str]:
     """Fetch a list of matrix servers from a text url
 
-    '-' prefixex (YAML list) are cleaned. Comment lines /^\s*#/ are ignored
+    '-' prefixes (YAML list) are cleaned. Comment lines /^\\s*#/ are ignored
 
     url: url of a text file
     returns: list of urls, default schema is https
