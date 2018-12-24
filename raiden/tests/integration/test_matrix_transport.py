@@ -39,7 +39,7 @@ def mock_matrix(
     def mock_get_room_ids_for_address(
             klass,
             address: Address,
-            filter_private: bool=None,
+            filter_private: bool = None,
     ) -> List[str]:
         return ['!roomID:server']
 

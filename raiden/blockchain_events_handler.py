@@ -294,7 +294,7 @@ def handle_secret_revealed(raiden, event: Event):
     raiden.handle_state_change(registeredsecret_state_change)
 
 
-def on_blockchain_event(raiden: 'RaidenService', event: Event):
+def on_blockchain_event(raiden, event: Event):
     data = event.event_data
     log.debug(
         'Blockchain event',
