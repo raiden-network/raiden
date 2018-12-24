@@ -7,7 +7,7 @@ from .wal import restore_to_state_change
 
 
 def channel_state_until_state_change(
-        raiden: 'RaidenService',
+        raiden,
         payment_network_identifier: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         channel_identifier: typing.ChannelID,
