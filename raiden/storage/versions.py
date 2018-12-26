@@ -6,7 +6,7 @@ from raiden.utils import typing
 
 from .sqlite import RAIDEN_DB_VERSION
 
-VERSION_RE = re.compile("^v(\d+).*")
+VERSION_RE = re.compile(r'^v(\d+).*')
 
 
 def older_db_file(database_base_path: str) -> typing.Optional[str]:

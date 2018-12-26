@@ -79,7 +79,7 @@ class TransferTask(ChannelActionTask):
         self,
         runner: ScenarioRunner,
         config: Any,
-        parent: 'Task' = None,
+        parent=None,
         abort_on_fail=True,
     ) -> None:
         super().__init__(runner, config, parent, abort_on_fail)

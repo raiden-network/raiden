@@ -4,8 +4,8 @@
 # due to https://github.com/PyCQA/pycodestyle/issues/741
 # Once a new version of flake8 is released we can specify the latest pycodestyle
 # version here
-flake8==3.5.0
-flake8-bugbear==18.2.0
+flake8==3.6.0
+flake8-bugbear==18.8.0
 flake8-commas==2.0.0
 flake8-tuple==0.2.13
 isort==4.2.15
