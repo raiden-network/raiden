@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :bug:`3201` Workaround for gas price strategy crashing Raiden with an Infura ethereum node.
+
 * :release:`0.100.1 <2018-12-21>`
 * :bug:`3171` Do not crash raiden if the Matrix server is offline when joining a discovery room.
 * :bug:`3196` If our partner updates onchain with earlier balance proof find the event in the DB and properly perform the unlock onchain.
