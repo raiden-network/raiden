@@ -339,11 +339,19 @@ class JSONRPCClient:
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
     def gas_price(self) -> int:
-        # generateGasPrice takes the transaction to be send as an optional argument
-        # but both strategies that we are using (time-based and rpc-based) don't make
-        # use of this argument. It is therefore safe to not provide it at the moment.
-        # This needs to be reevaluated if we use different gas price strategies
-        return int(self.web3.eth.generateGasPrice())
+        try:
+            # generateGasPrice takes the transaction to be send as an optional argument
+            # but both strategies that we are using (time-based and rpc-based) don't make
+            # use of this argument. It is therefore safe to not provide it at the moment.
+            # This needs to be reevaluated if we use different gas price strategies
+            price = int(self.web3.eth.generateGasPrice())
+        except AttributeError:  # workaround for Infura gas strategy key error
+            # As per https://github.com/raiden-network/raiden/issues/3201
+            # we can sporadically get an AtttributeError here. If that happens
+            # use latest gas price
+            price = int(self.web3.eth.gasPrice)
+
+        return price
 
     def new_contract_proxy(self, contract_interface, contract_address: typing.Address):
         """ Return a proxy for interacting with a smart contract.
