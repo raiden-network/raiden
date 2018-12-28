@@ -90,7 +90,7 @@ class Translator(dict):
             rxp = '(?:0x)?' + pex(address_checksum_and_decode(addr)) + f'(?:{addr.lower()[10:]})?'
             self._extra_keys[pex(address_checksum_and_decode(addr))] = addr.lower()
             self._extra_keys[addr[2:].lower()] = addr.lower()
-        except ValueError as e:
+        except ValueError:
             rxp = addr
         return rxp
 
