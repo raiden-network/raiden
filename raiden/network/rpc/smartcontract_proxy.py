@@ -13,6 +13,7 @@ from raiden.exceptions import (
     ReplacementTransactionUnderpriced,
     TransactionAlreadyPending,
 )
+from raiden.utils import typing
 from raiden.utils.filters import decode_event
 
 
@@ -23,6 +24,7 @@ class ClientErrorInspectResult(Enum):
     TRANSACTION_UNDERPRICED = 3
     TRANSACTION_PENDING = 4
     ALWAYS_FAIL = 5
+    TRANSACTION_ALREADY_IMPORTED = 7
 
 
 def inspect_client_error(val_err: ValueError, eth_node: EthClient) -> ClientErrorInspectResult:
@@ -52,6 +54,8 @@ def inspect_client_error(val_err: ValueError, eth_node: EthClient) -> ClientErro
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
             elif 'another transaction with same nonce in the queue' in error['message']:
                 return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
+            elif 'Transaction with the same hash was already imported' in error['message']:
+                return ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED
         elif error['code'] == -32015 and 'Transaction execution error' in error['message']:
             return ClientErrorInspectResult.ALWAYS_FAIL
 
@@ -71,7 +75,13 @@ class ContractProxy:
         self.jsonrpc_client = jsonrpc_client
         self.contract = contract
 
-    def transact(self, function_name: str, startgas: int, *args, **kargs):
+    def transact(
+            self,
+            function_name: str,
+            startgas: int,
+            *args,
+            **kargs,
+    ) -> typing.TransactionHash:
         data = ContractProxy.get_transaction_data(self.contract.abi, function_name, args)
 
         try:
@@ -98,6 +108,25 @@ class ContractProxy:
                     'The transaction has already been submitted. Please '
                     'wait until is has been mined or increase the gas price.',
                 )
+            elif action == ClientErrorInspectResult.TRANSACTION_ALREADY_IMPORTED:
+                # This is like TRANSACTION_PENDING is for geth but happens in parity
+                # Unlike with geth this can also happen without multiple transactions
+                # being sent via RPC -- due to probably some parity bug:
+                # https://github.com/raiden-network/raiden/issues/3211
+                # We will try to not crash by looking into the local parity
+                # transaction pool to retrieve the transaction hash
+                hex_address = to_checksum_address(self.jsonrpc_client.address)
+                txhash = self.jsonrpc_client.parity_get_pending_transaction_hash_by_nonce(
+                    address=hex_address,
+                    nonce=self.jsonrpc_client._available_nonce,
+                )
+                if not txhash:
+                    raise TransactionAlreadyPending(
+                        'Transaction was submitted via parity but parity saw it as'
+                        ' already pending. Could not find the transaction in the '
+                        'local transaction pool. Bailing ...',
+                    )
+                return txhash
 
             raise e
 
