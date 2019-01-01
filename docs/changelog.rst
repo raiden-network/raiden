@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3211` If using parity and getting the already imported error, attempt to handle it and not crash the client.
 * :bug:`3201` Workaround for gas price strategy crashing Raiden with an Infura ethereum node.
 
 * :release:`0.100.1 <2018-12-21>`
