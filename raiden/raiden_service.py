@@ -361,8 +361,14 @@ class RaidenService(Runnable):
         self.alarm.register_callback(self._callback_new_block)
         self.alarm.first_run(last_log_block_number)
 
-        chain_state = views.state_from_raiden(self)
+        # Run the alarm task block callback once more to possibly
+        # clear pending transactions after the chain syncing during
+        # the first run of the alarm task.
+        # https://github.com/raiden-network/raiden/issues/3216
+        latest_block = self.chain.get_block(block_identifier='latest')
+        self._callback_new_block(latest_block)
 
+        chain_state = views.state_from_raiden(self)
         self._initialize_transactions_queues(chain_state)
         self._initialize_whitelists(chain_state)
 
