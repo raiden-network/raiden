@@ -4,25 +4,17 @@ Web Application Tutorial
 .. toctree::
   :maxdepth: 2
 
-In order to quickly give an overview and idea of what the Raiden Developer Preview is capable of, a simple web application has been created. This application utilizes the :doc:`Raiden REST API endpoints <rest_api>` to allow the user to interact with token networks, make token payments, see the current status of open channels along with closing and settling channels to name some of the functionalities. For a more specific guide of the API itself see the :doc:`API Walkthrough <api_walkthrough>`.
+In order to quickly give an overview and idea of what Raiden is capable of, a web application has been created. This application utilizes the :doc:`Raiden REST API endpoints <rest_api>` to allow the user to interact with token networks, make token payments, see the current status of open channels along with closing and settling channels to name some of the functionalities. For a more specific guide of the API itself see the :doc:`API Walkthrough <api_walkthrough>`.
 
-The main focus of the web application is to display functionality and not to look pretty. Should you however want to make it pretty, don't hesitate to create a `pull request <https://github.com/raiden-network/raiden/pulls>`_.
+The main focus of the web application is to display functionality. If you want to contribute, don't hesitate to create a `pull request <https://github.com/raiden-network/webui/pulls>`_.
 
 
 Running the web application
 ---------------------------
-There are a few simple steps that needs to be carried out in order to run the Raiden web application. Firstly, Raiden needs to be installed. See :ref:`install instructions <installation>` for this.
+In order to run the Raiden web application (WebUI) you just need to install Raiden. See :ref:`install instructions <installation>` for this.
 
 
-The only dependency needed to run the web application is `node.js <https://docs.npmjs.com/getting-started/installing-node>`_.
-
-Once Raiden and node.js has been installed, it is quite easy to install and start the web application. From the root of the Raiden directory do::
-
-    python setup.py compile_webui
-
-This could be run automatically as part of installing Raiden, but to keep the run time of tests down, it's not.
-
-With the web application installed, we can :ref:`fire up Raiden <running_raiden>`. Make sure, you add the CORS domain to the start parameters of your ethereum client::
+After the installation, we can :ref:`fire up Raiden <running_raiden>`. Make sure, you add the CORS domain to the start parameters of your ethereum client::
 
     geth <...other parameters...> --rpccorsdomain http://127.0.0.1:5001
 
