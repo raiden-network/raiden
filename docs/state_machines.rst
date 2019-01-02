@@ -1,5 +1,5 @@
-Raiden Guide on State Machines
-##############################
+Description of the Raiden State Machines
+########################################
 .. toctree::
    :maxdepth: 2
 
@@ -13,7 +13,7 @@ Kinds of State Machines
 
 The state of the whole node is represented as a ``ChainState`` object. The ``ChainState`` object contains many other different kinds of objects. This section describes them in a bottom-to-top manner.
 
-This section is very early in construction with the simplest state machines.
+This section is still in construction. It contains only the simplest of the state machines.
 
 HashTimeLockState
 *****************
