@@ -108,6 +108,7 @@ class AlarmTask(Runnable):
 
     def start(self):
         log.debug('Alarm task started', node=pex(self.chain.node_address))
+        self._stop_event.set(False)
         super().start()
 
     def _run(self):  # pylint: disable=method-hidden
@@ -224,5 +225,6 @@ class AlarmTask(Runnable):
 
     def stop(self):
         self._stop_event.set(True)
+        self.callbacks = []
         log.debug('Alarm task stopped', node=pex(self.chain.node_address))
         return self.join()
