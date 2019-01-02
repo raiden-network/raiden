@@ -1120,7 +1120,8 @@ def create_sendlockedtransfer(
     token = channel_state.token_address
     nonce = get_next_nonce(channel_state.our_state)
     recipient = channel_state.partner_state.address
-    locked_amount = get_amount_locked(our_state) + amount  # the new lock is not registered yet
+    # the new lock is not registered yet
+    locked_amount: typing.TokenAmount = get_amount_locked(our_state) + amount
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1168,7 +1169,7 @@ def create_unlock(
 
     our_balance_proof = our_state.balance_proof
     if our_balance_proof:
-        transferred_amount = lock.amount + our_balance_proof.transferred_amount
+        transferred_amount: typing.TokenAmount = lock.amount + our_balance_proof.transferred_amount
     else:
         transferred_amount = lock.amount
 
@@ -1181,7 +1182,8 @@ def create_unlock(
     token_address = channel_state.token_address
     nonce = get_next_nonce(our_state)
     recipient = channel_state.partner_state.address
-    locked_amount = get_amount_locked(our_state) - lock.amount  # the lock is still registered
+    # the lock is still registered
+    locked_amount: typing.TokenAmount = get_amount_locked(our_state) - lock.amount
 
     balance_proof = BalanceProofUnsignedState(
         nonce=nonce,
@@ -1310,6 +1312,9 @@ def events_for_close(
             None,
         )
 
+        # silence mypy: partner's balance proofs should be signed
+        assert not isinstance(channel_state.partner_state.balance_proof, BalanceProofUnsignedState)
+
         close_event = ContractSendChannelClose(
             channel_state.identifier,
             channel_state.token_address,
@@ -1334,8 +1339,11 @@ def create_sendexpiredlock(
     nonce = get_next_nonce(sender_end_state)
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
-    updated_locked_amount = locked_amount - locked_lock.amount
-    transferred_amount = balance_proof.transferred_amount
+    updated_locked_amount: typing.TokenAmount = locked_amount - locked_lock.amount
+    if balance_proof:
+        transferred_amount = balance_proof.transferred_amount
+    else:
+        transferred_amount = 0
 
     merkletree = compute_merkletree_without(sender_end_state.merkletree, locked_lock.lockhash)
 
@@ -1705,6 +1713,10 @@ def handle_channel_closed(
         )
         if call_update:
             expiration = state_change.block_number + channel_state.settle_timeout
+            # silence mypy: checked above already
+            assert balance_proof is not None
+            # silence mypy: partner's balance proof is always signed
+            assert not isinstance(balance_proof, BalanceProofUnsignedState)
             # The channel was closed by our partner, if there is a balance
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(

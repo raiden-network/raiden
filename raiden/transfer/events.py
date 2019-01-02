@@ -24,7 +24,7 @@ class ContractSendChannelClose(ContractSendEvent):
             channel_identifier: typing.ChannelID,
             token_address: typing.TokenAddress,
             token_network_identifier: typing.TokenNetworkID,
-            balance_proof: BalanceProofSignedState,
+            balance_proof: typing.Optional[BalanceProofSignedState],
     ):
         self.channel_identifier = channel_identifier
         self.token_address = token_address
