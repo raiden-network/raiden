@@ -2,7 +2,7 @@ from enum import Enum
 
 from eth_utils import is_checksum_address
 
-from pathfinder.config import DEFAULT_PERCENTAGE_FEE
+from pathfinding_service.config import DEFAULT_PERCENTAGE_FEE
 from raiden_libs.types import Address, ChannelIdentifier
 
 

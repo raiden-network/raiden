@@ -1,8 +1,8 @@
-"""Tests for `pathfinder` package."""
+"""Tests for `pathfinding_service` package."""
 
 from click.testing import CliRunner
 
-from pathfinder import cli
+from pathfinding_service import cli
 
 
 def test_cli_help():

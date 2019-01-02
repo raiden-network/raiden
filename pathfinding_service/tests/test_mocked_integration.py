@@ -8,8 +8,8 @@ from typing import List
 
 from eth_utils import decode_hex
 
-from pathfinder.model import TokenNetwork
-from pathfinder.pathfinding_service import PathfindingService
+from pathfinding_service.model import TokenNetwork
+from pathfinding_service.pathfinding_service import PathfindingService
 from raiden_libs.types import Address
 
 

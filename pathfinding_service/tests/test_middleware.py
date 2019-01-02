@@ -6,7 +6,7 @@ import web3
 from requests.exceptions import ConnectionError
 from web3.providers import HTTPProvider
 
-from pathfinder.middleware import http_retry_with_backoff_middleware
+from pathfinding_service.middleware import http_retry_with_backoff_middleware
 
 
 @patch('web3.providers.rpc.make_post_request')

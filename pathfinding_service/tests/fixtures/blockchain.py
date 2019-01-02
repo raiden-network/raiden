@@ -1,6 +1,6 @@
 import pytest
 
-from pathfinder.utils.blockchain_listener import BlockchainListener
+from pathfinding_service.utils.blockchain_listener import BlockchainListener
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK
 
 

@@ -5,9 +5,9 @@ import pkg_resources
 import requests
 from eth_utils import to_normalized_address
 
-import pathfinder
-from pathfinder.api.rest import DEFAULT_MAX_PATHS, ServiceApi
-from pathfinder.model import TokenNetwork
+import pathfinding_service
+from pathfinding_service.api.rest import DEFAULT_MAX_PATHS, ServiceApi
+from pathfinding_service.model import TokenNetwork
 from raiden_libs.types import Address
 
 ID_12 = 12
@@ -174,7 +174,7 @@ def test_get_info(
     assert response.json() == {
             'ip': socket.gethostbyname(socket.gethostname()),
             'settings': 'PLACEHOLDER FOR PATHFINDER SETTINGS',
-            'version': pkg_resources.require(pathfinder.__name__)[0].version,
+            'version': pkg_resources.require(pathfinding_service.__name__)[0].version,
             'operator': 'PLACEHOLDER FOR PATHFINDER OPERATOR',
             'message': 'PLACEHOLDER FOR ADDITIONAL MESSAGE BY THE PFS',
         }

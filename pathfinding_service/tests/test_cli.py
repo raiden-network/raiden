@@ -4,10 +4,10 @@ from click.testing import CliRunner
 from eth_utils import is_checksum_address
 from web3 import Web3
 
-from pathfinder.cli import get_default_registry_and_start_block, main
+from pathfinding_service.cli import get_default_registry_and_start_block, main
 
 patch_args = dict(
-    target='pathfinder.cli',
+    target='pathfinding_service.cli',
     PathfindingService=DEFAULT,
     ServiceApi=DEFAULT,
     HTTPProvider=DEFAULT,
@@ -18,14 +18,14 @@ patch_args = dict(
 def test_bad_eth_client(caplog):
     """ Giving a bad `eth-rpc` value should yield a concise error message """
     runner = CliRunner()
-    with patch('pathfinder.cli.PathfindingService'):
+    with patch('pathfinding_service.cli.PathfindingService'):
         result = runner.invoke(main, ['--eth-rpc', 'http://localhost:12345'])
     assert result.exit_code == 1
     assert 'Can not connect to the Ethereum client' in caplog.records[0].getMessage()
 
 
 def test_success():
-    """ Calling the pathfinder with default args should succeed after heavy mocking """
+    """ Calling the pathfinding_service with default args should succeed after heavy mocking """
     runner = CliRunner()
     with patch.multiple(**patch_args) as mocks:
         mocks['get_default_registry_and_start_block'].return_value = Mock(), Mock()
@@ -37,7 +37,7 @@ def test_eth_rpc():
     """ The `eth-rpc` parameter must reach the `HTTPProvider` """
     runner = CliRunner()
     eth_rpc = 'example.com:1234'
-    with patch('pathfinder.cli.HTTPProvider') as provider:
+    with patch('pathfinding_service.cli.HTTPProvider') as provider:
         runner.invoke(main, ['--eth-rpc', eth_rpc])
         provider.assert_called_with(eth_rpc)
 

@@ -11,7 +11,7 @@ from raiden_libs.test.fixtures.address import *  # noqa
 from raiden_libs.test.fixtures.client import *  # noqa
 from raiden_libs.test.fixtures.web3 import *  # noqa
 
-from pathfinder.tests.fixtures import *  # isort:skip # noqa
+from pathfinding_service.tests.fixtures import *  # isort:skip # noqa
 
 
 def pytest_addoption(parser):

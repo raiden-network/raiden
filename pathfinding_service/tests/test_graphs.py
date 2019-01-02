@@ -6,8 +6,8 @@ from typing import List
 import pytest
 from networkx import NetworkXNoPath
 
-from pathfinder.config import DEFAULT_PERCENTAGE_FEE
-from pathfinder.model import ChannelView, TokenNetwork
+from pathfinding_service.config import DEFAULT_PERCENTAGE_FEE
+from pathfinding_service.model import ChannelView, TokenNetwork
 from raiden_libs.types import Address
 
 

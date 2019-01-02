@@ -8,8 +8,8 @@ from eth_utils import is_checksum_address
 from matrix_client.errors import MatrixRequestError
 from web3 import Web3
 
-from pathfinder.model import TokenNetwork
-from pathfinder.utils.blockchain_listener import (
+from pathfinding_service.model import TokenNetwork
+from pathfinding_service.utils.blockchain_listener import (
     BlockchainListener,
     create_channel_event_topics,
     create_registry_event_topics,

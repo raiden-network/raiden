@@ -2,7 +2,7 @@ from typing import Callable
 
 import pytest
 
-from pathfinder.model.token_network import TokenNetwork
+from pathfinding_service.model.token_network import TokenNetwork
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
 

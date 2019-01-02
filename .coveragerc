@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = pathfinder
+source = pathfinding_service
 
 [report]
 exclude_lines =
@@ -10,4 +10,4 @@ exclude_lines =
     if __name__ == .__main__.:
 ignore_errors = True
 omit =
-    pathfinder/tests/*
+    pathfinding_service/tests/*

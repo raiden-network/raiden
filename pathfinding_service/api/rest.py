@@ -13,9 +13,14 @@ from gevent import Greenlet
 from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
 
-import pathfinder
-from pathfinder.config import API_PATH, DEFAULT_API_HOST, DEFAULT_API_PORT, DEFAULT_MAX_PATHS
-from pathfinder.pathfinding_service import PathfindingService
+import pathfinding_service
+from pathfinding_service.config import (
+    API_PATH,
+    DEFAULT_API_HOST,
+    DEFAULT_API_PORT,
+    DEFAULT_MAX_PATHS,
+)
+from pathfinding_service.pathfinding_service import PathfindingService
 from raiden_libs.types import Address
 
 log = logging.getLogger(__name__)
@@ -126,7 +131,7 @@ class InfoResource(PathfinderResource):
         ip = socket.gethostbyname(socket.gethostname())
         # this is the internal IP address, scoped out soon anyway
         settings = 'PLACEHOLDER FOR PATHFINDER SETTINGS'
-        version = pkg_resources.require(pathfinder.__name__)[0].version
+        version = pkg_resources.require(pathfinding_service.__name__)[0].version
         operator = 'PLACEHOLDER FOR PATHFINDER OPERATOR'
         message = 'PLACEHOLDER FOR ADDITIONAL MESSAGE BY THE PFS'
 

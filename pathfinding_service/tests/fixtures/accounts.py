@@ -3,7 +3,7 @@ from typing import List
 import pytest
 from eth_utils import encode_hex, is_hex, keccak, remove_0x_prefix
 
-from pathfinder.tests.config import NUMBER_OF_NODES
+from pathfinding_service.tests.config import NUMBER_OF_NODES
 from raiden_libs.types import Address
 from raiden_libs.utils import private_key_to_address
 

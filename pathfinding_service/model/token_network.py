@@ -5,8 +5,8 @@ import networkx as nx
 from eth_utils import is_checksum_address
 from networkx import DiGraph
 
-from pathfinder.config import DIVERSITY_PEN_DEFAULT, MAX_PATHS_PER_REQUEST
-from pathfinder.model import ChannelView
+from pathfinding_service.config import DIVERSITY_PEN_DEFAULT, MAX_PATHS_PER_REQUEST
+from pathfinding_service.model import ChannelView
 from raiden_libs.types import Address, ChannelIdentifier
 
 log = logging.getLogger(__name__)

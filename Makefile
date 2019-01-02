@@ -49,14 +49,14 @@ clean-test: ## remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 
-ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive pathfinder/ -sg */node_modules/*
+ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive pathfinding_service/
 
 lint: mypy ## check style with flake8
-	flake8 pathfinder tests
+	flake8 pathfinding_service
 	isort $(ISORT_PARAMS) --diff --check-only
 
 mypy: ## static analysis with mypy
-	mypy --ignore-missing-imports pathfinder
+	mypy --ignore-missing-imports pathfinding_service
 
 isort: ## sort import with isort
 	isort $(ISORT_PARAMS)
@@ -65,15 +65,15 @@ test: ## run tests quickly with the default Python
 	py.test -v
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source pathfinder -m pytest
+	coverage run --source pathfinding_service -m pytest
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
 docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/pathfinder.rst
+	rm -f docs/pathfinding_service.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ pathfinder
+	sphinx-apidoc -o docs/ pathfinding_service
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html
