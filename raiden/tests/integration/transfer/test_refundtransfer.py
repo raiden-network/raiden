@@ -284,7 +284,6 @@ def test_refund_transfer(
     assert secrethash not in state_from_raiden(app1.raiden).payment_mapping.secrethashes_to_task
 
 
-@pytest.mark.skip(reason='Working on it -- Lefteris')
 @pytest.mark.parametrize('privatekey_seed', ['test_different_view_of_last_bp_during_unlock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -312,6 +311,9 @@ def test_different_view_of_last_bp_during_unlock(
         payment_network_identifier,
         token_address,
     )
+    token_proxy = app0.raiden.chain.token(token_address)
+    initial_balance0 = token_proxy.balance_of(app0.raiden.address)
+    initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 
     # make a transfer to test the path app0 -> app1 -> app2
     identifier_path = 1
@@ -432,7 +434,6 @@ def test_different_view_of_last_bp_during_unlock(
 
     # and now app1 comes back online
     app1.raiden.start()
-
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
     # and we wait for settlement
@@ -445,18 +446,26 @@ def test_different_view_of_last_bp_during_unlock(
     )
 
     with gevent.Timeout(10):
-        wait_for_state_change(
+        unlock_app0 = wait_for_state_change(
             app0.raiden,
             ContractReceiveChannelBatchUnlock,
-            {},
-            # {'participant': secrethash},
+            {'participant': app0.raiden.address},
             retry_timeout,
         )
-    # import pdb
-    # pdb.set_trace()
-    # a = 1
+    assert unlock_app0.returned_tokens == 50
+    with gevent.Timeout(10):
+        unlock_app1 = wait_for_state_change(
+            app1.raiden,
+            ContractReceiveChannelBatchUnlock,
+            {'participant': app1.raiden.address},
+            retry_timeout,
+        )
+    assert unlock_app1.returned_tokens == 50
+    final_balance0 = token_proxy.balance_of(app0.raiden.address)
+    final_balance1 = token_proxy.balance_of(app1.raiden.address)
 
-    # TODO: Here assert on amounts
+    assert final_balance0 - deposit - initial_balance0 == -1
+    assert final_balance1 - deposit - initial_balance1 == 1
 
 
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
