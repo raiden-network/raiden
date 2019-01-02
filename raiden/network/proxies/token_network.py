@@ -50,7 +50,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 class ChannelData(NamedTuple):
     channel_identifier: typing.ChannelID
     settle_block_number: typing.BlockNumber
-    state: int
+    state: typing.ChannelState
 
 
 class ParticipantDetails(NamedTuple):
@@ -808,6 +808,13 @@ class TokenNetwork:
             log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
             raise RaidenRecoverableError(msg)
 
+        self._check_channel_state_for_update(
+            channel_identifier=channel_identifier,
+            closer=partner,
+            update_nonce=nonce,
+            log_details=log_details,
+        )
+
         transaction_hash = self.proxy.transact(
             'updateNonClosingBalanceProof',
             safe_gas_limit(GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF),
@@ -832,6 +839,13 @@ class TokenNetwork:
                 )
                 log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
                 raise RaidenRecoverableError(msg)
+
+            self._check_channel_state_for_update(
+                channel_identifier=channel_identifier,
+                closer=partner,
+                update_nonce=nonce,
+                log_details=log_details,
+            )
 
             # This should never happen if the settlement window and gas price
             # estimation is done properly
@@ -1068,7 +1082,7 @@ class TokenNetwork:
             participant1: typing.Address,
             participant2: typing.Address,
             channel_identifier: typing.ChannelID,
-    ):
+    ) -> None:
         """
         Checks whether an operation is being execute on a channel
         between two participants using an old channel identifier
@@ -1090,7 +1104,12 @@ class TokenNetwork:
                 f'new={onchain_channel_identifier}',
             )
 
-    def _get_channel_state(self, participant1, participant2, channel_identifier):
+    def _get_channel_state(
+            self,
+            participant1: typing.Address,
+            participant2: typing.Address,
+            channel_identifier: typing.ChannelID = None,
+    ) -> typing.ChannelState:
         channel_data = self.detail_channel(participant1, participant2, channel_identifier)
 
         if not isinstance(channel_data.state, typing.T_ChannelState):
@@ -1098,7 +1117,12 @@ class TokenNetwork:
 
         return channel_data.state
 
-    def _check_channel_state_for_close(self, participant1, participant2, channel_identifier):
+    def _check_channel_state_for_close(
+            self,
+            participant1: typing.Address,
+            participant2: typing.Address,
+            channel_identifier: typing.ChannelID,
+    ) -> None:
         channel_state = self._get_channel_state(
             participant1=participant1,
             participant2=participant2,
@@ -1121,11 +1145,11 @@ class TokenNetwork:
 
     def _check_channel_state_for_deposit(
             self,
-            participant1,
-            participant2,
-            channel_identifier,
-            deposit_amount,
-    ):
+            participant1: typing.Address,
+            participant2: typing.Address,
+            channel_identifier: typing.ChannelID,
+            deposit_amount: typing.TokenAmount,
+    ) -> None:
         participant_details = self.detail_participants(
             participant1,
             participant2,
@@ -1158,7 +1182,12 @@ class TokenNetwork:
                 'Deposit amount did not increase after deposit transaction',
             )
 
-    def _check_channel_state_for_settle(self, participant1, participant2, channel_identifier):
+    def _check_channel_state_for_settle(
+            self,
+            participant1: typing.Address,
+            participant2: typing.Address,
+            channel_identifier: typing.ChannelID,
+    ) -> None:
         channel_data = self.detail_channel(participant1, participant2, channel_identifier)
         if channel_data.state == ChannelState.SETTLED:
             raise RaidenRecoverableError(
@@ -1182,3 +1211,28 @@ class TokenNetwork:
                 "Settling this channel failed although the channel's current state "
                 "is closed.",
             )
+
+    def _check_channel_state_for_update(
+            self,
+            channel_identifier: typing.ChannelID,
+            closer: typing.Address,
+            update_nonce: typing.Nonce,
+            log_details: typing.Dict,
+    ) -> None:
+        """Check the channel state on chain to see if it has been updated.
+
+        Compare the nonce we are about to update the contract with the
+        updated nonce in the onchain state and if it's the same raise a
+        RaidenRecoverableError"""
+        closer_details = self.detail_participant(
+            channel_identifier=channel_identifier,
+            participant=closer,
+            partner=self.node_address,
+        )
+        if closer_details.nonce == update_nonce:
+            msg = (
+                'updateNonClosingBalanceProof transaction has already '
+                'been mined and updated the channel succesfully.'
+            )
+            log.warning(f'{msg}', **log_details)
+            raise RaidenRecoverableError(msg)
