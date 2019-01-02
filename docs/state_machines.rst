@@ -23,11 +23,7 @@ A ``HashTimeLockState`` represents a hash time lock.
 Attributes of a HashTimeLockState
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* ``amount`` is the amount of tokens locked in the hash time lock.
-* ``expiration`` is the block number when the hash time lock expires.
-* ``secrethash`` is the hash value of the secret that can unlock the hash time lock.
-* ``encoded`` is the serialization of the above fields.
-* ``lockhash`` is the hash of ``encoded``, which is useful for the Merkle tree formation.
+See `the code <https://github.com/raiden-network/raiden/blob/f5d48172931ce60c820253e81708acc2a2f49941/raiden/transfer/state.py#L998>`__.
 
 State Changes on a HashTimeLockState
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
