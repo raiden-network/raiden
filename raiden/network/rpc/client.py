@@ -338,6 +338,26 @@ class JSONRPCClient:
         """ Return the balance of the account of given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
+    def parity_get_pending_transaction_hash_by_nonce(
+            self,
+            checksummed_address: typing.AddressHex,
+            nonce: typing.Nonce,
+    ) -> typing.Optional[typing.TransactionHash]:
+        """Queries the local parity transaction pool and searches for a transaction.
+
+        Checks the local tx pool for a transaction from a particular address and for
+        a given nonce. If it exists it returns the transaction hash.
+        """
+        assert self.eth_node == constants.EthClient.PARITY
+        # https://wiki.parity.io/JSONRPC-parity-module.html?q=traceTransaction#parity_alltransactions
+        transactions = self.web3.manager.request_blocking('parity_allTransactions', [])
+        log.debug('RETURNED TRANSACTIONS', transactions=transactions)
+        for tx in transactions:
+            address_match = to_checksum_address(tx['from']) == checksummed_address
+            if address_match and int(tx['nonce'], 16) == nonce:
+                return tx['hash']
+        return None
+
     def gas_price(self) -> int:
         try:
             # generateGasPrice takes the transaction to be send as an optional argument
