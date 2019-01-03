@@ -58,14 +58,23 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
     ReceiveUnlock,
 )
-from raiden.utils import typing
+from raiden.utils.typing import (
+    BlockNumber,
+    ChannelID,
+    List,
+    PaymentNetworkID,
+    SecretHash,
+    TokenAddress,
+    TokenNetworkID,
+    Tuple,
+)
 
 
 def get_networks(
         chain_state: ChainState,
-        payment_network_identifier: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.Tuple[PaymentNetworkState, TokenNetworkState]:
+        payment_network_identifier: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> Tuple[PaymentNetworkState, TokenNetworkState]:
     token_network_state = None
     payment_network_state = chain_state.identifiers_to_paymentnetworks.get(
         payment_network_identifier,
@@ -86,8 +95,8 @@ def get_networks(
 
 def get_token_network_by_token_address(
         chain_state: ChainState,
-        payment_network_identifier: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
+        payment_network_identifier: PaymentNetworkID,
+        token_address: TokenAddress,
 ) -> TokenNetworkState:
     _, token_network_state = get_networks(
         chain_state,
@@ -101,7 +110,7 @@ def get_token_network_by_token_address(
 def subdispatch_to_all_channels(
         chain_state: ChainState,
         state_change: StateChange,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     events = list()
 
@@ -135,7 +144,7 @@ def subdispatch_to_all_lockedtransfers(
 def subdispatch_to_paymenttask(
         chain_state: ChainState,
         state_change: StateChange,
-        secrethash: typing.SecretHash,
+        secrethash: SecretHash,
 ) -> TransitionResult:
     block_number = chain_state.block_number
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
@@ -207,8 +216,8 @@ def subdispatch_to_paymenttask(
 def subdispatch_initiatortask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: typing.TokenNetworkID,
-        secrethash: typing.SecretHash,
+        token_network_identifier: TokenNetworkID,
+        secrethash: SecretHash,
 ) -> TransitionResult:
 
     block_number = chain_state.block_number
@@ -258,8 +267,8 @@ def subdispatch_initiatortask(
 def subdispatch_mediatortask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: typing.TokenNetworkID,
-        secrethash: typing.SecretHash,
+        token_network_identifier: TokenNetworkID,
+        secrethash: SecretHash,
 ) -> TransitionResult:
 
     block_number = chain_state.block_number
@@ -309,9 +318,9 @@ def subdispatch_mediatortask(
 def subdispatch_targettask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: typing.TokenNetworkID,
-        channel_identifier: typing.ChannelID,
-        secrethash: typing.SecretHash,
+        token_network_identifier: TokenNetworkID,
+        channel_identifier: ChannelID,
+        secrethash: SecretHash,
 ) -> TransitionResult:
 
     block_number = chain_state.block_number
@@ -365,7 +374,7 @@ def subdispatch_targettask(
 
 def maybe_add_tokennetwork(
         chain_state: ChainState,
-        payment_network_identifier: typing.PaymentNetworkID,
+        payment_network_identifier: PaymentNetworkID,
         token_network_state: TokenNetworkState,
 ):
     token_network_identifier = token_network_state.address
@@ -420,7 +429,7 @@ def inplace_delete_message_queue(
 
 
 def inplace_delete_message(
-        message_queue: typing.List[SendMessageEvent],
+        message_queue: List[SendMessageEvent],
         state_change: StateChange,
 ):
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
@@ -1137,7 +1146,7 @@ def state_transition(chain_state: ChainState, state_change: StateChange) -> Tran
 def _get_channels_close_events(
         chain_state: ChainState,
         token_network_state: TokenNetworkState,
-) -> typing.List[Event]:
+) -> List[Event]:
     events = []
     for channel_identifiers in token_network_state.partneraddresses_to_channelidentifiers.values():
         channel_states = [
