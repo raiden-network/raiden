@@ -805,9 +805,9 @@ class BalanceProofUnsignedState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofUnsignedState':
         restored = cls(
             nonce=data['nonce'],
-            transferred_amount=int(data['transferred_amount']),
-            locked_amount=int(data['locked_amount']),
-            locksroot=serialization.deserialize_bytes(data['locksroot']),
+            transferred_amount=typing.TokenAmount(int(data['transferred_amount'])),
+            locked_amount=typing.TokenAmount(int(data['locked_amount'])),
+            locksroot=typing.Locksroot(serialization.deserialize_bytes(data['locksroot'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
             chain_id=data['chain_id'],
@@ -978,13 +978,13 @@ class BalanceProofSignedState(State):
     def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofSignedState':
         restored = cls(
             nonce=data['nonce'],
-            transferred_amount=int(data['transferred_amount']),
-            locked_amount=int(data['locked_amount']),
-            locksroot=serialization.deserialize_bytes(data['locksroot']),
+            transferred_amount=typing.TokenAmount(int(data['transferred_amount'])),
+            locked_amount=typing.TokenAmount(int(data['locked_amount'])),
+            locksroot=typing.Locksroot(serialization.deserialize_bytes(data['locksroot'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
-            message_hash=serialization.deserialize_bytes(data['message_hash']),
-            signature=serialization.deserialize_bytes(data['signature']),
+            message_hash=typing.Keccak256(serialization.deserialize_bytes(data['message_hash'])),
+            signature=typing.Signature(serialization.deserialize_bytes(data['signature'])),
             sender=to_canonical_address(data['sender']),
             chain_id=data['chain_id'],
         )

@@ -305,10 +305,10 @@ class SendBalanceProof(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
-            message_identifier=int(data['message_identifier']),
-            payment_identifier=int(data['payment_identifier']),
+            message_identifier=typing.MessageID(int(data['message_identifier'])),
+            payment_identifier=typing.PaymentID(int(data['payment_identifier'])),
             token_address=to_canonical_address(data['token_address']),
-            secret=serialization.deserialize_bytes(data['secret']),
+            secret=typing.Secret(serialization.deserialize_bytes(data['secret'])),
             balance_proof=data['balance_proof'],
         )
 

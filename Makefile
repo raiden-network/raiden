@@ -54,11 +54,13 @@ mypy:
 	raiden/encoding raiden/storage raiden/network \
 	--ignore-missing-imports | grep error > mypy-out.txt || true
 	# Expecting status code 1 from `grep`, which indicates no match.
-	# Again, we are starting small, detecting only 'BlockNumber' and 'Address'
-	# related errors, but all mypy errors should be detected soon.
+	# Again, we are starting small, detecting only errors related to
+	# 'BlockNumber', 'Address', 'ChannelID' etc, but all mypy errors should be
+	# detected soon.
 	grep BlockNumber mypy-out.txt; [ $$? -eq 1 ]
 	grep Address mypy-out.txt; [ $$? -eq 1 ]
 	grep ChannelID mypy-out.txt; [ $$? -eq 1 ]
+	grep BalanceProof mypy-out.txt; [ $$? -eq 1 ]
 
 isort:
 	isort $(ISORT_PARAMS)
