@@ -143,6 +143,7 @@ def logging_level(request):
         colorize=not request.config.option.plain_log,
         log_file=request.config.option.log_file,
         cache_logger_on_first_use=False,
+        disable_debug_logfile=True,
     )
 
 
