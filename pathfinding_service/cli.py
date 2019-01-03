@@ -2,8 +2,11 @@
 from gevent import monkey  # isort:skip # noqa
 monkey.patch_all()  # isort:skip # noqa
 
+import json
 import logging
+import logging.config
 import sys
+from typing import TextIO
 
 import click
 from eth_utils import is_checksum_address
@@ -52,7 +55,8 @@ def get_default_registry_and_start_block(
         sys.exit(1)
 
 
-def setup_logging(log_level: str):
+def setup_logging(log_level: str, log_config: TextIO):
+    """ Set log level and (optionally) detailed JSON logging config """
     level = getattr(logging, log_level)
     logging.basicConfig(
         level=level,
@@ -61,6 +65,10 @@ def setup_logging(log_level: str):
     )
     logging.getLogger('web3').setLevel(level)
     logging.getLogger('urllib3.connectionpool').setLevel(level)
+
+    if log_config:
+        config = json.load(log_config)
+        logging.config.dictConfig(config)
 
 
 @click.command()
@@ -100,6 +108,11 @@ def setup_logging(log_level: str):
     type=click.Choice(['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']),
     help='Print log messages of this level and more important ones',
 )
+@click.option(
+    '--log-config',
+    type=click.File('r'),
+    help='Use the given JSON file for logging configuration',
+)
 def main(
     eth_rpc: str,
     registry_address: Address,
@@ -107,10 +120,17 @@ def main(
     confirmations: int,
     host: str,
     log_level: str,
+    log_config: TextIO,
 ):
-    """Console script for pathfinding_service."""
+    """Console script for pathfinding_service.
 
-    setup_logging(log_level)
+    Logging can be quickly set by specifying a global log level or in a
+    detailed way by using a log configuration file. See
+    https://docs.python.org/3.7/library/logging.config.html#logging-config-dictschema
+    for a detailed description of the format.
+    """
+
+    setup_logging(log_level, log_config)
 
     log.info("Starting Raiden Pathfinding Service")
 
