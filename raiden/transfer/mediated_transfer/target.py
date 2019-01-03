@@ -21,13 +21,13 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import NettingChannelState, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
-from raiden.utils import typing
+from raiden.utils.typing import Address, BlockNumber
 
 
 def events_for_onchain_secretreveal(
         target_state: TargetTransferState,
         channel_state: NettingChannelState,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ):
     """ Emits the event for revealing the secret on-chain if the transfer
     can not be settled off-chain.
@@ -63,7 +63,7 @@ def handle_inittarget(
         state_change: ActionInitTarget,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ):
     """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
@@ -99,7 +99,7 @@ def handle_inittarget(
             message_identifier = message_identifier_from_prng(pseudo_random_generator)
             recipient = transfer.initiator
             secret_request = SendSecretRequest(
-                recipient=typing.Address(recipient),
+                recipient=Address(recipient),
                 channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
                 message_identifier=message_identifier,
                 payment_identifier=transfer.payment_identifier,
@@ -130,7 +130,7 @@ def handle_offchain_secretreveal(
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ):
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = is_valid_secret_reveal(
@@ -242,7 +242,7 @@ def handle_unlock(
 def handle_block(
         target_state: TargetTransferState,
         channel_state: NettingChannelState,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
@@ -259,7 +259,7 @@ def handle_block(
         end_state=channel_state.our_state,
         lock=lock,
         block_number=block_number,
-        lock_expiration_threshold=typing.BlockNumber(
+        lock_expiration_threshold=BlockNumber(
             lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
         ),
     )
@@ -286,7 +286,7 @@ def handle_lock_expired(
         target_state: TargetTransferState,
         state_change: ReceiveLockExpired,
         channel_state: NettingChannelState,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ):
     """Remove expired locks from channel states."""
     result = channel.handle_receive_lock_expired(

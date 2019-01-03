@@ -1,6 +1,5 @@
 import itertools
 import random
-from typing import Dict, List, cast
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
@@ -37,7 +36,22 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
-from raiden.utils import typing
+from raiden.utils.typing import (
+    Address,
+    BlockExpiration,
+    BlockNumber,
+    BlockTimeout,
+    ChannelMap,
+    Dict,
+    List,
+    Optional,
+    PaymentAmount,
+    Secret,
+    SecretHash,
+    SuccessOrError,
+    Tuple,
+    cast,
+)
 
 STATE_SECRET_KNOWN = (
     'payee_secret_revealed',
@@ -71,10 +85,10 @@ def is_lock_valid(expiration, block_number) -> bool:
 
 
 def is_safe_to_wait(
-        lock_expiration: typing.BlockExpiration,
-        reveal_timeout: typing.BlockTimeout,
-        block_number: typing.BlockNumber,
-) -> typing.SuccessOrError:
+        lock_expiration: BlockExpiration,
+        reveal_timeout: BlockTimeout,
+        block_number: BlockNumber,
+) -> SuccessOrError:
     """ True if waiting is safe, i.e. there are more than enough blocks to safely
     unlock on chain.
     """
@@ -101,8 +115,8 @@ def is_safe_to_wait(
 
 def is_channel_usable(
         candidate_channel_state: NettingChannelState,
-        transfer_amount: typing.PaymentAmount,
-        lock_timeout: typing.BlockTimeout,
+        transfer_amount: PaymentAmount,
+        lock_timeout: BlockTimeout,
 ) -> bool:
     pending_transfers = channel.get_number_of_pending_transfers(candidate_channel_state.our_state)
     distributable = channel.get_distributable(
@@ -141,9 +155,9 @@ def is_send_transfer_almost_equal(
 
 
 def has_secret_registration_started(
-        channel_states: typing.List[NettingChannelState],
-        transfers_pair: typing.List[MediationPairState],
-        secrethash: typing.SecretHash,
+        channel_states: List[NettingChannelState],
+        transfers_pair: List[MediationPairState],
+        secrethash: SecretHash,
 ) -> bool:
     # If it's known the secret is registered on-chain, the node should not send
     # a new transaction. Note there is a race condition:
@@ -165,9 +179,9 @@ def has_secret_registration_started(
 
 
 def filter_used_routes(
-        transfers_pair: typing.List[MediationPairState],
-        routes: typing.List['RouteState'],
-) -> typing.List['RouteState']:
+        transfers_pair: List[MediationPairState],
+        routes: List['RouteState'],
+) -> List['RouteState']:
     """This function makes sure we filter routes that have already been used.
 
     So in a setup like this, we want to make sure that node 2, having tried to
@@ -192,26 +206,26 @@ def filter_used_routes(
 
 
 def get_payee_channel(
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         transfer_pair: MediationPairState,
-) -> typing.Optional[NettingChannelState]:
+) -> Optional[NettingChannelState]:
     """ Returns the payee channel of a given transfer pair or None if it's not found """
     payee_channel_identifier = transfer_pair.payee_transfer.balance_proof.channel_identifier
     return channelidentifiers_to_channels.get(payee_channel_identifier)
 
 
 def get_payer_channel(
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         transfer_pair: MediationPairState,
-) -> typing.Optional[NettingChannelState]:
+) -> Optional[NettingChannelState]:
     """ Returns the payer channel of a given transfer pair or None if it's not found """
     payer_channel_identifier = transfer_pair.payer_transfer.balance_proof.channel_identifier
     return channelidentifiers_to_channels.get(payer_channel_identifier)
 
 
 def get_pending_transfer_pairs(
-        transfers_pair: typing.List[MediationPairState],
-) -> typing.List[MediationPairState]:
+        transfers_pair: List[MediationPairState],
+) -> List[MediationPairState]:
     """ Return the transfer pairs that are not at a final state. """
     pending_pairs = list(
         pair
@@ -259,7 +273,7 @@ def sanity_check(state: MediatorTransferState) -> None:
 
 def clear_if_finalized(
         iteration: TransitionResult,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
 ) -> TransitionResult:
     """Clear the mediator task if all the locks have been finalized.
 
@@ -296,9 +310,9 @@ def clear_if_finalized(
 def next_channel_from_routes(
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
-        transfer_amount: typing.PaymentAmount,
-        lock_timeout: typing.BlockTimeout,
-) -> typing.Optional[NettingChannelState]:
+        transfer_amount: PaymentAmount,
+        lock_timeout: BlockTimeout,
+) -> Optional[NettingChannelState]:
     """ Returns the first route that may be used to mediated the transfer.
     The routing service can race with local changes, so the recommended routes
     must be validated.
@@ -332,8 +346,8 @@ def forward_transfer_pair(
         available_routes: List['RouteState'],
         channelidentifiers_to_channels: Dict,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
-) -> typing.Tuple[typing.Optional[MediationPairState], typing.List[Event]]:
+        block_number: BlockNumber,
+) -> Tuple[Optional[MediationPairState], List[Event]]:
     """ Given a payer transfer tries a new route to proceed with the mediation.
 
     Args:
@@ -346,8 +360,8 @@ def forward_transfer_pair(
         block_number: The current block number.
     """
     transfer_pair = None
-    mediated_events: typing.List[Event] = list()
-    lock_timeout = typing.BlockTimeout(payer_transfer.lock.expiration - block_number)
+    mediated_events: List[Event] = list()
+    lock_timeout = BlockTimeout(payer_transfer.lock.expiration - block_number)
 
     payee_channel = next_channel_from_routes(
         available_routes=available_routes,
@@ -391,8 +405,8 @@ def backward_transfer_pair(
         backward_channel: NettingChannelState,
         payer_transfer: LockedTransferSignedState,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
-) -> typing.Tuple[typing.Optional[MediationPairState], typing.List[Event]]:
+        block_number: BlockNumber,
+) -> Tuple[Optional[MediationPairState], List[Event]]:
     """ Sends a transfer backwards, allowing the previous hop to try a new
     route.
 
@@ -411,10 +425,10 @@ def backward_transfer_pair(
         The mediator pair and the correspoding refund event.
     """
     transfer_pair = None
-    events: typing.List[Event] = list()
+    events: List[Event] = list()
 
     lock = payer_transfer.lock
-    lock_timeout = typing.BlockTimeout(lock.expiration - block_number)
+    lock_timeout = BlockTimeout(lock.expiration - block_number)
 
     # Ensure the refund transfer's lock has a safe expiration, otherwise don't
     # do anything and wait for the received lock to expire.
@@ -444,10 +458,10 @@ def backward_transfer_pair(
 
 def set_offchain_secret(
         state: MediatorTransferState,
-        channelidentifiers_to_channels: typing.ChannelMap,
-        secret: typing.Secret,
-        secrethash: typing.SecretHash,
-) -> typing.List[Event]:
+        channelidentifiers_to_channels: ChannelMap,
+        secret: Secret,
+        secrethash: SecretHash,
+) -> List[Event]:
     """ Set the secret to all mediated transfers. """
     state.secret = secret
 
@@ -502,11 +516,11 @@ def set_offchain_secret(
 
 def set_onchain_secret(
         state: MediatorTransferState,
-        channelidentifiers_to_channels: typing.ChannelMap,
-        secret: typing.Secret,
-        secrethash: typing.SecretHash,
-        block_number: typing.BlockNumber,
-) -> typing.List[Event]:
+        channelidentifiers_to_channels: ChannelMap,
+        secret: Secret,
+        secrethash: SecretHash,
+        block_number: BlockNumber,
+) -> List[Event]:
     """ Set the secret to all mediated transfers.
 
     The secret should have been learned from the secret registry.
@@ -560,8 +574,8 @@ def set_onchain_secret(
 
 
 def set_offchain_reveal_state(
-        transfers_pair: typing.List[MediationPairState],
-        payee_address: typing.Address,
+        transfers_pair: List[MediationPairState],
+        payee_address: Address,
 ) -> None:
     """ Set the state of a transfer *sent* to a payee. """
     for pair in transfers_pair:
@@ -570,15 +584,15 @@ def set_offchain_reveal_state(
 
 
 def events_for_expired_pairs(
-        channelidentifiers_to_channels: typing.ChannelMap,
-        transfers_pair: typing.List[MediationPairState],
+        channelidentifiers_to_channels: ChannelMap,
+        transfers_pair: List[MediationPairState],
         waiting_transfer: WaitingTransferState,
-        block_number: typing.BlockNumber,
-) -> typing.List[Event]:
+        block_number: BlockNumber,
+) -> List[Event]:
     """ Informational events for expired locks. """
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
-    events: typing.List[Event] = list()
+    events: List[Event] = list()
     for pair in pending_transfers_pairs:
         payer_balance_proof = pair.payer_transfer.balance_proof
         payer_channel = channelidentifiers_to_channels.get(payer_balance_proof.channel_identifier)
@@ -630,10 +644,10 @@ def events_for_expired_pairs(
 
 
 def events_for_secretreveal(
-        transfers_pair: typing.List[MediationPairState],
-        secret: typing.Secret,
+        transfers_pair: List[MediationPairState],
+        secret: Secret,
         pseudo_random_generator: random.Random,
-) -> typing.List[Event]:
+) -> List[Event]:
     """ Reveal the secret off-chain.
 
     The secret is revealed off-chain even if there is a pending transaction to
@@ -686,13 +700,13 @@ def events_for_secretreveal(
 
 
 def events_for_balanceproof(
-        channelidentifiers_to_channels: typing.ChannelMap,
-        transfers_pair: typing.List[MediationPairState],
+        channelidentifiers_to_channels: ChannelMap,
+        transfers_pair: List[MediationPairState],
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
-        secret: typing.Secret,
-        secrethash: typing.SecretHash,
-) -> typing.List[Event]:
+        block_number: BlockNumber,
+        secret: Secret,
+        secrethash: SecretHash,
+) -> List[Event]:
     """ While it's safe do the off-chain unlock. """
 
     events: List[Event] = list()
@@ -754,15 +768,15 @@ def events_for_balanceproof(
 
 
 def events_for_onchain_secretreveal_if_dangerzone(
-        channelmap: typing.ChannelMap,
-        secrethash: typing.SecretHash,
-        transfers_pair: typing.List[MediationPairState],
-        block_number: typing.BlockNumber,
-) -> typing.List[Event]:
+        channelmap: ChannelMap,
+        secrethash: SecretHash,
+        transfers_pair: List[MediationPairState],
+        block_number: BlockNumber,
+) -> List[Event]:
     """ Reveal the secret on-chain if the lock enters the unsafe region and the
     secret is not yet on-chain.
     """
-    events: typing.List[Event] = list()
+    events: List[Event] = list()
 
     all_payer_channels = []
     for pair in transfers_pair:
@@ -822,11 +836,11 @@ def events_for_onchain_secretreveal_if_dangerzone(
 
 
 def events_for_onchain_secretreveal_if_closed(
-        channelmap: typing.ChannelMap,
-        transfers_pair: typing.List[MediationPairState],
-        secret: typing.Secret,
-        secrethash: typing.SecretHash,
-) -> typing.List[ContractSendSecretReveal]:
+        channelmap: ChannelMap,
+        transfers_pair: List[MediationPairState],
+        secret: Secret,
+        secrethash: SecretHash,
+) -> List[ContractSendSecretReveal]:
     """ Register the secret on-chain if the payer channel is already closed and
     the mediator learned the secret off-chain.
 
@@ -876,8 +890,8 @@ def events_for_onchain_secretreveal_if_closed(
 
 def events_to_remove_expired_locks(
         mediator_state: MediatorTransferState,
-        channelidentifiers_to_channels: typing.ChannelMap,
-        block_number: typing.BlockNumber,
+        channelidentifiers_to_channels: ChannelMap,
+        block_number: BlockNumber,
         pseudo_random_generator: random.Random,
 ):
     """ Clear the channels which have expired locks.
@@ -885,7 +899,7 @@ def events_to_remove_expired_locks(
     This only considers the *sent* transfers, received transfers can only be
     updated by the partner.
     """
-    events: typing.List[Event] = list()
+    events: List[Event] = list()
 
     for transfer_pair in mediator_state.transfers_pair:
         balance_proof = transfer_pair.payee_transfer.balance_proof
@@ -935,12 +949,12 @@ def events_to_remove_expired_locks(
 
 def secret_learned(
         state: MediatorTransferState,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
-        secret: typing.Secret,
-        secrethash: typing.SecretHash,
-        payee_address: typing.Address,
+        block_number: BlockNumber,
+        secret: Secret,
+        secrethash: SecretHash,
+        payee_address: Address,
 ):
     """ Unlock the payee lock, reveal the lock to the payer, and if necessary
     register the secret on-chain.
@@ -989,12 +1003,12 @@ def secret_learned(
 
 def mediate_transfer(
         state: MediatorTransferState,
-        possible_routes: typing.List['RouteState'],
+        possible_routes: List['RouteState'],
         payer_channel: NettingChannelState,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         payer_transfer: LockedTransferSignedState,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     """ Try a new route or fail back to a refund.
 
@@ -1057,9 +1071,9 @@ def mediate_transfer(
 
 def handle_init(
         state_change: ActionInitMediator,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     routes = state_change.routes
 
@@ -1100,7 +1114,7 @@ def handle_init(
 def handle_block(
         mediator_state: MediatorTransferState,
         state_change: Block,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     """ After Raiden learns about a new block this function must be called to
@@ -1142,9 +1156,9 @@ def handle_block(
 def handle_refundtransfer(
         mediator_state: MediatorTransferState,
         mediator_state_change: ReceiveTransferRefund,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) ->TransitionResult:
     """ Validate and handle a ReceiveTransferRefund mediator_state change.
     A node might participate in mediated transfer more than once because of
@@ -1161,7 +1175,7 @@ def handle_refundtransfer(
     Returns:
         TransitionResult: The resulting iteration.
     """
-    events: typing.List[Event] = list()
+    events: List[Event] = list()
     if mediator_state.secret is None:
         # The last sent transfer is the only one that may be refunded, all the
         # previous ones are refunded already.
@@ -1201,9 +1215,9 @@ def handle_refundtransfer(
 def handle_offchain_secretreveal(
         mediator_state: MediatorTransferState,
         mediator_state_change: ReceiveSecretReveal,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     """ Handles the secret reveal and sends SendBalanceProof/RevealSecret if necessary. """
     is_valid_reveal = is_valid_secret_reveal(
@@ -1249,9 +1263,9 @@ def handle_offchain_secretreveal(
 def handle_onchain_secretreveal(
         mediator_state: MediatorTransferState,
         onchain_secret_reveal: ContractReceiveSecretReveal,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     """ The secret was revealed on-chain, set the state of all transfers to
     secret known.
@@ -1294,7 +1308,7 @@ def handle_onchain_secretreveal(
 def handle_unlock(
         mediator_state: MediatorTransferState,
         state_change: ReceiveUnlock,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
 ) -> TransitionResult:
     """ Handle a ReceiveUnlock state change. """
     events = list()
@@ -1335,8 +1349,8 @@ def handle_unlock(
 def handle_lock_expired(
         mediator_state: MediatorTransferState,
         state_change: ReceiveLockExpired,
-        channelidentifiers_to_channels: typing.ChannelMap,
-        block_number: typing.BlockNumber,
+        channelidentifiers_to_channels: ChannelMap,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     events = list()
 
@@ -1377,9 +1391,9 @@ def handle_lock_expired(
 def state_transition(
         mediator_state: MediatorTransferState,
         state_change: StateChange,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     """ State machine for a node mediating a transfer. """
     # pylint: disable=too-many-branches

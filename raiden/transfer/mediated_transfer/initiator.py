@@ -27,14 +27,28 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.transfer.utils import is_valid_secret_reveal
-from raiden.utils import typing
+from raiden.utils.typing import (
+    Address,
+    BlockExpiration,
+    BlockNumber,
+    BlockTimeout,
+    ChannelMap,
+    List,
+    MessageID,
+    Optional,
+    PaymentAmount,
+    Secret,
+    SecretHash,
+    TokenAmount,
+    cast,
+)
 
 
 def events_for_unlock_lock(
         initiator_state: InitiatorTransferState,
         channel_state: NettingChannelState,
-        secret: typing.Secret,
-        secrethash: typing.SecretHash,
+        secret: Secret,
+        secrethash: SecretHash,
         pseudo_random_generator: random.Random,
 ):
     # next hop learned the secret, unlock the token locally and send the
@@ -83,7 +97,7 @@ def handle_block(
             # task can go
             return TransitionResult(None, list())
 
-    lock_expiration_threshold = typing.BlockNumber(
+    lock_expiration_threshold = BlockNumber(
         locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
     )
     lock_has_expired, _ = channel.is_lock_expired(
@@ -123,25 +137,25 @@ def handle_block(
             # task around to wait for the LockExpired messages to sync.
             # Check https://github.com/raiden-network/raiden/issues/3183
             initiator_state if lock_exists else None,
-            typing.cast(typing.List[Event], expired_lock_events),
+            cast(List[Event], expired_lock_events),
         )
     else:
         return TransitionResult(initiator_state, list())
 
 
 def get_initial_lock_expiration(
-        block_number: typing.BlockNumber,
-        reveal_timeout: typing.BlockTimeout,
-) -> typing.BlockExpiration:
+        block_number: BlockNumber,
+        reveal_timeout: BlockTimeout,
+) -> BlockExpiration:
     """ Returns the expiration used for all hash-time-locks in transfer. """
-    return typing.BlockExpiration(block_number + reveal_timeout * 2)
+    return BlockExpiration(block_number + reveal_timeout * 2)
 
 
 def next_channel_from_routes(
-        available_routes: typing.List[RouteState],
-        channelidentifiers_to_channels: typing.ChannelMap,
-        transfer_amount: typing.TokenAmount,
-) -> typing.Optional[NettingChannelState]:
+        available_routes: List[RouteState],
+        channelidentifiers_to_channels: ChannelMap,
+        transfer_amount: TokenAmount,
+) -> Optional[NettingChannelState]:
     """ Returns the first channel that can be used to start the transfer.
     The routing service can race with local changes, so the recommended routes
     must be validated.
@@ -174,12 +188,12 @@ def next_channel_from_routes(
 
 
 def try_new_route(
-        old_initiator_state: typing.Optional[InitiatorTransferState],
-        channelidentifiers_to_channels: typing.ChannelMap,
-        available_routes: typing.List[RouteState],
+        old_initiator_state: Optional[InitiatorTransferState],
+        channelidentifiers_to_channels: ChannelMap,
+        available_routes: List[RouteState],
         transfer_description: TransferDescriptionWithSecretState,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
 
     channel_state = next_channel_from_routes(
@@ -188,7 +202,7 @@ def try_new_route(
         transfer_description.amount,
     )
 
-    events: typing.List[Event] = list()
+    events: List[Event] = list()
     if channel_state is None:
         if not available_routes:
             reason = 'there is no route available'
@@ -234,8 +248,8 @@ def try_new_route(
 def send_lockedtransfer(
         transfer_description: TransferDescriptionWithSecretState,
         channel_state: NettingChannelState,
-        message_identifier: typing.MessageID,
-        block_number: typing.BlockNumber,
+        message_identifier: MessageID,
+        block_number: BlockNumber,
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel.
 
@@ -253,8 +267,8 @@ def send_lockedtransfer(
         channel_state,
         transfer_description.initiator,
         transfer_description.target,
-        typing.cast(
-            typing.PaymentAmount,
+        cast(
+            PaymentAmount,
             transfer_description.amount,
         ),
         message_identifier,
@@ -306,7 +320,7 @@ def handle_secretrequest(
         transfer_description = initiator_state.transfer_description
         recipient = transfer_description.target
         revealsecret = SendSecretReveal(
-            recipient=typing.Address(recipient),
+            recipient=Address(recipient),
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=message_identifier,
             secret=transfer_description.secret,

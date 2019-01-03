@@ -17,13 +17,25 @@ from raiden.transfer.state import (
     TargetTask,
     TokenNetworkState,
 )
-from raiden.utils import typing
+from raiden.utils.typing import (
+    Address,
+    Callable,
+    ChannelID,
+    Dict,
+    List,
+    Optional,
+    PaymentNetworkID,
+    SecretHash,
+    Set,
+    TokenAddress,
+    TokenNetworkID,
+)
 
 # TODO: Either enforce immutability or make a copy of the values returned by
 # the view functions
 
 
-def all_neighbour_nodes(chain_state: ChainState) -> typing.Set[typing.Address]:
+def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
     """ Return the identifiers for all nodes accross all payment networks which
     have a channel open with this one.
     """
@@ -44,8 +56,8 @@ def block_number(chain_state: ChainState) -> int:
 
 def count_token_network_channels(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
 ) -> int:
     token_network = get_token_network_by_token_address(
         chain_state,
@@ -69,7 +81,7 @@ def state_from_app(app) -> ChainState:
     return app.raiden.wal.state_manager.current_state
 
 
-def get_pending_transactions(chain_state: ChainState) -> typing.List[ContractSendEvent]:
+def get_pending_transactions(chain_state: ChainState) -> List[ContractSendEvent]:
     return chain_state.pending_transactions
 
 
@@ -79,13 +91,13 @@ def get_all_messagequeues(
     return chain_state.queueids_to_queues
 
 
-def get_networkstatuses(chain_state: ChainState) -> typing.Dict:
+def get_networkstatuses(chain_state: ChainState) -> Dict:
     return chain_state.nodeaddresses_to_networkstates
 
 
 def get_node_network_status(
         chain_state: ChainState,
-        node_address: typing.Address,
+        node_address: Address,
 ) -> str:
 
     return chain_state.nodeaddresses_to_networkstates.get(
@@ -96,9 +108,9 @@ def get_node_network_status(
 
 def get_participants_addresses(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.Set[typing.Address]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> Set[Address]:
     token_network = get_token_network_by_token_address(
         chain_state,
         payment_network_id,
@@ -115,8 +127,8 @@ def get_participants_addresses(
 
 def get_our_capacity_for_token_network(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
 ) -> int:
     open_channels = get_channelstate_open(
         chain_state,
@@ -133,14 +145,14 @@ def get_our_capacity_for_token_network(
 
 def get_payment_network_identifiers(
         chain_state: ChainState,
-) -> typing.List[typing.PaymentNetworkID]:
+) -> List[PaymentNetworkID]:
     return list(chain_state.identifiers_to_paymentnetworks.keys())
 
 
 def get_token_network_registry_by_token_network_identifier(
         chain_state: ChainState,
-        token_network_identifier: typing.Address,
-) -> typing.Optional[PaymentNetworkState]:
+        token_network_identifier: Address,
+) -> Optional[PaymentNetworkState]:
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         if token_network_identifier in payment_network.tokenidentifiers_to_tokennetworks:
             return payment_network
@@ -150,9 +162,9 @@ def get_token_network_registry_by_token_network_identifier(
 
 def get_token_network_identifier_by_token_address(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.TokenNetworkID:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> TokenNetworkID:
     token_network = get_token_network_by_token_address(
         chain_state,
         payment_network_id,
@@ -166,8 +178,8 @@ def get_token_network_identifier_by_token_address(
 
 def get_token_network_identifiers(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-) -> typing.List[typing.TokenNetworkID]:
+        payment_network_id: PaymentNetworkID,
+) -> List[TokenNetworkID]:
     """ Return the list of token networks registered with the given payment network. """
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
 
@@ -182,8 +194,8 @@ def get_token_network_identifiers(
 
 def get_token_identifiers(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-) -> typing.List[typing.TokenAddress]:
+        payment_network_id: PaymentNetworkID,
+) -> List[TokenAddress]:
     """ Return the list of tokens registered with the given payment network. """
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
 
@@ -198,8 +210,8 @@ def get_token_identifiers(
 
 def get_token_network_addresses_for(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-) -> typing.List[typing.Address]:
+        payment_network_id: PaymentNetworkID,
+) -> List[Address]:
     """ Return the list of tokens registered with the given payment network. """
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
 
@@ -214,8 +226,8 @@ def get_token_network_addresses_for(
 
 def total_token_network_channels(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
 ) -> int:
 
     token_network = get_token_network_by_token_address(
@@ -233,9 +245,9 @@ def total_token_network_channels(
 
 def get_token_network_by_token_address(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.Optional[TokenNetworkState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> Optional[TokenNetworkState]:
 
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
     token_network_id = None
@@ -251,8 +263,8 @@ def get_token_network_by_token_address(
 
 def get_token_network_by_identifier(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
-) -> typing.Optional[TokenNetworkState]:
+        token_network_id: TokenNetworkID,
+) -> Optional[TokenNetworkState]:
 
     token_network_state = None
     for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
@@ -267,10 +279,10 @@ def get_token_network_by_identifier(
 
 def get_channelstate_for(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-        partner_address: typing.Address,
-) -> typing.Optional[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+        partner_address: Address,
+) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_token_address(
         chain_state,
@@ -297,9 +309,9 @@ def get_channelstate_for(
 
 def get_channelstate_by_token_network_and_partner(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
-        partner_address: typing.Address,
-) -> typing.Optional[NettingChannelState]:
+        token_network_id: TokenNetworkID,
+        partner_address: Address,
+) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
         chain_state,
@@ -324,9 +336,9 @@ def get_channelstate_by_token_network_and_partner(
 
 def get_channelstate_by_token_network_identifier(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
-        channel_id: typing.ChannelID,
-) -> typing.Optional[NettingChannelState]:
+        token_network_id: TokenNetworkID,
+        channel_id: ChannelID,
+) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
         chain_state,
@@ -342,10 +354,10 @@ def get_channelstate_by_token_network_identifier(
 
 def get_channelstate_by_id(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-        channel_id: typing.ChannelID,
-) -> typing.Optional[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+        channel_id: ChannelID,
+) -> Optional[NettingChannelState]:
     token_network = get_token_network_by_token_address(
         chain_state=chain_state,
         payment_network_id=payment_network_id,
@@ -361,10 +373,10 @@ def get_channelstate_by_id(
 
 def get_channelstate_filter(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-        filter_fn: typing.Callable,
-) -> typing.List[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+        filter_fn: Callable,
+) -> List[NettingChannelState]:
     """ Return the state of channels that match the condition in `filter_fn` """
     token_network = get_token_network_by_token_address(
         chain_state,
@@ -381,9 +393,9 @@ def get_channelstate_filter(
 
 def get_channelstate_open(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.List[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> List[NettingChannelState]:
     """Return the state of open channels in a token network."""
     return get_channelstate_filter(
         chain_state,
@@ -395,9 +407,9 @@ def get_channelstate_open(
 
 def get_channelstate_closing(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.List[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> List[NettingChannelState]:
     """Return the state of closing channels in a token network."""
     return get_channelstate_filter(
         chain_state,
@@ -409,9 +421,9 @@ def get_channelstate_closing(
 
 def get_channelstate_closed(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.List[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> List[NettingChannelState]:
     """Return the state of closed channels in a token network."""
     return get_channelstate_filter(
         chain_state,
@@ -423,9 +435,9 @@ def get_channelstate_closed(
 
 def get_channelstate_settling(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.List[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> List[NettingChannelState]:
     """Return the state of settling channels in a token network."""
     return get_channelstate_filter(
         chain_state,
@@ -437,9 +449,9 @@ def get_channelstate_settling(
 
 def get_channelstate_settled(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.List[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> List[NettingChannelState]:
     """Return the state of settled channels in a token network."""
     return get_channelstate_filter(
         chain_state,
@@ -451,7 +463,7 @@ def get_channelstate_settled(
 
 def get_transfer_role(
         chain_state: ChainState,
-        secrethash: typing.SecretHash,
+        secrethash: SecretHash,
 ) -> str:
 
     transfer_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
@@ -469,9 +481,9 @@ def get_transfer_role(
 
 def list_channelstate_for_tokennetwork(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-) -> typing.List[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+) -> List[NettingChannelState]:
 
     token_network = get_token_network_by_token_address(
         chain_state,
@@ -487,7 +499,7 @@ def list_channelstate_for_tokennetwork(
     return result
 
 
-def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannelState]:
+def list_all_channelstate(chain_state: ChainState) -> List[NettingChannelState]:
     result = []
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
@@ -499,10 +511,10 @@ def list_all_channelstate(chain_state: ChainState) -> typing.List[NettingChannel
 
 def filter_channels_by_partneraddress(
         chain_state: ChainState,
-        payment_network_id: typing.PaymentNetworkID,
-        token_address: typing.TokenAddress,
-        partner_addresses: typing.List[typing.Address],
-) -> typing.List[NettingChannelState]:
+        payment_network_id: PaymentNetworkID,
+        token_address: TokenAddress,
+        partner_addresses: List[Address],
+) -> List[NettingChannelState]:
 
     token_network = get_token_network_by_token_address(
         chain_state,
@@ -528,9 +540,9 @@ def filter_channels_by_partneraddress(
 
 
 def filter_channels_by_status(
-        channel_states: typing.List[NettingChannelState],
+        channel_states: List[NettingChannelState],
         exclude_states=None,
-) -> typing.List[NettingChannelState]:
+) -> List[NettingChannelState]:
     """ Filter the list of channels by excluding ones
     for which the state exists in `exclude_states`. """
 

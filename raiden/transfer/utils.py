@@ -5,20 +5,28 @@ from web3 import Web3
 
 from raiden.constants import EMPTY_HASH
 from raiden.storage import sqlite
-from raiden.utils import typing
 from raiden.utils.serialization import serialize_bytes
+from raiden.utils.typing import (
+    Address,
+    BalanceHash,
+    ChainID,
+    ChannelID,
+    Locksroot,
+    TokenAmount,
+    TokenNetworkID,
+)
 
 
 def get_state_change_or_event_with_balance_proof(
         storage: sqlite.SQLiteStorage,
-        chain_id: typing.ChainID,
-        token_network_identifier: typing.TokenNetworkID,
-        channel_identifier: typing.ChannelID,
+        chain_id: ChainID,
+        token_network_identifier: TokenNetworkID,
+        channel_identifier: ChannelID,
         is_our_unlock: bool,
         is_partner_unlock: bool,
-        our_balance_hash: typing.BalanceHash,
-        partner_balance_hash: typing.BalanceHash,
-        sender: typing.Address,
+        our_balance_hash: BalanceHash,
+        partner_balance_hash: BalanceHash,
+        sender: Address,
 ) -> sqlite.Record:
     """ Returns the state change or event which contains the corresponding balance
     proof depending on who's balance hash we're looking for.
@@ -74,11 +82,11 @@ def get_state_change_or_event_with_balance_proof(
 
 def get_state_change_with_balance_proof(
         storage: sqlite.SQLiteStorage,
-        chain_id: typing.ChainID,
-        token_network_identifier: typing.TokenNetworkID,
-        channel_identifier: typing.ChannelID,
-        balance_hash: typing.BalanceHash,
-        sender: typing.Address,
+        chain_id: ChainID,
+        token_network_identifier: TokenNetworkID,
+        channel_identifier: ChannelID,
+        balance_hash: BalanceHash,
+        sender: Address,
 ) -> sqlite.StateChangeRecord:
     """ Returns the state change which contains the corresponding balance
     proof.
@@ -94,10 +102,10 @@ def get_state_change_with_balance_proof(
 
 def get_event_with_balance_proof(
         storage: sqlite.SQLiteStorage,
-        chain_id: typing.ChainID,
-        token_network_identifier: typing.TokenNetworkID,
-        channel_identifier: typing.ChannelID,
-        balance_hash: typing.BalanceHash,
+        chain_id: ChainID,
+        token_network_identifier: TokenNetworkID,
+        channel_identifier: ChannelID,
+        balance_hash: BalanceHash,
 ) -> sqlite.EventRecord:
     """ Returns the event which contains the corresponding balance
     proof.
@@ -111,9 +119,9 @@ def get_event_with_balance_proof(
 
 
 def hash_balance_data(
-        transferred_amount: typing.TokenAmount,
-        locked_amount: typing.TokenAmount,
-        locksroot: typing.Locksroot,
+        transferred_amount: TokenAmount,
+        locked_amount: TokenAmount,
+        locksroot: Locksroot,
 ) -> bytes:
     assert locksroot != b''
     assert len(locksroot) == 32
