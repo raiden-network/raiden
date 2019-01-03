@@ -48,6 +48,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     Secret,
     SecretHash,
+    Sequence,
     SuccessOrError,
     Tuple,
     cast,
@@ -461,7 +462,7 @@ def set_offchain_secret(
         channelidentifiers_to_channels: ChannelMap,
         secret: Secret,
         secrethash: SecretHash,
-) -> List[Event]:
+) -> Sequence[Event]:
     """ Set the secret to all mediated transfers. """
     state.secret = secret
 
@@ -840,7 +841,7 @@ def events_for_onchain_secretreveal_if_closed(
         transfers_pair: List[MediationPairState],
         secret: Secret,
         secrethash: SecretHash,
-) -> List[ContractSendSecretReveal]:
+) -> Sequence[ContractSendSecretReveal]:
     """ Register the secret on-chain if the payer channel is already closed and
     the mediator learned the secret off-chain.
 
