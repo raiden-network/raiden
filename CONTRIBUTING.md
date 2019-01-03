@@ -467,6 +467,24 @@ Bad Example:
 def foo(a: typing.Optional[int] = None)
 ```
 
+**imports**
+
+Classes must be imported in the global namespace, unless there are name
+collisions and module imports can be used. Example:
+
+```python
+import a
+from b import Normal
+
+
+class Conflict:
+    pass
+
+
+def f():
+    return a.Conflict(), Normal()
+```
+
 #### Solidity
 
 For solidity we generally follow the style guide as shown in the [solidity
