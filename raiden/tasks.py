@@ -232,6 +232,8 @@ class AlarmTask(Runnable):
 
     def stop(self):
         self._stop_event.set(True)
-        self.callbacks = []
         log.debug('Alarm task stopped', node=pex(self.chain.node_address))
-        return self.join()
+        result = self.join()
+        # Callbacks should be cleaned after join
+        self.callbacks = []
+        return result
