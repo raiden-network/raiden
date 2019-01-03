@@ -145,27 +145,6 @@ def get_all_netting_channel_events(
     )
 
 
-def get_all_secret_registry_events(
-        chain: BlockChainService,
-        secret_registry_address: Address,
-        contract_manager: ContractManager,
-        from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
-        to_block: BlockSpecification = 'latest',
-) -> List[Dict]:
-    """ Helper to get all events of a SecretRegistry. """
-
-    return get_contract_events(
-        chain,
-        contract_manager.get_contract_abi(
-            CONTRACT_SECRET_REGISTRY,
-        ),
-        secret_registry_address,
-        ALL_EVENTS,
-        from_block,
-        to_block,
-    )
-
-
 def decode_event_to_internal(event):
     """ Enforce the binary encoding of address for internal usage. """
     data = event.event_data

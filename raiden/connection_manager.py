@@ -3,7 +3,6 @@ from random import shuffle
 import gevent
 import structlog
 from eth_utils import decode_hex
-from gevent.event import AsyncResult
 from gevent.lock import Semaphore
 
 from raiden import waiting
@@ -165,12 +164,6 @@ class ConnectionManager:
                 )
             else:
                 self._open_channels()
-
-    def leave_async(self):
-        """ Async version of `leave()` """
-        leave_result = AsyncResult()
-        gevent.spawn(self.leave).link(leave_result)
-        return leave_result
 
     def leave(self, registry_address):
         """ Leave the token network.
