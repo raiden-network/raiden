@@ -997,10 +997,10 @@ class HashTimeLockState(State):
 
     __slots__ = (
         'amount',
-        'expiration',
+        'expiration',   # latest block number when the secret has to be revealed
         'secrethash',
-        'encoded',
-        'lockhash',
+        'encoded',      # serialization of the above fields
+        'lockhash',     # hash of 'encoded'
     )
 
     def __init__(
