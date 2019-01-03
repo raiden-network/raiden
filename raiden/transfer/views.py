@@ -19,6 +19,7 @@ from raiden.transfer.state import (
 )
 from raiden.utils.typing import (
     Address,
+    BlockNumber,
     Callable,
     ChannelID,
     Dict,
@@ -50,7 +51,7 @@ def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
     return addresses
 
 
-def block_number(chain_state: ChainState) -> int:
+def block_number(chain_state: ChainState) -> BlockNumber:
     return chain_state.block_number
 
 
