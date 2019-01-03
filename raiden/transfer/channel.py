@@ -1312,14 +1312,15 @@ def events_for_close(
             None,
         )
 
+        balance_proof = channel_state.partner_state.balance_proof
         # silence mypy: partner's balance proofs should be signed
-        assert not isinstance(channel_state.partner_state.balance_proof, BalanceProofUnsignedState)
+        assert balance_proof is None or isinstance(balance_proof, BalanceProofSignedState)
 
         close_event = ContractSendChannelClose(
             channel_state.identifier,
             channel_state.token_address,
             channel_state.token_network_identifier,
-            channel_state.partner_state.balance_proof,
+            balance_proof,
         )
 
         events.append(close_event)
@@ -1340,10 +1341,9 @@ def create_sendexpiredlock(
     locked_amount = get_amount_locked(sender_end_state)
     balance_proof = sender_end_state.balance_proof
     updated_locked_amount: typing.TokenAmount = locked_amount - locked_lock.amount
-    if balance_proof:
-        transferred_amount = balance_proof.transferred_amount
-    else:
-        transferred_amount = 0
+
+    assert balance_proof is not None, 'there should be a balance proof because a lock is expiring'
+    transferred_amount = balance_proof.transferred_amount
 
     merkletree = compute_merkletree_without(sender_end_state.merkletree, locked_lock.lockhash)
 
@@ -1713,10 +1713,8 @@ def handle_channel_closed(
         )
         if call_update:
             expiration = state_change.block_number + channel_state.settle_timeout
-            # silence mypy: checked above already
-            assert balance_proof is not None
             # silence mypy: partner's balance proof is always signed
-            assert not isinstance(balance_proof, BalanceProofUnsignedState)
+            assert isinstance(balance_proof, BalanceProofSignedState)
             # The channel was closed by our partner, if there is a balance
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
