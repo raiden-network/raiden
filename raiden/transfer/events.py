@@ -8,7 +8,28 @@ from raiden.transfer.architecture import (
     SendMessageEvent,
 )
 from raiden.transfer.state import BalanceProofSignedState
-from raiden.utils import pex, serialization, sha3, typing
+from raiden.utils import pex, serialization, sha3
+from raiden.utils.typing import (
+    Address,
+    Any,
+    BlockExpiration,
+    ChannelID,
+    Dict,
+    InitiatorAddress,
+    Optional,
+    PaymentID,
+    PaymentNetworkID,
+    Secret,
+    SecretHash,
+    T_ChannelID,
+    T_Secret,
+    T_TokenNetworkAddress,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+    TokenNetworkAddress,
+    TokenNetworkID,
+)
 
 # pylint: disable=too-many-arguments,too-few-public-methods
 
@@ -21,10 +42,10 @@ class ContractSendChannelClose(ContractSendEvent):
 
     def __init__(
             self,
-            channel_identifier: typing.ChannelID,
-            token_address: typing.TokenAddress,
-            token_network_identifier: typing.TokenNetworkID,
-            balance_proof: typing.Optional[BalanceProofSignedState],
+            channel_identifier: ChannelID,
+            token_address: TokenAddress,
+            token_network_identifier: TokenNetworkID,
+            balance_proof: Optional[BalanceProofSignedState],
     ):
         self.channel_identifier = channel_identifier
         self.token_address = token_address
@@ -53,7 +74,7 @@ class ContractSendChannelClose(ContractSendEvent):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'channel_identifier': str(self.channel_identifier),
             'token_address': to_checksum_address(self.token_address),
@@ -64,9 +85,9 @@ class ContractSendChannelClose(ContractSendEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelClose':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelClose':
         restored = cls(
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
@@ -80,14 +101,14 @@ class ContractSendChannelSettle(ContractSendEvent):
 
     def __init__(
             self,
-            channel_identifier: typing.ChannelID,
-            token_network_identifier: typing.TokenNetworkAddress,
+            channel_identifier: ChannelID,
+            token_network_identifier: TokenNetworkAddress,
 
     ):
-        if not isinstance(channel_identifier, typing.T_ChannelID):
+        if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be a ChannelID instance')
 
-        if not isinstance(token_network_identifier, typing.T_TokenNetworkAddress):
+        if not isinstance(token_network_identifier, T_TokenNetworkAddress):
             raise ValueError('token_network_identifier must be a TokenNetworkAddress instance')
 
         self.channel_identifier = channel_identifier
@@ -109,7 +130,7 @@ class ContractSendChannelSettle(ContractSendEvent):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'channel_identifier': str(self.channel_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -118,9 +139,9 @@ class ContractSendChannelSettle(ContractSendEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelSettle':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelSettle':
         restored = cls(
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
         )
 
@@ -132,9 +153,9 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
 
     def __init__(
             self,
-            expiration: typing.BlockExpiration,
-            channel_identifier: typing.ChannelID,
-            token_network_identifier: typing.TokenNetworkID,
+            expiration: BlockExpiration,
+            channel_identifier: ChannelID,
+            token_network_identifier: TokenNetworkID,
             balance_proof: BalanceProofSignedState,
     ):
         super().__init__(expiration)
@@ -164,7 +185,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'expiration': str(self.expiration),
             'channel_identifier': str(self.channel_identifier),
@@ -175,10 +196,10 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelUpdateTransfer':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelUpdateTransfer':
         restored = cls(
             expiration=int(data['expiration']),
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
         )
@@ -191,10 +212,10 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
     def __init__(
             self,
-            token_address: typing.TokenAddress,
-            token_network_identifier: typing.TokenNetworkID,
-            channel_identifier: typing.ChannelID,
-            participant: typing.Address,
+            token_address: TokenAddress,
+            token_network_identifier: TokenNetworkID,
+            channel_identifier: ChannelID,
+            participant: Address,
     ):
         self.token_address = token_address
         self.token_network_identifier = token_network_identifier
@@ -225,7 +246,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -236,11 +257,11 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendChannelBatchUnlock':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelBatchUnlock':
         restored = cls(
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
             participant=to_canonical_address(data['participant']),
         )
 
@@ -250,15 +271,15 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 class ContractSendSecretReveal(ContractSendExpirableEvent):
     """ Event emitted when the lock must be claimed on-chain. """
 
-    def __init__(self, expiration: typing.BlockExpiration, secret: typing.Secret):
-        if not isinstance(secret, typing.T_Secret):
+    def __init__(self, expiration: BlockExpiration, secret: Secret):
+        if not isinstance(secret, T_Secret):
             raise ValueError('secret must be a Secret instance')
 
         super().__init__(expiration)
         self.secret = secret
 
     def __repr__(self):
-        secrethash: typing.SecretHash = typing.SecretHash(sha3(self.secret))
+        secrethash: SecretHash = SecretHash(sha3(self.secret))
         return '<ContractSendSecretReveal secrethash:{}>'.format(secrethash)
 
     def __eq__(self, other):
@@ -271,7 +292,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'expiration': str(self.expiration),
             'secret': serialization.serialize_bytes(self.secret),
@@ -280,7 +301,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ContractSendSecretReveal':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendSecretReveal':
         restored = cls(
             expiration=int(data['expiration']),
             secret=serialization.deserialize_bytes(data['secret']),
@@ -314,11 +335,11 @@ class EventPaymentSentSuccess(Event):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_network_identifier: typing.TokenNetworkID,
-            identifier: typing.PaymentID,
-            amount: typing.TokenAmount,
-            target: typing.TargetAddress,
+            payment_network_identifier: PaymentNetworkID,
+            token_network_identifier: TokenNetworkID,
+            identifier: PaymentID,
+            amount: TokenAmount,
+            target: TargetAddress,
     ):
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
@@ -355,7 +376,7 @@ class EventPaymentSentSuccess(Event):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -367,7 +388,7 @@ class EventPaymentSentSuccess(Event):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'EventPaymentSentSuccess':
+    def from_dict(cls, data: Dict[str, Any]) -> 'EventPaymentSentSuccess':
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -389,10 +410,10 @@ class EventPaymentSentFailed(Event):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_network_identifier: typing.TokenNetworkID,
-            identifier: typing.PaymentID,
-            target: typing.TargetAddress,
+            payment_network_identifier: PaymentNetworkID,
+            token_network_identifier: TokenNetworkID,
+            identifier: PaymentID,
+            target: TargetAddress,
             reason: str,
     ):
         self.payment_network_identifier = payment_network_identifier
@@ -429,7 +450,7 @@ class EventPaymentSentFailed(Event):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -441,7 +462,7 @@ class EventPaymentSentFailed(Event):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'EventPaymentSentFailed':
+    def from_dict(cls, data: Dict[str, Any]) -> 'EventPaymentSentFailed':
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -465,11 +486,11 @@ class EventPaymentReceivedSuccess(Event):
 
     def __init__(
             self,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_network_identifier: typing.TokenNetworkID,
-            identifier: typing.PaymentID,
-            amount: typing.TokenAmount,
-            initiator: typing.InitiatorAddress,
+            payment_network_identifier: PaymentNetworkID,
+            token_network_identifier: TokenNetworkID,
+            identifier: PaymentID,
+            amount: TokenAmount,
+            initiator: InitiatorAddress,
     ):
         if amount < 0:
             raise ValueError('transferred_amount cannot be negative')
@@ -511,7 +532,7 @@ class EventPaymentReceivedSuccess(Event):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
@@ -523,7 +544,7 @@ class EventPaymentReceivedSuccess(Event):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'EventPaymentReceivedSuccess':
+    def from_dict(cls, data: Dict[str, Any]) -> 'EventPaymentReceivedSuccess':
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
@@ -538,7 +559,7 @@ class EventPaymentReceivedSuccess(Event):
 class EventInvalidReceivedTransferRefund(Event):
     """ Event emitted when an invalid refund transfer is received. """
 
-    def __init__(self, payment_identifier: typing.PaymentID, reason: str):
+    def __init__(self, payment_identifier: PaymentID, reason: str):
         self.payment_identifier = payment_identifier
         self.reason = reason
 
@@ -561,7 +582,7 @@ class EventInvalidReceivedTransferRefund(Event):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'payment_identifier': str(self.payment_identifier),
             'reason': self.reason,
@@ -572,7 +593,7 @@ class EventInvalidReceivedTransferRefund(Event):
     @classmethod
     def from_dict(
             cls,
-            data: typing.Dict[str, typing.Any],
+            data: Dict[str, Any],
     )-> 'EventInvalidReceivedTransferRefund':
         restored = cls(
             payment_identifier=int(data['payment_identifier']),
@@ -585,7 +606,7 @@ class EventInvalidReceivedTransferRefund(Event):
 class EventInvalidReceivedLockExpired(Event):
     """ Event emitted when an invalid lock expired message is received. """
 
-    def __init__(self, secrethash: typing.SecretHash, reason: str):
+    def __init__(self, secrethash: SecretHash, reason: str):
         self.secrethash = secrethash
         self.reason = reason
 
@@ -608,7 +629,7 @@ class EventInvalidReceivedLockExpired(Event):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'secrethash': serialization.serialize_bytes(self.secrethash),
             'reason': self.reason,
@@ -619,7 +640,7 @@ class EventInvalidReceivedLockExpired(Event):
     @classmethod
     def from_dict(
             cls,
-            data: typing.Dict[str, typing.Any],
+            data: Dict[str, Any],
     )-> 'EventInvalidReceivedLockExpired':
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
@@ -632,7 +653,7 @@ class EventInvalidReceivedLockExpired(Event):
 class EventInvalidReceivedLockedTransfer(Event):
     """ Event emitted when an invalid locked transfer is received. """
 
-    def __init__(self, payment_identifier: typing.PaymentID, reason: str):
+    def __init__(self, payment_identifier: PaymentID, reason: str):
         self.payment_identifier = payment_identifier
         self.reason = reason
 
@@ -655,7 +676,7 @@ class EventInvalidReceivedLockedTransfer(Event):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'payment_identifier': str(self.payment_identifier),
             'reason': self.reason,
@@ -666,7 +687,7 @@ class EventInvalidReceivedLockedTransfer(Event):
     @classmethod
     def from_dict(
             cls,
-            data: typing.Dict[str, typing.Any],
+            data: Dict[str, Any],
     )-> 'EventInvalidReceivedLockedTransfer':
         restored = cls(
             payment_identifier=int(data['payment_identifier']),
@@ -679,7 +700,7 @@ class EventInvalidReceivedLockedTransfer(Event):
 class EventInvalidReceivedUnlock(Event):
     """ Event emitted when an invalid unlock message is received. """
 
-    def __init__(self, secrethash: typing.SecretHash, reason: str):
+    def __init__(self, secrethash: SecretHash, reason: str):
         self.secrethash = secrethash
         self.reason = reason
 
@@ -702,7 +723,7 @@ class EventInvalidReceivedUnlock(Event):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'secrethash': serialization.serialize_bytes(self.secrethash),
             'reason': self.reason,
@@ -713,7 +734,7 @@ class EventInvalidReceivedUnlock(Event):
     @classmethod
     def from_dict(
             cls,
-            data: typing.Dict[str, typing.Any],
+            data: Dict[str, Any],
     )-> 'EventInvalidReceivedUnlock':
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
@@ -741,7 +762,7 @@ class SendProcessed(SendMessageEvent):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'recipient': to_checksum_address(self.recipient),
             'channel_identifier': str(self.queue_identifier.channel_identifier),
@@ -751,10 +772,10 @@ class SendProcessed(SendMessageEvent):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'SendProcessed':
+    def from_dict(cls, data: Dict[str, Any]) -> 'SendProcessed':
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
             message_identifier=int(data['message_identifier']),
         )
 

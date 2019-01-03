@@ -19,7 +19,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import NettingChannelState
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
-from raiden.utils import typing
+from raiden.utils.typing import BlockNumber, ChannelMap, List
 
 # TODO:
 # - Add synchronization for expired locks (issue #193).
@@ -55,7 +55,7 @@ def sanity_check(payment_state: InitiatorPaymentState):
     ), 'either the task must be finished or there must be an initiator transfer pending'
 
 
-def events_for_cancel_current_route(transfer_description) -> typing.List[Event]:
+def events_for_cancel_current_route(transfer_description) -> List[Event]:
     unlock_failed = EventUnlockFailed(
         identifier=transfer_description.payment_identifier,
         secrethash=transfer_description.secrethash,
@@ -64,7 +64,7 @@ def events_for_cancel_current_route(transfer_description) -> typing.List[Event]:
     return [unlock_failed]
 
 
-def cancel_current_route(payment_state: InitiatorPaymentState) -> typing.List[Event]:
+def cancel_current_route(payment_state: InitiatorPaymentState) -> List[Event]:
     """ Cancel current route.
 
     This allows a new route to be tried.
@@ -82,7 +82,7 @@ def cancel_current_route(payment_state: InitiatorPaymentState) -> typing.List[Ev
 def handle_block(
         payment_state: InitiatorPaymentState,
         state_change: Block,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
@@ -103,11 +103,11 @@ def handle_block(
 def handle_init(
         payment_state: InitiatorPaymentState,
         state_change: ActionInitInitiator,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
-    events: typing.List[Event]
+    events: List[Event]
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             old_initiator_state=None,
@@ -131,11 +131,11 @@ def handle_init(
 def handle_cancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ActionCancelRoute,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
-    events: typing.List[Event] = list()
+    events: List[Event] = list()
     if can_cancel(payment_state):
         old_initiator_state = payment_state.initiator
         transfer_description = payment_state.initiator.transfer_description
@@ -192,9 +192,9 @@ def handle_cancelpayment(
 def handle_transferrefundcancelroute(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveTransferRefundCancelRoute,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
 
     channel_identifier = payment_state.initiator.channel_identifier
@@ -255,9 +255,9 @@ def handle_transferrefundcancelroute(
 def handle_lock_expired(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveLockExpired,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     """Initiator also needs to handle LockExpired messages when refund transfers are involved.
 
@@ -295,7 +295,7 @@ def handle_lock_expired(
 def handle_offchain_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
@@ -313,7 +313,7 @@ def handle_offchain_secretreveal(
 def handle_onchain_secretreveal(
         payment_state: InitiatorPaymentState,
         state_change: ReceiveSecretReveal,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     channel_identifier = payment_state.initiator.channel_identifier
@@ -331,9 +331,9 @@ def handle_onchain_secretreveal(
 def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
-        channelidentifiers_to_channels: typing.ChannelMap,
+        channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-        block_number: typing.BlockNumber,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     # pylint: disable=unidiomatic-typecheck
     if type(state_change) == Block:

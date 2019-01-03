@@ -5,17 +5,17 @@ from raiden.transfer.state import (
     CHANNEL_STATES_PRIOR_TO_CLOSED,
     NettingChannelState,
 )
-from raiden.utils import typing
+from raiden.utils.typing import BlockExpiration, List, Secret, T_Secret
 
 
 def events_for_onchain_secretreveal(
         channel_state: NettingChannelState,
-        secret: typing.Secret,
-        expiration: typing.BlockExpiration,
-) -> typing.List[ContractSendSecretReveal]:
+        secret: Secret,
+        expiration: BlockExpiration,
+) -> List[ContractSendSecretReveal]:
     events = list()
 
-    if not isinstance(secret, typing.T_Secret):
+    if not isinstance(secret, T_Secret):
         raise ValueError('secret must be a Secret instance')
 
     if get_status(channel_state) in CHANNEL_STATES_PRIOR_TO_CLOSED + (CHANNEL_STATE_CLOSED, ):

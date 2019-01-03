@@ -1,15 +1,23 @@
-from raiden.utils import typing
 from raiden.utils.signing import pack_data
+from raiden.utils.typing import (
+    AdditionalHash,
+    BalanceHash,
+    ChainID,
+    ChannelID,
+    Nonce,
+    Signature,
+    TokenNetworkID,
+)
 from raiden_contracts.constants import MessageTypeId
 
 
 def pack_balance_proof(
-        nonce: typing.Nonce,
-        balance_hash: typing.BalanceHash,
-        additional_hash: typing.AdditionalHash,
-        channel_identifier: typing.ChannelID,
-        token_network_identifier: typing.TokenNetworkID,
-        chain_id: typing.ChainID,
+        nonce: Nonce,
+        balance_hash: BalanceHash,
+        additional_hash: AdditionalHash,
+        channel_identifier: ChannelID,
+        token_network_identifier: TokenNetworkID,
+        chain_id: ChainID,
         msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF,
 ) -> bytes:
     """Packs balance proof data to be signed
@@ -37,13 +45,13 @@ def pack_balance_proof(
 
 
 def pack_balance_proof_update(
-        nonce: typing.Nonce,
-        balance_hash: typing.BalanceHash,
-        additional_hash: typing.AdditionalHash,
-        channel_identifier: typing.ChannelID,
-        token_network_identifier: typing.TokenNetworkID,
-        chain_id: typing.ChainID,
-        partner_signature: typing.Signature,
+        nonce: Nonce,
+        balance_hash: BalanceHash,
+        additional_hash: AdditionalHash,
+        channel_identifier: ChannelID,
+        token_network_identifier: TokenNetworkID,
+        chain_id: ChainID,
+        partner_signature: Signature,
 ) -> bytes:
     """Packs balance proof data to be signed for updateNonClosingBalanceProof
 

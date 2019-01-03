@@ -2,7 +2,6 @@
 import random
 from collections import defaultdict
 from functools import total_ordering
-from typing import Optional
 
 import networkx
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
@@ -14,13 +13,46 @@ from raiden.transfer.architecture import SendMessageEvent, State
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_from_json
-from raiden.utils import lpex, pex, serialization, sha3, typing
+from raiden.utils import lpex, pex, serialization, sha3
 from raiden.utils.serialization import map_dict, map_list, serialize_bytes
+from raiden.utils.typing import (
+    Address,
+    Any,
+    Balance,
+    BlockExpiration,
+    BlockNumber,
+    BlockTimeout,
+    ChainID,
+    ChannelID,
+    Dict,
+    Keccak256,
+    List,
+    LockHash,
+    Locksroot,
+    Optional,
+    PaymentAmount,
+    PaymentNetworkID,
+    Secret,
+    SecretHash,
+    Signature,
+    T_Address,
+    T_BlockNumber,
+    T_ChainID,
+    T_ChannelID,
+    T_Keccak256,
+    T_Secret,
+    T_Signature,
+    T_TokenAmount,
+    TokenAddress,
+    TokenAmount,
+    TokenNetworkID,
+    Union,
+)
 
-SecretHashToLock = typing.Dict[typing.SecretHash, 'HashTimeLockState']
-SecretHashToPartialUnlockProof = typing.Dict[typing.SecretHash, 'UnlockPartialProofState']
-QueueIdsToQueues = typing.Dict[QueueIdentifier, typing.List[SendMessageEvent]]
-OptionalBalanceProofState = typing.Optional[typing.Union[
+SecretHashToLock = Dict[SecretHash, 'HashTimeLockState']
+SecretHashToPartialUnlockProof = Dict[SecretHash, 'UnlockPartialProofState']
+QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
+OptionalBalanceProofState = Optional[Union[
     'BalanceProofSignedState',
     'BalanceProofUnsignedState',
 ]]
@@ -92,7 +124,7 @@ class InitiatorTask(State):
 
     def __init__(
             self,
-            token_network_identifier: typing.TokenNetworkID,
+            token_network_identifier: TokenNetworkID,
             manager_state: State,
     ):
         self.token_network_identifier = token_network_identifier
@@ -114,14 +146,14 @@ class InitiatorTask(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'manager_state': self.manager_state,
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'InitiatorTask':
+    def from_dict(cls, data: Dict[str, Any]) -> 'InitiatorTask':
         return cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             manager_state=data['manager_state'],
@@ -136,7 +168,7 @@ class MediatorTask(State):
 
     def __init__(
             self,
-            token_network_identifier: typing.TokenNetworkID,
+            token_network_identifier: TokenNetworkID,
             mediator_state,
     ):
         self.token_network_identifier = token_network_identifier
@@ -158,14 +190,14 @@ class MediatorTask(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'mediator_state': self.mediator_state,
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MediatorTask':
+    def from_dict(cls, data: Dict[str, Any]) -> 'MediatorTask':
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             mediator_state=data['mediator_state'],
@@ -183,8 +215,8 @@ class TargetTask(State):
 
     def __init__(
             self,
-            token_network_identifier: typing.TokenNetworkID,
-            channel_identifier: typing.ChannelID,
+            token_network_identifier: TokenNetworkID,
+            channel_identifier: ChannelID,
             target_state,
     ):
         self.token_network_identifier = token_network_identifier
@@ -209,7 +241,7 @@ class TargetTask(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': str(self.channel_identifier),
@@ -217,10 +249,10 @@ class TargetTask(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TargetTask':
+    def from_dict(cls, data: Dict[str, Any]) -> 'TargetTask':
         restored = cls(
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
             target_state=data['target_state'],
         )
 
@@ -251,14 +283,14 @@ class ChainState(State):
     def __init__(
             self,
             pseudo_random_generator: random.Random,
-            block_number: typing.BlockNumber,
-            our_address: typing.Address,
-            chain_id: typing.ChainID,
+            block_number: BlockNumber,
+            our_address: Address,
+            chain_id: ChainID,
     ):
-        if not isinstance(block_number, typing.T_BlockNumber):
+        if not isinstance(block_number, T_BlockNumber):
             raise ValueError('block_number must be of BlockNumber type')
 
-        if not isinstance(chain_id, typing.T_ChainID):
+        if not isinstance(chain_id, T_ChainID):
             raise ValueError('chain_id must be of ChainID type')
 
         self.block_number = block_number
@@ -296,7 +328,7 @@ class ChainState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'block_number': str(self.block_number),
             'chain_id': self.chain_id,
@@ -321,13 +353,13 @@ class ChainState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'ChainState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ChainState':
         pseudo_random_generator = pseudo_random_generator_from_json(data)
 
         restored = cls(
             pseudo_random_generator=pseudo_random_generator,
-            block_number=typing.BlockNumber(
-                typing.T_BlockNumber(data['block_number']),
+            block_number=BlockNumber(
+                T_BlockNumber(data['block_number']),
             ),
             our_address=to_canonical_address(data['our_address']),
             chain_id=data['chain_id'],
@@ -364,10 +396,10 @@ class PaymentNetworkState(State):
 
     def __init__(
             self,
-            address: typing.Address,
-            token_network_list: typing.List['TokenNetworkState'],
+            address: Address,
+            token_network_list: List['TokenNetworkState'],
     ):
-        if not isinstance(address, typing.T_Address):
+        if not isinstance(address, T_Address):
             raise ValueError('address must be an address instance')
 
         self.address = address
@@ -394,7 +426,7 @@ class PaymentNetworkState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'address': to_checksum_address(self.address),
             'tokennetworks': [
@@ -403,7 +435,7 @@ class PaymentNetworkState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentNetworkState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'PaymentNetworkState':
         restored = cls(
             address=to_canonical_address(data['address']),
             token_network_list=[
@@ -425,12 +457,12 @@ class TokenNetworkState(State):
         'partneraddresses_to_channelidentifiers',
     )
 
-    def __init__(self, address: typing.TokenNetworkID, token_address: typing.TokenAddress):
+    def __init__(self, address: TokenNetworkID, token_address: TokenAddress):
 
-        if not isinstance(address, typing.T_Address):
+        if not isinstance(address, T_Address):
             raise ValueError('address must be an address instance')
 
-        if not isinstance(token_address, typing.T_Address):
+        if not isinstance(token_address, T_Address):
             raise ValueError('token_address must be an address instance')
 
         self.address = address
@@ -462,7 +494,7 @@ class TokenNetworkState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'address': to_checksum_address(self.address),
             'token_address': to_checksum_address(self.token_address),
@@ -480,7 +512,7 @@ class TokenNetworkState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'TokenNetworkState':
         restored = cls(
             address=to_canonical_address(data['address']),
             token_address=to_canonical_address(data['token_address']),
@@ -518,7 +550,7 @@ class TokenNetworkGraphState(State):
         'channel_identifier_to_participants',
     )
 
-    def __init__(self, token_network_address: typing.TokenNetworkID):
+    def __init__(self, token_network_address: TokenNetworkID):
         self.token_network_id = token_network_address
         self.network = networkx.Graph()
         self.channel_identifier_to_participants = {}
@@ -542,7 +574,7 @@ class TokenNetworkGraphState(State):
             sorted(edge) for edge in self.network.edges()
         ])
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'token_network_id': to_checksum_address(self.token_network_id),
             'network': serialization.serialize_networkx_graph(self.network),
@@ -554,7 +586,7 @@ class TokenNetworkGraphState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TokenNetworkGraphState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'TokenNetworkGraphState':
         restored = cls(
             token_network_address=to_canonical_address(data['token_network_id']),
         )
@@ -605,7 +637,7 @@ class PaymentMappingState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'secrethashes_to_task': map_dict(
                 serialization.serialize_bytes,
@@ -615,7 +647,7 @@ class PaymentMappingState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'PaymentMappingState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'PaymentMappingState':
         restored = cls()
         restored.secrethashes_to_task = map_dict(
             serialization.deserialize_bytes,
@@ -641,10 +673,10 @@ class RouteState(State):
 
     def __init__(
             self,
-            node_address: typing.Address,
-            channel_identifier: typing.ChannelID,
+            node_address: Address,
+            channel_identifier: ChannelID,
     ):
-        if not isinstance(node_address, typing.T_Address):
+        if not isinstance(node_address, T_Address):
             raise ValueError('node_address must be an address instance')
 
         self.node_address = node_address
@@ -666,17 +698,17 @@ class RouteState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'node_address': to_checksum_address(self.node_address),
             'channel_identifier': str(self.channel_identifier),
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'RouteState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'RouteState':
         restored = cls(
             node_address=to_canonical_address(data['node_address']),
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
         )
 
         return restored
@@ -698,29 +730,29 @@ class BalanceProofUnsignedState(State):
     def __init__(
             self,
             nonce: int,
-            transferred_amount: typing.TokenAmount,
-            locked_amount: typing.TokenAmount,
-            locksroot: typing.Locksroot,
-            token_network_identifier: typing.TokenNetworkID,
-            channel_identifier: typing.ChannelID,  # FIXME: is this used anywhere
-            chain_id: typing.ChainID,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
+            locksroot: Locksroot,
+            token_network_identifier: TokenNetworkID,
+            channel_identifier: ChannelID,  # FIXME: is this used anywhere
+            chain_id: ChainID,
     ):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
-        if not isinstance(transferred_amount, typing.T_TokenAmount):
+        if not isinstance(transferred_amount, T_TokenAmount):
             raise ValueError('transferred_amount must be a token_amount instance')
 
-        if not isinstance(locked_amount, typing.T_TokenAmount):
+        if not isinstance(locked_amount, T_TokenAmount):
             raise ValueError('locked_amount must be a token_amount instance')
 
-        if not isinstance(locksroot, typing.T_Keccak256):
+        if not isinstance(locksroot, T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(channel_identifier, typing.T_ChannelID):
+        if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be an T_ChannelID instance')
 
-        if not isinstance(chain_id, typing.T_ChainID):
+        if not isinstance(chain_id, T_ChainID):
             raise ValueError('chain_id must be a ChainID instance')
 
         if nonce <= 0:
@@ -788,7 +820,7 @@ class BalanceProofUnsignedState(State):
             locksroot=self.locksroot,
         )
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'nonce': self.nonce,
             'transferred_amount': str(self.transferred_amount),
@@ -802,14 +834,14 @@ class BalanceProofUnsignedState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofUnsignedState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'BalanceProofUnsignedState':
         restored = cls(
             nonce=data['nonce'],
-            transferred_amount=typing.TokenAmount(int(data['transferred_amount'])),
-            locked_amount=typing.TokenAmount(int(data['locked_amount'])),
-            locksroot=typing.Locksroot(serialization.deserialize_bytes(data['locksroot'])),
+            transferred_amount=TokenAmount(int(data['transferred_amount'])),
+            locked_amount=TokenAmount(int(data['locked_amount'])),
+            locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
             chain_id=data['chain_id'],
         )
 
@@ -837,44 +869,44 @@ class BalanceProofSignedState(State):
     def __init__(
             self,
             nonce: int,
-            transferred_amount: typing.TokenAmount,
-            locked_amount: typing.TokenAmount,
-            locksroot: typing.Locksroot,
-            token_network_identifier: typing.TokenNetworkID,
-            channel_identifier: typing.ChannelID,
-            message_hash: typing.Keccak256,
-            signature: typing.Signature,
-            sender: typing.Address,
-            chain_id: typing.ChainID,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
+            locksroot: Locksroot,
+            token_network_identifier: TokenNetworkID,
+            channel_identifier: ChannelID,
+            message_hash: Keccak256,
+            signature: Signature,
+            sender: Address,
+            chain_id: ChainID,
     ):
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
-        if not isinstance(transferred_amount, typing.T_TokenAmount):
+        if not isinstance(transferred_amount, T_TokenAmount):
             raise ValueError('transferred_amount must be a token_amount instance')
 
-        if not isinstance(locked_amount, typing.T_TokenAmount):
+        if not isinstance(locked_amount, T_TokenAmount):
             raise ValueError('locked_amount must be a token_amount instance')
 
-        if not isinstance(locksroot, typing.T_Keccak256):
+        if not isinstance(locksroot, T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(token_network_identifier, typing.T_Address):
+        if not isinstance(token_network_identifier, T_Address):
             raise ValueError('token_network_identifier must be an address instance')
 
-        if not isinstance(channel_identifier, typing.T_ChannelID):
+        if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be an ChannelID instance')
 
-        if not isinstance(message_hash, typing.T_Keccak256):
+        if not isinstance(message_hash, T_Keccak256):
             raise ValueError('message_hash must be a keccak256 instance')
 
-        if not isinstance(signature, typing.T_Signature):
+        if not isinstance(signature, T_Signature):
             raise ValueError('signature must be a signature instance')
 
-        if not isinstance(sender, typing.T_Address):
+        if not isinstance(sender, T_Address):
             raise ValueError('sender must be an address instance')
 
-        if not isinstance(chain_id, typing.T_ChainID):
+        if not isinstance(chain_id, T_ChainID):
             raise ValueError('chain_id must be a ChainID instance')
 
         if nonce <= 0:
@@ -958,7 +990,7 @@ class BalanceProofSignedState(State):
             locksroot=self.locksroot,
         )
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'nonce': self.nonce,
             'transferred_amount': str(self.transferred_amount),
@@ -975,16 +1007,16 @@ class BalanceProofSignedState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'BalanceProofSignedState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'BalanceProofSignedState':
         restored = cls(
             nonce=data['nonce'],
-            transferred_amount=typing.TokenAmount(int(data['transferred_amount'])),
-            locked_amount=typing.TokenAmount(int(data['locked_amount'])),
-            locksroot=typing.Locksroot(serialization.deserialize_bytes(data['locksroot'])),
+            transferred_amount=TokenAmount(int(data['transferred_amount'])),
+            locked_amount=TokenAmount(int(data['locked_amount'])),
+            locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
-            message_hash=typing.Keccak256(serialization.deserialize_bytes(data['message_hash'])),
-            signature=typing.Signature(serialization.deserialize_bytes(data['signature'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
+            message_hash=Keccak256(serialization.deserialize_bytes(data['message_hash'])),
+            signature=Signature(serialization.deserialize_bytes(data['signature'])),
             sender=to_canonical_address(data['sender']),
             chain_id=data['chain_id'],
         )
@@ -1005,17 +1037,17 @@ class HashTimeLockState(State):
 
     def __init__(
             self,
-            amount: typing.PaymentAmount,
-            expiration: typing.BlockExpiration,
-            secrethash: typing.SecretHash,
+            amount: PaymentAmount,
+            expiration: BlockExpiration,
+            secrethash: SecretHash,
     ):
-        if not isinstance(amount, typing.T_TokenAmount):
+        if not isinstance(amount, T_TokenAmount):
             raise ValueError('amount must be a token_amount instance')
 
-        if not isinstance(expiration, typing.T_BlockNumber):
+        if not isinstance(expiration, T_BlockNumber):
             raise ValueError('expiration must be a block_number instance')
 
-        if not isinstance(secrethash, typing.T_Keccak256):
+        if not isinstance(secrethash, T_Keccak256):
             raise ValueError('secrethash must be a keccak256 instance')
 
         packed = messages.Lock(buffer_for(messages.Lock))
@@ -1028,7 +1060,7 @@ class HashTimeLockState(State):
         self.expiration = expiration
         self.secrethash = secrethash
         self.encoded = encoded
-        self.lockhash: typing.LockHash = typing.LockHash(sha3(encoded))
+        self.lockhash: LockHash = LockHash(sha3(encoded))
 
     def __repr__(self):
         return '<HashTimeLockState amount:{} expiration:{} secrethash:{}>'.format(
@@ -1051,7 +1083,7 @@ class HashTimeLockState(State):
     def __hash__(self):
         return self.lockhash
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'amount': self.amount,
             'expiration': self.expiration,
@@ -1059,7 +1091,7 @@ class HashTimeLockState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'HashTimeLockState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'HashTimeLockState':
         restored = cls(
             amount=data['amount'],
             expiration=data['expiration'],
@@ -1082,11 +1114,11 @@ class UnlockPartialProofState(State):
         'lockhash',
     )
 
-    def __init__(self, lock: HashTimeLockState, secret: typing.Secret):
+    def __init__(self, lock: HashTimeLockState, secret: Secret):
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
-        if not isinstance(secret, typing.T_Secret):
+        if not isinstance(secret, T_Secret):
             raise ValueError('secret must be a secret instance')
 
         self.lock = lock
@@ -1112,14 +1144,14 @@ class UnlockPartialProofState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'lock': self.lock,
             'secret': serialization.serialize_bytes(self.secret),
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockPartialProofState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'UnlockPartialProofState':
         restored = cls(
             lock=data['lock'],
             secret=serialization.deserialize_bytes(data['secret']),
@@ -1139,12 +1171,12 @@ class UnlockProofState(State):
 
     def __init__(
             self,
-            merkle_proof: typing.List[typing.Keccak256],
+            merkle_proof: List[Keccak256],
             lock_encoded: bytes,
-            secret: typing.Secret,
+            secret: Secret,
     ):
 
-        if not isinstance(secret, typing.T_Secret):
+        if not isinstance(secret, T_Secret):
             raise ValueError('secret must be a secret instance')
 
         self.merkle_proof = merkle_proof
@@ -1166,7 +1198,7 @@ class UnlockProofState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'merkle_proof': map_list(serialization.serialize_bytes, self.merkle_proof),
             'lock_encoded': serialization.serialize_bytes(self.lock_encoded),
@@ -1174,7 +1206,7 @@ class UnlockProofState(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UnlockProofState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'UnlockProofState':
         restored = cls(
             merkle_proof=map_list(serialization.deserialize_bytes, data['merkle_proof']),
             lock_encoded=serialization.deserialize_bytes(data['lock_encoded']),
@@ -1195,18 +1227,18 @@ class TransactionExecutionStatus(State):
 
     def __init__(
             self,
-            started_block_number: Optional[typing.BlockNumber] = None,
-            finished_block_number: Optional[typing.BlockNumber] = None,
+            started_block_number: Optional[BlockNumber] = None,
+            finished_block_number: Optional[BlockNumber] = None,
             result: str = None,
     ):
 
         is_valid_start = (
             started_block_number is None or
-            isinstance(started_block_number, typing.T_BlockNumber)
+            isinstance(started_block_number, T_BlockNumber)
         )
         is_valid_finish = (
             finished_block_number is None or
-            isinstance(finished_block_number, typing.T_BlockNumber)
+            isinstance(finished_block_number, T_BlockNumber)
         )
         is_valid_result = (
             result is None or
@@ -1244,8 +1276,8 @@ class TransactionExecutionStatus(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
-        result: typing.Dict[str, typing.Any] = {}
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {}
         if self.started_block_number is not None:
             result['started_block_number'] = str(self.started_block_number)
         if self.finished_block_number is not None:
@@ -1256,15 +1288,15 @@ class TransactionExecutionStatus(State):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionExecutionStatus':
+    def from_dict(cls, data: Dict[str, Any]) -> 'TransactionExecutionStatus':
         started_optional = data.get('started_block_number')
         started_block_number = (
-            typing.BlockNumber(int(started_optional))
+            BlockNumber(int(started_optional))
             if started_optional else None
         )
         finished_optional = data.get('finished_block_number')
         finished_block_number = (
-            typing.BlockNumber(int(finished_optional))
+            BlockNumber(int(finished_optional))
             if finished_optional else None
         )
 
@@ -1282,7 +1314,7 @@ class MerkleTreeState(State):
         'layers',
     )
 
-    def __init__(self, layers: typing.List[typing.List[typing.Keccak256]]):
+    def __init__(self, layers: List[List[Keccak256]]):
         self.layers = layers
 
     def __repr__(self):
@@ -1299,13 +1331,13 @@ class MerkleTreeState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'layers': serialization.serialize_merkletree_layers(self.layers),
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'MerkleTreeState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'MerkleTreeState':
         restored = cls(
             layers=serialization.deserialize_merkletree_layers(data['layers']),
         )
@@ -1326,11 +1358,11 @@ class NettingChannelEndState(State):
         'balance_proof',
     )
 
-    def __init__(self, address: typing.Address, balance: typing.Balance):
-        if not isinstance(address, typing.T_Address):
+    def __init__(self, address: Address, balance: Balance):
+        if not isinstance(address, T_Address):
             raise ValueError('address must be an address instance')
 
-        if not isinstance(balance, typing.T_TokenAmount):
+        if not isinstance(balance, T_TokenAmount):
             raise ValueError('balance must be a token_amount isinstance')
 
         self.address = address
@@ -1367,7 +1399,7 @@ class NettingChannelEndState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'address': to_checksum_address(self.address),
             'contract_balance': str(self.contract_balance),
@@ -1394,7 +1426,7 @@ class NettingChannelEndState(State):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelEndState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'NettingChannelEndState':
         restored = cls(
             address=to_canonical_address(data['address']),
             balance=int(data['contract_balance']),
@@ -1446,13 +1478,13 @@ class NettingChannelState(State):
 
     def __init__(
             self,
-            identifier: typing.ChannelID,
-            chain_id: typing.ChainID,
-            token_address: typing.TokenAddress,
-            payment_network_identifier: typing.PaymentNetworkID,
-            token_network_identifier: typing.TokenNetworkID,
-            reveal_timeout: typing.BlockTimeout,
-            settle_timeout: typing.BlockTimeout,
+            identifier: ChannelID,
+            chain_id: ChainID,
+            token_address: TokenAddress,
+            payment_network_identifier: PaymentNetworkID,
+            token_network_identifier: TokenNetworkID,
+            reveal_timeout: BlockTimeout,
+            settle_timeout: BlockTimeout,
             our_state: NettingChannelEndState,
             partner_state: NettingChannelEndState,
             open_transaction: TransactionExecutionStatus,
@@ -1478,7 +1510,7 @@ class NettingChannelState(State):
                 'Cannot create a NettingChannelState with a non successfull open_transaction',
             )
 
-        if not isinstance(identifier, typing.T_ChannelID):
+        if not isinstance(identifier, T_ChannelID):
             raise ValueError('channel identifier must be of type T_ChannelID')
 
         if identifier < 0 or identifier > UINT256_MAX:
@@ -1509,7 +1541,7 @@ class NettingChannelState(State):
         self.settle_timeout = settle_timeout
         self.our_state = our_state
         self.partner_state = partner_state
-        self.deposit_transaction_queue: typing.List[TransactionOrder] = list()
+        self.deposit_transaction_queue: List[TransactionOrder] = list()
         self.open_transaction = open_transaction
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
@@ -1556,7 +1588,7 @@ class NettingChannelState(State):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         result = {
             'identifier': str(self.identifier),
             'chain_id': self.chain_id,
@@ -1583,9 +1615,9 @@ class NettingChannelState(State):
         return result
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'NettingChannelState':
+    def from_dict(cls, data: Dict[str, Any]) -> 'NettingChannelState':
         restored = cls(
-            identifier=typing.ChannelID(int(data['identifier'])),
+            identifier=ChannelID(int(data['identifier'])),
             chain_id=data['chain_id'],
             token_address=to_canonical_address(data['token_address']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
@@ -1625,17 +1657,17 @@ class TransactionChannelNewBalance(State):
 
     def __init__(
             self,
-            participant_address: typing.Address,
-            contract_balance: typing.TokenAmount,
-            deposit_block_number: typing.BlockNumber,
+            participant_address: Address,
+            contract_balance: TokenAmount,
+            deposit_block_number: BlockNumber,
     ):
-        if not isinstance(participant_address, typing.T_Address):
+        if not isinstance(participant_address, T_Address):
             raise ValueError('participant_address must be of type address')
 
-        if not isinstance(contract_balance, typing.T_TokenAmount):
+        if not isinstance(contract_balance, T_TokenAmount):
             raise ValueError('contract_balance must be of type token_amount')
 
-        if not isinstance(deposit_block_number, typing.T_BlockNumber):
+        if not isinstance(deposit_block_number, T_BlockNumber):
             raise ValueError('deposit_block_number must be of type block_number')
 
         self.participant_address = participant_address
@@ -1673,7 +1705,7 @@ class TransactionChannelNewBalance(State):
             )
         )
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'participant_address': to_checksum_address(self.participant_address),
             'contract_balance': str(self.contract_balance),
@@ -1681,11 +1713,11 @@ class TransactionChannelNewBalance(State):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionChannelNewBalance':
+    def from_dict(cls, data: Dict[str, Any]) -> 'TransactionChannelNewBalance':
         restored = cls(
             participant_address=to_canonical_address(data['participant_address']),
             contract_balance=int(data['contract_balance']),
-            deposit_block_number=typing.BlockNumber(int(data['deposit_block_number'])),
+            deposit_block_number=BlockNumber(int(data['deposit_block_number'])),
         )
 
         return restored
@@ -1695,7 +1727,7 @@ class TransactionChannelNewBalance(State):
 class TransactionOrder(State):
     def __init__(
             self,
-            block_number: typing.BlockNumber,
+            block_number: BlockNumber,
             transaction: TransactionChannelNewBalance,
     ):
         self.block_number = block_number
@@ -1725,23 +1757,23 @@ class TransactionOrder(State):
             (other.block_number, other.transaction)
         )
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'block_number': str(self.block_number),
             'transaction': self.transaction,
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'TransactionOrder':
+    def from_dict(cls, data: Dict[str, Any]) -> 'TransactionOrder':
         restored = cls(
-            block_number=typing.BlockNumber(int(data['block_number'])),
+            block_number=BlockNumber(int(data['block_number'])),
             transaction=data['transaction'],
         )
 
         return restored
 
 
-EMPTY_MERKLE_ROOT: typing.Locksroot = bytes(32)
+EMPTY_MERKLE_ROOT: Locksroot = bytes(32)
 EMPTY_MERKLE_TREE = MerkleTreeState([
     [],                   # the leaves are empty
     [EMPTY_MERKLE_ROOT],  # the root is the constant 0
