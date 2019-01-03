@@ -1000,16 +1000,6 @@ class MatrixTransport(Runnable):
         retrier = self._get_retrier(queue_identifier.recipient)
         retrier.enqueue(queue_identifier=queue_identifier, message=message)
 
-    def _send_immediate(
-        self,
-        queue_identifier: QueueIdentifier,
-        message: Message,
-    ):
-        data = JSONSerializer.serialize(message)
-        receiver_address = queue_identifier.recipient
-
-        self._send_raw(receiver_address, data)
-
     def _send_raw(self, receiver_address: Address, data: str):
         with self._getroom_lock:
             room = self._get_room_for_address(receiver_address)
