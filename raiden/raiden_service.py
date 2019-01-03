@@ -362,7 +362,6 @@ class RaidenService(Runnable):
         self.alarm.first_run(last_log_block_number)
 
         chain_state = views.state_from_raiden(self)
-
         self._initialize_transactions_queues(chain_state)
         self._initialize_whitelists(chain_state)
 
