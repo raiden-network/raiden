@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import DEFAULT, Mock, patch
 
 from click.testing import CliRunner
@@ -112,3 +113,20 @@ def test_shutdown():
         assert 'Exiting' in result.output
         assert mocks['PathfindingService'].return_value.stop.called
         assert mocks['ServiceApi'].return_value.stop.called
+
+
+def test_logging():
+    runner = CliRunner()
+    with patch.multiple(**patch_args) as mocks, \
+            patch('pathfinding_service.cli.logging.basicConfig') as basicConfig:
+        for log_level in ('CRITICAL', 'WARNING'):
+            runner.invoke(main, ['--log-level', log_level])
+            assert logging.getLevelName(
+                logging.getLogger('web3').getEffectiveLevel()
+            ) == log_level
+            # pytest already initializes logging, so basicConfig does not have
+            # an effect. Use mocking to check that it's called properly.
+            assert logging.getLevelName(
+                basicConfig.call_args[1]['level'] == log_level
+            )
+
