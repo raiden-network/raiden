@@ -303,8 +303,8 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendSecretReveal':
         restored = cls(
-            expiration=int(data['expiration']),
-            secret=serialization.deserialize_bytes(data['secret']),
+            expiration=BlockExpiration(int(data['expiration'])),
+            secret=Secret(serialization.deserialize_bytes(data['secret'])),
         )
 
         return restored

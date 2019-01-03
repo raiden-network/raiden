@@ -61,6 +61,7 @@ mypy:
 	grep Address mypy-out.txt; [ $$? -eq 1 ]
 	grep ChannelID mypy-out.txt; [ $$? -eq 1 ]
 	grep BalanceProof mypy-out.txt; [ $$? -eq 1 ]
+	grep SendSecretReveal mypy-out.txt; [ $$? -eq 1 ]
 
 isort:
 	isort $(ISORT_PARAMS)

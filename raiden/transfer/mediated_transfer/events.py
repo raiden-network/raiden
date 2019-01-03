@@ -215,8 +215,8 @@ class SendSecretReveal(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
-            message_identifier=int(data['message_identifier']),
-            secret=serialization.deserialize_bytes(data['secret']),
+            message_identifier=typing.MessageID(int(data['message_identifier'])),
+            secret=typing.Secret(serialization.deserialize_bytes(data['secret'])),
         )
 
         return restored

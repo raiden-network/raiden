@@ -1,4 +1,6 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from typing import TYPE_CHECKING
+
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
 
 from raiden.transfer.architecture import State
@@ -11,6 +13,10 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
 )
 from raiden.utils import pex, serialization, sha3, typing
+
+# Upgrade pyflakes to 2.0.0 and remove the 'if' and '# noqa'.
+if TYPE_CHECKING:
+    from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa: F401
 
 
 def lockedtransfersigned_from_message(message):
