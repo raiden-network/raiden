@@ -472,15 +472,6 @@ class RaidenService(Runnable):
     def get_block_number(self) -> BlockNumber:
         return views.block_number(self.wal.state_manager.current_state)
 
-    def pop_payment_status(
-            self,
-            target: typing.TargetAddress,
-            payment_identifier: typing.PaymentID,
-    ) -> typing.Optional[PaymentStatus]:
-        with self.payment_identifier_lock:
-            status = self.targets_to_identifiers_to_statuses[target].pop(payment_identifier, None)
-        return status
-
     def on_message(self, message: Message):
         self.message_handler.on_message(self, message)
 
