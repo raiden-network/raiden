@@ -26,7 +26,7 @@ from raiden.transfer.state import (
     RouteState,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
+from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, StateChange
 from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils.typing import (
     Address,
@@ -444,4 +444,43 @@ def handle_onchain_secretreveal(
         events = list()
         iteration = TransitionResult(initiator_state, events)
 
+    return iteration
+
+
+def state_transition(
+        initiator_state: InitiatorTransferState,
+        state_change: StateChange,
+        channel_state: NettingChannelState,
+        pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    if type(state_change) == Block:
+        iteration = handle_block(
+            initiator_state,
+            state_change,
+            channel_state,
+            pseudo_random_generator,
+        )
+    elif type(state_change) == ReceiveSecretRequest:
+        iteration = handle_secretrequest(
+            initiator_state,
+            state_change,
+            channel_state,
+            pseudo_random_generator,
+        )
+    elif type(state_change) == ReceiveSecretReveal:
+        iteration = handle_offchain_secretreveal(
+            initiator_state,
+            state_change,
+            channel_state,
+            pseudo_random_generator,
+        )
+    elif type(state_change) == ContractReceiveSecretReveal:
+        iteration = handle_onchain_secretreveal(
+            initiator_state,
+            state_change,
+            channel_state,
+            pseudo_random_generator,
+        )
+    else:
+        iteration = TransitionResult(initiator_state, list())
     return iteration
