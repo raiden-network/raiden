@@ -3,6 +3,7 @@ import enum
 import os
 import random
 from collections import defaultdict
+from typing import Dict, List, NamedTuple, Union
 
 import filelock
 import gevent
@@ -30,6 +31,7 @@ from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
+from raiden.transfer.architecture import StateChange
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
@@ -40,7 +42,12 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ActionInitTarget,
 )
-from raiden.transfer.state import BalanceProofUnsignedState, PaymentNetworkState, RouteState
+from raiden.transfer.state import (
+    BalanceProofUnsignedState,
+    ChainState,
+    PaymentNetworkState,
+    RouteState,
+)
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionInitChain,
@@ -55,15 +62,28 @@ from raiden.utils import (
     privatekey_to_address,
     random_secret,
     sha3,
-    typing,
 )
 from raiden.utils.runnable import Runnable
+from raiden.utils.typing import (
+    Address,
+    BlockNumber,
+    InitiatorAddress,
+    PaymentAmount,
+    PaymentID,
+    Secret,
+    TargetAddress,
+    TokenAmount,
+    TokenNetworkAddress,
+    TokenNetworkID,
+)
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def _redact_secret(data):
+def _redact_secret(
+        data: Union[Dict, List],
+) -> Union[Dict, List]:
     """ Modify `data` in-place and replace keys named `secret`. """
 
     if isinstance(data, dict):
@@ -88,11 +108,11 @@ def _redact_secret(data):
 
 def initiator_init(
         raiden: 'RaidenService',
-        transfer_identifier: typing.PaymentID,
-        transfer_amount: typing.PaymentAmount,
-        transfer_secret: typing.Secret,
-        token_network_identifier: typing.TokenNetworkID,
-        target_address: typing.TargetAddress,
+        transfer_identifier: PaymentID,
+        transfer_amount: PaymentAmount,
+        transfer_secret: Secret,
+        token_network_identifier: TokenNetworkID,
+        target_address: TargetAddress,
 ):
 
     msg = 'Should never end up initiating transfer with Secret 0x0'
@@ -102,7 +122,7 @@ def initiator_init(
         transfer_identifier,
         transfer_amount,
         token_network_identifier,
-        typing.InitiatorAddress(raiden.address),
+        InitiatorAddress(raiden.address),
         target_address,
         transfer_secret,
     )
@@ -110,7 +130,7 @@ def initiator_init(
     routes = routing.get_best_routes(
         views.state_from_raiden(raiden),
         token_network_identifier,
-        typing.InitiatorAddress(raiden.address),
+        InitiatorAddress(raiden.address),
         target_address,
         transfer_amount,
         previous_address,
@@ -162,23 +182,23 @@ class PaymentType(enum.Enum):
     MEDIATED = 2
 
 
-class PaymentStatus(typing.NamedTuple):
+class PaymentStatus(NamedTuple):
     """Value type for RaidenService.targets_to_identifiers_to_statuses.
 
     Contains the necessary information to tell conflicting transfers from
     retries as well as the status of a transfer that is retried.
     """
     payment_type: PaymentType
-    payment_identifier: typing.PaymentID
-    amount: typing.TokenAmount
-    token_network_identifier: typing.TokenNetworkID
+    payment_identifier: PaymentID
+    amount: TokenAmount
+    token_network_identifier: TokenNetworkID
     payment_done: AsyncResult
 
     def matches(
             self,
             payment_type: PaymentType,
-            token_network_identifier: typing.TokenNetworkID,
-            amount: typing.TokenAmount,
+            token_network_identifier: TokenNetworkID,
+            amount: TokenAmount,
     ):
         return (
             payment_type == self.payment_type and
@@ -187,7 +207,7 @@ class PaymentStatus(typing.NamedTuple):
         )
 
 
-StatusesDict = typing.Dict[typing.TargetAddress, typing.Dict[typing.PaymentID, PaymentStatus]]
+StatusesDict = Dict[TargetAddress, Dict[PaymentID, PaymentStatus]]
 
 
 class RaidenService(Runnable):
@@ -196,7 +216,7 @@ class RaidenService(Runnable):
     def __init__(
             self,
             chain: BlockChainService,
-            query_start_block: typing.BlockNumber,
+            query_start_block: BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             private_key_bin,
@@ -444,18 +464,18 @@ class RaidenService(Runnable):
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
-    def start_neighbours_healthcheck(self, chain_state):
+    def start_neighbours_healthcheck(self, chain_state: ChainState):
         for neighbour in views.all_neighbour_nodes(chain_state):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                 self.start_health_check_for(neighbour)
 
-    def get_block_number(self):
+    def get_block_number(self) -> BlockNumber:
         return views.block_number(self.wal.state_manager.current_state)
 
     def on_message(self, message: Message):
         self.message_handler.on_message(self, message)
 
-    def handle_state_change(self, state_change):
+    def handle_state_change(self, state_change: StateChange):
         log.debug(
             'State change',
             node=pex(self.address),
@@ -505,18 +525,18 @@ class RaidenService(Runnable):
 
         return event_list
 
-    def set_node_network_state(self, node_address, network_state):
+    def set_node_network_state(self, node_address: Address, network_state: str):
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
         self.handle_state_change(state_change)
 
-    def start_health_check_for(self, node_address):
+    def start_health_check_for(self, node_address: Address):
         # This function is a noop during initialization. It can be called
         # through the alarm task while polling for new channel events.  The
         # healthcheck will be started by self.start_neighbours_healthcheck()
         if self.transport:
             self.transport.start_health_check(node_address)
 
-    def _callback_new_block(self, latest_block):
+    def _callback_new_block(self, latest_block: Dict):
         """Called once a new block is detected by the alarm task.
 
         Note:
@@ -568,8 +588,8 @@ class RaidenService(Runnable):
 
     def _register_payment_status(
             self,
-            target: typing.TargetAddress,
-            identifier: typing.PaymentID,
+            target: TargetAddress,
+            identifier: PaymentID,
             payment_type: PaymentType,
             balance_proof: BalanceProofUnsignedState,
     ):
@@ -581,7 +601,7 @@ class RaidenService(Runnable):
             payment_done=AsyncResult(),
         )
 
-    def _initialize_transactions_queues(self, chain_state):
+    def _initialize_transactions_queues(self, chain_state: ChainState):
         pending_transactions = views.get_pending_transactions(chain_state)
 
         log.debug(
@@ -608,7 +628,7 @@ class RaidenService(Runnable):
                     else:
                         raise
 
-    def _initialize_messages_queues(self, chain_state):
+    def _initialize_messages_queues(self, chain_state: ChainState):
         """ Push the queues to the transport and populate
         targets_to_identifiers_to_statuses.
         """
@@ -635,7 +655,7 @@ class RaidenService(Runnable):
                 self.sign(message)
                 self.transport.send_async(queue_identifier, message)
 
-    def _initialize_whitelists(self, chain_state):
+    def _initialize_whitelists(self, chain_state: ChainState):
         """ Whitelist neighbors and mediated transfer targets on transport """
 
         for neighbour in views.all_neighbour_nodes(chain_state):
@@ -654,7 +674,7 @@ class RaidenService(Runnable):
                 if is_initiator:
                     self.transport.whitelist(address=event.transfer.target)
 
-    def sign(self, message):
+    def sign(self, message: Message):
         """ Sign message inplace. """
         if not isinstance(message, SignedMessage):
             raise ValueError('{} is not signable.'.format(repr(message)))
@@ -665,7 +685,7 @@ class RaidenService(Runnable):
             self,
             token_network_registry_proxy: TokenNetworkRegistry,
             secret_registry_proxy: SecretRegistry,
-            from_block: typing.BlockNumber,
+            from_block: BlockNumber,
     ):
         with self.event_poll_lock:
             node_state = views.state_from_raiden(self)
@@ -687,7 +707,7 @@ class RaidenService(Runnable):
 
             for token_network in token_networks:
                 token_network_proxy = self.chain.token_network(
-                    typing.TokenNetworkAddress(token_network),
+                    TokenNetworkAddress(token_network),
                 )
                 self.blockchain_events.add_token_network_listener(
                     token_network_proxy=token_network_proxy,
@@ -695,7 +715,10 @@ class RaidenService(Runnable):
                     from_block=from_block,
                 )
 
-    def connection_manager_for_token_network(self, token_network_identifier):
+    def connection_manager_for_token_network(
+            self,
+            token_network_identifier: TokenNetworkID,
+    ) -> ConnectionManager:
         if not is_binary_address(token_network_identifier):
             raise InvalidAddress('token address is not valid.')
 
@@ -734,11 +757,11 @@ class RaidenService(Runnable):
 
     def mediated_transfer_async(
             self,
-            token_network_identifier: typing.TokenNetworkID,
-            amount: typing.TokenAmount,
-            target: typing.TargetAddress,
-            identifier: typing.PaymentID,
-    ):
+            token_network_identifier: TokenNetworkID,
+            amount: TokenAmount,
+            target: TargetAddress,
+            identifier: PaymentID,
+    ) -> AsyncResult:
         """ Transfer `amount` between this node and `target`.
 
         This method will start an asynchronous transfer, the transfer might fail
@@ -763,12 +786,12 @@ class RaidenService(Runnable):
 
     def start_mediated_transfer_with_secret(
             self,
-            token_network_identifier: typing.TokenNetworkID,
-            amount: typing.TokenAmount,
-            target: typing.TargetAddress,
-            identifier: typing.PaymentID,
-            secret: typing.Secret,
-    ):
+            token_network_identifier: TokenNetworkID,
+            amount: TokenAmount,
+            target: TargetAddress,
+            identifier: PaymentID,
+            secret: Secret,
+    ) -> AsyncResult:
 
         secret_hash = sha3(secret)
         if self.default_secret_registry.check_registered(secret_hash):
@@ -777,7 +800,7 @@ class RaidenService(Runnable):
                 f' That secret is already registered onchain.',
             )
 
-        self.start_health_check_for(target)
+        self.start_health_check_for(Address(target))
 
         if identifier is None:
             identifier = create_default_identifier()
