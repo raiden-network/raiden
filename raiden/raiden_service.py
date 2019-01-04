@@ -379,7 +379,8 @@ class RaidenService(Runnable):
         # - The alarm must complete its first run before the transport is started,
         #   to reject messages for closed/settled channels.
         self.alarm.register_callback(self._callback_new_block)
-        self.alarm.first_run(last_log_block_number)
+        with self.dispatch_events_lock:
+            self.alarm.first_run(last_log_block_number)
 
         chain_state = views.state_from_raiden(self)
         self._initialize_transactions_queues(chain_state)

@@ -176,13 +176,6 @@ class AlarmTask(Runnable):
         self.chain_id = chain_id
         self._maybe_run_callbacks(latest_block)
 
-        # Run the alarm task block callback once more to possibly
-        # clear pending transactions after the chain syncing during
-        # the first run of the alarm task.
-        # https://github.com/raiden-network/raiden/issues/3216
-        latest_block = self.chain.get_block(block_identifier='latest')
-        self._maybe_run_callbacks(latest_block)
-
     def _maybe_run_callbacks(self, latest_block):
         """ Run the callbacks if there is at least one new block.
 
