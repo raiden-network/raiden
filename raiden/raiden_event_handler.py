@@ -195,11 +195,12 @@ class RaidenEventHandler:
             payment_sent_success_event: EventPaymentSentSuccess,
     ):
         target = payment_sent_success_event.target
-        payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
-            payment_sent_success_event.identifier,
-            None,
-        )
-        assert payment_status is not None
+        payment_identifier = payment_sent_success_event.identifier
+        payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(payment_identifier)
+
+        # With the introduction of the lock we should always get
+        # here only once per identifier so payment_status should always exist
+        # see: https://github.com/raiden-network/raiden/pull/3191
         payment_status.payment_done.set(True)
 
     def handle_paymentsentfailed(
@@ -208,8 +209,9 @@ class RaidenEventHandler:
             payment_sent_failed_event: EventPaymentSentFailed,
     ):
         target = payment_sent_failed_event.target
+        payment_identifier = payment_sent_failed_event.identifier
         payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
-            payment_sent_failed_event.identifier,
+            payment_identifier,
             None,
         )
         # In the case of a refund transfer the payment fails earlier
