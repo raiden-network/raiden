@@ -38,7 +38,8 @@ with open('constraints.txt') as req_file:
 
 test_requirements = []
 
-version = '0.100.1'  # Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
+# Do not edit: this is maintained by bumpversion (see .bumpversion_client.cfg)
+version = '0.100.2-rc1'
 
 setup(
     name='raiden',
@@ -61,7 +62,7 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     cmdclass={
-        'test': PyTest
+        'test': PyTest,
     },
     use_scm_version=True,
     setup_requires=['setuptools_scm'],
