@@ -1,4 +1,4 @@
-FROM ethereum/client-go:v1.8.13
+FROM ethereum/client-go:v1.8.20
 MAINTAINER Ulrich Petri <ulrich@brainbot.com>
 
 RUN \
