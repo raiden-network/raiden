@@ -1081,6 +1081,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=transfer.lock.expiration,
     )
 
     payment_identifier = setup.current_state.initiator.transfer_description.payment_identifier
@@ -1112,6 +1113,7 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=transfer.lock.expiration,
     )
     assert len(iteration.events) == 0
     # make sure the original lock wasn't moved
@@ -1140,6 +1142,7 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=transfer.lock.expiration + 1,
     )
 
     assert search_for_item(iteration.events, SendBalanceProof, {}) is None
