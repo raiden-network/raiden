@@ -432,8 +432,18 @@ def test_different_view_of_last_bp_during_unlock(
             partner_address=app1.raiden.address,
         )
 
+    count = 0
+    original_update = app1.raiden.raiden_event_handler.handle_contract_send_channelupdate
+
+    def patched_update(raiden, event):
+        nonlocal count
+        count += 1
+        original_update(raiden, event)
+
+    app1.raiden.raiden_event_handler.handle_contract_send_channelupdate = patched_update
     # and now app1 comes back online
     app1.raiden.start()
+    assert count == 1
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
     # and we wait for settlement
