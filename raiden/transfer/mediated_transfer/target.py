@@ -21,7 +21,31 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import NettingChannelState, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
-from raiden.utils.typing import Address, BlockNumber
+from raiden.utils.typing import Address, BlockNumber, Optional
+
+
+def sanity_check(
+        old_state: Optional[TargetTransferState],
+        new_state: Optional[TargetTransferState],
+        channel_state: NettingChannelState,
+) -> None:
+    was_running = old_state is not None
+    is_running = new_state is not None
+    is_cleared = was_running and not is_running
+
+    if is_cleared:
+        lock = channel.get_lock(
+            end_state=channel_state.partner_state,
+            secrethash=old_state.transfer.lock.secrethash,
+        )
+        assert lock is None, 'The lock must be cleared once the task exists'
+    elif is_running:
+        # old_state can be None if the task is starting
+        lock = channel.get_lock(
+            end_state=channel_state.partner_state,
+            secrethash=new_state.transfer.lock.secrethash,
+        )
+        assert lock is not None, 'The lock must not be cleared while the task is running'
 
 
 def events_for_onchain_secretreveal(
@@ -362,5 +386,11 @@ def state_transition(
             channel_state,
             block_number,
         )
+
+    sanity_check(
+        old_state=target_state,
+        new_state=iteration.new_state,
+        channel_state=channel_state,
+    )
 
     return iteration
