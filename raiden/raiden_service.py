@@ -44,7 +44,6 @@ from raiden.transfer.state import BalanceProofUnsignedState, PaymentNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionInitChain,
-    ActionLeaveAllNetworks,
     Block,
     ContractReceiveNewPaymentNetwork,
 )
@@ -714,10 +713,6 @@ class RaidenService(Runnable):
             self.tokennetworkids_to_connectionmanagers[token_network_identifier] = manager
 
         return manager
-
-    def leave_all_token_networks(self):
-        state_change = ActionLeaveAllNetworks()
-        self.handle_state_change(state_change)
 
     def mediated_transfer_async(
             self,
