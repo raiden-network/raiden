@@ -13,7 +13,7 @@ from eth_utils import is_binary_address
 from gevent.event import AsyncResult, Event
 from gevent.lock import Semaphore
 
-from raiden import constants, routing, waiting
+from raiden import constants, routing
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
@@ -51,7 +51,6 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionInitChain,
-    ActionLeaveAllNetworks,
     Block,
     ContractReceiveNewPaymentNetwork,
 )
@@ -737,23 +736,6 @@ class RaidenService(Runnable):
             self.tokennetworkids_to_connectionmanagers[token_network_identifier] = manager
 
         return manager
-
-    def leave_all_token_networks(self):
-        state_change = ActionLeaveAllNetworks()
-        self.handle_state_change(state_change)
-
-    def close_and_settle(self):
-        log.info('raiden will close and settle all channels now')
-
-        self.leave_all_token_networks()
-
-        connection_managers = [cm for cm in self.tokennetworkids_to_connectionmanagers.values()]
-
-        if connection_managers:
-            waiting.wait_for_settle_all_channels(
-                self,
-                self.alarm.sleep_time,
-            )
 
     def mediated_transfer_async(
             self,
