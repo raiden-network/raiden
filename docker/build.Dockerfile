@@ -5,7 +5,7 @@ ARG SOLC_URL_LINUX
 ARG GETH_URL_LINUX
 
 # install dependencies
-RUN apt-get update
+RUN apt-get update --fix-missing
 RUN apt-get install -y git-core wget xz-utils
 
 RUN wget -nv -O /usr/bin/solc ${SOLC_URL_LINUX} && \
