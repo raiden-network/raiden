@@ -105,10 +105,9 @@ class PathsResource(PathfinderResource):
         token_network = self.pathfinding_service.token_networks.get(
             Address(token_network_address),
         )
-        if not token_network:
-            return {'errors': 'Token network {} not found.'.format(
-                token_network_address,
-            )}, 400
+        # Existence is checked in _validate_token_network_argument
+        assert token_network, 'Requested token network cannot be found'
+
         try:
             paths = token_network.get_paths(
                 source=args['from'],
