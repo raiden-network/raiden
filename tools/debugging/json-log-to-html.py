@@ -10,14 +10,19 @@ import hashlib
 import json
 import math
 from collections import Counter, namedtuple
+from copy import copy
 from datetime import datetime
 from html import escape
 from json import JSONDecodeError
-from typing import Iterable, Set
+from typing import Any, Dict, Iterable, Set
 
 import click
+from click import UsageError
 from click._compat import _default_text_stderr
 from colour import Color
+from eth_utils import is_address, to_canonical_address
+
+from raiden.utils import pex
 
 Record = namedtuple('Line', ('event', 'timestamp', 'logger', 'level', 'fields'))
 
@@ -138,6 +143,42 @@ def filter_records(
             yield record
 
 
+def transform_records(log_records: Iterable[Record], replacements: Dict[str, Any]):
+    def replace(value):
+        # Use `type(value)()` construction to preserve exact (sub-)type
+        if isinstance(value, tuple) and hasattr(value, '_fields'):
+            # namedtuples have a different signature, *sigh*
+            return type(value)(*[replace(inner) for inner in value])
+        if isinstance(value, (list, tuple)):
+            return type(value)(replace(inner) for inner in value)
+        elif isinstance(value, dict):
+            return {
+                replace(k): replace(v)
+                for k, v in value.items()
+            }
+        str_value = str(value).lower()
+        if isinstance(value, str):
+            keys_in_value = [key for key in replacement_keys if key in str_value]
+            for key in keys_in_value:
+                try:
+                    repl_start = str_value.index(key)
+                except ValueError:
+                    # Value no longer in string due to replacement
+                    continue
+                value = f"{value[:repl_start]}{replacements[key]}{value[repl_start + len(key):]}"
+                str_value = value.lower()
+        return replacements.get(str_value, value)
+
+    replacements = {str(k).lower(): v for k, v in replacements.items()}
+    for k, v in copy(replacements).items():
+        # Special handling for `pex()`ed eth addresses
+        if isinstance(k, str) and k.startswith('0x') and is_address(k):
+            replacements[pex(to_canonical_address(k))] = v
+    replacement_keys = replacements.keys()
+    for record in log_records:
+        yield replace(record)
+
+
 def render(name: str, log_records: Iterable[Record], record_count: int, known_fields: Counter):
     sorted_known_fields = [name for name, count in known_fields.most_common()]
     header = (
@@ -215,17 +256,47 @@ def colorize_value(value, min_luminance):
         'Case insensitive. Can be given multiple times.'
     ),
 )
-def main(log_file, drop_event, drop_logger, output):
+@click.option(
+    '-r',
+    '--replacements',
+    help=(
+        'Replace values before rendering. '
+        'Input must be a JSON object. '
+        'Keys are transformed to lowercase strings before matching. '
+        'Partial substring matches will also be replaced. '
+        'Eth-Addresses will also be replaced in pex()ed format.'
+    ),
+)
+@click.option(
+    '-f',
+    '--replacements-from-file',
+    type=click.File('rt'),
+    help=(
+        'Behaves as -r / --replacements but reads the JSON object from the given file.'
+    ),
+)
+def main(log_file, drop_event, drop_logger, replacements, replacements_from_file, output):
+    if replacements_from_file:
+        replacements = replacements_from_file.read()
+    if not replacements:
+        replacements = '{}'
+    try:
+        replacements = json.loads(replacements)
+    except (JSONDecodeError, UnicodeDecodeError) as ex:
+        raise UsageError(f'Option "--replacements" contains invalid JSON: {ex}') from ex
     log_records, known_fields = parse_log(log_file)
     prog_bar = click.progressbar(log_records, label='Rendering', file=_default_text_stderr())
     with prog_bar as log_records_progr:
         print(
             render(
                 log_file.name,
-                filter_records(
-                    log_records_progr,
-                    drop_events=set(d.lower() for d in drop_event),
-                    drop_loggers=set(l.lower() for l in drop_logger),
+                transform_records(
+                    filter_records(
+                        log_records_progr,
+                        drop_events=set(d.lower() for d in drop_event),
+                        drop_loggers=set(l.lower() for l in drop_logger),
+                    ),
+                    replacements,
                 ),
                 len(log_records),
                 known_fields,
