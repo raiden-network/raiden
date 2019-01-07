@@ -22,6 +22,9 @@ def hash_pair(first, second):
     if second is None:
         return first
 
+    if first == second:
+        return first
+
     if first > second:
         return sha3(second + first)
 
