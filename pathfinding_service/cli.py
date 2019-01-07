@@ -63,8 +63,6 @@ def setup_logging(log_level: str, log_config: TextIO):
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%m-%d %H:%M:%S',
     )
-    logging.getLogger('web3').setLevel(level)
-    logging.getLogger('urllib3.connectionpool').setLevel(level)
 
     if log_config:
         config = json.load(log_config)

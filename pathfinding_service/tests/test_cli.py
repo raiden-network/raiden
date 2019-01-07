@@ -123,9 +123,6 @@ def test_log_level():
             patch('pathfinding_service.cli.logging.basicConfig') as basicConfig:
         for log_level in ('CRITICAL', 'WARNING'):
             runner.invoke(main, ['--log-level', log_level])
-            assert logging.getLevelName(
-                logging.getLogger('web3').getEffectiveLevel(),
-            ) == log_level
             # pytest already initializes logging, so basicConfig does not have
             # an effect. Use mocking to check that it's called properly.
             assert logging.getLevelName(
