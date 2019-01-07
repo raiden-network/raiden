@@ -5,6 +5,7 @@ from raiden.transfer.merkle_tree import (
     MERKLEROOT,
     compute_layers,
     compute_merkleproof_for,
+    hash_pair,
     merkleroot,
     validate_proof,
 )
@@ -43,6 +44,11 @@ def test_compute_layers_duplicated():
 
     with pytest.raises(ValueError):
         compute_layers([hash_0, hash_1, hash_0])
+
+
+def test_hash_pair_on_same_inputs():
+    hash = sha3(b'x')
+    assert hash == hash_pair(hash, hash)
 
 
 def test_compute_layers_single_entry():
