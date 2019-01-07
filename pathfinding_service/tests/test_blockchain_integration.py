@@ -8,8 +8,8 @@ from typing import List
 
 import gevent
 
+from pathfinding_service import PathfindingService
 from pathfinding_service.model import ChannelView
-from pathfinding_service.pathfinding_service import PathfindingService
 from raiden_contracts.contract_manager import ContractManager
 
 

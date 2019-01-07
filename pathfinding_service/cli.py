@@ -13,10 +13,10 @@ from eth_utils import is_checksum_address
 from requests.exceptions import ConnectionError
 from web3 import HTTPProvider, Web3
 
+from pathfinding_service import PathfindingService
 from pathfinding_service.api.rest import ServiceApi
 from pathfinding_service.config import DEFAULT_API_HOST
 from pathfinding_service.middleware import http_retry_with_backoff_middleware
-from pathfinding_service.pathfinding_service import PathfindingService
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY
 from raiden_contracts.contract_manager import (
     ContractManager,

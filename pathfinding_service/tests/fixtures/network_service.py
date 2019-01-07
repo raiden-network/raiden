@@ -5,8 +5,8 @@ from unittest.mock import Mock, patch
 import pytest
 from web3 import Web3
 
+from pathfinding_service import PathfindingService
 from pathfinding_service.model.token_network import TokenNetwork
-from pathfinding_service.pathfinding_service import PathfindingService
 from pathfinding_service.tests.config import NUMBER_OF_CHANNELS
 from pathfinding_service.tests.mocks.blockchain_listener import BlockchainListenerMock
 from raiden_contracts.contract_manager import ContractManager
@@ -264,7 +264,7 @@ def pathfinding_service_full_mock(
     contracts_manager: ContractManager,
     token_network_model: TokenNetwork,
 ) -> Generator[PathfindingService, None, None]:
-    with patch('pathfinding_service.pathfinding_service.BlockchainListener', new=Mock):
+    with patch('pathfinding_service.service.BlockchainListener', new=Mock):
         web3_mock = Mock()
         web3_mock.net.version = '1'
 
@@ -287,7 +287,7 @@ def pathfinding_service_mocked_listeners(
 ) -> Generator[PathfindingService, None, None]:
     """ Returns a PathfindingService with mocked blockchain listeners. """
     with patch(
-        'pathfinding_service.pathfinding_service.BlockchainListener',
+        'pathfinding_service.service.BlockchainListener',
         new=BlockchainListenerMock,
     ):
         pathfinding_service = PathfindingService(

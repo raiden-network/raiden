@@ -14,13 +14,13 @@ from gevent.pywsgi import WSGIServer
 from networkx.exception import NetworkXNoPath
 
 import pathfinding_service
+from pathfinding_service import PathfindingService
 from pathfinding_service.config import (
     API_PATH,
     DEFAULT_API_HOST,
     DEFAULT_API_PORT,
     DEFAULT_MAX_PATHS,
 )
-from pathfinding_service.pathfinding_service import PathfindingService
 from raiden_libs.types import Address
 
 log = logging.getLogger(__name__)

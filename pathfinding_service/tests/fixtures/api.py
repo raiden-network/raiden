@@ -4,9 +4,9 @@ from typing import Iterator
 import psutil
 import pytest
 
+from pathfinding_service import PathfindingService
 from pathfinding_service.api.rest import ServiceApi
 from pathfinding_service.config import API_PATH, DEFAULT_API_PORT
-from pathfinding_service.pathfinding_service import PathfindingService
 
 
 def get_free_port(address: str, initial_port: int):
