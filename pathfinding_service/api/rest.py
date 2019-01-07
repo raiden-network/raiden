@@ -3,8 +3,6 @@ import socket
 from typing import Dict, List, Optional, Tuple
 
 import gevent
-import matplotlib.pyplot as plt
-import networkx as nx
 import pkg_resources
 from eth_utils import is_address, is_checksum_address
 from flask import Flask
@@ -134,12 +132,6 @@ class InfoResource(PathfinderResource):
         version = pkg_resources.require(pathfinding_service.__name__)[0].version
         operator = 'PLACEHOLDER FOR PATHFINDER OPERATOR'
         message = 'PLACEHOLDER FOR ADDITIONAL MESSAGE BY THE PFS'
-
-        for token_network in self.pathfinding_service.token_networks.values():
-            nx.draw(token_network.G)  # networkx draw()
-            plt.draw()  # pyplot draw()
-            plt.savefig(f'Graph-{token_network.address}.png', dpi=100)
-            plt.clf()
 
         return {
             'ip': ip,
