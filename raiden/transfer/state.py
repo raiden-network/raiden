@@ -30,7 +30,6 @@ from raiden.utils.typing import (
     LockHash,
     Locksroot,
     Optional,
-    PaymentAmount,
     PaymentNetworkID,
     Secret,
     SecretHash,
@@ -1037,7 +1036,7 @@ class HashTimeLockState(State):
 
     def __init__(
             self,
-            amount: PaymentAmount,
+            amount: TokenAmount,
             expiration: BlockExpiration,
             secrethash: SecretHash,
     ):
