@@ -177,8 +177,9 @@ class TokenNetwork:
             channel_exists = self.channel_exists_and_not_settled(self.node_address, partner)
             if channel_exists:
                 raise DuplicatedChannelError('Duplicated channel')
-            log.critical('openChannel will always fail', **log_details)
-            raise RaidenUnrecoverableError('creating new channel failed')
+
+            log.critical('Call to openChannel will fail', **log_details)
+            raise RaidenUnrecoverableError('Call to openChannel will fail')
 
         log.debug('new_netting_channel called', **log_details)
 
@@ -680,9 +681,9 @@ class TokenNetwork:
             log_details: typing.Dict,
     ):
         latest_deposit = self.detail_participant(
-            channel_identifier,
-            self.node_address,
-            partner,
+            channel_identifier=channel_identifier,
+            participant=self.node_address,
+            partner=partner,
         ).deposit
 
         if token.allowance(self.node_address, self.address) < amount_to_deposit:
@@ -701,10 +702,10 @@ class TokenNetwork:
         log.critical(log_msg, **log_details)
 
         self._check_channel_state_for_deposit(
-            self.node_address,
-            partner,
-            channel_identifier,
-            total_deposit,
+            participant1=self.node_address,
+            participant2=partner,
+            channel_identifier=channel_identifier,
+            deposit_amount=total_deposit,
         )
 
     def close(

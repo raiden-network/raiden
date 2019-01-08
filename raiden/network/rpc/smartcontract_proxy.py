@@ -183,7 +183,7 @@ class ContractProxy:
 
     def estimate_gas(self, function: str, *args) -> typing.Optional[int]:
         """Returns a gas estimate for the function with the given arguments or
-        None if the function call will always fail due to Insufficient funds or
+        None if the function call will fail due to Insufficient funds or
         the logic in the called function."""
         fn = getattr(self.contract.functions, function)
         try:
