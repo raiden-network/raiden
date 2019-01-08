@@ -622,7 +622,7 @@ class TokenNetwork:
             # in which case  the second `approve` will overwrite the first,
             # and the first `setTotalDeposit` will consume the allowance,
             #  making the second deposit fail.
-            token.approve(self.address, amount_to_deposit)
+            token.approve(typing.Address(self.address), amount_to_deposit)
 
             gas_limit = self.proxy.estimate_gas(
                 'setTotalDeposit',
