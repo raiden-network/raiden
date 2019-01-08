@@ -1,16 +1,9 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from copy import deepcopy
 from random import Random
 
 from hypothesis import assume, event
-from hypothesis.stateful import (
-    Bundle,
-    RuleBasedStateMachine,
-    initialize,
-    invariant,
-    precondition,
-    rule,
-)
+from hypothesis.stateful import Bundle, RuleBasedStateMachine, initialize, invariant, rule
 from hypothesis.strategies import builds, composite, integers, random_module, randoms
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
@@ -41,16 +34,65 @@ def transferred_amount(state):
     return 0 if not state.balance_proof else state.balance_proof.transferred_amount
 
 
+partners = Bundle('partners')
+# shared bundle of ChainStateStateMachine and all mixin classes
+
+
 class ChainStateStateMachine(RuleBasedStateMachine):
 
-    def __init__(self, address=None, channels_with=None):
+    def __init__(self, address=None):
         self.address = address or factories.make_address()
-        self.channels_with = channels_with or [factories.make_address()]
         self.replay_path = False
-        self.channels = None
+        self.address_to_channel = dict()
+        self.address_to_privkey = dict()
+
+        self.our_previous_deposit = defaultdict(int)
+        self.partner_previous_deposit = defaultdict(int)
+        self.our_previous_transferred = defaultdict(int)
+        self.partner_previous_transferred = defaultdict(int)
+        self.our_previous_unclaimed = defaultdict(int)
+        self.partner_previous_unclaimed = defaultdict(int)
+
         super().__init__()
 
+    def new_channel(self):
+        """Create a new partner address with private key and channel. The
+        private key and channels are listed in the instance's dictionaries,
+        the address is returned and should be added to the partners Bundle.
+        """
+
+        partner_privkey, partner_address = factories.make_privkey_address()
+
+        self.address_to_privkey[partner_address] = partner_privkey
+        self.address_to_channel[partner_address] = factories.make_channel(
+            our_balance=1000,
+            partner_balance=1000,
+            token_network_identifier=self.token_network_id,
+            our_address=self.address,
+            partner_address=partner_address,
+        )
+
+        return partner_address
+
+    def new_channel_with_transaction(self):
+        partner_address = self.new_channel()
+
+        channel_new_state_change = ContractReceiveChannelNew(
+            factories.make_transaction_hash(),
+            self.token_network_id,
+            self.address_to_channel[partner_address],
+            self.block_number,
+        )
+        node.state_transition(self.chain_state, channel_new_state_change)
+
+        return partner_address
+
+    @property
+    def default_partner(self):
+        return list(self.address_to_channel.keys())[0]
+
     @initialize(
+        target=partners,
         block_number=integers(min_value=GENESIS_BLOCK_NUMBER + 1),
         random=randoms(),
         random_seed=random_module(),
@@ -83,33 +125,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.payment_network_id
         ] = self.payment_network_state
 
-        self.channels = list()
-
-        for partner_address in self.channels_with:
-            channel = factories.make_channel(
-                our_balance=1000,
-                partner_balance=1000,
-                token_network_identifier=self.token_network_id,
-                our_address=self.address,
-                partner_address=partner_address,
-            )
-            channel_new_state_change = ContractReceiveChannelNew(
-                factories.make_transaction_hash(),
-                self.token_network_id,
-                channel,
-                self.block_number,
-            )
-            node.state_transition(self.chain_state, channel_new_state_change)
-
-            self.channels.append(channel)
-
-        number_of_channels = len(self.channels)
-        self.our_previous_deposit = [0] * number_of_channels
-        self.partner_previous_deposit = [0] * number_of_channels
-        self.our_previous_transferred = [0] * number_of_channels
-        self.partner_previous_transferred = [0] * number_of_channels
-        self.our_previous_unclaimed = [0] * number_of_channels
-        self.partner_previous_unclaimed = [0] * number_of_channels
+        return self.new_channel_with_transaction()
 
     def event(self, description):
         """ Wrapper for hypothesis' event function.
@@ -120,21 +136,19 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         if not self.replay_path:
             event(description)
 
-    @precondition(lambda self: self.channels)
     @invariant()
     def monotonicity(self):
         """ Check monotonicity properties as given in Raiden specification """
 
-        for index in range(len(self.channels)):
-            netting_channel = self.channels[index]
+        for address, netting_channel in self.address_to_channel.items():
 
             # constraint (1TN)
-            assert netting_channel.our_total_deposit >= self.our_previous_deposit[index]
-            assert netting_channel.partner_total_deposit >= self.partner_previous_deposit[index]
-            self.our_previous_deposit[index] = netting_channel.our_total_deposit
-            self.partner_previous_deposit[index] = netting_channel.partner_total_deposit
+            assert netting_channel.our_total_deposit >= self.our_previous_deposit[address]
+            assert netting_channel.partner_total_deposit >= self.partner_previous_deposit[address]
+            self.our_previous_deposit[address] = netting_channel.our_total_deposit
+            self.partner_previous_deposit[address] = netting_channel.partner_total_deposit
 
-            # add constraint (2TN) when withdrawal is implemented
+            # TODO add constraint (2TN) when withdrawal is implemented
             # constraint (3R) and (4R)
             our_transferred = transferred_amount(netting_channel.our_state)
             partner_transferred = transferred_amount(netting_channel.partner_state)
@@ -142,27 +156,26 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             partner_unclaimed = channel.get_amount_unclaimed_onchain(
                 netting_channel.partner_state,
             )
-            assert our_transferred >= self.our_previous_transferred[index]
-            assert partner_transferred >= self.partner_previous_transferred[index]
+            assert our_transferred >= self.our_previous_transferred[address]
+            assert partner_transferred >= self.partner_previous_transferred[address]
             assert (
                 our_unclaimed + our_transferred >=
-                self.our_previous_transferred[index] + self.our_previous_unclaimed[index]
+                self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
             )
             assert (
                 partner_unclaimed + partner_transferred >=
-                self.our_previous_transferred[index] + self.our_previous_unclaimed[index]
+                self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
             )
-            self.our_previous_transferred[index] = our_transferred
-            self.partner_previous_transferred[index] = partner_transferred
-            self.our_previous_unclaimed[index] = our_unclaimed
-            self.partner_previous_unclaimed[index] = partner_unclaimed
+            self.our_previous_transferred[address] = our_transferred
+            self.partner_previous_transferred[address] = partner_transferred
+            self.our_previous_unclaimed[address] = our_unclaimed
+            self.partner_previous_unclaimed[address] = partner_unclaimed
 
-    @precondition(lambda self: self.channels)
     @invariant()
     def channel_state_invariants(self):
         """ Check the invariants for the channel state given in the Raiden specification """
 
-        for netting_channel in self.channels:
+        for netting_channel in self.address_to_channel.values():
             our_state = netting_channel.our_state
             partner_state = netting_channel.partner_state
 
@@ -213,14 +226,11 @@ class InitiatorStateMixin:
         self.processed_secret_requests = set()
         self.initiated = set()
 
-    @property
-    def channel(self):
-        return self.channels[0]
-
     def _action_init_initiator(self, transfer: TransferDescriptionWithSecretState):
+        channel = self.address_to_channel[transfer.target]
         return ActionInitInitiator(
             transfer,
-            [factories.route_from_channel(self.channel)],
+            [factories.route_from_channel(channel)],
         )
 
     def _receive_secret_request(self, transfer: TransferDescriptionWithSecretState):
@@ -240,11 +250,12 @@ class InitiatorStateMixin:
 
     @rule(
         target=transfers,
+        partner=partners,
         payment_id=integers(min_value=1),
         amount=integers(min_value=1, max_value=100),
         secret=secret(),
     )
-    def populate_transfer_descriptions(self, payment_id, amount, secret):
+    def populate_transfer_descriptions(self, partner, payment_id, amount, secret):
         assume(secret not in self.used_secrets)
         self.used_secrets.add(secret)
         return TransferDescriptionWithSecretState(
@@ -253,20 +264,21 @@ class InitiatorStateMixin:
             amount=amount,
             token_network_identifier=self.token_network_id,
             initiator=self.address,
-            target=self.channel.partner_state.address,
+            target=partner,
             secret=secret,
         )
 
     def _secret_in_use(self, secret):
         return sha3(secret) in self.chain_state.payment_mapping.secrethashes_to_task
 
-    def _available_amount(self):
-        return channel.get_distributable(self.channel.our_state, self.channel.partner_state)
+    def _available_amount(self, partner_address):
+        netting_channel = self.address_to_channel[partner_address]
+        return channel.get_distributable(netting_channel.our_state, netting_channel.partner_state)
 
     @rule(target=init_initiators, transfer=transfers)
     def valid_init_initiator(self, transfer):
         assume(transfer.secret not in self.initiated)
-        assume(transfer.amount <= self._available_amount())
+        assume(transfer.amount <= self._available_amount(transfer.target))
         action = self._action_init_initiator(transfer)
         result = node.state_transition(self.chain_state, action)
         assert event_types_match(result.events, SendLockedTransfer)
@@ -346,7 +358,12 @@ def test_regression_malicious_secret_request_handled_properly():
     state.replay_path = True
 
     state.initialize(block_number=1, random=Random(), random_seed=None)
-    v1 = state.populate_transfer_descriptions(amount=1, payment_id=1, secret=b'\x00' * 32)
+    v1 = state.populate_transfer_descriptions(
+        partner=state.default_partner,
+        amount=1,
+        payment_id=1,
+        secret=b'\x00' * 32,
+    )
     v2 = state.valid_init_initiator(transfer=v1)
     v3 = state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.invalid_authentic_secret_request(v3)
