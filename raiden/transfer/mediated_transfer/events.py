@@ -397,11 +397,11 @@ class SendSecretRequest(SendMessageEvent):
         restored = cls(
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
-            message_identifier=int(data['message_identifier']),
-            payment_identifier=int(data['payment_identifier']),
-            amount=int(data['amount']),
-            expiration=int(data['expiration']),
-            secrethash=serialization.deserialize_bytes(data['secrethash']),
+            message_identifier=MessageID(int(data['message_identifier'])),
+            payment_identifier=PaymentID(int(data['payment_identifier'])),
+            amount=TokenAmount(int(data['amount'])),
+            expiration=BlockExpiration(int(data['expiration'])),
+            secrethash=SecretHash(serialization.deserialize_bytes(data['secrethash'])),
         )
 
         return restored
