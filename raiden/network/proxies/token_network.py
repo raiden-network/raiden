@@ -1025,9 +1025,6 @@ class TokenNetwork:
                     locksroot,
                 )
                 if not gas_limit:
-                    # Context switch before we check the channel data in
-                    # case the partner already settled and this is why settle would fail
-                    gevent.sleep(1)
                     self._check_channel_state_before_settle(
                         participant1=self.node_address,
                         participant2=partner,
