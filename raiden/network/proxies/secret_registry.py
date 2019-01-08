@@ -85,10 +85,10 @@ class SecretRegistry:
         gas_limit = self.proxy.estimate_gas('registerSecretBatch', secrets)
         if not gas_limit:
             log.critical(
-                'registerSecretBatch will always fail',
+                'Call to registerSecretBatch will fail. Out of funds?',
                 **log_details,
             )
-            raise RaidenUnrecoverableError('RegisterSecretBatch transaction will always fail')
+            raise RaidenUnrecoverableError('Call to registerSecretBatch will fail. Out of funds?')
 
         try:
             log.debug('registerSecretBatch called', **log_details)

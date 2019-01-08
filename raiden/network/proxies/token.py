@@ -66,10 +66,11 @@ class Token:
         if not startgas:
             msg = self._check_why_approved_failed(allowance)
             log.critical(
-                f'approve transaction will always fail due to,  {msg}',
+                'Call to approve transaction will fail',
+                msg=msg,
                 **log_details,
             )
-            raise RaidenUnrecoverableError('Approve transaction will always fail')
+            raise RaidenUnrecoverableError('Call to approve transaction will fail')
 
         log.debug('approve called', **log_details)
         transaction_hash = self.proxy.transact(
@@ -107,22 +108,23 @@ class Token:
         # allowance, which is not necessarily the case)
         elif user_balance < allowance:
             msg = (
-                'Approve failed. \n'
-                'Your account balance is {}, nevertheless the call to '
-                'approve failed. Please make sure the corresponding smart '
-                'contract is a valid ERC20 token.'
-            ).format(user_balance)
+                f'Approve failed. \n'
+                f'Your account balance is {user_balance}. '
+                f'The requested allowance is {allowance}. '
+                f'The smart contract may be rejecting your request due to the '
+                f'lack of balance.'
+            )
 
         # If the user has enough balance, warn the user the smart contract
         # may not have the approve function.
         else:
             msg = (
                 f'Approve failed. \n'
-                f'Your account balance is {user_balance}, '
-                f'the request allowance is {allowance}. '
-                f'The smart contract may be rejecting your request for the '
-                f'lack of balance.'
-            )
+                f'Your account balance is {user_balance}. Nevertheless the call to'
+                f'approve failed. Please make sure the corresponding smart '
+                f'contract is a valid ERC20 token.'
+            ).format(user_balance)
+
         return msg
 
     def balance_of(self, address):
