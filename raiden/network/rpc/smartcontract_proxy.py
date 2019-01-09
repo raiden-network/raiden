@@ -181,15 +181,17 @@ class ContractProxy:
     def encode_function_call(self, function: str, args: List = None):
         return self.get_transaction_data(self.contract.abi, function, args)
 
-    def estimate_gas(self, function: str, *args) -> typing.Optional[int]:
+    def estimate_gas(self, block_identifier, function: str, *args) -> typing.Optional[int]:
         """Returns a gas estimate for the function with the given arguments or
         None if the function call will fail due to Insufficient funds or
         the logic in the called function."""
         fn = getattr(self.contract.functions, function)
+        address = to_checksum_address(self.jsonrpc_client.address)
         try:
-            return fn(*args).estimateGas({
-                'from': to_checksum_address(self.jsonrpc_client.address),
-            })
+            return fn(*args).estimateGas(
+                transaction={'from': address},
+                block_identifier=block_identifier,
+            )
         except ValueError as err:
             action = inspect_client_error(err, self.jsonrpc_client.eth_node)
             will_fail = action in (

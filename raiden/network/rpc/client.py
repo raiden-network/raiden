@@ -7,6 +7,7 @@ import structlog
 from eth_utils import (
     decode_hex,
     encode_hex,
+    is_checksum_address,
     remove_0x_prefix,
     to_canonical_address,
     to_checksum_address,
@@ -14,8 +15,13 @@ from eth_utils import (
 from gevent.lock import Semaphore
 from requests import ConnectTimeout
 from web3 import Web3
+from web3.contract import ContractFunction
+from web3.eth import Eth
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
+from web3.utils.contracts import prepare_transaction
+from web3.utils.toolz import assoc
+from web3.utls.empty import empty
 
 from raiden import constants
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError, EthNodeInterfaceError
@@ -222,6 +228,94 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
+def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
+    """ Temporary workaround until next web3.py release (5.X.X)
+
+    Current master of web3.py has this implementation already:
+    https://github.com/ethereum/web3.py/blob/2a67ea9f0ab40bb80af2b803dce742d6cad5943e/web3/eth.py#L311
+    """
+    if 'from' not in transaction and is_checksum_address(self.defaultAccount):
+        transaction = assoc(transaction, 'from', self.defaultAccount)
+
+    if block_identifier is None:
+        params = [transaction]
+    else:
+        params = [transaction, block_identifier]
+
+    return self.web3.manager.request_blocking(
+        "eth_estimateGas",
+        params,
+    )
+
+
+def estimate_gas_for_function(
+    address,
+    web3,
+    fn_identifier=None,
+    transaction=None,
+    contract_abi=None,
+    fn_abi=None,
+    block_identifier=None,
+    *args,
+    **kwargs,
+):
+    """Temporary workaround until next web3.py release (5.X.X)"""
+    estimate_transaction = prepare_transaction(
+        address,
+        web3,
+        fn_identifier=fn_identifier,
+        contract_abi=contract_abi,
+        fn_abi=fn_abi,
+        transaction=transaction,
+        fn_args=args,
+        fn_kwargs=kwargs,
+    )
+
+    gas_estimate = web3.eth.estimateGas(estimate_transaction, block_identifier)
+    return gas_estimate
+
+
+def patched_contractfunction_estimateGas(self, transaction=None, block_identifier=None):
+    """Temporary workaround until next web3.py release (5.X.X)"""
+    if transaction is None:
+            estimate_gas_transaction = {}
+    else:
+        estimate_gas_transaction = dict(**transaction)
+
+    if 'data' in estimate_gas_transaction:
+        raise ValueError('Cannot set data in estimateGas transaction')
+    if 'to' in estimate_gas_transaction:
+        raise ValueError('Cannot set to in estimateGas transaction')
+
+    if self.address:
+        estimate_gas_transaction.setdefault('to', self.address)
+    if self.web3.eth.defaultAccount is not empty:
+        estimate_gas_transaction.setdefault('from', self.web3.eth.defaultAccount)
+
+    if 'to' not in estimate_gas_transaction:
+        if isinstance(self, type):
+            raise ValueError(
+                'When using `Contract.estimateGas` from a contract factory '
+                'you must provide a `to` address with the transaction',
+            )
+        else:
+            raise ValueError(
+                'Please ensure that this contract instance has an address.',
+            )
+
+    return estimate_gas_for_function(
+        address=self.address,
+        web3=self.web3,
+        fn_identifier=self.function_identifier,
+        transaction=estimate_gas_transaction,
+        contract_abi=self.contract_abi,
+        fn_abi=self.abi,
+        block_identifier=block_identifier,
+        *self.args,
+        **self.kwargs,
+    )
+
+
 def monkey_patch_web3(web3, gas_price_strategy):
     try:
         # install caching middleware
@@ -241,6 +335,10 @@ def monkey_patch_web3(web3, gas_price_strategy):
     # create the connection test middleware (but only for non-tester chain)
     if not hasattr(web3, 'testing'):
         web3.middleware_stack.inject(connection_test_middleware, layer=0)
+
+    # Temporary until next web3.py release (5.X.X)
+    ContractFunction.estimateGas = patched_contractfunction_estimateGas
+    Eth.estimateGas = patched_web3_eth_estimate_gas
 
 
 class JSONRPCClient:
