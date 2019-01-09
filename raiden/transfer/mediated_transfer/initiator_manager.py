@@ -136,7 +136,7 @@ def subdispatch_to_all_initiatortransfer(
     for secrethash in list(payment_state.initiator_transfers.keys()):
         initiator_state = payment_state.initiator_transfers[secrethash]
         channel_identifier = initiator_state.channel_identifier
-        channel_state = channelidentifiers_to_channels[channel_identifier]
+        channel_state = channelidentifiers_to_channels.get(channel_identifier)
         if not channel_state:
             continue
 
