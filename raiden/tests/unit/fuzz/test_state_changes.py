@@ -3,7 +3,14 @@ from copy import deepcopy
 from random import Random
 
 from hypothesis import assume, event
-from hypothesis.stateful import Bundle, RuleBasedStateMachine, initialize, invariant, rule
+from hypothesis.stateful import (
+    Bundle,
+    RuleBasedStateMachine,
+    consumes,
+    initialize,
+    invariant,
+    rule,
+)
 from hypothesis.strategies import builds, composite, integers, random_module, randoms
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
@@ -17,7 +24,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
-from raiden.transfer.state_change import ContractReceiveChannelNew
+from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveChannelSettled
 from raiden.utils import random_secret, sha3
 
 
@@ -218,7 +225,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             assert - our_deposit <= netted_transferred <= partner_deposit
 
 
-class InitiatorStateMixin:
+class InitiatorMixin:
 
     def __init__(self):
         super().__init__()
@@ -346,15 +353,45 @@ class InitiatorStateMixin:
         assert not result.events
 
 
-class InitiatorState(InitiatorStateMixin, ChainStateStateMachine):
+class OnChainMixin:
+
+    @rule(target=partners)
+    def open_channel(self):
+        return self.new_channel_with_transaction()
+
+    @rule(partner=consumes(partners))
+    def settle_channel(self, partner):
+        channel = self.address_to_channel[partner]
+
+        channel_settled_state_change = ContractReceiveChannelSettled(
+            transaction_hash=factories.make_transaction_hash(),
+            token_network_identifier=channel.token_network_identifier,
+            channel_identifier=channel.identifier,
+            block_number=self.block_number + 1,
+        )
+
+        node.state_transition(self.chain_state, channel_settled_state_change)
+
+
+class InitiatorStateMachine(InitiatorMixin, ChainStateStateMachine):
     pass
 
 
-TestInitiator = InitiatorState.TestCase
+class OnChainStateMachine(OnChainMixin, ChainStateStateMachine):
+    pass
+
+
+class MultiChannelInitiatorStateMachine(InitiatorMixin, OnChainMixin, ChainStateStateMachine):
+    pass
+
+
+TestInitiator = InitiatorStateMachine.TestCase
+TestOnChain = OnChainStateMachine.TestCase
+TestMultiChannelInitiator = MultiChannelInitiatorStateMachine.TestCase
 
 
 def test_regression_malicious_secret_request_handled_properly():
-    state = InitiatorState()
+    state = InitiatorStateMachine()
     state.replay_path = True
 
     state.initialize(block_number=1, random=Random(), random_seed=None)
