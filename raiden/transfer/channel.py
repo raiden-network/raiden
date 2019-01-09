@@ -834,6 +834,29 @@ def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
     return total_pending + total_unclaimed + total_unclaimed_onchain
 
 
+def get_batch_unlock_values(
+    channel_state: NettingChannelState,
+) -> Tuple[TokenAmount, TokenAmount]:
+    """Collect lock values for expired locks and onchain unlocked locks.
+    Note: this function does not check expiry, so the values make only sense during settlement.
+
+    Returns:
+        receiving_unlock_value: TokenAmount sent to us and revealed on-chain
+        expired_unlock_value: TokenAmount sent from us and expired
+    """
+    receiving_unlock_value = sum(
+        unlock.lock.amount
+        for unlock in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks.values()
+    )
+    expired_unlock_value = sum(
+        lock.amount
+        for lock in channel_state.our_state.secrethashes_to_lockedlocks.values()
+    ) + sum(
+        lock.amount for lock in channel_state.our_state.secrethashes_to_unlockedlocks
+    )
+    return (receiving_unlock_value, expired_unlock_value)
+
+
 def get_balance(
         sender: NettingChannelEndState,
         receiver: NettingChannelEndState,
@@ -1479,6 +1502,7 @@ def register_onchain_secret_endstate(
     # the lock might be in end_state.secrethashes_to_lockedlocks or
     # end_state.secrethashes_to_unlockedlocks
     # It should be removed from both and moved into secrethashes_to_onchain_unlockedlocks
+    # FIXME: we may have a bad interaction from the HoldOffChainSecretRequest-event handler
     pending_lock = None
 
     if is_lock_locked(end_state, secrethash):
@@ -1812,29 +1836,54 @@ def handle_channel_settled(
 ) -> TransitionResult:
     events: List[Event] = list()
 
-    # At the moment each participant unlocks its receiving half of the
-    # channel automatically
     if state_change.channel_identifier == channel_state.identifier:
         set_settled(channel_state, state_change.block_number)
 
-        is_settle_pending = channel_state.our_unlock_transaction is not None
-        merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
+        # Decide which sides of the channel to unlock. Depending on the difference between
+        # the expired sent, and the on-chain revealed token amounts,
+        # we decide for both sides, if it is in our favor to unlock.
+        receiving_side, sending_side = get_batch_unlock_values(channel_state)
 
-        if not is_settle_pending and merkle_tree_leaves:
-            onchain_unlock = ContractSendChannelBatchUnlock(
-                channel_state.token_address,
-                channel_state.token_network_identifier,
-                channel_state.identifier,
-                channel_state.partner_state.address,
-            )
-            events.append(onchain_unlock)
+        if sending_side > 0:
+            # We will gain from unlock, because there are on-chain unlocks in our favor
+            is_settle_pending = channel_state.our_unlock_transaction is not None
+            merkle_tree_leaves = get_batch_unlock(channel_state.our_state)
 
-            channel_state.our_unlock_transaction = TransactionExecutionStatus(
-                block_number,
-                None,
-                None,
-            )
-        else:
+            if not is_settle_pending and merkle_tree_leaves:
+                onchain_unlock = ContractSendChannelBatchUnlock(
+                    channel_state.token_address,
+                    channel_state.token_network_identifier,
+                    channel_state.identifier,
+                    channel_state.partner_state.address,
+                )
+                events.append(onchain_unlock)
+
+                channel_state.our_unlock_transaction = TransactionExecutionStatus(
+                    block_number,
+                    None,
+                    None,
+                )
+
+        if receiving_side > 0:
+            # We will gain from unlock, because there are expired locks in our favor
+            is_settle_pending = channel_state.partner_unlock_transaction is not None
+            merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
+
+            if not is_settle_pending and merkle_tree_leaves:
+                onchain_unlock = ContractSendChannelBatchUnlock(
+                    channel_state.token_address,
+                    channel_state.token_network_identifier,
+                    channel_state.identifier,
+                    channel_state.our_state.address,
+                )
+                events.append(onchain_unlock)
+
+                channel_state.partner_unlock_transaction = TransactionExecutionStatus(
+                    block_number,
+                    None,
+                    None,
+                )
+        if receiving_side <= 0 and sending_side <= 0:
             # we don't need to wait for the unlock to be successful, the
             # channel can be cleaned now
             channel_state = None

@@ -9,8 +9,13 @@ from raiden.messages import Message
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs
+from raiden.transfer import channel
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendSecretRequest
+from raiden.transfer.mediated_transfer.events import (
+    SendBalanceProof,
+    SendSecretRequest,
+    SendSecretReveal,
+)
 from raiden.utils import pex, typing
 
 log = structlog.get_logger(__name__)
@@ -33,6 +38,12 @@ class SendBalanceProofState(typing.NamedTuple):
     balance_proof_event: typing.Optional[SendBalanceProof]
 
 
+class SecretRevealState(typing.NamedTuple):
+    secrethash: bytes
+    secret_reveal_available: Event
+    secret_reveal_event: SendSecretReveal
+
+
 class WaitForMessage(MessageHandler):
     def __init__(self):
         self.waiting = defaultdict(list)
@@ -53,6 +64,66 @@ class WaitForMessage(MessageHandler):
                 waiting.message_received_event.set()
 
 
+class HoldOffChainSecretReveal(RaidenEventHandler):
+    """ Use this handler to stop the initiator from revealing the secret.
+
+    This is used to simulate network communication problems. The message
+    SecretReveal is used because the participants state can be expected to be
+    consistent.
+    """
+
+    def __init__(self):
+        self.secrethashes_to_hold = dict()
+
+    def on_raiden_event(self, raiden: RaidenService, event: Event):
+        if type(event) == channel.ContractSendChannelSettle:
+            return
+        return super().on_raiden_event(raiden, event)
+
+    def hold_secretreveal_for(self, secrethash: typing.SecretHash):
+        assert secrethash not in self.secrethashes_to_hold
+
+        waiting_event = Event()
+        self.secrethashes_to_hold[secrethash] = SecretRevealState(
+            secrethash=secrethash,
+            secret_reveal_available=waiting_event,
+            secret_reveal_event=None,
+        )
+
+        return waiting_event
+
+    def release_secretreveal_for(self, raiden: RaidenService, secrethash: typing.SecretHash):
+        hold_state = self.secrethashes_to_hold.get(secrethash)
+
+        if hold_state and hold_state.secret_reveal_available.is_set():
+            secret_reveal_event = hold_state.secret_reveal_event
+            assert secret_reveal_event
+            del self.secrethashes_to_hold[secrethash]
+
+            super().handle_send_secretreveal(raiden, secret_reveal_event)
+            log.info(
+                f'SecretReveal for {pex(secret_reveal_event.secrethash)} released.',
+                node=pex(raiden.address),
+            )
+
+    def handle_send_secretreveal(
+            self,
+            raiden: RaidenService,
+            secret_reveal_event: SendSecretReveal,
+    ):
+        hold_state = self.secrethashes_to_hold.get(secret_reveal_event.secrethash)
+        if hold_state is None:
+            super().handle_send_secretreveal(raiden, secret_reveal_event)
+        else:
+            new_hold_state = hold_state._replace(secret_reveal_event=secret_reveal_event)
+            new_hold_state.secret_reveal_available.set()
+            self.secrethashes_to_hold[secret_reveal_event.secrethash] = new_hold_state
+            log.info(
+                f'SecretReveal for {pex(secret_reveal_event.secrethash)} held.',
+                node=pex(raiden.address),
+            )
+
+
 class HoldOffChainSecretRequest(RaidenEventHandler):
     """ Use this handler to stop the target from requesting the secret.
 
@@ -64,6 +135,9 @@ class HoldOffChainSecretRequest(RaidenEventHandler):
     def __init__(self):
         self.secrethashes_to_holdsecretrequest = dict()
         self.secrethashes_to_holdbalanceproof = dict()
+
+    def on_raiden_event(self, raiden: RaidenService, event: Event):
+        return super().on_raiden_event(raiden, event)
 
     def hold_secretrequest_for(self, secrethash: typing.SecretHash):
         assert secrethash not in self.secrethashes_to_holdsecretrequest

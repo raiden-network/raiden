@@ -1164,6 +1164,7 @@ class TokenNetwork:
     def unlock(
             self,
             channel_identifier: ChannelID,
+            participant: Address,
             partner: Address,
             merkle_tree_leaves: MerkleTreeLeaves,
     ):
@@ -1171,6 +1172,7 @@ class TokenNetwork:
             'token_network': pex(self.address),
             'node': pex(self.node_address),
             'partner': pex(partner),
+            'participant': pex(participant),
             'merkle_tree_leaves': merkle_tree_leaves,
         }
 
@@ -1185,7 +1187,7 @@ class TokenNetwork:
             'pending',
             'unlock',
             channel_identifier,
-            self.node_address,
+            participant,
             partner,
             leaves_packed,
         )
@@ -1198,7 +1200,7 @@ class TokenNetwork:
                 'unlock',
                 gas_limit,
                 channel_identifier,
-                self.node_address,
+                participant,
                 partner,
                 leaves_packed,
             )
@@ -1220,7 +1222,7 @@ class TokenNetwork:
                 block_identifier=block,
             )
             channel_settled = self.channel_is_settled(
-                participant1=self.node_address,
+                participant1=participant,
                 participant2=partner,
                 channel_identifier=channel_identifier,
                 block_identifier=block,

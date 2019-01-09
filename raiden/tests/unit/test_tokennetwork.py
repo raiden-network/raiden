@@ -20,6 +20,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
     ContractReceiveRouteClosed,
     ContractReceiveRouteNew,
+    ContractReceiveSecretReveal,
 )
 from raiden.utils import sha3
 
@@ -144,7 +145,7 @@ def test_channel_settle_must_properly_cleanup():
     assert channel_state.identifier not in ids_to_channels
 
 
-def test_channel_data_removed_after_unlock(
+def test_channel_data_removed_when_no_unlock(
         chain_state,
         token_network_state,
         our_address,
@@ -240,31 +241,8 @@ def test_channel_data_removed_after_unlock(
 
     token_network_state_after_settle = channel_settled_iteration.new_state
     ids_to_channels = token_network_state_after_settle.channelidentifiers_to_channels
-    assert len(ids_to_channels) == 1
-    assert channel_state.identifier in ids_to_channels
-
-    unlock_blocknumber = settle_block_number + 5
-    channel_batch_unlock_state_change = ContractReceiveChannelBatchUnlock(
-        transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        participant=our_address,
-        partner=address,
-        locksroot=lock_secrethash,
-        unlocked_amount=lock_amount,
-        returned_tokens=0,
-        block_number=closed_block_number + 1,
-    )
-    channel_unlock_iteration = token_network.state_transition(
-        payment_network_identifier,
-        channel_settled_iteration.new_state,
-        channel_batch_unlock_state_change,
-        pseudo_random_generator,
-        unlock_blocknumber,
-    )
-
-    token_network_state_after_unlock = channel_unlock_iteration.new_state
-    ids_to_channels = token_network_state_after_unlock.channelidentifiers_to_channels
     assert len(ids_to_channels) == 0
+    assert channel_state.identifier not in ids_to_channels
 
 
 def test_mediator_clear_pairs_after_batch_unlock(
@@ -472,6 +450,18 @@ def test_multiple_channel_states(
     )
 
     node.state_transition(chain_state, init_target)
+
+    channel_onchain_reveal_state_change = ContractReceiveSecretReveal(
+        transaction_hash=factories.make_transaction_hash(),
+        secret_registry_address=factories.make_address(),
+        secrethash=lock_secrethash,
+        secret=lock_secret,
+        block_number=lock_expiration - 1,
+    )
+    node.state_transition(
+        chain_state,
+        channel_onchain_reveal_state_change,
+    )
 
     closed_block_number = open_block_number + 10
     channel_close_state_change = ContractReceiveChannelClosed(

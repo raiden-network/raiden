@@ -204,10 +204,16 @@ class PaymentChannel:
             non_closing_signature=signature,
         )
 
-    def unlock(self, merkle_tree_leaves: bytes):
+    def unlock(
+        self,
+        merkle_tree_leaves: bytes,
+        participant: Address,
+        partner: Address,
+    ):
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
-            partner=self.participant2,
+            participant=participant,
+            partner=partner,
             merkle_tree_leaves=merkle_tree_leaves,
         )
 

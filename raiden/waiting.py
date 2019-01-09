@@ -2,6 +2,7 @@ import gevent
 import structlog
 
 from raiden.transfer import channel, views
+from raiden.transfer.architecture import StateChange
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
@@ -195,6 +196,30 @@ def wait_for_payment_network(
             payment_network_id,
             token_address,
         )
+
+
+def wait_for_state_change(
+    raiden: RaidenService,
+    filter_mask: dict,
+    state_change_type: StateChange,
+    retry_timeout: float,
+) -> None:
+    """ Wait for a certain state_change of `state_change_type`, that has the fields and values
+    declared in `filter_mask`.
+    Notes:
+        - make sure to properly string encode the values of `filter_mask`.
+        - this doesn't time out by itself, wrap with gevent.Timeout
+    """
+    while True:
+        state_change = raiden.wal.storage.get_latest_state_change_by_data_field(
+            filters=filter_mask,
+        )
+        if state_change and state_change.data is not None:
+            if (
+                isinstance(state_change.data, state_change_type)
+            ):
+                return
+        gevent.sleep(retry_timeout)
 
 
 def wait_for_settle(

@@ -324,47 +324,70 @@ class RaidenEventHandler:
             token_network_address=token_network_identifier,
             channel_id=channel_identifier,
         )
+
+        our_address = raiden.address
+        partner_address = (
+            payment_channel.participant2 if payment_channel.participant1 == our_address
+            else payment_channel.participant1
+        )
         token_network: TokenNetwork = payment_channel.token_network
 
-        participants_details = token_network.detail_participants(
-            participant1=raiden.address,
-            participant2=participant,
-            channel_identifier=channel_identifier,
-        )
+        (
+            _, _, _, _,
+            our_nonce,
+            our_locksroot,
+            our_locked_amount,
+        ) = token_network.proxy.contract.functions.getChannelParticipantInfo(
+            channel_identifier,
+            to_checksum_address(our_address),
+            to_checksum_address(partner_address),
+        ).call()
 
-        our_details = participants_details.our_details
-        our_locksroot = our_details.locksroot
+        (
+            _, _, _, _,
+            partner_nonce,
+            partner_locksroot,
+            partner_locked_amount,
+        ) = token_network.proxy.contract.functions.getChannelParticipantInfo(
+            channel_identifier,
+            to_checksum_address(partner_address),
+            to_checksum_address(our_address),
+        ).call()
 
-        partner_details = participants_details.partner_details
-        partner_locksroot = partner_details.locksroot
-
-        is_partner_unlock = (
-            partner_details.address == participant and
+        # we want to unlock because there are on-chain unlocked locks
+        is_unlock_receiving = (
+            our_address == participant and
             partner_locksroot != EMPTY_HASH
         )
-        is_our_unlock = (
-            our_details.address == participant and
+        # we want to unlock, because there are expired, not revealed locks
+        is_unlock_sending = (
+            partner_address == participant and
             our_locksroot != EMPTY_HASH
         )
 
-        if is_partner_unlock:
+        if is_unlock_receiving:
             state_change_record = get_state_change_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
                 token_network_identifier=token_network_identifier,
                 channel_identifier=channel_identifier,
                 locksroot=partner_locksroot,
-                sender=participants_details.partner_details.address,
+                sender=partner_address,
             )
+            participant = our_address
+            partner = partner_address
             state_change_identifier = state_change_record.state_change_identifier
-        elif is_our_unlock:
+        elif is_unlock_sending:
             event_record = get_event_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
                 token_network_identifier=token_network_identifier,
                 channel_identifier=channel_identifier,
-                locksroot=our_locksroot.balance_hash,
+                locksroot=our_locksroot,
             )
+            assert our_locked_amount > 0
+            participant = partner_address
+            partner = our_address
             state_change_identifier = event_record.state_change_identifier
         else:
             # In the case that someone else sent the unlock we do nothing
@@ -387,9 +410,7 @@ class RaidenEventHandler:
                 f'channel:{channel_identifier} '
                 f'participant:{to_checksum_address(participant)} '
                 f'our_locksroot:{to_hex(our_locksroot)} '
-                f'our_balance_hash:{to_hex(our_details.balance_hash)} '
-                f'partner_locksroot:{to_hex(partner_locksroot)} '
-                f'partner_balancehash:{to_hex(partner_details.balance_hash)} ',
+                f'partner_locksroot:{to_hex(partner_locksroot)} ',
             )
 
         # Replay state changes until a channel state is reached where
@@ -405,12 +426,16 @@ class RaidenEventHandler:
         our_state = restored_channel_state.our_state
         partner_state = restored_channel_state.partner_state
         if partner_state.address == participant:
-            merkle_tree_leaves = get_batch_unlock(partner_state)
-        elif our_state.address == participant:
             merkle_tree_leaves = get_batch_unlock(our_state)
+        elif our_state.address == participant:
+            merkle_tree_leaves = get_batch_unlock(partner_state)
 
         try:
-            payment_channel.unlock(merkle_tree_leaves)
+            payment_channel.unlock(
+                participant=participant,
+                partner=partner,
+                merkle_tree_leaves=merkle_tree_leaves,
+            )
         except ChannelOutdatedError as e:
             log.error(
                 str(e),

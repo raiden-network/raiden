@@ -206,7 +206,7 @@ class SQLiteStorage:
             self,
             filters: typing.Dict[str, typing.Any],
     ) -> EventRecord:
-        """ Return all state changes filtered by a named field and value."""
+        """ Return latest event filtered by named fields and values."""
         cursor = self.conn.cursor()
 
         where_clauses = []
@@ -250,7 +250,7 @@ class SQLiteStorage:
             self,
             filters: typing.Dict[str, str],
     ) -> StateChangeRecord:
-        """ Return all state changes filtered by a named field and value."""
+        """ Return latest state change filtered by named fields and values."""
         cursor = self.conn.cursor()
 
         where_clauses = []

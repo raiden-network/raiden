@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 from raiden.constants import EMPTY_HASH
 from raiden.network.proxies.token_network import ParticipantDetails, ParticipantsDetails
 from raiden.raiden_event_handler import RaidenEventHandler
@@ -7,7 +9,7 @@ from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.utils import hash_balance_data
 
 
-def test_handle_contract_send_channelunlock_already_unlocked():
+def test_handle_contract_send_channelunlock_already_unlocked(monkeypatch):
     """This is a test for the scenario where the onchain unlock has
     already happened when we get to handle our own send unlock
     transaction.
@@ -55,6 +57,15 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 
     # make sure detail_participants returns partner data with a locksroot of 0x0
     raiden.chain.token_network.detail_participants = detail_participants
+    # ensure, there are some fields set
+    raiden.chain.payment_channel(
+        token_network_identifier,
+        channel_identifier,
+    ).participant1 = participant
+    raiden.chain.token_network.configure_mock(**{
+        'proxy.contract.functions.getChannelParticipantInfo.return_value':
+        Mock(call=lambda: (0, 0, 0, 0, 1, EMPTY_HASH, 1)),
+    })
 
     event = ContractSendChannelBatchUnlock(
         token_address=token_address,

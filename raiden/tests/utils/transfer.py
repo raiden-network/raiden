@@ -2,7 +2,6 @@
 import random
 
 import gevent
-from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
@@ -231,12 +230,11 @@ def make_mediated_transfer(
     )
     mediated_transfer_msg = LockedTransfer.from_event(lockedtransfer)
 
-    sign_key = PrivateKey(pkey)
-    mediated_transfer_msg.sign(sign_key)
+    mediated_transfer_msg.sign(pkey)
 
     # compute the signature
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
-    lockedtransfer.balance_proof = balance_proof
+    lockedtransfer.transfer.balance_proof = balance_proof
 
     # if this fails it's not the right key for the current `from_channel`
     assert mediated_transfer_msg.sender == from_channel.our_state.address
