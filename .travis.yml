@@ -1,15 +1,9 @@
-# Config file for automatic testing at travis-ci.org
-
 language: python
 python: 3.6
 cache: pip
 
-env:
-  global:
-    - CODECOV_TOKEN="2ca8f46a-aa46-4ca9-bd0f-8ee4195af7ad"
-
 install:
-  - pip install codecov
+  - pip install codecov pytest-travis-fold
   - pip install -r requirements-dev.txt
   - pip install -e .
 
