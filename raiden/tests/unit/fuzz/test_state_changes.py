@@ -232,6 +232,7 @@ class InitiatorMixin:
         self.used_secrets = set()
         self.processed_secret_requests = set()
         self.initiated = set()
+        self.failing_path_2 = False
 
     def _action_init_initiator(self, transfer: TransferDescriptionWithSecretState):
         channel = self.address_to_channel[transfer.target]
@@ -250,42 +251,53 @@ class InitiatorMixin:
             sender=transfer.target,
         )
 
-    transfers = Bundle('transfers')
-    init_initiators = Bundle('init_initiators')
-    invalid_authentic_secret_requests = Bundle('invalid_authentic_secret_requests')
-    unauthentic_secret_requests = Bundle('unauthentic_secret_requests')
-
-    @rule(
-        target=transfers,
-        partner=partners,
-        payment_id=integers(min_value=1),
-        amount=integers(min_value=1, max_value=100),
-        secret=secret(),
-    )
-    def populate_transfer_descriptions(self, partner, payment_id, amount, secret):
+    def _new_transfer_description(self, target, payment_id, amount, secret):
         assume(secret not in self.used_secrets)
         self.used_secrets.add(secret)
+
         return TransferDescriptionWithSecretState(
             payment_network_identifier=self.payment_network_id,
             payment_identifier=payment_id,
             amount=amount,
             token_network_identifier=self.token_network_id,
             initiator=self.address,
-            target=partner,
+            target=target,
             secret=secret,
         )
 
-    def _secret_in_use(self, secret):
-        return sha3(secret) in self.chain_state.payment_mapping.secrethashes_to_task
+    def _invalid_authentic_secret_request(self, action):
+        result = node.state_transition(self.chain_state, action)
+        if action.secrethash not in self.processed_secret_requests:
+            assert event_types_match(result.events, EventPaymentSentFailed)
+        else:
+            assert not result.events
+        self.processed_secret_requests.add(action.secrethash)
+
+    def _unauthentic_secret_request(self, action):
+        result = node.state_transition(self.chain_state, action)
+        assert not result.events
 
     def _available_amount(self, partner_address):
         netting_channel = self.address_to_channel[partner_address]
         return channel.get_distributable(netting_channel.our_state, netting_channel.partner_state)
 
-    @rule(target=init_initiators, transfer=transfers)
-    def valid_init_initiator(self, transfer):
-        assume(transfer.secret not in self.initiated)
-        assume(transfer.amount <= self._available_amount(transfer.target))
+    def _assume_channel_opened(self, action):
+        if not self.failing_path_2:
+            needed_channel = self.address_to_channel[action.transfer.target]
+            assume(channel.get_status(needed_channel) == channel.CHANNEL_STATE_OPENED)
+
+    init_initiators = Bundle('init_initiators')
+
+    @rule(
+        target=init_initiators,
+        partner=partners,
+        payment_id=integers(min_value=1),
+        amount=integers(min_value=1, max_value=100),
+        secret=secret(),
+    )
+    def valid_init_initiator(self, partner, payment_id, amount, secret):
+        assume(amount <= self._available_amount(partner))
+        transfer = self._new_transfer_description(partner, payment_id, amount, secret)
         action = self._action_init_initiator(transfer)
         result = node.state_transition(self.chain_state, action)
         assert event_types_match(result.events, SendLockedTransfer)
@@ -300,6 +312,7 @@ class InitiatorMixin:
     @rule(previous_action=init_initiators)
     def valid_secret_request(self, previous_action):
         action = self._receive_secret_request(previous_action.transfer)
+        self._assume_channel_opened(previous_action)
         result = node.state_transition(self.chain_state, action)
         if action.secrethash in self.processed_secret_requests:
             assert not result.events
@@ -309,48 +322,32 @@ class InitiatorMixin:
             self.event('Valid SecretRequest accepted.')
             self.processed_secret_requests.add(action.secrethash)
 
-    @rule(
-        target=invalid_authentic_secret_requests,
-        previous_action=init_initiators,
-        amount=integers(),
-    )
+    @rule(previous_action=init_initiators, amount=integers())
     def wrong_amount_secret_request(self, previous_action, amount):
         assume(amount != previous_action.transfer.amount)
+        self._assume_channel_opened(previous_action)
         transfer = deepcopy(previous_action.transfer)
         transfer.amount = amount
-        return self._receive_secret_request(transfer)
+        action = self._receive_secret_request(transfer)
+        self._invalid_authentic_secret_request(action)
 
-    @rule(action=invalid_authentic_secret_requests)
-    def invalid_authentic_secret_request(self, action):
-        result = node.state_transition(self.chain_state, action)
-        if action.secrethash not in self.processed_secret_requests:
-            assert event_types_match(result.events, EventPaymentSentFailed)
-        else:
-            assert not result.events
-        self.processed_secret_requests.add(action.secrethash)
-
-    @rule(target=unauthentic_secret_requests, previous_action=init_initiators, secret=secret())
+    @rule(previous_action=init_initiators, secret=secret())
     def secret_request_with_wrong_secrethash(self, previous_action, secret):
         assume(sha3(secret) != sha3(previous_action.transfer.secret))
+        self._assume_channel_opened(previous_action)
         transfer = deepcopy(previous_action.transfer)
         transfer.secret = secret
-        return self._receive_secret_request(transfer)
+        action = self._receive_secret_request(transfer)
+        return self._unauthentic_secret_request(action)
 
-    @rule(
-        target=unauthentic_secret_requests,
-        previous_action=init_initiators,
-        payment_identifier=integers(),
-    )
+    @rule(previous_action=init_initiators, payment_identifier=integers())
     def secret_request_with_wrong_payment_id(self, previous_action, payment_identifier):
         assume(payment_identifier != previous_action.transfer.payment_identifier)
+        self._assume_channel_opened(previous_action)
         transfer = deepcopy(previous_action.transfer)
         transfer.payment_identifier = payment_identifier
-        return self._receive_secret_request(transfer)
-
-    @rule(action=unauthentic_secret_requests)
-    def unauthentic_secret_request(self, action):
-        result = node.state_transition(self.chain_state, action)
-        assert not result.events
+        action = self._receive_secret_request(transfer)
+        self._unauthentic_secret_request(action)
 
 
 class OnChainMixin:
@@ -395,15 +392,27 @@ def test_regression_malicious_secret_request_handled_properly():
     state.replay_path = True
 
     state.initialize(block_number=1, random=Random(), random_seed=None)
-    v1 = state.populate_transfer_descriptions(
+    v2 = state.valid_init_initiator(
         partner=state.default_partner,
         amount=1,
         payment_id=1,
         secret=b'\x00' * 32,
     )
-    v2 = state.valid_init_initiator(transfer=v1)
-    v3 = state.wrong_amount_secret_request(amount=0, previous_action=v2)
-    state.invalid_authentic_secret_request(v3)
+    state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.replay_init_initator(previous_action=v2)
+
+    state.teardown()
+
+
+@pytest.mark.skip
+def test_try_secret_request_after_settle_channel():
+    state = MultiChannelInitiatorStateMachine()
+    state.replay_path = True
+    state.failing_path_2 = True
+
+    v1 = state.initialize(block_number=1, random=Random(), random_seed=None)
+    v2 = state.valid_init_initiator(amount=1, partner=v1, payment_id=1, secret=b'\x91' * 32)
+    state.settle_channel(partner=v1)
+    state.valid_secret_request(previous_action=v2)
 
     state.teardown()
