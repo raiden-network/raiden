@@ -126,3 +126,5 @@ SuccessOrError = Tuple[bool, Optional[str]]
 BlockSpecification = Union[str, T_BlockNumber]
 
 ChannelMap = Dict[ChannelID, 'NettingChannelState']
+
+InitiatorTransfersMap = Dict[str, 'InitiatorTransferState']

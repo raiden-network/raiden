@@ -452,6 +452,7 @@ def state_transition(
         state_change: StateChange,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
 ) -> TransitionResult:
     if type(state_change) == Block:
         iteration = handle_block(
