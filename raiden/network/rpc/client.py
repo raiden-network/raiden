@@ -20,8 +20,8 @@ from web3.eth import Eth
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
 from web3.utils.contracts import prepare_transaction
+from web3.utils.empty import empty
 from web3.utils.toolz import assoc
-from web3.utls.empty import empty
 
 from raiden import constants
 from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError, EthNodeInterfaceError
@@ -304,13 +304,13 @@ def patched_contractfunction_estimateGas(self, transaction=None, block_identifie
             )
 
     return estimate_gas_for_function(
-        address=self.address,
-        web3=self.web3,
-        fn_identifier=self.function_identifier,
-        transaction=estimate_gas_transaction,
-        contract_abi=self.contract_abi,
-        fn_abi=self.abi,
-        block_identifier=block_identifier,
+        self.address,
+        self.web3,
+        self.function_identifier,
+        estimate_gas_transaction,
+        self.contract_abi,
+        self.abi,
+        block_identifier,
         *self.args,
         **self.kwargs,
     )

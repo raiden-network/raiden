@@ -7,6 +7,7 @@ from web3.contract import Contract
 from web3.utils.abi import get_abi_input_types
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 
+from raiden import constants
 from raiden.constants import EthClient
 from raiden.exceptions import (
     InsufficientFunds,
@@ -187,6 +188,15 @@ class ContractProxy:
         the logic in the called function."""
         fn = getattr(self.contract.functions, function)
         address = to_checksum_address(self.jsonrpc_client.address)
+        if self.jsonrpc_client.eth_node == constants.EthClient.GETH:
+            # Unfortunately geth does not follow the ethereum JSON-RPC spec and
+            # does not accept a block identifier argument for eth_estimateGas
+            # parity and py-evm (trinity) do.
+            #
+            # Spec: https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_estimategas
+            # Geth Issue: https://github.com/ethereum/go-ethereum/issues/2586
+            # Relevant web3 PR: https://github.com/ethereum/web3.py/pull/1046
+            block_identifier = None
         try:
             return fn(*args).estimateGas(
                 transaction={'from': address},
