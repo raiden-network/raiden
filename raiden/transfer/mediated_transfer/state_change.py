@@ -18,7 +18,6 @@ from raiden.utils.typing import (
     Address,
     Any,
     BlockExpiration,
-    ChannelID,
     Dict,
     List,
     MessageID,
@@ -193,55 +192,6 @@ class ActionInitTarget(BalanceProofStateChange):
         return cls(
             route=data['route'],
             transfer=data['transfer'],
-        )
-
-
-class ActionCancelRoute(StateChange):
-    """ Cancel the current route.
-    Notes:
-        Used to cancel a specific route but not the transfer. May be used for
-        timeouts.
-    """
-
-    def __init__(
-            self,
-            registry_address: Address,
-            channel_identifier: ChannelID,
-            routes: List[RouteState],
-    ):
-        self.registry_address = registry_address
-        self.identifier = channel_identifier
-        self.routes = routes
-
-    def __repr__(self):
-        return '<ActionCancelRoute id:{}>'.format(
-            self.identifier,
-        )
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ActionCancelRoute) and
-            self.registry_address == other.registry_address and
-            self.identifier == other.identifier and
-            self.routes == other.routes
-        )
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            'registry_address': to_checksum_address(self.registry_address),
-            'identifier': str(self.identifier),
-            'routes': self.routes,
-        }
-
-    @classmethod
-    def from_dict(cls, data) -> 'ActionCancelRoute':
-        return cls(
-            registry_address=to_canonical_address(data['registry_address']),
-            channel_identifier=ChannelID(int(data['identifier'])),
-            routes=data['routes'],
         )
 
 
