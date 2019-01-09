@@ -13,6 +13,7 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
 )
 from raiden.utils import pex, serialization, sha3
+from raiden.utils.serialization import map_dict
 from raiden.utils.typing import (
     Address,
     Any,
@@ -94,14 +95,22 @@ class InitiatorPaymentState(State):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'initiator_transfers': self.initiator_transfers,
+            'initiator_transfers': map_dict(
+                serialization.serialize_bytes,
+                serialization.identity,
+                self.initiator_transfers,
+            ),
             'cancelled_channels': self.cancelled_channels,
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'InitiatorPaymentState':
         restored = cls(
-            initiator_transfers=data['initiator_transfers'],
+            initiator_transfers=map_dict(
+                serialization.deserialize_bytes,
+                serialization.identity,
+                data['initiator_transfers'],
+            ),
         )
         restored.cancelled_channels = data['cancelled_channels']
 
