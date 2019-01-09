@@ -7,41 +7,41 @@ from raiden.transfer.mediated_transfer import initiator
 from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, EventUnlockFailed
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
+    InitiatorTransferState,
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ActionCancelRoute,
     ActionInitInitiator,
     ReceiveLockExpired,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.state import NettingChannelState
+from raiden.transfer.state import RouteState
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
-from raiden.utils.typing import BlockNumber, ChannelMap, List
-
-# TODO:
-# - Add synchronization for expired locks (issue #193).
-#   Transfers added to the canceled list by an ActionCancelRoute are stale in
-#   the channels merkle tree, while this doesn't increase the messages sizes
-#   nor does it interfere with the guarantees of finality it increases memory
-#   usage for each end, since the full merkle tree must be saved to compute
-#   it's root.
+from raiden.utils.typing import BlockNumber, ChannelMap, List, cast
 
 
-def can_cancel(payment_state: InitiatorPaymentState) -> bool:
+def clear_if_finalized(iteration: TransitionResult) -> TransitionResult:
+    """ Clear the initiator payment task if all transfers have been finalized
+    or expired. """
+    state = cast(InitiatorPaymentState, iteration.new_state)
+
+    if state is None:
+        return iteration
+
+    if len(state.initiator_transfers) == 0:
+        return TransitionResult(None, iteration.events)
+
+    return iteration
+
+
+def can_cancel(initiator: InitiatorTransferState) -> bool:
     """ A transfer is only cancellable until the secret is revealed. """
     return (
-        payment_state.initiator is None or
-        payment_state.initiator.revealsecret is None
+        initiator is None or
+        initiator.revealsecret is None
     )
-
-
-def sanity_check(payment_state: InitiatorPaymentState):
-    assert (
-        payment_state is None or payment_state.initiator is not None
-    ), 'either the task must be finished or there must be an initiator transfer pending'
 
 
 def events_for_cancel_current_route(transfer_description) -> List[Event]:
@@ -53,22 +53,79 @@ def events_for_cancel_current_route(transfer_description) -> List[Event]:
     return [unlock_failed]
 
 
-def cancel_current_route(payment_state: InitiatorPaymentState) -> List[Event]:
+def cancel_current_route(
+        payment_state: InitiatorPaymentState,
+        initiator_state: InitiatorPaymentState,
+) -> List[Event]:
     """ Cancel current route.
 
     This allows a new route to be tried.
     """
-    assert can_cancel(payment_state), 'Cannot cancel a route after the secret is revealed'
+    assert can_cancel(initiator_state), 'Cannot cancel a route after the secret is revealed'
 
-    transfer_description = payment_state.initiator.transfer_description
+    transfer_description = initiator_state.transfer_description
 
-    payment_state.cancelled_channels.append(payment_state.initiator.channel_identifier)
-    payment_state.initiator = None
+    payment_state.cancelled_channels.append(initiator_state.channel_identifier)
 
     return events_for_cancel_current_route(transfer_description)
 
 
+def maybe_try_new_route(
+        payment_state: InitiatorPaymentState,
+        initiator_state: InitiatorTransferState,
+        transfer_description: TransferDescriptionWithSecretState,
+        available_routes: List[RouteState],
+        channelidentifiers_to_channels: ChannelMap,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+) -> TransitionResult:
+    events: List[Event] = list()
+    if can_cancel(initiator_state):
+        cancel_events = cancel_current_route(payment_state, initiator_state)
+
+        sub_iteration = initiator.try_new_route(
+            old_initiator_state=initiator_state,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            available_routes=available_routes,
+            transfer_description=transfer_description,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+        )
+
+        events.extend(cancel_events)
+        events.extend(sub_iteration.events)
+        assert sub_iteration.new_state
+
+        new_transfer = sub_iteration.new_state.transfer
+        payment_state.initiator_transfers[new_transfer.lock.secrethash] = sub_iteration.new_state
+
+    iteration = TransitionResult(payment_state, events)
+
+    return iteration
+
+
 def subdispatch_to_initiatortransfer(
+        initiator_state: InitiatorTransferState,
+        state_change: StateChange,
+        channelidentifiers_to_channels: ChannelMap,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+) -> TransitionResult:
+    channel_identifier = initiator_state.channel_identifier
+    channel_state = channelidentifiers_to_channels[channel_identifier]
+    if not channel_state:
+        return TransitionResult(initiator_state, list())
+
+    return initiator.state_transition(
+        initiator_state=initiator_state,
+        state_change=state_change,
+        channel_state=channel_state,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+
+
+def subdispatch_to_all_initiatortransfer(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
         channelidentifiers_to_channels: ChannelMap,
@@ -76,7 +133,8 @@ def subdispatch_to_initiatortransfer(
         block_number: BlockNumber,
 ) -> TransitionResult:
     events = list()
-    for initiator_state in payment_state.initiator_transfers:
+    for secrethash in list(payment_state.initiator_transfers.keys()):
+        initiator_state = payment_state.initiator_transfers[secrethash]
         channel_identifier = initiator_state.channel_identifier
         channel_state = channelidentifiers_to_channels[channel_identifier]
         if not channel_state:
@@ -89,6 +147,8 @@ def subdispatch_to_initiatortransfer(
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
+        if sub_iteration.new_state is None:
+            del payment_state.initiator_transfers[secrethash]
         events.extend(sub_iteration.events)
     return TransitionResult(payment_state, events)
 
@@ -100,7 +160,7 @@ def handle_block(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult:
-    return subdispatch_to_initiatortransfer(
+    return subdispatch_to_all_initiatortransfer(
         payment_state=payment_state,
         state_change=state_change,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
@@ -129,7 +189,11 @@ def handle_init(
 
         events = sub_iteration.events
         if sub_iteration.new_state:
-            payment_state = InitiatorPaymentState([sub_iteration.new_state])
+            payment_state = InitiatorPaymentState(
+                initiator_transfers={
+                    sub_iteration.new_state.transfer.lock.secrethash: sub_iteration.new_state,
+                },
+            )
     else:
         events = list()
 
@@ -137,65 +201,35 @@ def handle_init(
     return iteration
 
 
-def handle_cancelroute(
-        payment_state: InitiatorPaymentState,
-        state_change: ActionCancelRoute,
-        channelidentifiers_to_channels: ChannelMap,
-        pseudo_random_generator: random.Random,
-        block_number: BlockNumber,
-) -> TransitionResult:
-    events: List[Event] = list()
-    if can_cancel(payment_state):
-        old_initiator_state = payment_state.initiator
-        transfer_description = payment_state.initiator.transfer_description
-        cancel_events = cancel_current_route(payment_state)
-
-        msg = 'The previous transfer must be cancelled prior to trying a new route'
-        assert payment_state.initiator is None, msg
-
-        sub_iteration = initiator.try_new_route(
-            old_initiator_state=old_initiator_state,
-            channelidentifiers_to_channels=channelidentifiers_to_channels,
-            available_routes=state_change.routes,
-            transfer_description=transfer_description,
-            pseudo_random_generator=pseudo_random_generator,
-            block_number=block_number,
-        )
-
-        events.extend(cancel_events)
-        events.extend(sub_iteration.events)
-        assert sub_iteration.new_state
-        payment_state.initiator = sub_iteration.new_state
-
-    iteration = TransitionResult(payment_state, events)
-
-    return iteration
-
-
 def handle_cancelpayment(
         payment_state: InitiatorPaymentState,
-        channel_state: NettingChannelState,
+        channelidentifiers_to_channels: ChannelMap,
 ) -> TransitionResult:
     """ Cancel the payment and all related transfers. """
     # Cannot cancel a transfer after the secret is revealed
-    if can_cancel(payment_state):
-        transfer_description = payment_state.initiator.transfer_description
-        cancel_events = cancel_current_route(payment_state)
+    events = list()
+    for secrethash in list(payment_state.initiator_transfers.keys()):
+        initiator_state = payment_state.initiator_transfers[secrethash]
+        channel_identifier = initiator_state.channel_identifier
+        channel_state = channelidentifiers_to_channels[channel_identifier]
+        if can_cancel(initiator_state):
+            transfer_description = initiator_state.transfer_description
+            cancel_events = cancel_current_route(payment_state, initiator_state)
 
-        cancel = EventPaymentSentFailed(
-            payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifier=channel_state.token_network_identifier,
-            identifier=transfer_description.payment_identifier,
-            target=transfer_description.target,
-            reason='user canceled payment',
-        )
-        cancel_events.append(cancel)
+            del payment_state.initiator_transfers[secrethash]
 
-        iteration = TransitionResult(None, cancel_events)
-    else:
-        iteration = TransitionResult(payment_state, list())
+            cancel = EventPaymentSentFailed(
+                payment_network_identifier=channel_state.payment_network_identifier,
+                token_network_identifier=channel_state.token_network_identifier,
+                identifier=transfer_description.payment_identifier,
+                target=transfer_description.target,
+                reason='user canceled payment',
+            )
+            cancel_events.append(cancel)
 
-    return iteration
+            events.extend(cancel_events)
+
+    return TransitionResult(payment_state, events)
 
 
 def handle_transferrefundcancelroute(
@@ -205,11 +239,14 @@ def handle_transferrefundcancelroute(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult:
+    initiator_state = payment_state.initiator_transfers.get(state_change.transfer.lock.secrethash)
+    if not initiator_state:
+        return TransitionResult(payment_state, list())
 
-    channel_identifier = payment_state.initiator.channel_identifier
+    channel_identifier = initiator_state.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
     refund_transfer = state_change.transfer
-    original_transfer = payment_state.initiator.transfer
+    original_transfer = initiator_state.transfer
 
     is_valid_lock = (
         refund_transfer.lock.secrethash == original_transfer.lock.secrethash and
@@ -223,38 +260,41 @@ def handle_transferrefundcancelroute(
     )
 
     events = list()
-    if is_valid_lock and is_valid_refund:
-        is_valid, channel_events, _ = channel.handle_receive_refundtransfercancelroute(
-            channel_state,
-            refund_transfer,
-        )
+    if not is_valid_lock or not is_valid_refund:
+        return TransitionResult(payment_state, list())
 
-        events.extend(channel_events)
+    is_valid, channel_events, _ = channel.handle_receive_refundtransfercancelroute(
+        channel_state,
+        refund_transfer,
+    )
 
-        if is_valid:
-            old_description = payment_state.initiator.transfer_description
-            transfer_description = TransferDescriptionWithSecretState(
-                old_description.payment_network_identifier,
-                old_description.payment_identifier,
-                old_description.amount,
-                old_description.token_network_identifier,
-                old_description.initiator,
-                old_description.target,
-                state_change.secret,
-            )
-            payment_state.initiator.transfer_description = transfer_description
+    events.extend(channel_events)
 
-            sub_iteration = handle_cancelroute(
-                payment_state,
-                state_change,
-                channelidentifiers_to_channels,
-                pseudo_random_generator,
-                block_number,
-            )
+    if not is_valid:
+        return TransitionResult(payment_state, list())
 
-            events.extend(sub_iteration.events)
-            if sub_iteration.new_state is None:
-                payment_state = None
+    old_description = initiator_state.transfer_description
+    transfer_description = TransferDescriptionWithSecretState(
+        old_description.payment_network_identifier,
+        old_description.payment_identifier,
+        old_description.amount,
+        old_description.token_network_identifier,
+        old_description.initiator,
+        old_description.target,
+        state_change.secret,
+    )
+
+    sub_iteration = maybe_try_new_route(
+        payment_state=payment_state,
+        initiator_state=initiator_state,
+        transfer_description=transfer_description,
+        available_routes=state_change.routes,
+        channelidentifiers_to_channels=channelidentifiers_to_channels,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+
+    events.extend(sub_iteration.events)
 
     iteration = TransitionResult(payment_state, events)
 
@@ -280,9 +320,13 @@ def handle_lock_expired(
 
     Related issue: https://github.com/raiden-network/raiden/issues/3183
 """
-    channel_identifier = payment_state.initiator.channel_identifier
+    initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
+    if not initiator_state:
+        return TransitionResult(payment_state, list())
+
+    channel_identifier = initiator_state.channel_identifier
     channel_state = channelidentifiers_to_channels[channel_identifier]
-    secrethash = payment_state.initiator.transfer.lock.secrethash
+    secrethash = initiator_state.transfer.lock.secrethash
     result = channel.handle_receive_lock_expired(
         channel_state=channel_state,
         state_change=state_change,
@@ -290,7 +334,7 @@ def handle_lock_expired(
     )
 
     if not channel.get_lock(result.new_state.partner_state, secrethash):
-        transfer = payment_state.initiator.transfer
+        transfer = initiator_state.transfer
         unlock_failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
@@ -308,7 +352,7 @@ def handle_offchain_secretreveal(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult:
-    return subdispatch_to_initiatortransfer(
+    return subdispatch_to_all_initiatortransfer(
         payment_state=payment_state,
         state_change=state_change,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
@@ -324,7 +368,7 @@ def handle_onchain_secretreveal(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult:
-    return subdispatch_to_initiatortransfer(
+    return subdispatch_to_all_initiatortransfer(
         payment_state=payment_state,
         state_change=state_change,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
@@ -340,13 +384,20 @@ def handle_secretrequest(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult:
-    return subdispatch_to_initiatortransfer(
-        payment_state,
-        state_change,
-        channelidentifiers_to_channels,
-        pseudo_random_generator,
+    initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
+
+    if not initiator_state:
+        return TransitionResult(payment_state, list())
+
+    sub_iteration = subdispatch_to_initiatortransfer(
+        initiator_state=initiator_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=channelidentifiers_to_channels,
+        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
+
+    return TransitionResult(payment_state, sub_iteration.events)
 
 
 def state_transition(
@@ -381,14 +432,6 @@ def state_transition(
             pseudo_random_generator,
             block_number,
         )
-    elif type(state_change) == ActionCancelRoute:
-        iteration = handle_cancelroute(
-            payment_state,
-            state_change,
-            channelidentifiers_to_channels,
-            pseudo_random_generator,
-            block_number,
-        )
     elif type(state_change) == ReceiveTransferRefundCancelRoute:
         iteration = handle_transferrefundcancelroute(
             payment_state,
@@ -398,11 +441,9 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ActionCancelPayment:
-        channel_identifier = payment_state.initiator.channel_identifier
-        channel_state = channelidentifiers_to_channels[channel_identifier]
         iteration = handle_cancelpayment(
             payment_state,
-            channel_state,
+            channelidentifiers_to_channels,
         )
     elif type(state_change) == ReceiveSecretReveal:
         iteration = handle_offchain_secretreveal(
@@ -431,6 +472,4 @@ def state_transition(
     else:
         iteration = TransitionResult(payment_state, list())
 
-    sanity_check(iteration.new_state)
-
-    return iteration
+    return clear_if_finalized(iteration)

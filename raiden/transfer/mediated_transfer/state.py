@@ -19,6 +19,7 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     InitiatorAddress,
+    InitiatorTransfersMap,
     List,
     MessageID,
     Optional,
@@ -72,7 +73,7 @@ class InitiatorPaymentState(State):
         'initiator_transfers',
     )
 
-    def __init__(self, initiator_transfers: List['InitiatorTransferState']):
+    def __init__(self, initiator_transfers: InitiatorTransfersMap):
         self.initiator_transfers = initiator_transfers
         self.cancelled_channels = list()
 
