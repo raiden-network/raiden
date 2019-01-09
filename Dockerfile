@@ -1,7 +1,7 @@
 FROM python:3.6
 
 LABEL Name=pathfinding-service-dev Version=0.0.1 Author="Paul Lange"
-EXPOSE 5002
+EXPOSE 6000
 
 WORKDIR /pfs
 ADD . /pfs
