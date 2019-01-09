@@ -188,6 +188,7 @@ def run_app(
         network_id,
         environment_type,
         unrecoverable_error_should_crash,
+        pathfinding_service_address,
         config=None,
         extra_config=None,
         **kwargs,
@@ -229,6 +230,7 @@ def run_app(
     config['transport']['udp']['nat_keepalive_timeout'] = timeout
     config['privatekey_hex'] = encode_hex(privatekey_bin)
     config['unrecoverable_error_should_crash'] = unrecoverable_error_should_crash
+    config['services']['pathfinding_service_address'] = pathfinding_service_address
 
     parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
     if not parsed_eth_rpc_endpoint.scheme:

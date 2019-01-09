@@ -204,6 +204,12 @@ def options(func):
                 type=str,
                 show_default=True,
             ),
+            option(
+                '--pathfinding-service-address',
+                help='"host:port" for the raiden pathfinding service to request paths.',
+                type=str,
+                show_default=True,
+            ),
         ),
         option_group(
             'UDP Transport Options',
