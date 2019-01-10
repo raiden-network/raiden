@@ -19,7 +19,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import RouteState
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
-from raiden.utils.typing import BlockNumber, ChannelMap, List, cast
+from raiden.utils.typing import BlockNumber, ChannelMap, List, SecretHash, cast
 
 
 def clear_if_finalized(iteration: TransitionResult) -> TransitionResult:
@@ -34,6 +34,23 @@ def clear_if_finalized(iteration: TransitionResult) -> TransitionResult:
         return TransitionResult(None, iteration.events)
 
     return iteration
+
+
+def transfer_exists(
+        payment_state: InitiatorPaymentState,
+        secrethash: SecretHash,
+):
+    return secrethash in payment_state.initiator_transfers
+
+
+def cancel_other_transfers(
+        payment_state: InitiatorPaymentState,
+        unlocked_secrethash: SecretHash,
+):
+    for secrethash, initiator_state in payment_state.initiator_transfers.items():
+        if secrethash == unlocked_secrethash:
+            continue
+        initiator_state.transfer_state = 'transfer_cancelled'
 
 
 def can_cancel(initiator: InitiatorTransferState) -> bool:
@@ -105,6 +122,7 @@ def maybe_try_new_route(
 
 
 def subdispatch_to_initiatortransfer(
+        payment_state: InitiatorPaymentState,
         initiator_state: InitiatorTransferState,
         state_change: StateChange,
         channelidentifiers_to_channels: ChannelMap,
@@ -116,13 +134,18 @@ def subdispatch_to_initiatortransfer(
     if not channel_state:
         return TransitionResult(initiator_state, list())
 
-    return initiator.state_transition(
+    sub_iteration = initiator.state_transition(
         initiator_state=initiator_state,
         state_change=state_change,
         channel_state=channel_state,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
+
+    if sub_iteration.new_state is None:
+        del payment_state.initiator_transfers[initiator_state.transfer.lock.secrethash]
+
+    return sub_iteration
 
 
 def subdispatch_to_all_initiatortransfer(
@@ -135,20 +158,14 @@ def subdispatch_to_all_initiatortransfer(
     events = list()
     for secrethash in list(payment_state.initiator_transfers.keys()):
         initiator_state = payment_state.initiator_transfers[secrethash]
-        channel_identifier = initiator_state.channel_identifier
-        channel_state = channelidentifiers_to_channels.get(channel_identifier)
-        if not channel_state:
-            continue
-
-        sub_iteration = initiator.state_transition(
+        sub_iteration = subdispatch_to_initiatortransfer(
+            payment_state=payment_state,
             initiator_state=initiator_state,
             state_change=state_change,
-            channel_state=channel_state,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
             pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
         )
-        if sub_iteration.new_state is None:
-            del payment_state.initiator_transfers[secrethash]
         events.extend(sub_iteration.events)
     return TransitionResult(payment_state, events)
 
@@ -352,29 +369,59 @@ def handle_offchain_secretreveal(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult:
-    return subdispatch_to_all_initiatortransfer(
+    initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
+
+    if not initiator_state:
+        return TransitionResult(payment_state, list())
+
+    if initiator_state.transfer_state == 'transfer_cancelled':
+        return TransitionResult(payment_state, list())
+
+    sub_iteration = subdispatch_to_initiatortransfer(
         payment_state=payment_state,
+        initiator_state=initiator_state,
         state_change=state_change,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
+
+    # The current secretreveal unlocked the transfer
+    if not transfer_exists(payment_state, state_change.secrethash):
+        cancel_other_transfers(payment_state, state_change.secrethash)
+
+    return TransitionResult(payment_state, sub_iteration.events)
 
 
 def handle_onchain_secretreveal(
         payment_state: InitiatorPaymentState,
-        state_change: ReceiveSecretReveal,
+        state_change: ContractReceiveSecretReveal,
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult:
-    return subdispatch_to_all_initiatortransfer(
+    initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
+
+    if not initiator_state:
+        return TransitionResult(payment_state, list())
+
+    if initiator_state.transfer_state == 'transfer_cancelled':
+        return TransitionResult(payment_state, list())
+
+    sub_iteration = subdispatch_to_initiatortransfer(
         payment_state=payment_state,
+        initiator_state=initiator_state,
         state_change=state_change,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
+
+    # The current secretreveal unlocked the transfer
+    if not transfer_exists(payment_state, state_change.secrethash):
+        cancel_other_transfers(payment_state, state_change.secrethash)
+
+    return TransitionResult(payment_state, sub_iteration.events)
 
 
 def handle_secretrequest(
@@ -389,7 +436,11 @@ def handle_secretrequest(
     if not initiator_state:
         return TransitionResult(payment_state, list())
 
+    if initiator_state.transfer_state == 'transfer_cancelled':
+        return TransitionResult(payment_state, list())
+
     sub_iteration = subdispatch_to_initiatortransfer(
+        payment_state=payment_state,
         initiator_state=initiator_state,
         state_change=state_change,
         channelidentifiers_to_channels=channelidentifiers_to_channels,
