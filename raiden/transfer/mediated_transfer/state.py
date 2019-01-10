@@ -126,6 +126,12 @@ class InitiatorTransferState(State):
         'transfer',
         'revealsecret',
         'received_secret_request',
+        'transfer_state',
+    )
+
+    valid_payer_states = (
+        'transfer_pending',
+        'transfer_cancelled',
     )
 
     def __init__(
@@ -151,11 +157,13 @@ class InitiatorTransferState(State):
         self.transfer = transfer
         self.revealsecret = revealsecret
         self.received_secret_request = received_secret_request
+        self.transfer_state = 'transfer_pending'
 
     def __repr__(self):
-        return '<InitiatorTransferState transfer:{} channel:{}>'.format(
+        return '<InitiatorTransferState transfer:{} channel:{} state:{}>'.format(
             self.transfer,
             self.channel_identifier,
+            self.transfer_state,
         )
 
     def __eq__(self, other):
@@ -165,7 +173,8 @@ class InitiatorTransferState(State):
             self.channel_identifier == other.channel_identifier and
             self.transfer == other.transfer and
             self.revealsecret == other.revealsecret and
-            self.received_secret_request == other.received_secret_request
+            self.received_secret_request == other.received_secret_request and
+            self.transfer_state == other.transfer_state
         )
 
     def __ne__(self, other):
@@ -178,6 +187,7 @@ class InitiatorTransferState(State):
             'transfer': self.transfer,
             'revealsecret': self.revealsecret,
             'received_secret_request': self.received_secret_request,
+            'transfer_state': self.transfer_state,
         }
 
         return result
@@ -191,6 +201,7 @@ class InitiatorTransferState(State):
             revealsecret=data['revealsecret'],
             received_secret_request=data['received_secret_request'],
         )
+        restored.transfer_state = data['transfer_state']
 
         return restored
 
