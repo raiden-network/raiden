@@ -1,5 +1,4 @@
 # pylint: disable=too-many-lines
-import enum
 import os
 import random
 from collections import defaultdict
@@ -176,18 +175,12 @@ def target_init(transfer: LockedTransfer):
     return init_target_statechange
 
 
-class PaymentType(enum.Enum):
-    DIRECT = 1
-    MEDIATED = 2
-
-
 class PaymentStatus(NamedTuple):
     """Value type for RaidenService.targets_to_identifiers_to_statuses.
 
     Contains the necessary information to tell conflicting transfers from
     retries as well as the status of a transfer that is retried.
     """
-    payment_type: PaymentType
     payment_identifier: PaymentID
     amount: TokenAmount
     token_network_identifier: TokenNetworkID
@@ -195,12 +188,10 @@ class PaymentStatus(NamedTuple):
 
     def matches(
             self,
-            payment_type: PaymentType,
             token_network_identifier: TokenNetworkID,
             amount: TokenAmount,
     ):
         return (
-            payment_type == self.payment_type and
             token_network_identifier == self.token_network_identifier and
             amount == self.amount
         )
@@ -591,12 +582,10 @@ class RaidenService(Runnable):
             self,
             target: TargetAddress,
             identifier: PaymentID,
-            payment_type: PaymentType,
             balance_proof: BalanceProofUnsignedState,
     ):
         with self.payment_identifier_lock:
             self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
-                payment_type=payment_type,
                 payment_identifier=identifier,
                 amount=balance_proof.transferred_amount,
                 token_network_identifier=balance_proof.token_network_identifier,
@@ -649,7 +638,6 @@ class RaidenService(Runnable):
                     self._register_payment_status(
                         target=event.transfer.target,
                         identifier=event.transfer.payment_identifier,
-                        payment_type=PaymentType.MEDIATED,
                         balance_proof=event.transfer.balance_proof,
                     )
 
@@ -794,7 +782,6 @@ class RaidenService(Runnable):
             payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
             if payment_status:
                 payment_status_matches = payment_status.matches(
-                    PaymentType.MEDIATED,
                     token_network_identifier,
                     amount,
                 )
@@ -806,7 +793,6 @@ class RaidenService(Runnable):
                 return payment_status.payment_done
 
             payment_status = PaymentStatus(
-                payment_type=PaymentType.MEDIATED,
                 payment_identifier=identifier,
                 amount=amount,
                 token_network_identifier=token_network_identifier,
