@@ -1388,3 +1388,68 @@ def test_secret_reveal_cancel_other_transfers():
     )
 
     assert must_contain_entry(iteration.events, SendBalanceProof, {}) is None
+
+
+def test_refund_after_secret_request():
+    """ A refund transfer after the original transfer's secret
+    is requested should fail to be cancelled.
+    """
+    amount = UNIT_TRANSFER_AMOUNT
+    refund_pkey, refund_address = factories.make_privkey_address()
+    setup = setup_initiator_tests(
+        amount=amount,
+        partner_balance=amount,
+        our_address=UNIT_TRANSFER_INITIATOR,
+        partner_address=refund_address,
+    )
+
+    initiator_state = get_transfer_at_index(setup.current_state, 0)
+    original_transfer = initiator_state.transfer
+
+    secret_request = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        setup.lock.amount,
+        setup.lock.expiration,
+        setup.lock.secrethash,
+        UNIT_TRANSFER_TARGET,
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=setup.current_state,
+        state_change=secret_request,
+        channelidentifiers_to_channels=setup.channel_map,
+        pseudo_random_generator=setup.prng,
+        block_number=setup.block_number,
+    )
+
+    current_state = iteration.new_state
+    assert current_state is not None
+
+    refund_transfer = factories.make_signed_transfer(
+        amount,
+        original_transfer.initiator,
+        original_transfer.target,
+        original_transfer.lock.expiration,
+        UNIT_SECRET,
+        payment_identifier=original_transfer.payment_identifier,
+        channel_identifier=setup.channel.identifier,
+        pkey=refund_pkey,
+        sender=refund_address,
+    )
+
+    state_change = ReceiveTransferRefundCancelRoute(
+        routes=setup.available_routes,
+        transfer=refund_transfer,
+        secret=random_secret(),
+    )
+
+    iteration = initiator_manager.state_transition(
+        setup.current_state,
+        state_change,
+        setup.channel_map,
+        setup.prng,
+        setup.block_number,
+    )
+    current_state = iteration.new_state
+    assert current_state is not None
+    assert must_contain_entry(iteration.events, EventUnlockFailed, {}) is None
