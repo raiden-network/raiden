@@ -759,7 +759,7 @@ def test_cancel_transfer():
         pseudo_random_generator=setup.prng,
         block_number=setup.block_number,
     )
-    assert iteration.new_state is None
+    assert iteration.new_state is not None
     assert len(iteration.events) == 2
 
     unlocked_failed = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
@@ -788,7 +788,28 @@ def test_cancelpayment():
         block_number=setup.block_number,
     )
     msg = 'The secret has not been revealed yet, the payment can be cancelled'
-    assert iteration.new_state is None, msg
+    assert iteration.new_state is not None, msg
+
+    transfer_state = get_transfer_at_index(iteration.new_state, 0)
+    assert transfer_state.transfer_state == 'transfer_cancelled'
+
+    transfer = transfer_state.transfer
+
+    expiry_block = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    expiry_block_state_change = Block(
+        block_number=expiry_block,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=iteration.new_state,
+        state_change=expiry_block_state_change,
+        channelidentifiers_to_channels=setup.channel_map,
+        pseudo_random_generator=setup.prng,
+        block_number=expiry_block,
+    )
+    assert not iteration.new_state, 'payment task should be deleted at this block'
 
 
 def test_invalid_cancelpayment():
