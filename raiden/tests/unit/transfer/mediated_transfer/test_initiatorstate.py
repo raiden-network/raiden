@@ -1092,7 +1092,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
 
     message_identifier = message_identifier_from_prng(deepcopy(setup.prng))
 
-    iteration = initiator_manager.handle_onchain_secretreveal(
+    iteration = initiator_manager.state_transition(
         payment_state=setup.current_state,
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
@@ -1248,3 +1248,143 @@ def test_lock_expiry_updates_balance_proof():
     assert balance_proof.nonce == nonce_before_lock_expiry + 1
     assert balance_proof.transferred_amount == 0
     assert balance_proof.locked_amount == 0
+
+
+def test_secret_reveal_cancel_other_transfers():
+    """ Once an initiator manager receives a secretreveal
+    on one of the pending transfers, all other pending
+    transfers should be cancelled. Any secret requests / reveals
+    for any of the other now-cancelled requests should be rejected.
+    """
+    amount = UNIT_TRANSFER_AMOUNT
+    our_address = factories.ADDR
+    refund_pkey, refund_address = factories.make_privkey_address()
+    pseudo_random_generator = random.Random()
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        partner_balance=amount,
+        our_address=our_address,
+        partner_address=refund_address,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel2 = factories.make_channel(
+        our_balance=0,
+        our_address=our_address,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel3 = factories.make_channel(
+        our_balance=amount,
+        our_address=our_address,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+
+    channel_map = {
+        channel1.identifier: channel1,
+        channel2.identifier: channel2,
+        channel3.identifier: channel3,
+    }
+
+    available_routes = [
+        factories.route_from_channel(channel1),
+        factories.route_from_channel(channel2),
+        factories.route_from_channel(channel3),
+    ]
+
+    block_number = 10
+    current_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    initiator_state = get_transfer_at_index(current_state, 0)
+    original_transfer = initiator_state.transfer
+
+    refund_transfer = factories.make_signed_transfer(
+        amount,
+        our_address,
+        original_transfer.target,
+        original_transfer.lock.expiration,
+        UNIT_SECRET,
+        payment_identifier=original_transfer.payment_identifier,
+        channel_identifier=channel1.identifier,
+        pkey=refund_pkey,
+        sender=refund_address,
+    )
+    assert channel1.partner_state.address == refund_address
+
+    state_change = ReceiveTransferRefundCancelRoute(
+        routes=available_routes,
+        transfer=refund_transfer,
+        secret=random_secret(),
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=current_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+    assert iteration.new_state is not None
+
+    route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
+    new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransfer))
+
+    assert route_cancelled, 'The previous transfer must be cancelled'
+    assert new_transfer, 'No mediated transfer event emitted, should have tried a new route'
+    msg = 'the new transfer must use a new secret / secrethash'
+    assert new_transfer.transfer.lock.secrethash != refund_transfer.lock.secrethash, msg
+
+    initial_transfer = get_transfer_at_index(iteration.new_state, 0)
+    assert initial_transfer is not None
+    assert initial_transfer.transfer_state == 'transfer_pending'
+
+    rerouted_transfer = get_transfer_at_index(iteration.new_state, 1)
+    assert rerouted_transfer is not None
+    assert rerouted_transfer.transfer_state == 'transfer_pending'
+
+    # A secretreveal for a pending transfer should succeed
+    secret_reveal = ReceiveSecretReveal(
+        secret=UNIT_SECRET,
+        sender=channel1.partner_state.address,
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=iteration.new_state,
+        state_change=secret_reveal,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+
+    assert must_contain_entry(iteration.events, SendBalanceProof, {}) is not None
+    # An unlock should only be sent to the intended transfer that we received
+    # a secret reveal for. So there should only be 1 balance proof to be sent
+    assert len(list(filter(lambda e: isinstance(e, SendBalanceProof), iteration.events))) == 1
+
+    rerouted_transfer = get_transfer_at_index(iteration.new_state, 0)
+    assert rerouted_transfer.transfer_state == 'transfer_cancelled'
+
+    secret_reveal = ReceiveSecretReveal(
+        secret=rerouted_transfer.transfer_description.secret,
+        sender=channel1.partner_state.address,
+    )
+
+    # An existing transfer was already unlocked,
+    # so subsequent secretreveals for other transfers are ignored
+    iteration = initiator_manager.state_transition(
+        payment_state=iteration.new_state,
+        state_change=secret_reveal,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+
+    assert must_contain_entry(iteration.events, SendBalanceProof, {}) is None
