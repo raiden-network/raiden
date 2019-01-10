@@ -82,7 +82,7 @@ class SecretRegistry:
             log.debug('registerSecretBatch skipped', **log_details)
             return
 
-        gas_limit = self.proxy.estimate_gas('latest', 'registerSecretBatch', secrets)
+        gas_limit = self.proxy.estimate_gas('pending', 'registerSecretBatch', secrets)
         if not gas_limit:
             log.critical(
                 'Call to registerSecretBatch will fail. Out of funds?',

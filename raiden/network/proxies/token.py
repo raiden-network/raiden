@@ -59,7 +59,7 @@ class Token:
         }
 
         startgas = self.proxy.estimate_gas(
-            'latest',
+            'pending',
             'approve',
             to_checksum_address(allowed_address),
             allowance,

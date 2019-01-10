@@ -168,7 +168,7 @@ class TokenNetwork:
             'peer2': pex(partner),
         }
         gas_limit = self.proxy.estimate_gas(
-            'latest',
+            'pending',
             'openChannel',
             self.node_address,
             partner,
@@ -627,7 +627,7 @@ class TokenNetwork:
             token.approve(typing.Address(self.address), amount_to_deposit)
 
             gas_limit = self.proxy.estimate_gas(
-                'latest',
+                'pending',
                 'setTotalDeposit',
                 channel_identifier,
                 self.node_address,
@@ -931,7 +931,7 @@ class TokenNetwork:
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
         gas_limit = self.proxy.estimate_gas(
-            'latest',
+            'pending',
             'unlock',
             channel_identifier,
             self.node_address,
@@ -1016,7 +1016,7 @@ class TokenNetwork:
 
             if our_bp_is_larger:
                 gas_limit = self.proxy.estimate_gas(
-                    'latest',
+                    'pending',
                     'settleChannel',
                     channel_identifier,
                     partner,
@@ -1054,7 +1054,7 @@ class TokenNetwork:
                 )
             else:
                 gas_limit = self.proxy.estimate_gas(
-                    'latest',
+                    'pending',
                     'settleChannel',
                     channel_identifier,
                     self.node_address,
