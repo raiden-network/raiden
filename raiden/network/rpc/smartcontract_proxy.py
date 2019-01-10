@@ -193,6 +193,10 @@ class ContractProxy:
             # does not accept a block identifier argument for eth_estimateGas
             # parity and py-evm (trinity) do.
             #
+            # Geth only runs estimateGas on the pending block and that's why we
+            # should also enforce parity, py-evm and others to do the same since
+            # we can't customize geth.
+            #
             # Spec: https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_estimategas
             # Geth Issue: https://github.com/ethereum/go-ethereum/issues/2586
             # Relevant web3 PR: https://github.com/ethereum/web3.py/pull/1046
