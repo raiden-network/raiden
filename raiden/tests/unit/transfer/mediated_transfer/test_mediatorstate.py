@@ -731,7 +731,7 @@ def test_secret_learned():
 
     channels = mediator_make_channel_pair()
 
-    from_transfer = factories.make_signed_transfer_for2(channels[0])
+    from_transfer = factories.make_signed_transfer_for(channels[0])
 
     iteration = mediator.state_transition(
         mediator_state=None,
@@ -806,7 +806,7 @@ def test_mediate_transfer():
     pseudo_random_generator = random.Random()
 
     channels = mediator_make_channel_pair()
-    payer_transfer = factories.make_signed_transfer_for2(
+    payer_transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(transfer=LockedTransferProperties(expiration=30)),
     )
@@ -839,7 +839,7 @@ def test_mediate_transfer():
 
 def test_init_mediator():
     channels = mediator_make_channel_pair()
-    from_transfer = factories.make_signed_transfer_for2(channels[0])
+    from_transfer = factories.make_signed_transfer_for(channels[0])
 
     iteration = mediator.state_transition(
         mediator_state=None,
@@ -865,7 +865,7 @@ def test_init_mediator():
 
 def test_mediator_reject_keccak_empty_hash():
     channels = mediator_make_channel_pair()
-    from_transfer = factories.make_signed_transfer_for2(
+    from_transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(initiator=HOP1, secret=EMPTY_HASH),
@@ -888,7 +888,7 @@ def test_mediator_secret_reveal_empty_hash():
     pseudo_random_generator = random.Random()
 
     channels = mediator_make_channel_pair()
-    from_transfer = factories.make_signed_transfer_for2(
+    from_transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(transfer=LockedTransferProperties(initiator=HOP1)),
     )
@@ -953,7 +953,7 @@ def test_no_valid_routes():
             our_state=NettingChannelEndStateProperties(balance=0),
         ),
     ])
-    from_transfer = factories.make_signed_transfer_for2(
+    from_transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(transfer=LockedTransferProperties(initiator=HOP1)),
     )
@@ -1012,7 +1012,7 @@ def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
     )
 
     channels = mediator_make_channel_pair(defaults=channel_defaults)
-    from_transfer = factories.make_signed_transfer_for2(
+    from_transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(initiator=HOP1, expiration=high_expiration),
@@ -1082,7 +1082,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     )
     from_route = factories.route_from_channel(bc_channel)
 
-    from_transfer = factories.make_signed_transfer_for2(
+    from_transfer = factories.make_signed_transfer_for(
         bc_channel,
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(
@@ -1226,7 +1226,7 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
     pseudo_random_generator = random.Random()
 
     channels = mediator_make_channel_pair()
-    payer_transfer = factories.make_signed_transfer_for2(
+    payer_transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(expiration=30),
@@ -1317,7 +1317,7 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
 
     iterations = []
     for index in range(1, MAXIMUM_PENDING_TRANSFERS + 2):
-        from_transfer = factories.make_signed_transfer_for2(
+        from_transfer = factories.make_signed_transfer_for(
             channels[0],
             LockedTransferSignedStateProperties(
                 transfer=LockedTransferProperties(
@@ -1367,7 +1367,7 @@ def test_mediator_lock_expired_with_new_block():
 
     channels = mediator_make_channel_pair()
 
-    payer_transfer = factories.make_signed_transfer_for2(
+    payer_transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(
@@ -1423,7 +1423,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     pseudo_random_generator = random.Random()
 
     channels = mediator_make_channel_pair()
-    transfer = factories.make_signed_transfer_for2(
+    transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(expiration=expiration),
@@ -1513,7 +1513,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     pseudo_random_generator = random.Random()
 
     channels = mediator_make_channel_pair()
-    transfer = factories.make_signed_transfer_for2(
+    transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(expiration=expiration),
@@ -1597,7 +1597,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     pseudo_random_generator = random.Random()
 
     channels = mediator_make_channel_pair()
-    transfer = factories.make_signed_transfer_for2(
+    transfer = factories.make_signed_transfer_for(
         channels[0],
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(expiration=30),
