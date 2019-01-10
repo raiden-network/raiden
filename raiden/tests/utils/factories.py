@@ -497,21 +497,6 @@ def make_signed_transfer_for(
     return mediated_transfer
 
 
-def make_default_signed_transfer_for(
-        channel_state: NettingChannelState,
-        **kwargs,
-) -> LockedTransferSignedState:
-    parameters = {
-        'amount': UNIT_TRANSFER_AMOUNT,
-        'initiator': UNIT_TRANSFER_SENDER,
-        'target': HOP2,
-        'expiration': UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT,
-        'secret': UNIT_SECRET,
-    }
-    parameters.update(kwargs)
-    return make_signed_transfer_for(channel_state, **parameters)
-
-
 # ALIASES
 make_channel = make_channel_state
 route_from_channel = make_route_from_channel
