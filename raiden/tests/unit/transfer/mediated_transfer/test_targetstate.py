@@ -45,7 +45,7 @@ from raiden.utils import typing
 def make_target_transfer(channel, amount=None, expiration=None, initiator=None, block_number=1):
     default_expiration = block_number + channel.settle_timeout - channel.reveal_timeout
 
-    return factories.make_signed_transfer_for2(
+    return factories.make_signed_transfer_for(
         channel,
         factories.LockedTransferSignedStateProperties(
             transfer=factories.LockedTransferProperties(
@@ -518,7 +518,7 @@ def test_target_reject_keccak_empty_hash():
     channels = make_channel_set([channel_properties2])
     expiration = block_number + channels[0].settle_timeout - channels[0].reveal_timeout
 
-    from_transfer = factories.make_signed_transfer_for2(
+    from_transfer = factories.make_signed_transfer_for(
         channels[0],
         factories.LockedTransferSignedStateProperties(
             transfer=factories.LockedTransferProperties(

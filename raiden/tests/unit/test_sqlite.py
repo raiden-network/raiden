@@ -109,7 +109,7 @@ def make_from_route_from_counter(counter):
 
     expiration = factories.UNIT_REVEAL_TIMEOUT + 1
 
-    from_transfer = factories.make_signed_transfer_for2(
+    from_transfer = factories.make_signed_transfer_for(
         from_channel,
         factories.LockedTransferSignedStateProperties(
             transfer=factories.LockedTransferProperties(

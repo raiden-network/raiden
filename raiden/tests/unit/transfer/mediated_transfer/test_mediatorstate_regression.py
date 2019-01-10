@@ -57,8 +57,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
     pseudo_random_generator = random.Random()
 
     channels = factories.mediator_make_channel_pair()
-
-    payer_transfer = factories.make_signed_transfer_for2(channels[0], LONG_EXPIRATION)
+    payer_transfer = factories.make_signed_transfer_for(channels[0], LONG_EXPIRATION)
 
     initial_iteration = mediator.state_transition(
         mediator_state=None,
@@ -228,7 +227,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
     pseudo_random_generator = random.Random()
 
     channels = factories.mediator_make_channel_pair()
-    payer_transfer = factories.make_signed_transfer_for2(channels[0], LONG_EXPIRATION)
+    payer_transfer = factories.make_signed_transfer_for(channels[0], LONG_EXPIRATION)
 
     init_iteration = mediator.state_transition(
         mediator_state=None,
@@ -295,7 +294,7 @@ def test_regression_mediator_task_no_routes():
         ),
     ])
 
-    payer_transfer = factories.make_signed_transfer_for2(
+    payer_transfer = factories.make_signed_transfer_for(
         channels[0],
         factories.LockedTransferSignedStateProperties(
             sender=HOP2,
@@ -385,7 +384,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     pair = factories.mediator_make_channel_pair()
     payer_channel, payee_channel = pair.channels
     payer_route = factories.route_from_channel(payer_channel)
-    payer_transfer = factories.make_signed_transfer_for2(payer_channel, LONG_EXPIRATION)
+    payer_transfer = factories.make_signed_transfer_for(payer_channel, LONG_EXPIRATION)
 
     available_routes = [factories.route_from_channel(payee_channel)]
     init_state_change = ActionInitMediator(

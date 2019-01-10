@@ -408,95 +408,6 @@ def make_signed_balance_proof(
     )
 
 
-def make_signed_transfer_for(
-        channel_state: NettingChannelState = EMPTY,
-        amount: typing.TokenAmount = EMPTY,
-        initiator: typing.InitiatorAddress = EMPTY,
-        target: typing.TargetAddress = EMPTY,
-        expiration: typing.BlockExpiration = EMPTY,
-        secret: typing.Secret = EMPTY,
-        identifier: typing.PaymentID = EMPTY,
-        nonce: typing.Nonce = EMPTY,
-        transferred_amount: typing.TokenAmount = EMPTY,
-        locked_amount: typing.TokenAmount = EMPTY,
-        pkey: PrivateKey = EMPTY,
-        sender: typing.Address = EMPTY,
-        compute_locksroot: typing.Locksroot = EMPTY,
-        allow_invalid: bool = EMPTY,
-) -> LockedTransferSignedState:
-
-    channel_state = if_empty(channel_state, make_channel_state())
-    amount = if_empty(amount, 0)
-    initiator = if_empty(initiator, make_address())
-    target = if_empty(target, make_address())
-    expiration = if_empty(expiration, UNIT_REVEAL_TIMEOUT)
-    secret = if_empty(secret, make_secret())
-    identifier = if_empty(identifier, 1)
-    nonce = if_empty(nonce, 1)
-    transferred_amount = if_empty(transferred_amount, 0)
-    pkey = if_empty(pkey, UNIT_TRANSFER_PKEY)
-    sender = if_empty(sender, UNIT_TRANSFER_SENDER)
-    compute_locksroot = if_empty(compute_locksroot, False)
-    allow_invalid = if_empty(allow_invalid, False)
-
-    if not allow_invalid:
-        msg = 'expiration must be lower than settle_timeout'
-        assert expiration < channel_state.settle_timeout, msg
-        msg = 'expiration must be larger than reveal_timeout'
-        assert expiration > channel_state.reveal_timeout, msg
-
-    pubkey = pkey.public_key.format(compressed=False)
-    assert publickey_to_address(pubkey) == sender
-
-    assert sender in (channel_state.our_state.address, channel_state.partner_state.address)
-    if sender == channel_state.our_state.address:
-        recipient = channel_state.partner_state.address
-    else:
-        recipient = channel_state.our_state.address
-
-    channel_identifier = channel_state.identifier
-    token_address = channel_state.token_address
-
-    if compute_locksroot:
-        locksroot = merkleroot(channel.compute_merkletree_with(
-            channel_state.partner_state.merkletree,
-            sha3(Lock(amount, expiration, sha3(secret)).as_bytes),
-        ))
-    else:
-        locksroot = EMPTY_MERKLE_ROOT
-
-    mediated_transfer = make_signed_transfer(
-        amount=amount,
-        initiator=initiator,
-        target=target,
-        expiration=expiration,
-        secret=secret,
-        payment_identifier=identifier,
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-        locksroot=locksroot,
-        locked_amount=locked_amount,
-        recipient=recipient,
-        channel_identifier=channel_identifier,
-        token_network_address=channel_state.token_network_identifier,
-        token=token_address,
-        pkey=pkey,
-        sender=sender,
-    )
-
-    # Do *not* register the transfer here
-    if not allow_invalid:
-        is_valid, msg, _ = channel.is_valid_lockedtransfer(
-            transfer_state=mediated_transfer,
-            channel_state=channel_state,
-            sender_state=channel_state.partner_state,
-            receiver_state=channel_state.our_state,
-        )
-        assert is_valid, msg
-
-    return mediated_transfer
-
-
 # ALIASES
 make_channel = make_channel_state
 route_from_channel = make_route_from_channel
@@ -877,7 +788,7 @@ SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(LockedTransferSignedSta
 ))
 
 
-def make_signed_transfer_for2(
+def make_signed_transfer_for(
     channel_state: NettingChannelState = EMPTY,
     properties: LockedTransferSignedStateProperties = None,
     defaults: LockedTransferSignedStateProperties = None,
