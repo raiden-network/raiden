@@ -7,10 +7,8 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
     HOP1,
-    HOP1_KEY,
     HOP2,
     HOP2_KEY,
-    HOP3,
     UNIT_SECRET,
     UNIT_SECRETHASH,
     UNIT_TOKEN_ADDRESS,
@@ -41,6 +39,11 @@ from raiden.transfer.state import balanceproof_from_envelope, message_identifier
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 
 
+LONG_EXPIRATION = factories.create_properties(factories.LockedTransferSignedStateProperties(
+    transfer=factories.LockedTransferProperties(expiration=30),
+))
+
+
 def test_payer_enter_danger_zone_with_transfer_payed():
     """ A mediator may have paid the next hop (payee), and didn't get paid by
     the previous hop (payer).
@@ -55,11 +58,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
 
     channels = factories.mediator_make_channel_pair()
 
-    payer_transfer = factories.make_default_signed_transfer_for(
-        channels[0],
-        initiator=HOP1,
-        expiration=30,
-    )
+    payer_transfer = factories.make_signed_transfer_for2(channels[0], LONG_EXPIRATION)
 
     initial_iteration = mediator.state_transition(
         mediator_state=None,
@@ -229,11 +228,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
     pseudo_random_generator = random.Random()
 
     channels = factories.mediator_make_channel_pair()
-    payer_transfer = factories.make_default_signed_transfer_for(
-        channels[0],
-        initiator=HOP1,
-        expiration=30,
-    )
+    payer_transfer = factories.make_signed_transfer_for2(channels[0], LONG_EXPIRATION)
 
     init_iteration = mediator.state_transition(
         mediator_state=None,
@@ -292,17 +287,21 @@ def test_regression_mediator_task_no_routes():
     channels = make_channel_set([
         NettingChannelStateProperties(
             our_state=NettingChannelEndStateProperties(balance=0),
-            partner_state=NettingChannelEndStateProperties(balance=10, address=HOP2),
+            partner_state=NettingChannelEndStateProperties(
+                balance=10,
+                address=HOP2,
+                privatekey=HOP2_KEY,
+            ),
         ),
     ])
 
-    payer_transfer = factories.make_default_signed_transfer_for(
+    payer_transfer = factories.make_signed_transfer_for2(
         channels[0],
-        initiator=HOP1,
-        expiration=30,
-        pkey=HOP2_KEY,
-        sender=HOP2,
-    )
+        factories.LockedTransferSignedStateProperties(
+            sender=HOP2,
+            pkey=HOP2_KEY,
+            transfer=factories.LockedTransferProperties(expiration=30),
+        ))
 
     init_state_change = ActionInitMediator(
         channels.get_routes(),
@@ -338,7 +337,7 @@ def test_regression_mediator_task_no_routes():
     )
     assert send_lock_expired
     lock_expired_message = message_from_sendevent(send_lock_expired, HOP1)
-    lock_expired_message.sign(HOP2_KEY)
+    lock_expired_message.sign(channels.partner_privatekeys[0])
     balance_proof = balanceproof_from_envelope(lock_expired_message)
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
@@ -381,59 +380,25 @@ def test_regression_mediator_not_update_payer_state_twice():
     Make sure that after a lock expired the mediator doesn't update the pair
     twice causing EventUnlockClaimFailed to be generated at every block.
     """
-    amount = 10
-    block_number = 5
-    initiator = HOP1
-    initiator_key = HOP1_KEY
-    mediator_address = HOP2
-    target = HOP3
-    expiration = 30
     pseudo_random_generator = random.Random()
 
-    payer_channel = factories.make_channel(
-        partner_balance=amount,
-        our_balance=amount,
-        our_address=mediator_address,
-        partner_address=initiator,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
+    pair = factories.mediator_make_channel_pair()
+    payer_channel, payee_channel = pair.channels
     payer_route = factories.route_from_channel(payer_channel)
+    payer_transfer = factories.make_signed_transfer_for2(payer_channel, LONG_EXPIRATION)
 
-    payer_transfer = factories.make_signed_transfer_for(
-        channel_state=payer_channel,
-        amount=amount,
-        initiator=initiator,
-        target=target,
-        expiration=expiration,
-        secret=UNIT_SECRET,
-        sender=initiator,
-        pkey=initiator_key,
-    )
-
-    payee_channel = factories.make_channel(
-        our_balance=amount,
-        our_address=mediator_address,
-        partner_address=target,
-        token_address=UNIT_TOKEN_ADDRESS,
-    )
     available_routes = [factories.route_from_channel(payee_channel)]
-    channel_map = {
-        payee_channel.identifier: payee_channel,
-        payer_channel.identifier: payer_channel,
-    }
-
     init_state_change = ActionInitMediator(
         routes=available_routes,
         from_route=payer_route,
         from_transfer=payer_transfer,
     )
-    initial_state = None
     iteration = mediator.state_transition(
-        mediator_state=initial_state,
+        mediator_state=None,
         state_change=init_state_change,
-        channelidentifiers_to_channels=channel_map,
+        channelidentifiers_to_channels=pair.channel_map,
         pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
+        block_number=5,
     )
     assert iteration.new_state is not None
 
@@ -452,7 +417,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     iteration = mediator.state_transition(
         mediator_state=current_state,
         state_change=block,
-        channelidentifiers_to_channels=channel_map,
+        channelidentifiers_to_channels=pair.channel_map,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
     )
@@ -475,7 +440,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     iteration = mediator.state_transition(
         mediator_state=current_state,
         state_change=receive_secret,
-        channelidentifiers_to_channels=channel_map,
+        channelidentifiers_to_channels=pair.channel_map,
         pseudo_random_generator=pseudo_random_generator,
         block_number=next_block.block_number,
     )
@@ -497,7 +462,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     iteration = mediator.state_transition(
         mediator_state=current_state,
         state_change=next_block,
-        channelidentifiers_to_channels=channel_map,
+        channelidentifiers_to_channels=pair.channel_map,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
     )
