@@ -128,7 +128,7 @@ def subdispatch_to_initiatortransfer(
         block_number: BlockNumber,
 ) -> TransitionResult:
     channel_identifier = initiator_state.channel_identifier
-    channel_state = channelidentifiers_to_channels[channel_identifier]
+    channel_state = channelidentifiers_to_channels.get(channel_identifier)
     if not channel_state:
         return TransitionResult(initiator_state, list())
 
@@ -226,12 +226,16 @@ def handle_cancelpayment(
     for secrethash in list(payment_state.initiator_transfers.keys()):
         initiator_state = payment_state.initiator_transfers[secrethash]
         channel_identifier = initiator_state.channel_identifier
-        channel_state = channelidentifiers_to_channels[channel_identifier]
+        channel_state = channelidentifiers_to_channels.get(channel_identifier)
+
+        if not channel_state:
+            continue
+
         if can_cancel(initiator_state):
             transfer_description = initiator_state.transfer_description
             cancel_events = cancel_current_route(payment_state, initiator_state)
 
-            del payment_state.initiator_transfers[secrethash]
+            initiator_state.transfer_state = 'transfer_cancelled'
 
             cancel = EventPaymentSentFailed(
                 payment_network_identifier=channel_state.payment_network_identifier,
@@ -259,7 +263,11 @@ def handle_transferrefundcancelroute(
         return TransitionResult(payment_state, list())
 
     channel_identifier = initiator_state.channel_identifier
-    channel_state = channelidentifiers_to_channels[channel_identifier]
+    channel_state = channelidentifiers_to_channels.get(channel_identifier)
+
+    if not channel_state:
+        return TransitionResult(payment_state, list())
+
     refund_transfer = state_change.transfer
     original_transfer = initiator_state.transfer
 
@@ -340,7 +348,11 @@ def handle_lock_expired(
         return TransitionResult(payment_state, list())
 
     channel_identifier = initiator_state.channel_identifier
-    channel_state = channelidentifiers_to_channels[channel_identifier]
+    channel_state = channelidentifiers_to_channels.get(channel_identifier)
+
+    if not channel_state:
+        return TransitionResult(payment_state, list())
+
     secrethash = initiator_state.transfer.lock.secrethash
     result = channel.handle_receive_lock_expired(
         channel_state=channel_state,
