@@ -47,9 +47,7 @@ def cancel_other_transfers(
         payment_state: InitiatorPaymentState,
         unlocked_secrethash: SecretHash,
 ):
-    for secrethash, initiator_state in payment_state.initiator_transfers.items():
-        if secrethash == unlocked_secrethash:
-            continue
+    for initiator_state in payment_state.initiator_transfers.values():
         initiator_state.transfer_state = 'transfer_cancelled'
 
 
