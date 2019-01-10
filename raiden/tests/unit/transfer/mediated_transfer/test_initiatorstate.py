@@ -1334,14 +1334,6 @@ def test_secret_reveal_cancel_other_transfers():
     )
     assert iteration.new_state is not None
 
-    route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransfer))
-
-    assert route_cancelled, 'The previous transfer must be cancelled'
-    assert new_transfer, 'No mediated transfer event emitted, should have tried a new route'
-    msg = 'the new transfer must use a new secret / secrethash'
-    assert new_transfer.transfer.lock.secrethash != refund_transfer.lock.secrethash, msg
-
     initial_transfer = get_transfer_at_index(iteration.new_state, 0)
     assert initial_transfer is not None
     assert initial_transfer.transfer_state == 'transfer_pending'
@@ -1453,3 +1445,162 @@ def test_refund_after_secret_request():
     current_state = iteration.new_state
     assert current_state is not None
     assert must_contain_entry(iteration.events, EventUnlockFailed, {}) is None
+
+
+def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
+    """ Create an initiator manager state where we have nodes with channels:
+    A - > B
+    |
+    ---> C
+    A sends B a transfer and B refunds.
+    A reroutes the transfer to C.
+    Now A has 2 transfers and B has 1.
+    The initiator manager state should be cleared if all
+    transfers have been removed (in the case of A that's 2)
+    But it also waits for the refund transfer from B to be expired.
+    """
+    amount = UNIT_TRANSFER_AMOUNT
+    our_address = factories.ADDR
+    refund_pkey, refund_address = factories.make_privkey_address()
+    pseudo_random_generator = random.Random()
+
+    channel1 = factories.make_channel(
+        our_balance=amount,
+        partner_balance=amount,
+        our_address=our_address,
+        partner_address=refund_address,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+    channel2 = factories.make_channel(
+        our_balance=amount,
+        our_address=our_address,
+        token_address=UNIT_TOKEN_ADDRESS,
+        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    )
+
+    channel_map = {
+        channel1.identifier: channel1,
+        channel2.identifier: channel2,
+    }
+
+    available_routes = [
+        factories.route_from_channel(channel1),
+        factories.route_from_channel(channel2),
+    ]
+
+    block_number = 10
+    current_state = make_initiator_manager_state(
+        available_routes,
+        factories.UNIT_TRANSFER_DESCRIPTION,
+        channel_map,
+        pseudo_random_generator,
+        block_number,
+    )
+
+    initiator_state = get_transfer_at_index(current_state, 0)
+    original_transfer = initiator_state.transfer
+
+    refund_transfer = factories.make_signed_transfer(
+        amount,
+        our_address,
+        original_transfer.target,
+        original_transfer.lock.expiration,
+        UNIT_SECRET,
+        payment_identifier=original_transfer.payment_identifier,
+        channel_identifier=channel1.identifier,
+        pkey=refund_pkey,
+        sender=refund_address,
+    )
+
+    state_change = ReceiveTransferRefundCancelRoute(
+        routes=available_routes,
+        transfer=refund_transfer,
+        secret=random_secret(),
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=current_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number + 10,
+    )
+    assert iteration.new_state is not None
+
+    initial_transfer_state = get_transfer_at_index(iteration.new_state, 0)
+    initial_transfer = initial_transfer_state.transfer
+
+    assert initial_transfer_state is not None
+    assert initial_transfer_state.channel_identifier == channel1.identifier
+
+    rerouted_transfer_state = get_transfer_at_index(iteration.new_state, 1)
+    rerouted_transfer = rerouted_transfer_state.transfer
+    assert rerouted_transfer_state is not None
+    assert rerouted_transfer_state.channel_identifier == channel2.identifier
+
+    ##
+    # Expire both locks of the initial transfer and it's refund
+    ##
+    balance_proof = factories.make_signed_balance_proof(
+        nonce=2,
+        transferred_amount=initial_transfer.balance_proof.transferred_amount,
+        locked_amount=0,
+        token_network_address=initial_transfer.balance_proof.token_network_identifier,
+        channel_identifier=channel1.identifier,
+        locksroot=EMPTY_MERKLE_ROOT,
+        extra_hash=initial_transfer.lock.secrethash,
+        sender_address=refund_address,
+        private_key=refund_pkey,
+    )
+    lock_expired_state_change = ReceiveLockExpired(
+        balance_proof,
+        secrethash=initial_transfer.lock.secrethash,
+        message_identifier=5,
+    )
+
+    expiry_block = initial_transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    iteration = initiator_manager.state_transition(
+        payment_state=iteration.new_state,
+        state_change=lock_expired_state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=expiry_block,
+    )
+    assert iteration.new_state, 'payment task should not be deleted at this block'
+
+    initial_transfer_expiry_block_state_change = Block(
+        block_number=expiry_block,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=iteration.new_state,
+        state_change=initial_transfer_expiry_block_state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=expiry_block,
+    )
+    assert iteration.new_state, 'payment task should not be deleted at this block'
+
+    ##
+    # The initiator manager state still has pending transfer, so we expire
+    # the rerouted transfer and it's refund to check if the payment state
+    # is cleared as expected.
+    ##
+    expiry_block = rerouted_transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    rerouted_transfer_expiry_block_state_change = Block(
+        block_number=expiry_block,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=iteration.new_state,
+        state_change=rerouted_transfer_expiry_block_state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=expiry_block,
+    )
+    assert not iteration.new_state, 'payment task should be deleted at this block'
