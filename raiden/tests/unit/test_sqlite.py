@@ -109,18 +109,24 @@ def make_from_route_from_counter(counter):
 
     expiration = factories.UNIT_REVEAL_TIMEOUT + 1
 
-    from_transfer = factories.make_signed_transfer_for(
-        channel_state=from_channel,
-        amount=1,
-        initiator=factories.make_address(),
-        target=factories.make_address(),
-        expiration=expiration,
-        secret=sha3(factories.make_secret(next(counter))),
-        identifier=next(counter),
-        nonce=1,
-        transferred_amount=0,
-        pkey=factories.HOP1_KEY,
-        sender=factories.HOP1,
+    from_transfer = factories.make_signed_transfer_for2(
+        from_channel,
+        factories.LockedTransferSignedStateProperties(
+            transfer=factories.LockedTransferProperties(
+                balance_proof=factories.BalanceProofProperties(
+                    transferred_amount=0,
+                    token_network_identifier=from_channel.token_network_identifier,
+                ),
+                amount=1,
+                expiration=expiration,
+                secret=sha3(factories.make_secret(next(counter))),
+                initiator=factories.make_address(),
+                target=factories.make_address(),
+                payment_identifier=next(counter),
+            ),
+            sender=factories.HOP1,
+            pkey=factories.HOP1_KEY,
+        ),
     )
     return from_route, from_transfer
 
