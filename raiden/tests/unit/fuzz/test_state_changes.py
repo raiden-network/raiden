@@ -252,7 +252,6 @@ class InitiatorMixin:
         )
 
     def _new_transfer_description(self, target, payment_id, amount, secret):
-        assume(secret not in self.used_secrets)
         self.used_secrets.add(secret)
 
         return TransferDescriptionWithSecretState(
@@ -297,12 +296,41 @@ class InitiatorMixin:
     )
     def valid_init_initiator(self, partner, payment_id, amount, secret):
         assume(amount <= self._available_amount(partner))
+        assume(secret not in self.used_secrets)
         transfer = self._new_transfer_description(partner, payment_id, amount, secret)
         action = self._action_init_initiator(transfer)
         result = node.state_transition(self.chain_state, action)
         assert event_types_match(result.events, SendLockedTransfer)
         self.initiated.add(transfer.secret)
         return action
+
+    @rule(
+        partner=partners,
+        payment_id=integers(min_value=1),
+        excess_amount=integers(min_value=1),
+        secret=secret(),
+    )
+    def exceeded_capacity_init_initiator(self, partner, payment_id, excess_amount, secret):
+        amount = self._available_amount(partner) + excess_amount
+        transfer = self._new_transfer_description(partner, payment_id, amount, secret)
+        action = self._action_init_initiator(transfer)
+        result = node.state_transition(self.chain_state, action)
+        assert event_types_match(result.events, EventPaymentSentFailed)
+        self.event('ActionInitInitiator failed: Amount exceeded')
+
+    @rule(
+        previous_action=init_initiators,
+        partner=partners,
+        payment_id=integers(min_value=1),
+        amount=integers(min_value=1),
+    )
+    def used_secret_init_initiator(self, previous_action, partner, payment_id, amount):
+        secret = previous_action.transfer.secret
+        transfer = self._new_transfer_description(partner, payment_id, amount, secret)
+        action = self._action_init_initiator(transfer)
+        result = node.state_transition(self.chain_state, action)
+        assert not result.events
+        self.event('ActionInitInitiator failed: Secret already in use.')
 
     @rule(previous_action=init_initiators)
     def replay_init_initator(self, previous_action):
