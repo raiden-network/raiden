@@ -25,23 +25,15 @@ def setup_storage(db_path):
     return storage
 
 
-def test_upgrade_manager_restores_backup(tmp_path):
+def test_upgrade_v16_to_v17(tmp_path):
     db_path = tmp_path / Path('test.db')
-    upgrade_manager = UpgradeManager(db_path, 16, 17)
-    upgrade_manager.run()
-
-    assert upgrade_manager._backup_filename.exists()
-
-    time.sleep(1)
-    # Write some state changes into the backup DB file
-    setup_storage(str(upgrade_manager._backup_filename))
-
-    upgrade_manager.restore_backup()
-
-    # Once restored, the state changes written above should be
-    # in the restored database
-    storage = SQLiteStorage(str(db_path), JSONSerializer())
-    state_change_record = storage.get_latest_state_change_by_data_field(
-        {'_type': 'raiden.transfer.state_change.ActionInitChain'},
+    storage = setup_storage(db_path)
+    manager = UpgradeManager(
+        db_filename=str(db_path),
+        current_version=16,
+        new_version=17,
     )
-    assert state_change_record.data is not None
+    manager.run()
+
+    snapshot = storage.get_latest_state_snapshot()
+    assert snapshot is not None
