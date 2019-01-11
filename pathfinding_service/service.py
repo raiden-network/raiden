@@ -34,7 +34,7 @@ def error_handler(context, exc_info):
         )
         sys.exit()
     else:
-        log.fatal(
+        log.critical(
             'Unhandled exception. Terminating the program...'
             'Please report this issue at '
             'https://github.com/raiden-network/raiden-pathfinding-service/issues',

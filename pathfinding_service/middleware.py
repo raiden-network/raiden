@@ -1,4 +1,4 @@
-from typing import Any, Iterable
+from typing import Tuple
 
 import gevent
 from requests.exceptions import ConnectionError, HTTPError, Timeout, TooManyRedirects
@@ -8,7 +8,7 @@ from web3.middleware.exception_retry_request import check_if_retry_on_failure
 def http_retry_with_backoff_middleware(
     make_request,
     web3,
-    errors: Iterable[Any] = (ConnectionError, HTTPError, Timeout, TooManyRedirects),
+    errors: Tuple = (ConnectionError, HTTPError, Timeout, TooManyRedirects),
     retries: int = 10,
     first_backoff: float = 0.2,
     backoff_factor: float = 2,

@@ -56,7 +56,7 @@ lint: mypy ## check style with flake8
 	isort $(ISORT_PARAMS) --diff --check-only
 
 mypy: ## static analysis with mypy
-	mypy --ignore-missing-imports pathfinding_service
+	mypy --ignore-missing-imports --check-untyped-defs pathfinding_service
 
 isort: ## sort import with isort
 	isort $(ISORT_PARAMS)

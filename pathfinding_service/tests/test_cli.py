@@ -75,7 +75,9 @@ def test_start_block():
         mocks['get_default_registry_and_start_block'].return_value = Mock(), Mock()
         start_block = 10
         address = Web3.toChecksumAddress('0x' + '1'*40)
-        result = runner.invoke(main, ['--registry-address', address, '--start-block', start_block])
+        result = runner.invoke(main, [
+            '--registry-address', address, '--start-block', str(start_block)],
+        )
         assert result.exit_code == 0
         assert mocks['PathfindingService'].call_args[1]['sync_start_block'] == start_block
 
@@ -86,7 +88,9 @@ def test_confirmations():
     with patch.multiple(**patch_args) as mocks:
         mocks['get_default_registry_and_start_block'].return_value = Mock(), Mock()
         confirmations = 77
-        result = runner.invoke(main, ['--confirmations', confirmations], catch_exceptions=False)
+        result = runner.invoke(main, [
+            '--confirmations', str(confirmations)], catch_exceptions=False,
+        )
         assert result.exit_code == 0
         assert mocks['PathfindingService'].call_args[1]['required_confirmations'] == confirmations
 
