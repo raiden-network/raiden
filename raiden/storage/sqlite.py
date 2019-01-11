@@ -67,13 +67,15 @@ class SQLiteStorage:
             raise TypeError("Callback is not callable")
         self._upgrade_callbacks.append(callback)
 
-    def run_updates(self):
+    def maybe_upgrade(self):
         current_version = self.get_version()
         if RAIDEN_DB_VERSION <= current_version:
             return
 
         for callback in self._upgrade_callbacks:
             callback(current_version, RAIDEN_DB_VERSION)
+
+        self.update_version()
 
     def update_version(self):
         cursor = self.conn.cursor()
