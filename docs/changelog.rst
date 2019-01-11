@@ -21,6 +21,7 @@ Changelog
 * :bug:`3211` If using parity and getting the already imported error, attempt to handle it and not crash the client.
 * :bug:`3121` If the same payment identifier is reused avoid a specific race condition that can crash Raiden.
 * :bug:`3201` Workaround for gas price strategy crashing Raiden with an Infura ethereum node.
+* :bug:`3190` Prevents removal of initiator task when one of the transfers is expired.
 
 * :release:`0.100.1 <2018-12-21>`
 * :bug:`3171` Do not crash raiden if the Matrix server is offline when joining a discovery room.
