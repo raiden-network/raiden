@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`-` Update WebUI to version 0.7.1 https://github.com/raiden-network/webui/releases/tag/v0.7.1
+
 * :release:`0.100.2-rc1 <2019-01-04>`
 * :feature:`3217` If channel is already updated onchain don't call updateNonClosingBalanceProof.
 * :bug:`3216` If coming online after partner closed channel don't try to send updateNonClosingBalanceProof twice and crash Raiden.
