@@ -1,0 +1,16 @@
+Click==7.0
+coincurve==8.0.2
+
+web3==4.8.2
+eth-utils==1.4.0
+eth-abi==1.2.0
+py_ecc!=1.4.5
+
+flask==1.0.2
+flask_restful==0.3.6
+gevent==1.3.7
+networkx==2.2
+requests==2.21.0
+
+raiden-libs==0.1.16
+raiden-contracts==0.8.0

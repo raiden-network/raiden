@@ -1,0 +1,13 @@
+language: python
+python: 3.6
+cache: pip
+
+install:
+  - pip install codecov pytest-travis-fold
+  - pip install -r requirements-dev.txt
+  - pip install -e .
+
+script:
+  - make lint
+  - pytest -v --cov=./
+  - codecov
