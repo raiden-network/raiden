@@ -21,6 +21,7 @@ from raiden.exceptions import (
     InvalidAddress,
     InvalidDBData,
     PaymentConflict,
+    RaidenDBUpgradeError,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -74,6 +75,7 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkID,
 )
+from raiden.utils.upgrades import UpgradeManager
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -295,6 +297,8 @@ class RaidenService(Runnable):
             )
 
         storage = sqlite.SQLiteStorage(self.database_path, serialize.JSONSerializer())
+        storage.register_upgrade_callback(self.upgrade_db)
+
         self.wal = wal.restore_to_state_change(
             transition_function=node.state_transition,
             storage=storage,
@@ -825,3 +829,18 @@ class RaidenService(Runnable):
         self.start_health_check_for(transfer.initiator)
         init_target_statechange = target_init(transfer)
         self.handle_state_change(init_target_statechange)
+
+    def upgrade_db(self, current_version: int, new_version: int):
+        log.debug(f'Upgrading database from v{current_version} to v{new_version}')
+        # Prevent unique constraint error in DB when recording raiden "runs"
+        gevent.sleep(1)
+        manager = UpgradeManager(
+            db_filename=self.database_path,
+            current_version=current_version,
+            new_version=new_version,
+        )
+        try:
+            manager.run()
+        except (RaidenDBUpgradeError, InvalidDBData) as e:
+            manager.restore_backup()
+            log.error(f'Failed to upgrade database: {str(e)}')
