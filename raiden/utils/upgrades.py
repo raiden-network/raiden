@@ -30,9 +30,9 @@ class UpgradeManager:
         )
 
     def run(self):
-        self._backup()
-
         storage = SQLiteStorage(str(self._db_filename), JSONSerializer())
+
+        self._backup()
 
         for version in range(self._current_version, self._new_version):
             upgrade_module_name = f'v{version}_to_v{version+1}'
