@@ -2,7 +2,10 @@
 Changelog
 =========
 
+
 * :feature:`-` Update WebUI to version 0.7.1 https://github.com/raiden-network/webui/releases/tag/v0.7.1
+* :bug:`3257` Requesting the channel list with a token address and not a partner address via the API should no longer cause a 500 server error.
+
 
 * :release:`0.100.2-rc1 <2019-01-04>`
 * :feature:`3217` If channel is already updated onchain don't call updateNonClosingBalanceProof.
