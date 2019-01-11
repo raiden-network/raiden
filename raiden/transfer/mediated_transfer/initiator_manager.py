@@ -99,7 +99,6 @@ def maybe_try_new_route(
         cancel_events = cancel_current_route(payment_state, initiator_state)
 
         sub_iteration = initiator.try_new_route(
-            old_initiator_state=initiator_state,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             available_routes=available_routes,
             transfer_description=transfer_description,
@@ -109,7 +108,14 @@ def maybe_try_new_route(
 
         events.extend(cancel_events)
         events.extend(sub_iteration.events)
-        assert sub_iteration.new_state
+
+        if sub_iteration.new_state is None:
+            # Here we don't delete the initiator state, but instead let it live.
+            # It will be deleted when the lock expires. We do that so that we
+            # still have an initiator payment task around to process the
+            # LockExpired message that our partner will send us.
+            # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
+            return TransitionResult(payment_state, events)
 
         new_transfer = sub_iteration.new_state.transfer
         payment_state.initiator_transfers[new_transfer.lock.secrethash] = sub_iteration.new_state
@@ -194,7 +200,6 @@ def handle_init(
     events: List[Event]
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
-            old_initiator_state=None,
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             available_routes=state_change.routes,
             transfer_description=state_change.transfer,
