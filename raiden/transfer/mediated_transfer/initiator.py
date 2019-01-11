@@ -1,7 +1,7 @@
 import random
 
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
@@ -98,7 +98,7 @@ def handle_block(
             return TransitionResult(None, list())
 
     lock_expiration_threshold = BlockNumber(
-        locked_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+        locked_lock.expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL,
     )
     lock_has_expired, _ = channel.is_lock_expired(
         end_state=channel_state.our_state,

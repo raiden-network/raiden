@@ -2,6 +2,8 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from random import Random
 
+import pytest
+
 from hypothesis import assume, event
 from hypothesis.stateful import (
     Bundle,
@@ -14,6 +16,7 @@ from hypothesis.stateful import (
 from hypothesis.strategies import builds, composite, integers, random_module, randoms
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.tests.utils import factories
 from raiden.transfer import channel, node
 from raiden.transfer.events import EventPaymentSentFailed
@@ -24,7 +27,11 @@ from raiden.transfer.mediated_transfer.state_change import (
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
-from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveChannelSettled
+from raiden.transfer.state_change import (
+    Block,
+    ContractReceiveChannelNew,
+    ContractReceiveChannelSettled,
+)
 from raiden.utils import random_secret, sha3
 
 
@@ -60,6 +67,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.our_previous_unclaimed = defaultdict(int)
         self.partner_previous_unclaimed = defaultdict(int)
 
+        self.expected_expiry = dict()
+
         super().__init__()
 
     def new_channel(self):
@@ -93,10 +102,6 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         node.state_transition(self.chain_state, channel_new_state_change)
 
         return partner_address
-
-    @property
-    def default_partner(self):
-        return list(self.address_to_channel.keys())[0]
 
     @initialize(
         target=partners,
@@ -236,6 +241,8 @@ class InitiatorMixin:
 
     def _action_init_initiator(self, transfer: TransferDescriptionWithSecretState):
         channel = self.address_to_channel[transfer.target]
+        if transfer.secrethash not in self.expected_expiry:
+            self.expected_expiry[transfer.secrethash] = self.block_number + 10
         return ActionInitInitiator(
             transfer,
             [factories.route_from_channel(channel)],
@@ -246,7 +253,7 @@ class InitiatorMixin:
         return ReceiveSecretRequest(
             payment_identifier=transfer.payment_identifier,
             amount=transfer.amount,
-            expiration=self.block_number + 10,  # todo
+            expiration=self.expected_expiry[transfer.secrethash],
             secrethash=secrethash,
             sender=transfer.target,
         )
@@ -264,13 +271,13 @@ class InitiatorMixin:
             secret=secret,
         )
 
-    def _invalid_authentic_secret_request(self, action):
+    def _invalid_authentic_secret_request(self, previous, action):
         result = node.state_transition(self.chain_state, action)
-        if action.secrethash not in self.processed_secret_requests:
-            assert event_types_match(result.events, EventPaymentSentFailed)
-        else:
+        if action.secrethash in self.processed_secret_requests or self._is_removed(previous):
             assert not result.events
-        self.processed_secret_requests.add(action.secrethash)
+        else:
+            assert event_types_match(result.events, EventPaymentSentFailed)
+            self.processed_secret_requests.add(action.secrethash)
 
     def _unauthentic_secret_request(self, action):
         result = node.state_transition(self.chain_state, action)
@@ -285,6 +292,10 @@ class InitiatorMixin:
             needed_channel = self.address_to_channel[action.transfer.target]
             assume(channel.get_status(needed_channel) == channel.CHANNEL_STATE_OPENED)
 
+    def _is_removed(self, action):
+        expiry = self.expected_expiry[action.transfer.secrethash]
+        return self.block_number >= expiry + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
+
     init_initiators = Bundle('init_initiators')
 
     @rule(
@@ -297,11 +308,16 @@ class InitiatorMixin:
     def valid_init_initiator(self, partner, payment_id, amount, secret):
         assume(amount <= self._available_amount(partner))
         assume(secret not in self.used_secrets)
+
         transfer = self._new_transfer_description(partner, payment_id, amount, secret)
         action = self._action_init_initiator(transfer)
         result = node.state_transition(self.chain_state, action)
+
         assert event_types_match(result.events, SendLockedTransfer)
+
         self.initiated.add(transfer.secret)
+        self.expected_expiry[transfer.secrethash] = self.block_number + 10
+
         return action
 
     @rule(
@@ -325,6 +341,7 @@ class InitiatorMixin:
         amount=integers(min_value=1),
     )
     def used_secret_init_initiator(self, previous_action, partner, payment_id, amount):
+        assume(not self._is_removed(previous_action))
         secret = previous_action.transfer.secret
         transfer = self._new_transfer_description(partner, payment_id, amount, secret)
         action = self._action_init_initiator(transfer)
@@ -334,6 +351,7 @@ class InitiatorMixin:
 
     @rule(previous_action=init_initiators)
     def replay_init_initator(self, previous_action):
+        assume(not self._is_removed(previous_action))
         result = node.state_transition(self.chain_state, previous_action)
         assert not result.events
 
@@ -345,6 +363,9 @@ class InitiatorMixin:
         if action.secrethash in self.processed_secret_requests:
             assert not result.events
             self.event('Valid SecretRequest dropped due to previous invalid one.')
+        elif self._is_removed(previous_action):
+            assert not result.events
+            self.event('Ohterwise valid SecretRequest dropped due to expired lock.')
         else:
             assert event_types_match(result.events, SendSecretReveal)
             self.event('Valid SecretRequest accepted.')
@@ -357,7 +378,7 @@ class InitiatorMixin:
         transfer = deepcopy(previous_action.transfer)
         transfer.amount = amount
         action = self._receive_secret_request(transfer)
-        self._invalid_authentic_secret_request(action)
+        self._invalid_authentic_secret_request(previous_action, action)
 
     @rule(previous_action=init_initiators, secret=secret())
     def secret_request_with_wrong_secrethash(self, previous_action, secret):
@@ -379,6 +400,21 @@ class InitiatorMixin:
 
 
 class OnChainMixin:
+
+    @rule(number=integers(min_value=1, max_value=50))
+    def new_blocks(self, number):
+        events = list()
+
+        for _ in range(number):
+            block_state_change = Block(
+                block_number=self.block_number + 1,
+                gas_limit=1,
+                block_hash=factories.make_keccak_hash(),
+            )
+            result = node.state_transition(self.chain_state, block_state_change)
+            events.extend(result.events)
+
+            self.block_number += 1
 
     @rule(target=partners)
     def open_channel(self):
@@ -419,9 +455,9 @@ def test_regression_malicious_secret_request_handled_properly():
     state = InitiatorStateMachine()
     state.replay_path = True
 
-    state.initialize(block_number=1, random=Random(), random_seed=None)
+    v1 = state.initialize(block_number=1, random=Random(), random_seed=None)
     v2 = state.valid_init_initiator(
-        partner=state.default_partner,
+        partner=v1,
         amount=1,
         payment_id=1,
         secret=b'\x00' * 32,
