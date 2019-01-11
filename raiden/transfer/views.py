@@ -493,7 +493,7 @@ def list_channelstate_for_tokennetwork(
     )
 
     if token_network:
-        result = token_network.channelidentifiers_to_channels.values()
+        result = list(token_network.channelidentifiers_to_channels.values())
     else:
         result = []
 
