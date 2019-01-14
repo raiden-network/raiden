@@ -65,7 +65,7 @@ class Token:
             allowance,
         )
         if not startgas:
-            msg = self._check_why_approved_failed(allowance)
+            msg = self._check_why_approved_failed(allowance, 'pending')
             log.critical(
                 'Call to approve transaction will fail',
                 msg=msg,
@@ -85,14 +85,17 @@ class Token:
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
-            msg = self._check_why_approved_failed(allowance)
+            msg = self._check_why_approved_failed(allowance, 'latest')
             log.critical(f'approve failed, {msg}', **log_details)
             raise TransactionThrew(msg, receipt_or_none)
 
         log.info('approve successful', **log_details)
 
-    def _check_why_approved_failed(self, allowance: typing.TokenAmount) -> str:
-        user_balance = self.balance_of(self.client.address)
+    def _check_why_approved_failed(self, allowance: typing.TokenAmount, block_identifier) -> str:
+        user_balance = self.balance_of(
+            address=self.client.address,
+            block_identifier=block_identifier,
+        )
 
         # If the balance is zero, either the smart contract doesnt have a
         # balanceOf function or the actual balance is zero
@@ -128,11 +131,11 @@ class Token:
 
         return msg
 
-    def balance_of(self, address):
+    def balance_of(self, address, block_identifier='latest'):
         """ Return the balance of `address`. """
         return self.proxy.contract.functions.balanceOf(
             to_checksum_address(address),
-        ).call()
+        ).call(block_identifier=block_identifier)
 
     def transfer(self, to_address, amount):
         log_details = {
