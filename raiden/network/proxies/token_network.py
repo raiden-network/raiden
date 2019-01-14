@@ -402,7 +402,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
+            channel_identifier: typing.ChannelID,
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
         try:
@@ -415,7 +415,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
+            channel_identifier: typing.ChannelID,
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
         try:
@@ -428,7 +428,7 @@ class TokenNetwork:
             self,
             participant1: typing.Address,
             participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
+            channel_identifier: typing.ChannelID,
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
         try:
