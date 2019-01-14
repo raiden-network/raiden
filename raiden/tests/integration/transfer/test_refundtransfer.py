@@ -11,7 +11,7 @@ from raiden.tests.utils.events import (
 )
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import (
-    dont_handle_locked_expired_mock,
+    dont_handle_lock_expired_mock,
     dont_handle_node_change_network_state,
 )
 from raiden.tests.utils.transfer import (
@@ -218,7 +218,7 @@ def test_refund_transfer(
     assert secrethash in state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task
 
     # Wait for lock lock expiration but make sure app0 never processes LockExpired
-    with dont_handle_locked_expired_mock(app0):
+    with dont_handle_lock_expired_mock(app0):
         wait_for_block(
             raiden=app0.raiden,
             block_number=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2 + 1,
@@ -443,7 +443,8 @@ def test_different_view_of_last_bp_during_unlock(
     app1.raiden.raiden_event_handler.handle_contract_send_channelupdate = patched_update
     # and now app1 comes back online
     app1.raiden.start()
-    assert count == 1
+    # test for https://github.com/raiden-network/raiden/issues/3216
+    assert count == 1, 'Update transfer should have only been called once during restart'
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
     # and we wait for settlement
