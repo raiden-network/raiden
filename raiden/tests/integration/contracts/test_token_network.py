@@ -102,8 +102,22 @@ def test_token_network_proxy_basics(
         c1_client.address,
         c2_client.address,
     ) is False
-    assert c1_token_network_proxy.channel_is_opened(c1_client.address, c2_client.address) is False
-    assert c1_token_network_proxy.channel_is_closed(c1_client.address, c2_client.address) is False
+
+    channel_identifier = c1_token_network_proxy._call_and_check_result(
+        'getChannelIdentifier',
+        to_checksum_address(c1_client.address),
+        to_checksum_address(c2_client.address),
+    )
+    assert c1_token_network_proxy.channel_is_opened(
+        c1_client.address,
+        c2_client.address,
+        channel_identifier,
+    ) is False
+    assert c1_token_network_proxy.channel_is_closed(
+        c1_client.address,
+        c2_client.address,
+        channel_identifier,
+    ) is False
     # test timeout limits
     with pytest.raises(InvalidSettleTimeout):
         c1_token_network_proxy.new_netting_channel(
