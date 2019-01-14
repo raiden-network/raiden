@@ -90,6 +90,12 @@ jobs:
       env:
         - TEST='raiden/tests/unit'
 
+    - stage: test
+      << *job-template-test
+      env:
+        - TEST='raiden/tests/fuzz'
+        - TRANSPORT_OPTIONS='--hypothesis-show-statistics'
+
     - stage: integration
       <<: *job-template-integration
       if: (type = cron OR NOT commit_message =~ /\[ci / OR commit_message =~ /\[ci integration-general\]/)
