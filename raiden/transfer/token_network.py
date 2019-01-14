@@ -335,7 +335,5 @@ def state_transition(
             token_network_state,
             state_change,
         )
-    else:
-        raise RuntimeError(state_change)
 
     return iteration
