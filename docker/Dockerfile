@@ -1,27 +1,35 @@
-FROM ubuntu:xenial
 
-MAINTAINER Herman Junge <herman.junge@consensys.net>
+# This will build the latest master
+#
+# we use an intermediate image to build this image. it will make the resulting
+# image a bit smaller.
+#
+# you can build the image with:
+#
+#   docker build . -t raiden
 
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 923F6CA9 \
-    && echo "deb http://ppa.launchpad.net/ethereum/ethereum/ubuntu xenial main" \
-       | tee -a /etc/apt/sources.list.d/ethereum.list
+FROM python:3 as builder
 
-RUN apt-get update -y \
-    && apt-get dist-upgrade -y
+# use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version
+ARG REPO=raiden-network/raiden
+ARG RAIDENVERSION=master
 
-RUN apt-get install -y automake build-essential git-core libffi-dev \
-       libgmp-dev libssl-dev libtool pkg-config python-dev python-pip solc \
-    && rm -rf /var/lib/apt/lists/*
+# This is a "hack" to automatically invalidate the cache in case there are new commits
+ADD https://api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
 
-RUN pip install --upgrade pip
+# clone raiden repo + install dependencies
+RUN git clone -b ${RAIDENVERSION} https://github.com/${REPO}
+RUN git fetch --tags
 
-RUN git clone https://github.com/raiden-network/raiden.git /apps/raiden \
-    && cd /apps/raiden \
-    && pip install --upgrade -r requirements.txt \
-    && python setup.py develop
+RUN python3 -m venv /opt/venv
 
-WORKDIR /apps/raiden
+RUN /opt/venv/bin/pip3 install -c /app/raiden/constraints.txt -r /app/raiden/requirements.txt /app/raiden
 
-EXPOSE 38647/udp
 
-ENTRYPOINT ["raiden"]
+FROM python:3-slim as runner
+
+COPY --from=builder /opt/venv /opt/venv
+
+EXPOSE 5001
+
+ENTRYPOINT ["/opt/venv/bin/python3", "-m", "raiden"]
