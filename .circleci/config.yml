@@ -241,7 +241,7 @@ jobs:
       test-type:
         description: "type of test"
         type: enum
-        enum: ["integration", "unit"]
+        enum: ["integration", "unit", "fuzz"]
       blockchain-type:
         description: "blockchain type client passed to test run if needed"
         default: "geth"
@@ -455,16 +455,27 @@ workflows:
           requires:
             - prepare-python-3.6
 
+      - test:
+          name: test-fuzz-3.6
+          py-version: "3.6"
+          test-type: "fuzz"
+          blockchain-type: "geth"
+          additional-args: "--hypothesis-show-statistics"
+          requires:
+            - prepare-python-3.6
+
       - finalize:
           requires:
             - lint-3.6
             - mypy-3.6
             - test-unit-3.6
+            - test-fuzz-3.6
             - test-integration-udp-3.6
             - test-integration-matrix-3.6
             - lint-3.7
             - mypy-3.7
             - test-unit-3.7
+            - test-fuzz-3.7
             - test-integration-udp-3.7
             - test-integration-matrix-3.7
 
@@ -519,6 +530,15 @@ workflows:
           py-version: "3.7"
           test-type: "unit"
           blockchain-type: "geth"
+          requires:
+            - prepare-python-3.7
+
+      - test:
+          name: test-fuzz-3.7
+          py-version: "3.7"
+          test-type: "fuzz"
+          blockchain-type: "geth"
+          additional-args: "--hypothesis-show-statistics"
           requires:
             - prepare-python-3.7
 
@@ -635,16 +655,27 @@ workflows:
           requires:
             - prepare-python-3.6
 
+      - test:
+          name: test-fuzz-3.6
+          py-version: "3.6"
+          test-type: "fuzz"
+          blockchain-type: "geth"
+          additional-args: "--hypothesis-show-statistics"
+          requires:
+            - prepare-python-3.6
+
       - finalize:
           requires:
             - lint-3.6
             - mypy-3.7
             - test-unit-3.6
+            - test-fuzz-3.6
             - test-integration-udp-3.6
             - test-integration-matrix-3.6
             - lint-3.7
             - mypy-3.7
             - test-unit-3.7
+            - test-fuzz-3.7
             - test-integration-udp-3.7
             - test-integration-matrix-3.7
 
@@ -699,6 +730,15 @@ workflows:
           py-version: "3.7"
           test-type: "unit"
           blockchain-type: "geth"
+          requires:
+            - prepare-python-3.7
+
+      - test:
+          name: test-fuzz-3.7
+          py-version: "3.7"
+          test-type: "fuzz"
+          blockchain-type: "geth"
+          additional-args: "--hypothesis-show-statistics"
           requires:
             - prepare-python-3.7
 
