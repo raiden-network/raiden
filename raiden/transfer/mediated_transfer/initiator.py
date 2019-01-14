@@ -257,11 +257,7 @@ def send_lockedtransfer(
         message_identifier: MessageID,
         block_number: BlockNumber,
 ) -> SendLockedTransfer:
-    """ Create a mediated transfer using channel.
-
-    Raises:
-        AssertionError: If the channel does not have enough capacity.
-    """
+    """ Create a mediated transfer using channel. """
     assert channel_state.token_network_identifier == transfer_description.token_network_identifier
 
     lock_expiration = get_initial_lock_expiration(
