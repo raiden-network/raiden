@@ -46,7 +46,7 @@ def pytest_addoption(parser):
     parser.addoption(
         '--transport',
         choices=('none', 'udp', 'matrix', 'all'),
-        default='udp',
+        default='matrix',
         help='Run integration tests with udp, with matrix, with both or not at all.',
     )
 
