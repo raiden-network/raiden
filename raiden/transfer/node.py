@@ -881,8 +881,6 @@ def handle_state_change(chain_state: ChainState, state_change: StateChange) -> T
             chain_state,
             state_change,
         )
-    else:
-        raise ValueError(f'Unknown state change: {state_change!r}')
 
     return iteration
 
