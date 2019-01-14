@@ -128,8 +128,8 @@ def dont_handle_secret_request_mock(app):
     )
 
 
-def dont_handle_locked_expired_mock(app):
-    """Takes in a raiden app and returns a mock context where locke expired is not processed
+def dont_handle_lock_expired_mock(app):
+    """Takes in a raiden app and returns a mock context where lock_expired is not processed
     """
     def do_nothing(raiden, message):
         pass

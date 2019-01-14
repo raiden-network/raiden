@@ -464,7 +464,7 @@ class UDPTransport(Runnable):
         """ Send message to recipient if the transport is running. """
 
         # Don't sleep if timeout is zero, otherwise a context-switch is done
-        # and the message is delayed, increasing it's latency
+        # and the message is delayed, increasing its latency
         sleep_timeout = self.throttle_policy.consume(1)
         if sleep_timeout:
             gevent.sleep(sleep_timeout)
