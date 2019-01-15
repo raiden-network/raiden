@@ -18,8 +18,7 @@ ARG RAIDENVERSION=master
 ADD https://api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
 
 # clone raiden repo + install dependencies
-RUN git clone -b ${RAIDENVERSION} https://github.com/${REPO}
-RUN git fetch --tags
+RUN git clone -b ${RAIDENVERSION} https://github.com/${REPO} /app/raiden
 
 RUN python3 -m venv /opt/venv
 
