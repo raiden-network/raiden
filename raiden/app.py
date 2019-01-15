@@ -66,6 +66,9 @@ class App:  # pylint: disable=too-few-public-methods
         'rpc': True,
         'console': False,
         'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
+        'services': {
+            'pathfinding_service_address': None,
+        },
     }
 
     def __init__(
