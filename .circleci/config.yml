@@ -402,7 +402,7 @@ jobs:
       - config-path
       - run:
           name: upload-to-digitalocean
-          command: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY build/archive/ raiden-ci-test ams3.digitaloceanspaces.com
+          command: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY build/archive/ $DO_S3_SUB_SUB_DOMAIN ams3.digitaloceanspaces.com
 
   deploy-github-release:
     working_directory: ~/raiden

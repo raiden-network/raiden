@@ -5,7 +5,7 @@ stages:
   - name: integration
     if: (type = cron OR NOT commit_message =~ /\[no ci integration\]/) AND NOT commit_message =~ /\[ci nightly\]/ AND tag IS NOT present
   - name: deploy
-    if: type = cron OR commit_message =~ /\[ci nightly\]/ OR tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
+    if: tag IS present AND tag =~ /^v[\d]+\.[\d]+\.[\d]+/
 
 templates:
   job-template-test: &job-template-test
