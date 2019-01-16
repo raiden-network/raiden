@@ -53,14 +53,14 @@ def secret_registry_proxy_patched(secret_registry_proxy, contract_manager):
         secret_registry_address=secret_registry_proxy.address,
         contract_manager=contract_manager,
     )
-    _register_secret_batch = secret_registry_patched._register_secret_batch
+    register_secret_batch = secret_registry_patched.register_secret_batch
 
-    def register_secret_batch_patched(self, secrets, gas_limit):
+    def register_secret_batch_patched(self, secrets):
         """Make sure the transaction is sent only once per secret"""
         for secret in secrets:
             assert secret not in self.trigger
             self.trigger[secret] = True
-        return _register_secret_batch(secrets, gas_limit)
+        return register_secret_batch(secrets)
 
     secret_registry_patched._register_secret_batch = types.MethodType(
         register_secret_batch_patched,

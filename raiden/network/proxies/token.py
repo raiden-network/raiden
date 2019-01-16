@@ -36,11 +36,11 @@ class Token:
         self.node_address = privatekey_to_address(jsonrpc_client.privkey)
         self.proxy = proxy
 
-    def allowance(self, owner, spender):
+    def allowance(self, owner, spender, block_identifier):
         return self.proxy.contract.functions.allowance(
             to_checksum_address(owner),
             to_checksum_address(spender),
-        ).call()
+        ).call(block_identifier=block_identifier)
 
     def approve(self, allowed_address: typing.Address, allowance: typing.TokenAmount):
         """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
@@ -58,40 +58,46 @@ class Token:
             'allowance': allowance,
         }
 
-        startgas = self.proxy.estimate_gas(
+        error_prefix = 'Call to approve will fail'
+        gas_limit = self.proxy.estimate_gas(
             'pending',
             'approve',
             to_checksum_address(allowed_address),
             allowance,
         )
-        if not startgas:
-            msg = self._check_why_approved_failed(allowance, 'pending')
-            log.critical(
-                'Call to approve transaction will fail',
-                msg=msg,
-                **log_details,
+
+        if gas_limit:
+            error_prefix = 'Call to approve failed'
+            log.debug('approve called', **log_details)
+            transaction_hash = self.proxy.transact(
+                'approve',
+                safe_gas_limit(gas_limit),
+                to_checksum_address(allowed_address),
+                allowance,
             )
-            raise RaidenUnrecoverableError('Call to approve transaction will fail')
 
-        log.debug('approve called', **log_details)
-        transaction_hash = self.proxy.transact(
-            'approve',
-            safe_gas_limit(startgas),
-            to_checksum_address(allowed_address),
-            allowance,
-        )
+            self.client.poll(transaction_hash)
+            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-        self.client.poll(transaction_hash)
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        transaction_executed = gas_limit is not None
+        if not transaction_executed or receipt_or_none:
+            if transaction_executed:
+                block = receipt_or_none['blockNumber']
+            else:
+                block = 'pending'
 
-        if receipt_or_none:
-            msg = self._check_why_approved_failed(allowance, 'latest')
-            log.critical(f'approve failed, {msg}', **log_details)
-            raise TransactionThrew(msg, receipt_or_none)
+            msg = self._check_why_approved_failed(allowance, block)
+            error_msg = f'{error_prefix}. {msg}'
+            log.critical(error_msg, **log_details)
+            raise RaidenUnrecoverableError(error_msg)
 
         log.info('approve successful', **log_details)
 
-    def _check_why_approved_failed(self, allowance: typing.TokenAmount, block_identifier) -> str:
+    def _check_why_approved_failed(
+            self,
+            allowance: typing.TokenAmount,
+            block_identifier: typing.BlockSpecification,
+    ) -> str:
         user_balance = self.balance_of(
             address=self.client.address,
             block_identifier=block_identifier,

@@ -9,7 +9,6 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
     SamePeerAddress,
-    TransactionThrew,
 )
 from raiden.network.proxies import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
@@ -104,6 +103,7 @@ def test_token_network_proxy_basics(
     ) is False
 
     channel_identifier = c1_token_network_proxy._call_and_check_result(
+        'latest',
         'getChannelIdentifier',
         to_checksum_address(c1_client.address),
         to_checksum_address(c2_client.address),
@@ -219,7 +219,7 @@ def test_token_network_proxy_basics(
         data=balance_proof.serialize_bin(),
     ))
     # close with invalid signature
-    with pytest.raises(TransactionThrew):
+    with pytest.raises(RaidenUnrecoverableError):
         c2_token_network_proxy.close(
             channel_identifier=channel_identifier,
             partner=c1_client.address,
@@ -436,7 +436,7 @@ def test_token_network_proxy_update_transfer(
         privkey=encode_hex(c2_client.privkey),
         data=non_closing_data,
     )
-    with pytest.raises(TransactionThrew):
+    with pytest.raises(RaidenUnrecoverableError):
         c2_token_network_proxy.update_transfer(
             channel_identifier,
             c1_client.address,

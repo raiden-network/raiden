@@ -22,7 +22,6 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
     SamePeerAddress,
-    TransactionThrew,
 )
 from raiden.network.proxies import Token
 from raiden.network.proxies.utils import compare_contract_versions
@@ -131,20 +130,12 @@ class TokenNetwork:
         """ Return the token of this manager. """
         return to_canonical_address(self.proxy.contract.functions.token().call())
 
-    def new_netting_channel(
+    def _new_channel_preconditions(
             self,
             partner: typing.Address,
             settle_timeout: int,
-    ) -> typing.ChannelID:
-        """ Creates a new channel in the TokenNetwork contract.
-
-        Args:
-            partner: The peer to open the channel with.
-            settle_timeout: The settle timeout to use for this channel.
-
-        Returns:
-            The ChannelID of the new netting channel.
-        """
+            block_identifier: typing.BlockSpecification,
+    ):
         if not is_binary_address(partner):
             raise InvalidAddress('Expected binary address format for channel partner')
 
@@ -162,6 +153,44 @@ class TokenNetwork:
         if self.node_address == partner:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
 
+        channel_exists = self.channel_exists_and_not_settled(
+            participant1=self.node_address,
+            participant2=partner,
+            block_identifier=block_identifier,
+        )
+        if channel_exists:
+            raise DuplicatedChannelError('Channel with given partner address already exists')
+
+    def _new_channel_postconditions(
+            self,
+            partner: typing.Address,
+            block: typing.BlockSpecification,
+    ) -> typing.Tuple[bool, str]:
+        channel_created = self.channel_exists_and_not_settled(
+            participant1=self.node_address,
+            participant2=partner,
+            block_identifier=block,
+        )
+        if channel_created:
+            return True, 'Channel with given partner address already exists'
+        return False, ''
+
+    def new_netting_channel(
+            self,
+            partner: typing.Address,
+            settle_timeout: int,
+    ) -> typing.ChannelID:
+        """ Creates a new channel in the TokenNetwork contract.
+
+        Args:
+            partner: The peer to open the channel with.
+            settle_timeout: The settle timeout to use for this channel.
+
+        Returns:
+            The ChannelID of the new netting channel.
+        """
+
+        self._new_channel_preconditions(partner, settle_timeout, 'pending')
         log_details = {
             'peer1': pex(self.node_address),
             'peer2': pex(partner),
@@ -186,19 +215,32 @@ class TokenNetwork:
             raise RaidenUnrecoverableError('Call to openChannel will fail')
 
         log.debug('new_netting_channel called', **log_details)
-
         # Prevent concurrent attempts to open a channel with the same token and
         # partner address.
-        if partner not in self.open_channel_transactions:
+        if gas_limit and partner not in self.open_channel_transactions:
             new_open_channel_transaction = AsyncResult()
             self.open_channel_transactions[partner] = new_open_channel_transaction
-
+            gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_OPEN_CHANNEL)
             try:
-                transaction_hash = self._new_netting_channel(
-                    partner=partner,
-                    settle_timeout=settle_timeout,
-                    gas_limit=gas_limit,
+                transaction_hash = self.proxy.transact(
+                    'openChannel',
+                    gas_limit,
+                    self.node_address,
+                    partner,
+                    settle_timeout,
                 )
+                self.client.poll(transaction_hash)
+                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+                if receipt_or_none:
+                    known_race, msg = self._new_channel_postconditions(
+                        partner=partner,
+                        block=receipt_or_none['blockNumber'],
+                    )
+                    if known_race:
+                        raise DuplicatedChannelError(msg)
+                    log.critical('new_netting_channel failed', **log_details)
+                    raise RaidenUnrecoverableError('creating new channel failed')
+
             except Exception as e:
                 log.critical('new_netting_channel failed', **log_details)
                 new_open_channel_transaction.set_exception(e)
@@ -211,14 +253,15 @@ class TokenNetwork:
             # All other concurrent threads should block on the result of opening this channel
             self.open_channel_transactions[partner].get()
 
-        channel_created = self.channel_exists_and_not_settled(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier='pending',
-        )
-        if channel_created is False:
-            log.critical('new_netting_channel failed', **log_details)
-            raise RaidenUnrecoverableError('creating new channel failed')
+        if not gas_limit:
+            known_race, msg = self._new_channel_postconditions(
+                partner=partner,
+                block='pending',
+            )
+            if known_race:
+                raise DuplicatedChannelError(msg)
+            log.critical('new_netting_channel call will fail', **log_details)
+            raise RaidenUnrecoverableError('Creating a new channel will fail')
 
         channel_identifier: typing.ChannelID = self.detail_channel(
             participant1=self.node_address,
@@ -229,40 +272,6 @@ class TokenNetwork:
         log.info('new_netting_channel successful', **log_details)
 
         return channel_identifier
-
-    def _new_netting_channel(
-            self,
-            partner: typing.Address,
-            settle_timeout: int,
-            gas_limit: int,
-    ) -> typing.TransactionHash:
-        channel_already_exists = self.channel_exists_and_not_settled(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier='pending',
-        )
-        if channel_already_exists:
-            raise DuplicatedChannelError('Channel with given partner address already exists')
-
-        gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_OPEN_CHANNEL)
-
-        transaction_hash = self.proxy.transact(
-            'openChannel',
-            gas_limit,
-            self.node_address,
-            partner,
-            settle_timeout,
-        )
-
-        if not transaction_hash:
-            raise RuntimeError('open channel transaction failed')
-
-        self.client.poll(transaction_hash)
-
-        if check_transaction_threw(self.client, transaction_hash):
-            raise DuplicatedChannelError('Duplicated channel')
-
-        return transaction_hash
 
     def _inspect_channel_identifier(
             self,
@@ -568,6 +577,116 @@ class TokenNetwork:
         ).deposit
         return deposit > 0
 
+    def _deposit_preconditions(
+            self,
+            channel_identifier: typing.ChannelID,
+            total_deposit: typing.TokenAmount,
+            partner: typing.Address,
+            token: Token,
+            block_identifier: typing.BlockSpecification,
+    ) -> typing.Tuple[typing.TokenAmount, typing.Dict]:
+        if not isinstance(total_deposit, int):
+            raise ValueError('total_deposit needs to be an integral number.')
+
+        self._check_for_outdated_channel(
+            participant1=self.node_address,
+            participant2=partner,
+            channel_identifier=channel_identifier,
+            block_identifier=block_identifier,
+        )
+
+        # setTotalDeposit requires a monotonically increasing value. This
+        # is used to handle concurrent actions:
+        #
+        #  - The deposits will be done in order, i.e. the monotonic
+        #  property is preserved by the caller
+        #  - The race of two deposits will be resolved with the larger
+        #  deposit winning
+        #  - Retries wont have effect
+        #
+        # This check is serialized with the channel_operations_lock to avoid
+        # sending invalid transactions on-chain (decreasing total deposit).
+        #
+        previous_total_deposit = self.detail_participant(
+            channel_identifier=channel_identifier,
+            participant=self.node_address,
+            partner=partner,
+            block_identifier=block_identifier,
+        ).deposit
+        amount_to_deposit = total_deposit - previous_total_deposit
+
+        log_details = {
+            'token_network': pex(self.address),
+            'channel_identifier': channel_identifier,
+            'node': pex(self.node_address),
+            'partner': pex(partner),
+            'new_total_deposit': total_deposit,
+            'previous_total_deposit': previous_total_deposit,
+        }
+
+        # These two scenarios can happen if two calls to deposit happen
+        # and then we get here on the second call
+        if total_deposit < previous_total_deposit:
+            msg = (
+                f'Current total deposit ({previous_total_deposit}) is already larger '
+                f'than the requested total deposit amount ({total_deposit})'
+            )
+            log.info('setTotalDeposit failed', reason=msg, **log_details)
+            raise DepositMismatch(msg)
+
+        if amount_to_deposit <= 0:
+            msg = (
+                f'new_total_deposit - previous_total_deposit must be greater than 0. '
+                f'new_total_deposit={total_deposit} '
+                f'previous_total_deposit={previous_total_deposit}'
+            )
+            log.info('setTotalDeposit failed', reason=msg, **log_details)
+            raise DepositMismatch(msg)
+
+        # A node may be setting up multiple channels for the same token
+        # concurrently. Because each deposit changes the user balance this
+        # check must be serialized with the operation locks.
+        #
+        # This check is merely informational, used to avoid sending
+        # transactions which are known to fail.
+        #
+        # It is serialized with the deposit_lock to avoid sending invalid
+        # transactions on-chain (account without balance). The lock
+        # channel_operations_lock is not sufficient, as it allows two
+        # concurrent deposits for different channels.
+        #
+        current_balance = token.balance_of(self.node_address)
+        if current_balance < amount_to_deposit:
+            msg = (
+                f'new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not '
+                f'be larger than the available balance {current_balance}, '
+                f'for token at address {pex(token.address)}'
+            )
+            log.info('setTotalDeposit failed', reason=msg, **log_details)
+            raise DepositMismatch(msg)
+
+        # If there are channels being set up concurrenlty either the
+        # allowance must be accumulated *or* the calls to `approve` and
+        # `setTotalDeposit` must be serialized. This is necessary otherwise
+        # the deposit will fail.
+        #
+        # Calls to approve and setTotalDeposit are serialized with the
+        # deposit_lock to avoid transaction failure, because with two
+        # concurrent deposits, we may have the transactions executed in the
+        # following order
+        #
+        # - approve
+        # - approve
+        # - setTotalDeposit
+        # - setTotalDeposit
+        #
+        # in which case  the second `approve` will overwrite the first,
+        # and the first `setTotalDeposit` will consume the allowance,
+        #  making the second deposit fail.
+        token.approve(typing.Address(self.address), amount_to_deposit)
+
+        return amount_to_deposit, log_details
+
     def set_total_deposit(
             self,
             channel_identifier: typing.ChannelID,
@@ -577,115 +696,24 @@ class TokenNetwork:
         """ Set total token deposit in the channel to total_deposit.
 
         Raises:
+            ChannelBusyError: If the channel is busy with another operation
             RuntimeError: If the token address is empty.
         """
-        if not isinstance(total_deposit, int):
-            raise ValueError('total_deposit needs to be an integral number.')
-
-        self._check_for_outdated_channel(
-            participant1=self.node_address,
-            participant2=partner,
-            channel_identifier=channel_identifier,
-            block_identifier='pending',
-        )
-
         token_address = self.token_address()
         token = Token(
             jsonrpc_client=self.client,
             token_address=token_address,
             contract_manager=self.contract_manager,
         )
-
+        error_prefix = 'setTotalDeposit call will fail'
         with self.channel_operations_lock[partner], self.deposit_lock:
-            # setTotalDeposit requires a monotonically increasing value. This
-            # is used to handle concurrent actions:
-            #
-            #  - The deposits will be done in order, i.e. the monotonic
-            #  property is preserved by the caller
-            #  - The race of two deposits will be resolved with the larger
-            #  deposit winning
-            #  - Retries wont have effect
-            #
-            # This check is serialized with the channel_operations_lock to avoid
-            # sending invalid transactions on-chain (decreasing total deposit).
-            #
-            previous_total_deposit = self.detail_participant(
+            amount_to_deposit, log_details = self._deposit_preconditions(
                 channel_identifier=channel_identifier,
-                participant=self.node_address,
+                total_deposit=total_deposit,
                 partner=partner,
+                token=token,
                 block_identifier='pending',
-            ).deposit
-            amount_to_deposit = total_deposit - previous_total_deposit
-
-            log_details = {
-                'token_network': pex(self.address),
-                'channel_identifier': channel_identifier,
-                'node': pex(self.node_address),
-                'partner': pex(partner),
-                'new_total_deposit': total_deposit,
-                'previous_total_deposit': previous_total_deposit,
-            }
-
-            # These two scenarios can happen if two calls to deposit happen
-            # and then we get here on the second call
-            if total_deposit < previous_total_deposit:
-                msg = (
-                    f'Current total deposit ({previous_total_deposit}) is already larger '
-                    f'than the requested total deposit amount ({total_deposit})'
-                )
-                log.info('setTotalDeposit failed', reason=msg, **log_details)
-                raise DepositMismatch(msg)
-
-            if amount_to_deposit <= 0:
-                msg = (
-                    f'new_total_deposit - previous_total_deposit must be greater than 0. '
-                    f'new_total_deposit={total_deposit} '
-                    f'previous_total_deposit={previous_total_deposit}'
-                )
-                log.info('setTotalDeposit failed', reason=msg, **log_details)
-                raise DepositMismatch(msg)
-
-            # A node may be setting up multiple channels for the same token
-            # concurrently. Because each deposit changes the user balance this
-            # check must be serialized with the operation locks.
-            #
-            # This check is merely informational, used to avoid sending
-            # transactions which are known to fail.
-            #
-            # It is serialized with the deposit_lock to avoid sending invalid
-            # transactions on-chain (account without balance). The lock
-            # channel_operations_lock is not sufficient, as it allows two
-            # concurrent deposits for different channels.
-            #
-            current_balance = token.balance_of(self.node_address)
-            if current_balance < amount_to_deposit:
-                msg = (
-                    f'new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not '
-                    f'be larger than the available balance {current_balance}, '
-                    f'for token at address {pex(token_address)}'
-                )
-                log.info('setTotalDeposit failed', reason=msg, **log_details)
-                raise DepositMismatch(msg)
-
-            # If there are channels being set up concurrenlty either the
-            # allowance must be accumulated *or* the calls to `approve` and
-            # `setTotalDeposit` must be serialized. This is necessary otherwise
-            # the deposit will fail.
-            #
-            # Calls to approve and setTotalDeposit are serialized with the
-            # deposit_lock to avoid transaction failure, because with two
-            # concurrent deposits, we may have the transactions executed in the
-            # following order
-            #
-            # - approve
-            # - approve
-            # - setTotalDeposit
-            # - setTotalDeposit
-            #
-            # in which case  the second `approve` will overwrite the first,
-            # and the first `setTotalDeposit` will consume the allowance,
-            #  making the second deposit fail.
-            token.approve(typing.Address(self.address), amount_to_deposit)
+            )
 
             gas_limit = self.proxy.estimate_gas(
                 'pending',
@@ -695,44 +723,45 @@ class TokenNetwork:
                 total_deposit,
                 partner,
             )
-            if not gas_limit:
-                self._check_why_deposit_failed(
+
+            if gas_limit:
+                gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
+                error_prefix = 'setTotalDeposit call failed'
+
+                log.debug('setTotalDeposit called', **log_details)
+                transaction_hash = self.proxy.transact(
+                    'setTotalDeposit',
+                    gas_limit,
+                    channel_identifier,
+                    self.node_address,
+                    total_deposit,
+                    partner,
+                )
+                self.client.poll(transaction_hash)
+                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+
+            transaction_executed = gas_limit is not None
+            if not transaction_executed or receipt_or_none:
+                if transaction_executed:
+                    block = receipt_or_none['blockNumber']
+                else:
+                    block = 'pending'
+                error_type, msg = self._check_why_deposit_failed(
                     channel_identifier=channel_identifier,
                     partner=partner,
                     token=token,
                     amount_to_deposit=amount_to_deposit,
                     total_deposit=total_deposit,
-                    log_details=log_details,
-                    block_identifier='pending',
+                    transaction_executed=transaction_executed,
+                    block_identifier=block,
                 )
-                raise RaidenUnrecoverableError('Deposit transaction will always fail')
 
-            gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT)
-
-            log.debug('setTotalDeposit called', **log_details)
-            transaction_hash = self.proxy.transact(
-                'setTotalDeposit',
-                gas_limit,
-                channel_identifier,
-                self.node_address,
-                total_deposit,
-                partner,
-            )
-            self.client.poll(transaction_hash)
-
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-
-            if receipt_or_none:
-                self._check_why_deposit_failed(
-                    channel_identifier=channel_identifier,
-                    partner=partner,
-                    token=token,
-                    amount_to_deposit=amount_to_deposit,
-                    total_deposit=total_deposit,
-                    log_details=log_details,
-                    block_identifier='pending',
-                )
-                raise TransactionThrew('Deposit', receipt_or_none)
+                error_msg = f'{error_prefix}. {msg}'
+                if error_type == RaidenRecoverableError:
+                    log.warning(error_msg, **log_details)
+                else:
+                    log.critical(error_msg, **log_details)
+                raise error_type(error_msg)
 
             log.info('setTotalDeposit successful', **log_details)
 
@@ -743,9 +772,14 @@ class TokenNetwork:
             token: Token,
             amount_to_deposit: typing.TokenAmount,
             total_deposit: typing.TokenAmount,
-            log_details: typing.Dict,
-            block_identifier='latest',
-    ):
+            transaction_executed: bool,
+            block_identifier: typing.BlockSpecification,
+    ) -> typing.Tuple[
+        typing.Union[RaidenRecoverableError, RaidenUnrecoverableError],
+        str,
+    ]:
+        error_type = RaidenUnrecoverableError
+        msg = ''
         latest_deposit = self.detail_participant(
             channel_identifier=channel_identifier,
             participant=self.node_address,
@@ -753,28 +787,67 @@ class TokenNetwork:
             block_identifier=block_identifier,
         ).deposit
 
-        if token.allowance(self.node_address, self.address) < amount_to_deposit:
-            log_msg = (
-                'setTotalDeposit failed. The allowance is insufficient, '
-                'check concurrent deposits for the same token network '
-                'but different proxies.'
+        if token.allowance(self.node_address, self.address, block_identifier) < amount_to_deposit:
+            msg = (
+                'The allowance is insufficient. Check concurrent deposits '
+                'for the same token network but different proxies.'
             )
-        elif token.balance_of(self.node_address) < amount_to_deposit:
-            log_msg = 'setTotalDeposit failed. The address doesnt have funds'
-        elif latest_deposit < total_deposit:
-            log_msg = 'setTotalDeposit failed. The tokens were not transferred'
+        elif token.balance_of(self.node_address, block_identifier) < amount_to_deposit:
+            msg = 'The address doesnt have enough tokens'
+        elif transaction_executed and latest_deposit < total_deposit:
+            msg = 'The tokens were not transferred'
         else:
-            log_msg = 'setTotalDeposit failed'
+            participant_details = self.detail_participants(
+                participant1=self.node_address,
+                participant2=partner,
+                channel_identifier=channel_identifier,
+                block_identifier=block_identifier,
+            )
+            channel_state = self._get_channel_state(
+                participant1=self.node_address,
+                participant2=partner,
+                channel_identifier=channel_identifier,
+                block_identifier=block_identifier,
+            )
+            # Check if deposit is being made on a nonexistent channel
+            if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
+                msg = (
+                    f'Channel between participant {self.node_address} '
+                    f'and {partner} does not exist',
+                )
+            # Deposit was prohibited because the channel is settled
+            elif channel_state == ChannelState.SETTLED:
+                msg = 'Deposit is not possible due to channel being settled'
+            # Deposit was prohibited because the channel is closed
+            elif channel_state == ChannelState.CLOSED:
+                error_type = RaidenRecoverableError
+                msg = 'Channel is already closed'
+            elif participant_details.our_details.deposit < total_deposit:
+                msg = 'Deposit amount did not increase after deposit transaction'
 
-        log.critical(log_msg, **log_details)
+        return error_type, msg
 
-        self._check_channel_state_for_deposit(
+    def _close_preconditions(
+            self,
+            channel_identifier: typing.ChannelID,
+            partner: typing.Address,
+            block_identifier: typing.BlockSpecification,
+    ):
+        self._check_for_outdated_channel(
             participant1=self.node_address,
             participant2=partner,
             channel_identifier=channel_identifier,
-            deposit_amount=total_deposit,
             block_identifier=block_identifier,
         )
+
+        error_type, msg = self._check_channel_state_for_close(
+            participant1=self.node_address,
+            participant2=partner,
+            channel_identifier=channel_identifier,
+            block_identifier=block_identifier,
+        )
+        if error_type:
+            raise error_type(msg)
 
     def close(
             self,
@@ -803,6 +876,13 @@ class TokenNetwork:
         }
         log.debug('closeChannel called', **log_details)
 
+        self._close_preconditions(
+            channel_identifier,
+            partner=partner,
+            block_identifier='pending',
+        )
+
+        error_prefix = 'closeChannel call will fail'
         gas_limit = self.proxy.estimate_gas(
             'pending',
             'closeChannel',
@@ -813,50 +893,50 @@ class TokenNetwork:
             additional_hash,
             signature,
         )
-        if not gas_limit:
-            self._check_for_outdated_channel(
-                participant1=self.node_address,
-                participant2=partner,
-                channel_identifier=channel_identifier,
-                block_identifier='pending',
-            )
 
-            self._check_channel_state_for_close(
-                participant1=self.node_address,
-                participant2=partner,
-                channel_identifier=channel_identifier,
-                block_identifier='pending',
-            )
-
-        with self.channel_operations_lock[partner]:
-            transaction_hash = self.proxy.transact(
-                'closeChannel',
-                safe_gas_limit(GAS_REQUIRED_FOR_CLOSE_CHANNEL),
-                channel_identifier,
-                partner,
-                balance_hash,
-                nonce,
-                additional_hash,
-                signature,
-            )
-            self.client.poll(transaction_hash)
-
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-            if receipt_or_none:
-                log.critical('closeChannel failed', **log_details)
-
-                self._check_channel_state_for_close(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    channel_identifier=channel_identifier,
-                    block_identifier='pending',
+        if gas_limit:
+            with self.channel_operations_lock[partner]:
+                error_prefix = 'closeChannel call failed'
+                transaction_hash = self.proxy.transact(
+                    'closeChannel',
+                    safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CLOSE_CHANNEL),
+                    channel_identifier,
+                    partner,
+                    balance_hash,
+                    nonce,
+                    additional_hash,
+                    signature,
                 )
+                self.client.poll(transaction_hash)
+                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-                raise TransactionThrew('Close', receipt_or_none)
+        transaction_executed = gas_limit is not None
+        if not transaction_executed or receipt_or_none:
+            if transaction_executed:
+                block = receipt_or_none['blockNumber']
+            else:
+                block = 'pending'
 
-            log.info('closeChannel successful', **log_details)
+            error_type, msg = self._check_channel_state_for_close(
+                participant1=self.node_address,
+                participant2=partner,
+                channel_identifier=channel_identifier,
+                block_identifier=block,
+            )
+            error_msg = f'{error_prefix}. {msg}'
+            if error_type == RaidenRecoverableError:
+                log.warning(error_msg, **log_details)
+            else:
+                # error_type can also be None above in which case it's
+                # unknown reason why we would fail.
+                error_type = RaidenUnrecoverableError
+                log.critical(error_msg, **log_details)
 
-    def update_transfer(
+            raise error_type(error_msg)
+
+        log.info('closeChannel successful', **log_details)
+
+    def _update_preconditions(
             self,
             channel_identifier: typing.ChannelID,
             partner: typing.Address,
@@ -864,20 +944,8 @@ class TokenNetwork:
             nonce: typing.Nonce,
             additional_hash: typing.AdditionalHash,
             closing_signature: typing.Signature,
-            non_closing_signature: typing.Signature,
-    ):
-        log_details = {
-            'token_network': pex(self.address),
-            'node': pex(self.node_address),
-            'partner': pex(partner),
-            'nonce': nonce,
-            'balance_hash': encode_hex(balance_hash),
-            'additional_hash': encode_hex(additional_hash),
-            'closing_signature': encode_hex(closing_signature),
-            'non_closing_signature': encode_hex(non_closing_signature),
-        }
-        log.debug('updateNonClosingBalanceProof called', **log_details)
-
+            block_identifier: typing.BlockSpecification,
+    ) -> None:
         data_that_was_signed = pack_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
@@ -902,14 +970,74 @@ class TokenNetwork:
             # Exception is raised if the public key recovery failed.
         except Exception:  # pylint: disable=broad-except
             msg = "Couldn't verify the balance proof signature"
-            log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-            raise RaidenUnrecoverableError(msg)
+            return RaidenUnrecoverableError, msg
 
         if signer_address != partner:
-            msg = 'Invalid balance proof signature'
-            log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-            raise RaidenUnrecoverableError(msg)
+            raise RaidenUnrecoverableError('Invalid balance proof signature')
 
+        self._check_for_outdated_channel(
+            self.node_address,
+            partner,
+            channel_identifier,
+        )
+
+        detail = self.detail_channel(
+            participant1=self.node_address,
+            participant2=partner,
+            channel_identifier=channel_identifier,
+            block_identifier=block_identifier,
+        )
+        if detail.state != ChannelState.CLOSED:
+            raise RaidenUnrecoverableError('Channel is not in a closed state')
+        elif detail.settle_block_number < self.client.block_number():
+            msg = (
+                'updateNonClosingBalanceProof cannot be called '
+                'because the settlement period is over'
+            )
+            raise RaidenRecoverableError(msg)
+        else:
+            error_type, msg = self._check_channel_state_for_update(
+                channel_identifier=channel_identifier,
+                closer=partner,
+                update_nonce=nonce,
+                block_identifier=block_identifier,
+            )
+            if error_type:
+                raise error_type(msg)
+
+    def update_transfer(
+            self,
+            channel_identifier: typing.ChannelID,
+            partner: typing.Address,
+            balance_hash: typing.BalanceHash,
+            nonce: typing.Nonce,
+            additional_hash: typing.AdditionalHash,
+            closing_signature: typing.Signature,
+            non_closing_signature: typing.Signature,
+    ):
+        log_details = {
+            'token_network': pex(self.address),
+            'node': pex(self.node_address),
+            'partner': pex(partner),
+            'nonce': nonce,
+            'balance_hash': encode_hex(balance_hash),
+            'additional_hash': encode_hex(additional_hash),
+            'closing_signature': encode_hex(closing_signature),
+            'non_closing_signature': encode_hex(non_closing_signature),
+        }
+        log.debug('updateNonClosingBalanceProof called', **log_details)
+
+        self._update_preconditions(
+            channel_identifier=channel_identifier,
+            partner=partner,
+            balance_hash=balance_hash,
+            nonce=nonce,
+            additional_hash=additional_hash,
+            closing_signature=closing_signature,
+            block_identifier='pending',
+        )
+
+        error_prefix = 'updateNonClosingBalanceProof call will fail'
         gas_limit = self.proxy.estimate_gas(
             'pending',
             'updateNonClosingBalanceProof',
@@ -922,109 +1050,74 @@ class TokenNetwork:
             closing_signature,
             non_closing_signature,
         )
-        if not gas_limit:
-            self._check_for_outdated_channel(
-                participant1=self.node_address,
-                participant2=partner,
-                channel_identifier=channel_identifier,
-                block_identifier='pending',
+
+        if gas_limit:
+            error_prefix = 'updateNonClosingBalanceProof call failed'
+            transaction_hash = self.proxy.transact(
+                'updateNonClosingBalanceProof',
+                safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF),
+                channel_identifier,
+                partner,
+                self.node_address,
+                balance_hash,
+                nonce,
+                additional_hash,
+                closing_signature,
+                non_closing_signature,
             )
+
+            self.client.poll(transaction_hash)
+            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        transaction_executed = gas_limit is not None
+        if not transaction_executed or receipt_or_none:
+            if transaction_executed:
+                block = receipt_or_none['blockNumber']
+                to_compare_block = block
+            else:
+                block = 'pending'
+                to_compare_block = self.client.block_number()
 
             detail = self.detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
                 channel_identifier=channel_identifier,
-                block_identifier='pending',
+                block_identifier=block,
             )
-            if detail.state != ChannelState.CLOSED:
-                msg = 'Channel is not in a closed state'
-                log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-                raise RaidenUnrecoverableError(msg)
-
-            if detail.settle_block_number < self.client.block_number():
-                msg = (
-                    'updateNonClosingBalanceProof cannot be called '
-                    'because the settlement period is over'
-                )
-                log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-                raise RaidenRecoverableError(msg)
-
-            self._check_channel_state_for_update(
-                channel_identifier=channel_identifier,
-                closer=partner,
-                update_nonce=nonce,
-                log_details=log_details,
-                block_identifier='pending',
-            )
-            channel_settled = self.channel_is_settled(
-                participant1=self.node_address,
-                participant2=partner,
-                channel_identifier=channel_identifier,
-                block_identifier='pending',
-            )
-            if channel_settled is True:
-                msg = 'Channel is settled'
-                log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-                raise RaidenRecoverableError(msg)
-
-            log.critical('Call to updateNonClosingBalanceProof will fail', **log_details)
-            raise RaidenUnrecoverableError('Call to updateNonClosingBalanceProof will fail')
-
-        transaction_hash = self.proxy.transact(
-            'updateNonClosingBalanceProof',
-            safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF),
-            channel_identifier,
-            partner,
-            self.node_address,
-            balance_hash,
-            nonce,
-            additional_hash,
-            closing_signature,
-            non_closing_signature,
-        )
-
-        self.client.poll(transaction_hash)
-
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-        if receipt_or_none:
-            detail = self.detail_channel(
-                participant1=self.node_address,
-                participant2=partner,
-                channel_identifier=channel_identifier,
-                block_identifier='pending',
-            )
-            if detail.settle_block_number < receipt_or_none['blockNumber']:
+            if detail.settle_block_number < to_compare_block:
+                error_type = RaidenRecoverableError
                 msg = (
                     'updateNonClosingBalanceProof transaction '
                     'was mined after settlement finished'
                 )
-                log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-                raise RaidenRecoverableError(msg)
+            else:
+                error_type, msg = self._check_channel_state_for_update(
+                    channel_identifier=channel_identifier,
+                    closer=partner,
+                    update_nonce=nonce,
+                    block_identifier=block,
+                )
+                if error_type is None:
+                    # This should never happen if the settlement window and gas price
+                    # estimation is done properly
+                    channel_settled = self.channel_is_settled(
+                        participant1=self.node_address,
+                        participant2=partner,
+                        channel_identifier=channel_identifier,
+                        block_identifier=block,
+                    )
+                    if channel_settled is True:
+                        error_type = RaidenUnrecoverableError
+                        msg = 'Channel is settled'
+                    else:
+                        error_type = RaidenUnrecoverableError
+                        msg = ''
 
-            self._check_channel_state_for_update(
-                channel_identifier=channel_identifier,
-                closer=partner,
-                update_nonce=nonce,
-                log_details=log_details,
-                block_identifier='pending',
-            )
-
-            # This should never happen if the settlement window and gas price
-            # estimation is done properly
-            channel_settled = self.channel_is_settled(
-                participant1=self.node_address,
-                participant2=partner,
-                channel_identifier=channel_identifier,
-                block_identifier='pending',
-            )
-            if channel_settled is True:
-                msg = 'Channel is settled'
-                log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-                raise RaidenRecoverableError(msg)
-
-            msg = 'Update NonClosing balance proof'
-            log.critical(f'updateNonClosingBalanceProof failed, {msg}', **log_details)
-            raise TransactionThrew(msg, receipt_or_none)
+            error_msg = f'{error_prefix}. {msg}'
+            if error_type == RaidenRecoverableError:
+                log.warning(error_msg, **log_details)
+            else:
+                log.critical(error_msg, **log_details)
+            raise error_type(error_msg)
 
         log.info('updateNonClosingBalanceProof successful', **log_details)
 
@@ -1047,6 +1140,7 @@ class TokenNetwork:
 
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
+        error_prefix = 'Call to unlock will fail'
         gas_limit = self.proxy.estimate_gas(
             'pending',
             'unlock',
@@ -1055,55 +1149,93 @@ class TokenNetwork:
             partner,
             leaves_packed,
         )
-        if not gas_limit:
+
+        if gas_limit:
+            gas_limit = safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
+            error_prefix = 'Call to unlock failed'
+            log.info('unlock called', **log_details)
+            transaction_hash = self.proxy.transact(
+                'unlock',
+                gas_limit,
+                channel_identifier,
+                self.node_address,
+                partner,
+                leaves_packed,
+            )
+
+            self.client.poll(transaction_hash)
+            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+
+        transaction_executed = gas_limit is not None
+        if not transaction_executed or receipt_or_none:
+            if transaction_executed:
+                block = receipt_or_none['blockNumber']
+            else:
+                block = 'pending'
+
             channel_settled = self.channel_is_settled(
                 participant1=self.node_address,
                 participant2=partner,
                 channel_identifier=channel_identifier,
-                block_identifier='pending',
+                block_identifier=block,
             )
             if channel_settled is False:
-                log.critical('unlock failed. Channel is not in a settled state', **log_details)
-                raise RaidenUnrecoverableError(
-                    'Channel is not in a settled state. An unlock cannot be made',
-                )
+                msg = 'Channel is not in a settled state'
 
-            log.critical('Call to unlock transaction will fail. Out of funds?', **log_details)
-            raise RaidenUnrecoverableError('Call to unlock transaction will fail. Out of funds?')
+            error_msg = f'{error_prefix}. {msg}'
 
-        gas_limit = safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
-
-        log.info('unlock called', **log_details)
-        transaction_hash = self.proxy.transact(
-            'unlock',
-            gas_limit,
-            channel_identifier,
-            self.node_address,
-            partner,
-            leaves_packed,
-        )
-
-        self.client.poll(transaction_hash)
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-
-        if receipt_or_none:
-            channel_settled = self.channel_is_settled(
-                participant1=self.node_address,
-                participant2=partner,
-                channel_identifier=channel_identifier,
-                block_identifier='pending',
-            )
-
-            if channel_settled is False:
-                log.critical('unlock failed. Channel is not in a settled state', **log_details)
-                raise RaidenUnrecoverableError(
-                    'Channel is not in a settled state. An unlock cannot be made',
-                )
-
-            log.critical('unlock failed', **log_details)
-            raise TransactionThrew('Unlock', receipt_or_none)
+            log.critical(error_msg, **log_details)
+            raise RaidenUnrecoverableError(error_msg)
 
         log.info('unlock successful', **log_details)
+
+    def _settle_preconditions(
+            self,
+            channel_identifier: typing.ChannelID,
+            transferred_amount: int,
+            locked_amount: int,
+            locksroot: typing.Locksroot,
+            partner: typing.Address,
+            partner_transferred_amount: int,
+            partner_locked_amount: int,
+            partner_locksroot: typing.Locksroot,
+            block_identifier: typing.BlockSpecification,
+    ):
+        self._check_for_outdated_channel(
+            participant1=self.node_address,
+            participant2=partner,
+            channel_identifier=channel_identifier,
+            block_identifier=block_identifier,
+        )
+
+        # and now find out
+        our_maximum = transferred_amount + locked_amount
+        partner_maximum = partner_transferred_amount + partner_locked_amount
+
+        # The second participant transferred + locked amount must be higher
+        our_bp_is_larger = our_maximum > partner_maximum
+        if our_bp_is_larger:
+            return [
+                partner,
+                partner_transferred_amount,
+                partner_locked_amount,
+                partner_locksroot,
+                self.node_address,
+                transferred_amount,
+                locked_amount,
+                locksroot,
+            ]
+        else:
+            return [
+                self.node_address,
+                transferred_amount,
+                locked_amount,
+                locksroot,
+                partner,
+                partner_transferred_amount,
+                partner_locked_amount,
+                partner_locksroot,
+            ]
 
     def settle(
             self,
@@ -1131,122 +1263,58 @@ class TokenNetwork:
         }
         log.debug('settle called', **log_details)
 
-        self._check_for_outdated_channel(
-            participant1=self.node_address,
-            participant2=partner,
+        args = self._settle_preconditions(
             channel_identifier=channel_identifier,
+            transferred_amount=transferred_amount,
+            locked_amount=locked_amount,
+            locksroot=locksroot,
+            partner=partner,
+            partner_transferred_amount=partner_transferred_amount,
+            partner_locked_amount=partner_locked_amount,
+            partner_locksroot=partner_locksroot,
             block_identifier='pending',
         )
 
         with self.channel_operations_lock[partner]:
-            our_maximum = transferred_amount + locked_amount
-            partner_maximum = partner_transferred_amount + partner_locked_amount
+            error_prefix = 'Call to settle will fail'
+            gas_limit = self.proxy.estimate_gas(
+                'pending',
+                'settleChannel',
+                channel_identifier,
+                *args,
+            )
 
-            # The second participant transferred + locked amount must be higher
-            our_bp_is_larger = our_maximum > partner_maximum
-
-            if our_bp_is_larger:
-                gas_limit = self.proxy.estimate_gas(
-                    'pending',
-                    'settleChannel',
-                    channel_identifier,
-                    partner,
-                    partner_transferred_amount,
-                    partner_locked_amount,
-                    partner_locksroot,
-                    self.node_address,
-                    transferred_amount,
-                    locked_amount,
-                    locksroot,
-                )
-                if not gas_limit:
-                    self._check_channel_state_before_settle(
-                        participant1=self.node_address,
-                        participant2=partner,
-                        channel_identifier=channel_identifier,
-                        block_identifier='pending',
-                    )
-                    log.critical(
-                        'Call to settle transaction will fail. Out of funds?',
-                        **log_details,
-                    )
-                    raise RaidenUnrecoverableError(
-                        'Call to settle transaction will fail. Out of funds?',
-                    )
-
+            if gas_limit:
+                error_prefix = 'settle call failed'
                 gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
 
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
                     gas_limit,
                     channel_identifier,
-                    partner,
-                    partner_transferred_amount,
-                    partner_locked_amount,
-                    partner_locksroot,
-                    self.node_address,
-                    transferred_amount,
-                    locked_amount,
-                    locksroot,
+                    *args,
                 )
+                self.client.poll(transaction_hash)
+                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+
+        transaction_executed = gas_limit is not None
+        if not transaction_executed or receipt_or_none:
+            if transaction_executed:
+                block = receipt_or_none['blockNumber']
             else:
-                gas_limit = self.proxy.estimate_gas(
-                    'pending',
-                    'settleChannel',
-                    channel_identifier,
-                    self.node_address,
-                    transferred_amount,
-                    locked_amount,
-                    locksroot,
-                    partner,
-                    partner_transferred_amount,
-                    partner_locked_amount,
-                    partner_locksroot,
-                )
-                if not gas_limit:
-                    self._check_channel_state_before_settle(
-                        participant1=self.node_address,
-                        participant2=partner,
-                        channel_identifier=channel_identifier,
-                        block_identifier='pending',
-                    )
-                    log.critical(
-                        'Call to settle transaction will fail. Out of funds?',
-                        **log_details,
-                    )
-                    raise RaidenUnrecoverableError(
-                        'Call to settle transaction will fail. Out of funds?',
-                    )
+                block = 'pending'
 
-                gas_limit = safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_SETTLE_CHANNEL)
+            msg = self._check_channel_state_after_settle(
+                participant1=self.node_address,
+                participant2=partner,
+                channel_identifier=channel_identifier,
+                block_identifier=block,
+            )
+            error_msg = f'{error_prefix}. {msg}'
+            log.critical(error_msg, **log_details)
+            raise RaidenUnrecoverableError(error_msg)
 
-                transaction_hash = self.proxy.transact(
-                    'settleChannel',
-                    gas_limit,
-                    channel_identifier,
-                    self.node_address,
-                    transferred_amount,
-                    locked_amount,
-                    locksroot,
-                    partner,
-                    partner_transferred_amount,
-                    partner_locked_amount,
-                    partner_locksroot,
-                )
-
-            self.client.poll(transaction_hash)
-            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-            if receipt_or_none:
-                log.critical('settle failed', **log_details)
-                self._check_channel_state_after_settle(
-                    participant1=self.node_address,
-                    participant2=partner,
-                    channel_identifier=channel_identifier,
-                    block_identifier='pending',
-                )
-                raise TransactionThrew('Settle', receipt_or_none)
-
-            log.info('settle successful', **log_details)
+        log.info('settle successful', **log_details)
 
     def events_filter(
             self,
@@ -1341,7 +1409,12 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID,
             block_identifier,
-    ) -> None:
+    ) -> typing.Tuple[
+        typing.Optional[typing.Union[RaidenRecoverableError, RaidenUnrecoverableError]],
+        str,
+    ]:
+        error_type = None
+        msg = ''
         channel_state = self._get_channel_state(
             participant1=participant1,
             participant2=participant2,
@@ -1350,60 +1423,19 @@ class TokenNetwork:
         )
 
         if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-            raise RaidenUnrecoverableError(
+            error_type = RaidenUnrecoverableError
+            msg = (
                 f'Channel between participant {participant1} '
                 f'and {participant2} does not exist',
             )
         elif channel_state == ChannelState.SETTLED:
-            raise RaidenUnrecoverableError(
-                'A settled channel cannot be closed',
-            )
+            error_type = RaidenUnrecoverableError
+            msg = 'A settled channel cannot be closed'
         elif channel_state == ChannelState.CLOSED:
-            raise RaidenRecoverableError(
-                'Channel is already closed',
-            )
+            error_type = RaidenRecoverableError
+            msg = 'Channel is already closed'
 
-    def _check_channel_state_for_deposit(
-            self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
-            deposit_amount: typing.TokenAmount,
-            block_identifier,
-    ) -> None:
-        participant_details = self.detail_participants(
-            participant1=participant1,
-            participant2=participant2,
-            channel_identifier=channel_identifier,
-            block_identifier=block_identifier,
-        )
-
-        channel_state = self._get_channel_state(
-            participant1=self.node_address,
-            participant2=participant2,
-            channel_identifier=channel_identifier,
-            block_identifier=block_identifier,
-        )
-        # Check if deposit is being made on a nonexistent channel
-        if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-            raise RaidenUnrecoverableError(
-                f'Channel between participant {participant1} '
-                f'and {participant2} does not exist',
-            )
-        # Deposit was prohibited because the channel is settled
-        elif channel_state == ChannelState.SETTLED:
-            raise RaidenUnrecoverableError(
-                'Deposit is not possible due to channel being settled',
-            )
-        # Deposit was prohibited because the channel is closed
-        elif channel_state == ChannelState.CLOSED:
-            raise RaidenRecoverableError(
-                'Channel is already closed',
-            )
-        elif participant_details.our_details.deposit < deposit_amount:
-            raise RaidenUnrecoverableError(
-                'Deposit amount did not increase after deposit transaction',
-            )
+        return error_type, msg
 
     def _check_channel_state_before_settle(
             self,
@@ -1445,7 +1477,8 @@ class TokenNetwork:
             participant2: typing.Address,
             channel_identifier: typing.ChannelID,
             block_identifier,
-    ):
+    ) -> str:
+        str = ''
         channel_data = self._check_channel_state_before_settle(
             participant1=participant1,
             participant2=participant2,
@@ -1453,24 +1486,26 @@ class TokenNetwork:
             block_identifier=block_identifier,
         )
         if channel_data.state == ChannelState.CLOSED:
-            raise RaidenUnrecoverableError(
+            str = (
                 "Settling this channel failed although the channel's current state "
                 "is closed.",
             )
+        return str
 
     def _check_channel_state_for_update(
             self,
             channel_identifier: typing.ChannelID,
             closer: typing.Address,
             update_nonce: typing.Nonce,
-            log_details: typing.Dict,
-            block_identifier,
-    ) -> None:
+            block_identifier: typing.BlockSpecification,
+    ) -> typing.Tuple[typing.Optional[RaidenRecoverableError], str]:
         """Check the channel state on chain to see if it has been updated.
 
         Compare the nonce we are about to update the contract with the
         updated nonce in the onchain state and if it's the same raise a
         RaidenRecoverableError"""
+        error_type = None
+        msg = ''
         closer_details = self.detail_participant(
             channel_identifier=channel_identifier,
             participant=closer,
@@ -1478,9 +1513,10 @@ class TokenNetwork:
             block_identifier=block_identifier,
         )
         if closer_details.nonce == update_nonce:
+            error_type = RaidenRecoverableError
             msg = (
                 'updateNonClosingBalanceProof transaction has already '
                 'been mined and updated the channel succesfully.'
             )
-            log.warning(f'{msg}', **log_details)
-            raise RaidenRecoverableError(msg)
+
+        return error_type, msg
