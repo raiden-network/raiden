@@ -9,7 +9,8 @@ from raiden.exceptions import InvalidAddress, RaidenUnrecoverableError
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, privatekey_to_address, safe_gas_limit, sha3, typing
+from raiden.utils import pex, privatekey_to_address, safe_gas_limit, sha3
+from raiden.utils.typing import BlockSpecification, Keccak256, Secret
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
 from raiden_contracts.contract_manager import ContractManager
 
@@ -47,10 +48,10 @@ class SecretRegistry:
         self.node_address = privatekey_to_address(self.client.privkey)
         self.open_secret_transactions = dict()
 
-    def register_secret(self, secret: typing.Secret):
+    def register_secret(self, secret: Secret):
         self.register_secret_batch([secret])
 
-    def register_secret_batch(self, secrets: List[typing.Secret]):
+    def register_secret_batch(self, secrets: List[Secret]):
         secrets_to_register = list()
         secrethashes_to_register = list()
         secrethashes_not_sent = list()
@@ -111,16 +112,16 @@ class SecretRegistry:
 
         log.info('registerSecretBatch successful', **log_details)
 
-    def get_register_block_for_secrethash(self, secrethash: typing.Keccak256) -> int:
+    def get_register_block_for_secrethash(self, secrethash: Keccak256) -> int:
         return self.proxy.contract.functions.getSecretRevealBlockHeight(secrethash).call()
 
-    def check_registered(self, secrethash: typing.Keccak256) -> bool:
+    def check_registered(self, secrethash: Keccak256) -> bool:
         return self.get_register_block_for_secrethash(secrethash) > 0
 
     def secret_registered_filter(
             self,
-            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
-            to_block: typing.BlockSpecification = 'latest',
+            from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
+            to_block: BlockSpecification = 'latest',
     ) -> StatelessFilter:
         event_abi = self.contract_manager.get_event_abi(
             CONTRACT_SECRET_REGISTRY,

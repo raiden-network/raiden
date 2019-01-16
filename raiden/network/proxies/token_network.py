@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List, NamedTuple, Optional
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
 import structlog
 from eth_utils import (
@@ -28,8 +28,26 @@ from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
-from raiden.utils import pex, privatekey_to_address, safe_gas_limit, typing
+from raiden.utils import pex, privatekey_to_address, safe_gas_limit
 from raiden.utils.signing import eth_recover
+from raiden.utils.typing import (
+    AdditionalHash,
+    Address,
+    BalanceHash,
+    BlockNumber,
+    BlockSpecification,
+    ChainID,
+    ChannelID,
+    Locksroot,
+    MerkleTreeLeaves,
+    Nonce,
+    Signature,
+    T_ChannelID,
+    T_ChannelState,
+    TokenAmount,
+    TokenNetworkAddress,
+    TokenNetworkID,
+)
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     GAS_REQUIRED_FOR_CLOSE_CHANNEL,
@@ -47,20 +65,20 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class ChannelData(NamedTuple):
-    channel_identifier: typing.ChannelID
-    settle_block_number: typing.BlockNumber
-    state: typing.ChannelState
+    channel_identifier: ChannelID
+    settle_block_number: BlockNumber
+    state: ChannelState
 
 
 class ParticipantDetails(NamedTuple):
-    address: typing.Address
-    deposit: typing.TokenAmount
-    withdrawn: typing.TokenAmount
+    address: Address
+    deposit: TokenAmount
+    withdrawn: TokenAmount
     is_closer: bool
-    balance_hash: typing.BalanceHash
-    nonce: typing.Nonce
-    locksroot: typing.Locksroot
-    locked_amount: typing.TokenAmount
+    balance_hash: BalanceHash
+    nonce: Nonce
+    locksroot: Locksroot
+    locked_amount: TokenAmount
 
 
 class ParticipantsDetails(NamedTuple):
@@ -69,7 +87,7 @@ class ParticipantsDetails(NamedTuple):
 
 
 class ChannelDetails(NamedTuple):
-    chain_id: typing.ChainID
+    chain_id: ChainID
     channel_data: int
     participants_data: ParticipantsDetails
 
@@ -78,7 +96,7 @@ class TokenNetwork:
     def __init__(
             self,
             jsonrpc_client,
-            token_network_address: typing.TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             contract_manager: ContractManager,
     ):
         if not is_binary_address(token_network_address):
@@ -86,7 +104,7 @@ class TokenNetwork:
 
         check_address_has_code(
             jsonrpc_client,
-            typing.Address(token_network_address),
+            Address(token_network_address),
             CONTRACT_TOKEN_NETWORK,
         )
 
@@ -100,7 +118,7 @@ class TokenNetwork:
             proxy=proxy,
             expected_version=contract_manager.contracts_version,
             contract_name=CONTRACT_TOKEN_NETWORK,
-            address=typing.Address(token_network_address),
+            address=Address(token_network_address),
         )
 
         self.address = token_network_address
@@ -117,7 +135,12 @@ class TokenNetwork:
         # setTotalDeposit calls.
         self.deposit_lock = Semaphore()
 
-    def _call_and_check_result(self, block_identifier, function_name: str, *args):
+    def _call_and_check_result(
+            self,
+            block_identifier: BlockSpecification,
+            function_name: str,
+            *args,
+    ):
         fn = getattr(self.proxy.contract.functions, function_name)
         call_result = fn(*args).call(block_identifier=block_identifier)
 
@@ -126,15 +149,15 @@ class TokenNetwork:
 
         return call_result
 
-    def token_address(self) -> typing.Address:
+    def token_address(self) -> Address:
         """ Return the token of this manager. """
         return to_canonical_address(self.proxy.contract.functions.token().call())
 
     def _new_channel_preconditions(
             self,
-            partner: typing.Address,
+            partner: Address,
             settle_timeout: int,
-            block_identifier: typing.BlockSpecification,
+            block_identifier: BlockSpecification,
     ):
         if not is_binary_address(partner):
             raise InvalidAddress('Expected binary address format for channel partner')
@@ -163,9 +186,9 @@ class TokenNetwork:
 
     def _new_channel_postconditions(
             self,
-            partner: typing.Address,
-            block: typing.BlockSpecification,
-    ) -> typing.Tuple[bool, str]:
+            partner: Address,
+            block: BlockSpecification,
+    ) -> Tuple[bool, str]:
         channel_created = self.channel_exists_and_not_settled(
             participant1=self.node_address,
             participant2=partner,
@@ -177,9 +200,9 @@ class TokenNetwork:
 
     def new_netting_channel(
             self,
-            partner: typing.Address,
+            partner: Address,
             settle_timeout: int,
-    ) -> typing.ChannelID:
+    ) -> ChannelID:
         """ Creates a new channel in the TokenNetwork contract.
 
         Args:
@@ -263,7 +286,7 @@ class TokenNetwork:
             log.critical('new_netting_channel call will fail', **log_details)
             raise RaidenUnrecoverableError('Creating a new channel will fail')
 
-        channel_identifier: typing.ChannelID = self.detail_channel(
+        channel_identifier: ChannelID = self.detail_channel(
             participant1=self.node_address,
             participant2=partner,
             block_identifier='latest',
@@ -275,12 +298,12 @@ class TokenNetwork:
 
     def _inspect_channel_identifier(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
+            participant1: Address,
+            participant2: Address,
             called_by_fn: str,
-            channel_identifier: typing.ChannelID = None,
-            block_identifier='latest',
-    ) -> typing.ChannelID:
+            channel_identifier: ChannelID = None,
+            block_identifier: BlockSpecification ='pending',
+    ) -> ChannelID:
         if not channel_identifier:
             channel_identifier = self._call_and_check_result(
                 block_identifier,
@@ -288,7 +311,7 @@ class TokenNetwork:
                 to_checksum_address(participant1),
                 to_checksum_address(participant2),
             )
-        assert isinstance(channel_identifier, typing.T_ChannelID)
+        assert isinstance(channel_identifier, T_ChannelID)
         if channel_identifier == 0:
             raise RaidenRecoverableError(
                 f'When calling {called_by_fn} either 0 value was given for the '
@@ -300,10 +323,10 @@ class TokenNetwork:
 
     def channel_exists_and_not_settled(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
-            block_identifier='latest',
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID = None,
+            block_identifier: BlockSpecification = 'pending',
     ) -> bool:
         """Returns if the channel exists and is in a non-settled state"""
         try:
@@ -323,10 +346,10 @@ class TokenNetwork:
 
     def detail_participant(
             self,
-            channel_identifier: typing.ChannelID,
-            participant: typing.Address,
-            partner: typing.Address,
-            block_identifier,
+            channel_identifier: ChannelID,
+            participant: Address,
+            partner: Address,
+            block_identifier: BlockSpecification,
     ) -> ParticipantDetails:
         """ Returns a dictionary with the channel participant information. """
 
@@ -350,10 +373,10 @@ class TokenNetwork:
 
     def detail_channel(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
-            block_identifier='latest',
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID = None,
+            block_identifier: BlockSpecification = 'pending',
     ) -> ChannelData:
         """ Returns a ChannelData instance with the channel specific information.
 
@@ -385,10 +408,10 @@ class TokenNetwork:
 
     def detail_participants(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
-            block_identifier='latest',
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID = None,
+            block_identifier: BlockSpecification = 'pending',
     ) -> ParticipantsDetails:
         """ Returns a ParticipantsDetails instance with the participants'
             channel information.
@@ -426,10 +449,10 @@ class TokenNetwork:
 
     def detail(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
-            block_identifier='latest',
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID = None,
+            block_identifier: BlockSpecification = 'pending',
     ) -> ChannelDetails:
         """ Returns a ChannelDetails instance with all the details of the
             channel and the channel participants.
@@ -473,9 +496,9 @@ class TokenNetwork:
 
     def channel_is_opened(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID,
     ) -> bool:
         """ Returns true if the channel is in an open state, false otherwise. """
         try:
@@ -486,9 +509,9 @@ class TokenNetwork:
 
     def channel_is_closed(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID,
     ) -> bool:
         """ Returns true if the channel is in a closed state, false otherwise. """
         try:
@@ -499,10 +522,10 @@ class TokenNetwork:
 
     def channel_is_settled(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
-            block_identifier='latest',
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID,
+            block_identifier: BlockSpecification,
     ) -> bool:
         """ Returns true if the channel is in a settled state, false otherwise. """
         try:
@@ -518,11 +541,11 @@ class TokenNetwork:
 
     def closing_address(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
-            block_identifier='latest',
-    ) -> Optional[typing.Address]:
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID = None,
+            block_identifier: BlockSpecification = 'pending',
+    ) -> Optional[Address]:
         """ Returns the address of the closer, if the channel is closed and not settled. None
         otherwise. """
 
@@ -555,9 +578,9 @@ class TokenNetwork:
 
     def can_transfer(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID,
     ) -> bool:
         """ Returns True if the channel is opened and the node has deposit in
         it.
@@ -579,12 +602,12 @@ class TokenNetwork:
 
     def _deposit_preconditions(
             self,
-            channel_identifier: typing.ChannelID,
-            total_deposit: typing.TokenAmount,
-            partner: typing.Address,
+            channel_identifier: ChannelID,
+            total_deposit: TokenAmount,
+            partner: Address,
             token: Token,
-            block_identifier: typing.BlockSpecification,
-    ) -> typing.Tuple[typing.TokenAmount, typing.Dict]:
+            block_identifier: BlockSpecification,
+    ) -> Tuple[TokenAmount, Dict]:
         if not isinstance(total_deposit, int):
             raise ValueError('total_deposit needs to be an integral number.')
 
@@ -683,15 +706,15 @@ class TokenNetwork:
         # in which case  the second `approve` will overwrite the first,
         # and the first `setTotalDeposit` will consume the allowance,
         #  making the second deposit fail.
-        token.approve(typing.Address(self.address), amount_to_deposit)
+        token.approve(Address(self.address), amount_to_deposit)
 
         return amount_to_deposit, log_details
 
     def set_total_deposit(
             self,
-            channel_identifier: typing.ChannelID,
-            total_deposit: typing.TokenAmount,
-            partner: typing.Address,
+            channel_identifier: ChannelID,
+            total_deposit: TokenAmount,
+            partner: Address,
     ):
         """ Set total token deposit in the channel to total_deposit.
 
@@ -767,15 +790,15 @@ class TokenNetwork:
 
     def _check_why_deposit_failed(
             self,
-            channel_identifier: typing.ChannelID,
-            partner: typing.Address,
+            channel_identifier: ChannelID,
+            partner: Address,
             token: Token,
-            amount_to_deposit: typing.TokenAmount,
-            total_deposit: typing.TokenAmount,
+            amount_to_deposit: TokenAmount,
+            total_deposit: TokenAmount,
             transaction_executed: bool,
-            block_identifier: typing.BlockSpecification,
-    ) -> typing.Tuple[
-        typing.Union[RaidenRecoverableError, RaidenUnrecoverableError],
+            block_identifier: BlockSpecification,
+    ) -> Tuple[
+        Union[RaidenRecoverableError, RaidenUnrecoverableError],
         str,
     ]:
         error_type = RaidenUnrecoverableError
@@ -829,9 +852,9 @@ class TokenNetwork:
 
     def _close_preconditions(
             self,
-            channel_identifier: typing.ChannelID,
-            partner: typing.Address,
-            block_identifier: typing.BlockSpecification,
+            channel_identifier: ChannelID,
+            partner: Address,
+            block_identifier: BlockSpecification,
     ):
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -851,12 +874,12 @@ class TokenNetwork:
 
     def close(
             self,
-            channel_identifier: typing.ChannelID,
-            partner: typing.Address,
-            balance_hash: typing.BalanceHash,
-            nonce: typing.Nonce,
-            additional_hash: typing.AdditionalHash,
-            signature: typing.Signature,
+            channel_identifier: ChannelID,
+            partner: Address,
+            balance_hash: BalanceHash,
+            nonce: Nonce,
+            additional_hash: AdditionalHash,
+            signature: Signature,
     ):
         """ Close the channel using the provided balance proof.
 
@@ -938,20 +961,20 @@ class TokenNetwork:
 
     def _update_preconditions(
             self,
-            channel_identifier: typing.ChannelID,
-            partner: typing.Address,
-            balance_hash: typing.BalanceHash,
-            nonce: typing.Nonce,
-            additional_hash: typing.AdditionalHash,
-            closing_signature: typing.Signature,
-            block_identifier: typing.BlockSpecification,
+            channel_identifier: ChannelID,
+            partner: Address,
+            balance_hash: BalanceHash,
+            nonce: Nonce,
+            additional_hash: AdditionalHash,
+            closing_signature: Signature,
+            block_identifier: BlockSpecification,
     ) -> None:
         data_that_was_signed = pack_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
             channel_identifier=channel_identifier,
-            token_network_identifier=typing.TokenNetworkID(self.address),
+            token_network_identifier=TokenNetworkID(self.address),
             chain_id=self.proxy.contract.functions.chain_id().call(),
         )
 
@@ -979,6 +1002,7 @@ class TokenNetwork:
             self.node_address,
             partner,
             channel_identifier,
+            block_identifier=block_identifier,
         )
 
         detail = self.detail_channel(
@@ -1007,13 +1031,13 @@ class TokenNetwork:
 
     def update_transfer(
             self,
-            channel_identifier: typing.ChannelID,
-            partner: typing.Address,
-            balance_hash: typing.BalanceHash,
-            nonce: typing.Nonce,
-            additional_hash: typing.AdditionalHash,
-            closing_signature: typing.Signature,
-            non_closing_signature: typing.Signature,
+            channel_identifier: ChannelID,
+            partner: Address,
+            balance_hash: BalanceHash,
+            nonce: Nonce,
+            additional_hash: AdditionalHash,
+            closing_signature: Signature,
+            non_closing_signature: Signature,
     ):
         log_details = {
             'token_network': pex(self.address),
@@ -1123,9 +1147,9 @@ class TokenNetwork:
 
     def unlock(
             self,
-            channel_identifier: typing.ChannelID,
-            partner: typing.Address,
-            merkle_tree_leaves: typing.MerkleTreeLeaves,
+            channel_identifier: ChannelID,
+            partner: Address,
+            merkle_tree_leaves: MerkleTreeLeaves,
     ):
         log_details = {
             'token_network': pex(self.address),
@@ -1191,15 +1215,15 @@ class TokenNetwork:
 
     def _settle_preconditions(
             self,
-            channel_identifier: typing.ChannelID,
+            channel_identifier: ChannelID,
             transferred_amount: int,
             locked_amount: int,
-            locksroot: typing.Locksroot,
-            partner: typing.Address,
+            locksroot: Locksroot,
+            partner: Address,
             partner_transferred_amount: int,
             partner_locked_amount: int,
-            partner_locksroot: typing.Locksroot,
-            block_identifier: typing.BlockSpecification,
+            partner_locksroot: Locksroot,
+            block_identifier: BlockSpecification,
     ):
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -1239,14 +1263,14 @@ class TokenNetwork:
 
     def settle(
             self,
-            channel_identifier: typing.ChannelID,
+            channel_identifier: ChannelID,
             transferred_amount: int,
             locked_amount: int,
-            locksroot: typing.Locksroot,
-            partner: typing.Address,
+            locksroot: Locksroot,
+            partner: Address,
             partner_transferred_amount: int,
             partner_locked_amount: int,
-            partner_locksroot: typing.Locksroot,
+            partner_locksroot: Locksroot,
     ):
         """ Settle the channel. """
         log_details = {
@@ -1319,8 +1343,8 @@ class TokenNetwork:
     def events_filter(
             self,
             topics: List[str] = None,
-            from_block: typing.BlockSpecification = None,
-            to_block: typing.BlockSpecification = None,
+            from_block: BlockSpecification = None,
+            to_block: BlockSpecification = None,
     ) -> StatelessFilter:
         """ Install a new filter for an array of topics emitted by the contract.
 
@@ -1341,8 +1365,8 @@ class TokenNetwork:
 
     def all_events_filter(
             self,
-            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
-            to_block: typing.BlockSpecification = 'latest',
+            from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
+            to_block: BlockSpecification = 'latest',
     ) -> StatelessFilter:
         """ Install a new filter for all the events emitted by the current token network contract
 
@@ -1357,10 +1381,10 @@ class TokenNetwork:
 
     def _check_for_outdated_channel(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
-            block_identifier='latest',
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID,
+            block_identifier: BlockSpecification,
     ) -> None:
         """
         Checks whether an operation is being executed on a channel
@@ -1386,11 +1410,11 @@ class TokenNetwork:
 
     def _get_channel_state(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID = None,
-            block_identifier='latest',
-    ) -> typing.ChannelState:
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID = None,
+            block_identifier: BlockSpecification = 'pending',
+    ) -> ChannelState:
         channel_data = self.detail_channel(
             participant1=participant1,
             participant2=participant2,
@@ -1398,19 +1422,19 @@ class TokenNetwork:
             block_identifier=block_identifier,
         )
 
-        if not isinstance(channel_data.state, typing.T_ChannelState):
+        if not isinstance(channel_data.state, T_ChannelState):
             raise ValueError('channel state must be of type ChannelState')
 
         return channel_data.state
 
     def _check_channel_state_for_close(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
-            block_identifier,
-    ) -> typing.Tuple[
-        typing.Optional[typing.Union[RaidenRecoverableError, RaidenUnrecoverableError]],
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID,
+            block_identifier: BlockSpecification,
+    ) -> Tuple[
+        Optional[Union[RaidenRecoverableError, RaidenUnrecoverableError]],
         str,
     ]:
         error_type = None
@@ -1439,10 +1463,10 @@ class TokenNetwork:
 
     def _check_channel_state_before_settle(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
-            block_identifier='latest',
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID,
+            block_identifier: BlockSpecification,
     ) -> ChannelData:
 
         channel_data = self.detail_channel(
@@ -1473,10 +1497,10 @@ class TokenNetwork:
 
     def _check_channel_state_after_settle(
             self,
-            participant1: typing.Address,
-            participant2: typing.Address,
-            channel_identifier: typing.ChannelID,
-            block_identifier,
+            participant1: Address,
+            participant2: Address,
+            channel_identifier: ChannelID,
+            block_identifier: BlockSpecification,
     ) -> str:
         str = ''
         channel_data = self._check_channel_state_before_settle(
@@ -1494,11 +1518,11 @@ class TokenNetwork:
 
     def _check_channel_state_for_update(
             self,
-            channel_identifier: typing.ChannelID,
-            closer: typing.Address,
-            update_nonce: typing.Nonce,
-            block_identifier: typing.BlockSpecification,
-    ) -> typing.Tuple[typing.Optional[RaidenRecoverableError], str]:
+            channel_identifier: ChannelID,
+            closer: Address,
+            update_nonce: Nonce,
+            block_identifier: BlockSpecification,
+    ) -> Tuple[Optional[RaidenRecoverableError], str]:
         """Check the channel state on chain to see if it has been updated.
 
         Compare the nonce we are about to update the contract with the

@@ -6,7 +6,8 @@ from raiden.exceptions import RaidenUnrecoverableError, TransactionThrew
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, privatekey_to_address, safe_gas_limit, typing
+from raiden.utils import pex, privatekey_to_address, safe_gas_limit
+from raiden.utils.typing import Address, BlockSpecification, TokenAmount
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -42,7 +43,7 @@ class Token:
             to_checksum_address(spender),
         ).call(block_identifier=block_identifier)
 
-    def approve(self, allowed_address: typing.Address, allowance: typing.TokenAmount):
+    def approve(self, allowed_address: Address, allowance: TokenAmount):
         """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
@@ -95,8 +96,8 @@ class Token:
 
     def _check_why_approved_failed(
             self,
-            allowance: typing.TokenAmount,
-            block_identifier: typing.BlockSpecification,
+            allowance: TokenAmount,
+            block_identifier: BlockSpecification,
     ) -> str:
         user_balance = self.balance_of(
             address=self.client.address,

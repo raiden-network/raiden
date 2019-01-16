@@ -6,8 +6,18 @@ from web3.utils.filters import Filter
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies import TokenNetwork
 from raiden.network.proxies.token_network import ChannelDetails
-from raiden.utils import typing
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
+from raiden.utils.typing import (
+    AdditionalHash,
+    Address,
+    BalanceHash,
+    BlockSpecification,
+    ChannelID,
+    Locksroot,
+    Nonce,
+    Signature,
+    TokenAmount,
+)
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
@@ -16,7 +26,7 @@ class PaymentChannel:
     def __init__(
             self,
             token_network: TokenNetwork,
-            channel_identifier: typing.ChannelID,
+            channel_identifier: ChannelID,
             contract_manager: ContractManager,
     ):
 
@@ -53,7 +63,7 @@ class PaymentChannel:
         self.participant2 = participant2
         self.token_network = token_network
 
-    def token_address(self) -> typing.Address:
+    def token_address(self) -> Address:
         """ Returns the address of the token for the channel. """
         return self.token_network.token_address()
 
@@ -87,7 +97,7 @@ class PaymentChannel:
         )
         return event['args']['settle_timeout']
 
-    def close_block_number(self) -> typing.Optional[int]:
+    def close_block_number(self) -> Optional[int]:
         """ Returns the channel's closed block number. """
 
         # The closed block number is not in the smart contract storage to save
@@ -134,7 +144,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def closing_address(self) -> Optional[typing.Address]:
+    def closing_address(self) -> Optional[Address]:
         """ Returns the address of the closer of the channel. """
         return self.token_network.closing_address(
             participant1=self.participant1,
@@ -150,7 +160,7 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def set_total_deposit(self, total_deposit: typing.TokenAmount):
+    def set_total_deposit(self, total_deposit: TokenAmount):
         self.token_network.set_total_deposit(
             channel_identifier=self.channel_identifier,
             total_deposit=total_deposit,
@@ -159,10 +169,10 @@ class PaymentChannel:
 
     def close(
             self,
-            nonce: typing.Nonce,
-            balance_hash: typing.BalanceHash,
-            additional_hash: typing.AdditionalHash,
-            signature: typing.Signature,
+            nonce: Nonce,
+            balance_hash: BalanceHash,
+            additional_hash: AdditionalHash,
+            signature: Signature,
     ):
         """ Closes the channel using the provided balance proof. """
         self.token_network.close(
@@ -176,11 +186,11 @@ class PaymentChannel:
 
     def update_transfer(
             self,
-            nonce: typing.Nonce,
-            balance_hash: typing.BalanceHash,
-            additional_hash: typing.AdditionalHash,
-            partner_signature: typing.Signature,
-            signature: typing.Signature,
+            nonce: Nonce,
+            balance_hash: BalanceHash,
+            additional_hash: AdditionalHash,
+            partner_signature: Signature,
+            signature: Signature,
     ):
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
@@ -204,10 +214,10 @@ class PaymentChannel:
             self,
             transferred_amount: int,
             locked_amount: int,
-            locksroot: typing.Locksroot,
+            locksroot: Locksroot,
             partner_transferred_amount: int,
             partner_locked_amount: int,
-            partner_locksroot: typing.Locksroot,
+            partner_locksroot: Locksroot,
     ):
         """ Settles the channel. """
         self.token_network.settle(
@@ -223,8 +233,8 @@ class PaymentChannel:
 
     def all_events_filter(
             self,
-            from_block: typing.BlockSpecification = None,
-            to_block: typing.BlockSpecification = None,
+            from_block: BlockSpecification = None,
+            to_block: BlockSpecification = None,
     ) -> Filter:
 
         channel_topics = [
