@@ -1,6 +1,4 @@
 # pylint: disable=too-few-public-methods
-from copy import deepcopy
-
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils.typing import (
     Address,
@@ -251,13 +249,9 @@ class StateManager:
         """
         assert isinstance(state_change, StateChange)
 
-        # the state objects must be treated as immutable, so make a copy of the
-        # current state and pass the copy to the state machine to be modified.
-        next_state = deepcopy(self.current_state)
-
         # update the current state by applying the change
         iteration = self.state_transition(
-            next_state,
+            self.current_state,
             state_change,
         )
 
