@@ -62,7 +62,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
-    EMPTY_MERKLE_ROOT,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
@@ -329,8 +328,8 @@ def test_events_for_refund():
             balance_proof=BalanceProofProperties(
                 channel_identifier=refund_channel.identifier,
                 token_network_identifier=refund_channel.token_network_identifier,
-                transferred_amount=0,   # TODO decent defaults
-                locked_amount=10,   # TODO decent defaults
+                transferred_amount=0,
+                locked_amount=10,
             ),
         ),
     )
@@ -1328,8 +1327,8 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
                     balance_proof=BalanceProofProperties(
                         nonce=index,
                         locked_amount=index * UNIT_TRANSFER_AMOUNT,
-                        channel_identifier=2,  # TODO defaults
-                        transferred_amount=0,  # TODO defaults
+                        channel_identifier=2,
+                        transferred_amount=0,
                     ),
                 ),
                 message_identifier=index,
@@ -1460,7 +1459,6 @@ def test_mediator_lock_expired_with_receive_lock_expired():
             transferred_amount=transfer.balance_proof.transferred_amount,
             token_network_identifier=transfer.balance_proof.token_network_identifier,
             channel_identifier=channels[0].identifier,
-            locksroot=EMPTY_MERKLE_ROOT,  # TODO default?
         ),
         message_hash=transfer.lock.secrethash,
     )
@@ -1553,10 +1551,8 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
         balance_proof=BalanceProofProperties(
             nonce=2,
             transferred_amount=transfer.balance_proof.transferred_amount,
-            locked_amount=0,
             token_network_identifier=transfer.balance_proof.token_network_identifier,
             channel_identifier=channels[0].identifier,
-            locksroot=EMPTY_MERKLE_ROOT,  # TODO set as default?
         ),
         message_hash=transfer.lock.secrethash,
     )

@@ -819,15 +819,14 @@ def make_signed_transfer_for(
         assert False, 'Given sender does not participate in given channel.'
 
     if compute_locksroot:
+        lock = Lock(
+            amount=properties.transfer.amount,
+            expiration=properties.transfer.expiration,
+            secrethash=sha3(properties.transfer.secret),
+        )
         locksroot = merkleroot(channel.compute_merkletree_with(
-            channel_state.partner_state.merkletree,
-            sha3(
-                Lock(
-                    properties.transfer.amount,
-                    properties.transfer.expiration,
-                    sha3(properties.transfer.secret),
-                ).as_bytes,
-            ),
+            merkletree=channel_state.partner_state.merkletree,
+            lockhash=sha3(lock.as_bytes),
         ))
     else:
         locksroot = properties.transfer.balance_proof.locksroot
