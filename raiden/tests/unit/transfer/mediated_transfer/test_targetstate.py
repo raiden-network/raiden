@@ -91,12 +91,12 @@ def make_target_state(
     expiration = expiration or channels[0].reveal_timeout + block_number + 1
     from_transfer = make_target_transfer(channels[0], amount, expiration, initiator)
 
-    state_change = ActionInitTarget(channels.get_route(0), from_transfer)
+    state_change = ActionInitTarget(route=channels.get_route(0), transfer=from_transfer)
     iteration = target.handle_inittarget(
-        state_change,
-        channels[0],
-        pseudo_random_generator,
-        block_number,
+        state_change=state_change,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
 
     return TargetStateSetup(
@@ -163,7 +163,7 @@ def test_handle_inittarget():
             balance_proof=BalanceProofProperties(
                 channel_identifier=channels[0].identifier,
                 token_network_identifier=channels[0].token_network_identifier,
-                transferred_amount=0,  # TODO defaults?
+                transferred_amount=0,
                 locked_amount=channels[0].partner_state.contract_balance,
             ),
         ),
@@ -260,10 +260,10 @@ def test_handle_offchain_secretreveal_after_lock_expired():
         block_hash=factories.make_transaction_hash(),
     )
     iteration = target.state_transition(
-        target_state=(setup.new_state),
+        target_state=setup.new_state,
         state_change=lock_expiration_block,
-        channel_state=(setup.channel),
-        pseudo_random_generator=(setup.pseudo_random_generator),
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
         block_number=lock_expiration_block_number,
     )
     state = iteration.new_state
@@ -274,8 +274,8 @@ def test_handle_offchain_secretreveal_after_lock_expired():
     iteration = target.state_transition(
         target_state=state,
         state_change=ReceiveSecretReveal(UNIT_SECRET, setup.initiator),
-        channel_state=(setup.channel),
-        pseudo_random_generator=(setup.pseudo_random_generator),
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
         block_number=lock_expiration_block_number + 1,
     )
     state = iteration.new_state
@@ -288,8 +288,8 @@ def test_handle_offchain_secretreveal_after_lock_expired():
     iteration = target.state_transition(
         target_state=state,
         state_change=next_block,
-        channel_state=(setup.channel),
-        pseudo_random_generator=(setup.pseudo_random_generator),
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
         block_number=lock_expiration_block_number + 1,
     )
     msg = 'At the next block we should not get the same event'
@@ -307,11 +307,11 @@ def test_handle_onchain_secretreveal():
     assert factories.UNIT_SECRETHASH in setup.channel.partner_state.secrethashes_to_lockedlocks
 
     offchain_secret_reveal_iteration = target.state_transition(
-        setup.new_state,
-        ReceiveSecretReveal(UNIT_SECRET, setup.initiator),
-        setup.channel,
-        setup.pseudo_random_generator,
-        setup.block_number,
+        target_state=setup.new_state,
+        state_change=ReceiveSecretReveal(UNIT_SECRET, setup.initiator),
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
+        block_number=setup.block_number,
     )
     assert UNIT_SECRETHASH in setup.channel.partner_state.secrethashes_to_unlockedlocks
     assert UNIT_SECRETHASH not in setup.channel.partner_state.secrethashes_to_lockedlocks
@@ -326,11 +326,11 @@ def test_handle_onchain_secretreveal():
         block_number=block_number_prior_the_expiration,
     )
     onchain_secret_reveal_iteration = target.state_transition(
-        offchain_secret_reveal_iteration.new_state,
-        onchain_reveal,
-        setup.channel,
-        setup.pseudo_random_generator,
-        block_number_prior_the_expiration,
+        target_state=offchain_secret_reveal_iteration.new_state,
+        state_change=onchain_reveal,
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
+        block_number=block_number_prior_the_expiration,
     )
     unlocked_onchain = setup.channel.partner_state.secrethashes_to_onchain_unlockedlocks
     assert EMPTY_HASH_KECCAK not in unlocked_onchain
@@ -339,11 +339,11 @@ def test_handle_onchain_secretreveal():
     onchain_reveal.secret = UNIT_SECRET
     onchain_reveal.secrethash = UNIT_SECRETHASH
     onchain_secret_reveal_iteration = target.state_transition(
-        offchain_secret_reveal_iteration.new_state,
-        onchain_reveal,
-        setup.channel,
-        setup.pseudo_random_generator,
-        block_number_prior_the_expiration,
+        target_state=offchain_secret_reveal_iteration.new_state,
+        state_change=onchain_reveal,
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
+        block_number=block_number_prior_the_expiration,
     )
     unlocked_onchain = setup.channel.partner_state.secrethashes_to_onchain_unlockedlocks
     assert UNIT_SECRETHASH in unlocked_onchain
@@ -351,9 +351,9 @@ def test_handle_onchain_secretreveal():
     # Check that after we register a lock on-chain handling the block again will
     # not cause us to attempt an onchain re-register
     extra_block_handle_transition = target.handle_block(
-        onchain_secret_reveal_iteration.new_state,
-        setup.channel,
-        block_number_prior_the_expiration + 1,
+        target_state=onchain_secret_reveal_iteration.new_state,
+        channel_state=setup.channel,
+        block_number=block_number_prior_the_expiration + 1,
     )
     assert len(extra_block_handle_transition.events) == 0
 
@@ -369,11 +369,11 @@ def test_handle_block():
     )
 
     iteration = target.state_transition(
-        setup.new_state,
-        new_block,
-        setup.channel,
-        setup.pseudo_random_generator,
-        new_block.block_number,
+        target_state=setup.new_state,
+        state_change=new_block,
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
+        block_number=new_block.block_number,
     )
 
     assert iteration.new_state
@@ -391,11 +391,11 @@ def test_handle_block_equal_block_number():
     )
 
     iteration = target.state_transition(
-        setup.new_state,
-        new_block,
-        setup.channel,
-        random.Random(),
-        new_block.block_number,
+        target_state=setup.new_state,
+        state_change=new_block,
+        channel_state=setup.channel,
+        pseudo_random_generator=random.Random(),
+        block_number=new_block.block_number,
     )
 
     assert iteration.new_state
@@ -412,11 +412,11 @@ def test_handle_block_lower_block_number():
         block_hash=factories.make_transaction_hash(),
     )
     iteration = target.state_transition(
-        setup.new_state,
-        new_block,
-        setup.channel,
-        setup.pseudo_random_generator,
-        new_block.block_number,
+        target_state=setup.new_state,
+        state_change=new_block,
+        channel_state=setup.channel,
+        pseudo_random_generator=setup.pseudo_random_generator,
+        block_number=new_block.block_number,
     )
     assert iteration.new_state
     assert not iteration.events
@@ -435,11 +435,11 @@ def test_state_transition():
     init = ActionInitTarget(channels.get_route(0), from_transfer)
 
     init_transition = target.state_transition(
-        None,
-        init,
-        channels[0],
-        pseudo_random_generator,
-        block_number,
+        target_state=None,
+        state_change=init,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
     assert init_transition.new_state is not None
     assert init_transition.new_state.route == channels.get_route(0)
@@ -451,20 +451,20 @@ def test_state_transition():
         block_hash=factories.make_transaction_hash(),
     )
     first_block_iteration = target.state_transition(
-        init_transition.new_state,
-        first_new_block,
-        channels[0],
-        pseudo_random_generator,
-        first_new_block.block_number,
+        target_state=init_transition.new_state,
+        state_change=first_new_block,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=first_new_block.block_number,
     )
 
     secret_reveal = ReceiveSecretReveal(factories.UNIT_SECRET, initiator)
     reveal_iteration = target.state_transition(
-        first_block_iteration.new_state,
-        secret_reveal,
-        channels[0],
-        pseudo_random_generator,
-        first_new_block.block_number,
+        target_state=first_block_iteration.new_state,
+        state_change=secret_reveal,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=first_new_block.block_number,
     )
     assert reveal_iteration.events
 
@@ -474,11 +474,11 @@ def test_state_transition():
         block_hash=factories.make_transaction_hash(),
     )
     iteration = target.state_transition(
-        init_transition.new_state,
-        second_new_block,
-        channels[0],
-        pseudo_random_generator,
-        second_new_block.block_number,
+        target_state=init_transition.new_state,
+        state_change=second_new_block,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=second_new_block.block_number,
     )
     assert not iteration.events
 
@@ -501,11 +501,11 @@ def test_state_transition():
     )
 
     proof_iteration = target.state_transition(
-        init_transition.new_state,
-        balance_proof_state_change,
-        channels[0],
-        pseudo_random_generator,
-        block_number + 2,
+        target_state=init_transition.new_state,
+        state_change=balance_proof_state_change,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number + 2,
     )
     assert proof_iteration.new_state is None
 
@@ -534,11 +534,11 @@ def test_target_reject_keccak_empty_hash():
     init = ActionInitTarget(route=channels.get_route(0), transfer=from_transfer)
 
     init_transition = target.state_transition(
-        None,
-        init,
-        channels[0],
-        pseudo_random_generator,
-        block_number,
+        target_state=None,
+        state_change=init,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
     assert init_transition.new_state is None
 
@@ -560,11 +560,11 @@ def test_target_receive_lock_expired():
     init = ActionInitTarget(channels.get_route(0), from_transfer)
 
     init_transition = target.state_transition(
-        None,
-        init,
-        channels[0],
-        pseudo_random_generator,
-        block_number,
+        target_state=None,
+        state_change=init,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
     assert init_transition.new_state is not None
     assert init_transition.new_state.route == channels.get_route(0)
@@ -577,7 +577,6 @@ def test_target_receive_lock_expired():
             locked_amount=0,
             token_network_identifier=from_transfer.balance_proof.token_network_identifier,
             channel_identifier=channels[0].identifier,
-            locksroot=EMPTY_MERKLE_ROOT,  # TODO default?
         ),
         message_hash=from_transfer.lock.secrethash,
     ))
@@ -590,21 +589,21 @@ def test_target_receive_lock_expired():
 
     block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS - 1
     iteration = target.state_transition(
-        init_transition.new_state,
-        lock_expired_state_change,
-        channels[0],
-        pseudo_random_generator,
-        block_before_confirmed_expiration,
+        target_state=init_transition.new_state,
+        state_change=lock_expired_state_change,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_before_confirmed_expiration,
     )
     assert not must_contain_entry(iteration.events, SendProcessed, {})
 
     block_lock_expired = block_before_confirmed_expiration + 1
     iteration = target.state_transition(
-        init_transition.new_state,
-        lock_expired_state_change,
-        channels[0],
-        pseudo_random_generator,
-        block_lock_expired,
+        target_state=init_transition.new_state,
+        state_change=lock_expired_state_change,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_lock_expired,
     )
     assert must_contain_entry(iteration.events, SendProcessed, {})
 
@@ -620,11 +619,11 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
     init = ActionInitTarget(channels.get_route(0), from_transfer)
 
     init_transition = target.state_transition(
-        None,
-        init,
-        channels[0],
-        pseudo_random_generator,
-        block_number,
+        target_state=None,
+        state_change=init,
+        channel_state=channels[0],
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
     )
     assert init_transition.new_state is not None
 
