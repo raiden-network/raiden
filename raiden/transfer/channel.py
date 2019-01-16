@@ -792,6 +792,13 @@ def is_valid_unlock(
     return result
 
 
+def get_amount_unclaimed_onchain(end_state: NettingChannelEndState) -> TokenAmount:
+    return sum(
+        unlock.lock.amount
+        for unlock in end_state.secrethashes_to_onchain_unlockedlocks.values()
+    )
+
+
 def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
     total_pending = sum(
         lock.amount
@@ -803,10 +810,7 @@ def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
         for unlock in end_state.secrethashes_to_unlockedlocks.values()
     )
 
-    total_unclaimed_onchain = sum(
-        unlock.lock.amount
-        for unlock in end_state.secrethashes_to_onchain_unlockedlocks.values()
-    )
+    total_unclaimed_onchain = get_amount_unclaimed_onchain(end_state)
 
     return total_pending + total_unclaimed + total_unclaimed_onchain
 
