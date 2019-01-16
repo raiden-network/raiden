@@ -31,6 +31,6 @@ def test_token(
     assert allow_funds == token_proxy.proxy.contract.functions.allowance(
         to_checksum_address(deploy_client.address),
         to_checksum_address(address),
-    ).call()
+    ).call(block_identifier='latest')
     other_token_proxy.transfer(deploy_client.address, transfer_funds)
     assert token_proxy.balance_of(address) == 0
