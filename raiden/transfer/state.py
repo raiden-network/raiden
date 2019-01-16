@@ -1369,14 +1369,14 @@ class NettingChannelEndState(State):
         self.contract_balance = balance
 
         #: Locks which have been introduced with a locked transfer, however the
-        #: secret is not know yet
+        #: secret is not known yet
         self.secrethashes_to_lockedlocks: SecretHashToLock = dict()
-        #: Locks which the secret is known, but the partner has not sent an
+        #: Locks for which the secret is known, but the partner has not sent an
         #: unlock off chain yet.
         self.secrethashes_to_unlockedlocks: SecretHashToPartialUnlockProof = dict()
-        #: Locks which the secret is known, the partner has not sent an unlocked
-        #: off chain yet, and the secret has been registered onchain before the
-        #: lock has expired.
+        #: Locks for which the secret is known, the partner has not sent an
+        #: unlocked off chain yet, and the secret has been registered onchain
+        #: before the lock has expired.
         self.secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = dict()
         self.merkletree = EMPTY_MERKLE_TREE
         self.balance_proof: OptionalBalanceProofState = None
