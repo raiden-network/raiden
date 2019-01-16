@@ -22,6 +22,10 @@ from raiden_libs.network.matrix import Room
 USERID1 = '@Alice:Wonderland'
 
 
+# All tests in this module require matrix
+pytestmark = pytest.mark.usefixtures('skip_if_not_matrix')
+
+
 class MessageHandler:
     def __init__(self, bag: set):
         self.bag = bag
@@ -133,54 +137,46 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
     return room, event
 
 
-def test_normal_processing_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_normal_processing_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     assert m._handle_message(room, event)
 
 
-def test_normal_processing_json(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_normal_processing_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=False)
     assert m._handle_message(room, event)
 
 
-def test_processing_invalid_json(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_processing_invalid_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_json = '{"foo": 1,'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_json)
     assert not m._handle_message(room, event)
 
 
-def test_sending_nonstring_body(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_sending_nonstring_body(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(overwrite_data=b'somebinarydata')
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_json(
-        mock_matrix,
-        skip_userid_validation,
-        skip_if_not_matrix,
-):
+def test_processing_invalid_message_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_message = '{"this": 1, "message": 5, "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_json(
-        mock_matrix,
-        skip_userid_validation,
-        skip_if_not_matrix,
-):
+def test_processing_invalid_message_cmdid_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_processing_invalid_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -188,7 +184,7 @@ def test_processing_invalid_hex(mock_matrix, skip_userid_validation, skip_if_not
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -196,11 +192,7 @@ def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation, ski
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_hex(
-        mock_matrix,
-        skip_userid_validation,
-        skip_if_not_matrix,
-):
+def test_processing_invalid_message_cmdid_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -209,7 +201,6 @@ def test_processing_invalid_message_cmdid_hex(
 
 
 def test_matrix_message_sync(
-        skip_if_not_matrix,
         local_matrix_servers,
         private_rooms,
         retry_interval,
@@ -316,7 +307,6 @@ def test_matrix_message_sync(
 
 
 def test_matrix_message_retry(
-    skip_if_not_matrix,
     local_matrix_servers,
     private_rooms,
     retry_interval,
@@ -400,7 +390,6 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    skip_if_not_matrix,
     local_matrix_servers,
     private_rooms,
     retry_interval,
@@ -440,7 +429,7 @@ def test_join_invalid_discovery(
 
 
 @pytest.mark.parametrize('matrix_server_count', [2])
-def test_matrix_cross_server(skip_if_not_matrix, matrix_transports, retry_interval):
+def test_matrix_cross_server(matrix_transports, retry_interval):
     transport0, transport1 = matrix_transports
 
     received_messages0 = set()

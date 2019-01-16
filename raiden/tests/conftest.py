@@ -172,6 +172,33 @@ def insecure_tls():
     make_requests_insecure()
 
 
+# Convert `--transport all` to two separate invocations with `matrix` and `udp`
+def pytest_generate_tests(metafunc):
+    if 'transport' in metafunc.fixturenames:
+        transport = metafunc.config.getoption('transport')
+        transport_and_privacy = list()
+
+        # avoid collecting test if 'skip_if_not_*'
+        if transport in ('udp', 'all') and 'skip_if_not_matrix' not in metafunc.fixturenames:
+            transport_and_privacy.append(('udp', None))
+
+        if transport in ('matrix', 'all') and 'skip_if_not_udp' not in metafunc.fixturenames:
+            if 'public_and_private_rooms' in metafunc.fixturenames:
+                transport_and_privacy.extend([('matrix', False), ('matrix', True)])
+            else:
+                transport_and_privacy.append(('matrix', False))
+
+        if 'private_rooms' in metafunc.fixturenames:
+            metafunc.parametrize('transport,private_rooms', transport_and_privacy)
+        else:
+            # If the test function isn't taking the `private_rooms` fixture only give the
+            # transport values
+            metafunc.parametrize(
+                'transport',
+                list(set(transport_type for transport_type, _ in transport_and_privacy)),
+            )
+
+
 if sys.platform == 'darwin':
     # On macOS the temp directory base path is already very long.
     # To avoid failures on ipc tests (ipc path length is limited to 104/108 chars on macOS/linux)

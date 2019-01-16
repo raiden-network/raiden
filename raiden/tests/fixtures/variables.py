@@ -1,6 +1,7 @@
 # pylint: disable=redefined-outer-name
 import os
 import random
+from enum import Enum
 
 import pytest
 from eth_utils import denoms, remove_0x_prefix, to_normalized_address
@@ -13,7 +14,6 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
-from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.utils import privatekey_to_address, sha3
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
@@ -26,6 +26,11 @@ DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
+
+
+class TransportProtocol(Enum):
+    UDP = 'udp'
+    MATRIX = 'matrix'
 
 
 @pytest.fixture
@@ -320,3 +325,30 @@ def environment_type():
 def unrecoverable_error_should_crash():
     """For testing an UnrecoverableError should crash"""
     return True
+
+
+@pytest.fixture
+def transport(request):
+    """ 'all' replaced by parametrize in conftest.pytest_generate_tests """
+    return request.config.getoption('transport')
+
+
+@pytest.fixture
+def transport_protocol(transport):
+    return TransportProtocol(transport)
+
+
+@pytest.fixture
+def skip_if_not_udp(request):
+    """Skip the test if not run with UDP transport"""
+    if request.config.option.transport in ('udp', 'all'):
+        return
+    pytest.skip('This test works only with UDP transport')
+
+
+@pytest.fixture
+def skip_if_not_matrix(request):
+    """Skip the test if not run with Matrix transport"""
+    if request.config.option.transport in ('matrix', 'all'):
+        return
+    pytest.skip('This test works only with Matrix transport')
