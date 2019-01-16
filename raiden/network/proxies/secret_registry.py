@@ -5,7 +5,7 @@ from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_
 from gevent.event import AsyncResult
 
 from raiden.constants import GAS_REQUIRED_PER_SECRET_IN_BATCH, GENESIS_BLOCK_NUMBER
-from raiden.exceptions import InvalidAddress, RaidenUnrecoverableError, TransactionThrew
+from raiden.exceptions import InvalidAddress, RaidenUnrecoverableError
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -82,43 +82,34 @@ class SecretRegistry:
             log.debug('registerSecretBatch skipped', **log_details)
             return
 
+        error_prefix = 'Call to registerSecretBatch will fail'
         gas_limit = self.proxy.estimate_gas('pending', 'registerSecretBatch', secrets)
-        if not gas_limit:
-            log.critical(
-                'Call to registerSecretBatch will fail. Out of funds?',
-                **log_details,
-            )
-            raise RaidenUnrecoverableError('Call to registerSecretBatch will fail. Out of funds?')
+        if gas_limit:
+            error_prefix = 'Call to registerSecretBatch failed'
+            try:
+                gas_limit = safe_gas_limit(
+                    gas_limit,
+                    len(secrets) * GAS_REQUIRED_PER_SECRET_IN_BATCH,
+                )
+                transaction_hash = self.proxy.transact('registerSecretBatch', gas_limit, secrets)
+                self.client.poll(transaction_hash)
+                receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            except Exception as e:
+                secret_registry_transaction.set_exception(e)
+                msg = 'Unexpected exception at sending registerSecretBatch transaction'
+            else:
+                secret_registry_transaction.set(transaction_hash)
+            finally:
+                for secret in secrets_to_register:
+                    self.open_secret_transactions.pop(secret, None)
 
-        try:
-            log.debug('registerSecretBatch called', **log_details)
-            transaction_hash = self._register_secret_batch(secrets_to_register, gas_limit)
-        except Exception as e:
-            log.critical('registerSecretBatch failed', **log_details)
-            secret_registry_transaction.set_exception(e)
-            raise
-        else:
-            log.info('registerSecretBatch successful', **log_details)
-            secret_registry_transaction.set(transaction_hash)
-        finally:
-            for secret in secrets_to_register:
-                self.open_secret_transactions.pop(secret, None)
+        transaction_executed = gas_limit is not None
+        if not transaction_executed or receipt_or_none:
+            error_msg = f'{error_prefix}. {msg}'
+            log.critical(error_msg, **log_details)
+            raise RaidenUnrecoverableError(error_msg)
 
-    def _register_secret_batch(
-            self,
-            secrets: List[typing.Secret],
-            gas_limit: int,
-    ) -> typing.TransactionHash:
-
-        gas_limit = safe_gas_limit(gas_limit, len(secrets) * GAS_REQUIRED_PER_SECRET_IN_BATCH)
-        transaction_hash = self.proxy.transact('registerSecretBatch', gas_limit, secrets)
-        self.client.poll(transaction_hash)
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-
-        if receipt_or_none:
-            raise TransactionThrew('registerSecretBatch', receipt_or_none)
-
-        return transaction_hash
+        log.info('registerSecretBatch successful', **log_details)
 
     def get_register_block_for_secrethash(self, secrethash: typing.Keccak256) -> int:
         return self.proxy.contract.functions.getSecretRevealBlockHeight(secrethash).call()
