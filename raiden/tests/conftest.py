@@ -1,4 +1,8 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
+# ob-review
+# This order of imports seems very particular
+# I would put the monkey patching at the very beginning here
+# so I would be interested why this is
 import re
 import sys
 
@@ -8,6 +12,48 @@ from gevent import monkey
 
 monkey.patch_all()
 
+
+# ob-review
+# I would want to be extra paranoid and make sure that everything is really patched
+# Looking at the docs there is nothing that magically checks if everything
+# that should is patched, so something like this might be necessary
+# This is just a sketch - I don't expect it to be complete
+def assert_gevent_monkey_patches():
+    for name in [
+        "socket",
+        "time",
+        "select",
+        "threading",
+        "os",
+        "ssl",
+        "subprocess",
+        "time",
+        "signal",
+    ]:
+        assert monkey.is_module_patched(name), name
+    # something similar might be necessary for some objects using
+    # monkey.is_object_patched
+
+
+assert_gevent_monkey_patches()
+
+
+# ob-review
+def check_gevent_patches():
+    patched = ["select", "socket", "ssl", "subprocess", "time", "signal"]
+    # os is also patched but does not show up in saved ... why!?
+    # checking differently ...
+    orig = monkey.get_original("os", "fork")
+    import os
+    assert orig != os.fork
+    for name in patched:
+        assert monkey.is_module_patched(name), name
+
+
+check_gevent_patches()
+
+# ob-review
+# makes no sense to me unless meaning of `True` might change in the future
 if True:
     import pytest
     from raiden.log_config import configure_logging

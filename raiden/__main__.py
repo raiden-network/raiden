@@ -2,6 +2,9 @@
 
 
 def main():
+    # ob-review
+    # the patching should happen in `__init__.py` rather than here
+    # If there is a particular reason a short explanation would be good
     import gevent.monkey
     gevent.monkey.patch_all()
     from raiden.ui.cli import run
