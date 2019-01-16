@@ -6,8 +6,10 @@ import subprocess
 import sys
 from binascii import unhexlify
 from contextlib import ExitStack, contextmanager
+from datetime import datetime
 from pathlib import Path
 from tempfile import mkdtemp
+from typing import ContextManager
 from urllib.parse import urljoin, urlsplit
 
 import requests
@@ -18,6 +20,7 @@ from raiden.utils.http import HTTPExecutor
 from raiden.utils.signing import eth_recover
 
 _SYNAPSE_BASE_DIR_VAR_NAME = 'RAIDEN_TESTS_SYNAPSE_BASE_DIR'
+_SYNAPSE_LOGS_PATH = os.environ.get('RAIDEN_TESTS_SYNAPSE_LOGS_DIR', False)
 _SYNAPSE_CONFIG_TEMPLATE = Path(__file__).parent.joinpath('synapse_config.yaml.template')
 
 
@@ -123,7 +126,7 @@ def make_requests_insecure():
 
 
 @contextmanager
-def generate_synapse_config():
+def generate_synapse_config() -> ContextManager:
     # Allows caching of self signed synapse certificates on CI systems
     if _SYNAPSE_BASE_DIR_VAR_NAME in os.environ:
         synapse_base_dir = Path(os.environ[_SYNAPSE_BASE_DIR_VAR_NAME])
@@ -171,7 +174,12 @@ def generate_synapse_config():
 
 
 @contextmanager
-def matrix_server_starter(*, count=1, config_generator=None):
+def matrix_server_starter(
+    *,
+    count: int = 1,
+    config_generator: ContextManager = None,
+    log_context: str = None,
+) -> ContextManager:
     with ExitStack() as exit_stack:
         if config_generator is None:
             config_generator = exit_stack.enter_context(generate_synapse_config())
@@ -180,6 +188,23 @@ def matrix_server_starter(*, count=1, config_generator=None):
             server_name, config_file = config_generator(port)
             server_url = ParsedURL(f'https://{server_name}')
             server_urls.append(server_url)
+
+            synapse_io = subprocess.DEVNULL
+            # Used in CI to capture the logs for failure analysis
+            if _SYNAPSE_LOGS_PATH:
+                log_file_path = Path(_SYNAPSE_LOGS_PATH).joinpath(f'{server_name}.log')
+                log_file_path.parent.mkdir(parents=True, exist_ok=True)
+                log_file = exit_stack.enter_context(log_file_path.open('at'))
+
+                # Preface log with header
+                header = datetime.utcnow().isoformat()
+                if log_context:
+                    header = f'{header}: {log_context}'
+                header = f' {header} '
+                log_file.write(f'{header:=^100}\n')
+                log_file.flush()
+
+                synapse_io = subprocess.DEVNULL, log_file, subprocess.STDOUT
 
             exit_stack.enter_context(
                 HTTPExecutor(
@@ -194,7 +219,7 @@ def matrix_server_starter(*, count=1, config_generator=None):
                     method='GET',
                     timeout=30,
                     cwd=config_file.parent,
-                    io=subprocess.DEVNULL,
+                    io=synapse_io,
                 ),
             )
         yield server_urls
