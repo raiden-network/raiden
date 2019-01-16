@@ -262,6 +262,7 @@ jobs:
       TRANSPORT_OPTION: << parameters.transport-layer >>
       TRANSPORT_OPTION_ARG: "--transport=<< parameters.transport-layer >>"
       RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
+      RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
 
     parallelism: << parameters.parallelism >>
 
@@ -306,6 +307,11 @@ jobs:
 
     - store_artifacts:
         path: test-reports
+        destination: test-reports
+
+    - store_artifacts:
+        path: /tmp/synapse-logs
+        destination: synapse-logs
 
   finalize:
     executor:

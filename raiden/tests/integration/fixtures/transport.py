@@ -57,7 +57,12 @@ def matrix_server_count():
 
 
 @pytest.fixture
-def local_matrix_servers(transport_protocol, matrix_server_count, synapse_config_generator):
+def local_matrix_servers(
+    request,
+    transport_protocol,
+    matrix_server_count,
+    synapse_config_generator,
+):
     if transport_protocol is not TransportProtocol.MATRIX:
         yield [None]
         return
@@ -65,6 +70,7 @@ def local_matrix_servers(transport_protocol, matrix_server_count, synapse_config
     starter = matrix_server_starter(
         count=matrix_server_count,
         config_generator=synapse_config_generator,
+        log_context=request.node.name,
     )
     with starter as server_urls:
         yield server_urls
