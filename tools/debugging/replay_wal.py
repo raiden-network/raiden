@@ -169,13 +169,11 @@ def replay_wal(storage, token_network_identifier, partner_address, translator=No
     'db-file',
     type=click.Path(exists=True),
 )
-@click.option(
-    '-n',
-    '--token-network-identifier',
+@click.argument(
+    'token-network-identifier',
 )
-@click.option(
-    '-p',
-    '--partner-address',
+@click.argument(
+    'partner-address',
 )
 @click.option(
     '-x',
