@@ -1,7 +1,7 @@
 import pytest
 from eth_utils import is_same_address, to_canonical_address
 
-from raiden.exceptions import RaidenRecoverableError, TransactionThrew
+from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_token
@@ -19,7 +19,7 @@ def test_token_network_registry(
 
     bad_token_address = make_address()
     # try to register non-existing token network
-    with pytest.raises(TransactionThrew):
+    with pytest.raises(RaidenUnrecoverableError):
         token_network_registry_proxy.add_token(bad_token_address)
     # create token network & register it
     test_token = deploy_token(
