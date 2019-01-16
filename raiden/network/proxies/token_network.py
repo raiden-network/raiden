@@ -302,7 +302,7 @@ class TokenNetwork:
             participant2: Address,
             called_by_fn: str,
             channel_identifier: ChannelID = None,
-            block_identifier: BlockSpecification ='pending',
+            block_identifier: BlockSpecification = 'pending',
     ) -> ChannelID:
         if not channel_identifier:
             channel_identifier = self._call_and_check_result(
@@ -544,7 +544,7 @@ class TokenNetwork:
             participant1: Address,
             participant2: Address,
             channel_identifier: ChannelID = None,
-            block_identifier: BlockSpecification = 'pending',
+            block_identifier: BlockSpecification = 'latest',
     ) -> Optional[Address]:
         """ Returns the address of the closer, if the channel is closed and not settled. None
         otherwise. """

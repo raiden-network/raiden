@@ -142,6 +142,7 @@ class PaymentChannel:
             participant1=self.participant1,
             participant2=self.participant2,
             channel_identifier=self.channel_identifier,
+            block_identifier='latest',
         )
 
     def closing_address(self) -> Optional[Address]:

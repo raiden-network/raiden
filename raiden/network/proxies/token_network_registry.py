@@ -16,11 +16,18 @@ from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     NULL_ADDRESS,
 )
-from raiden.exceptions import InvalidAddress, RaidenRecoverableError, TransactionThrew
+from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenUnrecoverableError
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, privatekey_to_address, safe_gas_limit, typing
+from raiden.utils import pex, privatekey_to_address, safe_gas_limit
+from raiden.utils.typing import (
+    Address,
+    BlockSpecification,
+    PaymentNetworkID,
+    T_TargetAddress,
+    TokenAddress,
+)
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
 from raiden_contracts.contract_manager import ContractManager
 
@@ -31,13 +38,17 @@ class TokenNetworkRegistry:
     def __init__(
             self,
             jsonrpc_client,
-            registry_address,
+            registry_address: PaymentNetworkID,
             contract_manager: ContractManager,
     ):
         if not is_binary_address(registry_address):
             raise InvalidAddress('Expected binary address format for token network registry')
 
-        check_address_has_code(jsonrpc_client, registry_address, CONTRACT_TOKEN_NETWORK_REGISTRY)
+        check_address_has_code(
+            client=jsonrpc_client,
+            address=Address(registry_address),
+            contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
+        )
 
         self.contract_manager = contract_manager
         proxy = jsonrpc_client.new_contract_proxy(
@@ -49,7 +60,7 @@ class TokenNetworkRegistry:
             proxy=proxy,
             expected_version=contract_manager.contracts_version,
             contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
-            address=registry_address,
+            address=Address(registry_address),
         )
 
         self.address = registry_address
@@ -57,11 +68,15 @@ class TokenNetworkRegistry:
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
 
-    def get_token_network(self, token_address: typing.TokenAddress) -> Optional[typing.Address]:
+    def get_token_network(
+            self,
+            token_address: TokenAddress,
+            block_identifier: BlockSpecification = 'latest',
+    ) -> Optional[Address]:
         """ Return the token network address for the given token or None if
         there is no correspoding address.
         """
-        if not isinstance(token_address, typing.T_TargetAddress):
+        if not isinstance(token_address, T_TargetAddress):
             raise ValueError('token_address must be an address')
 
         address = self.proxy.contract.functions.token_to_token_networks(
@@ -74,7 +89,7 @@ class TokenNetworkRegistry:
 
         return address
 
-    def add_token(self, token_address: typing.TokenAddress):
+    def add_token(self, token_address: TokenAddress):
         if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token')
 
@@ -85,32 +100,49 @@ class TokenNetworkRegistry:
         }
         log.debug('createERC20TokenNetwork called', **log_details)
 
-        transaction_hash = self.proxy.transact(
+        error_prefix = 'Call to createERC20TokenNetwork will fail'
+        gas_limit = self.proxy.estimate_gas(
+            'pending',
             'createERC20TokenNetwork',
-            safe_gas_limit(GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK),
             token_address,
         )
 
-        self.client.poll(transaction_hash)
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-        if receipt_or_none:
-            if self.get_token_network(token_address):
-                msg = 'Token already registered'
-                log.info(f'createERC20TokenNetwork failed, {msg}', **log_details)
-                raise RaidenRecoverableError(msg)
-
-            log.critical(f'createERC20TokenNetwork failed', **log_details)
-            raise TransactionThrew('createERC20TokenNetwork', receipt_or_none)
-
-        token_network_address = self.get_token_network(token_address)
-
-        if token_network_address is None:
-            log.critical(
-                'createERC20TokenNetwork failed and check_transaction_threw didnt detect it',
-                **log_details,
+        if gas_limit:
+            error_prefix = 'Call to createERC20TokenNetwork failed'
+            transaction_hash = self.proxy.transact(
+                'createERC20TokenNetwork',
+                safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK),
+                token_address,
             )
 
-            raise RuntimeError('token_to_token_networks failed')
+            self.client.poll(transaction_hash)
+            receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+
+        transaction_executed = gas_limit is not None
+        if not transaction_executed or receipt_or_none:
+            error_type = RaidenUnrecoverableError
+            if transaction_executed:
+                block = receipt_or_none['blockNumber']
+            else:
+                block = 'pending'
+
+            msg = ''
+            if self.get_token_network(token_address, block):
+                msg = 'Token already registered'
+                error_type = RaidenRecoverableError
+
+            error_msg = f'{error_prefix}. {msg}'
+            if error_type == RaidenRecoverableError:
+                log.warning(error_msg, **log_details)
+            else:
+                log.critical(error_msg, **log_details)
+            raise error_type(error_msg)
+
+        token_network_address = self.get_token_network(token_address, 'latest')
+        if token_network_address is None:
+            msg = 'createERC20TokenNetwork succeeded but token network address is Null'
+            log.critical(msg, **log_details)
+            raise RuntimeError(msg)
 
         log.info(
             'createERC20TokenNetwork successful',
@@ -122,8 +154,8 @@ class TokenNetworkRegistry:
 
     def tokenadded_filter(
             self,
-            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
-            to_block: typing.BlockSpecification = 'latest',
+            from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
+            to_block: BlockSpecification = 'latest',
     ) -> StatelessFilter:
         event_abi = self.contract_manager.get_event_abi(
             CONTRACT_TOKEN_NETWORK_REGISTRY,

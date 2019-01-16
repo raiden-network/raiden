@@ -9,9 +9,9 @@ from raiden.constants import Environment
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositOverLimit,
-    InsufficientFunds,
     InsufficientGasReserve,
     InvalidAddress,
+    RaidenUnrecoverableError,
 )
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
@@ -111,8 +111,8 @@ def test_register_token_insufficient_eth(raiden_network, token_amount, contract_
     # app1.raiden loses all its ETH because it has been naughty
     burn_eth(app1.raiden)
 
-    # At this point we should get the InsufficientFunds exception
-    with pytest.raises(InsufficientFunds):
+    # At this point we should get an UnrecoverableError due to InsufficientFunds
+    with pytest.raises(RaidenUnrecoverableError):
         api1.token_network_register(registry_address, token_address)
 
 

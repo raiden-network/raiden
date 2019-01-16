@@ -13,7 +13,13 @@ from raiden.network.proxies import (
 )
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import privatekey_to_address
-from raiden.utils.typing import Address, ChannelID, T_ChannelID, TokenNetworkAddress
+from raiden.utils.typing import (
+    Address,
+    ChannelID,
+    PaymentNetworkID,
+    T_ChannelID,
+    TokenNetworkAddress,
+)
 from raiden_contracts.contract_manager import ContractManager
 
 
@@ -143,7 +149,7 @@ class BlockChainService:
             if address not in self.address_to_token_network_registry:
                 self.address_to_token_network_registry[address] = TokenNetworkRegistry(
                     jsonrpc_client=self.client,
-                    registry_address=address,
+                    registry_address=PaymentNetworkID(address),
                     contract_manager=self.contract_manager,
                 )
 
