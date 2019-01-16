@@ -5,8 +5,8 @@ import pytest
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import Lock, LockedTransfer, RevealSecret, Secret
+from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
-from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
