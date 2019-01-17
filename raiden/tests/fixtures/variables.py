@@ -190,6 +190,7 @@ def network_wait():
     return 10.0
 
 
+# ob-review - see below
 @pytest.fixture
 def private_keys(number_of_nodes, privatekey_seed):
     """ Private keys for each raiden node. """
@@ -216,7 +217,20 @@ def blockchain_type(request):
     return request.config.option.blockchain_type
 
 
-@pytest.fixture
+# ob-review
+# I stepped through two other fixtures to get to this, which returns essentially a constant.
+# There are several like this around.
+#
+# Are these leftovers from refactorings or preparations for when nodes will be other than one?
+#
+# Either way I feel that things like this might better be part of the
+# configuration rather than a fixture as they are always valid for a complete test run.
+#
+# I know this is a controversial topic, but I don't have a problem with a god object
+# that holds important configuration and can be manipulated for tests.
+# As with gevent based apps test parallelization needs to happen on the process level
+# there are no conflicts to be expected, when that configuration is manipulated for a specific test
+@pytest.fixture(scope="session")
 def blockchain_number_of_nodes():
     """ Number of nodes in the cluster, not the same as the number of raiden
     nodes. Used for all geth clusters.
@@ -224,6 +238,7 @@ def blockchain_number_of_nodes():
     return 1
 
 
+# ob-review - see above
 @pytest.fixture
 def blockchain_key_seed():
     """ Private key template for the nodes in the private blockchain, allows
@@ -231,7 +246,7 @@ def blockchain_key_seed():
     """
     return 'cluster:{}'
 
-
+# ob-review - see above - this always creates a list with on element
 @pytest.fixture
 def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
     """ The private keys for the each private chain node, not the same as the
@@ -249,6 +264,7 @@ def port_generator(request):
     return get_free_port('127.0.0.1', request.config.option.initial_port)
 
 
+# ob-review - see above - this always creates a list with on element
 @pytest.fixture
 def blockchain_rpc_ports(blockchain_number_of_nodes, port_generator):
     """ A list of unique port numbers to be used by the blockchain nodes for
@@ -260,6 +276,7 @@ def blockchain_rpc_ports(blockchain_number_of_nodes, port_generator):
     ]
 
 
+# ob-review - see above - this always creates a list with on element
 @pytest.fixture
 def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
     """ A list of unique port numbers to be used by the blockchain nodes for
@@ -271,6 +288,7 @@ def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
     ]
 
 
+# ob-review - see above - this always creates a list with on element
 @pytest.fixture
 def raiden_udp_ports(number_of_nodes, port_generator):
     """ A list of unique port numbers to be used by the raiden apps for the udp
