@@ -277,6 +277,12 @@ class TokenNetwork:
             self.open_channel_transactions[partner].get()
 
         if not gas_limit:
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='openChannel',
+                transaction_executed=False,
+                required_gas=GAS_REQUIRED_FOR_OPEN_CHANNEL,
+                block_identifier='pending',
+            )
             known_race, msg = self._new_channel_postconditions(
                 partner=partner,
                 block='pending',
@@ -769,6 +775,13 @@ class TokenNetwork:
                     block = receipt_or_none['blockNumber']
                 else:
                     block = 'pending'
+
+                self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                    transaction_name='setTotalDeposit',
+                    transaction_executed=transaction_executed,
+                    required_gas=GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT,
+                    block_identifier=block,
+                )
                 error_type, msg = self._check_why_deposit_failed(
                     channel_identifier=channel_identifier,
                     partner=partner,
@@ -940,6 +953,12 @@ class TokenNetwork:
             else:
                 block = 'pending'
 
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='closeChannel',
+                transaction_executed=transaction_executed,
+                required_gas=GAS_REQUIRED_FOR_CLOSE_CHANNEL,
+                block_identifier=block,
+            )
             error_type, msg = self._check_channel_state_for_close(
                 participant1=self.node_address,
                 participant2=partner,
@@ -1101,6 +1120,12 @@ class TokenNetwork:
                 block = 'pending'
                 to_compare_block = self.client.block_number()
 
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='updateNonClosingBalanceProof',
+                transaction_executed=transaction_executed,
+                required_gas=GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF,
+                block_identifier=block,
+            )
             detail = self.detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
@@ -1197,6 +1222,12 @@ class TokenNetwork:
             else:
                 block = 'pending'
 
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='unlock',
+                transaction_executed=transaction_executed,
+                required_gas=UNLOCK_TX_GAS_LIMIT,
+                block_identifier=block,
+            )
             channel_settled = self.channel_is_settled(
                 participant1=self.node_address,
                 participant2=partner,
@@ -1328,6 +1359,12 @@ class TokenNetwork:
             else:
                 block = 'pending'
 
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='settleChannel',
+                transaction_executed=transaction_executed,
+                required_gas=GAS_REQUIRED_FOR_SETTLE_CHANNEL,
+                block_identifier=block,
+            )
             msg = self._check_channel_state_after_settle(
                 participant1=self.node_address,
                 participant2=partner,
