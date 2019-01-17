@@ -61,6 +61,15 @@ if True:
     from raiden.utils.cli import LogLevelConfigType
 
 
+# ob-review
+# This should be in a conftest.py in the root of the project
+# or in an internal plugin
+# https://docs.pytest.org/en/latest/reference.html#_pytest.hookspec.pytest_addoption
+# If I cd into raiden/test for this to work I have another problem:
+# start() fails with:
+# FileNotFoundError: Can not execute '.synapse/run_synapse.sh' ...
+# I found the workaround in the circle CI config, but ideally, executing tests should
+# not depend on being in a specific directory.
 def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
@@ -192,6 +201,8 @@ def logging_level(request):
     )
 
 
+# ob-review
+# dead code - validate_solc also does not exist
 @pytest.fixture(scope='session', autouse=False)
 def validate_solidity_compiler():
     """ Check the solc prior to running any test. """
