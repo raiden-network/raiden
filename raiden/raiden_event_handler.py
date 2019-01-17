@@ -374,7 +374,7 @@ class RaidenEventHandler:
             log.warning(
                 f'Unlock not done. '
                 f'Failed to find state/event that match current channel locksroots. '
-                f'chain_id:raiden.chain.network_id '
+                f'chain_id:{raiden.chain.network_id} '
                 f'token:{to_checksum_address(token_address)} '
                 f'token_network:{to_checksum_address(token_network_identifier)} '
                 f'channel:{channel_identifier} '
@@ -382,7 +382,7 @@ class RaidenEventHandler:
                 f'our_locksroot:{to_hex(our_locksroot)} '
                 f'our_balance_hash:{to_hex(our_details.balance_hash)} '
                 f'partner_locksroot:{to_hex(partner_locksroot)} '
-                f'partner_locksroot:{to_hex(partner_details.balance_hash)} ',
+                f'partner_balancehash:{to_hex(partner_details.balance_hash)} ',
             )
             return
 
