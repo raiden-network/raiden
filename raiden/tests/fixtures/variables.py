@@ -26,6 +26,13 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 # I think this complicates the tests.
 # Might be worth having a look at simplifying this.
 
+# At the very least these fixtures should all be made session scoped, so that they
+# aren't unnecessarily executed and hinder elevating other fixtures depending on
+# them to higher scopes.
+# Sadly, there is no `any` scope yet to declare fixtures as being
+# compatible with all
+# scopes (there where discussions about it at the sprint in 2016, but nothing yet
+# came out of it).
 
 DEFAULT_BALANCE = denoms.ether * 10  # pylint: disable=no-member
 DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
