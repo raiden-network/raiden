@@ -15,6 +15,7 @@ def pytest_generate_tests(metafunc):
         # not sure what to think here - is this speeding up tests considerably?
         # Otherwise I would tend to that in the test to be skipped directly if runtime
         # information is needed and otherwise as a marker
+        
         # avoid collecting test if 'skip_if_not_*'
         if transport in ('udp', 'all') and 'skip_if_not_matrix' not in metafunc.fixturenames:
             transport_and_privacy.append(('udp', None))
