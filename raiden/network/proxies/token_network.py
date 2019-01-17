@@ -499,7 +499,6 @@ class TokenNetwork:
         """ Set total token deposit in the channel to total_deposit.
 
         Raises:
-            ChannelBusyError: If the channel is busy with another operation
             RuntimeError: If the token address is empty.
         """
         if not isinstance(total_deposit, int):
@@ -675,7 +674,6 @@ class TokenNetwork:
         """ Close the channel using the provided balance proof.
 
         Raises:
-            ChannelBusyError: If the channel is busy with another operation.
             RaidenRecoverableError: If the channel is already closed.
             RaidenUnrecoverableError: If the channel does not exist or is settled.
         """
@@ -936,11 +934,7 @@ class TokenNetwork:
             partner_locked_amount: int,
             partner_locksroot: typing.Locksroot,
     ):
-        """ Settle the channel.
-
-        Raises:
-            ChannelBusyError: If the channel is busy with another operation
-        """
+        """ Settle the channel. """
         log_details = {
             'channel_identifier': channel_identifier,
             'token_network': pex(self.address),
