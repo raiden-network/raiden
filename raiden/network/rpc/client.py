@@ -1,6 +1,7 @@
 import copy
 import os
 import warnings
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import gevent
 import structlog
@@ -24,15 +25,28 @@ from web3.utils.empty import empty
 from web3.utils.toolz import assoc
 
 from raiden import constants
-from raiden.exceptions import AddressWithoutCode, EthNodeCommunicationError, EthNodeInterfaceError
+from raiden.exceptions import (
+    AddressWithoutCode,
+    EthNodeCommunicationError,
+    EthNodeInterfaceError,
+    InsufficientFunds,
+)
 from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import is_supported_client, pex, privatekey_to_address, typing
+from raiden.utils import is_supported_client, pex, privatekey_to_address
 from raiden.utils.filters import StatelessFilter
 from raiden.utils.solc import (
     solidity_library_symbol,
     solidity_resolve_symbols,
     solidity_unresolved_symbols,
+)
+from raiden.utils.typing import (
+    ABI,
+    Address,
+    AddressHex,
+    BlockSpecification,
+    Nonce,
+    TransactionHash,
 )
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -113,8 +127,8 @@ def parity_assert_rpc_interfaces(web3: Web3):
 
 def parity_discover_next_available_nonce(
         web3: Web3,
-        address: typing.AddressHex,
-) -> typing.Nonce:
+        address: AddressHex,
+) -> Nonce:
     """Returns the next available nonce for `address`."""
     next_nonce_encoded = web3.manager.request_blocking('parity_nextNonce', [address])
     return int(next_nonce_encoded, 16)
@@ -122,8 +136,8 @@ def parity_discover_next_available_nonce(
 
 def geth_discover_next_available_nonce(
         web3: Web3,
-        address: typing.AddressHex,
-) -> typing.Nonce:
+        address: AddressHex,
+) -> Nonce:
     """Returns the next available nonce for `address`."""
 
     # The nonces of the mempool transactions are considered used, and it's
@@ -155,7 +169,7 @@ def geth_discover_next_available_nonce(
 
 def check_address_has_code(
         client: 'JSONRPCClient',
-        address: typing.Address,
+        address: Address,
         contract_name: str = '',
 ):
     """ Checks that the given address contains code. """
@@ -354,7 +368,7 @@ class JSONRPCClient:
             self,
             web3: Web3,
             privkey: bytes,
-            gas_price_strategy: typing.Callable = rpc_gas_price_strategy,
+            gas_price_strategy: Callable = rpc_gas_price_strategy,
             block_num_confirmations: int = 0,
             uses_infura=False,
     ):
@@ -432,15 +446,15 @@ class JSONRPCClient:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
-    def balance(self, account: typing.Address):
+    def balance(self, account: Address):
         """ Return the balance of the account of given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
     def parity_get_pending_transaction_hash_by_nonce(
             self,
-            checksummed_address: typing.AddressHex,
-            nonce: typing.Nonce,
-    ) -> typing.Optional[typing.TransactionHash]:
+            checksummed_address: AddressHex,
+            nonce: Nonce,
+    ) -> Optional[TransactionHash]:
         """Queries the local parity transaction pool and searches for a transaction.
 
         Checks the local tx pool for a transaction from a particular address and for
@@ -471,7 +485,7 @@ class JSONRPCClient:
 
         return price
 
-    def new_contract_proxy(self, contract_interface, contract_address: typing.Address):
+    def new_contract_proxy(self, contract_interface, contract_address: Address):
         """ Return a proxy for interacting with a smart contract.
 
         Args:
@@ -483,7 +497,7 @@ class JSONRPCClient:
             contract=self.new_contract(contract_interface, contract_address),
         )
 
-    def new_contract(self, contract_interface: typing.Dict, contract_address: typing.Address):
+    def new_contract(self, contract_interface: Dict, contract_address: Address):
         return self.web3.eth.contract(
             abi=contract_interface,
             address=to_checksum_address(contract_address),
@@ -495,9 +509,9 @@ class JSONRPCClient:
     def deploy_solidity_contract(
             self,  # pylint: disable=too-many-locals
             contract_name: str,
-            all_contracts: typing.Dict[str, typing.ABI],
-            libraries: typing.Dict[str, typing.Address] = None,
-            constructor_parameters: typing.Tuple[typing.Any] = None,
+            all_contracts: Dict[str, ABI],
+            libraries: Dict[str, Address] = None,
+            constructor_parameters: Tuple[Any] = None,
             contract_path: str = None,
     ):
         """
@@ -568,7 +582,7 @@ class JSONRPCClient:
 
                 gas_limit = self.web3.eth.getBlock('latest')['gasLimit'] * 8 // 10
                 transaction_hash = self.send_transaction(
-                    to=typing.Address(b''),
+                    to=Address(b''),
                     startgas=gas_limit,
                     data=bytecode,
                 )
@@ -601,7 +615,7 @@ class JSONRPCClient:
         contract = self.web3.eth.contract(abi=contract['abi'], bytecode=contract['bin'])
         contract_transaction = contract.constructor(*constructor_parameters).buildTransaction()
         transaction_hash = self.send_transaction(
-            to=typing.Address(b''),
+            to=Address(b''),
             data=contract_transaction['data'],
             startgas=contract_transaction['gas'],
         )
@@ -626,7 +640,7 @@ class JSONRPCClient:
 
     def send_transaction(
             self,
-            to: typing.Address,
+            to: Address,
             startgas: int,
             value: int = 0,
             data: bytes = b'',
@@ -730,10 +744,10 @@ class JSONRPCClient:
 
     def new_filter(
             self,
-            contract_address: typing.Address,
-            topics: typing.List[str] = None,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
+            contract_address: Address,
+            topics: List[str] = None,
+            from_block: BlockSpecification = 0,
+            to_block: BlockSpecification = 'latest',
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
         return StatelessFilter(
@@ -748,11 +762,11 @@ class JSONRPCClient:
 
     def get_filter_events(
             self,
-            contract_address: typing.Address,
-            topics: typing.List[str] = None,
-            from_block: typing.BlockSpecification = 0,
-            to_block: typing.BlockSpecification = 'latest',
-    ) -> typing.List[typing.Dict]:
+            contract_address: Address,
+            topics: List[str] = None,
+            from_block: BlockSpecification = 0,
+            to_block: BlockSpecification = 'latest',
+    ) -> List[Dict]:
         """ Get events for the given query. """
         return self.web3.eth.getLogs({
             'fromBlock': from_block,
@@ -760,3 +774,26 @@ class JSONRPCClient:
             'address': to_checksum_address(contract_address),
             'topics': topics,
         })
+
+    def check_for_insufficient_eth(
+            self,
+            transaction_name: str,
+            transaction_executed: bool,
+            required_gas: int,
+            block_identifier: BlockSpecification,
+    ):
+        """ After estimate gas failure checks if our address has enough balance.
+
+        If the account did not have enough ETH balance to execute the,
+        transaction then it raises an `InsufficientFunds` error
+        """
+        if transaction_executed:
+            return
+
+        our_address = to_checksum_address(self.address)
+        balance = self.web3.eth.getBalance(our_address, block_identifier)
+        required_balance = required_gas * self.gas_price()
+        if balance < required_balance:
+            msg = f'Failed to execute {transaction_name} due to insufficient ETH'
+            log.critical(msg, required_wei=required_balance, actual_wei=balance)
+            raise InsufficientFunds(msg)

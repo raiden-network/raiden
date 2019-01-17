@@ -106,6 +106,17 @@ class SecretRegistry:
 
         transaction_executed = gas_limit is not None
         if not transaction_executed or receipt_or_none:
+            if transaction_executed:
+                block = receipt_or_none['blockNumber']
+            else:
+                block = 'pending'
+
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='registerSecretBatch',
+                transaction_executed=transaction_executed,
+                required_gas=len(secrets) * GAS_REQUIRED_PER_SECRET_IN_BATCH,
+                block_identifier=block,
+            )
             error_msg = f'{error_prefix}. {msg}'
             log.critical(error_msg, **log_details)
             raise RaidenUnrecoverableError(error_msg)

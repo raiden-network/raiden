@@ -126,6 +126,13 @@ class TokenNetworkRegistry:
             else:
                 block = 'pending'
 
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='createERC20TokenNetwork',
+                transaction_executed=transaction_executed,
+                required_gas=GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK,
+                block_identifier=block,
+            )
+
             msg = ''
             if self.get_token_network(token_address, block):
                 msg = 'Token already registered'
