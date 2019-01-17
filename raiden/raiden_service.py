@@ -2,7 +2,7 @@
 import os
 import random
 from collections import defaultdict
-from typing import Callable, Dict, List, NamedTuple, Union
+from typing import Dict, List, NamedTuple, Union
 
 import filelock
 import gevent
@@ -56,8 +56,6 @@ from raiden.utils import (
     pex,
     random_secret,
     sha3,
-    spawn_and_link_with_parent,
-    typing,
 )
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
@@ -244,6 +242,8 @@ class RaidenService(Runnable):
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
+        self.greenlets = list()
+        self.asyncresults = list()
 
         self.wal: Optional[wal.WriteAheadLog] = None
         self.snapshot_group = 0
@@ -283,6 +283,8 @@ class RaidenService(Runnable):
         if not self.stop_event.ready():
             raise RuntimeError(f'{self!r} already started')
         self.stop_event.clear()
+        self.greenlets = list()
+        self.asyncresults = list()
 
         if self.database_dir is not None:
             self.db_lock.acquire(timeout=0)
@@ -329,7 +331,7 @@ class RaidenService(Runnable):
                 self.chain.node_address,
                 self.chain.network_id,
             )
-            self.handle_state_change(state_change)
+            self.handle_state_change(state_change).wait()
 
             payment_network = PaymentNetworkState(
                 self.default_registry.address,
@@ -341,7 +343,7 @@ class RaidenService(Runnable):
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
             )
-            self.handle_state_change(state_change)
+            self.handle_state_change(state_change).wait()
         else:
             # The `Block` state change is dispatched only after all the events
             # for that given block have been processed, filters can be safely
@@ -487,9 +489,8 @@ class RaidenService(Runnable):
     def on_message(self, message: Message):
         self.message_handler.on_message(self, message)
 
-    def handle_state_change(self, state_change: StateChange):
+    def handle_state_change(self, state_change: StateChange) -> AsyncResult:
         assert self.wal
-
         log.debug(
             'State change',
             node=pex(self.address),
@@ -513,12 +514,13 @@ class RaidenService(Runnable):
             ],
         )
 
+        done = AsyncResult()
+        transaction_greenlets = []
         if not self.dispatch_events_lock.locked():
-            # Note: It's important to /not/ block here, because this function
-            # can be called from the alarm task, which should not starve.
             for raiden_event in raiden_event_list:
                 if isinstance(raiden_event, ContractSendEvent):
-                    self.handle_transaction_event(transaction_event=raiden_event)
+                    g = self.handle_transaction_event(transaction_event=raiden_event)
+                    transaction_greenlets.append(g)
                 else:
                     self.raiden_event_handler.on_raiden_event(
                         raiden=self,
@@ -534,7 +536,18 @@ class RaidenService(Runnable):
                 self.wal.snapshot()
                 self.snapshot_group = new_snapshot_group
 
-    def handle_transaction_event(self, transaction_event: ContractSendEvent):
+        def wait():
+            try:
+                gevent.wait(transaction_greenlets)
+            except Exception as e:  # pylint: disable=broad-except
+                done.set_exception(e)
+            else:
+                done.set()
+
+        gevent.spawn(wait)
+        return done
+
+    def handle_transaction_event(self, transaction_event: ContractSendEvent) -> gevent.Greenlet:
         """Spawn a new thread to handle a transaction event.
 
         This will spawn a new greenlet to handle each transaction, which is
@@ -553,7 +566,7 @@ class RaidenService(Runnable):
             therefore /required/ there is *NO* order among these.
         """
         assert isinstance(transaction_event, ContractSendEvent)
-        spawn_and_link_with_parent(self._handle_transaction_event, transaction_event)
+        return gevent.spawn(self._handle_transaction_event, transaction_event)
 
     def _handle_transaction_event(self, transaction_event: ContractSendEvent):
         assert isinstance(transaction_event, ContractSendEvent)
@@ -564,7 +577,7 @@ class RaidenService(Runnable):
             )
         except RaidenRecoverableError as e:
             log.error(str(e))
-        except InvalidDBData as e:
+        except InvalidDBData:
             raise
         except RaidenUnrecoverableError as e:
             log_unrecoverable = (
@@ -576,17 +589,23 @@ class RaidenService(Runnable):
             else:
                 raise
 
-    def spawn_sub_task(self, func: Callable, *args, **kwargs):
+    def _track_asyncresult(self, result: AsyncResult):
+        """ Ensures an error on it crashes self/main greenlet. """
+
+        self.asyncresults.append(result)
+        result.rawlink(gevent.greenlet.SuccessSpawnedLink(self.asyncresults.remove))
+        result.rawlink(gevent.greenlet.FailureSpawnedLink(self.on_error))
+
+    def _track_greenlet(self, greenlet: gevent.Greenlet):
         """ Spawn a sub-task and ensures an error on it crashes self/main greenlet. """
 
-        greenlet = gevent.spawn(func, *args, **kwargs)
         self.greenlets.append(greenlet)
         greenlet.link_exception(self.on_error)
         greenlet.link_value(self.greenlets.remove)
 
     def set_node_network_state(self, node_address: Address, network_state: str):
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
-        self.handle_state_change(state_change)
+        self.handle_state_change(state_change).wait()
 
     def start_health_check_for(self, node_address: Address):
         # This function is a noop during initialization. It can be called
@@ -643,7 +662,12 @@ class RaidenService(Runnable):
                 gas_limit=confirmed_block['gasLimit'],
                 block_hash=BlockHash(bytes(confirmed_block['hash'])),
             )
-            self.handle_state_change(state_change)
+
+            # Note: It's important to /not/ block here, because this function
+            # can be called from the alarm task greenlet, which should not
+            # starve.
+            result = self.handle_state_change(state_change)
+            self._track_asyncresult(result)
 
     def _initialize_transactions_queues(self, chain_state: ChainState):
         pending_transactions = views.get_pending_transactions(chain_state)
@@ -656,7 +680,8 @@ class RaidenService(Runnable):
 
         with self.dispatch_events_lock:
             for transaction in pending_transactions:
-                self.handle_transaction_event(transaction)
+                g = self.handle_transaction_event(transaction)
+                self._track_greenlet(g)
 
     def _initialize_payment_statuses(self, chain_state: ChainState):
         """ Re-initialize targets_to_identifiers_to_statuses. """
@@ -870,18 +895,18 @@ class RaidenService(Runnable):
 
         # Dispatch the state change even if there are no routes to create the
         # wal entry.
-        self.handle_state_change(init_initiator_statechange)
+        self.handle_state_change(init_initiator_statechange).wait()
 
         return payment_status
 
     def mediate_mediated_transfer(self, transfer: LockedTransfer):
         init_mediator_statechange = mediator_init(self, transfer)
-        self.handle_state_change(init_mediator_statechange)
+        self.handle_state_change(init_mediator_statechange).wait()
 
     def target_mediated_transfer(self, transfer: LockedTransfer):
         self.start_health_check_for(transfer.initiator)
         init_target_statechange = target_init(transfer)
-        self.handle_state_change(init_target_statechange)
+        self.handle_state_change(init_target_statechange).wait()
 
     def maybe_upgrade_db(self):
         manager = UpgradeManager(db_filename=self.database_path)
