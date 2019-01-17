@@ -592,12 +592,18 @@ class RaidenService(Runnable):
     def _track_asyncresult(self, result: AsyncResult):
         """ Ensures an error on it crashes self/main greenlet. """
 
+        def remove(_):
+            self.asyncresults.remove(result)
+
         self.asyncresults.append(result)
-        result.rawlink(gevent.greenlet.SuccessSpawnedLink(self.asyncresults.remove))
+        result.rawlink(gevent.greenlet.SuccessSpawnedLink(remove))
         result.rawlink(gevent.greenlet.FailureSpawnedLink(self.on_error))
 
     def _track_greenlet(self, greenlet: gevent.Greenlet):
         """ Spawn a sub-task and ensures an error on it crashes self/main greenlet. """
+
+        def remove(_):
+            self.greenlets.remove(greenlet)
 
         self.greenlets.append(greenlet)
         greenlet.link_exception(self.on_error)
