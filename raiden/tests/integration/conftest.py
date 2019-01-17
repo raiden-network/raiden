@@ -10,6 +10,7 @@ def pytest_generate_tests(metafunc):
         transport = metafunc.config.getoption('transport')
         transport_and_privacy = list()
 
+        # ob-review skipping tests depending on
         # avoid collecting test if 'skip_if_not_*'
         if transport in ('udp', 'all') and 'skip_if_not_matrix' not in metafunc.fixturenames:
             transport_and_privacy.append(('udp', None))

@@ -120,6 +120,10 @@ def raiden_chain(
     shutdown_apps_and_cleanup_tasks(raiden_apps)
 
 
+# ob-review
+# I admit that I find this scary - depending on more than 20 fixtures
+# Quite a few of them also depend on several other fixtures
+# I'm all for modularization, but is this maybe a little bit too modular?
 @pytest.fixture
 def raiden_network(
         token_addresses,
