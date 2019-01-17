@@ -24,7 +24,7 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 # Most of these fixtures are simple constants, so I don't quite understand
 # what problems there were with parametrization in pytest that made this necessary.
 # I think this complicates the tests.
-# Might be worth having look at simplifying this
+# Might be worth having a look at simplifying this.
 
 
 DEFAULT_BALANCE = denoms.ether * 10  # pylint: disable=no-member
