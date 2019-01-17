@@ -653,4 +653,4 @@ class UDPTransport(Runnable):
 
     def set_node_network_state(self, node_address: Address, node_state):
         state_change = ActionChangeNodeNetworkState(node_address, node_state)
-        self.raiden.handle_state_change(state_change).wait()
+        self.raiden.handle_state_change(state_change)
