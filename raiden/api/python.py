@@ -575,7 +575,7 @@ class RaidenAPI:
                 channel_identifier=channel_state.identifier,
             )
 
-            self.raiden.handle_state_change(channel_close)
+            self.raiden.handle_state_change(channel_close).wait()
 
         channel_ids = [channel_state.identifier for channel_state in channels_to_close]
 

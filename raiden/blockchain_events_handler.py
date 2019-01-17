@@ -64,7 +64,7 @@ def handle_tokennetwork_new(raiden: 'RaidenService', event: Event):
         block_number=block_number,
         block_hash=block_hash,
     )
-    raiden.handle_state_change(new_token_network)
+    raiden.handle_state_change(new_token_network).wait()
 
 
 def handle_channel_new(raiden: 'RaidenService', event: Event):
@@ -103,7 +103,7 @@ def handle_channel_new(raiden: 'RaidenService', event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_state_change(new_channel)
+        raiden.handle_state_change(new_channel).wait()
 
         partner_address = channel_state.partner_state.address
 
@@ -121,7 +121,7 @@ def handle_channel_new(raiden: 'RaidenService', event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_state_change(new_route)
+        raiden.handle_state_change(new_route).wait()
 
     # A new channel is available, run the connection manager in case more
     # connections are needed
@@ -169,7 +169,7 @@ def handle_channel_new_balance(raiden: 'RaidenService', event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_state_change(newbalance_statechange)
+        raiden.handle_state_change(newbalance_statechange).wait()
 
         if balance_was_zero and participant_address != raiden.address:
             connection_manager = raiden.connection_manager_for_token_network(
@@ -211,7 +211,7 @@ def handle_channel_closed(raiden: 'RaidenService', event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_state_change(channel_closed)
+        raiden.handle_state_change(channel_closed).wait()
     else:
         # This is a channel close event of a channel we're not a participant of
         route_closed = ContractReceiveRouteClosed(
@@ -221,7 +221,7 @@ def handle_channel_closed(raiden: 'RaidenService', event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_state_change(route_closed)
+        raiden.handle_state_change(route_closed).wait()
 
 
 def handle_channel_update_transfer(raiden: 'RaidenService', event: Event):
@@ -248,7 +248,7 @@ def handle_channel_update_transfer(raiden: 'RaidenService', event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_state_change(channel_transfer_updated)
+        raiden.handle_state_change(channel_transfer_updated).wait()
 
 
 def handle_channel_settled(raiden: 'RaidenService', event: Event):
@@ -273,7 +273,7 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
             block_number=block_number,
             block_hash=block_hash,
         )
-        raiden.handle_state_change(channel_settled)
+        raiden.handle_state_change(channel_settled).wait()
 
 
 def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
@@ -296,7 +296,7 @@ def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
         block_hash=block_hash,
     )
 
-    raiden.handle_state_change(unlock_state_change)
+    raiden.handle_state_change(unlock_state_change).wait()
 
 
 def handle_secret_revealed(raiden: 'RaidenService', event: Event):
@@ -315,7 +315,7 @@ def handle_secret_revealed(raiden: 'RaidenService', event: Event):
         block_hash=block_hash,
     )
 
-    raiden.handle_state_change(registeredsecret_state_change)
+    raiden.handle_state_change(registeredsecret_state_change).wait()
 
 
 def on_blockchain_event(raiden: 'RaidenService', event: Event):
