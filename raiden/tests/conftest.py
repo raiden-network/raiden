@@ -39,20 +39,6 @@ assert_gevent_monkey_patches()
 
 
 # ob-review
-def check_gevent_patches():
-    patched = ["select", "socket", "ssl", "subprocess", "time", "signal"]
-    # os is also patched but does not show up in saved ... why!?
-    # checking differently ...
-    orig = monkey.get_original("os", "fork")
-    import os
-    assert orig != os.fork
-    for name in patched:
-        assert monkey.is_module_patched(name), name
-
-
-check_gevent_patches()
-
-# ob-review
 # makes no sense to me unless meaning of `True` might change in the future
 if True:
     import pytest
