@@ -20,6 +20,13 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
 
+# ob-review
+# Most of these fixtures are simple constants, so I don't quite understand
+# what problems there were with parametrization in pytest that made this necessary.
+# I think this complicates the tests.
+# Might be worth having look at simplifying this
+
+
 DEFAULT_BALANCE = denoms.ether * 10  # pylint: disable=no-member
 DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
