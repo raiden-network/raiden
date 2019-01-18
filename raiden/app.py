@@ -68,6 +68,7 @@ class App:  # pylint: disable=too-few-public-methods
         'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
         'services': {
             'pathfinding_service_address': None,
+            'pathfinding_max_paths': 3,
         },
     }
 
