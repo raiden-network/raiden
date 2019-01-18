@@ -241,7 +241,7 @@ jobs:
       test-type:
         description: "type of test"
         type: enum
-        enum: ["integration", "unit"]
+        enum: ["integration", "unit", "fuzz"]
       blockchain-type:
         description: "blockchain type client passed to test run if needed"
         default: "geth"
@@ -278,12 +278,13 @@ jobs:
           - synapse-keys-
     - run:
         name: Running tests
-        #coverage run -m pytest \
         command: |
+          mkdir -p ~/raiden/coverage
+          export COVERAGE_FILE=~/raiden/coverage/.coverage
           mkdir -p test-reports/test-${TEST_TYPE}-<< parameters.transport-layer >>-<< parameters.py-version >>
           circleci tests glob raiden/tests/${TEST_TYPE}/test_*.py raiden/tests/${TEST_TYPE}/*/test_*.py | \
           circleci tests split --split-by=timings | \
-          xargs -r pytest \
+          xargs --no-run-if-empty coverage run --include="~/raiden/**/*" --parallel-mode --module pytest \
             -vvvvvv \
             --log-config='raiden:DEBUG' \
             --random \
@@ -291,6 +292,10 @@ jobs:
             $BLOCKCHAIN_TYPE_ARG \
             $TRANSPORT_OPTION_ARG \
             << parameters.additional-args >>
+    - persist_to_workspace:
+        root: "~"
+        paths:
+          - "./raiden/coverage"
 
     - save_cache:
         key: ethash-{{ checksum "~/.local/bin/geth" }}
@@ -316,9 +321,18 @@ jobs:
   finalize:
     executor:
       name: base-executor
+      py-version: "3.7"
     steps:
+      - attach_workspace:
+          at: "~"
+      - config-path
       - run:
-          command: echo done
+          command: |
+            pip install codecov
+            cd ~/raiden
+            coverage combine coverage
+            codecov
+            echo done
 
   build-dist:
     executor:
@@ -455,16 +469,27 @@ workflows:
           requires:
             - prepare-python-3.6
 
+      - test:
+          name: test-fuzz-3.6
+          py-version: "3.6"
+          test-type: "fuzz"
+          blockchain-type: "geth"
+          additional-args: "--hypothesis-show-statistics"
+          requires:
+            - prepare-python-3.6
+
       - finalize:
           requires:
             - lint-3.6
             - mypy-3.6
             - test-unit-3.6
+            - test-fuzz-3.6
             - test-integration-udp-3.6
             - test-integration-matrix-3.6
             - lint-3.7
             - mypy-3.7
             - test-unit-3.7
+            - test-fuzz-3.7
             - test-integration-udp-3.7
             - test-integration-matrix-3.7
 
@@ -519,6 +544,15 @@ workflows:
           py-version: "3.7"
           test-type: "unit"
           blockchain-type: "geth"
+          requires:
+            - prepare-python-3.7
+
+      - test:
+          name: test-fuzz-3.7
+          py-version: "3.7"
+          test-type: "fuzz"
+          blockchain-type: "geth"
+          additional-args: "--hypothesis-show-statistics"
           requires:
             - prepare-python-3.7
 
@@ -635,16 +669,27 @@ workflows:
           requires:
             - prepare-python-3.6
 
+      - test:
+          name: test-fuzz-3.6
+          py-version: "3.6"
+          test-type: "fuzz"
+          blockchain-type: "geth"
+          additional-args: "--hypothesis-show-statistics"
+          requires:
+            - prepare-python-3.6
+
       - finalize:
           requires:
             - lint-3.6
             - mypy-3.7
             - test-unit-3.6
+            - test-fuzz-3.6
             - test-integration-udp-3.6
             - test-integration-matrix-3.6
             - lint-3.7
             - mypy-3.7
             - test-unit-3.7
+            - test-fuzz-3.7
             - test-integration-udp-3.7
             - test-integration-matrix-3.7
 
@@ -699,6 +744,15 @@ workflows:
           py-version: "3.7"
           test-type: "unit"
           blockchain-type: "geth"
+          requires:
+            - prepare-python-3.7
+
+      - test:
+          name: test-fuzz-3.7
+          py-version: "3.7"
+          test-type: "fuzz"
+          blockchain-type: "geth"
+          additional-args: "--hypothesis-show-statistics"
           requires:
             - prepare-python-3.7
 
