@@ -1,8 +1,6 @@
-from contextlib import contextmanager
 from typing import Optional
 
 from eth_utils import decode_hex
-from gevent.lock import RLock
 from web3.utils.filters import Filter
 
 from raiden.constants import UINT256_MAX
@@ -51,15 +49,9 @@ class PaymentChannel:
             participant1, participant2 = participant2, participant1
 
         self.channel_identifier = channel_identifier
-        self.channel_operations_lock = RLock()
         self.participant1 = participant1
         self.participant2 = participant2
         self.token_network = token_network
-
-    @contextmanager
-    def lock_or_raise(self):
-        with self.token_network.channel_operations_lock[self.participant2]:
-            yield
 
     def token_address(self) -> typing.Address:
         """ Returns the address of the token for the channel. """

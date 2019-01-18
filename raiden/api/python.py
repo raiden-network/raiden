@@ -1,5 +1,3 @@
-from contextlib import ExitStack
-
 import structlog
 from eth_utils import is_binary_address, to_checksum_address
 
@@ -422,22 +420,20 @@ class RaidenAPI:
             )
             raise InsufficientFunds(msg)
 
-        # If concurrent operations are happening on the channel, fail the request
-        with channel_proxy.lock_or_raise():
-            # set_total_deposit calls approve
-            # token.approve(netcontract_address, addendum)
-            channel_proxy.set_total_deposit(total_deposit)
+        # set_total_deposit calls approve
+        # token.approve(netcontract_address, addendum)
+        channel_proxy.set_total_deposit(total_deposit)
 
-            target_address = self.raiden.address
-            waiting.wait_for_participant_newbalance(
-                raiden=self.raiden,
-                payment_network_id=registry_address,
-                token_address=token_address,
-                partner_address=partner_address,
-                target_address=target_address,
-                target_balance=total_deposit,
-                retry_timeout=retry_timeout,
-            )
+        target_address = self.raiden.address
+        waiting.wait_for_participant_newbalance(
+            raiden=self.raiden,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+            target_address=target_address,
+            target_balance=total_deposit,
+            retry_timeout=retry_timeout,
+        )
 
     def channel_close(
             self,
@@ -497,25 +493,13 @@ class RaidenAPI:
             token_address=token_address,
         )
 
-        # If concurrent operations are happening on one of the channels, fail entire
-        # request.
-        with ExitStack() as stack:
-            # Put all the locks in this outer context so that the netting channel functions
-            # don't release the locks when their context goes out of scope
-            for channel_state in channels_to_close:
-                channel = self.raiden.chain.payment_channel(
-                    token_network_address=token_network_identifier,
-                    channel_id=channel_state.identifier,
-                )
-                stack.enter_context(channel.lock_or_raise())
+        for channel_state in channels_to_close:
+            channel_close = ActionChannelClose(
+                token_network_identifier=token_network_identifier,
+                channel_identifier=channel_state.identifier,
+            )
 
-            for channel_state in channels_to_close:
-                channel_close = ActionChannelClose(
-                    token_network_identifier=token_network_identifier,
-                    channel_identifier=channel_state.identifier,
-                )
-
-                self.raiden.handle_state_change(channel_close)
+            self.raiden.handle_state_change(channel_close)
 
         channel_ids = [channel_state.identifier for channel_state in channels_to_close]
 
