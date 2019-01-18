@@ -462,6 +462,11 @@ def test_matrix_cross_server(matrix_transports, retry_interval):
     assert len(received_messages0) == 1
     assert len(received_messages1) == 1
 
+    transport0.stop()
+    transport1.stop()
+    transport0.get()
+    transport1.get()
+
 
 def test_matrix_discovery_room_offline_server(
     local_matrix_servers,
@@ -480,3 +485,6 @@ def test_matrix_discovery_room_offline_server(
         'private_rooms': private_rooms,
     })
     transport.start(MockRaidenService(None), MessageHandler(set()), '')
+    gevent.sleep(.2)
+    transport.stop()
+    transport.get()
