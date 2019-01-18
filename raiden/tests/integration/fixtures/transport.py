@@ -63,3 +63,6 @@ def matrix_transports(local_matrix_servers, retries_before_backoff, retry_interv
 
     for transport in transports:
         transport.stop()
+
+    for transport in transports:
+        transport.get()

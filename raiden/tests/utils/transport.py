@@ -167,10 +167,11 @@ def generate_synapse_config() -> ContextManager:
             )
         return server_name, config_file
 
-    yield generate_config
-
-    if delete_base_dir:
-        shutil.rmtree(synapse_base_dir)
+    try:
+        yield generate_config
+    finally:
+        if delete_base_dir:
+            shutil.rmtree(synapse_base_dir)
 
 
 @contextmanager
