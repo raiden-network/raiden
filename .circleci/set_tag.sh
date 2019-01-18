@@ -1,6 +1,6 @@
+#!/bin/bash
 set -ex
 
-#!/bin/bash
 if [[ ! -z ${TRAVIS_TAG} ]]; then
     export ARCHIVE_TAG=${TRAVIS_TAG}
 else
