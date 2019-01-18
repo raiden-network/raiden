@@ -20,19 +20,6 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
 
-# ob-review
-# Most of these fixtures are simple constants, so I don't quite understand
-# what problems there were with parametrization in pytest that made this necessary.
-# I think this complicates the tests.
-# Might be worth having a look at simplifying this.
-
-# At the very least these fixtures should all be made session scoped, so that they
-# aren't unnecessarily executed and hinder elevating other fixtures depending on
-# them to higher scopes.
-# Sadly, there is no `any` scope yet to declare fixtures as being
-# compatible with all
-# scopes (there where discussions about it at the sprint in 2016, but nothing yet
-# came out of it).
 
 DEFAULT_BALANCE = denoms.ether * 10  # pylint: disable=no-member
 DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
@@ -233,17 +220,11 @@ def blockchain_type(request):
 
 # ob-review
 # I stepped through two other fixtures to get to this, which returns essentially a constant.
-# There are several like this around.
+# There are several like this around. And several others just look like it but are
+# actually overwritten by parametrizations. I find this quite confusing.
 #
-# Are these leftovers from refactorings or preparations for when nodes will be other than one?
-#
-# Either way I feel that things like this might better be part of the
-# configuration rather than a fixture as they are always valid for a complete test run.
-#
-# I know this is a controversial topic, but I don't have a problem with a god object
-# that holds important configuration and can be manipulated for tests.
-# As with gevent based apps test parallelization needs to happen on the process level
-# there are no conflicts to be expected, when that configuration is manipulated for a specific test
+# Either way I feel that things like this (things that are constant over one testrun)
+# should rather be constants or part of configuation object.
 @pytest.fixture(scope="session")
 def blockchain_number_of_nodes():
     """ Number of nodes in the cluster, not the same as the number of raiden
