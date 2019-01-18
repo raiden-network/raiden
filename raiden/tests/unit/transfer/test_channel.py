@@ -11,6 +11,10 @@ from raiden.transfer.state import HashTimeLockState
 from raiden.utils import sha3
 
 
+# ob-review
+# +1 - I like pulling out test helpers into a function instead of copy and pasting
+# I have seen quite a few test suites buckling under the weight of tons of copy and
+# paste code ("because it's only test code")
 def _channel_and_transfer(merkletree_width):
 
     our_model, _ = create_model(700)
@@ -37,6 +41,9 @@ def _channel_and_transfer(merkletree_width):
     return channel_state, mediated_transfer
 
 
+# ob-review
+# +1 I also really like naming tests descriptively like that.
+# Makes it much easier to grasp
 def test_handle_receive_lockedtransfer_enforces_transfer_limit():
 
     state, transfer = _channel_and_transfer(merkletree_width=MAXIMUM_PENDING_TRANSFERS - 1)
