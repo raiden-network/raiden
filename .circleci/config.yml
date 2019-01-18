@@ -4,7 +4,7 @@ templates:
 
   filter-tag-templates: &only-tagged-version-filter
     tags:
-      only: /^v\d+\.\d+\.\d+$/
+      only: /^v\d+\.\d+\.\d+(\-rc\d+)?$/
     branches:
       ignore: /.*/
 
@@ -374,12 +374,12 @@ jobs:
       - run:
           name: prepare-build
           command: |
-            source .travis/set_tag.sh
+            source .circleci/set_tag.sh
             mkdir -p dist/archive
       - run:
           name: build-distribution
           command: |
-            source .travis/set_tag.sh
+            source .circleci/set_tag.sh
             make bundle-docker
             tar -C build -xvzf build/archive/raiden-${ARCHIVE_TAG}-linux.tar.gz
             echo raiden-${ARCHIVE_TAG}-linux.tar.gz > build/archive/_LATEST-linux.txt
@@ -402,7 +402,7 @@ jobs:
       - config-path
       - run:
           name: upload-to-digitalocean
-          command: .travis/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY build/archive/ $DO_S3_SUB_SUB_DOMAIN ams3.digitaloceanspaces.com
+          command: .circleci/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY build/archive/ $DO_S3_SUB_SUB_DOMAIN ams3.digitaloceanspaces.com
 
   deploy-github-release:
     working_directory: ~/raiden
