@@ -3,6 +3,19 @@
 # This order of imports seems very particular
 # I would put the monkey patching at the very beginning here
 # so I would be interested why this is
+#
+# Also monkeypatching in a conftest.py is happening after pytest already imported
+# half the universe, so I am not even sure how to do that right.
+#
+# Maybe the cleanest way would be wrapping the test run rather than running
+# pytest directly:
+#   from gevent import monkey
+#   monkey.patch_all()
+#   import pytest
+#   pytest.main()
+#
+# on the other hand: if this seems to work fine, it might be alright.
+# (also see my paranoia check further down)
 import re
 import sys
 
