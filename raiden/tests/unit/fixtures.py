@@ -6,6 +6,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
 
+# ob-review - AFAICT there is noe outer name being redefined
 # pylint: disable=redefined-outer-name
 
 
@@ -62,7 +63,16 @@ def token_network_state(payment_network_state, token_network_id, token_id):
 
     return token_network
 
-
+# ob-review
+# This feels to me a bit like a fixture dependency labyrinth
+# chain_state <- our_adress
+# token_network_state <- payment_network_state <- chain_state
+# also directly depends directly on payment_network_state
+# This would make for an interesting graph and to a newcomer like me this is at the very
+# least very confusing.
+#
+# I also am confused how this is o.k. to depend on e.g. different chain_states that
+# are all function scope and therefore have all different values for our_address
 @pytest.fixture
 def netting_channel_state(chain_state, token_network_state, payment_network_state):
     partner = factories.make_address()

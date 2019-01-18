@@ -12,6 +12,7 @@ KEYFILE_INACCESSIBLE = 'UTC--2017-06-20T16-33-00.000000000Z--inaccessible'
 KEYFILE_INVALID = 'UTC--2017-06-20T16-06-00.000000000Z--invalid'
 
 
+# ob-review - yield_fixtures are very deprecated, also don't use `test_` for non-tests
 @pytest.yield_fixture(scope='module')
 def test_keystore():
     keystore = os.path.join(get_project_root(), 'tests', 'test_files')

@@ -12,6 +12,7 @@ from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
 from raiden.utils import sha3
 
 
+# ob-review - dead code
 def sort_join(first, second):
     return ''.join(sorted([first, second]))
 
