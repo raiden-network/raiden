@@ -37,7 +37,7 @@ def raiden_chain(
         nat_keepalive_timeout,
         environment_type,
         unrecoverable_error_should_crash,
-        local_matrix_server,
+        local_matrix_servers,
         private_rooms,
         retry_timeout,
 ):
@@ -69,7 +69,7 @@ def raiden_chain(
         nat_keepalive_timeout=nat_keepalive_timeout,
         environment_type=environment_type,
         unrecoverable_error_should_crash=unrecoverable_error_should_crash,
-        local_matrix_url=local_matrix_server,
+        local_matrix_url=local_matrix_servers[0],
         private_rooms=private_rooms,
     )
 
@@ -142,7 +142,7 @@ def raiden_network(
         nat_keepalive_timeout,
         environment_type,
         unrecoverable_error_should_crash,
-        local_matrix_server,
+        local_matrix_servers,
         private_rooms,
         retry_timeout,
 ):
@@ -166,7 +166,7 @@ def raiden_network(
         nat_keepalive_timeout=nat_keepalive_timeout,
         environment_type=environment_type,
         unrecoverable_error_should_crash=unrecoverable_error_should_crash,
-        local_matrix_url=local_matrix_server,
+        local_matrix_url=local_matrix_servers[0],
         private_rooms=private_rooms,
     )
 

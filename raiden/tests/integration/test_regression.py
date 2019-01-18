@@ -5,8 +5,8 @@ import pytest
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import Lock, LockedTransfer, RevealSecret, Secret
+from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
-from raiden.tests.integration.fixtures.transport import TransportProtocol
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
@@ -86,7 +86,7 @@ def test_regression_unfiltered_routes(
 
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_regression_revealsecret_after_secret(raiden_network, token_addresses, transport_config):
+def test_regression_revealsecret_after_secret(raiden_network, token_addresses, transport_protocol):
     """ A RevealSecret message received after a Secret message must be cleanly
     handled.
     """
@@ -122,11 +122,11 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
     )
     app2.raiden.sign(reveal_secret)
 
-    if transport_config.protocol is TransportProtocol.UDP:
+    if transport_protocol is TransportProtocol.UDP:
         reveal_data = reveal_secret.encode()
         host_port = None
         app1.raiden.transport.receive(reveal_data, host_port)
-    elif transport_config.protocol is TransportProtocol.MATRIX:
+    elif transport_protocol is TransportProtocol.MATRIX:
         app1.raiden.transport._receive_message(reveal_secret)  # pylint: disable=protected-access
     else:
         raise TypeError('Unknown TransportProtocol')
@@ -134,7 +134,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_regression_multiple_revealsecret(raiden_network, token_addresses, transport_config):
+def test_regression_multiple_revealsecret(raiden_network, token_addresses, transport_protocol):
     """ Multiple RevealSecret messages arriving at the same time must be
     handled properly.
 
@@ -192,11 +192,11 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     )
     app0.raiden.sign(mediated_transfer)
 
-    if transport_config.protocol is TransportProtocol.UDP:
+    if transport_protocol is TransportProtocol.UDP:
         message_data = mediated_transfer.encode()
         host_port = None
         app1.raiden.transport.receive(message_data, host_port)
-    elif transport_config.protocol is TransportProtocol.MATRIX:
+    elif transport_protocol is TransportProtocol.MATRIX:
         app1.raiden.transport._receive_message(mediated_transfer)
     else:
         raise TypeError('Unknown TransportProtocol')
@@ -222,7 +222,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     )
     app0.raiden.sign(secret)
 
-    if transport_config.protocol is TransportProtocol.UDP:
+    if transport_protocol is TransportProtocol.UDP:
         messages = [
             secret.encode(),
             reveal_secret.encode(),
@@ -238,7 +238,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
             )
             for data in messages
         ]
-    elif transport_config.protocol is TransportProtocol.MATRIX:
+    elif transport_protocol is TransportProtocol.MATRIX:
         messages = [
             secret,
             reveal_secret,

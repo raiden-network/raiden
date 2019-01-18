@@ -1,6 +1,7 @@
 # pylint: disable=redefined-outer-name
 import os
 import random
+from enum import Enum
 
 import pytest
 from eth_utils import denoms, remove_0x_prefix, to_normalized_address
@@ -25,6 +26,11 @@ DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
+
+
+class TransportProtocol(Enum):
+    UDP = 'udp'
+    MATRIX = 'matrix'
 
 
 @pytest.fixture
@@ -132,9 +138,9 @@ def channels_per_node():
 
 
 @pytest.fixture
-def retry_interval(request):
-    if request.config.option.transport == 'matrix':
-        return 5
+def retry_interval(transport_protocol):
+    if transport_protocol is TransportProtocol.MATRIX:
+        return 2
     else:
         return 0.5
 
@@ -244,9 +250,9 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
 
 
 @pytest.fixture(scope='session')
-def port_generator(request):
+def port_generator():
     """ count generator used to get a unique port number. """
-    return get_free_port('127.0.0.1', request.config.option.initial_port)
+    return get_free_port('127.0.0.1')
 
 
 @pytest.fixture
@@ -319,3 +325,30 @@ def environment_type():
 def unrecoverable_error_should_crash():
     """For testing an UnrecoverableError should crash"""
     return True
+
+
+@pytest.fixture
+def transport(request):
+    """ 'all' replaced by parametrize in conftest.pytest_generate_tests """
+    return request.config.getoption('transport')
+
+
+@pytest.fixture
+def transport_protocol(transport):
+    return TransportProtocol(transport)
+
+
+@pytest.fixture
+def skip_if_not_udp(request):
+    """Skip the test if not run with UDP transport"""
+    if request.config.option.transport in ('udp', 'all'):
+        return
+    pytest.skip('This test works only with UDP transport')
+
+
+@pytest.fixture
+def skip_if_not_matrix(request):
+    """Skip the test if not run with Matrix transport"""
+    if request.config.option.transport in ('matrix', 'all'):
+        return
+    pytest.skip('This test works only with Matrix transport')

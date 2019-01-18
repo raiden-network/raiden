@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import gevent
 import pytest
+from gevent import Timeout
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import Processed, SecretRequest
@@ -21,12 +22,24 @@ from raiden_libs.network.matrix import Room
 USERID1 = '@Alice:Wonderland'
 
 
+# All tests in this module require matrix
+pytestmark = pytest.mark.usefixtures('skip_if_not_matrix')
+
+
+class MessageHandler:
+    def __init__(self, bag: set):
+        self.bag = bag
+
+    def on_message(self, _, message):
+        self.bag.add(message)
+
+
 @pytest.fixture
 def mock_matrix(
         monkeypatch,
         retry_interval,
         retries_before_backoff,
-        local_matrix_server,
+        local_matrix_servers,
         private_rooms,
 ):
 
@@ -57,8 +70,8 @@ def mock_matrix(
     config = dict(
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,
-        server=local_matrix_server,
-        server_name='matrix.local.raiden',
+        server=local_matrix_servers[0],
+        server_name=local_matrix_servers[0].netloc,
         available_servers=[],
         discovery_room='discovery',
         private_rooms=private_rooms,
@@ -124,54 +137,46 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
     return room, event
 
 
-def test_normal_processing_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_normal_processing_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     assert m._handle_message(room, event)
 
 
-def test_normal_processing_json(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_normal_processing_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=False)
     assert m._handle_message(room, event)
 
 
-def test_processing_invalid_json(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_processing_invalid_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_json = '{"foo": 1,'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_json)
     assert not m._handle_message(room, event)
 
 
-def test_sending_nonstring_body(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_sending_nonstring_body(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(overwrite_data=b'somebinarydata')
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_json(
-        mock_matrix,
-        skip_userid_validation,
-        skip_if_not_matrix,
-):
+def test_processing_invalid_message_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_message = '{"this": 1, "message": 5, "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_json(
-        mock_matrix,
-        skip_userid_validation,
-        skip_if_not_matrix,
-):
+def test_processing_invalid_message_cmdid_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_processing_invalid_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -179,7 +184,7 @@ def test_processing_invalid_hex(mock_matrix, skip_userid_validation, skip_if_not
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation, skip_if_not_matrix):
+def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -187,11 +192,7 @@ def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation, ski
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_hex(
-        mock_matrix,
-        skip_userid_validation,
-        skip_if_not_matrix,
-):
+def test_processing_invalid_message_cmdid_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -200,8 +201,7 @@ def test_processing_invalid_message_cmdid_hex(
 
 
 def test_matrix_message_sync(
-        skip_if_not_matrix,
-        local_matrix_server,
+        local_matrix_servers,
         private_rooms,
         retry_interval,
         retries_before_backoff,
@@ -210,8 +210,8 @@ def test_matrix_message_sync(
         'discovery_room': 'discovery',
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
-        'server': local_matrix_server,
-        'server_name': 'matrix.local.raiden',
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
         'private_rooms': private_rooms,
     })
@@ -219,8 +219,8 @@ def test_matrix_message_sync(
         'discovery_room': 'discovery',
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
-        'server': local_matrix_server,
-        'server_name': 'matrix.local.raiden',
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
         'private_rooms': private_rooms,
     })
@@ -229,12 +229,7 @@ def test_matrix_message_sync(
 
     received_messages = set()
 
-    class MessageHandler:
-        def on_message(self, _, message):
-            nonlocal received_messages
-            received_messages.add(message)
-
-    message_handler = MessageHandler()
+    message_handler = MessageHandler(received_messages)
     raiden_service0 = MockRaidenService(message_handler)
     raiden_service1 = MockRaidenService(message_handler)
 
@@ -312,8 +307,7 @@ def test_matrix_message_sync(
 
 
 def test_matrix_message_retry(
-    skip_if_not_matrix,
-    local_matrix_server,
+    local_matrix_servers,
     private_rooms,
     retry_interval,
     retries_before_backoff,
@@ -332,8 +326,8 @@ def test_matrix_message_retry(
         'discovery_room': 'discovery',
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
-        'server': local_matrix_server,
-        'server_name': 'matrix.local.raiden',
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
         'private_rooms': private_rooms,
     })
@@ -396,8 +390,7 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    skip_if_not_matrix,
-    local_matrix_server,
+    local_matrix_servers,
     private_rooms,
     retry_interval,
     retries_before_backoff,
@@ -412,8 +405,8 @@ def test_join_invalid_discovery(
         'discovery_room': 'discovery',
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
-        'server': local_matrix_server,
-        'server_name': 'matrix.local.raiden',
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
         'available_servers': ['http://invalid.server'],
         'private_rooms': private_rooms,
     })
@@ -431,5 +424,67 @@ def test_join_invalid_discovery(
     transport._join_discovery_room()
     assert isinstance(transport._discovery_room, Room)
 
+    transport.stop()
+    transport.get()
+
+
+@pytest.mark.parametrize('matrix_server_count', [2])
+def test_matrix_cross_server(matrix_transports, retry_interval):
+    transport0, transport1 = matrix_transports
+
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
+
+    transport1.start_health_check(raiden_service0.address)
+    transport0.start_health_check(raiden_service1.address)
+
+    queueid = QueueIdentifier(
+        recipient=raiden_service1.address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+    message = Processed(0)
+    message.sign(raiden_service0.private_key)
+
+    transport0.send_async(queueid, message)
+
+    with Timeout(retry_interval * 10, exception=False):
+        while not (len(received_messages0) == 1 and len(received_messages1) == 1):
+            gevent.sleep(.1)
+
+    assert len(received_messages0) == 1
+    assert len(received_messages1) == 1
+
+    transport0.stop()
+    transport1.stop()
+    transport0.get()
+    transport1.get()
+
+
+def test_matrix_discovery_room_offline_server(
+    local_matrix_servers,
+    retries_before_backoff,
+    retry_interval,
+    private_rooms,
+):
+
+    transport = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [local_matrix_servers[0], 'https://localhost:1'],
+        'private_rooms': private_rooms,
+    })
+    transport.start(MockRaidenService(None), MessageHandler(set()), '')
+    gevent.sleep(.2)
     transport.stop()
     transport.get()

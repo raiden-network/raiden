@@ -11,6 +11,8 @@ from raiden.tests.utils.factories import ADDR, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transport import MockDiscovery
 
+pytestmark = pytest.mark.usefixtures('skip_if_not_udp')
+
 
 @pytest.fixture
 def mock_udp(

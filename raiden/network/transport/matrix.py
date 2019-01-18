@@ -291,7 +291,7 @@ class MatrixTransport(Runnable):
 
         while True:
             self._server_url: str = self._select_server(config)
-            self._server_name = config.get('server_name', urlparse(self._server_url).hostname)
+            self._server_name = config.get('server_name', urlparse(self._server_url).netloc)
             client_class = config.get('client_class', GMatrixClient)
             self._client: GMatrixClient = client_class(
                 self._server_url,
@@ -423,6 +423,10 @@ class MatrixTransport(Runnable):
         self._client.stop_listener_thread()  # stop sync_thread, wait client's greenlets
         # wait own greenlets, no need to get on them, exceptions should be raised in _run()
         gevent.wait(self.greenlets + [r.greenlet for r in self._address_to_retrier.values()])
+
+        # Ensure keep-alive http connections are closed
+        self._client.api.session.close()
+
         self.log.debug('Matrix stopped', config=self._config)
         del self.log
         # parent may want to call get() after stop(), to ensure _run errors are re-raised
@@ -618,7 +622,7 @@ class MatrixTransport(Runnable):
         self._discovery_room_alias = self._make_room_alias(self._config['discovery_room'])
 
         servers = self._config.get('available_servers') or list()
-        servers = [urlparse(s).hostname for s in servers if urlparse(s).hostname]
+        servers = [urlparse(s).netloc for s in servers if urlparse(s).netloc]
         if self._server_name not in servers:
             servers.append(self._server_name)
         servers.sort(key=lambda s: '' if s == self._server_name else s)  # our server goes first

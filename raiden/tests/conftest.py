@@ -1,17 +1,19 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
-import re
-import sys
-
-import gevent
-import py
 from gevent import monkey
 
 monkey.patch_all()
 
 if True:
+    import re
+    import sys
+
+    import gevent
+    import py
     import pytest
+
     from raiden.log_config import configure_logging
     from raiden.tests.fixtures.variables import *  # noqa: F401,F403
+    from raiden.tests.utils.transport import make_requests_insecure
     from raiden.utils.cli import LogLevelConfigType
 
 
@@ -20,13 +22,6 @@ def pytest_addoption(parser):
         '--blockchain-type',
         choices=['geth'],
         default='geth',
-    )
-
-    parser.addoption(
-        '--initial-port',
-        type=int,
-        default=29870,
-        help='Base port number used to avoid conflicts while running parallel tests.',
     )
 
     parser.addoption(
@@ -48,22 +43,6 @@ def pytest_addoption(parser):
         choices=('none', 'udp', 'matrix', 'all'),
         default='matrix',
         help='Run integration tests with udp, with matrix, with both or not at all.',
-    )
-
-    parser.addoption(
-        '--local-matrix',
-        dest='local_matrix',
-        default='.synapse/run_synapse.sh',
-        help="Command to run the local matrix server, or 'none', "
-             "default: '.synapse/run_synapse.sh'",
-    )
-
-    parser.addoption(
-        '--matrix-server',
-        action='store',
-        dest='matrix_server',
-        default='http://localhost:8008',
-        help="Host name of local matrix server if used, default: 'http://localhost:8008'",
     )
 
     parser.addoption(
@@ -186,6 +165,38 @@ def dont_exit_pytest():
     """
     gevent.get_hub().SYSTEM_ERROR = BaseException
     gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def insecure_tls():
+    make_requests_insecure()
+
+
+# Convert `--transport all` to two separate invocations with `matrix` and `udp`
+def pytest_generate_tests(metafunc):
+    if 'transport' in metafunc.fixturenames:
+        transport = metafunc.config.getoption('transport')
+        transport_and_privacy = list()
+
+        # avoid collecting test if 'skip_if_not_*'
+        if transport in ('udp', 'all') and 'skip_if_not_matrix' not in metafunc.fixturenames:
+            transport_and_privacy.append(('udp', None))
+
+        if transport in ('matrix', 'all') and 'skip_if_not_udp' not in metafunc.fixturenames:
+            if 'public_and_private_rooms' in metafunc.fixturenames:
+                transport_and_privacy.extend([('matrix', False), ('matrix', True)])
+            else:
+                transport_and_privacy.append(('matrix', False))
+
+        if 'private_rooms' in metafunc.fixturenames:
+            metafunc.parametrize('transport,private_rooms', transport_and_privacy)
+        else:
+            # If the test function isn't taking the `private_rooms` fixture only give the
+            # transport values
+            metafunc.parametrize(
+                'transport',
+                list(set(transport_type for transport_type, _ in transport_and_privacy)),
+            )
 
 
 if sys.platform == 'darwin':

@@ -1,13 +1,17 @@
-no_tls: true
+tls_certificate_path: "{server_dir}/localhost:{port}.tls.crt"
+tls_private_key_path: "{server_dir}/localhost:{port}.tls.key"
+tls_dh_params_path: "{server_dir}/localhost:{port}.tls.dh"
+
+no_tls: false
 tls_fingerprints: []
-server_name: "matrix.local.raiden"
+server_name: "localhost:{port}"
 web_client: true
 
 soft_file_limit: 0
 
 listeners:
-  - port: 8008
-    tls: false
+  - port: {port}
+    tls: true
     bind_addresses: ['127.0.0.1']
     type: http
 
@@ -39,7 +43,7 @@ max_upload_size: "0M"  # changed
 max_image_pixels: "0M"  # changed
 url_preview_enabled: false
 
-enable_registration: false  # changed
+enable_registration: true  # changed
 bcrypt_rounds: 12
 allow_guest_access: false
 enable_metrics: false
@@ -56,14 +60,14 @@ room_invite_state_types:
 app_service_config_files: []
 
 expire_access_token: false
-old_signing_keys: {}
+old_signing_keys: {{}}
 key_refresh_interval: "1d" # 1 Day.
 
 password_config:
    enabled: true
 
 password_providers:
-  - module: 'eth_auth_provider.EthAuthProvider'
+  - module: 'raiden.tests.utils.transport.EthAuthProvider'
     config:
       enabled: true
 
