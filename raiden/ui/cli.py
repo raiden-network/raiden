@@ -210,6 +210,13 @@ def options(func):
                 type=str,
                 show_default=True,
             ),
+            option(
+                '--pathfinding-max-paths',
+                help='sets maximum paths to be requested from the pathfinding service.',
+                default=3,
+                type=int,
+                show_default=True,
+            ),
         ),
         option_group(
             'UDP Transport Options',
