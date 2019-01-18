@@ -278,12 +278,13 @@ jobs:
           - synapse-keys-
     - run:
         name: Running tests
-        #coverage run -m pytest \
         command: |
+          mkdir -p ~/raiden/coverage
+          export COVERAGE_FILE=~/raiden/coverage/.coverage
           mkdir -p test-reports/test-${TEST_TYPE}-<< parameters.transport-layer >>-<< parameters.py-version >>
           circleci tests glob raiden/tests/${TEST_TYPE}/test_*.py raiden/tests/${TEST_TYPE}/*/test_*.py | \
           circleci tests split --split-by=timings | \
-          xargs -r pytest \
+          xargs --no-run-if-empty coverage run --include="~/raiden/**/*" --parallel-mode --module pytest \
             -vvvvvv \
             --log-config='raiden:DEBUG' \
             --random \
@@ -291,6 +292,10 @@ jobs:
             $BLOCKCHAIN_TYPE_ARG \
             $TRANSPORT_OPTION_ARG \
             << parameters.additional-args >>
+    - persist_to_workspace:
+        root: "~"
+        paths:
+          - "./raiden/coverage"
 
     - save_cache:
         key: ethash-{{ checksum "~/.local/bin/geth" }}
@@ -316,9 +321,18 @@ jobs:
   finalize:
     executor:
       name: base-executor
+      py-version: "3.7"
     steps:
+      - attach_workspace:
+          at: "~"
+      - config-path
       - run:
-          command: echo done
+          command: |
+            pip install codecov
+            cd ~/raiden
+            coverage combine coverage
+            codecov
+            echo done
 
   build-dist:
     executor:
