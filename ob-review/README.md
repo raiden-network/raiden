@@ -432,7 +432,7 @@ I do not know CircleCi, but this surprises me as I would expect the workflow to 
 
 The last stage (integrationtests) looks like parallelizing more there would help.
 
-Also: consider moving the longest running tests that slow down the whole test suite into a nightly build rather than also running them on each build. That might make it necessary to rerun them for different changesets if things break and it is otherwise hard to find the problem, but that might be worth it.
+**Also:** consider moving the longest running tests that slow down the whole test suite into a nightly build rather than also running them on each build. That might make it necessary to rerun them for different changesets if things break and it is otherwise hard to find the problem, but that might be worth it.
 
 ### Longer Term
 
@@ -442,7 +442,7 @@ Also: consider moving the longest running tests that slow down the whole test su
 
 # Further Random Remarks
 
-* One of the most knowledgeable people I know regarding pytest is @niccodemus (Bruno Oliveira) and he lives in Florianopolis just like you Augusto. Invite him to a beer and have a chat :) Say hello from me :)
+* One of the most knowledgeable people I know regarding pytest is [@niccodemus (Bruno Oliveira)](https://github.com/nicoddemus) and he lives in Florianopolis just like you Augusto. Invite him to a beer and have a chat :) Say hello from me :)
 * I always like to see links to issues that are being addressed by regression tests this is definitely a good practice to follow
 * some [helper code](raiden/tests/unit/fuzz/test_state_changes.py) in the tests looks like you will be needing tests for the tests at some point :D
 * I find it a bit annoying that logs are cluttered everywhere after tests - wouldn't they be better put into a fixed `logs` folder in the root of the project?
@@ -670,6 +670,44 @@ I don't quite understand why this is necessary, to me they are both tools to do 
 
 * core devs are also fighting with gevent: https://github.com/pytest-dev/pytest/issues/3510
 
-## Some stats
+## Code To Test Ratio
 
-[stats](stats.md)
+All code:
+
+```
+SLOC    Directory       SLOC-by-Language (Sorted)
+43182   raiden          python=43182
+3561    tools           python=3454,sh=107
+96      top_dir         python=60,sh=36
+78      docs            python=78
+
+Totals grouped by language (dominant language first):
+python:       46774 (99.70%)
+sh:             143 (0.30%)
+
+Total Physical Source Lines of Code (SLOC)                = 46,917
+Development Effort Estimate, Person-Years (Person-Months) = 11.37 (136.49)
+ (Basic COCOMO model, Person-Months = 2.4 * (KSLOC**1.05))
+Schedule Estimate, Years (Months)                         = 1.35 (16.19)
+ (Basic COCOMO model, Months = 2.5 * (person-months**0.38))
+Estimated Average Number of Developers (Effort/Schedule)  = 8.43
+Total Estimated Cost to Develop                           = $ 1,536,521
+ (average salary = $56,286/year, overhead = 2.40).
+SLOCCount, Copyright (C) 2001-2004 David A. Wheeler
+```
+
+raiden/tests only:
+
+```
+SLOC    Directory       SLOC-by-Language (Sorted)
+7862    integration     python=7862
+7756    unit            python=7756
+2487    utils           python=2487
+162     fixtures        python=162
+138     top_dir         python=138
+29      benchmark       python=29
+
+Total Physical Source Lines of Code (SLOC)                = 18,434
+```
+
+~0.6 lines of test code test one line of code (make of that what you like - TDD afficionados would be shocked calling 3 to 10 lines of test code per line of production code a healthy ratio).
