@@ -162,15 +162,15 @@ This could also take care of the `skip_*` fixtures that are used to filter out t
 
 Use a different way to pass this config object to the fixture that needs it. The obvious choice here to me is to make more extensive use of `pytest_generate_tests` which already used to skip tests and to parametrize `transport` and `private_rooms`.
 
-Rather than having a ton of fixtures all taking care of one aspect of the test configuration there would be one configuration object taking care of all these aspects (should it be skipped under certain circumstances? Which kind of dynamic parametrization is needed etc.)
+Rather than having a ton of fixtures all taking care of one aspect of the test configuration there would be one configuration object taking care of all these aspects (should it be skipped under certain circumstances? Which kind of dynamic parametrization is needed, etc.)
 
 This should also be well documented as this is a non obvious use of the testing mechanisms to people who are not deeply into how pytest works.
 
-I can't flesh this out more, as I am really running out of time, but I think the idea is clear.
+I can't flesh this out more as I am really running out of time, but I think the idea is clear.
 
 ## Suggestion: look deeper into the dependencies of the fixtures
 
-This is vague but generally questioning the interwoven dependencies might help - I commented in the `netting_channel_state` fixture as one example for that
+This is vague but generally questioning the interwoven dependencies might help - I commented in the `netting_channel_state` fixture as one example for that.
 
 Maybe it makes sense to merge certain fixtures to simplify things?
 
@@ -182,19 +182,19 @@ I am afraid that after this short time, I have no clear idea how to go about thi
 
 **Disclaimer: highly opinionated and with only a shallow understanding of the specifics of your project. There have been books written about that by much smarter and experienced people than me, but I'll try ...**
 
-## Smaller (unit) vs larger (tests)
+## Smaller (unit?) vs larger (integration?) tests
 
-I am actually a big fan of functional tests that test a larger part of the system. In a lot of messy real life applications it is much easier and safer to concentrate more on those high level tests that make sure that you keep your promise to the customer.
+I am actually a big fan of functional tests that test a larger part of the system. In a lot of messy real life applications it is much easier and safer to concentrate more on those high level tests that make sure that you keep your promise to the customer and cause no catastrophic failures.
 
-Lower level tests are helpful for development and very important to test the critical parts of the system. Not everything needs to be covered by those kinds of tests.
+Lower level tests are helpful for development and very important to test the (logic heavy) critical parts of the system. Not everything needs to be covered by those kinds of tests.
 
 Religious wars can be fought over the definition of what are unit tests, what are integration tests and so on. To me the terms "unittest" or "integration test" have no inherent meaning, they need to be made sense of in the context of the system where they are used. So, finding helpful terminology and an appropriate mix of tests needs to be done for each individual system and is often only possible after a test suite has grown and patterns have emerged. Google is by no means a blueprint for how everybody should name their tests - I'd just like to link to this article as one example for going about it that I like: [Test Sizes ](https://testing.googleblog.com/2010/12/test-sizes.html).
 
 ### Looking at some unittests
 
-[test_operators.py](../raiden/tests/unit/test_operators.py) look like "proper" unit tests to me, but they could be split up in more tests, named after what specifically they are testing. I am not opposed to having more than one assert in the test, if they all test the same thing, but e.g. in `test_event_operators` it looks to me like those are several tests in one test function.
+Tests in [test_operators.py](../raiden/tests/unit/test_operators.py) look like "proper" unit tests to me, but they could be split up in more tests, named after what specifically they are testing. I am not opposed to having more than one assert in the test, if they all test the same thing, but e.g. in `test_event_operators` it looks to me like those are several tests in one test function.
 
-[test_sqlite.py](../raiden/tests/unit/test_sqlite.py) is something that looks like a higher level test that already tests how several units of the system play together. E.g. maybe a test like `test_get_event_with_balance_proof` could be called a protocol test? It iterates over a series of events and asserting on them step by step. Another indication to is that there is quite a lot of setup code and quite a few internal objects and functions in use.
+Tests in [test_sqlite.py](../raiden/tests/unit/test_sqlite.py) is something that looks like a higher level test that already tests how several units of the system play together. E.g. maybe a test like `test_get_event_with_balance_proof` could be called a protocol test? It iterates over a series of events and asserting on them step by step. Another indication is that there is quite a lot of setup code and quite a few internal objects and functions in use.
 
 In contrast `BalanceProofUnsignedState` is used but I can't find any tests that test this class in (reasonable) isolation.
 
@@ -202,7 +202,7 @@ I'd suggest looking at which important entities in the system are not yet tested
 
 ### Looking at some integration tests
 
-I guess the criterion for what makes an integration test is that it needs some kind of server/service running with which to communicate, which is perfectly valid, but maybe not enough in the long run to organize tests in a meaningful way? E.g. [test_matrix_transport.py](../raiden/tests/integration/test_matrix_transport.py): to an uninitiated like me this also looks pretty much like being in the same league like `test_sqlite` - some non trivial multi-step behaviour between parts of the system is tested, so another protocol test that happens to use a running matrix server?
+I guess the criterion for what makes an integration test is that it needs some kind of server/service running with which to communicate, which is perfectly valid, but maybe not enough in the long run to organize tests in a meaningful way? E.g. [test_matrix_transport.py](../raiden/tests/integration/test_matrix_transport.py): to an uninitiated reader like me this also looks pretty much like being in the same league like `test_sqlite` - some non trivial multi-step behaviour between parts of the system is tested, so another protocol test that happens to use a running matrix server?
 
 ## How to concentrate more on unhappy path testing?
 
@@ -210,11 +210,11 @@ This might be a bit vague. I would go about this by asking this question more of
 
 ## How To introduce more inside out tests
 
-An incremental approach would be: if an integration test fails, ask yourself what could have been tested on a lower level to catch that problem earlier and write that test(s). Over time there will be a greater coverage on lower levels.
+An incremental approach would be: if an integration test fails, ask yourself what could have been tested on a lower level to catch that problem earlier and write that test(s). Over time there will be a greater coverage of lower levels.
 
 If and when integration tests might be superfluous then is harder question to answer and I prefer to err on the side of testing too much than testing too little for a critical system (or critical part of a system).
 
-Splitting up the system into subsystems would make testing in isolation and direct interaction between them. e.g. this [issue](https://github.com/raiden-network/raiden/issues/3252) might be going into that direction.
+I think you are already doing (have done) that but splitting up the system into clear subsystems with clear interfaces makes testing in isolation and direct interaction between them easier and more lightweight. This [issue](https://github.com/raiden-network/raiden/issues/3252) gives me the feeling that things like that are already being considered.
 
 # Speeding up integration tests
 
@@ -321,8 +321,30 @@ SETUP    S tmpdir_factory
         SETUP    F local_matrix_server (fixtures used: transport_config)
         SETUP    F private_rooms[None]
         SETUP    F retry_timeout
-        SETUP    F raiden_network (fixtures used: blockchain_services, chain_id, channels_per_node, database_paths, deposit, endpoint_discovery_services, environment_type, local_matrix_server, nat_invitation_timeout, nat_keepalive_retries, nat_keepalive_timeout, private_rooms, raiden_udp_ports, retries_before_backoff, retry_interval, retry_timeout, reveal_timeout, settle_timeout, throttle_capacity, throttle_fill_rate, token_addresses, token_network_registry_address, unrecoverable_error_should_crash)
-        raiden/tests/integration/test_pythonapi.py::test_insufficient_funds[udp-None-1-2] (fixtures used: blockchain_key_seed, blockchain_number_of_nodes, blockchain_p2p_ports, blockchain_private_keys, blockchain_rpc_ports, blockchain_services, blockchain_type, chain_id, channels_per_node, contract_manager, database_paths, deploy_client, deploy_key, deploy_service, deposit, dont_exit_pytest, enable_greenlet_debugger, endpoint_discovery_services, endpoint_registry_address, environment_type, local_matrix_server, logging_level, nat_invitation_timeout, nat_keepalive_retries, nat_keepalive_timeout, number_of_nodes, number_of_tokens, port_generator, private_keys, private_rooms, privatekey_seed, raiden_network, raiden_udp_ports, random_marker, register_tokens, retries_before_backoff, retry_interval, retry_timeout, reveal_timeout, secret_registry_address, settle_timeout, settle_timeout_max, settle_timeout_min, throttle_capacity, throttle_fill_rate, tmpdir, tmpdir_factory, token_addresses, token_amount, token_network_registry_address, transport, transport_config, unrecoverable_error_should_crash, web3).
+        SETUP    F raiden_network (fixtures used: blockchain_services, chain_id, channels_per_node, 
+                                   database_paths, deposit, endpoint_discovery_services, 
+                                   environment_type, local_matrix_server, nat_invitation_timeout,
+                                   nat_keepalive_retries, nat_keepalive_timeout, private_rooms, 
+                                   raiden_udp_ports, retries_before_backoff, retry_interval, 
+                                   retry_timeout, reveal_timeout, settle_timeout, throttle_capacity,
+                                   throttle_fill_rate, token_addresses, token_network_registry_address,
+                                   unrecoverable_error_should_crash)
+                            raiden/tests/integration/test_pythonapi.py::test_insufficient_funds[udp-None-1-2]
+                                 (fixtures used: blockchain_key_seed, blockchain_number_of_nodes, 
+                                  blockchain_p2p_ports, blockchain_private_keys, blockchain_rpc_ports,
+                                  blockchain_services, blockchain_type, chain_id, channels_per_node, 
+                                  contract_manager, database_paths, deploy_client, deploy_key, deploy_service,
+                                  deposit, dont_exit_pytest, enable_greenlet_debugger, endpoint_discovery_services,
+                                  endpoint_registry_address, environment_type, local_matrix_server, 
+                                  logging_level, nat_invitation_timeout, nat_keepalive_retries, 
+                                  nat_keepalive_timeout, number_of_nodes, number_of_tokens, 
+                                  port_generator, private_keys, private_rooms, privatekey_seed, 
+                                  raiden_network, raiden_udp_ports, random_marker, register_tokens,
+                                  retries_before_backoff, retry_interval, retry_timeout, reveal_timeout,
+                                  secret_registry_address, settle_timeout, settle_timeout_max, 
+                                  settle_timeout_min, throttle_capacity, throttle_fill_rate, tmpdir, 
+                                  tmpdir_factory, token_addresses, token_amount, token_network_registry_address,
+                                  transport, transport_config, unrecoverable_error_should_crash, web3).
         TEARDOWN F raiden_network
         TEARDOWN F retry_timeout
         TEARDOWN F private_rooms[None]
