@@ -135,24 +135,9 @@ This is definitely a very creative abuse of the parametrization system to commun
 
 For one: due to this entanglement it is pretty much impossible to have fixtures with scopes greater than function because pretty much everything depends on these function scoped magic parameter passing parametrization fixtures.
 
-It also makes the whole system pretty much opaque to even experienced users of pytest.
+It also makes the whole system pretty much opaque to even experienced users of pytest and makes for an impressive dependency graph:
 
-# Simplifying The Fixture System
-
-## Suggestion: communicate per-test configuration differently
-
-IMO this has the most potential to get to a simpler system. Other simplifications might emerge from that. I 'll sketch out a different way to communicate values to fixtures a test depends on. If I had the time to go deeper, I would attempt to think about why this is even necessary, but for now this must suffice even running the danger that I am trying to help treating a symptom here, rather than looking for a cause.
-
-The main advantages I would see in refactoring would be:
-
-* configuration of a test does not force all fixtures used by that test into having function scope anymore
-* Making explicit what is going on, makes the tests easier to understand
-
-## Step 1
-
-Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite impressive dependency tree:
-
-Looking a bit closer:
+`$ pytest --setup-plan -k test_insufficient_funds`
 
 ```
 ============================= test session starts ==============================
@@ -296,6 +281,21 @@ TEARDOWN S logging_level
 TEARDOWN S enable_greenlet_debugger
 TEARDOWN S dont_exit_pytest
 ```
+
+# Simplifying The Fixture System
+
+## Suggestion: communicate per-test configuration differently
+
+IMO this has the most potential to get to a simpler system. Other simplifications might emerge from that. I 'll sketch out a different way to communicate values to fixtures a test depends on. If I had the time to go deeper, I would attempt to think about why this is even necessary, but for now this must suffice even running the danger that I am trying to help treating a symptom here, rather than looking for a cause.
+
+The main advantages I would see in refactoring would be:
+
+* configuration of a test does not force all fixtures used by that test into having function scope anymore
+* Making explicit what is going on, makes the tests easier to understand
+
+## Step 1
+
+Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite impressive dependency tree.
 
 ## Step 2
 
