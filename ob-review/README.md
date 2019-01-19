@@ -150,111 +150,7 @@ The main advantages I would see in refactoring would be:
 
 ## Step 1
 
-Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite impressive dependency tree.
-
-## Step 2
-
-Collect all fixtures that are actually per-test-configuration (mainly for the "god fixture" raiden_network) into a configuration object that has sensible defaults (which are now the original return value of the fixtures). E.g. `number_of_nodes` and `channels_per_node`.
-
-This could also take care of the `skip_*` fixtures that are used to filter out tests already on collection time.
-
-## Step 3
-
-Use a different way to pass this config object to the fixture that needs it. The obvious choice here to me is to make more extensive use of `pytest_generate_tests` which already used to skip tests and to parametrize `transport` and `private_rooms`.
-
-Rather than having a ton of fixtures all taking care of one aspect of the test configuration there would be one configuration object taking care of all these aspects (should it be skipped under certain circumstances? Which kind of dynamic parametrization is needed, etc.)
-
-This should also be well documented as this is a non obvious use of the testing mechanisms to people who are not deeply into how pytest and the tests themselves work.
-
-I can't flesh this out more as I am really running out of time, but I think the idea is clear.
-
-## Suggestion: look deeper into the dependencies of the fixtures
-
-This is vague but generally questioning the interwoven dependencies might help - I commented in the `netting_channel_state` fixture as one example for that.
-
-Maybe it makes sense to merge certain fixtures to simplify things?
-
-**caveat:** I might be horribly wrong, because this is really hard to judge without having a deeper insight into the system under test
-
-I am afraid that after this short time, I have no clear idea how to go about this. A lot depends on what is possible to do when a basic system is set up, meaning, what is mutable and what is immutable and how setups can be simplified by having more one-size-fits-all (or at least many) fixtures that reduces the number of different setups needed for different tests. Grouping tests by the kind of precondition they need might be worth looking at. But I am really just guessing here, as I lack the deeper understanding.
-
-# Testing best practices?
-
-**Disclaimer: highly opinionated and with only a shallow understanding of the specifics of your project. There have been books written about that by much smarter and experienced people than me, but I'll try ...**
-
-## Smaller (unit?) vs larger (integration?) tests
-
-I am actually a big fan of functional tests that test a larger part of the system. In a lot of messy real life applications it is much easier and safer to concentrate more on those high level tests that make sure that you keep your promise to the customer and cause no catastrophic failures.
-
-Lower level tests are helpful for development and very important to test the (logic heavy) critical parts of the system. Not everything needs to be covered by those kinds of tests.
-
-Religious wars can be fought over the definition of what are unit tests, what are integration tests and so on. To me the terms "unittest" or "integration test" have no inherent meaning, they need to be made sense of in the context of the system where they are used. So, finding helpful terminology and an appropriate mix of tests needs to be done for each individual system and is often only possible after a test suite has grown and patterns have emerged. Google is by no means a blueprint for how everybody should organize their tests, but I'd just like to link to this article as one example for going about it that I like: [Test Sizes ](https://testing.googleblog.com/2010/12/test-sizes.html).
-
-### Looking at some unittests
-
-Tests in [test_operators.py](../raiden/tests/unit/test_operators.py) look like "proper" unit tests to me, but they could be split up in more tests, named after what specifically they are testing. I am not opposed to having more than one assert in the test, if they all test the same thing, but e.g. in `test_event_operators` it looks to me like those are several tests in one test function.
-
-Tests in [test_sqlite.py](../raiden/tests/unit/test_sqlite.py) is something that looks like a higher level test that already tests how several units of the system play together. E.g. maybe a test like `test_get_event_with_balance_proof` could be called a protocol test? It iterates over a series of events and asserting on them step by step. Another indication is that there is quite a lot of setup code and quite a few internal objects and functions in use.
-
-In contrast `BalanceProofUnsignedState` is used but I can't find any tests that test this class in (reasonable) isolation.
-
-I'd suggest looking at which important entities in the system are not yet tested directly in isolation.
-
-### Looking at some integration tests
-
-I guess the criterion for what makes an integration test is that it needs some kind of server/service running with which to communicate, which is perfectly valid, but maybe not enough in the long run to organize tests in a meaningful way? E.g. [test_matrix_transport.py](../raiden/tests/integration/test_matrix_transport.py): to an uninitiated reader like me this also looks pretty much like being in the same league like `test_sqlite` - some non trivial multi-step behaviour between parts of the system is tested, so another protocol test that happens to use a running matrix server?
-
-## How to concentrate more on unhappy path testing?
-
-This might be a bit vague. I would go about this by asking this question more often: "What is the worst that could happen here?" or "What absolutely must under no circumstance go wrong here?". Asking yourself or each other these question might lead to more unhappy paths being considered and also how to prevent the worst from happening if those unhappy paths are hit.
-
-## How To introduce more inside out tests
-
-An incremental approach would be: if an integration test fails, ask yourself what could have been tested on a lower level to catch that problem earlier and write that test(s). Over time there will be a greater coverage of lower levels.
-
-If and when integration tests might be superfluous then is harder question to answer and I prefer to err on the side of testing too much than testing too little for a critical system (or critical part of a system).
-
-I think you are already doing (have done) that but splitting up the system into clear subsystems with clear interfaces makes testing in isolation and direct interaction between them easier and more lightweight. This [issue](https://github.com/raiden-network/raiden/issues/3252) gives me the feeling that things like that are already being considered.
-
-# Speeding up integration tests
-
-## Looking at an arbitrary integration test
-
-I chose `test_invalid_close` to have a closer look.
-
-### Profiling
-
-Naively trying to profile via PyCharm yielded:
-
-```
-Testing started at 6:11 PM ...
-/home/ob/oss/raiden-dev/raiden-review/.tox/dev/bin/python /home/ob/opt/pycharm-2018.2/helpers/profiler/run_profiler.py 127.0.0.1 43041 /home/ob/opt/pycharm-2018.2/helpers/pycharm/_jb_pytest_runner.py --target test_balance_proof_check.py::test_invalid_close
-Starting cProfile profiler
-Launching pytest with arguments test_balance_proof_check.py::test_invalid_close in /home/ob/oss/raiden-dev/raiden-review/raiden/tests/integration
-
-/home/ob/oss/raiden-dev/raiden-review/raiden/tests/conftest.py:9: MonkeyPatchWarning: Monkey-patching ssl after ssl has already been imported may lead to errors, including RecursionError on Python 3.6. It may also silently lead to incorrect behaviour on Python 3.7. Please monkey-patch earlier. See https://github.com/gevent/gevent/issues/1016. Modules that had direct imports (NOT patched): ['thriftpy.transport._ssl (/home/ob/opt/pycharm-2018.2/helpers/profiler/thriftpy/transport/_ssl.py)']. 
-  monkey.patch_all()
-ImportError while loading conftest '/home/ob/oss/raiden-dev/raiden-review/raiden/tests/conftest.py'.
-RuntimeError: cannot release un-acquired lock
-Snapshot saved to /home/ob/.PyCharm2018.2/system/snapshots/raiden-review.pstat
-
-Process finished with exit code 0
-Empty test suite.
-```
-
-As @ulope said, this is likely to do with gevent based concurrency, so is not trivial to do.
-
-### Eyeballing it
-
-`pytest --durations 1 -k test_insufficient_funds`
-
-```
-43.55s setup    raiden/tests/integration/test_pythonapi.py::test_insufficient_funds[udp-None-1-2]
-0.08s teardown raiden/tests/integration/test_pythonapi.py::test_insufficient_funds[udp-None-1-2]
-0.01s call     raiden/tests/integration/test_pythonapi.py::test_insufficient_funds[udp-None-1-2]
-```
-
-0.02% of the test time is spent in the actual test.
+Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite impressive dependency tree:
 
 Looking a bit closer:
 
@@ -401,18 +297,109 @@ TEARDOWN S enable_greenlet_debugger
 TEARDOWN S dont_exit_pytest
 ```
 
-That's an impressive graph and that raiden_network fixture looks genuinely scary ...
+## Step 2
 
-Most time spent in (from longest to shortest - eyeball wise):
+Collect all fixtures that are actually per-test-configuration (mainly for the "god fixture" raiden_network) into a configuration object that has sensible defaults (which are now the original return value of the fixtures). E.g. `number_of_nodes` and `channels_per_node`.
 
-* retry_timeout (by a big margin the longest time is spent here)
-* register_tokens
-* chain_id
-* blockchain_services
-* deploy_service
-* settle_timeout_max
+This could also take care of the `skip_*` fixtures that are used to filter out tests already on collection time.
 
-All other fixture cost a negligible amount of time
+## Step 3
+
+Use a different way to pass this config object to the fixture that needs it. The obvious choice here to me is to make more extensive use of `pytest_generate_tests` which already used to skip tests and to parametrize `transport` and `private_rooms`.
+
+Rather than having a ton of fixtures all taking care of one aspect of the test configuration there would be one configuration object taking care of all these aspects (should it be skipped under certain circumstances? Which kind of dynamic parametrization is needed, etc.)
+
+This should also be well documented as this is a non obvious use of the testing mechanisms to people who are not deeply into how pytest and the tests themselves work.
+
+I can't flesh this out more as I am really running out of time, but I think the idea is clear.
+
+## Suggestion: look deeper into the dependencies of the fixtures
+
+This is vague but generally questioning the interwoven dependencies might help - I commented in the `netting_channel_state` fixture as one example for that.
+
+Maybe it makes sense to merge certain fixtures to simplify things?
+
+**caveat:** I might be horribly wrong, because this is really hard to judge without having a deeper insight into the system under test
+
+I am afraid that after this short time, I have no clear idea how to go about this. A lot depends on what is possible to do when a basic system is set up, meaning, what is mutable and what is immutable and how setups can be simplified by having more one-size-fits-all (or at least many) fixtures that reduces the number of different setups needed for different tests. Grouping tests by the kind of precondition they need might be worth looking at. But I am really just guessing here, as I lack the deeper understanding.
+
+# Testing best practices?
+
+**Disclaimer: highly opinionated and with only a shallow understanding of the specifics of your project. There have been books written about that by much smarter and experienced people than me, but I'll try ...**
+
+## Smaller (unit?) vs larger (integration?) tests
+
+I am actually a big fan of functional tests that test a larger part of the system. In a lot of messy real life applications it is much easier and safer to concentrate more on those high level tests that make sure that you keep your promise to the customer and cause no catastrophic failures.
+
+Lower level tests are helpful for development and very important to test the (logic heavy) critical parts of the system. Not everything needs to be covered by those kinds of tests.
+
+Religious wars can be fought over the definition of what are unit tests, what are integration tests and so on. To me the terms "unittest" or "integration test" have no inherent meaning, they need to be made sense of in the context of the system where they are used. So, finding helpful terminology and an appropriate mix of tests needs to be done for each individual system and is often only possible after a test suite has grown and patterns have emerged. Google is by no means a blueprint for how everybody should organize their tests, but I'd just like to link to this article as one example for going about it that I like: [Test Sizes ](https://testing.googleblog.com/2010/12/test-sizes.html).
+
+### Looking at some unittests
+
+Tests in [test_operators.py](../raiden/tests/unit/test_operators.py) look like "proper" unit tests to me, but they could be split up in more tests, named after what specifically they are testing. I am not opposed to having more than one assert in the test, if they all test the same thing, but e.g. in `test_event_operators` it looks to me like those are several tests in one test function.
+
+Tests in [test_sqlite.py](../raiden/tests/unit/test_sqlite.py) is something that looks like a higher level test that already tests how several units of the system play together. E.g. maybe a test like `test_get_event_with_balance_proof` could be called a protocol test? It iterates over a series of events and asserting on them step by step. Another indication is that there is quite a lot of setup code and quite a few internal objects and functions in use.
+
+In contrast `BalanceProofUnsignedState` is used but I can't find any tests that test this class in (reasonable) isolation.
+
+I'd suggest looking at which important entities in the system are not yet tested directly in isolation.
+
+### Looking at some integration tests
+
+I guess the criterion for what makes an integration test is that it needs some kind of server/service running with which to communicate, which is perfectly valid, but maybe not enough in the long run to organize tests in a meaningful way? E.g. [test_matrix_transport.py](../raiden/tests/integration/test_matrix_transport.py): to an uninitiated reader like me this also looks pretty much like being in the same league like `test_sqlite` - some non trivial multi-step behaviour between parts of the system is tested, so another protocol test that happens to use a running matrix server?
+
+## How to concentrate more on unhappy path testing?
+
+This might be a bit vague. I would go about this by asking this question more often: "What is the worst that could happen here?" or "What absolutely must under no circumstance go wrong here?". Asking yourself or each other these question might lead to more unhappy paths being considered and also how to prevent the worst from happening if those unhappy paths are hit.
+
+## How To introduce more inside out tests
+
+An incremental approach would be: if an integration test fails, ask yourself what could have been tested on a lower level to catch that problem earlier and write that test(s). Over time there will be a greater coverage of lower levels.
+
+If and when integration tests might be superfluous then is harder question to answer and I prefer to err on the side of testing too much than testing too little for a critical system (or critical part of a system).
+
+I think you are already doing (have done) that but splitting up the system into clear subsystems with clear interfaces makes testing in isolation and direct interaction between them easier and more lightweight. This [issue](https://github.com/raiden-network/raiden/issues/3252) gives me the feeling that things like that are already being considered.
+
+# Speeding up integration tests
+
+## Looking at an arbitrary integration test
+
+I chose `test_invalid_close` to have a closer look.
+
+### Profiling
+
+Naively trying to profile via PyCharm yielded:
+
+```
+Testing started at 6:11 PM ...
+/home/ob/oss/raiden-dev/raiden-review/.tox/dev/bin/python /home/ob/opt/pycharm-2018.2/helpers/profiler/run_profiler.py 127.0.0.1 43041 /home/ob/opt/pycharm-2018.2/helpers/pycharm/_jb_pytest_runner.py --target test_balance_proof_check.py::test_invalid_close
+Starting cProfile profiler
+Launching pytest with arguments test_balance_proof_check.py::test_invalid_close in /home/ob/oss/raiden-dev/raiden-review/raiden/tests/integration
+
+/home/ob/oss/raiden-dev/raiden-review/raiden/tests/conftest.py:9: MonkeyPatchWarning: Monkey-patching ssl after ssl has already been imported may lead to errors, including RecursionError on Python 3.6. It may also silently lead to incorrect behaviour on Python 3.7. Please monkey-patch earlier. See https://github.com/gevent/gevent/issues/1016. Modules that had direct imports (NOT patched): ['thriftpy.transport._ssl (/home/ob/opt/pycharm-2018.2/helpers/profiler/thriftpy/transport/_ssl.py)']. 
+  monkey.patch_all()
+ImportError while loading conftest '/home/ob/oss/raiden-dev/raiden-review/raiden/tests/conftest.py'.
+RuntimeError: cannot release un-acquired lock
+Snapshot saved to /home/ob/.PyCharm2018.2/system/snapshots/raiden-review.pstat
+
+Process finished with exit code 0
+Empty test suite.
+```
+
+As @ulope said, this is likely to do with gevent based concurrency, so is not trivial to do.
+
+### Eyeballing it
+
+`pytest --durations 1 -k test_insufficient_funds`
+
+```
+43.55s setup    raiden/tests/integration/test_pythonapi.py::test_insufficient_funds[udp-None-1-2]
+0.08s teardown raiden/tests/integration/test_pythonapi.py::test_insufficient_funds[udp-None-1-2]
+0.01s call     raiden/tests/integration/test_pythonapi.py::test_insufficient_funds[udp-None-1-2]
+```
+
+0.02% of the test time is spent in the actual test.
 
 As @hackaugusto mentioned most time is likely spent in production code setting up what is necessary, so I didn't spend more time looking into this deeper.
 
