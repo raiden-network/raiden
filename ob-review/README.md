@@ -150,7 +150,7 @@ The main advantages I would see in refactoring would be:
 
 ## Step 1
 
-Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite impressive dependency tree.
+Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite [impressive dependency tree](https://github.com/obestwalter/raiden-review/blob/review/ob-review/README.md#eyeballing-it).
 
 ## Step 2
 
