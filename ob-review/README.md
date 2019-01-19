@@ -418,7 +418,7 @@ As @hackaugusto mentioned most time is likely spent in production code setting u
 
 ## Suggestions
 
-Every integration test setup takes ~43 seconds. As most time is spent in production code and those setup activities are all necessarily function scoped for the time being, there is not much wiggle room here.
+Every integration test setup takes ~43 seconds on my beefy laptop. As most time is spent in production code and those setup activities are all necessarily function scoped for the time being, there is not much wiggle room here.
 
 ### Short Term
 
