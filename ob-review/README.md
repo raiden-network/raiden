@@ -45,7 +45,7 @@ I freely admit that I am heavily biased, but I would convert most of the makefil
 * It might be worth thinking about [separating tests and code more](https://docs.pytest.org/en/latest/goodpractices.html#tests-outside-application-code) (where code also includes helpers for testing)
 * I usually try to avoid having tests as packages, as you shouldn't import from test modules anyway, but this is also a matter of taste to a certain degree
 * A comprehensive fixture system like yours might be better organized as internal plugins rather than a colletion of modules inside the test packages, that would also make it unnecessary to have the test folders as packages
-* I usually also recommend the src layout for maturing projects to make sure you always tun the tests against the package (see [this article](https://hynek.me/articles/testing-packaging/)). It's a [contentious topic though](https://github.com/pypa/python-packaging-user-guide/issues/320) and some think it's not necessary or makes life even harder. tox and pytest recently adopted the src layout and it hasn't made my life harder in the slightest, but protects from accidentally testing the code in the project rather than in the package
+* I usually also recommend the src layout for maturing projects to make sure you always run the tests against the package (see [this article](https://hynek.me/articles/testing-packaging/)). It's a [contentious topic though](https://github.com/pypa/python-packaging-user-guide/issues/320) and some think it's not necessary or makes life even harder. tox and pytest recently adopted the src layout and it hasn't made my life harder in the slightest, but protects from accidentally testing the code in the project rather than in the package
 
 # Static code analysis
 
@@ -351,13 +351,13 @@ I guess the criterion for what makes an integration test is that it needs some k
 
 ## How to concentrate more on unhappy path testing?
 
-This might be a bit vague. I would go about this by asking this question more often: "What is the worst that could happen here?" or "What absolutely must under no circumstance go wrong here?". Asking yourself or each other these question might lead to more unhappy paths being considered and also how to prevent the worst from happening if those unhappy paths are hit.
+This might be a bit vague. I would go about this by asking this question more often: "What is the worst that could happen here?" or "What absolutely must under no circumstance go wrong here?". Asking yourself or each other these questions might lead to more unhappy paths being considered and also how to prevent the worst from happening if those unhappy paths are hit.
 
 ## How to introduce more inside out tests?
 
 An incremental approach would be: if an integration test fails, ask yourself what could have been tested on a lower level to catch that problem earlier and write that test(s). Over time there will be a greater coverage of lower levels.
 
-If and when integration tests might be superfluous then is harder question to answer and I prefer to err on the side of testing too much than testing too little for a critical system (or critical part of a system).
+If and when integration tests might be superfluous is a harder question to answer. I prefer to err on the side of testing too much than testing too little for a critical system (or critical part of a system).
 
 I think you are already doing (have done) that but splitting up the system into clear subsystems with clear interfaces makes testing in isolation and direct interaction between them easier and more lightweight. This [issue](https://github.com/raiden-network/raiden/issues/3252) gives me the feeling that things like that are already being considered.
 
@@ -415,7 +415,7 @@ Looking at one of the last builds:
 
 ![ci-workflow.png](ci-workflow.png)
 
-I do not know CircleCi, but this surprises me as I would expect the workflow to not advance to the next stage if there were any errors. I would not even bother running anything else if anything fails in a prior stage. Wouldn't that already take some load of CI?
+I do not know CircleCi, but this surprises me as I would expect the workflow to not advance to the next stage if there were any errors. I would not even bother running anything else if anything fails in a prior stage. Wouldn't that already take some load off CI?
 
 The last stage (integrationtests) looks like parallelizing more there would help.
 
