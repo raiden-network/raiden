@@ -43,7 +43,7 @@ I freely admit that I am heavily biased, but I would convert most of the makefil
 * It might be worth thinking about [separating tests and code more](https://docs.pytest.org/en/latest/goodpractices.html#tests-outside-application-code) (where code also includes helpers for testing)
 * I usually try to avoid having tests as packages, as you shouldn't import from test modules anyway, but this is also a matter of taste to a certain degree
 * A comprehensive fixture system like yours might be better organized as internal plugins rather than a colletion of modules inside the test packages, that would also make it unnecessary to have the test folder as packages
-* I usually also recommend the src layout for projects to make sure you always tun the tests against the package (see [this article](https://hynek.me/articles/testing-packaging/)). It's a [contentious topic though](https://github.com/pypa/python-packaging-user-guide/issues/320) and some think it's not necessary or makes life even harder. tox and pytest recently adopted the src layout and it hasn't made my life harder in the slightest, but protects from accidentally testing the code in the project rather than in the package
+* I usually also recommend the src layout for maturing projects to make sure you always tun the tests against the package (see [this article](https://hynek.me/articles/testing-packaging/)). It's a [contentious topic though](https://github.com/pypa/python-packaging-user-guide/issues/320) and some think it's not necessary or makes life even harder. tox and pytest recently adopted the src layout and it hasn't made my life harder in the slightest, but protects from accidentally testing the code in the project rather than in the package
 
 # Static code analysis
 
