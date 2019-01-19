@@ -28,6 +28,8 @@ If possible: **make documentation executable.**
 
 I created a tox env [`dev`](https://github.com/obestwalter/raiden-review/blob/b7eaf5fe7cd9de79f040e5cdc054f898724ff185/tox.ini#L51) to easily reinstall everything if needed. This makes the instructions even simpler (run `tox -e dev` and use that environment instead of a number of steps to go through). This also changes the docs maintained in different places into something executable which will then be automatically kept up to date if it changes, because the devs also use this for their work.
 
+**NOTE:** that existing `devenv` is not really one as I understand it, as it is not complete and also executes tests already. I would also always use the Python version that is mainly supported (python3.6 in our case).
+
 # Organisation of testing activities
 
 I usually bundle all important (test)-automation steps in tox environments to have a single entry point for all developer activities and to keep things testable/debuggable locally as much as possible.
