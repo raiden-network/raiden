@@ -150,11 +150,11 @@ The main advantages I would see in refactoring would be:
 
 ## Step 1
 
-Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite [impressive dependency tree](https://github.com/obestwalter/raiden-review/blob/review/ob-review/README.md#eyeballing-it).
+Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite impressive dependency tree.
 
 ## Step 2
 
-Collect all fixtures that are actually per-test-configuration (mainly for the "god fixture" raiden_network) into a configuration object that has sensible defaults (which are now the original return value of the fixtures).
+Collect all fixtures that are actually per-test-configuration (mainly for the "god fixture" raiden_network) into a configuration object that has sensible defaults (which are now the original return value of the fixtures). E.g. `number_of_nodes` and `channels_per_node`.
 
 This could also take care of the `skip_*` fixtures that are used to filter out tests already on collection time.
 
