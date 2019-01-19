@@ -4,7 +4,7 @@ This is the first code review of this kind I am doing - meaning: jumping into a 
 
 I did not have an easy time getting into this and coming up with a way of doing this. I also looked at this from a lot of angles, as I couldn't just look at the tests in isolation. In the end, I spent considerably more time on this than I am billing, because I felt this would otherwise be completely useless to you.
 
-I really want to thank you giving me the opportunity to do this!
+I really want to thank you for giving me the opportunity to do this!
 
 ![ohniwid.jpg](ohniwid.jpg)
 
@@ -299,15 +299,15 @@ Identify fixtures that are really just constants and are never overwritten and t
 
 ## Step 2
 
-Collect all fixtures that are actually per-test-configuration (mainly for the "god fixture" raiden_network) into a configuration object that has sensible defaults (which are now the original return value of the fixtures). E.g. `number_of_nodes` and `channels_per_node`.
+Collect all fixtures that are actually per-test-configuration (mainly for one of the "god fixtures" like `raiden_network`) into a configuration object that has sensible defaults (which are now the original return value of the fixtures). E.g. `number_of_nodes` and `channels_per_node`.
 
 This could also take care of the `skip_*` fixtures that are used to filter out tests already on collection time.
 
 ## Step 3
 
-Use a different way to pass this config object to the fixture that needs it. The obvious choice here to me is to make more extensive use of `pytest_generate_tests` which already used to skip tests and to parametrize `transport` and `private_rooms`.
+Use a different way to pass this config object to the fixture that needs it. The obvious choice here to me is to make more extensive use of `pytest_generate_tests` which is already used like this to skip tests and to parametrize `transport` and `private_rooms`.
 
-Rather than having a ton of fixtures all taking care of one aspect of the test configuration there would be one configuration object taking care of all these aspects (should it be skipped under certain circumstances? Which kind of dynamic parametrization is needed, etc.)
+Rather than having a ton of fixtures all taking care of one aspect of the test configuration there would be one configuration object taking care of all these aspects (should it be skipped under certain circumstances? Which kind of dynamic parametrization is needed, which concrete settings need to be passed to the fixture(s) using them, etc.)
 
 This should also be well documented as this is a non obvious use of the testing mechanisms to people who are not deeply into how pytest and the tests themselves work.
 
@@ -318,8 +318,6 @@ I can't flesh this out more as I am really running out of time, but I think the 
 This is vague but generally questioning the interwoven dependencies might help - I commented in the `netting_channel_state` fixture as one example for that.
 
 Maybe it makes sense to merge certain fixtures to simplify things?
-
-**caveat:** I might be horribly wrong, because this is really hard to judge without having a deeper insight into the system under test
 
 I am afraid that after this short time, I have no clear idea how to go about this. A lot depends on what is possible to do when a basic system is set up, meaning, what is mutable and what is immutable and how setups can be simplified by having more one-size-fits-all (or at least many) fixtures that reduces the number of different setups needed for different tests. Grouping tests by the kind of precondition they need might be worth looking at. But I am really just guessing here, as I lack the deeper understanding.
 
@@ -353,7 +351,7 @@ I guess the criterion for what makes an integration test is that it needs some k
 
 This might be a bit vague. I would go about this by asking this question more often: "What is the worst that could happen here?" or "What absolutely must under no circumstance go wrong here?". Asking yourself or each other these question might lead to more unhappy paths being considered and also how to prevent the worst from happening if those unhappy paths are hit.
 
-## How To introduce more inside out tests?
+## How to introduce more inside out tests?
 
 An incremental approach would be: if an integration test fails, ask yourself what could have been tested on a lower level to catch that problem earlier and write that test(s). Over time there will be a greater coverage of lower levels.
 
