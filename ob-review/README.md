@@ -1,10 +1,10 @@
-# Raiden Network Testing Review
+# Testing Review - Introductory Notes
 
-## Introductory Notes
-
-This is the first code review of this kind I am doing - meaning: jumping into a big project I don't know yet in a problem domain that is completely unfamiliar to me, with the mission to focus on testing.
+This is the first code review of this kind I am doing - meaning: jumping into a big project I don't know yet in a problem domain that is completely unfamiliar to me with the mission to focus on testing.
 
 I did not have an easy time getting into this and coming up with a way of doing this. I also looked at this from a lot of angles, as I couldn't just look at the tests in isolation. In the end, I spent considerably more time on this than I am billing, because I felt this would otherwise be completely useless to you.
+
+I really want to thank you giving me the opportunity to do this!
 
 ![ohniwid.jpg](ohniwid.jpg)
 
@@ -14,7 +14,7 @@ I also went rather broad than particularly deep to be able cover more ground.
 
 Where I thought that it makes sense to comment right in context I added it there - grep for **ob-review** in my fork.
 
-## Onboarding feedback
+# Onboarding feedback
 
 Very good!
 
@@ -22,13 +22,13 @@ Very good!
 
 I was able to run `raiden smoketest` and the tests successfully after following the install instructions for Arch Linux and the Python specific instructions.
 
-### Suggestion
+## Suggestion
 
 If possible: **make documentation executable.**
 
 I created a tox env `dev` in my fork to easily reinstall everything if needed. This makes the instructions even simpler (run `tox -e dev` and use that environment instead of a number of steps to go through). This also changes the docs maintained in different places into something executable which will then be automatically kept up to date if it changes, because the devs also use this for their work.
 
-## Organisation of testing activities
+# Organisation of testing activities
 
 I usually bundle all important (test)-automation steps in tox environments to have a single entry point for all developer activities.
 
@@ -38,18 +38,18 @@ There is also a different way how tests are started (`setup.py test`) from the M
 
 I freely admit that I am heavily biased, but I would convert most of the makefile targets into tox environments - at least the ones that use Python tools and need some setup in a virtualenv anyway (like all the lint/test and documentation related targets).
 
-## Test layout
+# Test layout
 
 * It might be worth thinking about [separating tests and code more](https://docs.pytest.org/en/latest/goodpractices.html#tests-outside-application-code) (where code also includes helpers for testing)
 * I usually try to avoid having tests as packages, as you shouldn't import from test modules anyway, but this is also a matter of taste to a certain degree
 * A comprehensive fixture system like yours might be better organized as internal plugins rather than a colletion of modules inside the test packages, that would also make it unnecessary to have the test folder as packages
 * I usually also recommend the src layout for projects to make sure you always tun the tests against the package (see [this article](https://hynek.me/articles/testing-packaging/)). It's a [contentious topic though](https://github.com/pypa/python-packaging-user-guide/issues/320) and some think it's not necessary or makes life even harder. tox and pytest recently adopted the src layout and it hasn't made my life harder in the slightest, but protects from accidentally testing the code in the project rather than in the package
 
-## Static code analysis
+# Static code analysis
 
 For me, making good use of static code analysis is just as important as good tests, so I also want to make a few comments on that.
 
-### mypy
+## mypy
 
 For a project like this definitely a very good idea.
 
@@ -57,31 +57,31 @@ For a project like this definitely a very good idea.
 
 -- May 2018, Yoichi Hirai in your Makefile
 
-#### Suggestions
+### Suggestions
 
 Gradually introducing this into the code base is a good approach but seems to drag on a bit so maybe looking into [pyannotate](https://github.com/dropbox/pyannotate) and get it over and done with in a concerted effort might be worth thinking about. Having a baseline to work with and having type hints everywhere makes it also easier for contributors to roll with it, I would reckon.
 
 I also noticed that tests are not using the proper types in a quite a few places. This could also be handled right away. IMO tests should adhere to the same quality standards as production code.
 
-### pylint / flake8
+## pylint / flake8
 
 If I run pylint without the project configuration file I get tons of warnings, and there are 140 `pylint:` silencer comments in the code. It's hard to quantify these things, but my feeling is that the linting could be cranked up a notch rather than ignoring/silencing so many warnings, but I didn't look into that much further as this also a bit beside the point of what I am doing.
 
-#### Suggestion
+### Suggestion
 
 How about unifing that a bit and adding automatic code formatting? Rather than having different calls in tox (only flake8 with `--exit-zero` and another lint environment in the Makefile, I would suggest to package that all up in a [pre-commit](https://pre-commit.com/) setup. This would be one environment for automatic fixing and linting with the extra benefits of a lot of useful little hooks to make life easier. The added benefit is that devs can install that as an actual pre-commit hook during dvelopment to prevent commits ending up on CI that should not end up there. Simple example in one of my projects: [config file](https://github.com/obestwalter/i3configger/blob/215c3023fec2464f4618a6327264585d9e0182b5/.pre-commit-config.yaml) and [tox env](https://github.com/obestwalter/i3configger/blob/dd55b1da4062f8eaf9e2d962eaf921c9744b1cbe/tox.ini#L24).
 
-### About the tests
+## About the tests
 
 The test suite is complex and I can't say that I really understand what's going on a lot of the time, but it seems really decent overall. For a software like Raiden Network that must be very tricky to test this seems appropriate though.
 
 Good use is being made of the pytest fixture mechanism and inbuilt fixtures. Good care was taken to name the tests well and to pull out helpers where it makes sense. If anything I would say there might be a bit too much of that going on in certain places, but I commented about these things in the code directly.
 
-#### Suggestion: Given-When-Then
+### Suggestion: Given-When-Then
 
 To improve the comprehensibility of tests that are quite involved or hard to understand, you could think about adding a higher level description in a docstring following [Given-When-Then](https://en.wikipedia.org/wiki/Given-When-Then). I wouldn't recomment that for "normal" tests, but for quite a few of the integration tests it might be a good idea. This way it might also become clearer, where tests overlap in what they are actually trying to test.
 
-#### Suggestion: Naming things
+### Suggestion: Naming things
 
 One thing that helps communicating fixture behaviour and resultinh data better is using the `name` keyword for fixtures. e.g. a fixture creating a database and returning the connection could look like this:
 
@@ -93,7 +93,7 @@ def create_postgres_db():
 
 The function name describes what is being done and the name describes what kind of object is injected into the test.
 
-#### Very creative way to pass values around
+### Very creative way to pass values around
 
 ```python
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -141,7 +141,7 @@ It also makes the whole system pretty much opaque to even experienced users of p
 
 I have no concrete idea how to simplify this but I feel that tackling this would have great potential for making the test suite more straightforward.
 
-#### How to simplify the fixture system?
+### How to simplify the fixture system?
 
 Like I mentioned in the code, I have a hunch that the fixture system could be simplified, when getting rid of fixtures that are actually constants or configuration. The fact that some fixtures that look like they would simply return constants but are actually overriden from dependent fixtures with the above mentioned creative parametrization method does not make things easier.
 
@@ -149,11 +149,11 @@ Also generally questioning the interwoven dependencies might help - I commented 
 
 I am afraid that after this short time, I have no clear idea how to go about this. A lot depends on what is possible to do when a basic system is set up, meaning, what is mutable and what is immutable and how setups can be simplified by having more one-size-fits-all (or at least many) fixtures that reduces the number of different setups needed for different tests. Grouping tests by the kind of precondition they need might be worth looking at. But I am really just guessing here, as I lack the deeper understanding.
 
-## Testing best practices?
+# Testing best practices?
 
 **Disclaimer: highly opinionated and with only a shallow understanding of the specifics of your project. There have been books written about that by much smarter and experienced people than me, but I'll try ...**
 
-### Smaller (unit) vs larger (tests)
+## Smaller (unit) vs larger (tests)
 
 I am actually a big fan of functional tests that test a larger part of the system. In a lot of messy real life applications it is much easier and safer to concentrate more on those high level tests that make sure that you keep your promise to the customer.
 
@@ -161,7 +161,7 @@ Lower level tests are helpful for development and very important to test the cri
 
 Religious wars can be fought over the definition of what are unit tests, what are integration tests and so on. To me the terms "unittest" or "integration test" have no inherent meaning, they need to be made sense of in the context of the system where they are used. So, finding helpful terminology and an appropriate mix of tests needs to be done for each individual system and is often only possible after a test suite has grown and patterns have emerged. Google is by no means a blueprint for how everybody should name their tests - I'd just like to link to this article as one example for going about it that I like: [Test Sizes ](https://testing.googleblog.com/2010/12/test-sizes.html).
 
-#### Looking at some unittests
+### Looking at some unittests
 
 [test_operators.py](../raiden/tests/unit/test_operators.py) look like "proper" unit tests to me, but they could be split up in more tests, named after what specifically they are testing. I am not opposed to having more than one assert in the test, if they all test the same thing, but e.g. in `test_event_operators` it looks to me like those are several tests in one test function.
 
@@ -171,15 +171,15 @@ In contrast `BalanceProofUnsignedState` is used but I can't find any tests that 
 
 I'd suggest looking at which important entities in the system are not yet tested directly in isolation.
 
-#### Looking at some integration tests
+### Looking at some integration tests
 
 I guess the criterion for what makes an integration test is that it needs some kind of server/service running with which to communicate, which is perfectly valid, but maybe not enough in the long run to organize tests in a meaningful way? E.g. [test_matrix_transport.py](../raiden/tests/integration/test_matrix_transport.py): to an uninitiated like me this also looks pretty much like being in the same league like `test_sqlite` - some non trivial multi-step behaviour between parts of the system is tested, so another protocol test that happens to use a running matrix server?
 
-### How to concentrate more on unhappy path testing?
+## How to concentrate more on unhappy path testing?
 
 This might be a bit vague. I would go about this by asking this question more often: "What is the worst that could happen here?" or "What absolutely must under no circumstance go wrong here?". Asking yourself or each other these question might lead to more unhappy paths being considered and also how to prevent the worst from happening if those unhappy paths are hit.
 
-### How To introduce more inside out tests
+## How To introduce more inside out tests
 
 An incremental approach would be: if an integration test fails, ask yourself what could have been tested on a lower level to catch that problem earlier and write that test(s). Over time there will be a greater coverage on lower levels.
 
@@ -187,13 +187,13 @@ If and when integration tests might be superfluous then is harder question to an
 
 Splitting up the system into subsystems would make testing in isolation and direct interaction between them. e.g. this [issue](https://github.com/raiden-network/raiden/issues/3252) might be going into that direction.
 
-## Speeding up integration tests
+# Speeding up integration tests
 
-### Looking at an arbitrary integration test
+## Looking at an arbitrary integration test
 
 I chose `test_invalid_close` to have a closer look.
 
-#### Profiling
+### Profiling
 
 Naively trying to profile via PyCharm yielded:
 
@@ -215,7 +215,7 @@ Empty test suite.
 
 As @ulope said, this is likely to do with gevent based concurrency, so is not trivial to do.
 
-#### Eyeballing it
+### Eyeballing it
 
 `pytest --durations 1 -k test_insufficient_funds`
 
@@ -365,11 +365,11 @@ All other fixture cost a negligible amount of time
 
 As @hackaugusto mentioned most time is likely spent in production code setting up what is necessary, so I didn't spend more time looking into this deeper.
 
-### Suggestions
+## Suggestions
 
 Every integration test setup takes ~43 seconds. As most time is spent in production code and those setup activities are all necessarily function scoped for the time being, there is not much wiggle room here.
 
-#### Short Term
+### Short Term
 
 I hope this doesn't sound to naive, but it really is the only thing I can come up with at the moment and I am sure you will already have thought of that, but I can't not say it: throw (more) money at your CI provider and parallelize massively. Split the integration tests into several groups running on different machines (e.g. via using module level markers).
 
@@ -383,30 +383,30 @@ The last stage (integrationtests) looks like parallelizing more there would help
 
 Also: consider moving the longest running tests that slow down the whole test suite into a nightly build rather than also running them on each build. That might make it necessary to rerun them for different changesets if things break and it is otherwise hard to find the problem, but that might be worth it.
 
-#### Longer Term
+### Longer Term
 
 * Based on profiling, see where time can be shaved off, maybe there are some easy wins that aren't obvious?
 * Bundle tests in groups where larger scopes can be used for slow fixtures
 * Look into mocking the most time consuming bit (creating a fresh blockchain) in a reliable way -> if you open source that please call it **mockchain** :D (I guess very hard to do though? No idea.)
 
-## Further Random Remarks
+# Further Random Remarks
 
 * One of the most knowledgeable people I know regarding pytest is @niccodemus (Bruno Oliveira) and he lives in Florianopolis just like you Augusto. Invite him to a beer and have a chat :) Say hello from me :)
 * I always like to see links to issues that are being addressed by regression tests this is definitely a good practice to follow
 * some [helper code](raiden/tests/unit/fuzz/test_state_changes.py) in the tests looks like you will be needing tests for the tests at some point :D
 * I find it a bit annoying that logs are cluttered everywhere after tests - wouldn't they be better put into a fixed `logs` folder in the root of the project?
 
-### Python: use `_` for unused names
+## Python: use `_` for unused names
 
 There are a few places in the code where this convention is used, but I saw quite a few places where e.g. `**kwargs` are collected in a function head but are not used. The resulting linter warning is silenced with `# pylint: disable=unused-argument`. This should not be necessary if using that convention also in those cases - e.g. `**_`. Then the linter does not need to be silenced either which results in less visual noise in the code. Might be a conscious decision though, but I thought I'd mention it.
 
-### Keep up with current versions of pytest
+## Keep up with current versions of pytest
 
 Constraint is 3.10.1 - current version is 4.1.2.
 
 I have a hunch that this has to do with the deprecations turning into errors with pytest 4. Although you have about 80 deprecation warnings I think this should be tackled rather sooner than later. It might look like more work than it actually is.
 
-### Code Complexity (McCabe)
+## Code Complexity (McCabe)
 
 > One of McCabe's original applications was to limit the complexity of routines during program development; he recommended that programmers should count the complexity of the modules they are developing, and split them into smaller modules whenever the cyclomatic complexity of the module exceeded 10.
 
@@ -452,7 +452,7 @@ A quick look at a few of the really "complex" ones showed that this is usually
 simple dispatch code for which this kind of complexity is fine, but maybe they
 should be marked as ignored individually and the overall check activated again?
 
-### Dead code?
+## Dead code?
 
 Might be worth having a look with e.g. [vulture](https://github.com/jendrikseipp/vulture) (needs double checking)
 
@@ -609,16 +609,16 @@ raiden/network/transport/matrix.py:1450: unreachable code after 'return' (100% c
 raiden/ui/cli.py:453: unused function 'smoketest' (60% confidence, 191 lines)
 ```
 
-### bumpversion + setuptools_scm?
+## bumpversion + setuptools_scm?
 
 More a question than a comment ...
 
 I don't quite understand why this is necessary, to me they are both tools to do the same job, but I never looked into bumpversion closer, so might be wrong. I use setuptools_scm which also takes care of the versioning taking a tag as as source without the need to hardcode the version. I reckon this has to do with complications on the CI level?
 
-# gevent
+## gevent
 
 * core devs are also fighting with gevent: https://github.com/pytest-dev/pytest/issues/3510
 
-# Some stats
+## Some stats
 
 [stats](stats.md)
