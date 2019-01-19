@@ -69,21 +69,23 @@ If I run pylint without the project configuration file I get tons of warnings, a
 
 ### Suggestion
 
-How about unifing linting and adding automatic code formatting? Rather than having different calls in tox (only flake8 with `--exit-zero` and another lint environment in the Makefile, I would suggest to package that all up in a [pre-commit](https://pre-commit.com/) setup. This would be one environment for automatic fixing and linting with the extra benefits of a lot of useful little hooks to make life easier. The added benefit is that devs can install that as an actual pre-commit hook during dvelopment to prevent commits ending up on CI that should not end up there. Simple example in one of my projects: [config file](https://github.com/obestwalter/i3configger/blob/215c3023fec2464f4618a6327264585d9e0182b5/.pre-commit-config.yaml) and [tox env](https://github.com/obestwalter/i3configger/blob/dd55b1da4062f8eaf9e2d962eaf921c9744b1cbe/tox.ini#L24).
+How about unifying linting and adding automatic code formatting? Rather than having different calls in tox (only flake8 with `--exit-zero` and another lint environment in the Makefile, I would suggest to package that all up in a [pre-commit](https://pre-commit.com/) setup. This would be one environment for automatic fixing and linting with the extra benefits of a lot of useful little hooks to make life easier. The added benefit is that devs can install that as an actual pre-commit hook during development to prevent commits ending up on CI that should not end up there. Simple example in one of my projects: [config file](https://github.com/obestwalter/i3configger/blob/215c3023fec2464f4618a6327264585d9e0182b5/.pre-commit-config.yaml) and [tox env](https://github.com/obestwalter/i3configger/blob/dd55b1da4062f8eaf9e2d962eaf921c9744b1cbe/tox.ini#L24).
 
-## About the tests
+# About the tests
 
-The test suite is complex and I can't say that I really understand what's going on a lot of the time, but it seems really decent overall. For a software like Raiden Network that must be very tricky to test this seems appropriate though.
+The test suite is complex and I can't say that I really understand what's going on a lot of the time, but it seems really decent overall. For a software like Raiden Network that must be very tricky to test this seems appropriate.
 
 Good use is being made of the pytest fixture mechanism and inbuilt fixtures. Good care was taken to name the tests well and to pull out helpers where it makes sense. If anything I would say there might be a bit too much of that going on in certain places, but I commented about these things in the code directly.
 
-### Suggestion: Given-When-Then
+Things can always be improved but overall on first view this looks like a really good suite.
 
-To improve the comprehensibility of tests that are quite involved or hard to understand, you could think about adding a higher level description in a docstring following [Given-When-Then](https://en.wikipedia.org/wiki/Given-When-Then). I wouldn't recomment that for "normal" tests, but for quite a few of the integration tests it might be a good idea. This way it might also become clearer, where tests overlap in what they are actually trying to test.
+## Suggestion: Given-When-Then
 
-### Suggestion: Naming things
+To improve the comprehensibility of tests that are quite involved or hard to understand, you could think about adding a higher level description in a docstring following [Given-When-Then](https://en.wikipedia.org/wiki/Given-When-Then). I wouldn't recomment that for "normal" tests, but for quite a few of the integration tests it might be a good idea (also linking to relevant docs specifying protocols under test if applicable). This way it might also become clearer where tests overlap in what they are actually trying to test.
 
-One thing that helps communicating fixture behaviour and resultinh data better is using the `name` keyword for fixtures. e.g. a fixture creating a database and returning the connection could look like this:
+## Suggestion: Naming things
+
+One thing that helps communicating fixture behaviour and resulting data better is using the `name` keyword for fixtures. e.g. a fixture creating a database and returning the connection could look like this:
 
 ```python
 @pytest.fixture(name="db_connection", scope="session")
@@ -93,7 +95,7 @@ def create_postgres_db():
 
 The function name describes what is being done and the name describes what kind of object is injected into the test.
 
-### Very creative way to pass values around
+## Very creative way to pass values around
 
 ```python
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -107,25 +109,21 @@ that are basically a lot of fixtures returning constants where a mystery to me.
 
 In my understading, parametrizing a test with only one parameter is not doing anything other than generating a different name for the single test. If that parameter is not even used in the test that means that there either black magic is going on or there removal was forgotten during a refactoring. In this case it's black magic I guess (at least to me).
 
-So what you are doing is basically sending the value from the top fixture from the test up to some other test depending on this ... right?
+So what you are doing is basically sending the value from the top fixture from the test up to some other test relying on this behaviour ... right?
 
 ```python
 import pytest
-
 
 @pytest.fixture
 def top():
     return 1
 
-
 @pytest.fixture
 def mid(top):
     return top
 
-
 def test_original(mid):
     assert 0, mid  # -> "1"
-
 
 @pytest.mark.parametrize("top", [2])
 def test_overwritten(mid):
@@ -133,19 +131,50 @@ def test_overwritten(mid):
 
 ```
 
-This is definitely a very creative abuse of the parametrization system, but I feel this would better be replaced with a different approach to setting up the system for a test.
+This is definitely a very creative abuse of the parametrization system to communicate values up the dependency chain, but I feel this would better be replaced with a different approach to setting up the system for a test.
 
 For one: due to this entanglement it is pretty much impossible to have fixtures with scopes greater than function because pretty much everything depends on these function scoped magic parameter passing parametrization fixtures.
 
 It also makes the whole system pretty much opaque to even experienced users of pytest.
 
-I have no concrete idea how to simplify this but I feel that tackling this would have great potential for making the test suite more straightforward.
+# Simplifying The Fixture System
 
-### How to simplify the fixture system?
+## Suggestion: communicate per-test configuration differently
 
-Like I mentioned in the code, I have a hunch that the fixture system could be simplified, when getting rid of fixtures that are actually constants or configuration. The fact that some fixtures that look like they would simply return constants but are actually overriden from dependent fixtures with the above mentioned creative parametrization method does not make things easier.
+IMO this has the most potential to get to a simpler system. Other simplifications might emerge from that. I 'll sketch out a different way to communicate values to fixtures a test depends on. If I had the time to go deeper, I would attempt to think about why this is even necessary, but for now this must suffice even running the danger that I am trying to help treating a symptom here, rather than looking for a cause.
 
-Also generally questioning the interwoven dependencies might help - I commented in the `netting_channel_state` fixture as one example for that (**caveat:** I might be horribly wrong, because this is really hard to judge without having a deeper insight into the system under test).
+The main advantages I would see in refactoring would be:
+
+* configuration of a test does not force all fixtures used by that test into having function scope anymore
+* Making explicit what is going on, makes the tests easier to understand
+
+## Step 1
+
+Identify fixtures that are really just constants and are never overwritten and turn them into constants. This might just be a handful of fixtures, but it is a handful of fixtures less in an already quite impressive dependency tree.
+
+## Step 2
+
+Collect all fixtures that are actually per-test-configuration (mainly for the "god fixture" raiden_network) into a configuration object that has sensible defaults (which are now the original return value of the fixtures).
+
+This could also take care of the `skip_*` fixtures that are used to filter out tests already on collection time.
+
+## Step 3
+
+Use a different way to pass this config object to the fixture that needs it. The obvious choice here to me is to make more extensive use of `pytest_generate_tests` which already used to skip tests and to parametrize `transport` and `private_rooms`.
+
+Rather than having a ton of fixtures all taking care of one aspect of the test configuration there would be one configuration object taking care of all these aspects (should it be skipped under certain circumstances? Which kind of dynamic parametrization is needed etc.)
+
+This should also be well documented as this is a non obvious use of the testing mechanisms to people who are not deeply into how pytest works.
+
+I can't flesh this out more, as I am really running out of time, but I think the idea is clear.
+
+## Suggestion: look deeper into the dependencies of the fixtures
+
+This is vague but generally questioning the interwoven dependencies might help - I commented in the `netting_channel_state` fixture as one example for that
+
+Maybe it makes sense to merge certain fixtures to simplify things?
+
+**caveat:** I might be horribly wrong, because this is really hard to judge without having a deeper insight into the system under test
 
 I am afraid that after this short time, I have no clear idea how to go about this. A lot depends on what is possible to do when a basic system is set up, meaning, what is mutable and what is immutable and how setups can be simplified by having more one-size-fits-all (or at least many) fixtures that reduces the number of different setups needed for different tests. Grouping tests by the kind of precondition they need might be worth looking at. But I am really just guessing here, as I lack the deeper understanding.
 
