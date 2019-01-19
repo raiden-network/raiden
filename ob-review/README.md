@@ -36,13 +36,13 @@ AFAIU a lot happening in the circle CI config is not circle CI specific and ther
 
 There is also a different way how tests are started (`setup.py test`) from the Makefile as opposed to how they are started in tox (`pytest` directly).
 
-I freely admit that I am heavily biased, but I would convert most of the makefile targets into tox environments - at least the ones that use Python tools and need some setup in a virtualenv anyway (like all the lint/test and documentation related targets). This might make this easier to digest to everyone involved. Adding descriptions to the tex environments then yields a quick overview what is going on by invoking `tox -av`.
+I freely admit that I am heavily biased, but I would convert most of the makefile targets into tox environments - at least the ones that use Python tools and need some setup in a virtualenv anyway (like all the lint/test and documentation related targets). This might make this easier to digest to everyone involved. Adding descriptions to the tox environments then yields a quick overview what is going on by invoking `tox -av`.
 
 # Test layout
 
 * It might be worth thinking about [separating tests and code more](https://docs.pytest.org/en/latest/goodpractices.html#tests-outside-application-code) (where code also includes helpers for testing)
 * I usually try to avoid having tests as packages, as you shouldn't import from test modules anyway, but this is also a matter of taste to a certain degree
-* A comprehensive fixture system like yours might be better organized as internal plugins rather than a colletion of modules inside the test packages, that would also make it unnecessary to have the test folder as packages
+* A comprehensive fixture system like yours might be better organized as internal plugins rather than a colletion of modules inside the test packages, that would also make it unnecessary to have the test folders as packages
 * I usually also recommend the src layout for maturing projects to make sure you always tun the tests against the package (see [this article](https://hynek.me/articles/testing-packaging/)). It's a [contentious topic though](https://github.com/pypa/python-packaging-user-guide/issues/320) and some think it's not necessary or makes life even harder. tox and pytest recently adopted the src layout and it hasn't made my life harder in the slightest, but protects from accidentally testing the code in the project rather than in the package
 
 # Static code analysis
@@ -107,7 +107,7 @@ def test_payload_with_address_invalid_chars(test_api_server):
 I have to admit that when I saw this, I had no clue what was going on. Also the variables
 that are basically a lot of fixtures returning constants where a mystery to me.
 
-In my understading, parametrizing a test with only one parameter is not doing anything other than generating a different name for the single test. If that parameter is not even used in the test that means that there either black magic is going on or there removal was forgotten during a refactoring. In this case it's black magic I guess (at least to me).
+In my understading, parametrizing a test with only one parameter is not doing anything other than generating a different name for the single test. If that parameter is not even used in the test that means that either black magic is going on or their removal was forgotten during a refactoring. In this case it was black magic (at least to me) :)
 
 So what you are doing is basically sending the value from the top fixture from the test up to some other test relying on this behaviour ... right?
 
