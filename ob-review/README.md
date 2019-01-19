@@ -429,7 +429,7 @@ The last stage (integrationtests) looks like parallelizing more there would help
 
 # Further Random Remarks
 
-* One of the most knowledgeable people I know regarding pytest is [@niccodemus (Bruno Oliveira)](https://github.com/nicoddemus) and he lives in Florianopolis just like you Augusto. Invite him to a beer and have a chat :) Say hello from me :)
+* One of the most knowledgeable people I know regarding pytest is [@niccodemus (Bruno Oliveira)](https://github.com/nicoddemus) and he lives in Florianopolis just like you Augusto. Invite him to a beer and have a chat - say hello from me :)
 * I always like to see links to issues that are being addressed by regression tests this is definitely a good practice to follow
 * some [helper code](raiden/tests/unit/fuzz/test_state_changes.py) in the tests looks like you will be needing tests for the tests at some point :D
 * I find it a bit annoying that logs are cluttered everywhere after tests - wouldn't they be better put into a fixed `logs` folder in the root of the project?
