@@ -188,7 +188,7 @@ I am actually a big fan of functional tests that test a larger part of the syste
 
 Lower level tests are helpful for development and very important to test the (logic heavy) critical parts of the system. Not everything needs to be covered by those kinds of tests.
 
-Religious wars can be fought over the definition of what are unit tests, what are integration tests and so on. To me the terms "unittest" or "integration test" have no inherent meaning, they need to be made sense of in the context of the system where they are used. So, finding helpful terminology and an appropriate mix of tests needs to be done for each individual system and is often only possible after a test suite has grown and patterns have emerged. Google is by no means a blueprint for how everybody should name their tests - I'd just like to link to this article as one example for going about it that I like: [Test Sizes ](https://testing.googleblog.com/2010/12/test-sizes.html).
+Religious wars can be fought over the definition of what are unit tests, what are integration tests and so on. To me the terms "unittest" or "integration test" have no inherent meaning, they need to be made sense of in the context of the system where they are used. So, finding helpful terminology and an appropriate mix of tests needs to be done for each individual system and is often only possible after a test suite has grown and patterns have emerged. Google is by no means a blueprint for how everybody should organize their tests, but I'd just like to link to this article as one example for going about it that I like: [Test Sizes ](https://testing.googleblog.com/2010/12/test-sizes.html).
 
 ### Looking at some unittests
 
