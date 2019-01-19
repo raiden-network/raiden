@@ -36,7 +36,7 @@ AFAIU a lot happening in the circle CI config is not circle CI specific and ther
 
 There is also a different way how tests are started (`setup.py test`) from the Makefile as opposed to how they are started in tox (`pytest` directly).
 
-I freely admit that I am heavily biased, but I would convert most of the makefile targets into tox environments - at least the ones that use Python tools and need some setup in a virtualenv anyway (like all the lint/test and documentation related targets).
+I freely admit that I am heavily biased, but I would convert most of the makefile targets into tox environments - at least the ones that use Python tools and need some setup in a virtualenv anyway (like all the lint/test and documentation related targets). This might make this easier to digest to everyone involved. Adding descriptions to the tex environments then yields a quick overview what is going on by invoking `tox -av`.
 
 # Test layout
 
