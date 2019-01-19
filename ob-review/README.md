@@ -353,7 +353,7 @@ I guess the criterion for what makes an integration test is that it needs some k
 
 This might be a bit vague. I would go about this by asking this question more often: "What is the worst that could happen here?" or "What absolutely must under no circumstance go wrong here?". Asking yourself or each other these question might lead to more unhappy paths being considered and also how to prevent the worst from happening if those unhappy paths are hit.
 
-## How To introduce more inside out tests
+## How To introduce more inside out tests?
 
 An incremental approach would be: if an integration test fails, ask yourself what could have been tested on a lower level to catch that problem earlier and write that test(s). Over time there will be a greater coverage of lower levels.
 
