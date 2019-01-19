@@ -12,7 +12,7 @@ To get an overview and a feel for the whole thing, I concentrated on basic thing
 
 I also went rather broad than particularly deep to be able cover more ground.
 
-Where I thought that it makes sense to comment right in context I added it there - grep for **ob-review** in my fork.
+Where I thought that it makes sense to comment right in context I added it there - grep for **ob-review**.
 
 # Onboarding feedback
 
@@ -26,7 +26,7 @@ I was able to run `raiden smoketest` and the tests successfully after following 
 
 If possible: **make documentation executable.**
 
-I created a tox env `dev` in my fork to easily reinstall everything if needed. This makes the instructions even simpler (run `tox -e dev` and use that environment instead of a number of steps to go through). This also changes the docs maintained in different places into something executable which will then be automatically kept up to date if it changes, because the devs also use this for their work.
+I created a tox env [`dev`](https://github.com/obestwalter/raiden-review/blob/b7eaf5fe7cd9de79f040e5cdc054f898724ff185/tox.ini#L51) to easily reinstall everything if needed. This makes the instructions even simpler (run `tox -e dev` and use that environment instead of a number of steps to go through). This also changes the docs maintained in different places into something executable which will then be automatically kept up to date if it changes, because the devs also use this for their work.
 
 # Organisation of testing activities
 
