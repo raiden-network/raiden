@@ -30,7 +30,7 @@ I created a tox env [`dev`](https://github.com/obestwalter/raiden-review/blob/b7
 
 # Organisation of testing activities
 
-I usually bundle all important (test)-automation steps in tox environments to have a single entry point for all developer activities.
+I usually bundle all important (test)-automation steps in tox environments to have a single entry point for all developer activities and to keep things testable/debuggable locally as much as possible.
 
 AFAIU a lot happening in the circle CI config is not circle CI specific and there is also a Makefile that takes over many things that I would expect to be a testenv in tox (e.g. lint).
 
