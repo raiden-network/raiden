@@ -164,7 +164,7 @@ Use a different way to pass this config object to the fixture that needs it. The
 
 Rather than having a ton of fixtures all taking care of one aspect of the test configuration there would be one configuration object taking care of all these aspects (should it be skipped under certain circumstances? Which kind of dynamic parametrization is needed, etc.)
 
-This should also be well documented as this is a non obvious use of the testing mechanisms to people who are not deeply into how pytest works.
+This should also be well documented as this is a non obvious use of the testing mechanisms to people who are not deeply into how pytest and the tests themselves work.
 
 I can't flesh this out more as I am really running out of time, but I think the idea is clear.
 
