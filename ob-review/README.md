@@ -59,7 +59,7 @@ For a project like this definitely a very good idea.
 
 ### Suggestions
 
-Gradually introducing this into the code base is a good approach but seems to drag on a bit so maybe looking into [pyannotate](https://github.com/dropbox/pyannotate) and get it over and done with in a concerted effort might be worth thinking about. Having a baseline to work with and having type hints everywhere makes it also easier for contributors to roll with it, I would reckon.
+Gradually introducing this into the code base is a good approach but seems to drag on a bit so maybe looking into [pyannotate](https://github.com/dropbox/pyannotate) and get it over and done with in a concerted effort might be worth thinking about. Having a baseline to work with and having type hints everywhere makes it also easier for contributors to roll with it, I would reckon. The more I look at your code though, I get the impression that the transition is already further advanced than the actual checks suggest.
 
 I also noticed that tests are not using the proper types in a quite a few places. This could also be handled right away. IMO tests should adhere to the same quality standards as production code.
 
