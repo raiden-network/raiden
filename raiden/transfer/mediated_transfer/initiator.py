@@ -398,21 +398,30 @@ def handle_onchain_secretreveal(
     the current lock removed from the merkle tree and the transferred amount
     updated.
     """
+    secret = state_change.secret
+    secrethash = initiator_state.transfer_description.secrethash
     is_valid_secret = is_valid_secret_reveal(
         state_change=state_change,
-        transfer_secrethash=initiator_state.transfer_description.secrethash,
-        secret=state_change.secret,
+        transfer_secrethash=secrethash,
+        secret=secret,
     )
     is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
     is_lock_expired = state_change.block_number > initiator_state.transfer.lock.expiration
 
     is_lock_unlocked = (
         is_valid_secret and
-        is_channel_open and
         not is_lock_expired
     )
 
     if is_lock_unlocked:
+        channel.register_onchain_secret(
+            channel_state=channel_state,
+            secret=secret,
+            secrethash=secrethash,
+            secret_reveal_block_number=state_change.block_number,
+        )
+
+    if is_lock_unlocked and is_channel_open:
         events = events_for_unlock_lock(
             initiator_state,
             channel_state,
