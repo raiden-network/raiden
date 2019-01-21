@@ -1283,6 +1283,9 @@ def send_refundtransfer(
     msg = 'Refunds are only valid for *known and pending* transfers'
     assert secrethash in channel_state.partner_state.secrethashes_to_lockedlocks, msg
 
+    msg = 'caller must make sure the channel is open'
+    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+
     send_mediated_transfer, merkletree = create_sendlockedtransfer(
         channel_state,
         initiator,
@@ -1409,6 +1412,9 @@ def events_for_expired_lock(
         locked_lock: HashTimeLockState,
         pseudo_random_generator: random.Random,
 ) -> List[SendLockExpired]:
+    msg = 'caller must make sure the channel is open'
+    assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
+
     send_lock_expired, merkletree = create_sendexpiredlock(
         sender_end_state=channel_state.our_state,
         locked_lock=locked_lock,
