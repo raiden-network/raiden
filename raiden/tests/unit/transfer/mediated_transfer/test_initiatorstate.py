@@ -53,7 +53,12 @@ from raiden.transfer.state import (
     RouteState,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
+from raiden.transfer.state_change import (
+    ActionCancelPayment,
+    Block,
+    ContractReceiveChannelClosed,
+    ContractReceiveSecretReveal,
+)
 from raiden.utils import random_secret, typing
 
 
@@ -1091,6 +1096,59 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
     )
 
     assert events.must_contain_entry(iteration.events, SendBalanceProof, {}) is None
+
+
+def test_initiator_handle_contract_receive_after_channel_closed():
+    """ Initiator must accept on-chain secret reveal if the channel is closed.
+    However, the off-chain unlock must not be done!
+
+    This will happen because secrets are registered after a channel is closed,
+    during the settlement window.
+    """
+    block_number = 10
+    setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=block_number)
+
+    transfer = setup.current_state.initiator.transfer
+    assert transfer.lock.secrethash in setup.channel.our_state.secrethashes_to_lockedlocks
+
+    channel_closed = ContractReceiveChannelClosed(
+        transaction_hash=factories.make_transaction_hash(),
+        transaction_from=factories.make_address(),
+        token_network_identifier=setup.channel.token_network_identifier,
+        channel_identifier=setup.channel.identifier,
+        block_number=block_number,
+    )
+
+    channel_close_transition = channel.state_transition(
+        channel_state=setup.channel,
+        state_change=channel_closed,
+        pseudo_random_generator=setup.prng,
+        block_number=block_number,
+    )
+    channel_state = channel_close_transition.new_state
+
+    state_change = ContractReceiveSecretReveal(
+        transaction_hash=factories.make_transaction_hash(),
+        secret_registry_address=factories.make_address(),
+        secrethash=transfer.lock.secrethash,
+        secret=UNIT_SECRET,
+        block_number=transfer.lock.expiration,
+    )
+
+    channel_map = {
+        channel_state.identifier: channel_state,
+    }
+    iteration = initiator_manager.handle_onchain_secretreveal(
+        payment_state=setup.current_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=channel_map,
+        pseudo_random_generator=setup.prng,
+    )
+    secrethash = setup.current_state.initiator.transfer_description.secrethash
+    assert secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
+
+    msg = 'The channel is closed already, the balance proof must not be sent off-chain'
+    assert not events.must_contain_entry(iteration.events, SendBalanceProof, {}), msg
 
 
 def test_lock_expiry_updates_balance_proof():
