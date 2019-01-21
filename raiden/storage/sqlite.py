@@ -372,9 +372,22 @@ class SQLiteStorage:
         entries = self._query_events(limit, offset)
         return [self.serializer.deserialize(entry[0]) for entry in entries]
 
-    def remove_snapshots(self):
+    def get_snapshots(self, raw=False):
         cursor = self.conn.cursor()
-        cursor.execute('DELETE FROM state_snapshot')
+        cursor.execute('SELECT identifier, data FROM state_snapshot')
+        snapshots = cursor.fetchall()
+        for snapshot in snapshots:
+            if raw:
+                yield snapshot[0], snapshot[1]
+            else:
+                yield snapshot[0], self.serializer.deserialize(snapshot[1])
+
+    def update_snapshot(self, identifier, new_snapshot):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'UPDATE state_snapshot SET data=? WHERE identifier=?',
+            (new_snapshot, identifier),
+        )
         self.conn.commit()
 
     def __del__(self):
