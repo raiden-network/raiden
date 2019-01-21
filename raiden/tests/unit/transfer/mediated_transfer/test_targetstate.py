@@ -144,9 +144,12 @@ def test_events_for_onchain_secretreveal():
     assert not events
 
     events = target.events_for_onchain_secretreveal(state, channels[0], unsafe_to_wait)
-    assert events
-    assert isinstance(events[0], ContractSendSecretReveal)
-    assert events[0].secret == UNIT_SECRET
+
+    msg = 'when its not safe to wait, the contract send must be emitted'
+    assert must_contain_entry(events, ContractSendSecretReveal, {'secret': UNIT_SECRET}), msg
+
+    msg = 'second call must not emit ContractSendSecretReveal again'
+    assert not target.events_for_onchain_secretreveal(state, channels[0], unsafe_to_wait), msg
 
 
 def test_handle_inittarget():
