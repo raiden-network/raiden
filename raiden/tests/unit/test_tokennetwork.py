@@ -818,6 +818,7 @@ def test_routing_issue2663(
         to_address=address1,
         amount=50,
         previous_address=None,
+        config={},
     )
     assert routes1[0].node_address == address1
     assert routes1[1].node_address == address2
@@ -829,6 +830,7 @@ def test_routing_issue2663(
         to_address=address1,
         amount=51,
         previous_address=None,
+        config={},
     )
     assert routes2[0].node_address == address2
 
@@ -846,6 +848,7 @@ def test_routing_issue2663(
         to_address=address1,
         amount=50,
         previous_address=None,
+        config={},
     )
     assert routes1[0].node_address == address1
 
@@ -856,6 +859,7 @@ def test_routing_issue2663(
         to_address=address1,
         amount=51,
         previous_address=None,
+        config={},
     )
     assert routes2 == []
 
@@ -874,6 +878,7 @@ def test_routing_issue2663(
         to_address=address1,
         amount=50,
         previous_address=None,
+        config={},
     )
     assert routes1[0].node_address == address1
     assert routes1[1].node_address == address2
@@ -885,6 +890,7 @@ def test_routing_issue2663(
         to_address=address1,
         amount=51,
         previous_address=None,
+        config={},
     )
     assert routes2[0].node_address == address2
 
@@ -902,6 +908,7 @@ def test_routing_issue2663(
         to_address=address1,
         amount=50,
         previous_address=None,
+        config={},
     )
     # right now the channel to 1 gets filtered out as it is offline
     assert routes1[0].node_address == address2
@@ -913,6 +920,7 @@ def test_routing_issue2663(
         to_address=address1,
         amount=51,
         previous_address=None,
+        config={},
     )
     assert routes2[0].node_address == address2
 
@@ -1072,6 +1080,7 @@ def test_routing_priority(
         to_address=address3,
         amount=1,
         previous_address=None,
+        config={},
     )
     assert routes[0].node_address == address1
     assert routes[1].node_address == address2
@@ -1091,6 +1100,7 @@ def test_routing_priority(
         to_address=address4,
         amount=1,
         previous_address=None,
+        config={},
     )
     assert routes[0].node_address == address2
     assert routes[1].node_address == address1
@@ -1109,6 +1119,7 @@ def test_routing_priority(
         to_address=address3,
         amount=2,
         previous_address=None,
+        config={},
     )
     assert routes[0].node_address == address2
 
@@ -1126,5 +1137,6 @@ def test_routing_priority(
         to_address=address3,
         amount=1,
         previous_address=None,
+        config={},
     )
     assert routes[0].node_address == address2

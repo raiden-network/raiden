@@ -95,12 +95,13 @@ class MessageHandler:
         chain_state = views.state_from_raiden(raiden)
 
         routes = get_best_routes(
-            chain_state,
-            typing.TokenNetworkID(token_network_address),
-            typing.InitiatorAddress(raiden.address),
-            from_transfer.target,
-            from_transfer.lock.amount,
-            message.sender,
+            chain_state=chain_state,
+            token_network_id=typing.TokenNetworkID(token_network_address),
+            from_address=typing.InitiatorAddress(raiden.address),
+            to_address=from_transfer.target,
+            amount=from_transfer.lock.amount,
+            previous_address=message.sender,
+            config=raiden.config,
         )
 
         role = views.get_transfer_role(

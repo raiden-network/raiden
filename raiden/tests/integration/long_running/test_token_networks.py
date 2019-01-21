@@ -165,12 +165,13 @@ def test_participant_selection(raiden_network, token_addresses):
             if target.raiden.address == app.raiden.address:
                 continue
             routes = routing.get_best_routes(
-                node_state,
-                network_state.address,
-                app.raiden.address,
-                target.raiden.address,
-                1,
-                None,
+                chain_state=node_state,
+                token_network_id=network_state.address,
+                from_address=app.raiden.address,
+                to_address=target.raiden.address,
+                amount=1,
+                previous_address=None,
+                config={},
             )
             assert routes is not None
 

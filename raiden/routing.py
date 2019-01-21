@@ -1,8 +1,10 @@
 from heapq import heappop, heappush
-from typing import List
+from typing import Dict, List
 
 import networkx
+import requests
 import structlog
+from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
@@ -18,6 +20,38 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def get_best_routes(
+        chain_state: ChainState,
+        token_network_id: typing.TokenNetworkID,
+        from_address: typing.InitiatorAddress,
+        to_address: typing.TargetAddress,
+        amount: int,
+        previous_address: typing.Optional[typing.Address],
+        config: Dict,
+) -> List[RouteState]:
+    services_config = config.get('services', None)
+
+    if services_config and services_config['pathfinding_service_address'] is not None:
+        return get_best_routes_pfs(
+            chain_state=chain_state,
+            token_network_id=token_network_id,
+            from_address=from_address,
+            to_address=to_address,
+            amount=amount,
+            previous_address=previous_address,
+            config=services_config,
+        )
+    else:
+        return get_best_routes_internal(
+            chain_state=chain_state,
+            token_network_id=token_network_id,
+            from_address=from_address,
+            to_address=to_address,
+            amount=amount,
+            previous_address=previous_address,
+        )
+
+
+def get_best_routes_internal(
         chain_state: ChainState,
         token_network_id: typing.TokenNetworkID,
         from_address: typing.InitiatorAddress,
@@ -129,3 +163,49 @@ def get_best_routes(
         route_state = RouteState(partner_address, channel_state_id)
         available_routes.append(route_state)
     return available_routes
+
+
+def get_best_routes_pfs(
+        chain_state: ChainState,
+        token_network_id: typing.TokenNetworkID,
+        from_address: typing.InitiatorAddress,
+        to_address: typing.TargetAddress,
+        amount: int,
+        previous_address: typing.Optional[typing.Address],  # TODO(paul): Remove this?
+        config: Dict,
+) -> List[RouteState]:
+    pfs_path = '{}/api/v1/{}/paths'.format(
+        config['pathfinding_service_address'],
+        to_checksum_address(token_network_id),
+    )
+    payload = {
+        'from': to_checksum_address(from_address),
+        'to': to_checksum_address(to_address),
+        'value': amount,
+        'max_paths': config['pathfinding_max_paths'],
+    }
+    response = requests.get(pfs_path, params=payload)
+
+    if response.status_code != 200:
+        return []
+
+    paths = []
+    for path_object in response.json()['result']:
+        path = path_object['path']
+
+        # get the second entry, as the first one is the node itself
+        # also needs to be converted to canonical representation
+        partner_address = to_canonical_address(path[1])
+
+        channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state=chain_state,
+            token_network_id=token_network_id,
+            partner_address=partner_address,
+        )
+        # TODO(paul): need to check online statuses as well?
+        paths.append(RouteState(
+            node_address=partner_address,
+            channel_identifier=channel_state.identifier,
+        ))
+
+    return paths
