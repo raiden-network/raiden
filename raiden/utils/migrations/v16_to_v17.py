@@ -1,53 +1,32 @@
-from raiden.exceptions import InvalidDBData
-from raiden.storage.restore import rebuild_chain_state
+import json
+
 from raiden.storage.sqlite import SQLiteStorage
 
 
-def _get_latest_state_change(storage: SQLiteStorage):
-    cursor = storage.conn.cursor()
-    sql = (
-        f'SELECT identifier '
-        f'FROM state_changes '
-        f'ORDER BY identifier '
-        f'DESC LIMIT 1'
-    )
-    cursor.execute(sql)
-    try:
-        row = cursor.fetchone()
-        if not row:
-            return 0
-        return row[0]
-    except AttributeError:
-        raise InvalidDBData(
-            'Your local database is corrupt. Bailing ...',
-        )
+def _transform_snapshot(raw_snapshot):
+    snapshot = json.loads(raw_snapshot)
+    secrethash_to_task = snapshot['payment_mapping']['secrethashes_to_task']
+    for secrethash, task in secrethash_to_task.items():
+        if task['_type'] != 'raiden.transfer.state.InitiatorTask':
+            continue
+
+        task['manager_state']['initiator_transfers'] = [
+            task['manager_state']['initiator'],
+        ]
+        del task['manager_state']['initiator']
+        secrethash_to_task[secrethash] = task
+    return json.dumps(snapshot)
 
 
-def _remove_snapshots(storage: SQLiteStorage):
-    storage.remove_snapshots()
+def _transform_snapshots(storage):
+    for identifier, snapshot in storage.get_snapshots(raw=True):
+        new_snapshot = _transform_snapshot(snapshot)
+        storage.update_snapshot(identifier, new_snapshot)
 
 
-def _create_snapshot(storage: SQLiteStorage):
-    snapshot = rebuild_chain_state(storage)
-    last_state_change_id = _get_latest_state_change(storage)
-
-    if not last_state_change_id:
-        # Databse does not have any records, no need for a snapshot
-        return
-
-    storage.write_state_snapshot(
-        statechange_id=last_state_change_id,
-        snapshot=snapshot,
-    )
-
-
-def upgrade(storage: SQLiteStorage):
+def upgrade_initiator_manager(storage: SQLiteStorage, old_version, current_version):
     """ InitiatorPaymentState was changed so that the "initiator"
     attribute is renamed to "initiator_transfers" and converted to a list.
-    Since the change exists in a "state" rather than a "state_change" or an "event",
-    then the migration strategy would be to prevent loading a snapshot in which
-    the attribute "initiator" is still used. Therefore, this migration deletes
-    all existing snapshots, rebuilds the state and then creates a new snapshot
-    with the new attribute in place."""
-    _remove_snapshots(storage)
-    _create_snapshot(storage)
+    """
+    if current_version > 16 and old_version == 16:
+        _transform_snapshots(storage)

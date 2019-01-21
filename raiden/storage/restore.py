@@ -7,16 +7,6 @@ from raiden.utils import pex, typing
 from .wal import restore_to_state_change
 
 
-def rebuild_chain_state(storage: SQLiteStorage) -> ChainState:
-    """ Go through WAL state changes until a certain balance hash is found. """
-    wal = restore_to_state_change(
-        transition_function=node.state_transition,
-        storage=storage,
-        state_change_identifier='latest',
-    )
-    return wal.state_manager.current_state
-
-
 def channel_state_until_state_change(
         raiden,
         payment_network_identifier: typing.PaymentNetworkID,
