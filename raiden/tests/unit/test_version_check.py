@@ -7,6 +7,7 @@ from pkg_resources import parse_version
 
 from raiden.tasks import SECURITY_EXPRESSION, _do_check_version
 
+
 LATEST_RELEASE_RESPONSE = """{"url":
             "https://api.github.com/repos/raiden-network/raiden/releases/14541434",
             "assets_url":

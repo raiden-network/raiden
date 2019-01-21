@@ -3,7 +3,6 @@ from copy import deepcopy
 from random import Random
 
 import pytest
-
 from hypothesis import assume, event
 from hypothesis.stateful import (
     Bundle,
