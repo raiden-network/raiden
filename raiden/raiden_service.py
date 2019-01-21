@@ -831,14 +831,14 @@ class RaidenService(Runnable):
         init_target_statechange = target_init(transfer)
         self.handle_state_change(init_target_statechange)
 
-    def upgrade_db(self, current_version: int, new_version: int):
-        log.debug(f'Upgrading database from v{current_version} to v{new_version}')
+    def upgrade_db(self, current_version: int, old_version: int):
+        log.debug(f'Upgrading database from v{old_version} to v{current_version}')
         # Prevent unique constraint error in DB when recording raiden "runs"
         gevent.sleep(1)
         manager = UpgradeManager(
             db_filename=self.database_path,
+            old_version=old_version,
             current_version=current_version,
-            new_version=new_version,
         )
         try:
             manager.run()
