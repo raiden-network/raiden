@@ -38,7 +38,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import balanceproof_from_envelope, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 
-
 LONG_EXPIRATION = factories.create_properties(factories.LockedTransferSignedStateProperties(
     transfer=factories.LockedTransferProperties(expiration=30),
 ))
