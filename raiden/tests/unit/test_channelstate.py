@@ -1003,9 +1003,9 @@ def test_channel_never_expires_lock_with_secret_onchain():
     assert lock.secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
 
 
-def test_channel_must_never_expire_locks_with_onchain_secret():
-    """ A transfer is received and the secret is registered on chain.
-    This means that any lock expired messages should not be accepted.
+def test_regression_must_update_balanceproof_remove_expired_lock():
+    """ A remove expire lock message contains a balance proof and changes the
+    merkle tree, the receiver must update the channel state.
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
@@ -1015,7 +1015,7 @@ def test_channel_must_never_expire_locks_with_onchain_secret():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = sha3(b'test_channel_must_never_expire_locks_with_onchain_secret')
+    lock_secret = sha3(b'test_regression_must_update_balanceproof_remove_expired_lock')
     lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         amount=lock_amount,
@@ -1073,9 +1073,9 @@ def test_channel_must_never_expire_locks_with_onchain_secret():
     assert new_channel_state.partner_state.merkletree == EMPTY_MERKLE_TREE
 
 
-def test_regression_must_update_balanceproof_remove_expired_lock():
-    """ A remove expire lock message contains a balance proof and changes the
-    merkle tree, the receiver must update the channel state.
+def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain():
+    """ Remove expired lock messages must be ignored if the lock was unlocked
+    on-chain.
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
@@ -1085,7 +1085,9 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
 
     lock_amount = 10
     lock_expiration = block_number - 10
-    lock_secret = sha3(b'test_regression_must_update_balanceproof_remove_expired_lock')
+    lock_secret = sha3(
+        b'test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain',
+    )
     lock_secrethash = sha3(lock_secret)
     lock = HashTimeLockState(
         amount=lock_amount,
@@ -1125,7 +1127,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
         message_identifier=1,
     )
 
-    is_valid, _, _ = channel.is_valid_lock_expired(
+    is_valid, msg, _ = channel.is_valid_lock_expired(
         state_change=lock_expired,
         channel_state=channel_state,
         sender_state=channel_state.partner_state,
@@ -1134,6 +1136,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     )
 
     assert not is_valid
+    assert 'on-chain' in msg, 'message must inform the lock was unlocked on-chain'
 
     channel.handle_receive_lock_expired(
         channel_state=channel_state,
