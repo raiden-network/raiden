@@ -95,3 +95,6 @@ raiden-debug.log*
 
 # tools
 tools/circleci/
+
+# venvs
+venv/

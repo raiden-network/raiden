@@ -126,12 +126,13 @@ def initiator_init(
     )
     previous_address = None
     routes = routing.get_best_routes(
-        views.state_from_raiden(raiden),
-        token_network_identifier,
-        InitiatorAddress(raiden.address),
-        target_address,
-        transfer_amount,
-        previous_address,
+        chain_state=views.state_from_raiden(raiden),
+        token_network_id=token_network_identifier,
+        from_address=InitiatorAddress(raiden.address),
+        to_address=target_address,
+        amount=transfer_amount,
+        previous_address=previous_address,
+        config=raiden.config,
     )
     init_initiator_statechange = ActionInitInitiator(
         transfer_state,
@@ -143,12 +144,13 @@ def initiator_init(
 def mediator_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
     routes = routing.get_best_routes(
-        views.state_from_raiden(raiden),
-        from_transfer.balance_proof.token_network_identifier,
-        raiden.address,
-        from_transfer.target,
-        from_transfer.lock.amount,
-        transfer.sender,
+        chain_state=views.state_from_raiden(raiden),
+        token_network_id=from_transfer.balance_proof.token_network_identifier,
+        from_address=raiden.address,
+        to_address=from_transfer.target,
+        amount=from_transfer.lock.amount,
+        previous_address=transfer.sender,
+        config=raiden.config,
     )
     from_route = RouteState(
         transfer.sender,
