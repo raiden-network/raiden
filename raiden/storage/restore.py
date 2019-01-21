@@ -1,7 +1,6 @@
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.storage.sqlite import SQLiteStorage
 from raiden.transfer import node, views
-from raiden.transfer.state import ChainState, NettingChannelState
+from raiden.transfer.state import NettingChannelState
 from raiden.utils import pex, typing
 
 from .wal import restore_to_state_change

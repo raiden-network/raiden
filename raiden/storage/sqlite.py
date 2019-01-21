@@ -68,12 +68,15 @@ class SQLiteStorage:
         self._upgrade_callback = callback
 
     def maybe_upgrade(self):
-        current_version = self.get_version()
-        if RAIDEN_DB_VERSION <= current_version:
+        db_version = self.get_version()
+        if RAIDEN_DB_VERSION <= db_version:
             return
 
         if self._upgrade_callback:
-            self._upgrade_callback(current_version, RAIDEN_DB_VERSION)
+            self._upgrade_callback(
+                current_version=RAIDEN_DB_VERSION,
+                old_version=db_version,
+            )
 
         self.update_version()
 
