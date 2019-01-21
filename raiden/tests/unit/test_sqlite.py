@@ -303,14 +303,11 @@ def test_triggers_upgrade_callbacks():
         storage.update_version()
 
     upgrade_callback_mock1 = Mock()
-    upgrade_callback_mock2 = Mock()
 
     storage.register_upgrade_callback(upgrade_callback_mock1)
-    storage.register_upgrade_callback(upgrade_callback_mock2)
 
     storage.maybe_upgrade()
 
     assert upgrade_callback_mock1.called
-    assert upgrade_callback_mock2.called
 
     assert storage.get_version() == 17

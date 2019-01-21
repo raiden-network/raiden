@@ -10,12 +10,15 @@ def _transform_snapshot(raw_snapshot):
         if task['_type'] != 'raiden.transfer.state.InitiatorTask':
             continue
 
-        task['manager_state']['initiator_transfers'] = [
-            task['manager_state']['initiator'],
-        ]
+        # The transfer is pending as long as the initiator task still exists
+        transfer_secrethash = task['manager_state']['initiator']['transfer']['lock']['secrethash']
+        task['manager_state']['initiator']['transfer_state'] = 'transfer_pending'
+        task['manager_state']['initiator_transfers'] = {
+            transfer_secrethash: task['manager_state']['initiator'],
+        }
         del task['manager_state']['initiator']
         secrethash_to_task[secrethash] = task
-    return json.dumps(snapshot)
+    return json.dumps(snapshot, indent=4)
 
 
 def _transform_snapshots(storage):

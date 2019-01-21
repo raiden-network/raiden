@@ -12,7 +12,10 @@ from raiden.utils.upgrades import UpgradeManager
 
 def setup_storage(db_path):
     storage = SQLiteStorage(str(db_path), JSONSerializer())
-    time.sleep(1)
+
+    chain_state_data = Path(__file__).parent / 'data/v16_chainstate.json'
+    chain_state = chain_state_data.read_text()
+
     storage.write_state_change(
         ActionInitChain(
             pseudo_random_generator=random.Random(),
@@ -22,16 +25,26 @@ def setup_storage(db_path):
         ),
         datetime.utcnow().isoformat(timespec='milliseconds'),
     )
+
+    cursor = storage.conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO state_snapshot(identifier, statechange_id, data)
+        VALUES(1, 1, ?)
+        """, (chain_state,),
+    )
+    storage.conn.commit()
     return storage
 
 
 def test_upgrade_v16_to_v17(tmp_path):
     db_path = tmp_path / Path('test.db')
     storage = setup_storage(db_path)
+    time.sleep(1)
     manager = UpgradeManager(
         db_filename=str(db_path),
-        current_version=16,
-        new_version=17,
+        old_version=16,
+        current_version=17,
     )
     manager.run()
 
