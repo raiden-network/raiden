@@ -60,20 +60,20 @@ class SQLiteStorage:
         # condition.
         self.write_lock = threading.Lock()
         self.serializer = serializer
-        self._upgrade_callbacks = []
+        self._upgrade_callback = None
 
     def register_upgrade_callback(self, callback: Callable[[int, int], None]):
         if not callable(callback):
             raise TypeError("Callback is not callable")
-        self._upgrade_callbacks.append(callback)
+        self._upgrade_callback = callback
 
     def maybe_upgrade(self):
         current_version = self.get_version()
         if RAIDEN_DB_VERSION <= current_version:
             return
 
-        for callback in self._upgrade_callbacks:
-            callback(current_version, RAIDEN_DB_VERSION)
+        if self._upgrade_callback:
+            self._upgrade_callback(current_version, RAIDEN_DB_VERSION)
 
         self.update_version()
 
