@@ -68,8 +68,10 @@ def events_for_onchain_secretreveal(
         channel_state.partner_state,
         transfer.lock.secrethash,
     )
+    has_onchain_reveal_started = target_state.state == 'onchain_reveal_secret'
 
-    if not safe_to_wait and secret_known_offchain:
+    if not safe_to_wait and secret_known_offchain and not has_onchain_reveal_started:
+        target_state.state = 'onchain_reveal_secret'
         secret = channel.get_secret(
             channel_state.partner_state,
             transfer.lock.secrethash,
@@ -217,7 +219,7 @@ def handle_onchain_secretreveal(
             secret_reveal_block_number=state_change.block_number,
         )
 
-        target_state.state = 'reveal_secret'
+        target_state.state = 'onchain_unlock'
         target_state.secret = state_change.secret
 
     return TransitionResult(target_state, list())
