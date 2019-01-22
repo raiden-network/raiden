@@ -68,10 +68,12 @@ def events_for_onchain_secretreveal(
         channel_state.partner_state,
         transfer.lock.secrethash,
     )
-    has_onchain_reveal_started = target_state.state == 'onchain_reveal_secret'
+    has_onchain_reveal_started = (
+        target_state.state == TargetTransferState.ONCHAIN_SECRET_REVEAL
+    )
 
     if not safe_to_wait and secret_known_offchain and not has_onchain_reveal_started:
-        target_state.state = 'onchain_reveal_secret'
+        target_state.state = TargetTransferState.ONCHAIN_SECRET_REVEAL
         secret = channel.get_secret(
             channel_state.partner_state,
             transfer.lock.secrethash,
@@ -179,7 +181,7 @@ def handle_offchain_secretreveal(
 
         route = target_state.route
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
-        target_state.state = 'reveal_secret'
+        target_state.state = TargetTransferState.OFFCHAIN_SECRET_REVEAL
         target_state.secret = state_change.secret
         recipient = route.node_address
 
@@ -219,7 +221,7 @@ def handle_onchain_secretreveal(
             secret_reveal_block_number=state_change.block_number,
         )
 
-        target_state.state = 'onchain_unlock'
+        target_state.state = TargetTransferState.ONCHAIN_UNLOCK
         target_state.secret = state_change.secret
 
     return TransitionResult(target_state, list())
@@ -296,7 +298,7 @@ def handle_block(
             secrethash=transfer.lock.secrethash,
             reason=f'lock expired',
         )
-        target_state.state = 'expired'
+        target_state.state = TargetTransferState.EXPIRED
         events = [failed]
     elif secret_known:
         events = events_for_onchain_secretreveal(
