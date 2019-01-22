@@ -929,7 +929,9 @@ def events_to_remove_expired_locks(
                 lock_expiration_threshold=lock_expiration_threshold,
             )
 
-            if has_lock_expired:
+            is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+
+            if has_lock_expired and is_channel_open:
                 transfer_pair.payee_state = 'payee_expired'
                 expired_lock_events = channel.events_for_expired_lock(
                     channel_state=channel_state,

@@ -64,7 +64,11 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
+from raiden.transfer.state_change import (
+    Block,
+    ContractReceiveChannelClosed,
+    ContractReceiveSecretReveal,
+)
 from raiden.utils import random_secret
 
 
@@ -1415,6 +1419,70 @@ def test_mediator_lock_expired_with_new_block():
         'secrethash': transfer.lock.secrethash,
     })
     assert transfer.lock.secrethash not in channels[1].our_state.secrethashes_to_lockedlocks
+
+
+def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
+    block_number = 5
+    pseudo_random_generator = random.Random()
+
+    channels = mediator_make_channel_pair()
+    channel_state = channels[0]
+
+    payer_transfer = factories.make_signed_transfer_for(
+        channel_state,
+        LockedTransferSignedStateProperties(
+            transfer=LockedTransferProperties(
+                initiator=HOP1,
+                expiration=30,
+            ),
+        ),
+    )
+
+    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
+    iteration = mediator.mediate_transfer(
+        state=mediator_state,
+        possible_routes=channels.get_routes(1),
+        payer_channel=channels[0],
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        payer_transfer=payer_transfer,
+        block_number=block_number,
+    )
+
+    send_transfer = must_contain_entry(iteration.events, SendLockedTransfer, {})
+    transfer = send_transfer.transfer
+
+    channel_closed = ContractReceiveChannelClosed(
+        transaction_hash=factories.make_transaction_hash(),
+        transaction_from=factories.make_address(),
+        token_network_identifier=channel_state.token_network_identifier,
+        channel_identifier=channel_state.identifier,
+        block_number=block_number,
+    )
+    channel_close_transition = channel.state_transition(
+        channel_state=channel_state,
+        state_change=channel_closed,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+    channel_state = channel_close_transition.new_state
+
+    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    block = Block(
+        block_number=block_expiration_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    iteration = mediator.state_transition(
+        mediator_state=mediator_state,
+        state_change=block,
+        channelidentifiers_to_channels={channel_state.identifier: channel_state},
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_expiration_number,
+    )
+
+    assert iteration.events
+    assert must_contain_entry(iteration.events, SendLockExpired, {}) is None
 
 
 def test_mediator_lock_expired_with_receive_lock_expired():
