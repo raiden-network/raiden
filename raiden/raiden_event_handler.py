@@ -36,7 +36,12 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.utils import get_event_with_balance_proof, get_state_change_with_balance_proof
+from raiden.transfer.utils import (
+    get_event_with_balance_proof_by_balance_hash,
+    get_event_with_balance_proof_by_locksroot,
+    get_state_change_with_balance_proof_by_balance_hash,
+    get_state_change_with_balance_proof_by_locksroot,
+)
 from raiden.utils import pex
 from raiden.utils.signing import eth_sign
 
@@ -343,22 +348,22 @@ class RaidenEventHandler:
         )
 
         if is_partner_unlock:
-            state_change_record = get_state_change_with_balance_proof(
+            state_change_record = get_state_change_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
                 token_network_identifier=token_network_identifier,
                 channel_identifier=channel_identifier,
-                balance_hash=partner_details.balance_hash,
+                locksroot=partner_locksroot,
                 sender=participants_details.partner_details.address,
             )
             state_change_identifier = state_change_record.state_change_identifier
         elif is_our_unlock:
-            event_record = get_event_with_balance_proof(
+            event_record = get_event_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
                 token_network_identifier=token_network_identifier,
                 channel_identifier=channel_identifier,
-                balance_hash=our_details.balance_hash,
+                locksroot=our_locksroot.balance_hash,
             )
             state_change_identifier = event_record.state_change_identifier
         else:
@@ -459,7 +464,7 @@ class RaidenEventHandler:
         }
 
         if our_details.balance_hash != EMPTY_HASH:
-            event_record = get_event_with_balance_proof(
+            event_record = get_event_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
                 chain_id=chain_id,
                 token_network_identifier=token_network_identifier,
@@ -486,7 +491,7 @@ class RaidenEventHandler:
             our_locksroot = EMPTY_HASH
 
         if partner_details.balance_hash != EMPTY_HASH:
-            state_change_record = get_state_change_with_balance_proof(
+            state_change_record = get_state_change_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
                 chain_id=chain_id,
                 token_network_identifier=token_network_identifier,
