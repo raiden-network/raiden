@@ -107,12 +107,18 @@ def handle_block(
         lock_expiration_threshold=lock_expiration_threshold,
     )
 
+    events: List[Event] = list()
+
     if lock_has_expired:
-        expired_lock_events = channel.events_for_expired_lock(
-            channel_state=channel_state,
-            locked_lock=locked_lock,
-            pseudo_random_generator=pseudo_random_generator,
-        )
+        is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
+        if is_channel_open:
+            expired_lock_events = channel.events_for_expired_lock(
+                channel_state=channel_state,
+                locked_lock=locked_lock,
+                pseudo_random_generator=pseudo_random_generator,
+            )
+            events.extend(expired_lock_events)
+
         transfer_description = initiator_state.transfer_description
         # TODO: When we introduce multiple transfers per payment this needs to be
         #       reconsidered. As we would want to try other routes once a route
@@ -126,7 +132,7 @@ def handle_block(
             target=transfer_description.target,
             reason="transfer's lock has expired",
         )
-        expired_lock_events.append(transfer_failed)
+        events.append(transfer_failed)
         lock_exists = channel.lock_exists_in_either_channel_side(
             channel_state=channel_state,
             secrethash=secrethash,
@@ -137,10 +143,10 @@ def handle_block(
             # task around to wait for the LockExpired messages to sync.
             # Check https://github.com/raiden-network/raiden/issues/3183
             initiator_state if lock_exists else None,
-            cast(List[Event], expired_lock_events),
+            events,
         )
     else:
-        return TransitionResult(initiator_state, list())
+        return TransitionResult(initiator_state, events)
 
 
 def get_initial_lock_expiration(
