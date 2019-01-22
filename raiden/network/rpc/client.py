@@ -257,21 +257,21 @@ def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
         params = [transaction, block_identifier]
 
     return self.web3.manager.request_blocking(
-        "eth_estimateGas",
+        'eth_estimateGas',
         params,
     )
 
 
 def estimate_gas_for_function(
-    address,
-    web3,
-    fn_identifier=None,
-    transaction=None,
-    contract_abi=None,
-    fn_abi=None,
-    block_identifier=None,
-    *args,
-    **kwargs,
+        address,
+        web3,
+        fn_identifier=None,
+        transaction=None,
+        contract_abi=None,
+        fn_abi=None,
+        block_identifier=None,
+        *args,
+        **kwargs,
 ):
     """Temporary workaround until next web3.py release (5.X.X)"""
     estimate_transaction = prepare_transaction(
@@ -292,7 +292,7 @@ def estimate_gas_for_function(
 def patched_contractfunction_estimateGas(self, transaction=None, block_identifier=None):
     """Temporary workaround until next web3.py release (5.X.X)"""
     if transaction is None:
-            estimate_gas_transaction = {}
+        estimate_gas_transaction = {}
     else:
         estimate_gas_transaction = dict(**transaction)
 

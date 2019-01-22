@@ -1247,12 +1247,12 @@ class TokenNetwork:
     def _settle_preconditions(
             self,
             channel_identifier: ChannelID,
-            transferred_amount: int,
-            locked_amount: int,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
             locksroot: Locksroot,
             partner: Address,
-            partner_transferred_amount: int,
-            partner_locked_amount: int,
+            partner_transferred_amount: TokenAmount,
+            partner_locked_amount: TokenAmount,
             partner_locksroot: Locksroot,
             block_identifier: BlockSpecification,
     ):
@@ -1295,12 +1295,12 @@ class TokenNetwork:
     def settle(
             self,
             channel_identifier: ChannelID,
-            transferred_amount: int,
-            locked_amount: int,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
             locksroot: Locksroot,
             partner: Address,
-            partner_transferred_amount: int,
-            partner_locked_amount: int,
+            partner_transferred_amount: TokenAmount,
+            partner_locked_amount: TokenAmount,
             partner_locksroot: Locksroot,
     ):
         """ Settle the channel. """
@@ -1539,7 +1539,7 @@ class TokenNetwork:
             channel_identifier: ChannelID,
             block_identifier: BlockSpecification,
     ) -> str:
-        str = ''
+        msg = ''
         channel_data = self._check_channel_state_before_settle(
             participant1=participant1,
             participant2=participant2,
@@ -1547,11 +1547,11 @@ class TokenNetwork:
             block_identifier=block_identifier,
         )
         if channel_data.state == ChannelState.CLOSED:
-            str = (
+            msg = (
                 "Settling this channel failed although the channel's current state "
                 "is closed.",
             )
-        return str
+        return msg
 
     def _check_channel_state_for_update(
             self,
