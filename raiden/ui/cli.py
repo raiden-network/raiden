@@ -552,30 +552,30 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
 
         raiden_stdout = StringIO()
         with contextlib.redirect_stdout(raiden_stdout):
-            # invoke the raiden app
-            app = run_app(**args)
-
-            raiden_api = RaidenAPI(app.raiden)
-            rest_api = RestAPI(raiden_api)
-            api_server = APIServer(rest_api)
-            (api_host, api_port) = split_endpoint(args['api_address'])
-            api_server.start(api_host, api_port)
-
-            raiden_api.channel_open(
-                registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-                token_address=to_canonical_address(token.contract.address),
-                partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
-            )
-            raiden_api.set_total_channel_deposit(
-                contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
-                to_canonical_address(token.contract.address),
-                to_canonical_address(TEST_PARTNER_ADDRESS),
-                TEST_DEPOSIT_AMOUNT,
-            )
-            token_addresses = [to_checksum_address(token.contract.address)]
-
-            success = False
             try:
+                # invoke the raiden app
+                app = run_app(**args)
+
+                raiden_api = RaidenAPI(app.raiden)
+                rest_api = RestAPI(raiden_api)
+                api_server = APIServer(rest_api)
+                (api_host, api_port) = split_endpoint(args['api_address'])
+                api_server.start(api_host, api_port)
+
+                raiden_api.channel_open(
+                    registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+                    token_address=to_canonical_address(token.contract.address),
+                    partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
+                )
+                raiden_api.set_total_channel_deposit(
+                    contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+                    to_canonical_address(token.contract.address),
+                    to_canonical_address(TEST_PARTNER_ADDRESS),
+                    TEST_DEPOSIT_AMOUNT,
+                )
+                token_addresses = [to_checksum_address(token.contract.address)]
+
+                success = False
                 print_step('Running smoketest')
                 error = run_smoketests(
                     app.raiden,
@@ -590,6 +590,7 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
                     success = True
             finally:
                 app.stop()
+                app.raiden.get()
                 node = ethereum[0]
                 node.send_signal(2)
                 err, out = node.communicate()
