@@ -443,31 +443,21 @@ def is_valid_lock_expired(
 ) -> MerkletreeOrError:
     secrethash = state_change.secrethash
     received_balance_proof = state_change.balance_proof
-    lock = channel_state.partner_state.secrethashes_to_lockedlocks.get(secrethash)
 
     # If the lock was not found in locked locks, this means that we've received
     # the secret for the locked transfer but we haven't unlocked it yet. Lock
     # expiry in this case could still happen which means that we have to make
     # sure that we check for "unclaimed" locks in our check.
+    lock = channel_state.partner_state.secrethashes_to_lockedlocks.get(secrethash)
     if not lock:
         lock = channel_state.partner_state.secrethashes_to_unlockedlocks.get(secrethash)
 
-    lock_registered_on_chain = (
-        secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
+    secret_registered_on_chain = (
+        secrethash in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
     )
 
-    if not lock:
-        msg = (
-            f'Invalid LockExpired message. '
-            f'Lock with secrethash {pex(secrethash)} is not known.'
-        )
-        return (False, msg, None)
-
     current_balance_proof = get_current_balanceproof(sender_state)
-    merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
-
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
-    expected_locked_amount = current_locked_amount - lock.amount
 
     is_balance_proof_usable, invalid_balance_proof_msg = is_balance_proof_usable_onchain(
         received_balance_proof=received_balance_proof,
@@ -475,18 +465,29 @@ def is_valid_lock_expired(
         sender_state=sender_state,
     )
 
+    if lock:
+        merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
+        expected_locked_amount = current_locked_amount - lock.amount
+
     result: MerkletreeOrError = (False, None, None)
 
-    if not is_balance_proof_usable:
+    if secret_registered_on_chain:
+        msg = 'Invalid LockExpired mesage. Lock was unlocked on-chain.'
+        result = (False, msg, None)
+
+    elif lock is None:
+        msg = (
+            f'Invalid LockExpired message. '
+            f'Lock with secrethash {pex(secrethash)} is not known.'
+        )
+        result = (False, msg, None)
+
+    elif not is_balance_proof_usable:
         msg = 'Invalid LockExpired message. {}'.format(invalid_balance_proof_msg)
         result = (False, msg, None)
 
     elif merkletree is None:
         msg = 'Invalid LockExpired message. Same lockhash handled twice.'
-        result = (False, msg, None)
-
-    elif lock_registered_on_chain:
-        msg = 'Invalid LockExpired mesage. Lock was unlocked on-chain.'
         result = (False, msg, None)
 
     else:
