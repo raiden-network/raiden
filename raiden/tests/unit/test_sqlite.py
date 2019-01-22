@@ -21,7 +21,10 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.transfer.state_change import ReceiveUnlock
-from raiden.transfer.utils import get_event_with_balance_proof, get_state_change_with_balance_proof
+from raiden.transfer.utils import (
+    get_event_with_balance_proof_by_balance_hash,
+    get_state_change_with_balance_proof_by_balance_hash,
+)
 from raiden.utils import sha3
 
 
@@ -199,7 +202,7 @@ def test_get_state_change_with_balance_proof():
     assert isinstance(stored_statechanges[1], ReceiveUnlock)
 
     for state_change, balance_proof in statechanges_balanceproofs:
-        state_change_record = get_state_change_with_balance_proof(
+        state_change_record = get_state_change_with_balance_proof_by_balance_hash(
             storage=storage,
             chain_id=balance_proof.chain_id,
             token_network_identifier=balance_proof.token_network_identifier,
@@ -267,7 +270,7 @@ def test_get_event_with_balance_proof():
         )
 
     for event, balance_proof in events_balanceproofs:
-        event_record = get_event_with_balance_proof(
+        event_record = get_event_with_balance_proof_by_balance_hash(
             storage=storage,
             chain_id=balance_proof.chain_id,
             token_network_identifier=balance_proof.token_network_identifier,
