@@ -152,7 +152,7 @@ class AlarmTask(Runnable):
         while self._stop_event.wait(sleep_time) is not True:
             try:
                 latest_block = self.chain.get_block(block_identifier='latest')
-            except (KeyboardInterrupt, JSONDecodeError) as e:
+            except JSONDecodeError as e:
                 raise EthNodeCommunicationError(str(e))
 
             self._maybe_run_callbacks(latest_block)
