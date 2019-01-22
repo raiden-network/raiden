@@ -1,4 +1,5 @@
 import re
+from json.decoder import JSONDecodeError
 
 import click
 import gevent
@@ -9,6 +10,7 @@ from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
 
+from raiden.exceptions import EthNodeCommunicationError
 from raiden.utils import gas_reserve, pex
 from raiden.utils.runnable import Runnable
 
@@ -148,7 +150,11 @@ class AlarmTask(Runnable):
 
         sleep_time = self.sleep_time
         while self._stop_event.wait(sleep_time) is not True:
-            latest_block = self.chain.get_block(block_identifier='latest')
+            try:
+                latest_block = self.chain.get_block(block_identifier='latest')
+            except (KeyboardInterrupt, JSONDecodeError) as e:
+                raise EthNodeCommunicationError(str(e))
+
             self._maybe_run_callbacks(latest_block)
 
             if chain_id != self.chain.network_id:
