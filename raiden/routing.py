@@ -1,11 +1,12 @@
 from heapq import heappop, heappush
-from typing import Dict, List
+from typing import Any, Dict, List, Tuple
 
 import networkx
 import requests
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 
+from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT
 from raiden.transfer import channel, views
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
@@ -26,12 +27,12 @@ def get_best_routes(
         to_address: typing.TargetAddress,
         amount: int,
         previous_address: typing.Optional[typing.Address],
-        config: Dict,
+        config: Dict[str, Any],
 ) -> List[RouteState]:
     services_config = config.get('services', None)
 
     if services_config and services_config['pathfinding_service_address'] is not None:
-        return get_best_routes_pfs(
+        pfs_answer_ok, pfs_routes = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_id=token_network_id,
             from_address=from_address,
@@ -40,15 +41,18 @@ def get_best_routes(
             previous_address=previous_address,
             config=services_config,
         )
-    else:
-        return get_best_routes_internal(
-            chain_state=chain_state,
-            token_network_id=token_network_id,
-            from_address=from_address,
-            to_address=to_address,
-            amount=amount,
-            previous_address=previous_address,
-        )
+
+        if pfs_answer_ok:
+            return pfs_routes
+
+    return get_best_routes_internal(
+        chain_state=chain_state,
+        token_network_id=token_network_id,
+        from_address=from_address,
+        to_address=to_address,
+        amount=amount,
+        previous_address=previous_address,
+    )
 
 
 def get_best_routes_internal(
@@ -172,8 +176,8 @@ def get_best_routes_pfs(
         to_address: typing.TargetAddress,
         amount: int,
         previous_address: typing.Optional[typing.Address],  # TODO(paul): Remove this?
-        config: Dict,
-) -> List[RouteState]:
+        config: Dict[str, Any],
+) -> Tuple[bool, List[RouteState]]:
     pfs_path = '{}/api/v1/{}/paths'.format(
         config['pathfinding_service_address'],
         to_checksum_address(token_network_id),
@@ -184,13 +188,27 @@ def get_best_routes_pfs(
         'value': amount,
         'max_paths': config['pathfinding_max_paths'],
     }
-    response = requests.get(pfs_path, params=payload)
+
+    # check that the response is successful
+    try:
+        response = requests.get(pfs_path, params=payload, timeout=DEFAULT_REQUEST_TIMEOUT)
+    except requests.RequestException:
+        return False, []
 
     if response.status_code != 200:
-        return []
+        return False, []
+
+    # check that the response contains valid json
+    try:
+        response_json = response.json()
+    except ValueError:
+        return False, []
+
+    if response_json.get('result') is None:
+        return False, []
 
     paths = []
-    for path_object in response.json()['result']:
+    for path_object in response_json['result']:
         path = path_object['path']
 
         # get the second entry, as the first one is the node itself
@@ -208,4 +226,4 @@ def get_best_routes_pfs(
             channel_identifier=channel_state.identifier,
         ))
 
-    return paths
+    return True, paths
