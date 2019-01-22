@@ -114,8 +114,6 @@ class GroupableOption(click.Option):
             multiple=False,
             count=False,
             allow_from_autoenv=True,
-            type=None,
-            help=None,
             option_group=None,
             **attrs,
     ):
@@ -130,8 +128,6 @@ class GroupableOption(click.Option):
             multiple,
             count,
             allow_from_autoenv,
-            type,
-            help,
             **attrs,
         )
         self.option_group = option_group

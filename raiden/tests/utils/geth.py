@@ -9,9 +9,9 @@ import time
 from collections import namedtuple
 
 import gevent
+import requests
 import structlog
 from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
-from requests import ConnectionError
 from web3 import Web3
 
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
@@ -209,7 +209,7 @@ def geth_wait_and_check(web3, accounts_addresses, random_marker):
                 'eth_getBlockByNumber',
                 ['0x0', False],
             )
-        except ConnectionError:
+        except requests.exceptions.ConnectionError:
             gevent.sleep(0.5)
             tries -= 1
         else:
