@@ -11,18 +11,13 @@ from raiden.utils import get_system_spec, typing
 RAIDEN_DB_VERSION = 16
 
 
-class Record(typing.NamedTuple):
-    state_change_identifier: int
-    data: typing.Any
-
-
-class StateChangeRecord(Record):
-    state_change_identifier: int
-    data: typing.Any
-
-
 class EventRecord(typing.NamedTuple):
     event_identifier: int
+    state_change_identifier: int
+    data: typing.Any
+
+
+class StateChangeRecord(typing.NamedTuple):
     state_change_identifier: int
     data: typing.Any
 
