@@ -1264,23 +1264,120 @@ def test_routing_mocked_pfs(
         address3: NODE_NETWORK_REACHABLE,
     }
 
+    # channel 1 and 2 are flipped here, to see when the PFS gets called
     json_data = {
         'result': [
             {
-                'path': [to_checksum_address(our_address), to_checksum_address(address1)],
+                'path': [to_checksum_address(our_address), to_checksum_address(address2)],
                 'fees': 0,
             },
             {
-                'path': [to_checksum_address(our_address), to_checksum_address(address2)],
+                'path': [to_checksum_address(our_address), to_checksum_address(address1)],
                 'fees': 0,
             },
         ],
     }
 
-    # Build mock response object
+    # Test happy path
     response = Mock()
     response.configure_mock(status_code=200)
     response.json = Mock(return_value=json_data)
+
+    with patch.object(requests, 'get', return_value=response):
+        routes = get_best_routes(
+            chain_state=chain_state,
+            token_network_id=token_network_state.address,
+            from_address=our_address,
+            to_address=address1,
+            amount=50,
+            previous_address=None,
+            config={
+                'services': {
+                    'pathfinding_service_address': 'my-pfs',
+                    'pathfinding_max_paths': 3,
+                },
+            },
+        )
+        assert routes[0].node_address == address2
+        assert routes[0].channel_identifier == channel_state2.identifier
+        assert routes[1].node_address == address1
+        assert routes[1].channel_identifier == channel_state1.identifier
+
+    # Test error handling for failing request
+    with patch.object(requests, 'get', side_effect=requests.RequestException()):
+        routes = get_best_routes(
+            chain_state=chain_state,
+            token_network_id=token_network_state.address,
+            from_address=our_address,
+            to_address=address1,
+            amount=50,
+            previous_address=None,
+            config={
+                'services': {
+                    'pathfinding_service_address': 'my-pfs',
+                    'pathfinding_max_paths': 3,
+                },
+            },
+        )
+        assert routes[0].node_address == address1
+        assert routes[0].channel_identifier == channel_state1.identifier
+        assert routes[1].node_address == address2
+        assert routes[1].channel_identifier == channel_state2.identifier
+
+    # Test bad HTTP code
+    response = Mock()
+    response.configure_mock(status_code=400)
+    response.json = Mock(return_value=json_data)
+
+    with patch.object(requests, 'get', return_value=response):
+        routes = get_best_routes(
+            chain_state=chain_state,
+            token_network_id=token_network_state.address,
+            from_address=our_address,
+            to_address=address1,
+            amount=50,
+            previous_address=None,
+            config={
+                'services': {
+                    'pathfinding_service_address': 'my-pfs',
+                    'pathfinding_max_paths': 3,
+                },
+            },
+        )
+        assert routes[0].node_address == address1
+        assert routes[0].channel_identifier == channel_state1.identifier
+        assert routes[1].node_address == address2
+        assert routes[1].channel_identifier == channel_state2.identifier
+
+    # Test invalid json
+    response = Mock()
+    response.configure_mock(status_code=400)
+    response.json = Mock(side_effect=ValueError())
+
+    with patch.object(requests, 'get', return_value=response):
+        routes = get_best_routes(
+            chain_state=chain_state,
+            token_network_id=token_network_state.address,
+            from_address=our_address,
+            to_address=address1,
+            amount=50,
+            previous_address=None,
+            config={
+                'services': {
+                    'pathfinding_service_address': 'my-pfs',
+                    'pathfinding_max_paths': 3,
+                },
+            },
+        )
+        assert routes[0].node_address == address1
+        assert routes[0].channel_identifier == channel_state1.identifier
+        assert routes[1].node_address == address2
+        assert routes[1].channel_identifier == channel_state2.identifier
+
+    # Test invalid json structure
+    response = Mock()
+    response.configure_mock(status_code=400)
+    response.json = Mock(return_value={})
 
     with patch.object(requests, 'get', return_value=response):
         routes = get_best_routes(
