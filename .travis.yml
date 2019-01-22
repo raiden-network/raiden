@@ -91,7 +91,7 @@ jobs:
         - TEST='raiden/tests/unit'
 
     - stage: test
-      << *job-template-test
+      <<: *job-template-test
       env:
         - TEST='raiden/tests/fuzz'
         - TRANSPORT_OPTIONS='--hypothesis-show-statistics'
