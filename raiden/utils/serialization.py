@@ -14,21 +14,21 @@ def identity(val):
 def map_dict(
     key_func: typing.Callable,
     value_func: typing.Callable,
-    dict: typing.Dict,
+    dict_: typing.Dict,
 ) -> typing.Dict[str, typing.Any]:
     return {
         key_func(k): value_func(v)
-        for k, v in dict.items()
+        for k, v in dict_.items()
     }
 
 
 def map_list(
     value_func: typing.Callable,
-    list: typing.List,
+    list_: typing.List,
 ) -> typing.List[typing.Any]:
     return [
         value_func(v)
-        for v in list
+        for v in list_
     ]
 
 
