@@ -1011,6 +1011,46 @@ def test_initiator_lock_expired():
     assert transfer3_lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
 
 
+def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
+    """ If the channel is closed there is no rason to send balance proofs
+    off-chain, so a remove expired lock must not be sent when the channel is
+    closed.
+    """
+    block_number = 10
+    setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=block_number)
+
+    channel_closed = ContractReceiveChannelClosed(
+        transaction_hash=factories.make_transaction_hash(),
+        transaction_from=factories.make_address(),
+        token_network_identifier=setup.channel.token_network_identifier,
+        channel_identifier=setup.channel.identifier,
+        block_number=block_number,
+    )
+    channel_close_transition = channel.state_transition(
+        channel_state=setup.channel,
+        state_change=channel_closed,
+        pseudo_random_generator=setup.prng,
+        block_number=block_number,
+    )
+    channel_state = channel_close_transition.new_state
+
+    expiration_block_number = setup.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    block = Block(
+        block_number=expiration_block_number,
+        gas_limit=1,
+        block_hash=factories.make_transaction_hash(),
+    )
+    channel_map = {channel_state.identifier: channel_state}
+    iteration = initiator_manager.state_transition(
+        setup.current_state,
+        block,
+        channel_map,
+        setup.prng,
+        expiration_block_number,
+    )
+    assert events.must_contain_entry(iteration.events, SendLockExpired, {}) is None
+
+
 def test_initiator_handle_contract_receive_secret_reveal():
     """ Initiator must unlock off-chain if the secret is revealed on-chain and
     the channel is open.
