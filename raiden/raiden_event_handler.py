@@ -36,11 +36,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.utils import (
-    get_event_with_balance_proof,
-    get_state_change_or_event_with_balance_proof,
-    get_state_change_with_balance_proof,
-)
+from raiden.transfer.utils import get_event_with_balance_proof, get_state_change_with_balance_proof
 from raiden.utils import pex
 from raiden.utils.signing import eth_sign
 
@@ -346,7 +342,26 @@ class RaidenEventHandler:
             our_locksroot != EMPTY_HASH
         )
 
-        if not is_partner_unlock and not is_our_unlock:
+        if is_partner_unlock:
+            state_change_record = get_state_change_with_balance_proof(
+                storage=raiden.wal.storage,
+                chain_id=raiden.chain.network_id,
+                token_network_identifier=token_network_identifier,
+                channel_identifier=channel_identifier,
+                balance_hash=partner_details.balance_hash,
+                sender=participants_details.partner_details.address,
+            )
+            state_change_identifier = state_change_record.state_change_identifier
+        elif is_our_unlock:
+            event_record = get_event_with_balance_proof(
+                storage=raiden.wal.storage,
+                chain_id=raiden.chain.network_id,
+                token_network_identifier=token_network_identifier,
+                channel_identifier=channel_identifier,
+                balance_hash=our_details.balance_hash,
+            )
+            state_change_identifier = event_record.state_change_identifier
+        else:
             # In the case that someone else sent the unlock we do nothing
             # Check https://github.com/raiden-network/raiden/issues/3152
             # for more details
@@ -358,21 +373,8 @@ class RaidenEventHandler:
             )
             return
 
-        record = get_state_change_or_event_with_balance_proof(
-            storage=raiden.wal.storage,
-            chain_id=raiden.chain.network_id,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
-            is_our_unlock=is_our_unlock,
-            is_partner_unlock=is_partner_unlock,
-            our_balance_hash=our_details.balance_hash,
-            partner_balance_hash=partner_details.balance_hash,
-            sender=participants_details.partner_details.address,
-        )
-
-        if not record.state_change_identifier:
-            log.warning(
-                f'Unlock not done. '
+        if not state_change_identifier:
+            raise RaidenUnrecoverableError(
                 f'Failed to find state/event that match current channel locksroots. '
                 f'chain_id:{raiden.chain.network_id} '
                 f'token:{to_checksum_address(token_address)} '
@@ -384,7 +386,6 @@ class RaidenEventHandler:
                 f'partner_locksroot:{to_hex(partner_locksroot)} '
                 f'partner_balancehash:{to_hex(partner_details.balance_hash)} ',
             )
-            return
 
         # Replay state changes until a channel state is reached where
         # this channel state has the participants balance hash.
@@ -393,7 +394,7 @@ class RaidenEventHandler:
             payment_network_identifier=raiden.default_registry.address,
             token_address=token_address,
             channel_identifier=channel_identifier,
-            state_change_identifier=record.state_change_identifier,
+            state_change_identifier=state_change_identifier,
         )
 
         our_state = restored_channel_state.our_state

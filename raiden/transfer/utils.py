@@ -17,69 +17,6 @@ from raiden.utils.typing import (
 )
 
 
-def get_state_change_or_event_with_balance_proof(
-        storage: sqlite.SQLiteStorage,
-        chain_id: ChainID,
-        token_network_identifier: TokenNetworkID,
-        channel_identifier: ChannelID,
-        is_our_unlock: bool,
-        is_partner_unlock: bool,
-        our_balance_hash: BalanceHash,
-        partner_balance_hash: BalanceHash,
-        sender: Address,
-) -> sqlite.Record:
-    """ Returns the state change or event which contains the corresponding balance
-    proof depending on who's balance hash we're looking for.
-    """
-    if is_partner_unlock:
-        state_change_record = get_state_change_with_balance_proof(
-            storage=storage,
-            chain_id=chain_id,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
-            balance_hash=partner_balance_hash,
-            sender=sender,
-        )
-        state_change_identifier = state_change_record.state_change_identifier
-
-        if state_change_identifier:
-            return state_change_record
-
-        event_record = get_event_with_balance_proof(
-            storage=storage,
-            chain_id=chain_id,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
-            balance_hash=partner_balance_hash,
-        )
-
-        return event_record
-    elif is_our_unlock:
-        event_record = get_event_with_balance_proof(
-            storage=storage,
-            chain_id=chain_id,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
-            balance_hash=our_balance_hash,
-        )
-        state_change_identifier = event_record.state_change_identifier
-
-        if state_change_identifier:
-            return event_record
-
-        state_change_record = get_state_change_with_balance_proof(
-            storage=storage,
-            chain_id=chain_id,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
-            balance_hash=our_balance_hash,
-            sender=sender,
-        )
-
-        return state_change_record
-    return 0
-
-
 def get_state_change_with_balance_proof(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
