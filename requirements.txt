@@ -25,6 +25,7 @@ pytoml
 raiden-contracts
 raiden-libs
 raiden-webui
+requests
 structlog
 web3
 webargs
