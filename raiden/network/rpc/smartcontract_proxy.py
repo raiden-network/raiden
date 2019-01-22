@@ -186,6 +186,11 @@ class ContractProxy:
         """Returns a gas estimate for the function with the given arguments or
         None if the function call will fail due to Insufficient funds or
         the logic in the called function."""
+        msg = (
+            'At the moment since geth only accepts pending block for estimateGas '
+            'we enforce the same behaviour for all clients. Please use "pending".'
+        )
+        assert block_identifier == 'pending', msg
         fn = getattr(self.contract.functions, function)
         address = to_checksum_address(self.jsonrpc_client.address)
         if self.jsonrpc_client.eth_node == constants.EthClient.GETH:
