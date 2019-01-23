@@ -283,10 +283,11 @@ def test_get_event_with_balance_proof():
         assert event_record.data.balance_proof == event.balance_proof
 
 
-def test_log_raiden_run():
+def test_log_run():
     with patch('raiden.storage.sqlite.get_system_spec') as get_speck_mock:
         get_speck_mock.return_value = dict(raiden='1.2.3')
         store = SQLiteStorage(':memory:', None)
+        store.log_run()
     cursor = store.conn.cursor()
     cursor.execute('SELECT started_at, raiden_version FROM runs')
     run = cursor.fetchone()
