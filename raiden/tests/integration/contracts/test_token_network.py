@@ -10,9 +10,10 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     SamePeerAddress,
 )
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils import wait_blocks
+from raiden.tests.utils.geth import wait_until_block
 from raiden.utils.signing import eth_sign
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
@@ -76,6 +77,7 @@ def test_token_network_proxy_basics(
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
+    c1_chain = BlockChainService(private_keys[1], c1_client)
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
@@ -282,7 +284,7 @@ def test_token_network_proxy_basics(
         assert 'not in an open state' in str(exc)
 
     # update transfer
-    wait_blocks(c1_client.web3, TEST_SETTLE_TIMEOUT_MIN)
+    wait_until_block(c1_chain, c1_chain.block_number() + TEST_SETTLE_TIMEOUT_MIN)
 
     # try to settle using incorrect data
     with pytest.raises(RaidenUnrecoverableError):
@@ -337,6 +339,7 @@ def test_token_network_proxy_update_transfer(
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
+    c1_chain = BlockChainService(private_keys[1], c1_client)
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
@@ -478,7 +481,7 @@ def test_token_network_proxy_update_transfer(
 
         assert 'cannot be settled before settlement window is over' in str(exc)
 
-    wait_blocks(c1_client.web3, 10)
+    wait_until_block(c1_chain, c1_chain.block_number() + 10)
 
     # settling with an invalid amount
     with pytest.raises(RaidenUnrecoverableError):
