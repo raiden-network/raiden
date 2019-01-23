@@ -94,18 +94,18 @@ def enable_greenlet_debugger(request):
         enabled = False
         hub = gevent.get_hub()
 
-        def debugger(context, type, value, tb):
+        def debugger(context, type_, value, tb):
             # Always print the exception, because once the pdb REPL is started
             # we cannot retrieve it with `sys.exc_info()`.
             #
             # Using gevent's hub print_exception because it properly handles
             # corner cases.
-            hub.print_exception(context, type, value, tb)
+            hub.print_exception(context, type_, value, tb)
 
             # Don't enter nested sessions
             # Ignore exceptions used to quit the debugger / interpreter
             nonlocal enabled
-            if not enabled and type not in (bdb.BdbQuit, KeyboardInterrupt):
+            if not enabled and type_ not in (bdb.BdbQuit, KeyboardInterrupt):
                 enabled = True
                 pdb.post_mortem()  # pylint: disable=no-member
                 enabled = False

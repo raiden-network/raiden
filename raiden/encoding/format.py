@@ -28,10 +28,10 @@ def make_field(name, size_bytes, format_string, encoder=None):
     )
 
 
-def pad(bytes):
+def pad(bytes_):
     return Pad(
-        bytes,
-        '{}x'.format(bytes),
+        bytes_,
+        '{}x'.format(bytes_),
     )
 
 
