@@ -258,6 +258,7 @@ jobs:
     environment:
       RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
       RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
+      RAIDEN_TESTS_GET_DATADIR: /tmp/geth
       COVERAGE_DIR: /home/circleci/raiden/coverage
 
     parallelism: << parameters.parallelism >>
@@ -344,6 +345,10 @@ jobs:
     - store_artifacts:
         path: /tmp/synapse-logs
         destination: synapse-logs
+
+    - store_artifacts:
+        path: /tmp/geth/logs
+        destination: geth-logs
 
   finalize:
     executor:
