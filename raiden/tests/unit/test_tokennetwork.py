@@ -1398,3 +1398,33 @@ def test_routing_mocked_pfs(
         assert routes[0].channel_identifier == channel_state1.identifier
         assert routes[1].node_address == address2
         assert routes[1].channel_identifier == channel_state2.identifier
+
+    # test routing with node 2 unavailable
+    chain_state.nodeaddresses_to_networkstates = {
+        address1: NODE_NETWORK_REACHABLE,
+        address2: NODE_NETWORK_UNREACHABLE,
+        address3: NODE_NETWORK_REACHABLE,
+    }
+
+    # Test that route over node 2 gets filtered out
+    response = Mock()
+    response.configure_mock(status_code=200)
+    response.json = Mock(return_value=json_data)
+
+    with patch.object(requests, 'get', return_value=response):
+        routes = get_best_routes(
+            chain_state=chain_state,
+            token_network_id=token_network_state.address,
+            from_address=our_address,
+            to_address=address1,
+            amount=50,
+            previous_address=None,
+            config={
+                'services': {
+                    'pathfinding_service_address': 'my-pfs',
+                    'pathfinding_max_paths': 3,
+                },
+            },
+        )
+        assert routes[0].node_address == address1
+        assert routes[0].channel_identifier == channel_state1.identifier
