@@ -13,11 +13,62 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
     ChainState,
+    NettingChannelState,
     RouteState,
 )
 from raiden.utils import pex, typing
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+
+
+def check_channel_constraints(
+        channel_state: NettingChannelState,
+        from_address: typing.InitiatorAddress,
+        partner_address: typing.Address,
+        amount: int,
+        network_statuses: Dict[typing.Address, str],
+        routing_module: str,
+) -> bool:
+    # check channel state
+    if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+        log.info(
+            'Channel is not opened, ignoring',
+            from_address=pex(from_address),
+            partner_address=pex(partner_address),
+            routing_source=routing_module,
+        )
+        return False
+
+    # check channel distributable
+    distributable = channel.get_distributable(
+        channel_state.our_state,
+        channel_state.partner_state,
+    )
+
+    if amount > distributable:
+        log.info(
+            'Channel doesnt have enough funds, ignoring',
+            from_address=pex(from_address),
+            partner_address=pex(partner_address),
+            amount=amount,
+            distributable=distributable,
+            routing_source=routing_module,
+        )
+        return False
+
+    # check channel partner reachability
+    network_state = network_statuses.get(partner_address, NODE_NETWORK_UNKNOWN)
+    if network_state != NODE_NETWORK_REACHABLE:
+        log.info(
+            'Partner for channel isn\'t reachable, ignoring',
+            from_address=pex(from_address),
+            partner_address=pex(partner_address),
+            status=network_state,
+            routing_source=routing_module,
+        )
+        return False
+
+    return True
 
 
 def get_best_routes(
@@ -105,40 +156,15 @@ def get_best_routes_internal(
             partner_address,
         )
 
-        assert channel_state is not None
-
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
-            log.info(
-                'channel is not opened, ignoring',
-                from_address=pex(from_address),
-                partner_address=pex(partner_address),
-            )
-            continue
-
-        distributable = channel.get_distributable(
-            channel_state.our_state,
-            channel_state.partner_state,
+        channel_constraints_fulfilled = check_channel_constraints(
+            channel_state=channel_state,
+            from_address=from_address,
+            partner_address=partner_address,
+            amount=amount,
+            network_statuses=network_statuses,
+            routing_module='Internal Routing',
         )
-
-        if amount > distributable:
-            log.info(
-                'channel doesnt have enough funds, ignoring',
-                from_address=pex(from_address),
-                partner_address=pex(partner_address),
-                amount=amount,
-                distributable=distributable,
-            )
-            continue
-
-        network_state = network_statuses.get(partner_address, NODE_NETWORK_UNKNOWN)
-
-        if network_state != NODE_NETWORK_REACHABLE:
-            log.info(
-                'partner for channel state isn\'t reachable, ignoring',
-                from_address=pex(from_address),
-                partner_address=pex(partner_address),
-                status=network_state,
-            )
+        if not channel_constraints_fulfilled:
             continue
 
         nonrefundable = amount > channel.get_distributable(
@@ -256,23 +282,16 @@ def get_best_routes_pfs(
             token_network_id=token_network_id,
             partner_address=partner_address,
         )
-        assert channel_state is not None
 
-        # check channel state
-        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
-            continue
-
-        # check channel distributable
-        distributable = channel.get_distributable(
-            channel_state.our_state,
-            channel_state.partner_state,
+        channel_constraints_fulfilled = check_channel_constraints(
+            channel_state=channel_state,
+            from_address=from_address,
+            partner_address=partner_address,
+            amount=amount,
+            network_statuses=network_statuses,
+            routing_module='Pathfinding Service',
         )
-        if amount > distributable:
-            continue
-
-        # check partner's online status
-        network_state = network_statuses.get(partner_address, NODE_NETWORK_UNKNOWN)
-        if network_state != NODE_NETWORK_REACHABLE:
+        if not channel_constraints_fulfilled:
             continue
 
         paths.append(RouteState(
