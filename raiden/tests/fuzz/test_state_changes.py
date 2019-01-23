@@ -10,22 +10,31 @@ from hypothesis.stateful import (
     consumes,
     initialize,
     invariant,
+    multiple,
     rule,
 )
 from hypothesis.strategies import builds, composite, integers, random_module, randoms
 
 from raiden.constants import EMPTY_MERKLE_ROOT, GENESIS_BLOCK_NUMBER
+from raiden.messages import Lock
 from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.tests.utils import factories
 from raiden.transfer import channel, node
-from raiden.transfer.events import EventPaymentSentFailed
+from raiden.transfer.events import EventPaymentSentFailed, SendProcessed
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
+    ActionInitMediator,
     ReceiveSecretRequest,
     TransferDescriptionWithSecretState,
 )
-from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
+from raiden.transfer.merkle_tree import merkleroot
+from raiden.transfer.state import (
+    EMPTY_MERKLE_TREE,
+    ChainState,
+    PaymentNetworkState,
+    TokenNetworkState,
+)
 from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelNew,
@@ -58,6 +67,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.replay_path = False
         self.address_to_channel = dict()
         self.address_to_privkey = dict()
+        self.initial_number_of_channels = 1
 
         self.our_previous_deposit = defaultdict(int)
         self.partner_previous_deposit = defaultdict(int)
@@ -143,11 +153,11 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.payment_network_id
         ] = self.payment_network_state
 
-        self.chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
-            self.token_network_id
-        ] = self.payment_network_id
-
-        return self.new_channel_with_transaction()
+        channels = [
+            self.new_channel_with_transaction()
+            for _ in range(self.initial_number_of_channels)
+        ]
+        return multiple(*channels)
 
     def event(self, description):
         """ Wrapper for hypothesis' event function.
@@ -405,6 +415,126 @@ class InitiatorMixin:
         self._unauthentic_secret_request(action)
 
 
+class BalanceProofData:
+    def __init__(self, channel_id, token_network_id):
+        self._merkletree = EMPTY_MERKLE_TREE
+        self.properties = factories.BalanceProofProperties(
+            transferred_amount=0,
+            locked_amount=0,
+            nonce=0,
+            channel_identifier=channel_id,
+            token_network_identifier=token_network_id,
+        )
+
+    def update(self, amount, lockhash):
+        self._merkletree = channel.compute_merkletree_with(
+            self._merkletree,
+            lockhash,
+        )
+        self.properties = factories.create_properties(
+            factories.BalanceProofProperties(
+                locked_amount = self.properties.locked_amount + amount,
+                locksroot=merkleroot(self._merkletree),
+                nonce = self.properties.nonce + 1,
+            ),
+            self.properties,
+        )
+
+
+class MediatorMixin:
+
+    def __init__(self):
+        super().__init__()
+        self.partner_to_balance_proof_data = dict()
+        self.initial_number_of_channels = 2
+
+    def _get_balance_proof_data(self, partner):
+        if partner not in self.partner_to_balance_proof_data:
+            partner_channel = self.address_to_channel[partner]
+            self.partner_to_balance_proof_data[partner] = BalanceProofData(
+                channel_id=partner_channel.identifier,
+                token_network_id=self.token_network_id,
+            )
+        return self.partner_to_balance_proof_data[partner]
+
+    def _update_balance_proof_data(self, partner, amount, expiration, secret):
+        expected = self._get_balance_proof_data(partner)
+        lock = Lock(amount, expiration, sha3(secret))
+        expected.update(amount, lock.lockhash)
+        return expected
+
+    init_mediators = Bundle('init_mediators')
+
+    def _new_mediator_transfer(
+            self,
+            initiator_address,
+            target_address,
+            payment_id,
+            amount,
+            secret,
+    ) -> LockedTransferSignedState:
+        initiator_pkey = self.address_to_privkey[initiator_address]
+
+        balance_proof_data = self._update_balance_proof_data(initiator_address, amount, 5, secret)
+
+        return factories.create(factories.LockedTransferSignedStateProperties(
+            transfer=factories.LockedTransferProperties(
+                balance_proof=balance_proof_data.properties,
+                amount=amount,
+                payment_identifier=payment_id,
+                secret=secret,
+                initiator=initiator_address,
+                target=target_address,
+            ),
+            sender=initiator_address,
+            recipient=self.address,
+            pkey=initiator_pkey,
+            message_identifier=1,
+        ))
+
+    def _action_init_mediator(self, transfer: LockedTransferSignedState) -> ActionInitMediator:
+        initiator_channel = self.address_to_channel[transfer.initiator]
+        target_channel = self.address_to_channel[transfer.target]
+
+        return ActionInitMediator(
+            [factories.route_from_channel(target_channel)],
+            factories.make_route_to_channel(initiator_channel),
+            transfer,
+        )
+
+    @rule(
+        target=init_mediators,
+        initiator_address=partners,
+        target_address=partners,
+        payment_id=integers(min_value=1, max_value=UINT64_MAX),
+        amount=integers(min_value=1, max_value=100),
+        secret=secret(),
+    )
+    def valid_init_mediator(
+            self,
+            initiator_address,
+            target_address,
+            payment_id,
+            amount,
+            secret,
+    ):
+        assume(initiator_address != target_address)
+
+        transfer = self._new_mediator_transfer(
+            initiator_address,
+            target_address,
+            payment_id,
+            amount,
+            secret,
+        )
+        action = self._action_init_mediator(transfer)
+        result = node.state_transition(self.chain_state, action)
+
+        assert event_types_match(result.events, SendProcessed)
+
+        return action
+
+
 class OnChainMixin:
 
     block_number: BlockNumber
@@ -452,6 +582,10 @@ class InitiatorStateMachine(InitiatorMixin, ChainStateStateMachine):
     pass
 
 
+class MediatorStateMachine(MediatorMixin, ChainStateStateMachine):
+    pass
+
+
 class OnChainStateMachine(OnChainMixin, ChainStateStateMachine):
     pass
 
@@ -460,11 +594,28 @@ class MultiChannelInitiatorStateMachine(InitiatorMixin, OnChainMixin, ChainState
     pass
 
 
+class MultiChannelMediatorStateMachine(MediatorMixin, OnChainMixin, ChainStateStateMachine):
+    pass
+
+
+class FullStateMachine(
+    InitiatorMixin,
+    MediatorMixin,
+    OnChainMixin,
+    ChainStateStateMachine,
+):
+    pass
+
+
 TestInitiator = InitiatorStateMachine.TestCase
+TestMediator = MediatorStateMachine.TestCase
 TestOnChain = OnChainStateMachine.TestCase
 TestMultiChannelInitiator = MultiChannelInitiatorStateMachine.TestCase
+TestMultiChannelMediator = MultiChannelMediatorStateMachine.TestCase
+TestFullStateMachine = FullStateMachine.TestCase
 
 
+@pytest.mark.skip
 def test_regression_malicious_secret_request_handled_properly():
     state = InitiatorStateMachine()
     state.replay_path = True
