@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from web3 import HTTPProvider, Web3
 
@@ -12,6 +14,8 @@ from raiden.utils import privatekey_to_address
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
+
+_GETH_DATADIR = os.environ.get('RAIDEN_TESTS_GET_DATADIR', False)
 
 
 @pytest.fixture
@@ -69,14 +73,20 @@ def web3(
             for key in keys_to_fund
         ]
 
+        if _GETH_DATADIR:
+            base_datadir = _GETH_DATADIR
+            os.makedirs(base_datadir, exist_ok=True)
+        else:
+            base_datadir = str(tmpdir)
+
         geth_processes = geth_run_private_blockchain(
-            web3,
-            accounts_to_fund,
-            geth_nodes,
-            str(tmpdir),
-            chain_id,
-            request.config.option.verbose,
-            random_marker,
+            web3=web3,
+            accounts_to_fund=accounts_to_fund,
+            geth_nodes=geth_nodes,
+            base_datadir=base_datadir,
+            chain_id=chain_id,
+            verbosity=request.config.option.verbose,
+            random_marker=random_marker,
         )
 
         yield web3
