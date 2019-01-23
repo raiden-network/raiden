@@ -313,7 +313,7 @@ def geth_run_nodes(
         verbosity,
         logdir,
 ):
-    os.makedirs(logdir)
+    os.makedirs(logdir, exist_ok=True)
 
     password_path = os.path.join(base_datadir, 'pw')
     with open(password_path, 'w') as handler:
