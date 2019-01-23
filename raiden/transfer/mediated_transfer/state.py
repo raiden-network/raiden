@@ -283,10 +283,18 @@ class TargetTransferState(State):
         'state',
     )
 
+    EXPIRED = 'expired'
+    OFFCHAIN_SECRET_REVEAL = 'reveal_secret'
+    ONCHAIN_SECRET_REVEAL = 'onchain_secret_reveal'
+    ONCHAIN_UNLOCK = 'onchain_unlock'
+    SECRET_REQUEST = 'secret_request'
+
     valid_states = (
-        'secret_request',
-        'reveal_secret',
-        'expired',
+        EXPIRED,
+        OFFCHAIN_SECRET_REVEAL,
+        ONCHAIN_SECRET_REVEAL,
+        ONCHAIN_UNLOCK,
+        SECRET_REQUEST,
     )
 
     def __init__(
