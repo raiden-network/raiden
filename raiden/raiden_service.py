@@ -296,10 +296,10 @@ class RaidenService(Runnable):
                 self.config['transport']['udp']['external_port'],
             )
 
-        storage = sqlite.SQLiteStorage(self.database_path, serialize.JSONSerializer())
-        storage.register_upgrade_callback(self.upgrade_db)
-        storage.maybe_upgrade()
+        self.maybe_upgrade_db()
 
+        storage = sqlite.SQLiteStorage(self.database_path, serialize.JSONSerializer())
+        storage.log_run()
         self.wal = wal.restore_to_state_change(
             transition_function=node.state_transition,
             storage=storage,
@@ -831,10 +831,7 @@ class RaidenService(Runnable):
         init_target_statechange = target_init(transfer)
         self.handle_state_change(init_target_statechange)
 
-    def upgrade_db(self, current_version: int, old_version: int):
-        log.debug(f'Upgrading database from v{old_version} to v{current_version}')
-        # Prevent unique constraint error in DB when recording raiden "runs"
-        gevent.sleep(1)
+    def maybe_upgrade_db(self, current_version: int, old_version: int):
         manager = UpgradeManager(
             db_filename=self.database_path,
             old_version=old_version,

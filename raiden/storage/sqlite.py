@@ -44,8 +44,6 @@ class SQLiteStorage:
                     'Manual user intervention required. Bailing ...'.format(database_path),
                 )
 
-        self._log_raiden_run()
-
         # When writting to a table where the primary key is the identifier and we want
         # to return said identifier we use cursor.lastrowid, which uses sqlite's last_insert_rowid
         # https://github.com/python/cpython/blob/2.7/Modules/_sqlite/cursor.c#L727-L732
@@ -60,25 +58,6 @@ class SQLiteStorage:
         # condition.
         self.write_lock = threading.Lock()
         self.serializer = serializer
-        self._upgrade_callback = None
-
-    def register_upgrade_callback(self, callback: Callable[[int, int], None]):
-        if not callable(callback):
-            raise TypeError("Callback is not callable")
-        self._upgrade_callback = callback
-
-    def maybe_upgrade(self):
-        db_version = self.get_version()
-        if RAIDEN_DB_VERSION <= db_version:
-            return
-
-        if self._upgrade_callback:
-            self._upgrade_callback(
-                current_version=RAIDEN_DB_VERSION,
-                old_version=db_version,
-            )
-
-        self.update_version()
 
     def update_version(self):
         cursor = self.conn.cursor()
@@ -88,7 +67,7 @@ class SQLiteStorage:
         )
         self.conn.commit()
 
-    def _log_raiden_run(self):
+    def log_run(self):
         """ Log timestamp and raiden version to help with debugging """
         version = get_system_spec()['raiden']
         cursor = self.conn.cursor()
