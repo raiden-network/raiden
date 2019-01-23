@@ -5,12 +5,12 @@ import pytest
 from eth_utils import keccak
 
 from raiden.network.proxies import SecretRegistry
-from raiden.tests.utils import get_random_bytes
+from raiden.tests.utils.factories import make_secret
 
 
 def test_secret_registry(secret_registry_proxy):
     #  register secret
-    secret = get_random_bytes(32)
+    secret = make_secret()
     event_filter = secret_registry_proxy.secret_registered_filter()
     secret_registry_proxy.register_secret(secret)
 
@@ -29,7 +29,7 @@ def test_secret_registry(secret_registry_proxy):
 
 
 def test_secret_registry_register_batch(secret_registry_proxy):
-    secrets = [get_random_bytes(32) for i in range(4)]
+    secrets = [make_secret() for i in range(4)]
     secrethashes = [keccak(secret) for secret in secrets]
 
     event_filter = secret_registry_proxy.secret_registered_filter()
@@ -78,7 +78,7 @@ def test_concurrent_access(
     This is done by patchin secret_registry_proxy to forbid more than
     one call to `_register_secret_batch`.
     """
-    secret = get_random_bytes(32)
+    secret = make_secret()
     # Spawn multiple greenlets registrering a single secret
     # Patched secret registry asserts that the on-chain registry call
     # is only called once.
