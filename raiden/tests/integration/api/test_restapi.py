@@ -10,9 +10,8 @@ from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
 from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
-from raiden.tests.utils import assert_dicts_are_equal
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.events import must_have_event, must_have_events
+from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
@@ -356,13 +355,14 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response, HTTPStatus.CREATED)
     first_channel_id = 1
     response = response.json()
-    expected_response = channel_data_obj
-    expected_response['balance'] = 0
-    expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = 1
-    expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
-    expected_response['total_deposit'] = 0
-    assert_dicts_are_equal(response, expected_response)
+    expected_response = channel_data_obj.copy()
+    expected_response.update({
+        'balance': 0,
+        'state': CHANNEL_STATE_OPENED,
+        'channel_identifier': 1,
+        'total_deposit': 0,
+    })
+    assert check_dict_nested_attrs(response, expected_response)
 
     token_network_identifier = response['token_network_identifier']
 
@@ -388,13 +388,15 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response, HTTPStatus.CREATED)
     second_channel_id = 2
     response = response.json()
-    expected_response = channel_data_obj
-    expected_response['balance'] = total_deposit
-    expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = second_channel_id
-    expected_response['token_network_identifier'] = token_network_identifier
-    expected_response['total_deposit'] = total_deposit
-    assert_dicts_are_equal(response, expected_response)
+    expected_response = channel_data_obj.copy()
+    expected_response.update({
+        'balance': total_deposit,
+        'state': CHANNEL_STATE_OPENED,
+        'channel_identifier': second_channel_id,
+        'token_network_identifier': token_network_identifier,
+        'total_deposit': total_deposit,
+    })
+    assert check_dict_nested_attrs(response, expected_response)
 
     # assert depositing again with less than the initial deposit returns 409
     request = grequests.patch(
@@ -446,7 +448,7 @@ def test_api_open_and_deposit_channel(
         'total_deposit': total_deposit,
         'token_network_identifier': token_network_identifier,
     }
-    assert_dicts_are_equal(response, expected_response)
+    assert check_dict_nested_attrs(response, expected_response)
 
     # let's try querying for the second channel
     request = grequests.get(
@@ -472,7 +474,7 @@ def test_api_open_and_deposit_channel(
         'total_deposit': total_deposit,
         'token_network_identifier': token_network_identifier,
     }
-    assert_dicts_are_equal(response, expected_response)
+    assert check_dict_nested_attrs(response, expected_response)
 
     # finally let's burn all eth and try to open another channel
     burn_eth(test_api_server.rest_api.raiden_api.raiden)
@@ -525,14 +527,15 @@ def test_api_open_close_and_settle_channel(
     assert_proper_response(response, status_code=HTTPStatus.CREATED)
     channel_identifier = 1
     response = response.json()
-    expected_response = channel_data_obj
-    expected_response['balance'] = balance
-    expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['reveal_timeout'] = reveal_timeout
-    expected_response['channel_identifier'] = channel_identifier
-    expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
-    expected_response['total_deposit'] = 0
-    assert_dicts_are_equal(response, expected_response)
+    expected_response = channel_data_obj.copy()
+    expected_response.update({
+        'balance': balance,
+        'state': CHANNEL_STATE_OPENED,
+        'reveal_timeout': reveal_timeout,
+        'channel_identifier': channel_identifier,
+        'total_deposit': 0,
+    })
+    assert check_dict_nested_attrs(response, expected_response)
 
     token_network_identifier = response['token_network_identifier']
 
@@ -559,7 +562,7 @@ def test_api_open_close_and_settle_channel(
         'balance': balance,
         'total_deposit': balance,
     }
-    assert_dicts_are_equal(response.json(), expected_response)
+    assert check_dict_nested_attrs(response.json(), expected_response)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -591,14 +594,15 @@ def test_api_close_insufficient_eth(
     assert_proper_response(response, status_code=HTTPStatus.CREATED)
     channel_identifier = 1
     response = response.json()
-    expected_response = channel_data_obj
-    expected_response['balance'] = balance
-    expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['reveal_timeout'] = reveal_timeout
-    expected_response['channel_identifier'] = channel_identifier
-    expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
-    expected_response['total_deposit'] = 0
-    assert_dicts_are_equal(response, expected_response)
+    expected_response = channel_data_obj.copy()
+    expected_response.update({
+        'balance': balance,
+        'state': CHANNEL_STATE_OPENED,
+        'reveal_timeout': reveal_timeout,
+        'channel_identifier': channel_identifier,
+        'total_deposit': 0,
+    })
+    assert check_dict_nested_attrs(response, expected_response)
 
     # let's burn all eth and try to close the channel
     burn_eth(test_api_server.rest_api.raiden_api.raiden)
@@ -1329,13 +1333,14 @@ def test_api_deposit_limit(
     assert_proper_response(response, HTTPStatus.CREATED)
     first_channel_identifier = 1
     response = response.json()
-    expected_response = channel_data_obj
-    expected_response['balance'] = balance_working
-    expected_response['state'] = CHANNEL_STATE_OPENED
-    expected_response['channel_identifier'] = first_channel_identifier
-    expected_response['token_network_identifier'] = assert_dicts_are_equal.IGNORE_VALUE
-    expected_response['total_deposit'] = balance_working
-    assert_dicts_are_equal(response, expected_response)
+    expected_response = channel_data_obj.copy()
+    expected_response.update({
+        'balance': balance_working,
+        'state': CHANNEL_STATE_OPENED,
+        'channel_identifier': first_channel_identifier,
+        'total_deposit': balance_working,
+    })
+    assert check_dict_nested_attrs(response, expected_response)
 
     # now let's open a channel and deposit a bit more than the limit
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'

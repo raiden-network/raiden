@@ -53,6 +53,16 @@ def raiden_events_must_contain_entry(raiden, type_, data):
 
 
 def check_dict_nested_attrs(item, dict_data):
+    """ Checks the values from `dict_data` are contained in `item`
+
+    >>> d = {'a': 1, 'b': {'c': 2}}
+    >>> check_dict_nested_attrs(d, {'a': 1)
+    True
+    >>> check_dict_nested_attrs(d, {'b': {'c': 2}})
+    True
+    >>> check_dict_nested_attrs(d, {'d': []})
+    False
+    """
     for key, value in dict_data.items():
         if key not in item:
             return False
