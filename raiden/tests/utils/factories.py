@@ -175,6 +175,11 @@ def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> Route
     return RouteState(channel_state.partner_state.address, channel_state.identifier)
 
 
+def make_route_to_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
+    channel_state = if_empty(channel_state, make_channel_state())
+    return RouteState(channel_state.our_state.address, channel_state.identifier)
+
+
 # CONSTANTS
 # In this module constants are in the bottom because we need some of the
 # factories.
