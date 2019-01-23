@@ -180,7 +180,7 @@ def get_best_routes_pfs(
         from_address: typing.InitiatorAddress,
         to_address: typing.TargetAddress,
         amount: int,
-        previous_address: typing.Optional[typing.Address],  # TODO(paul): Remove this?
+        previous_address: typing.Optional[typing.Address],
         config: Dict[str, Any],
 ) -> Tuple[bool, List[RouteState]]:
     pfs_path = '{}/api/v1/{}/paths'.format(
@@ -239,6 +239,7 @@ def get_best_routes_pfs(
         return False, []
 
     paths = []
+    network_statuses = views.get_networkstatuses(chain_state)
     for path_object in response_json['result']:
         path = path_object['path']
 
@@ -246,12 +247,34 @@ def get_best_routes_pfs(
         # also needs to be converted to canonical representation
         partner_address = to_canonical_address(path[1])
 
+        # don't route back
+        if partner_address == previous_address:
+            continue
+
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
             token_network_id=token_network_id,
             partner_address=partner_address,
         )
-        # TODO(paul): need to check online statuses as well?
+        assert channel_state is not None
+
+        # check channel state
+        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+            continue
+
+        # check channel distributable
+        distributable = channel.get_distributable(
+            channel_state.our_state,
+            channel_state.partner_state,
+        )
+        if amount > distributable:
+            continue
+
+        # check partner's online status
+        network_state = network_statuses.get(partner_address, NODE_NETWORK_UNKNOWN)
+        if network_state != NODE_NETWORK_REACHABLE:
+            continue
+
         paths.append(RouteState(
             node_address=partner_address,
             channel_identifier=channel_state.identifier,
