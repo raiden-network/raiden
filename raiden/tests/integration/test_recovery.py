@@ -5,16 +5,19 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.message_handler import MessageHandler
+from raiden.messages import Secret
 from raiden.network.transport import UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
 )
+from raiden.utils import create_default_identifier
 
 
 @pytest.mark.parametrize('deposit', [10])
@@ -30,6 +33,10 @@ def test_recovery_happy_case(
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
+
+    app2_wait_for = WaitForMessage()
+    app2.raiden.message_handler = app2_wait_for
+
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -108,6 +115,9 @@ def test_recovery_happy_case(
         network_wait,
     )
 
+    identifier = create_default_identifier()
+    wait_for_payment = app2_wait_for.wait_for_message(Secret, {'payment_identifier': identifier})
+
     mediated_transfer(
         app2,
         app0_restart,
@@ -116,10 +126,11 @@ def test_recovery_happy_case(
         timeout=network_wait * number_of_nodes * 2,
     )
     mediated_transfer(
-        app0_restart,
-        app2,
-        token_network_identifier,
-        amount,
+        initiator_app=app0_restart,
+        target_app=app2,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        identifier=identifier,
         timeout=network_wait * number_of_nodes * 2,
     )
 
@@ -128,6 +139,8 @@ def test_recovery_happy_case(
         app0_restart, deposit - spent_amount, [],
         app1, deposit + spent_amount, [],
     )
+
+    wait_for_payment.wait()
     assert_synced_channel_state(
         token_network_identifier,
         app1, deposit - spent_amount, [],
