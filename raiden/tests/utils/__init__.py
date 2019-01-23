@@ -1,14 +1,5 @@
-import random
-
 import gevent
 from web3 import Web3
-
-
-def get_random_bytes(count):
-    """Get an array filed with random numbers"""
-    return bytes(
-        [random.randint(0, 0xff) for _ in range(count)],
-    )
 
 
 def wait_blocks(web3: Web3, blocks: int):
