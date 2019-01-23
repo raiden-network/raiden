@@ -14,13 +14,24 @@ from raiden.transfer.state_change import ContractReceiveChannelSettled
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_invalid_close(
+def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         raiden_network,
         number_of_nodes,
         deposit,
         token_addresses,
         network_wait,
 ):
+    """ A node must be able to settle a channel, even if the partner used an
+    old balance proof to close it.
+
+    This test will:
+    - Make a transfer from app0 to app1, to make sure there are balance
+    proofs available
+    - Call close manually in behalf of app1, without any balance proof data
+    - Assert that app0 can settle the closed channel, even though app1 didn't
+    use the latest balance proof
+    """
+
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -33,7 +44,8 @@ def test_invalid_close(
     )
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
-    # make a transfer from app0 to app1 so that app1 is supposed to have a non empty balance hash
+    # make a transfer from app0 to app1 so that app1 is supposed to have a non
+    # empty balance hash
     mediated_transfer(
         initiator_app=app0,
         target_app=app1,
@@ -86,7 +98,7 @@ def test_invalid_close(
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_invalid_update_transfer(
+def test_node_can_settle_if_partner_does_not_call_update_transfer(
         raiden_network,
         number_of_nodes,
         deposit,
@@ -94,6 +106,18 @@ def test_invalid_update_transfer(
         network_wait,
         chain_id,
 ):
+    """ A node must be able to settle a channel, even if the partner did not
+    call update transfer.
+
+    This test will:
+    - Make a transfer from app0 to app1, to make sure there are balance
+    proofs available
+    - Stop app1, to make sure update is not called.
+    - Use app0 to close the channel.
+    - Assert that app0 can settle the closed channel, even though app1 didn't
+    use the latest balance proof
+    """
+
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -106,7 +130,6 @@ def test_invalid_update_transfer(
     )
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
-    # make a transfer
     mediated_transfer(
         initiator_app=app0,
         target_app=app1,
@@ -116,7 +139,6 @@ def test_invalid_update_transfer(
     )
     # stop app1 - the test uses token_network_contract now
     app1.stop()
-    # close the channel
     RaidenAPI(app0.raiden).channel_close(
         registry_address=registry_address,
         token_address=token_address,
@@ -132,7 +154,6 @@ def test_invalid_update_transfer(
 
     # app1 won't update the channel
 
-    # app0 waits for settle
     waiting.wait_for_settle(
         raiden=app0.raiden,
         payment_network_id=registry_address,
