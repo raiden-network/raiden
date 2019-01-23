@@ -27,10 +27,22 @@ DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
 
+DUPLICATED_BRACKETS = str.maketrans({'{': '{{', '}': '}}'})
+
 
 class TransportProtocol(Enum):
     UDP = 'udp'
     MATRIX = 'matrix'
+
+
+def escape_for_format(string):
+    """ Escape `string` so that it can be used with `.format()`.
+
+    >>> escaped = escape_for_format('{}')
+    >>> escaped + '{}'.format(0)
+    '{}0'
+    """
+    return string.translate(DUPLICATED_BRACKETS)
 
 
 @pytest.fixture
@@ -180,7 +192,7 @@ def privatekey_seed(request):
     """ Private key template, allow different keys to be used for each test to
     avoid collisions.
     """
-    return request.node.name + ':{}'
+    return escape_for_format(request.node.name) + ':{}'
 
 
 @pytest.fixture
@@ -231,11 +243,14 @@ def blockchain_number_of_nodes():
 
 
 @pytest.fixture
-def blockchain_key_seed():
+def blockchain_key_seed(request):
     """ Private key template for the nodes in the private blockchain, allows
     different keys to be used for each test to avoid collisions.
     """
-    return 'cluster:{}'
+    # Using the test name as part of the template to force the keys to be
+    # different accross tests, otherwise the data directories would be the same
+    # and collisions would happen
+    return escape_for_format(request.node.name) + 'cluster:{}'
 
 
 @pytest.fixture
