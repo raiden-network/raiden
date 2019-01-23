@@ -29,7 +29,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
     proof.
 
     Use this function to find a balance proof for a call to settle, which only
-    have the blinded balance proof data.
+    has the blinded balance proof data.
     """
     return storage.get_latest_state_change_by_data_field({
         'balance_proof.chain_id': chain_id,
@@ -52,8 +52,8 @@ def get_state_change_with_balance_proof_by_locksroot(
     proof.
 
     Use this function to find a balance proof for a call to unlock, which only
-    happens after settle, so the channel has the unblinded of the balance
-    proof.
+    happens after settle, so the channel has the unblinded version of the
+    balance proof.
     """
     return storage.get_latest_state_change_by_data_field({
         'balance_proof.chain_id': chain_id,
@@ -75,7 +75,7 @@ def get_event_with_balance_proof_by_balance_hash(
     proof.
 
     Use this function to find a balance proof for a call to settle, which only
-    have the blinded balance proof data.
+    has the blinded balance proof data.
     """
     return storage.get_latest_event_by_data_field({
         'balance_proof.chain_id': chain_id,
@@ -95,8 +95,8 @@ def get_event_with_balance_proof_by_locksroot(
     """ Returns the event which contains the corresponding balance proof.
 
     Use this function to find a balance proof for a call to unlock, which only
-    happens after settle, so the channel has the unblinded of the balance
-    proof.
+    happens after settle, so the channel has the unblinded version of the
+    balance proof.
     """
     return storage.get_latest_event_by_data_field({
         'balance_proof.chain_id': chain_id,
