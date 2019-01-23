@@ -276,6 +276,10 @@ Flake8 will warn you for 99 characters which is the hard limit on the max
 length. Try not to go above it. We also have a soft limit on 80 characters but
 that is not enforced and is there just to encourage short lines.
 
+**Shadowing built-ins**
+
+Shadowing built-in names is not allowed. Pylint will also warn you about it. If you want to use a built-in name then add a trailing underscore and not a leading one. Leading ones are reserved for private attributes. For example `type` -> `type_`.
+
 **Function definitions formatting**
 
 The line length must be [smaller than 100 characters](#python), so the
