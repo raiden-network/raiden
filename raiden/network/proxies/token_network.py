@@ -919,19 +919,19 @@ class TokenNetwork:
         )
 
         error_prefix = 'closeChannel call will fail'
-        gas_limit = self.proxy.estimate_gas(
-            'pending',
-            'closeChannel',
-            channel_identifier,
-            partner,
-            balance_hash,
-            nonce,
-            additional_hash,
-            signature,
-        )
+        with self.channel_operations_lock[partner]:
+            gas_limit = self.proxy.estimate_gas(
+                'pending',
+                'closeChannel',
+                channel_identifier,
+                partner,
+                balance_hash,
+                nonce,
+                additional_hash,
+                signature,
+            )
 
-        if gas_limit:
-            with self.channel_operations_lock[partner]:
+            if gas_limit:
                 error_prefix = 'closeChannel call failed'
                 transaction_hash = self.proxy.transact(
                     'closeChannel',
@@ -946,35 +946,35 @@ class TokenNetwork:
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-        transaction_executed = gas_limit is not None
-        if not transaction_executed or receipt_or_none:
-            if transaction_executed:
-                block = receipt_or_none['blockNumber']
-            else:
-                block = 'pending'
+            transaction_executed = gas_limit is not None
+            if not transaction_executed or receipt_or_none:
+                if transaction_executed:
+                    block = receipt_or_none['blockNumber']
+                else:
+                    block = 'pending'
 
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                transaction_name='closeChannel',
-                transaction_executed=transaction_executed,
-                required_gas=GAS_REQUIRED_FOR_CLOSE_CHANNEL,
-                block_identifier=block,
-            )
-            error_type, msg = self._check_channel_state_for_close(
-                participant1=self.node_address,
-                participant2=partner,
-                channel_identifier=channel_identifier,
-                block_identifier=block,
-            )
-            error_msg = f'{error_prefix}. {msg}'
-            if error_type == RaidenRecoverableError:
-                log.warning(error_msg, **log_details)
-            else:
-                # error_type can also be None above in which case it's
-                # unknown reason why we would fail.
-                error_type = RaidenUnrecoverableError
-                log.critical(error_msg, **log_details)
+                self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                    transaction_name='closeChannel',
+                    transaction_executed=transaction_executed,
+                    required_gas=GAS_REQUIRED_FOR_CLOSE_CHANNEL,
+                    block_identifier=block,
+                )
+                error_type, msg = self._check_channel_state_for_close(
+                    participant1=self.node_address,
+                    participant2=partner,
+                    channel_identifier=channel_identifier,
+                    block_identifier=block,
+                )
+                error_msg = f'{error_prefix}. {msg}'
+                if error_type == RaidenRecoverableError:
+                    log.warning(error_msg, **log_details)
+                else:
+                    # error_type can also be None above in which case it's
+                    # unknown reason why we would fail.
+                    error_type = RaidenUnrecoverableError
+                    log.critical(error_msg, **log_details)
 
-            raise error_type(error_msg)
+                raise error_type(error_msg)
 
         log.info('closeChannel successful', **log_details)
 
