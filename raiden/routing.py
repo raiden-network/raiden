@@ -44,6 +44,11 @@ def get_best_routes(
 
         if pfs_answer_ok:
             return pfs_routes
+        else:
+            log.info(
+                'Request to Pathfinding Service was not successful, '
+                'falling back to internal routing.',
+            )
 
     return get_best_routes_internal(
         chain_state=chain_state,
@@ -191,20 +196,46 @@ def get_best_routes_pfs(
 
     # check that the response is successful
     try:
-        response = requests.get(pfs_path, params=payload, timeout=DEFAULT_REQUEST_TIMEOUT)
-    except requests.RequestException:
-        return False, []
-
-    if response.status_code != 200:
+        response = requests.get(pfs_path, params=payload, timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
+    except requests.RequestException as re:
+        log.info(
+            'Could not connect to Pathfinding Service',
+            request=pfs_path,
+            parameters=payload,
+            exception_=re,
+        )
         return False, []
 
     # check that the response contains valid json
     try:
         response_json = response.json()
-    except ValueError:
+    except ValueError as ve:
+        log.info(
+            'Pathfinding Service returned invalid JSON',
+            exception_=ve,
+        )
+        return False, []
+
+    if response.status_code != 200:
+        log_info = {
+            'error_code': response.status_code,
+        }
+
+        error = response_json.get('errors')
+        if error is not None:
+            log_info['pfs_error'] = error
+
+        log.info(
+            'Pathfinding Service returned error code',
+            **log_info,
+        )
         return False, []
 
     if response_json.get('result') is None:
+        log.info(
+            'Pathfinding Service returned unexpected result',
+            result=response_json,
+        )
         return False, []
 
     paths = []
