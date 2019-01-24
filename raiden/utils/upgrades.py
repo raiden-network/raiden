@@ -1,12 +1,15 @@
 import os
 import shutil
+import sqlite3
 from pathlib import Path
 
+import sqlitebck
 import structlog
 
-from raiden.exceptions import RaidenDBUpgradeBackupError
+from raiden.exceptions import RaidenDBUpgradeError
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
+from raiden.storage.versions import older_db_file
 from raiden.utils.migrations.v16_to_v17 import upgrade_initiator_manager
 
 UPGRADES_LIST = [
@@ -23,35 +26,62 @@ class UpgradeManager:
     with the current implementation.
     """
     def __init__(self, db_filename: str):
-        self._db_filename = Path(db_filename)
+        self._current_db_filename = Path(db_filename)
 
     def run(self):
-        storage = SQLiteStorage(str(self._db_filename), JSONSerializer())
-
-        self._old_version = storage.get_version()
-        self._current_version = RAIDEN_DB_VERSION
-        self._backup_filename = self._db_filename.parent / Path(
-            f'version{self._current_version}_db.backup',
-        )
-
-        if self._current_version <= self._old_version:
+        """
+        The `_db_filename` is going to hold the filename of the database
+        with the new version. However, the previous version's data
+        is going to exist in a file whose name contains the old version.
+        Therefore, running the migration means that we have to copy
+        all data to the current version's database, execute the migration
+        functions.
+        """
+        if self._current_db_filename.exists():
+            # The current version has already been created / updraded.
             return
 
-        log.debug(f'Upgrading database from v{self._old_version} to v{self._current_version}')
+        old_version, old_db_filename = older_db_file(str(self._current_db_filename.parent))
 
-        self._backup()
+        if not old_version:
+            # There are no older versions to upgrade from.
+            return
 
-        for upgrade_func in UPGRADES_LIST:
-            upgrade_func(storage, self._old_version, self._current_version)
+        self._copy(str(old_db_filename), str(self._current_db_filename))
 
-        storage.update_version()
+        storage = SQLiteStorage(str(self._current_db_filename), JSONSerializer())
 
-    def restore_backup(self):
-        os.remove(str(self._db_filename))
-        shutil.copy(str(self._backup_filename), str(self._db_filename))
+        log.debug(f'Upgrading database to v{RAIDEN_DB_VERSION}')
 
-    def _backup(self):
-        shutil.copy(str(self._db_filename), str(self._backup_filename))
+        try:
+            for upgrade_func in UPGRADES_LIST:
+                upgrade_func(storage, old_version, RAIDEN_DB_VERSION)
 
-        if not self._backup_filename.exists():
-            raise RaidenDBUpgradeBackupError()
+            storage.update_version()
+
+            # Prevent the upgrade from happening on next restart
+            self._backup_old_db(old_db_filename)
+        except RaidenDBUpgradeError as e:
+            self._delete_current_db()
+            log.error(f'Failed to upgrade database: {str(e)}')
+            raise
+
+    def _backup_old_db(self, filename):
+        backup_name = filename.replace('_log.db', '_log.backup')
+        shutil.move(filename, backup_name)
+
+    def _delete_current_db(self):
+        os.remove(str(self._current_db_filename))
+
+    def _copy(self, old_db_filename, current_db_filename):
+        old_conn = sqlite3.connect(old_db_filename, detect_types=sqlite3.PARSE_DECLTYPES)
+        current_conn = sqlite3.connect(current_db_filename, detect_types=sqlite3.PARSE_DECLTYPES)
+
+        sqlitebck.copy(old_conn, current_conn)
+
+        old_conn.close()
+        current_conn.close()
+
+    def _get_old_version(self):
+        storage = SQLiteStorage(str(self._current_db_filename), JSONSerializer())
+        return storage.get_version()

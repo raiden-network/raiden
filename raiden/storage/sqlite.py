@@ -11,13 +11,13 @@ from raiden.utils.typing import Any, Dict, Generator, NamedTuple, Optional, Tupl
 RAIDEN_DB_VERSION = 17
 
 
-class EventRecord(typing.NamedTuple):
+class EventRecord(NamedTuple):
     event_identifier: int
     state_change_identifier: int
     data: Any
 
 
-class StateChangeRecord(typing.NamedTuple):
+class StateChangeRecord(NamedTuple):
     state_change_identifier: int
     data: Any
 

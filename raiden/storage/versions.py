@@ -14,8 +14,8 @@ def older_db_file(database_base_path: str) -> typing.Optional[str]:
     of the schema.
     """
     database_base_path = os.path.expanduser(database_base_path)
-    db_files = glob(f'{database_base_path}/**/*.db', recursive=True)
-    for db_file in db_files:
+    db_files = glob(f'{database_base_path}/**/*_log.db', recursive=True)
+    for db_file in sorted(db_files, reverse=True):
         expanded_name = os.path.basename(db_file)
         matches = VERSION_RE.search(expanded_name)
         if not matches:
@@ -26,6 +26,7 @@ def older_db_file(database_base_path: str) -> typing.Optional[str]:
             continue
 
         if version < RAIDEN_DB_VERSION:
-            return expanded_name
+            old_db_filename = f'{database_base_path}/{expanded_name}'
+            return version, old_db_filename
 
-    return None
+    return None, None
