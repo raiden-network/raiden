@@ -102,8 +102,12 @@ def test_log_filter():
 @pytest.mark.parametrize('level', ['DEBUG', 'WARNING'])
 @pytest.mark.parametrize('logger', ['test', 'raiden', 'raiden.network'])
 @pytest.mark.parametrize('disabled_debug', [True, False])
-def test_basic_logging(capsys, module, level, logger, disabled_debug):
-    configure_logging({module: level}, disable_debug_logfile=disabled_debug)
+def test_basic_logging(capsys, module, level, logger, disabled_debug, tmpdir):
+    configure_logging(
+        {module: level},
+        disable_debug_logfile=disabled_debug,
+        debug_log_file_name=str(tmpdir / 'raiden-debug.log'),
+    )
     log = structlog.get_logger(logger).bind(foo='bar')
     log.debug('test event', key='value')
 
@@ -118,8 +122,11 @@ def test_basic_logging(capsys, module, level, logger, disabled_debug):
         assert 'foo=bar' in captured.err
 
 
-def test_redacted_request(capsys):
-    configure_logging({'': 'DEBUG'})
+def test_redacted_request(capsys, tmpdir):
+    configure_logging(
+        {'': 'DEBUG'},
+        debug_log_file_name=str(tmpdir / 'raiden-debug.log'),
+    )
     token = 'my_access_token123'
 
     # use logging, as 'urllib3/requests'
@@ -133,8 +140,11 @@ def test_redacted_request(capsys):
     assert 'access_token=<redacted>' in captured.err
 
 
-def test_redacted_traceback(capsys):
-    configure_logging({'': 'DEBUG'})
+def test_redacted_traceback(capsys, tmpdir):
+    configure_logging(
+        {'': 'DEBUG'},
+        debug_log_file_name=str(tmpdir / 'raiden-debug.log'),
+    )
 
     token = 'my_access_token123'
 
