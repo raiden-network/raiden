@@ -544,12 +544,6 @@ def test_secret_revealed_on_chain(
 
     # The channels are out-of-sync. app1 has sent the unlock, however we are
     # intercepting it and app2 has not received the updated balance proof
-    #
-    # assert_synced_channel_state(
-    #     token_network_identifier,
-    #     app1, deposit - amount, [],
-    #     app2, deposit + amount, [],
-    # )
 
     # Close the channel. This must register the secret on chain
     channel_close_event = ContractSendChannelClose(
