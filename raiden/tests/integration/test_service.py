@@ -2,7 +2,7 @@ import pytest
 
 from raiden.messages import Ping
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import state, views
 from raiden.transfer.state_change import Block
@@ -86,9 +86,9 @@ def test_raiden_service_callback_new_block(raiden_network):
         to_identifier='latest',
     )
 
-    assert must_contain_entry(app0_state_changes, Block, {
+    assert search_for_item(app0_state_changes, Block, {
         'block_number': target_block_num - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
     })
-    assert not must_contain_entry(app0_state_changes, Block, {
+    assert not search_for_item(app0_state_changes, Block, {
         'block_number': target_block_num,
     })

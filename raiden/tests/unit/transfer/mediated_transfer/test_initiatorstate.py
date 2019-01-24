@@ -4,7 +4,8 @@ from copy import deepcopy
 from typing import NamedTuple
 
 from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
-from raiden.tests.utils import events, factories
+from raiden.tests.utils import factories
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
     ADDR,
     EMPTY,
@@ -664,8 +665,8 @@ def test_refund_transfer_no_more_routes():
     )
     assert iteration.new_state, 'payment task should not be deleted at this lock expired'
     # should not be accepted
-    assert not events.must_contain_entry(iteration.events, SendProcessed, {})
-    assert events.must_contain_entry(iteration.events, EventInvalidReceivedLockExpired, {})
+    assert search_for_item(iteration.events, SendProcessed, {}) is None
+    assert search_for_item(iteration.events, EventInvalidReceivedLockExpired, {}) is not None
 
     # process a valid lock expired message before lock expiration
     current_state = iteration.new_state
@@ -678,7 +679,7 @@ def test_refund_transfer_no_more_routes():
     )
     assert iteration.new_state, 'payment task should not be deleted at this lock expired'
     # should not be accepted
-    assert not events.must_contain_entry(iteration.events, SendProcessed, {})
+    assert search_for_item(iteration.events, SendProcessed, {}) is None
 
     # now we get to the lock expiration block
     current_state = iteration.new_state
@@ -694,7 +695,7 @@ def test_refund_transfer_no_more_routes():
         setup.prng,
         expiry_block,
     )
-    assert events.must_contain_entry(iteration.events, SendLockExpired, {})
+    assert search_for_item(iteration.events, SendLockExpired, {}) is not None
     # Since there was a refund transfer the payment task must not have been deleted
     assert iteration.new_state is not None
 
@@ -708,7 +709,7 @@ def test_refund_transfer_no_more_routes():
         expiry_block,
     )
     # should be accepted
-    assert events.must_contain_entry(iteration.events, SendProcessed, {})
+    assert search_for_item(iteration.events, SendProcessed, {}) is not None
     assert iteration.new_state, 'payment task should be there waiting for next block'
 
     # process the the block after lock expiration
@@ -860,10 +861,11 @@ def test_handle_offchain_secretreveal():
     )
 
     payment_identifier = setup.current_state.initiator.transfer_description.payment_identifier
-    assert events.must_contain_entry(iteration.events, SendBalanceProof, {
+    balance_proof = search_for_item(iteration.events, SendBalanceProof, {
         'message_identifier': message_identifier,
         'payment_identifier': payment_identifier,
     })
+    assert balance_proof is not None
 
 
 def test_handle_offchain_emptyhash_secret():
@@ -942,7 +944,7 @@ def test_initiator_lock_expired():
         block_number,
     )
 
-    assert events.must_contain_entry(iteration.events, SendLockExpired, {
+    lock_expired = search_for_item(iteration.events, SendLockExpired, {
         'balance_proof': {
             'nonce': 2,
             'transferred_amount': 0,
@@ -951,14 +953,17 @@ def test_initiator_lock_expired():
         'secrethash': transfer.lock.secrethash,
         'recipient': channel1.partner_state.address,
     })
+    assert lock_expired is not None
+
     # Since the lock expired make sure we also get the payment sent failed event
-    assert events.must_contain_entry(iteration.events, EventPaymentSentFailed, {
+    payment_failed = search_for_item(iteration.events, EventPaymentSentFailed, {
         'payment_network_identifier': channel1.payment_network_identifier,
         'token_network_identifier': channel1.token_network_identifier,
         'identifier': UNIT_TRANSFER_IDENTIFIER,
         'target': transfer.target,
         'reason': "transfer's lock has expired",
     })
+    assert payment_failed is not None
 
     assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
     msg = 'the initiator payment task must be deleted at block of the lock expiration'
@@ -1047,7 +1052,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
         setup.prng,
         expiration_block_number,
     )
-    assert events.must_contain_entry(iteration.events, SendLockExpired, {}) is None
+    assert search_for_item(iteration.events, SendLockExpired, {}) is None
 
 
 def test_initiator_handle_contract_receive_secret_reveal():
@@ -1077,10 +1082,11 @@ def test_initiator_handle_contract_receive_secret_reveal():
     )
 
     payment_identifier = setup.current_state.initiator.transfer_description.payment_identifier
-    assert events.must_contain_entry(iteration.events, SendBalanceProof, {
+    balance_proof = search_for_item(iteration.events, SendBalanceProof, {
         'message_identifier': message_identifier,
         'payment_identifier': payment_identifier,
     })
+    assert balance_proof is not None
 
 
 def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
@@ -1134,7 +1140,7 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
         pseudo_random_generator=setup.prng,
     )
 
-    assert events.must_contain_entry(iteration.events, SendBalanceProof, {}) is None
+    assert search_for_item(iteration.events, SendBalanceProof, {}) is None
 
 
 def test_initiator_handle_contract_receive_after_channel_closed():
@@ -1187,7 +1193,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
     assert secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
 
     msg = 'The channel is closed already, the balance proof must not be sent off-chain'
-    assert not events.must_contain_entry(iteration.events, SendBalanceProof, {}), msg
+    assert search_for_item(iteration.events, SendBalanceProof, {}) is None, msg
 
 
 def test_lock_expiry_updates_balance_proof():

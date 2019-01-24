@@ -10,7 +10,7 @@ from raiden.constants import UINT64_MAX
 from raiden.messages import Secret
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
     HOP1,
     UNIT_CHAIN_ID,
@@ -1422,7 +1422,7 @@ def test_channelstate_unlock():
         closed_block_number,
     )
     iteration = channel.handle_channel_closed(channel_state, close_state_change)
-    assert not must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {})
+    assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is None
 
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
     settle_state_change = ContractReceiveChannelSettled(
@@ -1436,7 +1436,7 @@ def test_channelstate_unlock():
         settle_state_change,
         settle_block_number,
     )
-    assert must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {})
+    assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is not None
 
 
 def test_refund_transfer_matches_received():
@@ -1549,7 +1549,7 @@ def test_settle_transaction_must_be_sent_only_once():
         settle_state_change,
         settle_block_number,
     )
-    assert must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {})
+    assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is not None
 
     iteration = channel.handle_channel_settled(
         channel_state,
@@ -1557,7 +1557,7 @@ def test_settle_transaction_must_be_sent_only_once():
         settle_block_number,
     )
     msg = 'BatchUnlock must be sent only once, the second transaction will always fail'
-    assert not must_contain_entry(iteration.events, ContractSendChannelBatchUnlock, {}), msg
+    assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is None, msg
 
 
 def test_action_close_must_change_the_channel_state():
@@ -1639,7 +1639,7 @@ def test_update_must_be_called_if_close_lost_race():
         closed_block_number,
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
-    assert must_contain_entry(iteration.events, ContractSendChannelUpdateTransfer, {})
+    assert search_for_item(iteration.events, ContractSendChannelUpdateTransfer, {}) is not None
 
 
 def test_update_transfer():

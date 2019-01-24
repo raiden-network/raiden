@@ -2,57 +2,13 @@ import gevent
 from web3.datastructures import AttributeDict
 
 from raiden.raiden_service import RaidenService
+from raiden.transfer.architecture import Event, StateChange
+from raiden.utils.typing import Any, Optional
 
 NOVALUE = object()
 
 
-def check_nested_attrs(item, data):
-    for name, value in data.items():
-        item_value = getattr(item, name, NOVALUE)
-
-        if isinstance(value, dict):
-            if not check_nested_attrs(item_value, value):
-                return False
-
-        elif item_value != value:
-            return False
-
-    return True
-
-
-def must_contain_entry(item_list, type_, data):
-    """ A node might have duplicated state changes or code changes may change
-    order / quantity of the events.
-
-    The number of state changes is non-deterministic since it depends on the
-    number of retries from the transport layer.
-
-    This is completely non-deterministic since the transport retries depend on
-    timeouts and the cooperative scheduling of the running greenlets.
-    Additionally the order / quantity of greenlet switches will change as the
-    code evolves.
-
-    This utility checks the list of state changes for an entry of the correct
-    type with the expected data, ignoring *new* fields, repeated entries, and
-    unexpected entries.
-    """
-    # item_list may be composed of state changes or events
-    for item in item_list:
-        if isinstance(item, type_):
-            if check_nested_attrs(item, data):
-                return item
-    return None
-
-
-def raiden_events_must_contain_entry(raiden, type_, data):
-    return must_contain_entry(
-        raiden.wal.storage.get_events(),
-        type_,
-        data,
-    )
-
-
-def check_dict_nested_attrs(item, dict_data):
+def check_dict_nested_attrs(item: dict, dict_data: dict) -> bool:
     """ Checks the values from `dict_data` are contained in `item`
 
     >>> d = {'a': 1, 'b': {'c': 2}}
@@ -78,6 +34,82 @@ def check_dict_nested_attrs(item, dict_data):
     return True
 
 
+def check_nested_attrs(item: Any, attributes: dict) -> bool:
+    """ Checks the attributes from `item` match the values defined in `attributes`.
+
+    >>> from collections import namedtuple
+    >>> A = namedtuple('A', 'a')
+    >>> B = namedtuple('B', 'b')
+    >>> d = {'a': 1}
+    >>> check_nested_attrs(A(1), {'a': 1})
+    True
+    >>> check_nested_attrs(A(B(1)), {'a': {'b': 1}})
+    True
+    >>> check_nested_attrs(A(1), {'a': 2})
+    False
+    >>> check_nested_attrs(A(1), {'b': 1})
+    False
+    """
+    for name, value in attributes.items():
+        item_value = getattr(item, name, NOVALUE)
+
+        if isinstance(value, dict):
+            if not check_nested_attrs(item_value, value):
+                return False
+
+        elif item_value != value:
+            return False
+
+    return True
+
+
+def search_for_item(
+        item_list: list,
+        item_type: Any,
+        attributes: dict,
+) -> Optional[Any]:
+    """ Search for the first item of type `item_type` with `attributes` in
+    `item_list`.
+
+    `attributes` are compared using the utility `check_nested_attrs`.
+    """
+    for item in item_list:
+        if isinstance(item, item_type) and check_nested_attrs(item, attributes):
+            return item
+
+    return None
+
+
+def raiden_events_search_for_item(
+        raiden: RaidenService,
+        item_type: Event,
+        attributes: dict,
+) -> Optional[Event]:
+    """ Search for the first event of type `item_type` with `attributes` in the
+    `raiden` database.
+
+    `attributes` are compared using the utility `check_nested_attrs`.
+    """
+    return search_for_item(raiden.wal.storage.get_events(), item_type, attributes)
+
+
+def raiden_state_changes_search_for_item(
+        raiden: RaidenService,
+        item_type: StateChange,
+        attributes: dict,
+) -> Optional[StateChange]:
+    """ Search for the first event of type `item_type` with `attributes` in the
+    `raiden` database.
+
+    `attributes` are compared using the utility `check_nested_attrs`.
+    """
+    return search_for_item(
+        raiden.wal.storage.get_statechanges_by_identifier(0, 'latest'),
+        item_type,
+        attributes,
+    )
+
+
 def must_have_event(event_list, dict_data):
     for item in event_list:
         if isinstance(item, dict) and check_dict_nested_attrs(item, dict_data):
@@ -96,42 +128,36 @@ def must_have_events(event_list, *args) -> bool:
 
 def wait_for_raiden_event(
         raiden: RaidenService,
-        type_,
-        data,
+        item_type: Event,
+        attributes: dict,
         retry_timeout: float,
-) -> None:
+) -> Event:
     """Wait until an event is seen in the WAL events
 
     Note:
         This does not time out, use gevent.Timeout.
     """
-    found = False
-    while not found:
-        found = raiden_events_must_contain_entry(raiden, type_, data)
-        if found:
-            break
-
+    found = None
+    while found is None:
+        found = raiden_events_search_for_item(raiden, item_type, attributes)
         gevent.sleep(retry_timeout)
+    return found
 
 
 def wait_for_state_change(
         raiden: RaidenService,
-        type_,
-        data,
+        item_type: StateChange,
+        attributes: dict,
         retry_timeout: float,
-) -> None:
+) -> StateChange:
     """Wait until a state change is seen in the WAL
 
     Note:
         This does not time out, use gevent.Timeout.
     """
-    found = False
-    while not found:
-        state_changes = raiden.wal.storage.get_statechanges_by_identifier(0, 'latest')
-        found = must_contain_entry(state_changes, type_, data)
-        if found:
-            break
-
+    found = None
+    while found is None:
+        found = raiden_state_changes_search_for_item(raiden, item_type, attributes)
         gevent.sleep(retry_timeout)
 
     return found
