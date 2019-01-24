@@ -7,7 +7,7 @@ import pytest
 from raiden.constants import EMPTY_HASH, EMPTY_HASH_KECCAK, UINT64_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
     UNIT_SECRET,
     UNIT_SECRETHASH,
@@ -146,7 +146,7 @@ def test_events_for_onchain_secretreveal():
     events = target.events_for_onchain_secretreveal(state, channels[0], unsafe_to_wait)
 
     msg = 'when its not safe to wait, the contract send must be emitted'
-    assert must_contain_entry(events, ContractSendSecretReveal, {'secret': UNIT_SECRET}), msg
+    assert search_for_item(events, ContractSendSecretReveal, {'secret': UNIT_SECRET}), msg
 
     msg = 'second call must not emit ContractSendSecretReveal again'
     assert not target.events_for_onchain_secretreveal(state, channels[0], unsafe_to_wait), msg
@@ -182,13 +182,13 @@ def test_handle_inittarget():
         block_number,
     )
 
-    assert must_contain_entry(iteration.events, SendSecretRequest, {
+    assert search_for_item(iteration.events, SendSecretRequest, {
         'payment_identifier': from_transfer.payment_identifier,
         'amount': from_transfer.lock.amount,
         'secrethash': from_transfer.lock.secrethash,
         'recipient': UNIT_TRANSFER_INITIATOR,
     })
-    assert must_contain_entry(iteration.events, SendProcessed, {})
+    assert search_for_item(iteration.events, SendProcessed, {})
 
 
 def test_handle_inittarget_bad_expiration():
@@ -209,7 +209,7 @@ def test_handle_inittarget_bad_expiration():
         pseudo_random_generator,
         block_number,
     )
-    assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {})
+    assert search_for_item(iteration.events, EventUnlockClaimFailed, {})
 
 
 def test_handle_offchain_secretreveal():
@@ -273,7 +273,7 @@ def test_handle_offchain_secretreveal_after_lock_expired():
     state = iteration.new_state
 
     msg = 'At the expiration block we should get an EventUnlockClaimFailed'
-    assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {}), msg
+    assert search_for_item(iteration.events, EventUnlockClaimFailed, {}), msg
 
     iteration = target.state_transition(
         target_state=state,
@@ -297,7 +297,7 @@ def test_handle_offchain_secretreveal_after_lock_expired():
         block_number=lock_expiration_block_number + 1,
     )
     msg = 'At the next block we should not get the same event'
-    assert not must_contain_entry(iteration.events, EventUnlockClaimFailed, {}), msg
+    assert not search_for_item(iteration.events, EventUnlockClaimFailed, {}), msg
 
 
 def test_handle_onchain_secretreveal():
@@ -599,7 +599,7 @@ def test_target_receive_lock_expired():
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_before_confirmed_expiration,
     )
-    assert not must_contain_entry(iteration.events, SendProcessed, {})
+    assert not search_for_item(iteration.events, SendProcessed, {})
 
     block_lock_expired = block_before_confirmed_expiration + 1
     iteration = target.state_transition(
@@ -609,7 +609,7 @@ def test_target_receive_lock_expired():
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_lock_expired,
     )
-    assert must_contain_entry(iteration.events, SendProcessed, {})
+    assert search_for_item(iteration.events, SendProcessed, {})
 
 
 def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
@@ -647,7 +647,7 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
     )
-    assert must_contain_entry(iteration.events, EventUnlockClaimFailed, {})
+    assert search_for_item(iteration.events, EventUnlockClaimFailed, {})
 
 
 @pytest.mark.xfail(reason='Not implemented #522')

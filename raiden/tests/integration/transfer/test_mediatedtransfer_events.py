@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import mediated_transfer
 from raiden.transfer import views
@@ -38,8 +38,8 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
     def test_initiator_events():
         initiator_events = app0.raiden.wal.storage.get_events()
         return (
-            must_contain_entry(initiator_events, SendSecretReveal, {}) and
-            must_contain_entry(initiator_events, EventUnlockSuccess, {})
+            search_for_item(initiator_events, SendSecretReveal, {}) and
+            search_for_item(initiator_events, EventUnlockSuccess, {})
         )
 
     assert wait_until(test_initiator_events, network_wait)
@@ -47,8 +47,8 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
     def test_mediator_events():
         mediator_events = app1.raiden.wal.storage.get_events()
         return (
-            must_contain_entry(mediator_events, EventUnlockSuccess, {}) and
-            must_contain_entry(mediator_events, EventUnlockClaimSuccess, {})
+            search_for_item(mediator_events, EventUnlockSuccess, {}) and
+            search_for_item(mediator_events, EventUnlockClaimSuccess, {})
         )
 
     assert wait_until(test_mediator_events, network_wait)
@@ -56,9 +56,9 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
     def test_target_events():
         target_events = app2.raiden.wal.storage.get_events()
         return (
-            must_contain_entry(target_events, SendSecretRequest, {}) and
-            must_contain_entry(target_events, SendSecretReveal, {}) and
-            must_contain_entry(target_events, EventUnlockClaimSuccess, {})
+            search_for_item(target_events, SendSecretRequest, {}) and
+            search_for_item(target_events, SendSecretReveal, {}) and
+            search_for_item(target_events, EventUnlockClaimSuccess, {})
         )
 
     assert wait_until(test_target_events, network_wait)

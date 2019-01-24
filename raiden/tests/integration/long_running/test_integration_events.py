@@ -17,7 +17,7 @@ from raiden.blockchain.events import (
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.tests.utils.events import must_contain_entry, must_have_event, wait_for_state_change
+from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, dont_handle_secret_request_mock
@@ -621,7 +621,7 @@ def test_clear_closed_queue(raiden_network, token_addresses, deposit, network_wa
         # make sure to wait until the queue is created
         def has_initiator_events():
             initiator_events = app0.raiden.wal.storage.get_events()
-            return must_contain_entry(initiator_events, SendLockedTransfer, {})
+            return search_for_item(initiator_events, SendLockedTransfer, {})
 
         assert wait_until(has_initiator_events, network_wait)
 

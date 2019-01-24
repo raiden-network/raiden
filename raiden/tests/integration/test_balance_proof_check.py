@@ -4,7 +4,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.network.proxies import TokenNetwork
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, mediated_transfer
 from raiden.transfer import views
@@ -89,7 +89,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         from_identifier=0,
         to_identifier='latest',
     )
-    assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
+    assert search_for_item(state_changes, ContractReceiveChannelSettled, {
         'token_network_identifier': token_network_identifier,
         'channel_identifier': channel_identifier,
     })
@@ -165,7 +165,7 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
         from_identifier=0,
         to_identifier='latest',
     )
-    assert must_contain_entry(state_changes, ContractReceiveChannelSettled, {
+    assert search_for_item(state_changes, ContractReceiveChannelSettled, {
         'token_network_identifier': token_network_identifier,
         'channel_identifier': channel_identifier,
     })
