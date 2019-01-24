@@ -1,6 +1,6 @@
 import itertools
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from raiden.messages import Lock
 from raiden.storage.serialize import JSONSerializer
@@ -294,21 +294,3 @@ def test_log_run():
     now = datetime.utcnow()
     assert now - timedelta(seconds=2) <= run[0] <= now, f'{run[0]} not right before {now}'
     assert run[1] == '1.2.3'
-
-
-def test_triggers_upgrade_callbacks():
-    serializer = JSONSerializer
-    storage = SQLiteStorage(':memory:', serializer)
-
-    with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
-        storage.update_version()
-
-    upgrade_callback_mock1 = Mock()
-
-    storage.register_upgrade_callback(upgrade_callback_mock1)
-
-    storage.maybe_upgrade()
-
-    assert upgrade_callback_mock1.called
-
-    assert storage.get_version() == 17

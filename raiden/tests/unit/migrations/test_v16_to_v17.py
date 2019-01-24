@@ -1,7 +1,7 @@
 import random
-import time
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SQLiteStorage
@@ -40,12 +40,11 @@ def setup_storage(db_path):
 def test_upgrade_v16_to_v17(tmp_path):
     db_path = tmp_path / Path('test.db')
     storage = setup_storage(db_path)
-    time.sleep(1)
-    manager = UpgradeManager(
-        db_filename=str(db_path),
-        old_version=16,
-        current_version=17,
-    )
+
+    with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
+        storage.update_version()
+
+    manager = UpgradeManager(db_filename=str(db_path))
     manager.run()
 
     snapshot = storage.get_latest_state_snapshot()
