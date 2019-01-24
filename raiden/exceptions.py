@@ -215,12 +215,4 @@ class InsufficientGasReserve(RaidenError):
 
 
 class RaidenDBUpgradeError(RaidenError):
-    """ Base error type for DB upgrade errors. """
-
-
-class RaidenDBUpgradeBackupError(RaidenDBUpgradeError):
-    """ Raised when copying existing db file to a backup file fails."""
-
-
-class RaidenDBUpgradeExecutionError(RaidenDBUpgradeError):
     """ Raised when executing upgrades fails. """

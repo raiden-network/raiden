@@ -1198,7 +1198,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
     block_number = 10
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=block_number)
 
-    transfer = setup.current_state.initiator.transfer
+    transfer = get_transfer_at_index(setup.current_state, 0)
     assert transfer.lock.secrethash in setup.channel.our_state.secrethashes_to_lockedlocks
 
     channel_closed = ContractReceiveChannelClosed(
@@ -1233,6 +1233,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         state_change=state_change,
         channelidentifiers_to_channels=channel_map,
         pseudo_random_generator=setup.prng,
+        block_number=transfer.lock.expiration + 1,
     )
     secrethash = setup.current_state.initiator.transfer_description.secrethash
     assert secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
