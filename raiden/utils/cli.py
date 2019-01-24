@@ -29,6 +29,7 @@ class HelpFormatter(click.HelpFormatter):
     Subclass that allows multiple (option) sections to be formatted with pre-determined
     widths.
     """
+
     def write_dl(self, rows, col_max=30, col_spacing=2, widths=None):
         """Writes a definition list into the buffer.  This is how options
         and commands are usually formatted.
@@ -76,6 +77,7 @@ class Context(click.Context):
 
 class CustomContextMixin:
     """ Use above context class instead of the click default """
+
     def make_context(self, info_name, args, parent=None, **extra):
         """
         This function when given an info name and arguments will kick
@@ -279,6 +281,7 @@ class EnvironmentChoiceType(click.Choice):
 
 class GasPriceChoiceType(click.Choice):
     """ Returns a GasPriceStrategy for the choice """
+
     def convert(self, value, param, ctx):
         if isinstance(value, str) and value.isnumeric():
             try:
@@ -340,10 +343,10 @@ class PathRelativePath(click.Path):
 
 
 def apply_config_file(
-    command_function: Union[click.Command, click.Group],
-    cli_params: Dict[str, Any],
-    ctx,
-    config_file_option_name='config_file',
+        command_function: Union[click.Command, click.Group],
+        cli_params: Dict[str, Any],
+        ctx,
+        config_file_option_name='config_file',
 ):
     """ Applies all options set in the config file to `cli_params` """
     paramname_to_param = {param.name: param for param in command_function.params}

@@ -93,11 +93,22 @@ def open_port(upnp, internal_port, external_start_port=None):
         if mapping is not None:
             # FIXME: figure out semantics of attr1 and attr2
             lanaddr, internal_mapped, name, attr1, attr2 = mapping
-            if (
+
+            is_valid_mapping = (
                 lanaddr == upnp.lanaddr and
                 name == RAIDEN_IDENTIFICATOR and
                 internal_mapped == internal
-            ):
+            )
+            is_not_our_mapping = (
+                internal_mapped != internal and
+                name != RAIDEN_IDENTIFICATOR
+            )
+            is_previous_mapping = (
+                internal_mapped != internal and
+                name == RAIDEN_IDENTIFICATOR and
+                lanaddr == upnp.lanaddr
+            )
+            if is_valid_mapping:
                 log.debug(
                     'keeping pre-existing portmapping',
                     internal=internal,
@@ -115,21 +126,14 @@ def open_port(upnp, internal_port, external_start_port=None):
                     our_ip=upnp.lanaddr,
                 )
                 return False
-            elif (
-                internal_mapped != internal and
-                name != RAIDEN_IDENTIFICATOR
-            ):
+            elif is_not_our_mapping:
                 log.debug(
                     'ignoring existing mapping for other program',
                     name=name,
                 )
                 # some other program uses our port
                 return False
-            elif (
-                internal_mapped != internal and
-                name == RAIDEN_IDENTIFICATOR and
-                lanaddr == upnp.lanaddr
-            ):
+            elif is_previous_mapping:
                 # we ran before on a different internal port
                 log.debug('releasing previous port mapping')
                 upnp.deleteportmapping(external, 'UDP')

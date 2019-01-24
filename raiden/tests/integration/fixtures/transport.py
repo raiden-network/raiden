@@ -25,10 +25,10 @@ def matrix_server_count():
 
 @pytest.fixture
 def local_matrix_servers(
-    request,
-    transport_protocol,
-    matrix_server_count,
-    synapse_config_generator,
+        request,
+        transport_protocol,
+        matrix_server_count,
+        synapse_config_generator,
 ):
     if transport_protocol is not TransportProtocol.MATRIX:
         yield [None]

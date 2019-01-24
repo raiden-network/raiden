@@ -28,13 +28,13 @@ GAS_RESERVE_ESTIMATE_SECURITY_FACTOR = 1.1
 
 
 def _get_required_gas_estimate(
-    new_channels: int = 0,
-    opening_channels: int = 0,
-    opened_channels: int = 0,
-    closing_channels: int = 0,
-    closed_channels: int = 0,
-    settling_channels: int = 0,
-    settled_channels: int = 0,
+        new_channels: int = 0,
+        opening_channels: int = 0,
+        opened_channels: int = 0,
+        closing_channels: int = 0,
+        closed_channels: int = 0,
+        settling_channels: int = 0,
+        settled_channels: int = 0,
 ) -> int:
     estimate = 0
 

@@ -176,10 +176,10 @@ def generate_synapse_config() -> ContextManager:
 
 @contextmanager
 def matrix_server_starter(
-    *,
-    count: int = 1,
-    config_generator: ContextManager = None,
-    log_context: str = None,
+        *,
+        count: int = 1,
+        config_generator: ContextManager = None,
+        log_context: str = None,
 ) -> ContextManager:
     with ExitStack() as exit_stack:
         if config_generator is None:

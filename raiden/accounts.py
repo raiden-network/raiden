@@ -100,11 +100,11 @@ class AccountManager:
                             address = add_0x_prefix(str(data['address']).lower())
                             self.accounts[address] = str(fullpath)
                     except (
-                        IOError,
-                        json.JSONDecodeError,
-                        KeyError,
-                        OSError,
-                        UnicodeDecodeError,
+                            IOError,
+                            json.JSONDecodeError,
+                            KeyError,
+                            OSError,
+                            UnicodeDecodeError,
                     ) as ex:
                         # Invalid file - skip
                         if f.startswith('UTC--'):

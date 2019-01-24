@@ -52,9 +52,9 @@ class LogFilter:
         ]
 
     def _match_list(
-        self,
-        module_rule: Tuple[List[str], str],
-        logger_name: str,
+            self,
+            module_rule: Tuple[List[str], str],
+            logger_name: str,
     ) -> Tuple[int, str]:
         logger_modules_split = logger_name.split('.') if logger_name else []
 

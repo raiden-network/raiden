@@ -71,7 +71,7 @@ def secret_registry_proxy_patched(secret_registry_proxy, contract_manager):
 
 
 def test_concurrent_access(
-    secret_registry_proxy_patched,
+        secret_registry_proxy_patched,
 ):
     """Test if multiple greenlets actually send only one transaction
     when registering a secret.
