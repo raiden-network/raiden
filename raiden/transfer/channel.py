@@ -1839,7 +1839,7 @@ def handle_channel_settled(
     if state_change.channel_identifier == channel_state.identifier:
         set_settled(channel_state, state_change.block_number)
 
-        # Decide which sides of the channel to unlock. Depending on the difference between
+        # Decide which sides of the channel to unlock. Depending on the
         # the expired sent, and the on-chain revealed token amounts,
         # we decide for both sides, if it is in our favor to unlock.
         receiving_side, sending_side = get_batch_unlock_values(channel_state)
