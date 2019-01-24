@@ -4,6 +4,22 @@ from raiden.storage.sqlite import SQLiteStorage
 
 
 def _transform_snapshot(raw_snapshot):
+    """
+    Version 16 data model:
+    - The top-level is always a `ChainState` object, this object will always
+      have a `PaymentMappingState`, the attribute `secrethashes_to_task` is a
+      dictionary that may be empty.
+    - `secrethashes_to_task` may have `InitiatorTask`s in it, these objects always
+      have a `manager_state: InitiatorPaymentState`,which always have
+      `initiator: InitiatorTransferState`
+
+    This migration upgrades the objects:
+
+    - `InitiatorPaymentState`, that may be contained in `secrethashes_to_task`.
+      In version 16 these objects had a single `initiator` object,
+      where in version 17 this was changed to a `Dict[SecretHash, 'InitiatorTransferState']`
+    - `InitiatorTransferState` has a new attribute `transfer_state`
+    """
     snapshot = json.loads(raw_snapshot)
     secrethash_to_task = snapshot['payment_mapping']['secrethashes_to_task']
     for secrethash, task in secrethash_to_task.items():
