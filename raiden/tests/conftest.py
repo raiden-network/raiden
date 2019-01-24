@@ -3,6 +3,8 @@ from gevent import monkey
 
 monkey.patch_all()
 
+# Prevents isort from moving the imports bellow before gevent's
+# monkeypatch
 if True:
     import datetime
     import os
