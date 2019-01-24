@@ -10,9 +10,9 @@ from requests import RequestException
 
 
 def get_free_port(
-    bind_address: str = '127.0.0.1',
-    initial_port: int = 0,
-    socket_kind: SocketKind = SocketKind.SOCK_STREAM,
+        bind_address: str = '127.0.0.1',
+        initial_port: int = 0,
+        socket_kind: SocketKind = SocketKind.SOCK_STREAM,
 ):
     """
     Find an unused TCP port.
@@ -45,10 +45,10 @@ def get_free_port(
 
 
 def get_http_rtt(
-    url: str,
-    samples: int = 3,
-    method: str = 'head',
-    timeout: int = 1,
+        url: str,
+        samples: int = 3,
+        method: str = 'head',
+        timeout: int = 1,
 ) -> Optional[float]:
     """
     Determine the average HTTP RTT to `url` over the number of `samples`.

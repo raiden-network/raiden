@@ -10,10 +10,10 @@ from raiden.transfer.state import CHANNEL_STATE_OPENED
 
 
 def wait_for_transaction(
-    receiver,
-    registry_address,
-    token_address,
-    sender_address,
+        receiver,
+        registry_address,
+        token_address,
+        sender_address,
 ):
     """Wait until a first transaction in a channel is received"""
     while True:
@@ -136,10 +136,8 @@ def test_participant_selection(raiden_network, token_addresses):
     ]
 
     unsaturated_connection_managers = connection_managers[:]
-    with gevent.Timeout(
-        120,
-        AssertionError('Unsaturated connection managers', unsaturated_connection_managers),
-    ):
+    exception = AssertionError('Unsaturated connection managers', unsaturated_connection_managers)
+    with gevent.Timeout(120, exception):
         while unsaturated_connection_managers:
             for manager in unsaturated_connection_managers:
                 if is_manager_saturated(manager, registry_address, token_address):
