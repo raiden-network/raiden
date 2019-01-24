@@ -10,7 +10,7 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs
 from raiden.transfer.architecture import TransitionResult
-from raiden.transfer.mediated_transfer.events import SendSecretRequest
+from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendSecretRequest
 from raiden.utils import pex, typing
 
 log = structlog.get_logger(__name__)
@@ -21,10 +21,16 @@ class MessageWaiting(typing.NamedTuple):
     message_received_event: Event
 
 
-class SecretRequestState(typing.NamedTuple):
+class SendSecretRequestState(typing.NamedTuple):
     secrethash: bytes
     secret_request_available: Event
-    secret_request_event: SendSecretRequest
+    secret_request_event: typing.Optional[SendSecretRequest]
+
+
+class SendBalanceProofState(typing.NamedTuple):
+    secrethash: bytes
+    secret_request_available: Event
+    balance_proof_event: typing.Optional[SendBalanceProof]
 
 
 class WaitForMessage(MessageHandler):
@@ -56,13 +62,14 @@ class HoldOffChainSecretRequest(RaidenEventHandler):
     """
 
     def __init__(self):
-        self.secrethashes_to_hold = dict()
+        self.secrethashes_to_holdsecretrequest = dict()
+        self.secrethashes_to_holdbalanceproof = dict()
 
     def hold_secretrequest_for(self, secrethash: typing.SecretHash):
-        assert secrethash not in self.secrethashes_to_hold
+        assert secrethash not in self.secrethashes_to_holdsecretrequest
 
         waiting_event = Event()
-        self.secrethashes_to_hold[secrethash] = SecretRequestState(
+        self.secrethashes_to_holdsecretrequest[secrethash] = SendSecretRequestState(
             secrethash=secrethash,
             secret_request_available=waiting_event,
             secret_request_event=None,
@@ -70,13 +77,39 @@ class HoldOffChainSecretRequest(RaidenEventHandler):
 
         return waiting_event
 
+    def hold_unlock_for(self, secrethash: typing.SecretHash):
+        assert secrethash not in self.secrethashes_to_holdbalanceproof
+
+        waiting_event = Event()
+        self.secrethashes_to_holdbalanceproof[secrethash] = SendBalanceProofState(
+            secrethash=secrethash,
+            secret_request_available=waiting_event,
+            balance_proof_event=None,
+        )
+
+        return waiting_event
+
     def release_secretrequest_for(self, raiden: RaidenService, secrethash: typing.SecretHash):
-        hold_state = self.secrethashes_to_hold.get(secrethash)
+        hold_state = self.secrethashes_to_holdsecretrequest.get(secrethash)
 
         if hold_state and hold_state.secret_request_available.is_set():
             secret_request_event = hold_state.secret_request_event
             assert secret_request_event
-            del self.secrethashes_to_hold[secrethash]
+            del self.secrethashes_to_holdsecretrequest[secrethash]
+
+            super().handle_send_secretrequest(raiden, secret_request_event)
+            log.info(
+                f'SecretRequest for {pex(secret_request_event.secrethash)} released.',
+                node=pex(raiden.address),
+            )
+
+    def release_unlock_for(self, raiden: RaidenService, secrethash: typing.SecretHash):
+        hold_state = self.secrethashes_to_holdbalanceproof.get(secrethash)
+
+        if hold_state and hold_state.secret_request_available.is_set():
+            secret_request_event = hold_state.secret_request_event
+            assert secret_request_event
+            del self.secrethashes_to_holdbalanceproof[secrethash]
 
             super().handle_send_secretrequest(raiden, secret_request_event)
             log.info(
@@ -89,15 +122,34 @@ class HoldOffChainSecretRequest(RaidenEventHandler):
             raiden: RaidenService,
             secret_request_event: SendSecretRequest,
     ):
-        hold_state = self.secrethashes_to_hold.get(secret_request_event.secrethash)
+        hold_state = self.secrethashes_to_holdsecretrequest.get(secret_request_event.secrethash)
         if hold_state is None:
             super().handle_send_secretrequest(raiden, secret_request_event)
         else:
             new_hold_state = hold_state._replace(secret_request_event=secret_request_event)
             new_hold_state.secret_request_available.set()
-            self.secrethashes_to_hold[secret_request_event.secrethash] = new_hold_state
+            self.secrethashes_to_holdsecretrequest[
+                secret_request_event.secrethash
+            ] = new_hold_state
             log.info(
-                f'SecretRequest for {pex(secret_request_event.secrethash)} held.',
+                f'SendSecretRequest for {pex(secret_request_event.secrethash)} held.',
+                node=pex(raiden.address),
+            )
+
+    def handle_send_balanceproof(
+            self,
+            raiden: RaidenService,
+            balance_proof_event: SendBalanceProof,
+    ):
+        hold_state = self.secrethashes_to_holdbalanceproof.get(balance_proof_event.secrethash)
+        if hold_state is None:
+            super().handle_send_secretrequest(raiden, balance_proof_event)
+        else:
+            new_hold_state = hold_state._replace(balance_proof_event=balance_proof_event)
+            new_hold_state.secret_request_available.set()
+            self.secrethashes_to_holdbalanceproof[balance_proof_event.secrethash] = new_hold_state
+            log.info(
+                f'SendBalanceProof for {pex(balance_proof_event.secrethash)} held.',
                 node=pex(raiden.address),
             )
 
