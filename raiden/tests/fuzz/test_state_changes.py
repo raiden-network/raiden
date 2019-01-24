@@ -57,6 +57,13 @@ def transferred_amount(state):
     return 0 if not state.balance_proof else state.balance_proof.transferred_amount
 
 
+# use of hypothesis.stateful.multiple() breaks the failed-example code
+# generation at the moment, this function is a temporary workaround
+def unwrap_multiple(multiple_results):
+    values = multiple_results.values
+    return values[0] if len(values) == 1 else values
+
+
 partners = Bundle("partners")
 # shared bundle of ChainStateStateMachine and all mixin classes
 
@@ -193,8 +200,14 @@ class ChainStateStateMachine(RuleBasedStateMachine):
                 >= self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
             )
             assert (
+<<<<<<< HEAD
                 partner_unclaimed + partner_transferred
                 >= self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
+=======
+                partner_unclaimed + partner_transferred >=
+                self.partner_previous_transferred[address] +
+                self.partner_previous_unclaimed[address]
+>>>>>>> 82e5f785... Add some fixes to fuzz test module
             )
             self.our_previous_transferred[address] = our_transferred
             self.partner_previous_transferred[address] = partner_transferred
@@ -615,13 +628,12 @@ TestMultiChannelMediator = MultiChannelMediatorStateMachine.TestCase
 TestFullStateMachine = FullStateMachine.TestCase
 
 
-@pytest.mark.skip
 def test_regression_malicious_secret_request_handled_properly():
     state = InitiatorStateMachine()
     state.replay_path = True
 
-    v1 = state.initialize(block_number=1, random=Random(), random_seed=None)
-    v2 = state.valid_init_initiator(partner=v1, amount=1, payment_id=1, secret=b"\x00" * 32)
+    v1 = unwrap_multiple(state.initialize(block_number=1, random=Random(), random_seed=None))
+    v2 = state.valid_init_initiator(partner=v1, amount=1, payment_id=1, secret=b'\x00' * 32)
     state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.replay_init_initator(previous_action=v2)
 
