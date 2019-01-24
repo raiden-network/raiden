@@ -15,7 +15,7 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
-_GETH_DATADIR = os.environ.get('RAIDEN_TESTS_GET_DATADIR', False)
+_GETH_DATADIR = os.environ.get('RAIDEN_TESTS_GETH_DATADIR', False)
 
 
 @pytest.fixture
