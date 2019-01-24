@@ -255,8 +255,9 @@ def test_handle_offchain_secretreveal_after_lock_expired():
     """
     setup = make_target_state()
 
-    lock_expiration = setup.new_state.transfer.lock.expiration
-    lock_expiration_block_number = lock_expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    lock_expiration_block_number = channel.get_sender_expiration_threshold(
+        setup.new_state.transfer.lock,
+    )
     lock_expiration_block = Block(
         block_number=lock_expiration_block_number,
         gas_limit=1,
@@ -638,7 +639,7 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
         block_number=block_number,
     )
 
-    expired_block_number = from_transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+    expired_block_number = channel.get_receiver_expiration_threshold(from_transfer.lock)
     iteration = target.state_transition(
         target_state=secret_reveal_iteration.new_state,
         state_change=Block(expired_block_number, None, None),

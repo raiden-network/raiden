@@ -300,9 +300,8 @@ def test_events_for_expired_pairs():
     assert pair.payer_state == 'payer_pending'
 
     # lock expired
-    payer_lock_expiration_threshold = (
-        pair.payer_transfer.lock.expiration +
-        DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    payer_lock_expiration_threshold = channel.get_sender_expiration_threshold(
+        pair.payer_transfer.lock,
     )
     mediator.events_for_expired_pairs(
         setup.channel_map,
@@ -1397,7 +1396,7 @@ def test_mediator_lock_expired_with_new_block():
 
     transfer = send_transfer.transfer
 
-    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
     block = Block(
         block_number=block_expiration_number,
         gas_limit=1,
@@ -1467,7 +1466,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     )
     channel_state = channel_close_transition.new_state
 
-    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
     block = Block(
         block_number=block_expiration_number,
         gas_limit=1,
@@ -1704,7 +1703,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     assert secrethash not in payee_channel.our_state.secrethashes_to_lockedlocks
     assert secrethash in payee_channel.our_state.secrethashes_to_unlockedlocks
 
-    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
     block = Block(
         block_number=block_expiration_number,
         gas_limit=1,

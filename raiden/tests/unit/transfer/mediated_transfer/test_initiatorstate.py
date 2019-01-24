@@ -4,7 +4,6 @@ from copy import deepcopy
 from typing import NamedTuple
 
 from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import events, factories
 from raiden.tests.utils.factories import (
     ADDR,
@@ -635,7 +634,7 @@ def test_refund_transfer_no_more_routes():
         message_identifier=5,
     )
     before_expiry_block = original_transfer.lock.expiration - 1
-    expiry_block = original_transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    expiry_block = channel.get_sender_expiration_threshold(original_transfer.lock)
 
     # a block before lock expiration, no events should be emitted
     current_state = iteration.new_state
@@ -930,7 +929,7 @@ def test_initiator_lock_expired():
 
     # Trigger lock expiry
     state_change = Block(
-        block_number=transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+        block_number=channel.get_sender_expiration_threshold(transfer.lock),
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )
@@ -989,7 +988,7 @@ def test_initiator_lock_expired():
 
     assert transfer2_lock.secrethash in channel1.our_state.secrethashes_to_lockedlocks
 
-    expiration_block_number = transfer2_lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    expiration_block_number = channel.get_sender_expiration_threshold(transfer2_lock)
 
     block = Block(
         block_number=expiration_block_number,
@@ -1034,7 +1033,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
     )
     channel_state = channel_close_transition.new_state
 
-    expiration_block_number = setup.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    expiration_block_number = channel.get_sender_expiration_threshold(setup.lock)
     block = Block(
         block_number=expiration_block_number,
         gas_limit=1,
@@ -1201,7 +1200,7 @@ def test_lock_expiry_updates_balance_proof():
 
     # Trigger lock expiry
     state_change = Block(
-        block_number=transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+        block_number=channel.get_sender_expiration_threshold(transfer.lock),
         gas_limit=1,
         block_hash=factories.make_transaction_hash(),
     )

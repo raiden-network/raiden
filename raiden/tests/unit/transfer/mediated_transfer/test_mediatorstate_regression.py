@@ -2,7 +2,6 @@
 import random
 
 from raiden.messages import message_from_sendevent
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.factories import (
@@ -241,7 +240,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
 
     transfer = send_transfer.transfer
 
-    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
     block = Block(
         block_number=block_expiration_number,
         gas_limit=1,
@@ -339,10 +338,10 @@ def test_regression_mediator_task_no_routes():
     balance_proof = balanceproof_from_envelope(lock_expired_message)
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
-    expired_block_number = lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
 
     # Regression: The mediator must still be able to process the block which
     # expires the lock
+    expired_block_number = channel.get_sender_expiration_threshold(lock)
     expire_block_iteration = mediator.state_transition(
         mediator_state=init_iteration.new_state,
         state_change=Block(
@@ -405,7 +404,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     assert send_transfer
 
     transfer = send_transfer.transfer
-    block_expiration_number = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
 
     block = Block(
         block_number=block_expiration_number,
@@ -527,7 +526,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     balance_proof = balanceproof_from_envelope(expired_message)
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
-    expired_block_number = lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    expired_block_number = channel.get_sender_expiration_threshold(lock)
     mediator.state_transition(
         mediator_state=mediator_state,
         state_change=ReceiveLockExpired(
