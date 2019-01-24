@@ -2,6 +2,7 @@ import random
 import time
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SQLiteStorage
@@ -27,12 +28,14 @@ def setup_storage(db_path):
 
 def test_upgrade_manager_restores_backup(tmp_path):
     db_path = tmp_path / Path('test.db')
-    upgrade_manager = UpgradeManager(db_path, 16, 17)
-    upgrade_manager.run()
+    upgrade_manager = UpgradeManager(db_filename=db_path)
+
+    with patch('raiden.storage.sqlite.SQLiteStorage.get_version') as get_version:
+        get_version.return_value = 16
+        upgrade_manager.run()
 
     assert upgrade_manager._backup_filename.exists()
 
-    time.sleep(1)
     # Write some state changes into the backup DB file
     setup_storage(str(upgrade_manager._backup_filename))
 

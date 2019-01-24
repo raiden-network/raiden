@@ -160,6 +160,10 @@ def subdispatch_to_all_initiatortransfer(
         block_number: BlockNumber,
 ) -> TransitionResult:
     events = list()
+    ''' Copy and iterate over the list of keys because this loop
+    will alter the `initiator_transfers` list and this is not
+    allowed if iterating over the original list.
+    '''
     for secrethash in list(payment_state.initiator_transfers.keys()):
         initiator_state = payment_state.initiator_transfers[secrethash]
         sub_iteration = subdispatch_to_initiatortransfer(
@@ -228,8 +232,7 @@ def handle_cancelpayment(
     """ Cancel the payment and all related transfers. """
     # Cannot cancel a transfer after the secret is revealed
     events = list()
-    for secrethash in list(payment_state.initiator_transfers.keys()):
-        initiator_state = payment_state.initiator_transfers[secrethash]
+    for initiator_state in payment_state.initiator_transfers.values():
         channel_identifier = initiator_state.channel_identifier
         channel_state = channelidentifiers_to_channels.get(channel_identifier)
 
