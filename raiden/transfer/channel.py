@@ -113,6 +113,30 @@ BalanceProofData = Tuple[
 SendUnlockAndMerkleTree = Tuple[SendBalanceProof, MerkleTreeState]
 
 
+def get_sender_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
+    """ Calculate the block number at which the lock is considered expired
+    from the perspective of the transfer sender (initiator / mediator).
+    Example: if node A initiated a transfer to B, at the calculated
+    block number as below, the lock would be considered expired.
+    """
+    return BlockNumber(
+        lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
+    )
+
+
+def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
+    """ Calculate the block number at which the lock is considered expired
+    from the perspective of the transfer receiver (mediator / target).
+    This threshold value is smaller than the one calculated for the sender
+    to provide the receiver with time to to catch up with the blockchain
+    so that any lock expiration could become valid (from the receiver's perspective)
+    at an earlier block compared to the block at which sender expired the block.
+    """
+    return BlockNumber(
+        lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    )
+
+
 def is_lock_pending(
         end_state: NettingChannelEndState,
         secrethash: SecretHash,
@@ -181,10 +205,7 @@ def transfer_expired(
         affected_channel: NettingChannelState,
         block_number: BlockNumber,
 ) -> bool:
-    lock_expiration_threshold = BlockNumber(
-        transfer.lock.expiration +
-        DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
-    )
+    lock_expiration_threshold = get_sender_expiration_threshold(transfer.lock)
     has_lock_expired, _ = is_lock_expired(
         end_state=affected_channel.our_state,
         lock=transfer.lock,
@@ -496,9 +517,7 @@ def is_valid_lock_expired(
             end_state=receiver_state,
             lock=lock,
             block_number=block_number,
-            lock_expiration_threshold=BlockNumber(
-                lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-            ),
+            lock_expiration_threshold=get_receiver_expiration_threshold(lock),
         )
 
         if not has_expired:

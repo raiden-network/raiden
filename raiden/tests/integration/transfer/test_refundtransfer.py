@@ -2,7 +2,6 @@ import gevent
 import pytest
 
 from raiden.api.python import RaidenAPI
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import (
     must_contain_entry,
     raiden_events_must_contain_entry,
@@ -19,7 +18,7 @@ from raiden.tests.utils.transfer import (
     get_channelstate,
     mediated_transfer,
 )
-from raiden.transfer import views
+from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
@@ -221,7 +220,7 @@ def test_refund_transfer(
     with dont_handle_lock_expired_mock(app0):
         wait_for_block(
             raiden=app0.raiden,
-            block_number=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2 + 1,
+            block_number=channel.get_sender_expiration_threshold(lock) + 1,
             retry_timeout=retry_timeout,
         )
         # make sure that app0 still has the payment task for the secrethash
@@ -413,7 +412,7 @@ def test_different_view_of_last_bp_during_unlock(
         # Wait for lock expiration so that app0 sends a LockExpired
         wait_for_block(
             raiden=app0.raiden,
-            block_number=lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2 + 1,
+            block_number=channel.get_sender_expiration_threshold(lock) + 1,
             retry_timeout=retry_timeout,
         )
 
