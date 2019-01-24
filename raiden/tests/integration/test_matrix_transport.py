@@ -403,8 +403,7 @@ def test_matrix_tx_error_handling(
     )
     # FIXME: TransactionExecutionStatus is not yet set to FAILURE, so asserting no SUCCESS
     assert channelstate.close_transaction.result != TransactionExecutionStatus.SUCCESS
-    # assert transport is still healthy
-    assert not app0.raiden.transport._stop_event.ready()
+    assert app0.raiden.transport._stop_event.ready()
 
 
 def test_matrix_message_retry(
