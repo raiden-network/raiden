@@ -12,9 +12,9 @@ def identity(val):
 
 
 def map_dict(
-    key_func: typing.Callable,
-    value_func: typing.Callable,
-    dict_: typing.Dict,
+        key_func: typing.Callable,
+        value_func: typing.Callable,
+        dict_: typing.Dict,
 ) -> typing.Dict[str, typing.Any]:
     return {
         key_func(k): value_func(v)
@@ -23,8 +23,8 @@ def map_dict(
 
 
 def map_list(
-    value_func: typing.Callable,
-    list_: typing.List,
+        value_func: typing.Callable,
+        list_: typing.List,
 ) -> typing.List[typing.Any]:
     return [
         value_func(v)
@@ -57,7 +57,7 @@ def deserialize_networkx_graph(data: str) -> networkx.Graph:
 
 
 def serialize_participants_tuple(
-    participants: typing.Tuple[typing.Address, typing.Address],
+        participants: typing.Tuple[typing.Address, typing.Address],
 ) -> typing.List[str]:
     return [
         to_checksum_address(participants[0]),
@@ -66,7 +66,7 @@ def serialize_participants_tuple(
 
 
 def deserialize_participants_tuple(
-    data: typing.List[str],
+        data: typing.List[str],
 ) -> typing.Tuple[typing.Address, typing.Address]:
     assert len(data) == 2
     return (

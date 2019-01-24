@@ -81,12 +81,20 @@ def test_account_manager_invalid_files(test_keystore, caplog):
     with caplog.at_level(logging.DEBUG):
         AccountManager(test_keystore)
 
-    for msg, file_name, reason in [
-        ('The account file is not valid JSON format',
-         KEYFILE_INVALID,
-         'Expecting value: line 1 column 1 (char 0)'),
-        ('Can not read account file (errno=13)', KEYFILE_INACCESSIBLE, 'Permission denied'),
-    ]:
+    logs = [
+        (
+            'The account file is not valid JSON format',
+            KEYFILE_INVALID,
+            'Expecting value: line 1 column 1 (char 0)',
+        ),
+        (
+            'Can not read account file (errno=13)',
+            KEYFILE_INACCESSIBLE,
+            'Permission denied',
+        ),
+    ]
+
+    for msg, file_name, reason in logs:
         for record in caplog.records:
             message = record.getMessage()
             if msg in message and file_name in message and reason in message:
@@ -100,9 +108,15 @@ def test_account_manager_invalid_directory(caplog):
         mock_listdir.side_effect = OSError
         AccountManager('/some/path')
 
-    for msg, path, reason in [
-        ('Unable to list the specified directory', '/some/path', ''),
-    ]:
+    logs = [
+        (
+            'Unable to list the specified directory',
+            '/some/path',
+            '',
+        ),
+    ]
+
+    for msg, path, reason in logs:
         for record in caplog.records:
             message = record.getMessage()
             if msg in message and path in message and reason in message:

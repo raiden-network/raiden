@@ -307,10 +307,10 @@ def test_matrix_message_sync(
 
 
 def test_matrix_message_retry(
-    local_matrix_servers,
-    private_rooms,
-    retry_interval,
-    retries_before_backoff,
+        local_matrix_servers,
+        private_rooms,
+        retry_interval,
+        retries_before_backoff,
 ):
     """ Test the retry mechanism implemented into the matrix client.
     The test creates a transport and sends a message. Given that the
@@ -390,10 +390,10 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    local_matrix_servers,
-    private_rooms,
-    retry_interval,
-    retries_before_backoff,
+        local_matrix_servers,
+        private_rooms,
+        retry_interval,
+        retries_before_backoff,
 ):
     """_join_discovery_room tries to join on all servers on available_servers config
 
@@ -469,10 +469,10 @@ def test_matrix_cross_server(matrix_transports, retry_interval):
 
 
 def test_matrix_discovery_room_offline_server(
-    local_matrix_servers,
-    retries_before_backoff,
-    retry_interval,
-    private_rooms,
+        local_matrix_servers,
+        retries_before_backoff,
+        retry_interval,
+        private_rooms,
 ):
 
     transport = MatrixTransport({

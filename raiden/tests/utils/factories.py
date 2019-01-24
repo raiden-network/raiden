@@ -789,12 +789,12 @@ SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(LockedTransferSignedSta
 
 
 def make_signed_transfer_for(
-    channel_state: NettingChannelState = EMPTY,
-    properties: LockedTransferSignedStateProperties = None,
-    defaults: LockedTransferSignedStateProperties = None,
-    compute_locksroot: bool = False,
-    allow_invalid: bool = False,
-    only_transfer: bool = True,
+        channel_state: NettingChannelState = EMPTY,
+        properties: LockedTransferSignedStateProperties = None,
+        defaults: LockedTransferSignedStateProperties = None,
+        compute_locksroot: bool = False,
+        allow_invalid: bool = False,
+        only_transfer: bool = True,
 ) -> LockedTransferSignedState:
     properties: LockedTransferSignedStateProperties = create_properties(
         properties or LockedTransferSignedStateProperties(),
@@ -921,9 +921,9 @@ class ChannelSet:
 
 
 def make_channel_set(
-    properties: typing.List[NettingChannelStateProperties] = None,
-    defaults: NettingChannelStateProperties = NETTING_CHANNEL_STATE_DEFAULTS,
-    number_of_channels: int = None,
+        properties: typing.List[NettingChannelStateProperties] = None,
+        defaults: NettingChannelStateProperties = NETTING_CHANNEL_STATE_DEFAULTS,
+        number_of_channels: int = None,
 ) -> ChannelSet:
 
     if number_of_channels is None:

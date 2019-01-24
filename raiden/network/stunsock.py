@@ -7,11 +7,11 @@ log = structlog.get_logger(__name__)
 
 
 def stun_socket(
-    socket,
-    source_ip='0.0.0.0',
-    source_port=4200,
-    stun_host=None,
-    stun_port=3478,
+        socket,
+        source_ip='0.0.0.0',
+        source_port=4200,
+        stun_host=None,
+        stun_port=3478,
 ):
     timeout = socket.gettimeout()
     socket.settimeout(2)
