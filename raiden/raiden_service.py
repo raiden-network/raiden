@@ -21,7 +21,6 @@ from raiden.exceptions import (
     InvalidAddress,
     InvalidDBData,
     PaymentConflict,
-    RaidenDBUpgradeError,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
@@ -833,8 +832,4 @@ class RaidenService(Runnable):
 
     def maybe_upgrade_db(self):
         manager = UpgradeManager(db_filename=self.database_path)
-        try:
-            manager.run()
-        except (RaidenDBUpgradeError, InvalidDBData) as e:
-            manager.restore_backup()
-            log.error(f'Failed to upgrade database: {str(e)}')
+        manager.run()
