@@ -2,7 +2,7 @@ import gevent
 import pytest
 
 from raiden.api.python import RaidenAPI
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.utils import wait_until
@@ -39,7 +39,7 @@ def test_event_transfer_received_success(
     gevent.sleep(1)
 
     def test_events(amount, address):
-        return must_contain_entry(
+        return search_for_item(
             receiver_app.raiden.wal.storage.get_events(),
             EventPaymentReceivedSuccess,
             {'amount': amount, 'initiator': address},

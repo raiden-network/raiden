@@ -4,7 +4,7 @@ import pytest
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, RevealSecret
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import UNIT_TRANSFER_INITIATOR, make_signed_transfer
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer, wait_assert
@@ -112,8 +112,8 @@ def test_locked_transfer_secret_registered_onchain(
 
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(0, 'latest')
     transfer_statechange_dispatched = (
-        must_contain_entry(state_changes, ActionInitMediator, {}) or
-        must_contain_entry(state_changes, ActionInitTarget, {})
+        search_for_item(state_changes, ActionInitMediator, {}) or
+        search_for_item(state_changes, ActionInitTarget, {})
     )
     assert not transfer_statechange_dispatched
 

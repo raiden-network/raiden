@@ -7,7 +7,7 @@ from raiden.constants import UINT64_MAX
 from raiden.messages import Lock, LockedTransfer, RevealSecret, Secret
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
@@ -108,7 +108,7 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
     )
     assert transfer.wait()
 
-    event = must_contain_entry(
+    event = search_for_item(
         app1.raiden.wal.storage.get_events(),
         SendSecretReveal,
         {},

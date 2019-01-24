@@ -7,7 +7,7 @@ import pytest
 from raiden.constants import EMPTY_HASH, EMPTY_HASH_KECCAK, MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
-from raiden.tests.utils.events import must_contain_entry
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
     ADDR,
     HOP1,
@@ -228,7 +228,7 @@ def test_next_transfer_pair():
     assert pair.payee_address == channels[0].partner_state.address
     assert pair.payee_transfer.lock.expiration == pair.payer_transfer.lock.expiration
 
-    assert must_contain_entry(events, SendLockedTransfer, {
+    assert search_for_item(events, SendLockedTransfer, {
         'recipient': pair.payee_address,
         'transfer': {
             'payment_identifier': payer_transfer.payment_identifier,
@@ -351,7 +351,7 @@ def test_events_for_refund():
         block_number,
     )
 
-    assert must_contain_entry(refund_events, SendRefundTransfer, {
+    assert search_for_item(refund_events, SendRefundTransfer, {
         'transfer': {
             'lock': {
                 'expiration': received_transfer.lock.expiration,
@@ -394,7 +394,7 @@ def test_events_for_secretreveal():
 
     # the last known hop sent a secret reveal message. This node learned the
     # secret and now must reveal it to the payer node from the transfer pair
-    assert must_contain_entry(events, SendSecretReveal, {
+    assert search_for_item(events, SendSecretReveal, {
         'secret': UNIT_SECRET,
         'recipient': last_pair.payer_transfer.balance_proof.sender,
     })
@@ -417,7 +417,7 @@ def test_events_for_secretreveal():
         pseudo_random_generator,
     )
 
-    assert must_contain_entry(events, SendSecretReveal, {
+    assert search_for_item(events, SendSecretReveal, {
         'secret': UNIT_SECRET,
         'recipient': first_pair.payer_transfer.balance_proof.sender,
     })
@@ -462,7 +462,7 @@ def test_events_for_secretreveal_all_states():
             pseudo_random_generator,
         )
 
-        assert must_contain_entry(events, SendSecretReveal, {
+        assert search_for_item(events, SendSecretReveal, {
             'secret': UNIT_SECRET,
             'recipient': setup.channels.partner_address(0),
         })
@@ -495,11 +495,11 @@ def test_events_for_balanceproof():
         UNIT_SECRETHASH,
     )
 
-    assert must_contain_entry(events, EventUnlockSuccess, {
+    assert search_for_item(events, EventUnlockSuccess, {
         'identifier': UNIT_TRANSFER_IDENTIFIER,
         'secrethash': UNIT_SECRETHASH,
     })
-    assert must_contain_entry(
+    assert search_for_item(
         events,
         SendBalanceProof,
         {
@@ -578,10 +578,10 @@ def test_events_for_balanceproof_middle_secret():
         UNIT_SECRETHASH,
     )
 
-    assert must_contain_entry(events, SendBalanceProof, {
+    assert search_for_item(events, SendBalanceProof, {
         'recipient': middle_pair.payee_address,
     })
-    assert must_contain_entry(events, EventUnlockSuccess, {})
+    assert search_for_item(events, EventUnlockSuccess, {})
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 
@@ -672,7 +672,7 @@ def test_events_for_onchain_secretreveal():
         block_number,
     )
 
-    assert must_contain_entry(events, ContractSendSecretReveal, {
+    assert search_for_item(events, ContractSendSecretReveal, {
         'secret': UNIT_SECRET,
     })
 
@@ -766,8 +766,8 @@ def test_secret_learned():
     assert transfer_pair.payee_state == 'payee_balance_proof'
     assert transfer_pair.payer_state == 'payer_secret_revealed'
 
-    assert must_contain_entry(iteration.events, SendSecretReveal, {})
-    assert must_contain_entry(iteration.events, SendBalanceProof, {})
+    assert search_for_item(iteration.events, SendSecretReveal, {})
+    assert search_for_item(iteration.events, SendBalanceProof, {})
 
 
 def test_secret_learned_with_refund():
@@ -824,7 +824,7 @@ def test_mediate_transfer():
         block_number,
     )
 
-    assert must_contain_entry(iteration.events, SendLockedTransfer, {
+    assert search_for_item(iteration.events, SendLockedTransfer, {
         'recipient': channels[1].partner_state.address,
         'transfer': {
             'payment_identifier': payer_transfer.payment_identifier,
@@ -853,7 +853,7 @@ def test_init_mediator():
 
     assert isinstance(iteration.new_state, MediatorTransferState)
     assert iteration.new_state.transfers_pair[0].payer_transfer == from_transfer
-    assert must_contain_entry(iteration.events, SendLockedTransfer, {
+    assert search_for_item(iteration.events, SendLockedTransfer, {
         'transfer': {
             'token': from_transfer.token,
             'lock': {
@@ -972,7 +972,7 @@ def test_no_valid_routes():
         'either to handle future available routes, or lock expired messages'
     )
     assert iteration.new_state is not None, msg
-    assert must_contain_entry(iteration.events, SendRefundTransfer, {})
+    assert search_for_item(iteration.events, SendRefundTransfer, {})
 
 
 def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
@@ -1038,7 +1038,7 @@ def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
         'The transfer must not be forwarded because the lock timeout is '
         'larger then the settlement timeout'
     )
-    assert not must_contain_entry(iteration.events, SendLockedTransfer, {}), msg
+    assert not search_for_item(iteration.events, SendLockedTransfer, {}), msg
 
 
 def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
@@ -1246,7 +1246,7 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
         block_number,
     )
 
-    assert must_contain_entry(iteration.events, SendLockedTransfer, {
+    assert search_for_item(iteration.events, SendLockedTransfer, {
         'transfer': {
             'lock': {
                 'expiration': payer_transfer.lock.expiration,
@@ -1352,7 +1352,7 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
     # last iteration should have failed due to exceeded pending transfer limit
     failed_iteration = iterations.pop()
     assert failed_iteration.new_state is None
-    assert must_contain_entry(failed_iteration.events, EventInvalidReceivedLockedTransfer, {
+    assert search_for_item(failed_iteration.events, EventInvalidReceivedLockedTransfer, {
         'payment_identifier': MAXIMUM_PENDING_TRANSFERS + 1,
         'reason': (
             'Invalid LockedTransfer message. Adding the transfer would '
@@ -1391,7 +1391,7 @@ def test_mediator_lock_expired_with_new_block():
     )
     assert len(iteration.events) == 1
 
-    send_transfer = must_contain_entry(iteration.events, SendLockedTransfer, {})
+    send_transfer = search_for_item(iteration.events, SendLockedTransfer, {})
     assert send_transfer
 
     transfer = send_transfer.transfer
@@ -1411,10 +1411,10 @@ def test_mediator_lock_expired_with_new_block():
     )
 
     assert iteration.events
-    assert must_contain_entry(iteration.events, SendLockExpired, {
+    assert search_for_item(iteration.events, SendLockExpired, {
         'secrethash': transfer.lock.secrethash,
     })
-    assert must_contain_entry(iteration.events, EventUnlockFailed, {
+    assert search_for_item(iteration.events, EventUnlockFailed, {
         'secrethash': transfer.lock.secrethash,
     })
     assert transfer.lock.secrethash not in channels[1].our_state.secrethashes_to_lockedlocks
@@ -1448,7 +1448,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         block_number=block_number,
     )
 
-    send_transfer = must_contain_entry(iteration.events, SendLockedTransfer, {})
+    send_transfer = search_for_item(iteration.events, SendLockedTransfer, {})
     transfer = send_transfer.transfer
 
     channel_closed = ContractReceiveChannelClosed(
@@ -1481,7 +1481,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     )
 
     assert iteration.events
-    assert must_contain_entry(iteration.events, SendLockExpired, {}) is None
+    assert search_for_item(iteration.events, SendLockExpired, {}) is None
 
 
 def test_mediator_lock_expired_with_receive_lock_expired():
@@ -1503,7 +1503,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         block_number=5,
     )
 
-    assert must_contain_entry(iteration.events, SendLockedTransfer, {
+    assert search_for_item(iteration.events, SendLockedTransfer, {
         'recipient': UNIT_TRANSFER_TARGET,
         'transfer': {
             'lock': {
@@ -1545,7 +1545,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_before_confirmed_expiration,
     )
-    assert not must_contain_entry(iteration.events, SendProcessed, {})
+    assert not search_for_item(iteration.events, SendProcessed, {})
 
     block_lock_expired = block_before_confirmed_expiration + 1
     iteration = mediator.state_transition(
@@ -1555,7 +1555,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_lock_expired,
     )
-    assert must_contain_entry(iteration.events, SendProcessed, {})
+    assert search_for_item(iteration.events, SendProcessed, {})
 
     assert iteration.new_state
     assert iteration.new_state.transfers_pair[0].payer_state == 'payer_expired'
@@ -1693,7 +1693,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     )
 
     # Mediator should NOT send balance proof
-    assert must_contain_entry(iteration.events, SendBalanceProof, {}) is None
+    assert search_for_item(iteration.events, SendBalanceProof, {}) is None
 
     # Make sure the lock was moved
     payer_channel, payee_channel = channels[0], channels[1]
@@ -1719,4 +1719,4 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     )
 
     assert secrethash not in channels[0].our_state.secrethashes_to_unlockedlocks
-    assert must_contain_entry(iteration.events, SendLockExpired, {})
+    assert search_for_item(iteration.events, SendLockExpired, {})
