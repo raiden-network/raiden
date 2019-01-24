@@ -19,6 +19,7 @@ from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.raiden_event_handler import SEND_BALANCE_PROOF_EVENTS, RaidenMonitoringEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.client import burn_eth
+from raiden.tests.utils.events import wait_for_raiden_event
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.messages import make_balance_proof, make_lock
 from raiden.tests.utils.mocks import MockRaidenService
@@ -377,10 +378,11 @@ def test_matrix_tx_error_handling(
         app0.raiden.handle_state_change(close_channel)
 
     app0.raiden.transport._client.add_presence_listener(make_tx)
-    waiting.wait_for_events_in_wal(
+
+    wait_for_raiden_event(
         raiden=app0.raiden,
-        event_type=ContractSendChannelClose,
-        count=1,
+        type_=ContractSendChannelClose,
+        data={},
         retry_timeout=1.0,
     )
     # assert the `close` did fail
