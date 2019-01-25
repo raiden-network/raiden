@@ -234,8 +234,21 @@ class TokenNetwork:
             if channel_exists:
                 raise DuplicatedChannelError('Duplicated channel')
 
-            log.critical('Call to openChannel will fail', **log_details)
-            raise RaidenUnrecoverableError('Call to openChannel will fail')
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='openChannel',
+                transaction_executed=False,
+                required_gas=GAS_REQUIRED_FOR_OPEN_CHANNEL,
+                block_identifier='pending',
+            )
+            known_race, msg = self._new_channel_postconditions(
+                partner=partner,
+                block='pending',
+            )
+            if known_race:
+                raise DuplicatedChannelError(msg)
+
+            log.critical('new_netting_channel call will fail', **log_details)
+            raise RaidenUnrecoverableError('Creating a new channel will fail')
 
         log.debug('new_netting_channel called', **log_details)
         # Prevent concurrent attempts to open a channel with the same token and
@@ -275,22 +288,6 @@ class TokenNetwork:
         else:
             # All other concurrent threads should block on the result of opening this channel
             self.open_channel_transactions[partner].get()
-
-        if not gas_limit:
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                transaction_name='openChannel',
-                transaction_executed=False,
-                required_gas=GAS_REQUIRED_FOR_OPEN_CHANNEL,
-                block_identifier='pending',
-            )
-            known_race, msg = self._new_channel_postconditions(
-                partner=partner,
-                block='pending',
-            )
-            if known_race:
-                raise DuplicatedChannelError(msg)
-            log.critical('new_netting_channel call will fail', **log_details)
-            raise RaidenUnrecoverableError('Creating a new channel will fail')
 
         channel_identifier: ChannelID = self.detail_channel(
             participant1=self.node_address,
