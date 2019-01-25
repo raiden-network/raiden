@@ -226,14 +226,6 @@ class TokenNetwork:
             settle_timeout,
         )
         if not gas_limit:
-            channel_exists = self.channel_exists_and_not_settled(
-                participant1=self.node_address,
-                participant2=partner,
-                block_identifier='pending',
-            )
-            if channel_exists:
-                raise DuplicatedChannelError('Duplicated channel')
-
             log.critical('Call to openChannel will fail', **log_details)
             raise RaidenUnrecoverableError('Call to openChannel will fail')
 
