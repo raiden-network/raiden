@@ -1,7 +1,7 @@
 version: 2.1
 
-templates:
 
+templates:
   filter-tag-templates: &only-tagged-version-filter
     tags:
       only: /^v\d+\.\d+\.\d+(\-rc\d+)?$/
@@ -28,8 +28,17 @@ templates:
       default: ""
       type: string
 
+  default-environment: &default-environment
+    GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.20-24d727b6.tar.gz'
+    GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.8.20-24d727b6.tar.gz'
+    GETH_VERSION: '1.8.20'
+    SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.4.23/solc-static-linux'
+    SOLC_URL_MACOS: 'https://www.dropbox.com/s/4amq3on2ds1dq36/solc_0.4.23?dl=0'
+    SOLC_VERSION: 'v0.4.23'
+
+
 executors:
-  base-executor:
+  docker:
     parameters:
       py-version:
         <<: *py-version-template
@@ -40,34 +49,83 @@ executors:
         enum: ["small", "medium", "medium+", "large", "xlarge"]
     working_directory: ~/raiden
     docker:
-    - image: circleci/python:<< parameters.py-version >>
+      - image: circleci/python:<< parameters.py-version >>
     resource_class: << parameters.resource >>
-
     environment:
+      <<: *default-environment
       PYTHON_VERSION_SHORT: << parameters.py-version >>
-      GETH_URL_LINUX: 'https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.8.20-24d727b6.tar.gz'
-      GETH_URL_MACOS: 'https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.8.20-24d727b6.tar.gz'
-      GETH_VERSION: '1.8.20'
-      SOLC_URL_LINUX: 'https://github.com/ethereum/solidity/releases/download/v0.4.23/solc-static-linux'
-      SOLC_URL_MACOS: 'https://www.dropbox.com/s/4amq3on2ds1dq36/solc_0.4.23?dl=0'
-      SOLC_VERSION: 'v0.4.23'
+
+  macos:
+    macos:
+      xcode: "10.1.0"
+    # The macos builder doesn't support different python versions but we define the parameter
+    # anyway to be compatible with the shared step definitions
+    parameters:
+      py-version:
+        <<: *py-version-template
+    working_directory: ~/raiden
+    environment:
+      <<: *default-environment
+
 
 commands:
   config-path:
     description: "set environment variables and change path to use venv"
     steps:
-    - run:
-        name: Configuring PATH
-        command: |
-          echo 'export PATH=~/venv-${PYTHON_VERSION_SHORT}/bin:~/.local/bin:${PATH}' >> ${BASH_ENV}
-          echo 'export RAIDEN_VERSION=$(python setup.py --version)' >> ${BASH_ENV}
+      - run:
+          name: Configuring PATH
+          command: |
+            echo 'export PATH=~/venv-${PYTHON_VERSION_SHORT}/bin:~/.local/bin:${PATH}' >> ${BASH_ENV}
+            echo 'export RAIDEN_VERSION=$(python setup.py --version)' >> ${BASH_ENV}
+
+  prepare-python:
+    parameters:
+      py-version:
+        <<: *py-version-template
+    steps:
+      - attach_workspace:
+          at: "~"
+      - config-path
+      - restore_cache:
+          key: pip-cache-<< parameters.py-version >>
+      - restore_cache:
+          keys:
+          - 'python-deps-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}'
+          - 'python-deps-<< parameters.py-version >>-'
+      - run:
+          name: Creating virtualenv
+          command: |
+            if [ ! -x ~/venv-<< parameters.py-version >>/bin/python ]; then
+              python -m venv ~/venv-<< parameters.py-version >>
+            fi
+            echo 'export VENV_PATH="$HOME/venv-<< parameters.py-version >>"' >> ${BASH_ENV}
+      - run:
+          name: Installing dependencies
+          command: |
+            . ${VENV_PATH}/bin/activate
+            pip install -U 'pip<19.0.0' wheel
+            pip install -c constraints.txt readme_renderer pyinstaller s3cmd
+            pip install -c constraints.txt -r requirements-dev.txt -e .
+      - save_cache:
+          key: python-deps-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}
+          paths:
+          - "~/venv-<< parameters.py-version >>"
+      - save_cache:
+          key: pip-cache-<< parameters.py-version >>
+          paths:
+          - "~/.cache/pip"
+      - persist_to_workspace:
+          root: "~"
+          paths:
+          - venv-<< parameters.py-version >>
+
 jobs:
   prepare-system:
     parameters:
       py-version:
         <<: *py-version-template
     executor:
-      name: base-executor
+      name: docker
       py-version: << parameters.py-version >>
 
     steps:
@@ -122,51 +180,28 @@ jobs:
             - .local
             - raiden
 
-  prepare-python:
+  prepare-python-linux:
     parameters:
       py-version:
         <<: *py-version-template
 
     executor:
-      name: base-executor
+      name: docker
       py-version: << parameters.py-version >>
 
     steps:
-    - attach_workspace:
-        at: "~"
-    - config-path
-    - restore_cache:
-        key: pip-cache-<< parameters.py-version >>
-    - restore_cache:
-        keys:
-        - 'python-deps-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}'
-        - 'python-deps-<< parameters.py-version >>-'
-    - run:
-        name: Creating virtualenv
-        command: |
-          if [ ! -x ~/venv-<< parameters.py-version >>/bin/python ]; then
-            python -m venv ~/venv-<< parameters.py-version >>
-          fi
-          echo 'export VENV_PATH="$HOME/venv-<< parameters.py-version >>"' >> ${BASH_ENV}
-    - run:
-        name: Installing dependencies
-        command: |
-          . ${VENV_PATH}/bin/activate
-          pip install -U pip wheel
-          pip install -c constraints.txt readme_renderer pyinstaller s3cmd
-          pip install -c constraints.txt -r requirements-dev.txt -e .
-    - save_cache:
-        key: python-deps-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}
-        paths:
-        - "~/venv-<< parameters.py-version >>"
-    - save_cache:
-        key: pip-cache-<< parameters.py-version >>
-        paths:
-        - "~/.cache/pip"
-    - persist_to_workspace:
-        root: "~"
-        paths:
-        - venv-<< parameters.py-version >>
+      - prepare-python:
+          py-version: << parameters.py-version >>
+
+  prepare-python-macos:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
+    executor: macos
+
+    steps:
+      - prepare-python
 
   lint:
     parameters:
@@ -174,7 +209,7 @@ jobs:
         <<: *py-version-template
 
     executor:
-      name: base-executor
+      name: docker
       py-version: << parameters.py-version >>
 
     steps:
@@ -197,7 +232,7 @@ jobs:
         <<: *py-version-template
 
     executor:
-      name: base-executor
+      name: docker
       py-version: << parameters.py-version >>
 
     steps:
@@ -219,7 +254,7 @@ jobs:
       <<: *parameter-templates
 
     executor:
-      name: base-executor
+      name: docker
       py-version: << parameters.py-version >>
 
     steps:
@@ -251,7 +286,7 @@ jobs:
         default: 1
         type: integer
     executor:
-      name: base-executor
+      name: docker
       py-version: << parameters.py-version >>
       resource: << parameters.resource >>
 
@@ -347,53 +382,66 @@ jobs:
 
   finalize:
     executor:
-      name: base-executor
+      name: docker
       py-version: "3.7"
     steps:
       - attach_workspace:
           at: "~"
       - config-path
       - run:
+          name: Report to Codecov
           command: |
             pip install codecov
             cd ~/raiden
             coverage combine coverage
             codecov
-            echo done
 
-  build-dist:
+  build-binary-linux:
     executor:
-      name: base-executor
+      name: docker
       py-version: "3.7"
 
     steps:
       - attach_workspace:
           at: "~"
-      - setup_remote_docker:   # (2)
-          docker_layer_caching: true # (3)
+      - setup_remote_docker:
+          docker_layer_caching: true
       - run:
-          name: prepare-build
+          name: Build Linux Binary
           command: |
-            source .circleci/set_tag.sh
-            mkdir -p dist/archive
-      - run:
-          name: build-distribution
-          command: |
-            source .circleci/set_tag.sh
+            source .circleci/get_archive_tag.sh
             make bundle-docker
-            tar -C build -xvzf build/archive/raiden-${ARCHIVE_TAG}-linux.tar.gz
-            echo raiden-${ARCHIVE_TAG}-linux.tar.gz > build/archive/_LATEST-linux.txt
-            export RAIDEN_VERSION=$(python setup.py --version)
-            echo $RAIDEN_VERSION > raiden-version.txt
+            echo raiden-${ARCHIVE_TAG}-linux.tar.gz > dist/archive/_LATEST-linux.txt
       - persist_to_workspace:
           root: "~"
           paths:
-            - raiden/build/archive
-            - raiden/raiden-version.txt
+            - raiden/dist/archive
+
+  build-binary-macos:
+    executor:
+      name: macos
+      py-version: "3.7"
+
+    steps:
+      - attach_workspace:
+          at: "~"
+      - run:
+          name: Prepare build
+          command: |
+            pip uninstall -y pdbpp
+            python setup.py build
+            mkdir -p dist/archive
+            source .circleci/get_archive_tag.sh
+      - run:
+          name: Build macOS Binary
+          command: |
+            pyinstaller --noconfirm --clean raiden.spec
+            zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip dist/raiden-${ARCHIVE_TAG}-macOS
+            echo raiden-${ARCHIVE_TAG}-macOS.zip > dist/archive/_LATEST-macOS.txt
 
   deploy-digitalocean:
     executor:
-      name: base-executor
+      name: docker
       py-version: "3.7"
 
     steps:
@@ -402,7 +450,7 @@ jobs:
       - config-path
       - run:
           name: upload-to-digitalocean
-          command: .circleci/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY build/archive/ $DO_S3_SUB_SUB_DOMAIN ams3.digitaloceanspaces.com
+          command: .circleci/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ $DO_S3_BUCKET_NAME ams3.digitaloceanspaces.com
 
   deploy-github-release:
     working_directory: ~/raiden
@@ -419,11 +467,11 @@ jobs:
                 command: |
                   echo "TAG: ${CIRCLE_TAG}"
                   RAIDEN_VERSION=${CIRCLE_TAG}
-                  ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${RAIDEN_VERSION} build/archive/
+                  ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${RAIDEN_VERSION} build/archive/
 
   deploy-pypi:
     executor:
-      name: base-executor
+      name: docker
       py-version: "3.7"
 
     steps:
@@ -443,21 +491,21 @@ jobs:
       - run:
           name: "upload to pypi"
           command: |
-            twine upload -u $PYPI_USER -p $PYPI_PASSWORD --repository-url $PYPI_URL dist/*
+            twine upload -u $PYPI_USER -p $PYPI_PASSWORD dist/*.{tar.gz,whl}
 
 workflows:
   raiden-default:
     jobs:
       - prepare-system
 
-      - prepare-python:
-          name: prepare-python-3.6
+      - prepare-python-linux:
+          name: prepare-python-linux-3.6
           py-version: '3.6'
           requires:
             - prepare-system
 
-      - prepare-python:
-          name: prepare-python-3.7
+      - prepare-python-linux:
+          name: prepare-python-linux-3.7
           py-version: '3.7'
           requires:
             - prepare-system
@@ -466,27 +514,27 @@ workflows:
           name: lint-3.6
           py-version: "3.6"
           requires:
-            - prepare-python-3.6
+            - prepare-python-linux-3.6
 
       - mypy:
           name: mypy-3.6
           py-version: "3.6"
           requires:
-            - prepare-python-3.6
+            - prepare-python-linux-3.6
 
       - smoketest:
           name: smoketest-udp-3.6
           py-version: "3.6"
           transport-layer: "udp"
           requires:
-            - prepare-python-3.6
+            - prepare-python-linux-3.6
 
       - smoketest:
           name: smoketest-matrix-3.6
           py-version: "3.6"
           transport-layer: "matrix"
           requires:
-            - prepare-python-3.6
+            - prepare-python-linux-3.6
 
       - test:
           name: test-unit-3.6
@@ -494,7 +542,7 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-            - prepare-python-3.6
+            - prepare-python-linux-3.6
 
       - test:
           name: test-fuzz-3.6
@@ -503,25 +551,12 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - prepare-python-3.6
-
-      - finalize:
-          requires:
-            - lint-3.6
-            - mypy-3.6
-            - test-fuzz-3.6
-            - test-integration-udp-3.6
-            - test-integration-matrix-3.6
-            - lint-3.7
-            - mypy-3.7
-            - test-fuzz-3.7
-            - test-integration-udp-3.7
-            - test-integration-matrix-3.7
+            - prepare-python-linux-3.6
 
       - test:
           name: test-integration-udp-3.6
           py-version: "3.6"
-          resource: "medium"
+          resource: "medium+"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
@@ -529,11 +564,12 @@ workflows:
           requires:
             - smoketest-udp-3.6
             - test-unit-3.6
+            - test-fuzz-3.6
 
       - test:
           name: test-integration-matrix-3.6
           py-version: "3.6"
-          resource: "medium"
+          resource: "medium+"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
@@ -541,32 +577,33 @@ workflows:
           requires:
             - smoketest-matrix-3.6
             - test-unit-3.6
+            - test-fuzz-3.6
 
       - lint:
           name: lint-3.7
           py-version: "3.7"
           requires:
-            - prepare-python-3.7
+            - prepare-python-linux-3.7
 
       - mypy:
           name: mypy-3.7
           py-version: "3.7"
           requires:
-            - prepare-python-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-udp-3.7
           py-version: "3.7"
           transport-layer: "udp"
           requires:
-            - prepare-python-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-matrix-3.7
           py-version: "3.7"
           transport-layer: "matrix"
           requires:
-            - prepare-python-3.7
+            - prepare-python-linux-3.7
 
       - test:
           name: test-unit-3.7
@@ -574,7 +611,7 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-            - prepare-python-3.7
+            - prepare-python-linux-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -583,12 +620,12 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - prepare-python-3.7
+            - prepare-python-linux-3.7
 
       - test:
           name: test-integration-udp-3.7
-          resource: "medium"
           py-version: "3.7"
+          resource: "medium+"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
@@ -596,11 +633,12 @@ workflows:
           requires:
             - smoketest-udp-3.7
             - test-unit-3.7
+            - test-fuzz-3.7
 
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
-          resource: "medium"
+          resource: "medium+"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
@@ -608,91 +646,113 @@ workflows:
           requires:
             - smoketest-matrix-3.7
             - test-unit-3.7
+            - test-fuzz-3.7
+
+      - finalize:
+          requires:
+            - lint-3.6
+            - mypy-3.6
+            - test-integration-udp-3.6
+            - test-integration-matrix-3.6
+            - lint-3.7
+            - mypy-3.7
+            - test-integration-udp-3.7
+            - test-integration-matrix-3.7
 
   deploy-release:
-
     jobs:
       - prepare-system:
           filters:
             <<: *only-tagged-version-filter
 
-      - prepare-python:
+      - prepare-python-linux:
           py-version: '3.7'
           requires:
             - prepare-system
           filters:
             <<: *only-tagged-version-filter
 
-      - build-dist:
-          requires:
-            - prepare-python
+      - prepare-python-macos:
+          py-version: '3.7'
           filters:
             <<: *only-tagged-version-filter
 
+      - build-binary-linux:
+          requires:
+            - prepare-python-linux
+          filters:
+            <<: *only-tagged-version-filter
+
+      - build-binary-macos:
+          requires:
+            - prepare-python-macos
+          filters:
+            <<: *only-tagged-version-filter
 
       - deploy-digitalocean:
           context: "Raiden Context"
           requires:
-            - build-dist
+            - build-binary-linux
+            - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
 
       - deploy-github-release:
           context: "Raiden Context"
           requires:
-          - build-dist
+            - build-binary-linux
+            - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
 
       - deploy-pypi:
           context: "Raiden Context"
           requires:
-          - build-dist
+            - prepare-python-linux
           filters:
             <<: *only-tagged-version-filter
 
   nightly:
-
     jobs:
       - prepare-system
 
-      - prepare-python:
-          name: prepare-python-3.6
+      - prepare-python-linux:
+          name: prepare-python-linux-3.6
           py-version: '3.6'
           requires:
-            - prepare-system
+          - prepare-system
 
-      - prepare-python:
-          name: prepare-python-3.7
+      - prepare-python-linux:
+          name: prepare-python-linux-3.7
           py-version: '3.7'
           requires:
-            - prepare-system
+          - prepare-system
 
       - lint:
           name: lint-3.6
           py-version: "3.6"
           requires:
-            - prepare-python-3.6
+          - prepare-python-linux-3.6
 
       - mypy:
           name: mypy-3.6
           py-version: "3.6"
           requires:
-          - prepare-python-3.6
+          - prepare-python-linux-3.6
 
       - smoketest:
           name: smoketest-udp-3.6
           py-version: "3.6"
           transport-layer: "udp"
           requires:
-            - prepare-python-3.6
+          - prepare-python-linux-3.6
 
       - smoketest:
           name: smoketest-matrix-3.6
           py-version: "3.6"
           transport-layer: "matrix"
           requires:
-            - prepare-python-3.6
+          - prepare-python-linux-3.6
 
       - test:
           name: test-unit-3.6
@@ -700,7 +760,7 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-            - prepare-python-3.6
+          - prepare-python-linux-3.6
 
       - test:
           name: test-fuzz-3.6
@@ -709,68 +769,59 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - prepare-python-3.6
-
-      - finalize:
-          requires:
-            - lint-3.6
-            - mypy-3.7
-            - test-fuzz-3.6
-            - test-integration-udp-3.6
-            - test-integration-matrix-3.6
-            - lint-3.7
-            - mypy-3.7
-            - test-fuzz-3.7
-            - test-integration-udp-3.7
-            - test-integration-matrix-3.7
+          - prepare-python-linux-3.6
 
       - test:
           name: test-integration-udp-3.6
           py-version: "3.6"
+          resource: "medium"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 16
+          parallelism: 25
           requires:
-            - smoketest-udp-3.6
-            - test-unit-3.6
+          - smoketest-udp-3.6
+          - test-unit-3.6
+          - test-fuzz-3.6
 
       - test:
           name: test-integration-matrix-3.6
           py-version: "3.6"
+          resource: "medium"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
-          parallelism: 16
+          parallelism: 25
           requires:
-            - smoketest-matrix-3.6
-            - test-unit-3.6
+          - smoketest-matrix-3.6
+          - test-unit-3.6
+          - test-fuzz-3.6
 
       - lint:
           name: lint-3.7
           py-version: "3.7"
           requires:
-            - prepare-python-3.7
+          - prepare-python-linux-3.7
 
       - mypy:
           name: mypy-3.7
           py-version: "3.7"
           requires:
-          - prepare-python-3.7
+          - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-udp-3.7
           py-version: "3.7"
           transport-layer: "udp"
           requires:
-            - prepare-python-3.7
+          - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-matrix-3.7
           py-version: "3.7"
           transport-layer: "matrix"
           requires:
-            - prepare-python-3.7
+          - prepare-python-linux-3.7
 
       - test:
           name: test-unit-3.7
@@ -778,7 +829,7 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-            - prepare-python-3.7
+          - prepare-python-linux-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -787,43 +838,63 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - prepare-python-3.7
+          - prepare-python-linux-3.7
 
       - test:
           name: test-integration-udp-3.7
+          resource: "medium"
           py-version: "3.7"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
-          parallelism: 16
+          parallelism: 25
           requires:
-            - smoketest-udp-3.7
-            - test-unit-3.7
+          - smoketest-udp-3.7
+          - test-unit-3.7
+          - test-fuzz-3.7
 
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
+          resource: "medium"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
-          parallelism: 16
+          parallelism: 25
           requires:
-            - smoketest-matrix-3.7
-            - test-unit-3.7
+          - smoketest-matrix-3.7
+          - test-unit-3.7
+          - test-fuzz-3.7
 
-      - build-dist:
+      - finalize:
+          requires:
+          - lint-3.6
+          - mypy-3.6
+          - test-integration-udp-3.6
+          - test-integration-matrix-3.6
+          - lint-3.7
+          - mypy-3.7
+          - test-integration-udp-3.7
+          - test-integration-matrix-3.7
+
+      - build-binary-linux:
+            requires:
+              - finalize
+
+      - build-binary-macos:
           requires:
             - finalize
 
       - deploy-digitalocean:
           context: "Raiden Context"
           requires:
-            - build-dist
+            - build-binary-linux
+            - build-binary-macos
 
     triggers:
-    - schedule:
-        cron: "0 0 * * *"
-        filters:
-          branches:
-            only:
-            - master
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                - master
