@@ -39,13 +39,15 @@ def setup_storage(db_path):
 
 def test_upgrade_v16_to_v17(tmp_path):
     db_path = tmp_path / Path('test.db')
-    storage = setup_storage(db_path)
 
-    with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
-        storage.update_version()
+    old_db_filename = tmp_path / Path('v16_log.db')
+    with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
+        older_db_file.return_value = 16, str(old_db_filename)
+        setup_storage(str(old_db_filename))
 
     manager = UpgradeManager(db_filename=str(db_path))
     manager.run()
 
+    storage = SQLiteStorage(str(db_path), JSONSerializer())
     snapshot = storage.get_latest_state_snapshot()
     assert snapshot is not None
