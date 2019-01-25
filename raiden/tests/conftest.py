@@ -6,6 +6,7 @@ monkey.patch_all()
 # Prevents isort from moving the imports bellow before gevent's
 # monkeypatch
 if True:
+    import datetime
     import os
     import re
     import sys
@@ -149,11 +150,17 @@ def logging_level(request):
     else:
         logging_levels = {'': level}
 
+    time = datetime.datetime.utcnow().isoformat()
+    debug_path = os.path.join(
+        tempfile.gettempdir(),
+        f'raiden-debug_{time}.log',
+    )
     configure_logging(
         logging_levels,
         colorize=not request.config.option.plain_log,
         log_file=request.config.option.log_file,
         cache_logger_on_first_use=False,
+        debug_log_file_name=debug_path,
     )
 
 
