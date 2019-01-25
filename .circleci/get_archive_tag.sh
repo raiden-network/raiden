@@ -1,8 +1,8 @@
 #!/bin/bash
 set -ex
 
-if [[ ! -z ${TRAVIS_TAG} ]]; then
-    export ARCHIVE_TAG=${TRAVIS_TAG}
+if [[ ! -z ${CIRCLE_TAG} ]]; then
+    export ARCHIVE_TAG=${CIRCLE_TAG}
 else
     DATE=$(date +%Y-%m-%dT%H-%M-%S)
     RAIDEN_VERSION=$(python setup.py --version)
