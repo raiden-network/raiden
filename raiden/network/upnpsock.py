@@ -91,8 +91,8 @@ def open_port(upnp, internal_port, external_start_port=None):
         # test existing mappings
         mapping = upnp.getspecificportmapping(external, 'UDP')
         if mapping is not None:
-            # FIXME: figure out semantics of attr1 and attr2
-            lanaddr, internal_mapped, name, attr1, attr2 = mapping
+            # FIXME: figure out semantics of the last two values
+            lanaddr, internal_mapped, name, _, _ = mapping
 
             is_valid_mapping = (
                 lanaddr == upnp.lanaddr and

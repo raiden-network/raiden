@@ -545,9 +545,9 @@ def test_routing_updates(
 ):
     open_block_number = 10
     pseudo_random_generator = random.Random()
-    pkey1, address1 = factories.make_privkey_address()
-    pkey2, address2 = factories.make_privkey_address()
-    pkey3, address3 = factories.make_privkey_address()
+    address1 = factories.make_address()
+    address2 = factories.make_address()
+    address3 = factories.make_address()
 
     amount = 30
     our_balance = amount + 50
@@ -701,9 +701,9 @@ def test_routing_issue2663(
 ):
     open_block_number = 10
     pseudo_random_generator = random.Random()
-    pkey1, address1 = factories.make_privkey_address()
-    pkey2, address2 = factories.make_privkey_address()
-    pkey3, address3 = factories.make_privkey_address()
+    address1 = factories.make_address()
+    address2 = factories.make_address()
+    address3 = factories.make_address()
 
     # Create a network with the following topology
     #
@@ -933,10 +933,10 @@ def test_routing_priority(
 ):
     open_block_number = 10
     pseudo_random_generator = random.Random()
-    pkey1, address1 = factories.make_privkey_address()
-    pkey2, address2 = factories.make_privkey_address()
-    pkey3, address3 = factories.make_privkey_address()
-    pkey4, address4 = factories.make_privkey_address()
+    address1 = factories.make_address()
+    address2 = factories.make_address()
+    address3 = factories.make_address()
+    address4 = factories.make_address()
 
     # Create a network with the following topology
     #

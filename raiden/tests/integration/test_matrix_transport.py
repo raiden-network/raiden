@@ -63,10 +63,6 @@ def mock_matrix(
         # We are just unit testing the matrix transport receive so do nothing
         assert message
 
-    def mock_receive_delivered(klass, delivered):
-        # We are just unit testing the matrix transport receive so do nothing
-        assert delivered
-
     config = dict(
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,

@@ -28,9 +28,9 @@ def create_square_network_topology(
 ]:
     open_block_number = 10
     pseudo_random_generator = random.Random()
-    pkey1, address1 = factories.make_privkey_address()
-    pkey2, address2 = factories.make_privkey_address()
-    pkey3, address3 = factories.make_privkey_address()
+    address1 = factories.make_address()
+    address2 = factories.make_address()
+    address3 = factories.make_address()
 
     # Create a network with the following topology
     #
@@ -404,7 +404,7 @@ def test_routing_mocked_pfs_unavailabe_peer(
         our_address=our_address,
     )
     address1, address2, address3 = addresses
-    channel_state1, channel_state2 = channel_states
+    channel_state1, _ = channel_states
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
