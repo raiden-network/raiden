@@ -1,5 +1,4 @@
 import random
-import time
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -13,7 +12,6 @@ from raiden.utils.upgrades import UpgradeManager
 
 def setup_storage(db_path):
     storage = SQLiteStorage(str(db_path), JSONSerializer())
-    time.sleep(1)
     storage.write_state_change(
         ActionInitChain(
             pseudo_random_generator=random.Random(),
@@ -27,19 +25,14 @@ def setup_storage(db_path):
 
 
 def test_upgrade_manager_restores_backup(tmp_path):
-    db_path = tmp_path / Path('test.db')
+    db_path = tmp_path / Path('v17_log.db')
     upgrade_manager = UpgradeManager(db_filename=db_path)
 
-    with patch('raiden.storage.sqlite.SQLiteStorage.get_version') as get_version:
-        get_version.return_value = 16
+    old_db_filename = tmp_path / Path('v16_log.db')
+    with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
+        older_db_file.return_value = 16, str(old_db_filename)
+        setup_storage(old_db_filename)
         upgrade_manager.run()
-
-    assert upgrade_manager._backup_filename.exists()
-
-    # Write some state changes into the backup DB file
-    setup_storage(str(upgrade_manager._backup_filename))
-
-    upgrade_manager.restore_backup()
 
     # Once restored, the state changes written above should be
     # in the restored database
@@ -48,3 +41,5 @@ def test_upgrade_manager_restores_backup(tmp_path):
         {'_type': 'raiden.transfer.state_change.ActionInitChain'},
     )
     assert state_change_record.data is not None
+    assert not old_db_filename.exists()
+    assert Path(str(old_db_filename).replace('_log.db', '_log.backup')).exists()
