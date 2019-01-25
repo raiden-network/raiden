@@ -164,13 +164,6 @@ def logging_level(request):
     )
 
 
-@pytest.fixture(scope='session', autouse=False)
-def validate_solidity_compiler():
-    """ Check the solc prior to running any test. """
-    from raiden.utils.solc import validate_solc
-    validate_solc()
-
-
 @pytest.fixture(scope='session', autouse=True)
 def dont_exit_pytest():
     """ Raiden will quit on any unhandled exception.
