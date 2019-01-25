@@ -226,14 +226,6 @@ class TokenNetwork:
             settle_timeout,
         )
         if not gas_limit:
-            channel_exists = self.channel_exists_and_not_settled(
-                participant1=self.node_address,
-                participant2=partner,
-                block_identifier='pending',
-            )
-            if channel_exists:
-                raise DuplicatedChannelError('Duplicated channel')
-
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name='openChannel',
                 transaction_executed=False,
