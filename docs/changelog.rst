@@ -4,7 +4,10 @@ Changelog
 
 * :release:`0.100.2-rc3 <2019-01-25>`
 * :feature:`-` Update WebUI to version 0.8.0 https://github.com/raiden-network/webui/releases/tag/v0.8.0
-  
+* :feature:`3236` Add backwards-compatible PFS integration in the routing layer
+* :bug:`3196` Proper fix for the bug that caused not finding locksroot in the DB during unlock
+* :feature:`2988` If estimateGas returns failure don't send a transaction.
+
 * :release:`0.100.2-rc2 <2019-01-11>`
 * :feature:`-` Update WebUI to version 0.7.1 https://github.com/raiden-network/webui/releases/tag/v0.7.1
 * :bug:`3257` Requesting the channel list with a token address and not a partner address via the API should no longer cause a 500 server error.
