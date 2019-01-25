@@ -114,10 +114,11 @@ SendUnlockAndMerkleTree = Tuple[SendBalanceProof, MerkleTreeState]
 
 
 def get_sender_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
-    """ Calculate the block number at which the lock is considered expired
-    from the perspective of the transfer sender (initiator / mediator).
-    Example: if node A initiated a transfer to B, at the calculated
-    block number as below, the lock would be considered expired.
+    """ Returns the block number at which the sender can send the remove expired lock.
+
+    The remove lock expired message will be rejected if the expiration block
+    has not been confirmed. Additionally the sender can account for possible
+    delays in the receiver, so a few additional blocks are used to avoid hanging the channel.
     """
     return BlockNumber(
         lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2,
@@ -125,12 +126,10 @@ def get_sender_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
 
 
 def get_receiver_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
-    """ Calculate the block number at which the lock is considered expired
-    from the perspective of the transfer receiver (mediator / target).
-    This threshold value is smaller than the one calculated for the sender
-    to provide the receiver with time to to catch up with the blockchain
-    so that any lock expiration could become valid (from the receiver's perspective)
-    at an earlier block compared to the block at which sender expired the block.
+    """ Returns the block number at which a remove lock expired can be accepted.
+
+    The receiver must wait for the block at which the lock expires to be confirmed.
+    This is necessary to handle reorgs which could hide a secret registration.
     """
     return BlockNumber(
         lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
