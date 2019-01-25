@@ -308,13 +308,14 @@ class TokenNetwork:
             block_identifier: BlockSpecification = 'pending',
     ) -> ChannelID:
         if not channel_identifier:
-            channel_identifier = self._call_and_check_result(
-                block_identifier,
-                'getChannelIdentifier',
+            channel_identifier = self.proxy.contract.functions.getChannelIdentifier(
                 to_checksum_address(participant1),
                 to_checksum_address(participant2),
-            )
-        assert isinstance(channel_identifier, T_ChannelID)
+            ).call(block_identifier=block_identifier)
+
+        if not isinstance(channel_identifier, T_ChannelID):
+            raise ValueError('channel_identifier must be of type T_ChannelID')
+
         if channel_identifier == 0:
             raise RaidenRecoverableError(
                 f'When calling {called_by_fn} either 0 value was given for the '
@@ -322,6 +323,7 @@ class TokenNetwork:
                 f'no channel currently exists between {pex(participant1)} and '
                 f'{pex(participant2)}',
             )
+
         return channel_identifier
 
     def channel_exists_and_not_settled(
