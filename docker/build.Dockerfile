@@ -20,22 +20,23 @@ ADD . /raiden
 
 WORKDIR /raiden
 RUN git fetch --tags | true
-RUN pip install -U pip setuptools
+RUN pip install -U 'pip<19.0.0' setuptools setuptools_scm
 RUN pip install -r requirements.txt -c constraints.txt
 
 # build contracts and web_ui
 RUN python setup.py build
 
 # install raiden and pyinstaller
-RUN pip install .
+RUN pip install -c constraints.txt .
 RUN pip install pyinstaller
+
+ARG ARCHIVE_TAG
 
 # build pyinstaller package
 RUN pyinstaller --noconfirm --clean raiden.spec
 
-ARG ARCHIVE_TAG
-
 # pack result to have a unique name to get it out of the container later
-RUN cd dist && \
-    tar -cvzf ./raiden-${ARCHIVE_TAG}-linux.tar.gz raiden* && \
-    mv raiden-${ARCHIVE_TAG}-linux.tar.gz ..
+RUN export FILE_TAG=${ARCHIVE_TAG:-v$(python setup.py --version)} && \
+    cd dist && \
+    tar -cvzf ./raiden-${FILE_TAG}-linux.tar.gz raiden-${FILE_TAG}-linux && \
+    mv raiden-${FILE_TAG}-linux.tar.gz ..

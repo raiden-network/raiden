@@ -84,7 +84,13 @@ docs:
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 
-ARCHIVE_TAG?=master
+
+ARCHIVE_TAG_ARG=
+ifdef ARCHIVE_TAG
+ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=$(ARCHIVE_TAG)
+else
+ARCHIVE_TAG=v$(shell python setup.py --version)
+endif
 
 GITHUB_ACCESS_TOKEN_ARG=
 ifdef GITHUB_ACCESS_TOKEN
@@ -93,11 +99,11 @@ endif
 
 
 bundle-docker:
-	@docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg ARCHIVE_TAG=$(ARCHIVE_TAG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
+	@docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) $(ARCHIVE_TAG_ARG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
-	mkdir -p build/archive
-	docker cp builder:/raiden/raiden-$(ARCHIVE_TAG)-linux.tar.gz build/archive/raiden-$(ARCHIVE_TAG)-linux.tar.gz
+	mkdir -p dist/archive
+	docker cp builder:/raiden/raiden-$(ARCHIVE_TAG)-linux.tar.gz dist/archive/raiden-$(ARCHIVE_TAG)-linux.tar.gz
 	docker rm builder
 
 bundle:
