@@ -439,6 +439,46 @@ jobs:
             zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip dist/raiden-${ARCHIVE_TAG}-macOS
             echo raiden-${ARCHIVE_TAG}-macOS.zip > dist/archive/_LATEST-macOS.txt
 
+  deploy-homebrew:
+    executor:
+      name: docker
+      py-version: "3.7"
+
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "46:b3:a5:c3:d8:21:63:cd:de:6d:07:5d:0c:5d:ba:73"
+      - attach_workspace:
+          at: "~"
+      - run:
+          name: Configure Git
+          command: |
+            git config --global user.email "contact@raiden.network"
+            git config --global user.name "Raiden Network"
+      - run:
+          name: Checkout homebrew-raiden
+          command: |
+            git clone git@github.com:raiden-network/homebrew-raiden
+      - run:
+          name: Update Formula
+          command: |
+            source .circleci/get_archive_tag.sh
+            UPDATED_SHA256=$(openssl dgst -sha256 dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip)
+            FORMULA_FILE="homebrew-raiden/raiden.rb"
+            sed -i .bak -E "s/[0-9]+\.[0-9]+\.[0-9]+/${ARCHIVE_TAG/v/}/g" ${FORMULA_FILE}
+            sed -i .bak -E "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"${UPDATED_SHA256: -64}\"/g" ${FORMULA_FILE}
+            rm $FORMULA_FILE.bak
+      - run:
+          name: Commit and Push Updated Formula
+          command: |
+            pushd homebrew-raiden
+            git add raiden.rb
+            git commit -m "Update formula to ${TRAVIS_TAG}"
+            git tag -a "${TRAVIS_TAG}" -m "${TRAVIS_TAG}"
+            git push --follow-tags
+            popd
+
+
   deploy-digitalocean:
     executor:
       name: docker
@@ -686,6 +726,12 @@ workflows:
       - build-binary-macos:
           requires:
             - prepare-python-macos
+          filters:
+            <<: *only-tagged-version-filter
+
+      - deploy-homebrew:
+          requires:
+            - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
 
