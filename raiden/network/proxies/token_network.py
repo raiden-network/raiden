@@ -997,8 +997,7 @@ class TokenNetwork:
             #
             # Exception is raised if the public key recovery failed.
         except Exception:  # pylint: disable=broad-except
-            msg = "Couldn't verify the balance proof signature"
-            return RaidenUnrecoverableError, msg
+            raise RaidenUnrecoverableError("Couldn't verify the balance proof signature")
 
         if signer_address != partner:
             raise RaidenUnrecoverableError('Invalid balance proof signature')
