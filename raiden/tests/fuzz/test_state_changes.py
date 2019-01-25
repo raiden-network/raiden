@@ -13,32 +13,40 @@ from hypothesis.stateful import (
     multiple,
     rule,
 )
-from hypothesis.strategies import builds, composite, integers, random_module, randoms
+from hypothesis.strategies import binary, builds, composite, integers, random_module, randoms
 
-from raiden.constants import EMPTY_MERKLE_ROOT, GENESIS_BLOCK_NUMBER
+from raiden.constants import EMPTY_MERKLE_ROOT, GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.messages import Lock
-from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.tests.utils import factories
 from raiden.transfer import channel, node
 from raiden.transfer.events import EventPaymentSentFailed, SendProcessed
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer, SendSecretReveal
+from raiden.transfer.mediated_transfer.events import (
+    EventUnlockSuccess,
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendSecretReveal,
+)
+from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
     ReceiveSecretRequest,
+    ReceiveSecretReveal,
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.state import (
-    EMPTY_MERKLE_TREE,
     ChainState,
     PaymentNetworkState,
     TokenNetworkState,
+    make_empty_merkle_tree,
 )
 from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
+    ReceiveUnlock,
 )
 from raiden.utils import random_secret, sha3
 from raiden.utils.typing import BlockNumber
@@ -47,6 +55,16 @@ from raiden.utils.typing import BlockNumber
 @composite
 def secret(draw):
     return draw(builds(random_secret))
+
+
+@composite
+def address(draw):
+    return draw(binary(min_size=20, max_size=20))
+
+
+@composite
+def payment_id(draw):
+    return draw(integers(min_value=1, max_value=UINT64_MAX))
 
 
 def event_types_match(events, *expected_types):
@@ -160,6 +178,9 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.payment_network_id
         ] = self.payment_network_state
 
+        self.chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
+            self.token_network_id
+        ] = self.payment_network_id
         channels = [
             self.new_channel_with_transaction()
             for _ in range(self.initial_number_of_channels)
@@ -328,7 +349,7 @@ class InitiatorMixin:
     @rule(
         target=init_initiators,
         partner=partners,
-        payment_id=integers(min_value=1),
+        payment_id=payment_id(),
         amount=integers(min_value=1, max_value=100),
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
@@ -349,7 +370,7 @@ class InitiatorMixin:
 
     @rule(
         partner=partners,
-        payment_id=integers(min_value=1),
+        payment_id=payment_id(),
         excess_amount=integers(min_value=1),
         secret=secret(),  # pylint: disable=no-value-for-parameter
     )
@@ -364,7 +385,7 @@ class InitiatorMixin:
     @rule(
         previous_action=init_initiators,
         partner=partners,
-        payment_id=integers(min_value=1),
+        payment_id=payment_id(),
         amount=integers(min_value=1),
     )
     def used_secret_init_initiator(self, previous_action, partner, payment_id, amount):
@@ -430,7 +451,7 @@ class InitiatorMixin:
 
 class BalanceProofData:
     def __init__(self, channel_id, token_network_id):
-        self._merkletree = EMPTY_MERKLE_TREE
+        self._merkletree = make_empty_merkle_tree()
         self.properties = factories.BalanceProofProperties(
             transferred_amount=0,
             locked_amount=0,
@@ -440,15 +461,12 @@ class BalanceProofData:
         )
 
     def update(self, amount, lockhash):
-        self._merkletree = channel.compute_merkletree_with(
-            self._merkletree,
-            lockhash,
-        )
+        self._merkletree = channel.compute_merkletree_with(self._merkletree, lockhash)
         self.properties = factories.create_properties(
             factories.BalanceProofProperties(
-                locked_amount = self.properties.locked_amount + amount,
+                locked_amount=self.properties.locked_amount + amount,
                 locksroot=merkleroot(self._merkletree),
-                nonce = self.properties.nonce + 1,
+                nonce=self.properties.nonce + 1,
             ),
             self.properties,
         )
@@ -459,6 +477,8 @@ class MediatorMixin:
     def __init__(self):
         super().__init__()
         self.partner_to_balance_proof_data = dict()
+        self.secrethash_to_secret = dict()
+        self.waiting_for_unlock = dict()
         self.initial_number_of_channels = 2
 
     def _get_balance_proof_data(self, partner):
@@ -477,6 +497,8 @@ class MediatorMixin:
         return expected
 
     init_mediators = Bundle('init_mediators')
+    secret_requests = Bundle('secret_requests')
+    unlocks = Bundle('unlocks')
 
     def _new_mediator_transfer(
             self,
@@ -487,17 +509,24 @@ class MediatorMixin:
             secret,
     ) -> LockedTransferSignedState:
         initiator_pkey = self.address_to_privkey[initiator_address]
-
-        balance_proof_data = self._update_balance_proof_data(initiator_address, amount, 5, secret)
+        balance_proof_data = self._update_balance_proof_data(
+            initiator_address,
+            amount,
+            self.block_number + 10,
+            secret,
+        )
+        self.secrethash_to_secret[sha3(secret)] = secret
 
         return factories.create(factories.LockedTransferSignedStateProperties(
             transfer=factories.LockedTransferProperties(
                 balance_proof=balance_proof_data.properties,
                 amount=amount,
+                expiration=self.block_number + 10,
                 payment_identifier=payment_id,
                 secret=secret,
                 initiator=initiator_address,
                 target=target_address,
+                token=self.token_id,
             ),
             sender=initiator_address,
             recipient=self.address,
@@ -519,7 +548,7 @@ class MediatorMixin:
         target=init_mediators,
         initiator_address=partners,
         target_address=partners,
-        payment_id=integers(min_value=1, max_value=UINT64_MAX),
+        payment_id=payment_id(),
         amount=integers(min_value=1, max_value=100),
         secret=secret(),
     )
@@ -543,8 +572,94 @@ class MediatorMixin:
         action = self._action_init_mediator(transfer)
         result = node.state_transition(self.chain_state, action)
 
-        assert event_types_match(result.events, SendProcessed)
+        assert event_types_match(result.events, SendProcessed, SendLockedTransfer)
 
+        return action
+
+    @rule(target=secret_requests, previous_action=consumes(init_mediators))
+    def valid_receive_secret_reveal(self, previous_action):
+        secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
+        sender = previous_action.from_transfer.target
+
+        action = ReceiveSecretReveal(secret, sender)
+        result = node.state_transition(self.chain_state, action)
+
+        expiration = previous_action.from_transfer.lock.expiration
+        target_channel = self.address_to_channel[previous_action.from_transfer.target]
+        in_time = self.block_number < expiration - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+        channel_open = channel.get_status(target_channel) == channel.CHANNEL_STATE_OPENED
+        if in_time and channel_open:
+            assert event_types_match(
+                result.events,
+                SendSecretReveal,
+                SendBalanceProof,
+                EventUnlockSuccess,
+            )
+            self.event('Unlock successful.')
+            self.waiting_for_unlock[secret] = previous_action.from_transfer.initiator
+        elif self.block_number < expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL:
+            assert event_types_match(result.events, SendSecretReveal)
+            self.event('Unlock failed, secret revealed too late.')
+        else:
+            assert not result.events
+            self.event('ReceiveSecretRevealed after removal of lock - dropped.')
+        return action
+
+    @rule(previous_action=secret_requests)
+    def replay_receive_secret_reveal(self, previous_action):
+        result = node.state_transition(self.chain_state, previous_action)
+        assert not result.events
+
+    @rule(previous_action=secret_requests, invalid_sender=address())
+    def replay_receive_secret_reveal_scrambled_sender(self, previous_action, invalid_sender):
+        action = ReceiveSecretReveal(previous_action.secret, invalid_sender)
+        result = node.state_transition(self.chain_state, action)
+        assert not result.events
+
+    @rule(previous_action=init_mediators, secret=secret())
+    def wrong_secret_receive_secret_reveal(self, previous_action, secret):
+        sender = previous_action.from_transfer.target
+        action = ReceiveSecretReveal(secret, sender)
+        result = node.state_transition(self.chain_state, action)
+        assert not result.events
+
+    @rule(
+        target=secret_requests,
+        previous_action=consumes(init_mediators),
+        invalid_sender=address(),
+    )
+    def wrong_address_receive_secret_reveal(self, previous_action, invalid_sender):
+        secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
+        invalid_action = ReceiveSecretReveal(secret, invalid_sender)
+        result = node.state_transition(self.chain_state, invalid_action)
+        assert not result.events
+
+        valid_sender = previous_action.from_transfer.target
+        valid_action = ReceiveSecretReveal(secret, valid_sender)
+        return valid_action
+
+    @rule(
+        target=unlocks,
+        previous_action=consumes(secret_requests),
+        message_identifier=integers(min_value=1),
+    )
+    def valid_receive_unlock(self, previous_action, message_identifier):
+        partner = self.waiting_for_unlock.get(previous_action.secret)
+        assume(partner is not None)
+
+        balance_proof_properties = self._get_balance_proof_data(partner).properties
+        signed_balance_proof = factories.create(factories.BalanceProofSignedStateProperties(
+            balance_proof=balance_proof_properties,
+            pkey=self.address_to_privkey[partner],
+        ))
+        action = ReceiveUnlock(
+            balance_proof=signed_balance_proof,
+            message_identifier=message_identifier,
+            secret=previous_action.secret,
+        )
+        result = node.state_transition(self.chain_state, action)
+
+        assert result.events  # TODO
         return action
 
 
