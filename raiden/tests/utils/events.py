@@ -3,12 +3,12 @@ from web3.datastructures import AttributeDict
 
 from raiden.raiden_service import RaidenService
 from raiden.transfer.architecture import Event, StateChange
-from raiden.utils.typing import Any, Optional
+from raiden.utils.typing import Any, Dict, List, Optional
 
 NOVALUE = object()
 
 
-def check_dict_nested_attrs(item: dict, dict_data: dict) -> bool:
+def check_dict_nested_attrs(item: Dict, dict_data: Dict) -> bool:
     """ Checks the values from `dict_data` are contained in `item`
 
     >>> d = {'a': 1, 'b': {'c': 2}}
@@ -34,7 +34,7 @@ def check_dict_nested_attrs(item: dict, dict_data: dict) -> bool:
     return True
 
 
-def check_nested_attrs(item: Any, attributes: dict) -> bool:
+def check_nested_attrs(item: Any, attributes: Dict) -> bool:
     """ Checks the attributes from `item` match the values defined in `attributes`.
 
     >>> from collections import namedtuple
@@ -64,9 +64,9 @@ def check_nested_attrs(item: Any, attributes: dict) -> bool:
 
 
 def search_for_item(
-        item_list: list,
+        item_list: List,
         item_type: Any,
-        attributes: dict,
+        attributes: Dict,
 ) -> Optional[Any]:
     """ Search for the first item of type `item_type` with `attributes` in
     `item_list`.
@@ -83,7 +83,7 @@ def search_for_item(
 def raiden_events_search_for_item(
         raiden: RaidenService,
         item_type: Event,
-        attributes: dict,
+        attributes: Dict,
 ) -> Optional[Event]:
     """ Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
@@ -96,7 +96,7 @@ def raiden_events_search_for_item(
 def raiden_state_changes_search_for_item(
         raiden: RaidenService,
         item_type: StateChange,
-        attributes: dict,
+        attributes: Dict,
 ) -> Optional[StateChange]:
     """ Search for the first event of type `item_type` with `attributes` in the
     `raiden` database.
@@ -110,14 +110,14 @@ def raiden_state_changes_search_for_item(
     )
 
 
-def must_have_event(event_list, dict_data):
+def must_have_event(event_list: List, dict_data: Dict):
     for item in event_list:
         if isinstance(item, dict) and check_dict_nested_attrs(item, dict_data):
             return item
     return None
 
 
-def must_have_events(event_list, *args) -> bool:
+def must_have_events(event_list: List, *args) -> bool:
     for dict_data in args:
         item = must_have_event(event_list, dict_data)
         if not item:
@@ -129,7 +129,7 @@ def must_have_events(event_list, *args) -> bool:
 def wait_for_raiden_event(
         raiden: RaidenService,
         item_type: Event,
-        attributes: dict,
+        attributes: Dict,
         retry_timeout: float,
 ) -> Event:
     """Wait until an event is seen in the WAL events
@@ -147,7 +147,7 @@ def wait_for_raiden_event(
 def wait_for_state_change(
         raiden: RaidenService,
         item_type: StateChange,
-        attributes: dict,
+        attributes: Dict,
         retry_timeout: float,
 ) -> StateChange:
     """Wait until a state change is seen in the WAL
