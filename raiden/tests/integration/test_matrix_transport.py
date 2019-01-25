@@ -346,9 +346,9 @@ def test_matrix_message_sync(
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
 def test_matrix_tx_error_handling(
-    skip_if_not_matrix,
-    raiden_chain,
-    token_addresses,
+        skip_if_not_matrix,
+        raiden_chain,
+        token_addresses,
 ):
     """ Test exception propagation for transactions triggered by the transport greenlet.
     """
