@@ -1,28 +1,23 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
-from gevent import monkey
+from gevent import monkey  # isort:skip # noqa
+monkey.patch_all()  # isort:skip # noqa
 
-monkey.patch_all()
+import datetime
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
 
-# Prevents isort from moving the imports bellow before gevent's
-# monkeypatch
-if True:
-    import datetime
-    import os
-    import re
-    import sys
-    import tempfile
-    from pathlib import Path
+import gevent
+import pytest
+from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
+from _pytest.tmpdir import get_user
 
-    import gevent
-    import pytest
-
-    from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
-    from _pytest.tmpdir import get_user
-
-    from raiden.log_config import configure_logging
-    from raiden.tests.fixtures.variables import *  # noqa: F401,F403
-    from raiden.tests.utils.transport import make_requests_insecure
-    from raiden.utils.cli import LogLevelConfigType
+from raiden.log_config import configure_logging
+from raiden.tests.fixtures.variables import *  # noqa: F401,F403
+from raiden.tests.utils.transport import make_requests_insecure
+from raiden.utils.cli import LogLevelConfigType
 
 
 def pytest_addoption(parser):
