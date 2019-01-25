@@ -157,7 +157,7 @@ def test_crash_on_unhandled_exception(test_api_server):
 
     # as we should not have unhandled exceptions in our endpoints, create one to test
     @test_api_server.flask_app.route('/error_endpoint', methods=['GET'])
-    def error_endpoint():
+    def error_endpoint():  # pylint: disable=unused-variable
         raise CustomException('This is an unhandled error')
 
     with test_api_server.flask_app.app_context():
@@ -940,7 +940,7 @@ def assert_payment_conflict(responses):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_api_payments_conflicts(test_api_server, raiden_network, token_addresses):
-    app0, app1 = raiden_network
+    _, app1 = raiden_network
     token_address = token_addresses[0]
     target_address = app1.raiden.address
 
