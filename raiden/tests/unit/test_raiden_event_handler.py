@@ -20,7 +20,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     participant = make_address()
     raiden = MockRaidenService()
 
-    def detail_participants(participant1, participant2, channel_identifier):
+    def detail_participants(participant1, participant2, block_identifier, channel_identifier):
         transferred_amount = 1
         locked_amount = 1
         locksroot = make_32bytes()

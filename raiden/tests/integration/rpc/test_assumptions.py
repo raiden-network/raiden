@@ -109,7 +109,8 @@ def test_estimate_gas_fail(deploy_client):
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    assert not contract_proxy.estimate_gas('pending', 'fail')
+    check_block = deploy_client.get_checking_block()
+    assert not contract_proxy.estimate_gas(check_block, 'fail')
 
 
 def test_duplicated_transaction_same_gas_price_raises(deploy_client):
@@ -132,7 +133,8 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
         contract_proxy.contract_address,
     )
 
-    startgas = safe_gas_limit(contract_proxy.estimate_gas('pending', 'ret'))
+    check_block = deploy_client.get_checking_block()
+    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, 'ret'))
 
     with pytest.raises(TransactionAlreadyPending):
         second_proxy.transact('ret', startgas)
@@ -158,7 +160,8 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
         contract_proxy.contract_address,
     )
 
-    startgas = safe_gas_limit(contract_proxy.estimate_gas('pending', 'ret'))
+    check_block = deploy_client.get_checking_block()
+    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, 'ret'))
 
     with pytest.raises(ReplacementTransactionUnderpriced):
         second_proxy.transact('ret', startgas)
@@ -172,7 +175,8 @@ def test_transact_opcode(deploy_client):
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    startgas = contract_proxy.estimate_gas('pending', 'ret') * 2
+    check_block = deploy_client.get_checking_block()
+    startgas = contract_proxy.estimate_gas(check_block, 'ret') * 2
 
     transaction = contract_proxy.transact('ret', startgas)
     deploy_client.poll(transaction)
@@ -204,7 +208,8 @@ def test_transact_opcode_oog(deploy_client):
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
     # divide the estimate by 2 to run into out-of-gas
-    startgas = safe_gas_limit(contract_proxy.estimate_gas('pending', 'loop', 1000)) // 2
+    check_block = deploy_client.get_checking_block()
+    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, 'loop', 1000)) // 2
 
     transaction = contract_proxy.transact('loop', startgas, 1000)
     deploy_client.poll(transaction)
@@ -216,8 +221,9 @@ def test_filter_start_block_inclusive(deploy_client):
     """ A filter includes events from the block given in from_block """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
+    check_block = deploy_client.get_checking_block()
     # call the create event function twice and wait for confirmation each time
-    startgas = safe_gas_limit(contract_proxy.estimate_gas('pending', 'createEvent', 1))
+    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, 'createEvent', 1))
     transaction_1 = contract_proxy.transact('createEvent', startgas, 1)
     deploy_client.poll(transaction_1)
     transaction_2 = contract_proxy.transact('createEvent', startgas, 2)
@@ -248,8 +254,9 @@ def test_filter_end_block_inclusive(deploy_client):
     until and including end_block. """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
+    check_block = deploy_client.get_checking_block()
     # call the create event function twice and wait for confirmation each time
-    startgas = safe_gas_limit(contract_proxy.estimate_gas('pending', 'createEvent', 1))
+    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, 'createEvent', 1))
     transaction_1 = contract_proxy.transact('createEvent', startgas, 1)
     deploy_client.poll(transaction_1)
     transaction_2 = contract_proxy.transact('createEvent', startgas, 2)

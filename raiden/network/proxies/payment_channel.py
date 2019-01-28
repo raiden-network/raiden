@@ -62,6 +62,7 @@ class PaymentChannel:
         self.participant1 = participant1
         self.participant2 = participant2
         self.token_network = token_network
+        self.client = self.token_network.client
 
     def token_address(self) -> Address:
         """ Returns the address of the token for the channel. """
@@ -69,9 +70,11 @@ class PaymentChannel:
 
     def detail(self) -> ChannelDetails:
         """ Returns the channel details. """
+        checking_block = self.client.get_checking_block()
         return self.token_network.detail(
             participant1=self.participant1,
             participant2=self.participant2,
+            block_identifier=checking_block,
             channel_identifier=self.channel_identifier,
         )
 
@@ -141,8 +144,8 @@ class PaymentChannel:
         return self.token_network.channel_is_settled(
             participant1=self.participant1,
             participant2=self.participant2,
-            channel_identifier=self.channel_identifier,
             block_identifier='latest',
+            channel_identifier=self.channel_identifier,
         )
 
     def closing_address(self) -> Optional[Address]:
@@ -150,6 +153,7 @@ class PaymentChannel:
         return self.token_network.closing_address(
             participant1=self.participant1,
             participant2=self.participant2,
+            block_identifier='latest',
             channel_identifier=self.channel_identifier,
         )
 

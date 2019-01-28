@@ -11,7 +11,13 @@ from raiden.transfer.state_change import ActionInitChain
 
 class MockTokenNetwork:
 
-    def detail_participants(self, participant1, participant2, channel_identifier):
+    def detail_participants(
+            self,
+            participant1,
+            participant2,
+            block_identifier,
+            channel_identifier,
+    ):
         # To be changed by each test
         return None
 
