@@ -4,6 +4,7 @@ from web3.datastructures import AttributeDict
 from raiden.raiden_service import RaidenService
 from raiden.transfer.architecture import Event, StateChange
 from raiden.utils.typing import Any, Dict, List, Optional
+from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock
 
 NOVALUE = object()
 
@@ -144,6 +145,24 @@ def wait_for_raiden_event(
     return found
 
 
+def wait_for_batch_unlock(app, token_network_id, participant, partner, retry_timeout=1):
+    unlock_event = None
+    while not unlock_event:
+        state_changes = app.raiden.wal.storage.get_statechanges_by_identifier(
+            from_identifier=0,
+            to_identifier='latest',
+        )
+
+        unlock_event = search_for_item(state_changes, ContractReceiveChannelBatchUnlock, {
+            'token_network_identifier': token_network_id,
+            'participant': participant,
+            'partner': partner,
+        })
+        if unlock_event is not None:
+            return unlock_event
+        gevent.sleep(retry_timeout)
+
+
 def wait_for_state_change(
         raiden: RaidenService,
         item_type: StateChange,
@@ -160,4 +179,4 @@ def wait_for_state_change(
         found = raiden_state_changes_search_for_item(raiden, item_type, attributes)
         gevent.sleep(retry_timeout)
 
-    return found
+    return

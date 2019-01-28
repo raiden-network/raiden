@@ -5,6 +5,7 @@ from raiden.api.python import RaidenAPI
 from raiden.tests.utils.events import (
     raiden_events_search_for_item,
     search_for_item,
+    wait_for_batch_unlock,
     wait_for_raiden_event,
     wait_for_state_change,
 )
@@ -26,7 +27,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.state import lockstate_from_lock
-from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock, ReceiveProcessed
+from raiden.transfer.state_change import ReceiveProcessed
 from raiden.transfer.views import state_from_raiden
 from raiden.waiting import wait_for_block, wait_for_settle
 
@@ -313,6 +314,7 @@ def test_different_view_of_last_bp_during_unlock(
     token_proxy = app0.raiden.chain.token(token_address)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
+    initial_balance2 = token_proxy.balance_of(app2.raiden.address)
 
     # make a transfer to test the path app0 -> app1 -> app2
     identifier_path = 1
@@ -430,6 +432,12 @@ def test_different_view_of_last_bp_during_unlock(
             token_address=token_address,
             partner_address=app1.raiden.address,
         )
+        # also app1 closes the channel
+        RaidenAPI(app2.raiden).channel_close(
+            registry_address=payment_network_identifier,
+            token_address=token_address,
+            partner_address=app1.raiden.address,
+        )
 
     count = 0
     original_update = app1.raiden.raiden_event_handler.handle_contract_send_channelupdate
@@ -446,6 +454,34 @@ def test_different_view_of_last_bp_during_unlock(
     assert count == 1, 'Update transfer should have only been called once during restart'
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
+    token_network0 = views.get_token_network_by_identifier(
+        views.state_from_app(app0),
+        token_network_identifier,
+    )
+
+    channel_state01 = get_channelstate(app0, app1, token_network_identifier)
+    assert channel_state01
+    # app0 does not expect any tokens from unlock
+    assert not any(channel.get_batch_unlock_values(channel_state01))
+
+    assert channel_identifier in token_network0.partneraddresses_to_channelidentifiers[
+        app1.raiden.address
+    ]
+
+    channel_state10 = get_channelstate(app1, app0, token_network_identifier)
+    values10 = channel.get_batch_unlock_values(channel_state10)
+    # channel10 will need to call unlock
+    assert any(values10)
+
+    # Ensure that no other unlocks are to be done
+    channel_state01 = get_channelstate(app0, app1, token_network_identifier)
+    channel_state12 = get_channelstate(app1, app2, token_network_identifier)
+    channel_state21 = get_channelstate(app2, app1, token_network_identifier)
+    for channel_state in (channel_state01, channel_state12, channel_state21):
+        if channel_state is not None:
+            values = channel.get_batch_unlock_values(channel_state)
+            assert not any(values)
+
     # and we wait for settlement
     wait_for_settle(
         raiden=app0.raiden,
@@ -455,27 +491,58 @@ def test_different_view_of_last_bp_during_unlock(
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
 
+    channel_identifier21 = get_channelstate(app2, app1, token_network_identifier).identifier
+    wait_for_settle(
+        raiden=app2.raiden,
+        payment_network_id=payment_network_identifier,
+        token_address=token_address,
+        channel_ids=[channel_identifier21],
+        retry_timeout=app2.raiden.alarm.sleep_time,
+    )
+
+    # Same unlock situation after settlement
+    channel_state10 = get_channelstate(app1, app0, token_network_identifier)
+    values10 = channel.get_batch_unlock_values(channel_state10)
+    # channel10 will need to call unlock
+    assert any(values10)
+
+    # Ensure that no other unlocks are to be done
+    channel_state01 = get_channelstate(app0, app1, token_network_identifier)
+    channel_state12 = get_channelstate(app1, app2, token_network_identifier)
+    channel_state21 = get_channelstate(app2, app1, token_network_identifier)
+    for channel_state in (channel_state01, channel_state12, channel_state21):
+        if channel_state is not None:
+            values = channel.get_batch_unlock_values(channel_state01)
+            assert not any(values)
+
+    registry_address = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(app0),
+        registry_address,
+        token_address,
+    )
+
     with gevent.Timeout(10):
-        unlock_app0 = wait_for_state_change(
-            app0.raiden,
-            ContractReceiveChannelBatchUnlock,
-            {'participant': app0.raiden.address},
-            retry_timeout,
+        wait_for_batch_unlock(
+            app1,
+            token_network_identifier,
+            channel_state10.partner_state.address,
+            channel_state10.our_state.address,
+            retry_timeout=app1.raiden.alarm.sleep_time,
         )
-    assert unlock_app0.returned_tokens == 50
-    with gevent.Timeout(10):
-        unlock_app1 = wait_for_state_change(
-            app1.raiden,
-            ContractReceiveChannelBatchUnlock,
-            {'participant': app1.raiden.address},
-            retry_timeout,
-        )
-    assert unlock_app1.returned_tokens == 50
     final_balance0 = token_proxy.balance_of(app0.raiden.address)
     final_balance1 = token_proxy.balance_of(app1.raiden.address)
+    final_balance2 = token_proxy.balance_of(app2.raiden.address)
 
-    assert final_balance0 - deposit - initial_balance0 == -1
-    assert final_balance1 - deposit - initial_balance1 == 1
+    tokens_lost = (
+        initial_balance0 + initial_balance1 + initial_balance2
+    ) != (
+        final_balance0 + final_balance1 + final_balance2 + 4 * deposit
+    )
+    assert not tokens_lost
+    assert final_balance0 - initial_balance0 == deposit - amount_refund - amount_path
+    assert final_balance1 - initial_balance1 == 2 * deposit - amount_drain
+    assert final_balance2 - initial_balance2 == deposit + amount_drain + amount_path
 
 
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])

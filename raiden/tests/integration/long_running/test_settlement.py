@@ -8,7 +8,7 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret
 from raiden.tests.utils import factories
-from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.events import search_for_item, wait_for_batch_unlock
 from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
@@ -20,29 +20,11 @@ from raiden.tests.utils.transfer import (
 from raiden.transfer import channel, views
 from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
-    ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelSettled,
     ContractReceiveSecretReveal,
 )
 from raiden.utils import encode_hex, sha3
-
-
-def wait_for_batch_unlock(app, token_network_id, participant, partner):
-    unlock_event = None
-    while not unlock_event:
-        gevent.sleep(1)
-
-        state_changes = app.raiden.wal.storage.get_statechanges_by_identifier(
-            from_identifier=0,
-            to_identifier='latest',
-        )
-
-        unlock_event = search_for_item(state_changes, ContractReceiveChannelBatchUnlock, {
-            'token_network_identifier': token_network_id,
-            'participant': participant,
-            'partner': partner,
-        })
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
