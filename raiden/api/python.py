@@ -29,13 +29,13 @@ from raiden.messages import RequestMonitoring
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.transfer import architecture, views
 from raiden.transfer.events import (
-    ContractSendChannelClose,
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferState
 from raiden.transfer.state import BalanceProofSignedState, NettingChannelState, TransferTask
+from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import pex, sha3, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 
@@ -563,23 +563,19 @@ class RaidenAPI:
             token_address=token_address,
             partner_addresses=partner_addresses,
         )
+        token_network_identifier = views.get_token_network_identifier_by_token_address(
+            chain_state=views.state_from_raiden(self.raiden),
+            payment_network_id=registry_address,
+            token_address=token_address,
+        )
 
-        # Skip the WAL and produce the ContractSendChannelClose events
-        # manually.
-        #
-        # This will make the closing action *non* restartable, but it's
-        # required to expose the exceptions raised by the proxy to the caller.
         for channel_state in channels_to_close:
-            close_event = ContractSendChannelClose(
-                channel_state.identifier,
-                channel_state.token_address,
-                channel_state.token_network_identifier,
-                channel_state.partner_state.balance_proof,
+            channel_close = ActionChannelClose(
+                token_network_identifier=token_network_identifier,
+                channel_identifier=channel_state.identifier,
             )
-            self.raiden.raiden_event_handler.on_raiden_event(
-                self.raiden,
-                close_event,
-            )
+
+            self.raiden.handle_state_change(channel_close)
 
         channel_ids = [channel_state.identifier for channel_state in channels_to_close]
 
