@@ -432,6 +432,19 @@ def test_token_network_proxy_update_transfer(
         signature=decode_hex(balance_proof_c2.signature),
     )
 
+    # update transfer with completely invalid closing signature
+    with pytest.raises(RaidenUnrecoverableError) as excinfo:
+        c2_token_network_proxy.update_transfer(
+            channel_identifier,
+            c1_client.address,
+            decode_hex(balance_proof_c1.balance_hash),
+            balance_proof_c1.nonce,
+            decode_hex(balance_proof_c1.additional_hash),
+            b'',
+            b'',
+        )
+    assert str(excinfo.value) == "Couldn't verify the balance proof signature"
+
     # using invalid non-closing signature
     # Usual mistake when calling update Transfer - balance proof signature is missing in the data
     non_closing_data = balance_proof_c1.serialize_bin(msg_type=MessageTypeId.BALANCE_PROOF_UPDATE)
