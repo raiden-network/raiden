@@ -882,6 +882,12 @@ class TokenNetwork:
     ):
         """ Close the channel using the provided balance proof.
 
+        Note:
+            This method must *not* be called without updating the application
+            state, otherwise the node may accept new transfers which cannot be
+            used, because the closer is not allowed to update the balance proof
+            sent.
+
         Raises:
             RaidenRecoverableError: If the channel is already closed.
             RaidenUnrecoverableError: If the channel does not exist or is settled.
