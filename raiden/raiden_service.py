@@ -30,7 +30,7 @@ from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
-from raiden.transfer.architecture import StateChange
+from raiden.transfer.architecture import Event as RaidenEvent, StateChange
 from raiden.transfer.mediated_transfer.events import (
     EventNewBalanceProofReceived,
     SendLockedTransfer,
@@ -536,7 +536,7 @@ class RaidenService(Runnable):
 
         return greenlets
 
-    def handle_event(self, raiden_event: Event) -> Greenlet:
+    def handle_event(self, raiden_event: RaidenEvent) -> Greenlet:
         """Spawn a new thread to handle a Raiden event.
 
         This will spawn a new greenlet to handle each event, which is
@@ -556,8 +556,8 @@ class RaidenService(Runnable):
         """
         return gevent.spawn(self._handle_event, raiden_event)
 
-    def _handle_event(self, raiden_event: Event):
-        assert isinstance(raiden_event, Event)
+    def _handle_event(self, raiden_event: RaidenEvent):
+        assert isinstance(raiden_event, RaidenEvent)
         try:
             self.raiden_event_handler.on_raiden_event(
                 raiden=self,
