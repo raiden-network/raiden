@@ -886,7 +886,7 @@ class TokenNetwork:
             This method must *not* be called without updating the application
             state, otherwise the node may accept new transfers which cannot be
             used, because the closer is not allowed to update the balance proof
-            sent.
+            submitted on chain after closing
 
         Raises:
             RaidenRecoverableError: If the channel is already closed.
