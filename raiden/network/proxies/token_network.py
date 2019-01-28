@@ -211,14 +211,14 @@ class TokenNetwork:
         Returns:
             The ChannelID of the new netting channel.
         """
-
-        self._new_channel_preconditions(partner, settle_timeout, 'pending')
+        checking_block = self.client.get_checking_block()
+        self._new_channel_preconditions(partner, settle_timeout, checking_block)
         log_details = {
             'peer1': pex(self.node_address),
             'peer2': pex(partner),
         }
         gas_limit = self.proxy.estimate_gas(
-            'pending',
+            checking_block,
             'openChannel',
             self.node_address,
             partner,
@@ -229,7 +229,7 @@ class TokenNetwork:
                 transaction_name='openChannel',
                 transaction_executed=False,
                 required_gas=GAS_REQUIRED_FOR_OPEN_CHANNEL,
-                block_identifier='pending',
+                block_identifier=checking_block,
             )
             self._new_channel_postconditions(
                 partner=partner,
@@ -720,6 +720,7 @@ class TokenNetwork:
             token_address=token_address,
             contract_manager=self.contract_manager,
         )
+        checking_block = self.client.get_checking_block()
         error_prefix = 'setTotalDeposit call will fail'
         with self.channel_operations_lock[partner], self.deposit_lock:
             amount_to_deposit, log_details = self._deposit_preconditions(
@@ -727,11 +728,11 @@ class TokenNetwork:
                 total_deposit=total_deposit,
                 partner=partner,
                 token=token,
-                block_identifier='pending',
+                block_identifier=checking_block,
             )
 
             gas_limit = self.proxy.estimate_gas(
-                'pending',
+                checking_block,
                 'setTotalDeposit',
                 channel_identifier,
                 self.node_address,
@@ -760,7 +761,7 @@ class TokenNetwork:
                 if transaction_executed:
                     block = receipt_or_none['blockNumber']
                 else:
-                    block = 'pending'
+                    block = checking_block
 
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name='setTotalDeposit',
@@ -904,16 +905,17 @@ class TokenNetwork:
         }
         log.debug('closeChannel called', **log_details)
 
+        checking_block = self.client.get_checking_block()
         self._close_preconditions(
             channel_identifier,
             partner=partner,
-            block_identifier='pending',
+            block_identifier=checking_block,
         )
 
         error_prefix = 'closeChannel call will fail'
         with self.channel_operations_lock[partner]:
             gas_limit = self.proxy.estimate_gas(
-                'pending',
+                checking_block,
                 'closeChannel',
                 channel_identifier,
                 partner,
@@ -943,7 +945,7 @@ class TokenNetwork:
                 if transaction_executed:
                     block = receipt_or_none['blockNumber']
                 else:
-                    block = 'pending'
+                    block = checking_block
 
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name='closeChannel',
@@ -1061,6 +1063,7 @@ class TokenNetwork:
         }
         log.debug('updateNonClosingBalanceProof called', **log_details)
 
+        checking_block = self.client.get_checking_block()
         self._update_preconditions(
             channel_identifier=channel_identifier,
             partner=partner,
@@ -1068,12 +1071,12 @@ class TokenNetwork:
             nonce=nonce,
             additional_hash=additional_hash,
             closing_signature=closing_signature,
-            block_identifier='pending',
+            block_identifier=checking_block,
         )
 
         error_prefix = 'updateNonClosingBalanceProof call will fail'
         gas_limit = self.proxy.estimate_gas(
-            'pending',
+            checking_block,
             'updateNonClosingBalanceProof',
             channel_identifier,
             partner,
@@ -1108,7 +1111,7 @@ class TokenNetwork:
                 block = receipt_or_none['blockNumber']
                 to_compare_block = block
             else:
-                block = 'pending'
+                block = checking_block
                 to_compare_block = self.client.block_number()
 
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
@@ -1180,9 +1183,10 @@ class TokenNetwork:
 
         leaves_packed = b''.join(lock.encoded for lock in merkle_tree_leaves)
 
+        checking_block = self.client.get_checking_block()
         error_prefix = 'Call to unlock will fail'
         gas_limit = self.proxy.estimate_gas(
-            'pending',
+            checking_block,
             'unlock',
             channel_identifier,
             self.node_address,
@@ -1211,7 +1215,7 @@ class TokenNetwork:
             if transaction_executed:
                 block = receipt_or_none['blockNumber']
             else:
-                block = 'pending'
+                block = checking_block
 
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name='unlock',
@@ -1309,6 +1313,7 @@ class TokenNetwork:
         }
         log.debug('settle called', **log_details)
 
+        checking_block = self.client.get_checking_block()
         args = self._settle_preconditions(
             channel_identifier=channel_identifier,
             transferred_amount=transferred_amount,
@@ -1318,13 +1323,13 @@ class TokenNetwork:
             partner_transferred_amount=partner_transferred_amount,
             partner_locked_amount=partner_locked_amount,
             partner_locksroot=partner_locksroot,
-            block_identifier='pending',
+            block_identifier=checking_block,
         )
 
         with self.channel_operations_lock[partner]:
             error_prefix = 'Call to settle will fail'
             gas_limit = self.proxy.estimate_gas(
-                'pending',
+                checking_block,
                 'settleChannel',
                 channel_identifier,
                 *args,
@@ -1348,7 +1353,7 @@ class TokenNetwork:
             if transaction_executed:
                 block = receipt_or_none['blockNumber']
             else:
-                block = 'pending'
+                block = checking_block
 
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name='settleChannel',
