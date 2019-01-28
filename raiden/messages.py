@@ -671,7 +671,7 @@ class Unlock(EnvelopeMessage):
 
     def to_dict(self):
         return {
-            'type': self.__class__.__name__,
+            'type': 'Secret',
             'chain_id': self.chain_id,
             'message_identifier': self.message_identifier,
             'payment_identifier': self.payment_identifier,
@@ -687,7 +687,7 @@ class Unlock(EnvelopeMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__
+        assert data['type'] == 'Secret'
         message = cls(
             chain_id=data['chain_id'],
             message_identifier=data['message_identifier'],
