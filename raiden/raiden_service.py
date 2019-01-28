@@ -653,7 +653,9 @@ class RaidenService(Runnable):
 
         with self.dispatch_events_lock:
             for transaction in pending_transactions:
-                self.handle_transaction_event(transaction)
+                self.add_pending_greenlet(
+                    self.handle_event(raiden_event=transaction),
+                )
 
     def _initialize_payment_statuses(self, chain_state: ChainState):
         """ Re-initialize targets_to_identifiers_to_statuses. """
