@@ -1430,3 +1430,4 @@ CMDID_TO_CLASS = {
 }
 
 CLASSNAME_TO_CLASS = {klass.__name__: klass for klass in CMDID_TO_CLASS.values()}
+CLASSNAME_TO_CLASS['Secret'] = Unlock
