@@ -447,7 +447,7 @@ class JSONRPCClient:
         return self.web3.eth.blockNumber
 
     def balance(self, account: Address):
-        """ Return the balance of the account of given address. """
+        """ Return the balance of the account of the given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')
 
     def parity_get_pending_transaction_hash_by_nonce(

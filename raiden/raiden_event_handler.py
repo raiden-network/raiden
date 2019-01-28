@@ -329,6 +329,7 @@ class RaidenEventHandler:
         participants_details = token_network.detail_participants(
             participant1=raiden.address,
             participant2=participant,
+            block_identifier='latest',
             channel_identifier=channel_identifier,
         )
 
@@ -435,6 +436,7 @@ class RaidenEventHandler:
         participants_details = token_network_proxy.detail_participants(
             participant1=payment_channel.participant1,
             participant2=payment_channel.participant2,
+            block_identifier='latest',
             channel_identifier=channel_settle_event.channel_identifier,
         )
 
