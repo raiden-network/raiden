@@ -963,7 +963,7 @@ def test_initiator_lock_expired():
         'token_network_identifier': channel1.token_network_identifier,
         'identifier': UNIT_TRANSFER_IDENTIFIER,
         'target': transfer.target,
-        'reason': "transfer's lock has expired",
+        # 'reason': "transfer's lock has expired",
     })
     assert payment_failed is not None
 
