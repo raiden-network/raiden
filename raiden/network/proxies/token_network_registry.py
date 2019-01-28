@@ -100,9 +100,10 @@ class TokenNetworkRegistry:
         }
         log.debug('createERC20TokenNetwork called', **log_details)
 
+        checking_block = self.client.get_checking_block()
         error_prefix = 'Call to createERC20TokenNetwork will fail'
         gas_limit = self.proxy.estimate_gas(
-            'pending',
+            checking_block,
             'createERC20TokenNetwork',
             token_address,
         )
@@ -124,7 +125,7 @@ class TokenNetworkRegistry:
             if transaction_executed:
                 block = receipt_or_none['blockNumber']
             else:
-                block = 'pending'
+                block = checking_block
 
             required_gas = gas_limit if gas_limit else GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK
             self.proxy.jsonrpc_client.check_for_insufficient_eth(

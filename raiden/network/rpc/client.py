@@ -797,3 +797,15 @@ class JSONRPCClient:
             msg = f'Failed to execute {transaction_name} due to insufficient ETH'
             log.critical(msg, required_wei=required_balance, actual_wei=balance)
             raise InsufficientFunds(msg)
+
+    def get_checking_block(self):
+        """Workaround for parity https://github.com/paritytech/parity-ethereum/issues/9707
+        In parity doing any call() with the 'pending' block no longer falls back
+        to the latest if no pending block is found but throws a mistaken error.
+        Until that bug is fixed we need to enforce special behaviour for parity
+        and use the latest block for checking.
+        """
+        checking_block = 'pending'
+        if self.eth_node == constants.EthClient.PARITY:
+            checking_block = 'latest'
+        return checking_block

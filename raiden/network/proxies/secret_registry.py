@@ -83,8 +83,9 @@ class SecretRegistry:
             log.debug('registerSecretBatch skipped', **log_details)
             return
 
+        checking_block = self.client.get_checking_block()
         error_prefix = 'Call to registerSecretBatch will fail'
-        gas_limit = self.proxy.estimate_gas('pending', 'registerSecretBatch', secrets)
+        gas_limit = self.proxy.estimate_gas(checking_block, 'registerSecretBatch', secrets)
         if gas_limit:
             error_prefix = 'Call to registerSecretBatch failed'
             try:
@@ -109,7 +110,7 @@ class SecretRegistry:
             if transaction_executed:
                 block = receipt_or_none['blockNumber']
             else:
-                block = 'pending'
+                block = checking_block
 
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name='registerSecretBatch',
