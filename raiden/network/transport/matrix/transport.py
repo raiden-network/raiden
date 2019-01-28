@@ -404,7 +404,7 @@ class MatrixTransport(Runnable):
             f'{self._user_id}/{self._client.api.token}',
         )
         self.greenlet.name = f'MatrixTransport._run node:{pex(self._raiden_service.address)}'
-        self._raiden_service.handle_state_change(state_change)
+        self._raiden_service.handle_and_track_state_change(state_change)
         try:
             # children crashes should throw an exception here
             self._stop_event.wait()
@@ -1165,7 +1165,7 @@ class MatrixTransport(Runnable):
             reachability = NODE_NETWORK_UNREACHABLE
 
         state_change = ActionChangeNodeNetworkState(address, reachability)
-        self._raiden_service.handle_state_change(state_change)
+        self._raiden_service.handle_and_track_state_change(state_change)
 
     def _maybe_invite_user(self, user: User):
         address = validate_userid_signature(user)
