@@ -159,7 +159,7 @@ def handle_block(
             # task around to wait for the LockExpired messages to sync.
             # Check https://github.com/raiden-network/raiden/issues/3183
             initiator_state if lock_exists else None,
-            expired_lock_events + [payment_failed, unlock_failed],
+            events + [payment_failed, unlock_failed],
         )
     else:
         return TransitionResult(initiator_state, events)
