@@ -188,7 +188,7 @@ class TokenNetwork:
             self,
             partner: Address,
             block: BlockSpecification,
-    ) -> Tuple[bool, str]:
+    ):
         channel_created = self.channel_exists_and_not_settled(
             participant1=self.node_address,
             participant2=partner,
