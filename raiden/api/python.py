@@ -570,14 +570,11 @@ class RaidenAPI:
         # This will make the closing action *non* restartable, but it's
         # required to expose the exceptions raised by the proxy to the caller.
         for channel_state in channels_to_close:
-            balance_proof = channel_state.partner_state.balance_proof
-            # silence mypy: partner's balance proofs should be signed
-            assert balance_proof is None or isinstance(balance_proof, BalanceProofSignedState)
             close_event = ContractSendChannelClose(
                 channel_state.identifier,
                 channel_state.token_address,
                 channel_state.token_network_identifier,
-                balance_proof,
+                channel_state.partner_state.balance_proof,
             )
             self.raiden.raiden_event_handler.on_raiden_event(
                 self.raiden,
