@@ -100,8 +100,9 @@ def test_token_network_proxy_basics(
 
     # instantiating a new channel - test basic assumptions
     assert c1_token_network_proxy.channel_exists_and_not_settled(
-        c1_client.address,
-        c2_client.address,
+        participant1=c1_client.address,
+        participant2=c2_client.address,
+        block_identifier='latest',
     ) is False
 
     channel_identifier = c1_token_network_proxy._call_and_check_result(
@@ -177,6 +178,7 @@ def test_token_network_proxy_basics(
         participant1=c1_client.address,
         participant2=c2_client.address,
         channel_identifier=channel_identifier,
+        block_identifier='latest',
     ) is True
     assert c1_token_network_proxy.channel_is_opened(
         participant1=c1_client.address,
@@ -249,6 +251,7 @@ def test_token_network_proxy_basics(
         participant1=c1_client.address,
         participant2=c2_client.address,
         channel_identifier=channel_identifier,
+        block_identifier='latest',
     ) is True
 
     # closing already closed channel
@@ -313,6 +316,7 @@ def test_token_network_proxy_basics(
         participant1=c1_client.address,
         participant2=c2_client.address,
         channel_identifier=channel_identifier,
+        block_identifier='latest',
     ) is False
     assert token_proxy.balance_of(c1_client.address) == (initial_balance_c1 - transferred_amount)
     assert token_proxy.balance_of(c2_client.address) == (initial_balance_c2 + transferred_amount)
