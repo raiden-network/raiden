@@ -188,15 +188,14 @@ class TokenNetwork:
             self,
             partner: Address,
             block: BlockSpecification,
-    ) -> Tuple[bool, str]:
+    ):
         channel_created = self.channel_exists_and_not_settled(
             participant1=self.node_address,
             participant2=partner,
             block_identifier=block,
         )
         if channel_created:
-            return True, 'Channel with given partner address already exists'
-        return False, ''
+            raise DuplicatedChannelError('Channel with given partner address already exists')
 
     def new_netting_channel(
             self,
@@ -226,16 +225,19 @@ class TokenNetwork:
             settle_timeout,
         )
         if not gas_limit:
-            channel_exists = self.channel_exists_and_not_settled(
-                participant1=self.node_address,
-                participant2=partner,
+            self.proxy.jsonrpc_client.check_for_insufficient_eth(
+                transaction_name='openChannel',
+                transaction_executed=False,
+                required_gas=GAS_REQUIRED_FOR_OPEN_CHANNEL,
                 block_identifier='pending',
             )
-            if channel_exists:
-                raise DuplicatedChannelError('Duplicated channel')
+            self._new_channel_postconditions(
+                partner=partner,
+                block='pending',
+            )
 
-            log.critical('Call to openChannel will fail', **log_details)
-            raise RaidenUnrecoverableError('Call to openChannel will fail')
+            log.critical('new_netting_channel call will fail', **log_details)
+            raise RaidenUnrecoverableError('Creating a new channel will fail')
 
         log.debug('new_netting_channel called', **log_details)
         # Prevent concurrent attempts to open a channel with the same token and
@@ -255,12 +257,10 @@ class TokenNetwork:
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
                 if receipt_or_none:
-                    known_race, msg = self._new_channel_postconditions(
+                    self._new_channel_postconditions(
                         partner=partner,
                         block=receipt_or_none['blockNumber'],
                     )
-                    if known_race:
-                        raise DuplicatedChannelError(msg)
                     log.critical('new_netting_channel failed', **log_details)
                     raise RaidenUnrecoverableError('creating new channel failed')
 
@@ -275,22 +275,6 @@ class TokenNetwork:
         else:
             # All other concurrent threads should block on the result of opening this channel
             self.open_channel_transactions[partner].get()
-
-        if not gas_limit:
-            self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                transaction_name='openChannel',
-                transaction_executed=False,
-                required_gas=GAS_REQUIRED_FOR_OPEN_CHANNEL,
-                block_identifier='pending',
-            )
-            known_race, msg = self._new_channel_postconditions(
-                partner=partner,
-                block='pending',
-            )
-            if known_race:
-                raise DuplicatedChannelError(msg)
-            log.critical('new_netting_channel call will fail', **log_details)
-            raise RaidenUnrecoverableError('Creating a new channel will fail')
 
         channel_identifier: ChannelID = self.detail_channel(
             participant1=self.node_address,
