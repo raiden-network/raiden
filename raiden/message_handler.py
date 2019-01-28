@@ -78,7 +78,7 @@ class MessageHandler:
             message.secrethash,
             message.sender,
         )
-        raiden.handle_state_change(secret_request)
+        raiden.handle_and_track_state_change(secret_request)
 
     @staticmethod
     def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret):
@@ -86,7 +86,7 @@ class MessageHandler:
             message.secret,
             message.sender,
         )
-        raiden.handle_state_change(state_change)
+        raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
     def handle_message_unlock(raiden: RaidenService, message: Unlock):
@@ -96,7 +96,7 @@ class MessageHandler:
             secret=message.secret,
             balance_proof=balance_proof,
         )
-        raiden.handle_state_change(state_change)
+        raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
     def handle_message_lockexpired(raiden: RaidenService, message: LockExpired):
@@ -106,7 +106,7 @@ class MessageHandler:
             secrethash=message.secrethash,
             message_identifier=message.message_identifier,
         )
-        raiden.handle_state_change(state_change)
+        raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
     def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer):
@@ -142,7 +142,7 @@ class MessageHandler:
                 routes=routes,
             )
 
-        raiden.handle_state_change(state_change)
+        raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
     def handle_message_lockedtransfer(raiden: RaidenService, message: LockedTransfer):
@@ -166,9 +166,9 @@ class MessageHandler:
     @staticmethod
     def handle_message_processed(raiden: RaidenService, message: Processed):
         processed = ReceiveProcessed(message.sender, message.message_identifier)
-        raiden.handle_state_change(processed)
+        raiden.handle_and_track_state_change(processed)
 
     @staticmethod
     def handle_message_delivered(raiden: RaidenService, message: Delivered):
         delivered = ReceiveDelivered(message.sender, message.delivered_message_identifier)
-        raiden.handle_state_change(delivered)
+        raiden.handle_and_track_state_change(delivered)

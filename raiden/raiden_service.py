@@ -8,6 +8,7 @@ import filelock
 import gevent
 import structlog
 from eth_utils import is_binary_address
+from gevent import Greenlet
 from gevent.event import AsyncResult, Event
 from gevent.lock import Semaphore
 
@@ -29,7 +30,7 @@ from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
-from raiden.transfer.architecture import ContractSendEvent, StateChange
+from raiden.transfer.architecture import StateChange
 from raiden.transfer.mediated_transfer.events import (
     EventNewBalanceProofReceived,
     SendLockedTransfer,
@@ -50,13 +51,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import (
-    create_default_identifier,
-    lpex,
-    pex,
-    random_secret,
-    sha3,
-)
+from raiden.utils import create_default_identifier, lpex, pex, random_secret, sha3
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -329,7 +324,7 @@ class RaidenService(Runnable):
                 self.chain.node_address,
                 self.chain.network_id,
             )
-            self.handle_state_change(state_change)
+            self.handle_and_track_state_change(state_change)
 
             payment_network = PaymentNetworkState(
                 self.default_registry.address,
@@ -341,7 +336,7 @@ class RaidenService(Runnable):
                 block_number=last_log_block_number,
                 block_hash=last_log_block_hash,
             )
-            self.handle_state_change(state_change)
+            self.handle_and_track_state_change(state_change)
         else:
             # The `Block` state change is dispatched only after all the events
             # for that given block have been processed, filters can be safely
@@ -469,8 +464,15 @@ class RaidenService(Runnable):
 
         log.debug('Raiden Service stopped', node=pex(self.address))
 
-    def add_pending_greenlet(self, greenlet: gevent.Greenlet):
+    def add_pending_greenlet(self, greenlet: Greenlet):
+        """ Ensures an error on it crashes self/main greenlet. """
+
+        def remove(_):
+            self.greenlets.remove(greenlet)
+
+        self.greenlets.append(greenlet)
         greenlet.link_exception(self.on_error)
+        greenlet.link_value(remove)
 
     def __repr__(self):
         return f'<{self.__class__.__name__} node:{pex(self.address)}>'
@@ -487,7 +489,11 @@ class RaidenService(Runnable):
     def on_message(self, message: Message):
         self.message_handler.on_message(self, message)
 
-    def handle_state_change(self, state_change: StateChange):
+    def handle_and_track_state_change(self, state_change: StateChange):
+        for greenlet in self.handle_state_change(state_change):
+            self.add_pending_greenlet(greenlet)
+
+    def handle_state_change(self, state_change: StateChange) -> List[Greenlet]:
         assert self.wal
         log.debug(
             'State change',
@@ -512,15 +518,12 @@ class RaidenService(Runnable):
             ],
         )
 
+        greenlets: List[Greenlet] = list()
         if not self.dispatch_events_lock.locked():
             for raiden_event in raiden_event_list:
-                if isinstance(raiden_event, ContractSendEvent):
-                    self.handle_transaction_event(transaction_event=raiden_event)
-                else:
-                    self.raiden_event_handler.on_raiden_event(
-                        raiden=self,
-                        event=raiden_event,
-                    )
+                greenlets.append(
+                    self.handle_event(raiden_event=raiden_event),
+                )
 
             state_changes_count = self.wal.storage.count_state_changes()
             new_snapshot_group = (
@@ -531,10 +534,12 @@ class RaidenService(Runnable):
                 self.wal.snapshot()
                 self.snapshot_group = new_snapshot_group
 
-    def handle_transaction_event(self, transaction_event: ContractSendEvent):
-        """Spawn a new thread to handle a transaction event.
+        return greenlets
 
-        This will spawn a new greenlet to handle each transaction, which is
+    def handle_event(self, raiden_event: Event) -> Greenlet:
+        """Spawn a new thread to handle a Raiden event.
+
+        This will spawn a new greenlet to handle each event, which is
         important for two reasons:
 
         - Blockchain transactions can be queued without interfering with each
@@ -549,15 +554,14 @@ class RaidenService(Runnable):
             This is spawing a new greenlet for /each/ transaction. It's
             therefore /required/ there is *NO* order among these.
         """
-        assert isinstance(transaction_event, ContractSendEvent)
-        self._track_greenlet(gevent.spawn(self._handle_transaction_event, transaction_event))
+        return gevent.spawn(self._handle_event, raiden_event)
 
-    def _handle_transaction_event(self, transaction_event: ContractSendEvent):
-        assert isinstance(transaction_event, ContractSendEvent)
+    def _handle_event(self, raiden_event: Event):
+        assert isinstance(raiden_event, Event)
         try:
             self.raiden_event_handler.on_raiden_event(
                 raiden=self,
-                event=transaction_event,
+                event=raiden_event,
             )
         except RaidenRecoverableError as e:
             log.error(str(e))
@@ -573,19 +577,9 @@ class RaidenService(Runnable):
             else:
                 raise
 
-    def _track_greenlet(self, greenlet: gevent.Greenlet):
-        """ Spawn a sub-task and ensures an error on it crashes self/main greenlet. """
-
-        def remove(_):
-            self.greenlets.remove(greenlet)
-
-        self.greenlets.append(greenlet)
-        greenlet.link_exception(self.on_error)
-        greenlet.link_value(self.greenlets.remove)
-
     def set_node_network_state(self, node_address: Address, network_state: str):
         state_change = ActionChangeNodeNetworkState(node_address, network_state)
-        self.handle_state_change(state_change)
+        self.handle_and_track_state_change(state_change)
 
     def start_health_check_for(self, node_address: Address):
         # This function is a noop during initialization. It can be called
@@ -646,7 +640,7 @@ class RaidenService(Runnable):
             # Note: It's important to /not/ block here, because this function
             # can be called from the alarm task greenlet, which should not
             # starve.
-            self.handle_state_change(state_change)
+            self.handle_and_track_state_change(state_change)
 
     def _initialize_transactions_queues(self, chain_state: ChainState):
         pending_transactions = views.get_pending_transactions(chain_state)
@@ -873,18 +867,18 @@ class RaidenService(Runnable):
 
         # Dispatch the state change even if there are no routes to create the
         # wal entry.
-        self.handle_state_change(init_initiator_statechange)
+        self.handle_and_track_state_change(init_initiator_statechange)
 
         return payment_status
 
     def mediate_mediated_transfer(self, transfer: LockedTransfer):
         init_mediator_statechange = mediator_init(self, transfer)
-        self.handle_state_change(init_mediator_statechange)
+        self.handle_and_track_state_change(init_mediator_statechange)
 
     def target_mediated_transfer(self, transfer: LockedTransfer):
         self.start_health_check_for(transfer.initiator)
         init_target_statechange = target_init(transfer)
-        self.handle_state_change(init_target_statechange)
+        self.handle_and_track_state_change(init_target_statechange)
 
     def maybe_upgrade_db(self):
         manager = UpgradeManager(db_filename=self.database_path)

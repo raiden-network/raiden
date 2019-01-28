@@ -69,6 +69,9 @@ class MockRaidenService:
         if self.message_handler:
             self.message_handler.on_message(self, message)
 
+    def handle_and_track_state_change(self, state_change):
+        pass
+
     def handle_state_change(self, state_change):
         pass
 

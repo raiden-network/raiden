@@ -1,5 +1,7 @@
+import gevent
 import structlog
 from eth_utils import is_binary_address, is_hex, to_bytes, to_checksum_address
+from gevent import Greenlet
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
@@ -569,13 +571,18 @@ class RaidenAPI:
             token_address=token_address,
         )
 
+        greenlets: typing.List[Greenlet] = list()
         for channel_state in channels_to_close:
             channel_close = ActionChannelClose(
                 token_network_identifier=token_network_identifier,
                 channel_identifier=channel_state.identifier,
             )
 
-            self.raiden.handle_state_change(channel_close)
+            greenlets.extend(
+                self.raiden.handle_state_change(channel_close),
+            )
+
+        gevent.joinall(greenlets, raise_error=True)
 
         channel_ids = [channel_state.identifier for channel_state in channels_to_close]
 
