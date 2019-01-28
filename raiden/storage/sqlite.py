@@ -59,6 +59,8 @@ class SQLiteStorage:
         self.write_lock = threading.Lock()
         self.serializer = serializer
 
+        self.update_version()
+
     def update_version(self):
         cursor = self.conn.cursor()
         cursor.execute(

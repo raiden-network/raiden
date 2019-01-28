@@ -3,6 +3,7 @@ import shutil
 import sqlite3
 from pathlib import Path
 
+import filelock
 import sqlitebck
 import structlog
 
@@ -18,6 +19,18 @@ UPGRADES_LIST = [
 
 
 log = structlog.get_logger(__name__)
+
+
+def get_file_lock(db_filename: Path):
+    lock_file_name = os.path.join(str(db_filename), '.lock')
+    return filelock.FileLock(lock_file_name)
+
+
+def get_db_version(db_filename: Path):
+    db_lock = get_file_lock(db_filename)
+    with db_lock:
+        storage = SQLiteStorage(str(db_filename), JSONSerializer())
+        return storage.get_version()
 
 
 class UpgradeManager:
@@ -37,9 +50,13 @@ class UpgradeManager:
         all data to the current version's database, execute the migration
         functions.
         """
-        if self._current_db_filename.exists():
+        if get_db_version(self._current_db_filename) == RAIDEN_DB_VERSION:
             # The current version has already been created / updraded.
             return
+        else:
+            # The version inside the current database was not the expected one.
+            # Delete and re-run migration
+            self._delete_current_db()
 
         old_version, old_db_filename = older_db_file(str(self._current_db_filename.parent))
 
@@ -68,20 +85,24 @@ class UpgradeManager:
 
     def _backup_old_db(self, filename):
         backup_name = filename.replace('_log.db', '_log.backup')
-        shutil.move(filename, backup_name)
+        with get_file_lock(filename):
+            shutil.move(filename, backup_name)
 
     def _delete_current_db(self):
         os.remove(str(self._current_db_filename))
 
     def _copy(self, old_db_filename, current_db_filename):
-        old_conn = sqlite3.connect(old_db_filename, detect_types=sqlite3.PARSE_DECLTYPES)
-        current_conn = sqlite3.connect(current_db_filename, detect_types=sqlite3.PARSE_DECLTYPES)
+        with get_file_lock(old_db_filename), get_file_lock(current_db_filename):
+            old_conn = sqlite3.connect(
+                old_db_filename,
+                detect_types=sqlite3.PARSE_DECLTYPES,
+            )
+            current_conn = sqlite3.connect(
+                current_db_filename,
+                detect_types=sqlite3.PARSE_DECLTYPES,
+            )
 
-        sqlitebck.copy(old_conn, current_conn)
+            sqlitebck.copy(old_conn, current_conn)
 
-        old_conn.close()
-        current_conn.close()
-
-    def _get_old_version(self):
-        storage = SQLiteStorage(str(self._current_db_filename), JSONSerializer())
-        return storage.get_version()
+            old_conn.close()
+            current_conn.close()
