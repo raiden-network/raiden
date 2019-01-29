@@ -26,7 +26,6 @@ raiden-contracts
 raiden-libs
 raiden-webui
 requests
-sqlitebck
 structlog
 web3
 webargs
