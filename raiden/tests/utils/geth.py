@@ -9,7 +9,6 @@ import time
 from collections import namedtuple
 
 import gevent
-import psutil
 import requests
 import structlog
 from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
@@ -202,7 +201,6 @@ def geth_wait_and_check(
         web3,
         accounts_addresses,
         random_marker,
-        rpc_port,
         processes_list,
 ):
     """ Wait until the geth cluster is ready.
@@ -243,24 +241,7 @@ def geth_wait_and_check(
             raise ValueError(f'geth process failed with exit code {process.returncode}')
 
     if jsonrpc_running is False:
-        process = None
-
-        for connection in psutil.net_connections():
-            if connection.laddr.port == rpc_port:
-                try:
-                    process = next(
-                        connection.pid == process.pid
-                        for process in psutil.process_iter(attrs=['name'])
-                    )
-                except StopIteration:
-                    pass
-
-        if process is not None:
-            msg = f'geth didnt start the jsonrpc interface, port used by {process.name}'
-        else:
-            msg = 'geth didnt start the jsonrpc interface'
-
-        raise ValueError(msg)
+        raise ValueError('geth didnt start the jsonrpc interface')
 
     for account in accounts_addresses:
         tries = 10
@@ -463,16 +444,10 @@ def geth_run_private_blockchain(
     )
 
     try:
-        # This is a bit of implementation detail, but it may be helpful for
-        # debugging. The web3 fixture will provide a instance connected to the
-        # first geth_node
-        rpc_port = geth_nodes[0].rpc_port
-
         geth_wait_and_check(
             web3=web3,
             accounts_addresses=accounts_to_fund,
             random_marker=random_marker,
-            rpc_port=rpc_port,
             processes_list=processes_list,
         )
     except (ValueError, RuntimeError) as e:
