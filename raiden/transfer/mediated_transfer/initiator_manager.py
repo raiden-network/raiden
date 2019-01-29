@@ -392,8 +392,7 @@ def handle_offchain_secretreveal(
     if not initiator_state:
         return TransitionResult(payment_state, list())
 
-    if initiator_state.transfer_state == 'transfer_cancelled':
-        return TransitionResult(payment_state, list())
+    assert initiator_state.transfer_state != 'transfer_cancelled'
 
     sub_iteration = subdispatch_to_initiatortransfer(
         payment_state=payment_state,
@@ -423,8 +422,7 @@ def handle_onchain_secretreveal(
     if not initiator_state:
         return TransitionResult(payment_state, list())
 
-    if initiator_state.transfer_state == 'transfer_cancelled':
-        return TransitionResult(payment_state, list())
+    assert initiator_state.transfer_state != 'transfer_cancelled'
 
     sub_iteration = subdispatch_to_initiatortransfer(
         payment_state=payment_state,
