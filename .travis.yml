@@ -27,7 +27,7 @@ dist: xenial
 sudo: false
 language: python
 python:
-  - '3.6'
+  - '3.7'
 
 env:
   global:
