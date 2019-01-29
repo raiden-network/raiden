@@ -29,9 +29,14 @@ def test_upgrade_manager_restores_backup(tmp_path):
     upgrade_manager = UpgradeManager(db_filename=db_path)
 
     old_db_filename = tmp_path / Path('v16_log.db')
+    storage = None
     with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
-        older_db_file.return_value = 16, str(old_db_filename)
-        setup_storage(old_db_filename)
+        older_db_file.return_value = str(old_db_filename)
+        storage = setup_storage(old_db_filename)
+
+        with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
+            storage.update_version()
+
         upgrade_manager.run()
 
     # Once restored, the state changes written above should be

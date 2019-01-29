@@ -27,6 +27,6 @@ def older_db_file(database_base_path: str) -> typing.Optional[str]:
 
         if version < RAIDEN_DB_VERSION:
             old_db_filename = f'{database_base_path}/{expanded_name}'
-            return version, old_db_filename
+            return old_db_filename
 
-    return None, None
+    return None
