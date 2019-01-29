@@ -12,8 +12,8 @@ KEYFILE_INACCESSIBLE = 'UTC--2017-06-20T16-33-00.000000000Z--inaccessible'
 KEYFILE_INVALID = 'UTC--2017-06-20T16-06-00.000000000Z--invalid'
 
 
-@pytest.yield_fixture(scope='module')
-def test_keystore():
+@pytest.fixture(scope='module')
+def keystore_mock(request):
     keystore = os.path.join(get_project_root(), 'tests', 'test_files')
     # Create inaccessible keyfile
     inaccessible_file = os.path.join(keystore, KEYFILE_INACCESSIBLE)
@@ -26,23 +26,23 @@ def test_keystore():
     os.unlink(inaccessible_file)
 
 
-def test_get_accounts(test_keystore):
-    account_manager = AccountManager(test_keystore)
+def test_get_accounts(keystore_mock):
+    account_manager = AccountManager(keystore_mock)
     expected_accounts = {
         '0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645': os.path.join(
-            test_keystore,
+            keystore_mock,
             'UTC--2016-10-26T16-55-53.551024336Z--0d5a0e4fece4b84365b9b8dba6e6d41348c73645',
         ),
         '0x3593403033d18b82f7b4a0f18e1ed24623d23b20': os.path.join(
-            test_keystore,
+            keystore_mock,
             'valid_keystorefile_with_unexpected_name',
         ),
     }
     assert expected_accounts == account_manager.accounts
 
 
-def test_get_account_in_keystore(test_keystore):
-    account_manager = AccountManager(test_keystore)
+def test_get_account_in_keystore(keystore_mock):
+    account_manager = AccountManager(keystore_mock)
     assert account_manager.address_in_keystore('0d5a0e4fece4b84365b9b8dba6e6d41348c73645')
     assert account_manager.address_in_keystore('0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645')
     assert account_manager.address_in_keystore('0x0D5A0E4fece4b84365b9b8dba6e6d41348c73645')
@@ -51,8 +51,8 @@ def test_get_account_in_keystore(test_keystore):
     assert not account_manager.address_in_keystore('a05934d3033d18b82f7b4adf18e1ed24e3d23b19')
 
 
-def test_get_privkey(test_keystore):
-    account_manager = AccountManager(test_keystore)
+def test_get_privkey(keystore_mock):
+    account_manager = AccountManager(keystore_mock)
     assert '0xf696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
         account_manager.get_privkey('0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123'),
     )
@@ -77,9 +77,9 @@ def test_get_privkey(test_keystore):
     )
 
 
-def test_account_manager_invalid_files(test_keystore, caplog):
+def test_account_manager_invalid_files(keystore_mock, caplog):
     with caplog.at_level(logging.DEBUG):
-        AccountManager(test_keystore)
+        AccountManager(keystore_mock)
 
     logs = [
         (
