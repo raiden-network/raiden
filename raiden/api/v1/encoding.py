@@ -243,6 +243,8 @@ class PaymentSchema(BaseSchema):
     token_address = AddressField(missing=None)
     amount = fields.Integer(required=True)
     identifier = fields.Integer(missing=None)
+    secret = fields.String(missing=None)
+    secret_hash = fields.String(missing=None)
 
     class Meta:
         strict = True

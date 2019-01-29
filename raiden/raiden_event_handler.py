@@ -202,7 +202,10 @@ class RaidenEventHandler:
         # With the introduction of the lock we should always get
         # here only once per identifier so payment_status should always exist
         # see: https://github.com/raiden-network/raiden/pull/3191
-        payment_status.payment_done.set(True)
+        payment_status.payment_done.set({
+            'secret': payment_status.secret,
+            'secret_hash': payment_status.secret_hash,
+        })
 
     def handle_paymentsentfailed(
             self,
@@ -219,7 +222,7 @@ class RaidenEventHandler:
         # but the lock expiration will generate a second
         # EventPaymentSentFailed message which we can ignore here
         if payment_status:
-            payment_status.payment_done.set(False)
+            payment_status.payment_done.set(None)
 
     def handle_unlockfailed(
             self,
