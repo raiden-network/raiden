@@ -69,6 +69,7 @@ from raiden.utils.typing import (
     PaymentAmount,
     PaymentID,
     Secret,
+    SecretHash,
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
@@ -188,6 +189,8 @@ class PaymentStatus(NamedTuple):
     amount: TokenAmount
     token_network_identifier: TokenNetworkID
     payment_done: AsyncResult
+    secret: Secret
+    secret_hash: SecretHash
 
     def matches(
             self,
@@ -803,6 +806,8 @@ class RaidenService(Runnable):
                 amount=amount,
                 token_network_identifier=token_network_identifier,
                 payment_done=AsyncResult(),
+                secret=secret,
+                secret_hash=secret_hash,
             )
             self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 

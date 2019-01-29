@@ -1038,7 +1038,7 @@ class RestAPI:
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
-        if transfer_result is False:
+        if transfer_result is None:
             return api_error(
                 errors="Payment couldn't be completed "
                 "(insufficient funds, no route to target or target offline).",
@@ -1052,6 +1052,8 @@ class RestAPI:
             'target_address': target_address,
             'amount': amount,
             'identifier': identifier,
+            'secret': transfer_result.get('secret').hex(),
+            'secret_hash': transfer_result.get('secret_hash').hex(),
         }
         result = self.payment_schema.dump(payment)
         return api_response(result=result.data)
