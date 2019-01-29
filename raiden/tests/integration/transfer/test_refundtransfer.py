@@ -404,6 +404,14 @@ def test_different_view_of_last_bp_during_unlock(
     # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
     # At this point make sure that the initiator has not deleted the payment task
     assert secrethash in state_from_raiden(app0.raiden).payment_mapping.secrethashes_to_task
+    # 0 must have a locked lock (forward transfer, unlock on expire)
+    channel_state01 = get_channelstate(app0, app1, token_network_identifier)
+    assert len(channel_state01.our_state.secrethashes_to_lockedlocks)
+    assert channel.get_batch_unlock_values(channel_state01) == (0, 50)
+    # 1 must have a locked lock, too (refund transfer, unlock on expire)
+    channel_state10 = get_channelstate(app1, app0, token_network_identifier)
+    assert len(channel_state10.our_state.secrethashes_to_lockedlocks)
+    assert channel.get_batch_unlock_values(channel_state10) == (0, 50)
 
     with dont_handle_node_change_network_state():
         # now app1 goes offline
@@ -426,13 +434,13 @@ def test_different_view_of_last_bp_during_unlock(
             retry_timeout,
         )
 
-        # now app0 closes the channel
+        # now app0 closes the channel 0-1
         RaidenAPI(app0.raiden).channel_close(
             registry_address=payment_network_identifier,
             token_address=token_address,
             partner_address=app1.raiden.address,
         )
-        # also app1 closes the channel
+        # also app2 closes the channel 2-1
         RaidenAPI(app2.raiden).channel_close(
             registry_address=payment_network_identifier,
             token_address=token_address,
@@ -458,12 +466,7 @@ def test_different_view_of_last_bp_during_unlock(
         views.state_from_app(app0),
         token_network_identifier,
     )
-
-    channel_state01 = get_channelstate(app0, app1, token_network_identifier)
-    assert channel_state01
-    # app0 does not expect any tokens from unlock
-    assert not any(channel.get_batch_unlock_values(channel_state01))
-
+    # channel 0-1 must still be there!
     assert channel_identifier in token_network0.partneraddresses_to_channelidentifiers[
         app1.raiden.address
     ]
@@ -471,13 +474,17 @@ def test_different_view_of_last_bp_during_unlock(
     channel_state10 = get_channelstate(app1, app0, token_network_identifier)
     values10 = channel.get_batch_unlock_values(channel_state10)
     # channel10 will need to call unlock
-    assert any(values10)
+    assert any(values10), 'app1 abandoned the refund lock'
+
+    channel_state01 = get_channelstate(app0, app1, token_network_identifier)
+    values01 = channel.get_batch_unlock_values(channel_state01)
+    # channel01 will need to call unlock
+    assert any(values01), 'app0 abandoned the original lock'
 
     # Ensure that no other unlocks are to be done
-    channel_state01 = get_channelstate(app0, app1, token_network_identifier)
     channel_state12 = get_channelstate(app1, app2, token_network_identifier)
     channel_state21 = get_channelstate(app2, app1, token_network_identifier)
-    for channel_state in (channel_state01, channel_state12, channel_state21):
+    for channel_state in (channel_state12, channel_state21):
         if channel_state is not None:
             values = channel.get_batch_unlock_values(channel_state)
             assert not any(values)
@@ -530,14 +537,22 @@ def test_different_view_of_last_bp_during_unlock(
             channel_state10.our_state.address,
             retry_timeout=app1.raiden.alarm.sleep_time,
         )
+    with gevent.Timeout(10):
+        wait_for_batch_unlock(
+            app0,
+            token_network_identifier,
+            channel_state01.partner_state.address,
+            channel_state01.our_state.address,
+            retry_timeout=app0.raiden.alarm.sleep_time,
+        )
     final_balance0 = token_proxy.balance_of(app0.raiden.address)
     final_balance1 = token_proxy.balance_of(app1.raiden.address)
     final_balance2 = token_proxy.balance_of(app2.raiden.address)
 
     tokens_lost = (
-        initial_balance0 + initial_balance1 + initial_balance2
+        initial_balance0 + initial_balance1 + initial_balance2 + 4 * deposit
     ) != (
-        final_balance0 + final_balance1 + final_balance2 + 4 * deposit
+        final_balance0 + final_balance1 + final_balance2
     )
     assert not tokens_lost
     assert final_balance0 - initial_balance0 == deposit - amount_refund - amount_path
