@@ -12,10 +12,6 @@ from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
 from raiden.utils import sha3
 
 
-def sort_join(first, second):
-    return ''.join(sorted([first, second]))
-
-
 def test_empty():
     tree = MerkleTreeState([[EMPTY_MERKLE_ROOT]])
     assert merkleroot(tree) == EMPTY_MERKLE_ROOT
