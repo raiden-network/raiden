@@ -334,7 +334,7 @@ def test_state_wait_secretrequest_invalid_amount():
     )
 
     msg = 'The payment event now is emitted when the lock expires'
-    assert events.must_contain_entry(iteration.events, EventPaymentSentFailed, {}) is None, msg
+    assert search_for_item(iteration.events, EventPaymentSentFailed, {}) is None, msg
     assert iteration.new_state.initiator.received_secret_request is True
 
     state_change_2 = ReceiveSecretRequest(
@@ -963,7 +963,7 @@ def test_initiator_lock_expired():
         'token_network_identifier': channel1.token_network_identifier,
         'identifier': UNIT_TRANSFER_IDENTIFIER,
         'target': transfer.target,
-        # 'reason': "transfer's lock has expired",
+        'reason': 'lock expired',
     })
     assert payment_failed is not None
 
