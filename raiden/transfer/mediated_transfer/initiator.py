@@ -52,7 +52,7 @@ def events_for_unlock_lock(
         secrethash: SecretHash,
         pseudo_random_generator: random.Random,
 ) -> List[Event]:
-    """ Unlocks the lock offchain, and emit events for the successful payment. """
+    """ Unlocks the lock offchain, and emits the events for the successful payment. """
     # next hop learned the secret, unlock the token locally and send the
     # lock claim message to next hop
     transfer_description = initiator_state.transfer_description
