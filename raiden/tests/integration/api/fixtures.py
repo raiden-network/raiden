@@ -9,7 +9,7 @@ from raiden.tests.integration.api.utils import create_api_server
 #       the server is no longer running even though the teardown has not
 #       been invoked.
 @pytest.fixture
-def test_api_server(raiden_network, rest_api_port_number):
+def api_server_test_instance(raiden_network, rest_api_port_number):
     api_server = create_api_server(raiden_network[0], rest_api_port_number)
 
     yield api_server
