@@ -544,85 +544,10 @@ workflows:
       - prepare-system
 
       - prepare-python-linux:
-          name: prepare-python-linux-3.6
-          py-version: '3.6'
-          requires:
-            - prepare-system
-
-      - prepare-python-linux:
           name: prepare-python-linux-3.7
           py-version: '3.7'
           requires:
             - prepare-system
-
-      - lint:
-          name: lint-3.6
-          py-version: "3.6"
-          requires:
-            - prepare-python-linux-3.6
-
-      - mypy:
-          name: mypy-3.6
-          py-version: "3.6"
-          requires:
-            - prepare-python-linux-3.6
-
-      - smoketest:
-          name: smoketest-udp-3.6
-          py-version: "3.6"
-          transport-layer: "udp"
-          requires:
-            - prepare-python-linux-3.6
-
-      - smoketest:
-          name: smoketest-matrix-3.6
-          py-version: "3.6"
-          transport-layer: "matrix"
-          requires:
-            - prepare-python-linux-3.6
-
-      - test:
-          name: test-unit-3.6
-          py-version: "3.6"
-          test-type: "unit"
-          blockchain-type: "geth"
-          requires:
-            - prepare-python-linux-3.6
-
-      - test:
-          name: test-fuzz-3.6
-          py-version: "3.6"
-          test-type: "fuzz"
-          blockchain-type: "geth"
-          additional-args: "--hypothesis-show-statistics"
-          requires:
-            - prepare-python-linux-3.6
-
-      - test:
-          name: test-integration-udp-3.6
-          py-version: "3.6"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-            - smoketest-udp-3.6
-            - test-unit-3.6
-            - test-fuzz-3.6
-
-      - test:
-          name: test-integration-matrix-3.6
-          py-version: "3.6"
-          resource: "medium+"
-          test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "matrix"
-          parallelism: 25
-          requires:
-            - smoketest-matrix-3.6
-            - test-unit-3.6
-            - test-fuzz-3.6
 
       - lint:
           name: lint-3.7
@@ -695,10 +620,6 @@ workflows:
 
       - finalize:
           requires:
-            - lint-3.6
-            - mypy-3.6
-            - test-integration-udp-3.6
-            - test-integration-matrix-3.6
             - lint-3.7
             - mypy-3.7
             - test-integration-udp-3.7
@@ -768,85 +689,10 @@ workflows:
       - prepare-system
 
       - prepare-python-linux:
-          name: prepare-python-linux-3.6
-          py-version: '3.6'
-          requires:
-          - prepare-system
-
-      - prepare-python-linux:
           name: prepare-python-linux-3.7
           py-version: '3.7'
           requires:
           - prepare-system
-
-      - lint:
-          name: lint-3.6
-          py-version: "3.6"
-          requires:
-          - prepare-python-linux-3.6
-
-      - mypy:
-          name: mypy-3.6
-          py-version: "3.6"
-          requires:
-          - prepare-python-linux-3.6
-
-      - smoketest:
-          name: smoketest-udp-3.6
-          py-version: "3.6"
-          transport-layer: "udp"
-          requires:
-          - prepare-python-linux-3.6
-
-      - smoketest:
-          name: smoketest-matrix-3.6
-          py-version: "3.6"
-          transport-layer: "matrix"
-          requires:
-          - prepare-python-linux-3.6
-
-      - test:
-          name: test-unit-3.6
-          py-version: "3.6"
-          test-type: "unit"
-          blockchain-type: "geth"
-          requires:
-          - prepare-python-linux-3.6
-
-      - test:
-          name: test-fuzz-3.6
-          py-version: "3.6"
-          test-type: "fuzz"
-          blockchain-type: "geth"
-          additional-args: "--hypothesis-show-statistics"
-          requires:
-          - prepare-python-linux-3.6
-
-      - test:
-          name: test-integration-udp-3.6
-          py-version: "3.6"
-          resource: "medium"
-          test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "udp"
-          parallelism: 25
-          requires:
-          - smoketest-udp-3.6
-          - test-unit-3.6
-          - test-fuzz-3.6
-
-      - test:
-          name: test-integration-matrix-3.6
-          py-version: "3.6"
-          resource: "medium"
-          test-type: "integration"
-          blockchain-type: "geth"
-          transport-layer: "matrix"
-          parallelism: 25
-          requires:
-          - smoketest-matrix-3.6
-          - test-unit-3.6
-          - test-fuzz-3.6
 
       - lint:
           name: lint-3.7
@@ -919,10 +765,6 @@ workflows:
 
       - finalize:
           requires:
-          - lint-3.6
-          - mypy-3.6
-          - test-integration-udp-3.6
-          - test-integration-matrix-3.6
           - lint-3.7
           - mypy-3.7
           - test-integration-udp-3.7
