@@ -1,4 +1,4 @@
-FROM python:3.6
+FROM python:3.7
 
 # these are defined in .travis.yml and passed here in the makefile
 ARG SOLC_URL_LINUX
