@@ -795,7 +795,7 @@ def test_cancelpayment():
 
     transfer = transfer_state.transfer
 
-    expiry_block = transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    expiry_block = channel.get_sender_expiration_threshold(transfer.lock)
     expiry_block_state_change = Block(
         block_number=expiry_block,
         gas_limit=1,
@@ -1121,7 +1121,6 @@ def test_initiator_handle_contract_receive_secret_reveal():
         block_number=transfer.lock.expiration,
     )
 
-    initiator_state = get_transfer_at_index(setup.current_state, 0)
     payment_identifier = initiator_state.transfer_description.payment_identifier
     balance_proof = search_for_item(iteration.events, SendBalanceProof, {
         'message_identifier': message_identifier,
@@ -1380,7 +1379,7 @@ def test_secret_reveal_cancel_other_transfers():
         block_number=block_number,
     )
 
-    assert must_contain_entry(iteration.events, SendBalanceProof, {}) is not None
+    assert search_for_item(iteration.events, SendBalanceProof, {}) is not None
     # An unlock should only be sent to the intended transfer that we received
     # a secret reveal for. So there should only be 1 balance proof to be sent
     assert len(list(filter(lambda e: isinstance(e, SendBalanceProof), iteration.events))) == 1
@@ -1403,7 +1402,7 @@ def test_secret_reveal_cancel_other_transfers():
         block_number=block_number,
     )
 
-    assert must_contain_entry(iteration.events, SendBalanceProof, {}) is None
+    assert search_for_item(iteration.events, SendBalanceProof, {}) is None
 
 
 def test_refund_after_secret_request():
@@ -1468,7 +1467,7 @@ def test_refund_after_secret_request():
     )
     current_state = iteration.new_state
     assert current_state is not None
-    assert must_contain_entry(iteration.events, EventUnlockFailed, {}) is None
+    assert search_for_item(iteration.events, EventUnlockFailed, {}) is None
 
 
 def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
@@ -1583,7 +1582,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         message_identifier=5,
     )
 
-    expiry_block = initial_transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    expiry_block = channel.get_sender_expiration_threshold(initial_transfer.lock)
     iteration = initiator_manager.state_transition(
         payment_state=iteration.new_state,
         state_change=lock_expired_state_change,
@@ -1613,7 +1612,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     # the rerouted transfer and it's refund to check if the payment state
     # is cleared as expected.
     ##
-    expiry_block = rerouted_transfer.lock.expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS * 2
+    expiry_block = channel.get_sender_expiration_threshold(rerouted_transfer.lock)
     rerouted_transfer_expiry_block_state_change = Block(
         block_number=expiry_block,
         gas_limit=1,
