@@ -183,7 +183,7 @@ In :ref:`the next scenario <joining-existing-token-network>` it is explained how
 
 Joining an already existing token network
 ==========================================
-In :ref:`above scenario <bootstrapping-a-token-network>` it was shown how to bootstrap a token network for an unregistered token. In this section the most common way of joining a token network is be explained. In most cases users don't want to create a new token network, but they want to join an already existing token network for an ERC20 token that they already hold.
+In :ref:`above scenario <bootstrapping-a-token-network>` it was shown how to bootstrap a token network for an unregistered token. In this section the most common way of joining a token network is explained. In most cases users don't want to create a new token network, but they want to join an already existing token network for an ERC20 token that they already hold.
 
 The main focus of this section is the usage of the ``connect`` and the ``leave`` endpoints. The ``connect`` endpoint allows users to automatically connect to a token network and open channels with other nodes. Furthermore the ``leave`` endpoint allows users to leave a token network by automatically closing and settling all of their open channels.
 
