@@ -247,7 +247,6 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_v
             web3=web3,
             accounts_addresses=[],
             random_marker=random_marker,
-            rpc_port=rpc_port,
             processes_list=processes_list,
         )
     except (ValueError, RuntimeError) as e:
