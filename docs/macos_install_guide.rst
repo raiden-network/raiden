@@ -34,9 +34,9 @@ checkout of raiden.
 
     $ sudo pip install virtualenv
 
-#. Create a virtualenv for raiden (requires python3.6)::
+#. Create a virtualenv for raiden (requires python3.7)::
 
-    $ virtualenv --python=python3.6 venv-raiden
+    $ virtualenv --python=python3.7 venv-raiden
 
 #. "Activate" the virtualenv::
 

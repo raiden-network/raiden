@@ -3,7 +3,7 @@ Raiden Network
 
 .. image:: https://img.shields.io/pypi/pyversions/raiden.svg
     :target: https://raiden-network.readthedocs.io/en/stable/)
-    :alt: Python 3.6
+    :alt: Python 3.7
 .. image:: https://badges.gitter.im/Join%20Chat.svg
     :target: https://gitter.im/raiden-network/raiden?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
     :alt: Chat on Gitter
