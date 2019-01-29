@@ -5,7 +5,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.message_handler import MessageHandler
-from raiden.messages import Secret
+from raiden.messages import Unlock
 from raiden.network.transport import UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import search_for_item
@@ -116,7 +116,7 @@ def test_recovery_happy_case(
     )
 
     identifier = create_default_identifier()
-    wait_for_payment = app2_wait_for.wait_for_message(Secret, {'payment_identifier': identifier})
+    wait_for_payment = app2_wait_for.wait_for_message(Unlock, {'payment_identifier': identifier})
 
     mediated_transfer(
         app2,
