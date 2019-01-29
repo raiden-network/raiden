@@ -9,6 +9,7 @@ import time
 from collections import namedtuple
 
 import gevent
+import psutil
 import requests
 import structlog
 from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
@@ -197,8 +198,20 @@ def geth_init_datadir(datadir: str, genesis_path: str):
         raise ValueError(msg)
 
 
-def geth_wait_and_check(web3, accounts_addresses, random_marker):
-    """ Wait until the geth cluster is ready. """
+def geth_wait_and_check(
+        web3,
+        accounts_addresses,
+        random_marker,
+        rpc_port,
+        processes_list,
+):
+    """ Wait until the geth cluster is ready.
+
+    This will raise an exception if either:
+
+    - The geth process exists (sucessfully or not)
+    - The JSON RPC interface is not available after a very short moment
+    """
     jsonrpc_running = False
 
     tries = 5
@@ -223,8 +236,31 @@ def geth_wait_and_check(web3, accounts_addresses, random_marker):
                     'parallel with the same port?',
                 )
 
+    for process in processes_list:
+        process.poll()
+
+        if process.returncode is not None:
+            raise ValueError(f'geth process failed with exit code {process.returncode}')
+
     if jsonrpc_running is False:
-        raise ValueError('geth didnt start the jsonrpc interface')
+        process = None
+
+        for connection in psutil.net_connections():
+            if connection.laddr.port == rpc_port:
+                try:
+                    process = next(
+                        connection.pid == process.pid
+                        for process in psutil.process_iter(attrs=['name'])
+                    )
+                except StopIteration:
+                    pass
+
+        if process is not None:
+            msg = f'geth didnt start the jsonrpc interface, port used by {process.name}'
+        else:
+            msg = 'geth didnt start the jsonrpc interface'
+
+        raise ValueError(msg)
 
     for account in accounts_addresses:
         tries = 10
@@ -427,14 +463,18 @@ def geth_run_private_blockchain(
     )
 
     try:
-        geth_wait_and_check(web3, accounts_to_fund, random_marker)
+        # This is a bit of implementation detail, but it may be helpful for
+        # debugging. The web3 fixture will provide a instance connected to the
+        # first geth_node
+        rpc_port = geth_nodes[0].rpc_port
 
-        for process in processes_list:
-            process.poll()
-
-            if process.returncode is not None:
-                raise ValueError(f'geth process failed with exit code {process.returncode}')
-
+        geth_wait_and_check(
+            web3=web3,
+            accounts_addresses=accounts_to_fund,
+            random_marker=random_marker,
+            rpc_port=rpc_port,
+            processes_list=processes_list,
+        )
     except (ValueError, RuntimeError) as e:
         # If geth_wait_and_check or the above loop throw an exception make sure
         # we don't end up with a rogue geth process running in the background

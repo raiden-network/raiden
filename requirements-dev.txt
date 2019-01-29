@@ -35,3 +35,4 @@ bump2version==0.5.8
 
 # Test support
 matrix-synapse==0.33.9
+psutil==5.4.7

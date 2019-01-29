@@ -243,14 +243,13 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_v
     try:
         # the marker is hardcoded in the genesis file
         random_marker = remove_0x_prefix(encode_hex(b'raiden'))
-        geth_wait_and_check(web3, [], random_marker)
-
-        for process in processes_list:
-            process.poll()
-
-            if process.returncode is not None:
-                raise ValueError(f'geth process failed with exit code {process.returncode}')
-
+        geth_wait_and_check(
+            web3=web3,
+            accounts_addresses=[],
+            random_marker=random_marker,
+            rpc_port=rpc_port,
+            processes_list=processes_list,
+        )
     except (ValueError, RuntimeError) as e:
         # If geth_wait_and_check or the above loop throw an exception make sure
         # we don't end up with a rogue geth process running in the background
