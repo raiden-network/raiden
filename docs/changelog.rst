@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :feature:`-` Set python 3.7 as a minimum python version requirement to run Raiden.
+
 * :release:`0.100.2-rc3 <2019-01-25>`
 * :feature:`-` Update WebUI to version 0.8.0 https://github.com/raiden-network/webui/releases/tag/v0.8.0
 * :feature:`3236` Add backwards-compatible PFS integration in the routing layer
