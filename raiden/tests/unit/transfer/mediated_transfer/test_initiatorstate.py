@@ -3,6 +3,8 @@ import random
 from copy import deepcopy
 from typing import NamedTuple
 
+import pytest
+
 from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -1394,15 +1396,14 @@ def test_secret_reveal_cancel_other_transfers():
 
     # An existing transfer was already unlocked,
     # so subsequent secretreveals for other transfers are ignored
-    iteration = initiator_manager.state_transition(
-        payment_state=iteration.new_state,
-        state_change=secret_reveal,
-        channelidentifiers_to_channels=channel_map,
-        pseudo_random_generator=pseudo_random_generator,
-        block_number=block_number,
-    )
-
-    assert search_for_item(iteration.events, SendBalanceProof, {}) is None
+    with pytest.raises(AssertionError):
+        iteration = initiator_manager.state_transition(
+            payment_state=iteration.new_state,
+            state_change=secret_reveal,
+            channelidentifiers_to_channels=channel_map,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+        )
 
 
 def test_refund_after_secret_request():
