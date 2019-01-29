@@ -425,43 +425,67 @@ def test_join_invalid_discovery(
 
 
 @pytest.mark.parametrize('matrix_server_count', [2])
-def test_matrix_cross_server(matrix_transports, retry_interval):
-    transport0, transport1 = matrix_transports
-
+@pytest.mark.parametrize('number_of_transports', [3])
+def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval):
+    transport0, transport1, transport2 = matrix_transports
     received_messages0 = set()
     received_messages1 = set()
+    received_messages2 = set()
 
     message_handler0 = MessageHandler(received_messages0)
     message_handler1 = MessageHandler(received_messages1)
+    message_handler2 = MessageHandler(received_messages2)
+
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
+    raiden_service2 = MockRaidenService(message_handler2)
 
     transport0.start(raiden_service0, message_handler0, '')
     transport1.start(raiden_service1, message_handler1, '')
+    transport2.start(raiden_service2, message_handler2, '')
+
+    transport0.start_health_check(raiden_service1.address)
+    transport0.start_health_check(raiden_service2.address)
 
     transport1.start_health_check(raiden_service0.address)
-    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service2.address)
 
-    queueid = QueueIdentifier(
+    transport2.start_health_check(raiden_service0.address)
+    transport2.start_health_check(raiden_service1.address)
+
+    queueid1 = QueueIdentifier(
         recipient=raiden_service1.address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+    queueid2 = QueueIdentifier(
+        recipient=raiden_service2.address,
         channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     )
     message = Processed(0)
     message.sign(raiden_service0.private_key)
 
-    transport0.send_async(queueid, message)
+    transport0.send_async(queueid1, message)
+    transport0.send_async(queueid2, message)
 
     with Timeout(retry_interval * 10, exception=False):
-        while not (len(received_messages0) == 1 and len(received_messages1) == 1):
+        while not (
+                len(received_messages0) == 1 and
+                len(received_messages1) == 1 and
+                len(received_messages2) == 1
+        ):
             gevent.sleep(.1)
 
-    assert len(received_messages0) == 1
+    assert len(received_messages0) == 2
     assert len(received_messages1) == 1
+    assert len(received_messages2) == 1
 
     transport0.stop()
     transport1.stop()
+    transport2.stop()
+
     transport0.get()
     transport1.get()
+    transport2.get()
 
 
 def test_matrix_discovery_room_offline_server(
