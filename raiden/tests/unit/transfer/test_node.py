@@ -32,7 +32,7 @@ def test_is_transaction_effect_satisfied(
     # now call normally with us being the partner and not the participant
     state_change.partner = netting_channel_state.our_state.address
     state_change.participant = netting_channel_state.partner_state.address
-    assert not is_transaction_effect_satisfied(chain_state, transaction, state_change)
+    assert is_transaction_effect_satisfied(chain_state, transaction, state_change)
     # finally call with us being the participant and not the partner which should check out
     state_change.participant = netting_channel_state.our_state.address
     state_change.partner = netting_channel_state.partner_state.address
