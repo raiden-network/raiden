@@ -5,7 +5,7 @@ from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec
-from raiden.utils.typing import Any, Dict, Generator, NamedTuple, Optional, Tuple
+from raiden.utils.typing import Any, Dict, NamedTuple, Optional, Tuple
 
 # The latest DB version
 RAIDEN_DB_VERSION = 17
@@ -355,24 +355,6 @@ class SQLiteStorage:
     def get_events(self, limit: int = None, offset: int = None):
         entries = self._query_events(limit, offset)
         return [self.serializer.deserialize(entry[0]) for entry in entries]
-
-    def get_snapshots(self, raw: bool = False) -> Generator[Tuple[int, Any], None, None]:
-        cursor = self.conn.cursor()
-        cursor.execute('SELECT identifier, data FROM state_snapshot')
-        snapshots = cursor.fetchall()
-        for snapshot in snapshots:
-            if raw:
-                yield snapshot[0], snapshot[1]
-            else:
-                yield snapshot[0], self.serializer.deserialize(snapshot[1])
-
-    def update_snapshot(self, identifier: int, new_snapshot: str):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'UPDATE state_snapshot SET data=? WHERE identifier=?',
-            (new_snapshot, identifier),
-        )
-        self.conn.commit()
 
     def __del__(self):
         self.conn.close()

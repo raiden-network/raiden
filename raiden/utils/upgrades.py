@@ -22,15 +22,30 @@ log = structlog.get_logger(__name__)
 
 
 def get_file_lock(db_filename: Path):
-    lock_file_name = os.path.join(str(db_filename), '.lock')
+    lock_file_name = f'{db_filename}.lock'
     return filelock.FileLock(lock_file_name)
 
 
 def get_db_version(db_filename: Path):
     db_lock = get_file_lock(db_filename)
     with db_lock:
-        storage = SQLiteStorage(str(db_filename), JSONSerializer())
-        return storage.get_version()
+        # Perform a query directly through SQL rather than using
+        # storage.get_version()
+        # as get_version will return the latest version if it doesn't
+        # find a record in the database.
+        conn = sqlite3.connect(
+            str(db_filename),
+            detect_types=sqlite3.PARSE_DECLTYPES,
+        )
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT value FROM settings WHERE name=?;', ('version',))
+            query = cursor.fetchall()
+            if len(query) == 0:
+                return 0
+            return int(query[0][0])
+        except sqlite3.OperationalError:
+            return 0
 
 
 class UpgradeManager:
@@ -43,7 +58,7 @@ class UpgradeManager:
 
     def run(self):
         """
-        The `_db_filename` is going to hold the filename of the database
+        The `_current_db_filename` is going to hold the filename of the database
         with the new version. However, the previous version's data
         is going to exist in a file whose name contains the old version.
         Therefore, running the migration means that we have to copy
@@ -70,15 +85,19 @@ class UpgradeManager:
 
         log.debug(f'Upgrading database to v{RAIDEN_DB_VERSION}')
 
+        storage.conn.isolation_level = None
+        cursor = storage.conn.cursor()
+        cursor.execute('BEGIN')
         try:
             for upgrade_func in UPGRADES_LIST:
-                upgrade_func(storage, old_version, RAIDEN_DB_VERSION)
+                upgrade_func(cursor, old_version, RAIDEN_DB_VERSION)
 
+            # COMMIT is going to be executed within update_version.
             storage.update_version()
-
             # Prevent the upgrade from happening on next restart
             self._backup_old_db(old_db_filename)
         except RaidenDBUpgradeError as e:
+            cursor.execute('ROLLBACK')
             self._delete_current_db()
             log.error(f'Failed to upgrade database: {str(e)}')
             raise

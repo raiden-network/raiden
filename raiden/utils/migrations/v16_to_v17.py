@@ -1,6 +1,19 @@
 import json
+import sqlite3
 
-from raiden.storage.sqlite import SQLiteStorage
+
+def get_snapshots(cursor):
+    cursor.execute('SELECT identifier, data FROM state_snapshot')
+    snapshots = cursor.fetchall()
+    for snapshot in snapshots:
+        yield snapshot[0], snapshot[1]
+
+
+def update_snapshot(cursor, identifier, new_snapshot):
+    cursor.execute(
+        'UPDATE state_snapshot SET data=? WHERE identifier=?',
+        (new_snapshot, identifier),
+    )
 
 
 def _transform_snapshot(raw_snapshot):
@@ -37,15 +50,15 @@ def _transform_snapshot(raw_snapshot):
     return json.dumps(snapshot, indent=4)
 
 
-def _transform_snapshots(storage):
-    for identifier, snapshot in storage.get_snapshots(raw=True):
+def _transform_snapshots(cursor: sqlite3.Cursor):
+    for identifier, snapshot in get_snapshots(cursor):
         new_snapshot = _transform_snapshot(snapshot)
-        storage.update_snapshot(identifier, new_snapshot)
+        update_snapshot(cursor, identifier, new_snapshot)
 
 
-def upgrade_initiator_manager(storage: SQLiteStorage, old_version, current_version):
+def upgrade_initiator_manager(cursor: sqlite3.Cursor, old_version: int, current_version: int):
     """ InitiatorPaymentState was changed so that the "initiator"
     attribute is renamed to "initiator_transfers" and converted to a list.
     """
     if current_version > 16 and old_version == 16:
-        _transform_snapshots(storage)
+        _transform_snapshots(cursor)

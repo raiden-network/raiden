@@ -129,7 +129,7 @@ class InitiatorTransferState(State):
         'transfer_state',
     )
 
-    valid_payer_states = (
+    valid_transfer_states = (
         'transfer_pending',
         'transfer_cancelled',
     )
