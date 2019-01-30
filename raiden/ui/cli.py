@@ -527,6 +527,8 @@ def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
         'pre_limits',  # smoke test should work with pre-limits contract version
     )
     args = result['args']
+    args['log_config'] = ':info'
+
     contract_addresses = result['contract_addresses']
     token = result['token']
     ethereum = result['ethereum']
