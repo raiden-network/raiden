@@ -88,7 +88,7 @@ pyopenssl==18.0.0
 pysaml2==4.6.5
 pysha3==1.0.2
 pystun-patched-for-raiden==0.1.0
-pytest==3.10.1
+pytest==4.1.1
 python-dateutil==2.7.5
 pytoml==0.1.19
 pytz==2018.5
