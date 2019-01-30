@@ -315,6 +315,9 @@ def run_app(
         f'network_{pex(contract_address)}',
     )
 
+    if not os.path.exists(database_path):
+        os.makedirs(database_path)
+
     config['database_path'] = os.path.join(database_path, f'v{RAIDEN_DB_VERSION}_log.db')
 
     debug_log_file_path = os.path.join(database_path, 'debug.log')
@@ -388,24 +391,6 @@ def run_app(
         handle_contract_no_code('secret registry', secret_registry_contract_address)
     except AddressWrongContract:
         handle_contract_wrong_address('secret registry', secret_registry_contract_address)
-
-    database_path = os.path.join(
-        datadir,
-        f'node_{pex(address)}',
-        f'netid_{given_network_id}',
-        f'network_{pex(token_network_registry.address)}',
-    )
-
-    config['database_path'] = os.path.join(database_path, f'v{RAIDEN_DB_VERSION}_log.db')
-
-    log_file_path = os.path.join(database_path, 'debug.log')
-    log_file_path = kwargs.get('log_file', log_file_path)
-    configure_logging(
-        kwargs.get('log_config'),
-        log_json=kwargs.get('log_json'),
-        log_file=log_file_path,
-        disable_debug_logfile=kwargs.get('disable_debug_logfile'),
-    )
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
