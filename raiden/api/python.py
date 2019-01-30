@@ -81,6 +81,23 @@ def event_filter_for_payments(
     return sent_and_target_matches or received_and_initiator_matches
 
 
+def transfer_data_from_transfer_task(transfer_task):
+    role = views.role_from_transfer_task(transfer_task)
+
+    if role == 'initiator':
+        transfer_data = transfer_task.manager_state.initiator.transfer_description.to_dict()
+    elif role == 'mediator':
+        transfer_data = transfer_task.mediator_state.to_dict()
+        transfer_data['number_of_pairs'] = len(transfer_data.pop('transfers_pair'))
+    elif role == 'target':
+        transfer_data = transfer_task.target_state.transfer.to_dict()
+    else:
+        return None
+
+    transfer_data['role'] = role
+    return transfer_data
+
+
 class RaidenAPI:
     # pylint: disable=too-many-public-methods
 
@@ -847,3 +864,9 @@ class RaidenAPI:
         # sign RequestMonitoring and return
         monitor_request.sign(self.raiden.signer)
         return monitor_request
+
+    def get_pending_transfers(self):
+        chain_state = views.state_from_raiden(self.raiden)
+        transfer_tasks = views.get_all_transfer_tasks(chain_state)
+        return [transfer_data_from_transfer_task(task) for task in transfer_tasks]
+

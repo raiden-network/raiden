@@ -41,6 +41,7 @@ from raiden.api.v1.resources import (
     ChannelsResourceByTokenAndPartnerAddress,
     ConnectionsInfoResource,
     ConnectionsResource,
+    PendingTransfersResource,
     PartnersResourceByTokenAddress,
     PaymentResource,
     RaidenInternalEventsResource,
@@ -148,6 +149,10 @@ URLS_V1 = [
     (
         '/tokens/<hexaddress:token_address>',
         RegisterTokenResource,
+    ),
+    (
+        '/pending_transfers',
+        PendingTransfersResource,
     ),
 
     (
@@ -1219,3 +1224,6 @@ class RestAPI:
                 status_code=HTTPStatus.BAD_REQUEST,
             )
         return result
+
+    def get_pending_transfers(self):
+        return api_response(self.raiden_api.get_pending_transfers())

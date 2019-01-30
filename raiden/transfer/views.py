@@ -462,22 +462,27 @@ def get_channelstate_settled(
     )
 
 
-def get_transfer_role(
-        chain_state: ChainState,
-        secrethash: SecretHash,
-) -> str:
-
-    transfer_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
-
-    result = None
+def role_from_transfer_task(transfer_task) -> str:
     if isinstance(transfer_task, InitiatorTask):
-        result = 'initiator'
+        return 'initiator'
     elif isinstance(transfer_task, MediatorTask):
-        result = 'mediator'
+        return 'mediator'
     elif isinstance(transfer_task, TargetTask):
-        result = 'target'
+        return 'target'
 
-    return result
+
+def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> str:
+    return role_from_transfer_task(
+        chain_state.payment_mapping.secrethashes_to_task.get(secrethash),
+    )
+
+
+def get_transfer_task(chain_state: ChainState, secrethash: SecretHash):
+    return chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
+
+
+def get_all_transfer_tasks(chain_state: ChainState) -> List:
+    return list(chain_state.payment_mapping.secrethashes_to_task.values())
 
 
 def list_channelstate_for_tokennetwork(
