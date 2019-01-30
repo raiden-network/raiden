@@ -2,13 +2,9 @@
 
 SKIP_TAG="\[skip tests\]"
 
-if [[ -n "${CIRCLE_PR_NUMBER}" ]]; then
-    # If this is a PR get the base commit from the GitHub API
-    BASE_COMMIT=$(curl \
-        -H "Authorization: token ${GITHUB_TOKEN_RO}" \
-        https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${CIRCLE_PR_NUMBER} \
-        | jq -r .base.sha)
-    LOG_RANGE="${BASE_COMMIT}..${CIRCLE_SHA1}"
+if [[ -a ~/.local/BASE_COMMIT ]]; then
+    # The is a PR and we know the base commit (see fetch_pr_base_commit.sh)
+    LOG_RANGE="$(cat ~/.local/BASE_COMMIT)..${CIRCLE_SHA1}"
 else
     # Otherwise just look at the HEAD commit
     LOG_RANGE="-1"
