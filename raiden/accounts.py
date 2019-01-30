@@ -88,7 +88,7 @@ class AccountManager:
             try:
                 files = os.listdir(self.keystore_path)
             except OSError as ex:
-                msg = 'Unable to list the specified directory'
+                msg = 'OSError: Unable to list the specified directory {0}'.format(ex.filename)
                 click.secho(msg, fg='red')
                 return
 
