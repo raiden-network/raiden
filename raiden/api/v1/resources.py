@@ -247,3 +247,9 @@ class PaymentResource(BaseResource):
             amount=amount,
             identifier=identifier,
         )
+
+
+class PendingTransfersResource(BaseResource):
+
+    def get(self):
+        return self.rest_api.get_pending_transfers()
