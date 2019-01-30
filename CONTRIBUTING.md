@@ -7,6 +7,7 @@ and what are the requirements for a Pull Request to be opened against Raiden.
 - [Contributing](#contributing)
     - [Creating an Issue](#creating-an-issue)
     - [Creating a Pull Request](#creating-a-pull-request)
+	- [Pull Request Reviews](#pull-request-reviews)
 - [Development environment setup](#development-environment-setup)
 - [Development Guidelines](#development-guidelines)
     - [Coding Style](#coding-style)
@@ -101,6 +102,30 @@ For frequent contributors with write access to the repository we have a set of l
 
 - [Dev: Please Review](https://github.com/raiden-network/raiden/labels/dev%3A%20Please%20Review) to a Pull Request that is currently ready for a reviewer to have a look at.
 - [Dev: Work in Progress](https://github.com/raiden-network/raiden/labels/dev%3A%20Work%20In%20Progress) to a Pull Request that is either not yet ready for review or is getting PR review suggestions applied by the author until it's ready for review again.
+
+### Pull Request Reviews
+
+It is the responsibility of the author to ask for at least one person to review their Pull Request. That person should know the area of the code being changed. If the chosen reviwer does not feel confident in the review, they can then ask for someone else to additionally look at the code.
+
+All the developers in the team should perform Pull Request reviews. Make it a habit to check [this](https://github.com/raiden-network/raiden/pulls?q=is%3Apr+is%3Aopen+label%3A%22dev%3A+Please+Review%22) link often to help your fellow colleagues who have PRs open pending for review.
+
+We have a lot of tools that automatically check the quality of the code (flake8, mypy, pylint). All these are automatically ran by the CI. Therefore fixes related to linting are not part of PR reviews. Additionally reviewers are encouraged to not be nitpicky about the suggested changes they ask from the PR author. If something is indeed nitpicky then the reviewer is encouraged to state it beforehand. Example:
+
+> nitpick: I don't really think XYZ makes sense here. If possible it would be nice to have it changed to KLM
+
+The author of the PR can then choose to implement the nitpicks or ignore them.
+
+PR authors should make pull request reviews easier. Make them as small as possible and even if some code is touched it does not mean that it needs to be refactored. For example don't mix style/typing changes with a big PR.
+
+When a reviewer starts a PR review he should write a comment in the PR stating he is doing so. For example:
+
+> Reviewing this now
+
+This is to keep track of who is reviewing a PR and to also know when a PR review is ongoing.
+
+For complicated PRs that touch the core of the protocol at least 2 core developers are recommended to have a look and provide an opinion.
+
+When performing a PR review of non trivial PRs it is recommended to clone the branch locally, explore the changes with your editor, run tests and experiment with the changes so that a better understanding of the code change can be achieved and good constructive feedback given back to the author.
 
 ## Development environment setup
 
