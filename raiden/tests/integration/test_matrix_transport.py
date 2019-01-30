@@ -383,8 +383,8 @@ def test_matrix_tx_error_handling(
 
     wait_for_raiden_event(
         raiden=app0.raiden,
-        type_=ContractSendChannelClose,
-        data={},
+        item_type=ContractSendChannelClose,
+        attributes={},
         retry_timeout=1.0,
     )
     # assert the `close` did fail
