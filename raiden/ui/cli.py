@@ -453,7 +453,7 @@ def run(ctx, **kwargs):
     is_flag=True,
     help='Only display Raiden version',
 )
-def version(short, **kwargs):  # pylint: disable=unused-argument
+def version(short):
     """Print version information and exit. """
     if short:
         print(get_system_spec()['raiden'])
@@ -471,7 +471,7 @@ def version(short, **kwargs):  # pylint: disable=unused-argument
     help='Drop into pdb on errors.',
 )
 @click.pass_context
-def smoketest(ctx, debug, **kwargs):  # pylint: disable=unused-argument
+def smoketest(ctx, debug):
     """ Test, that the raiden installation is sane. """
     from raiden.api.python import RaidenAPI
     from raiden.tests.utils.smoketest import (
