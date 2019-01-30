@@ -10,14 +10,14 @@ templates:
 
   parameter-templates: &parameter-templates
     py-version: &py-version-template
-        description: "python version to be used in the executor"
-        default: "3.7"
-        type: string
+      description: "python version to be used in the executor"
+      default: "3.7"
+      type: string
     resource:
-        description: "resource type for underlying VM"
-        default: "medium"
-        type: enum
-        enum: ["small", "medium", "medium+", "large", "xlarge"]
+      description: "resource type for underlying VM"
+      default: "medium"
+      type: enum
+      enum: ["small", "medium", "medium+", "large", "xlarge"]
     transport-layer:
       description: "transmission protocol used, udp or matrix"
       default: "udp"
@@ -85,6 +85,62 @@ commands:
             echo 'export PATH=~/venv-${PYTHON_VERSION_SHORT}/bin:~/.local/bin:${PATH}' >> ${BASH_ENV}
             echo 'export RAIDEN_VERSION=$(python setup.py --version)' >> ${BASH_ENV}
 
+  prepare-system:
+    steps:
+      - run:
+          name: Preparing environment
+          command: |
+            echo "export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')" >> ${BASH_ENV}
+            echo ${GETH_VERSION} > /tmp/geth-version
+            echo ${SOLC_VERSION} > /tmp/solc-version
+            echo "SHA: ${CIRCLE_SHA1}"
+            echo "TAG: ${CIRCLE_TAG}"
+
+      - checkout
+
+      # This needs to be done here in order for the .egg-info directory to be included in the
+      # workspace. Luckily we don't need a virtualenv for this step.
+      - run:
+          name: Generate .egg-info
+          command: python setup.py egg_info
+
+
+      - restore_cache:
+          key: system-deps-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+
+      - run:
+          name: Installing system dependencies
+          command: |
+            GETH_PATH="${HOME}/.local/bin/geth-${OS_NAME}-${GETH_VERSION}"
+            if [ ! -x ${GETH_PATH} ]; then
+              mkdir -p ${HOME}/.local/bin
+              TEMP=$(mktemp -d 2>/dev/null || mktemp -d -t 'gethtmp')
+              pushd ${TEMP}
+              GETH_URL_VAR="GETH_URL_${OS_NAME}"
+              wget -O geth.tar.gz ${!GETH_URL_VAR}
+              tar xzf geth.tar.gz
+              cd geth*/
+              install -m 755 geth ${GETH_PATH}
+            fi
+            ln -sf ${GETH_PATH} ${HOME}/.local/bin/geth
+            SOLC_PATH="${HOME}/.local/bin/solc-${OS_NAME}-${SOLC_VERSION}"
+            if [ ! -x ${SOLC_PATH} ]; then
+              mkdir -p ${HOME}/.local/bin
+              SOLC_URL_VAR="SOLC_URL_${OS_NAME}"
+              curl -L ${!SOLC_URL_VAR} > ${SOLC_PATH}
+              chmod 775 ${SOLC_PATH}
+            fi
+            ln -sf ${SOLC_PATH} ${HOME}/.local/bin/solc
+      - save_cache:
+          key: system-deps-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          paths:
+          - "~/.local"
+      - persist_to_workspace:
+          root: "~"
+          paths:
+          - .local
+          - raiden
+
   prepare-python:
     parameters:
       py-version:
@@ -128,65 +184,15 @@ commands:
           - venv-<< parameters.py-version >>
 
 jobs:
-  prepare-system:
-    parameters:
-      py-version:
-        <<: *py-version-template
-    executor:
-      name: docker
-      py-version: << parameters.py-version >>
-
+  prepare-system-linux:
+    executor: docker
     steps:
-      - run:
-          name: Preparing environment
+      - prepare-system
 
-          command: |
-            echo "export OS_NAME=$(uname -s)" >> ${BASH_ENV}
-            echo "SHA: ${CIRCLE_SHA1}"
-            echo "TAG: ${CIRCLE_TAG}"
-      - checkout
-
-      # This needs to be done here in order for the .egg-info directory to be included in the
-      # workspace. Luckily we don't need a virtualenv for this step.
-      - run:
-          name: Generate .egg-info
-          command: python setup.py egg_info
-
-
-      # Get Geth and Solc -> Versions defined in Project Environment Variables accessible via circleci webUI
-      - restore_cache:
-          key: system-deps-geth-{{ .Environment.GETH_VERSION }}-solc-{{ .Environment.SOLC_VERSION }}
-
-      - run:
-          name: Installing system dependencies
-          command: |
-            GETH_PATH="${HOME}/.local/bin/geth-${OS_NAME}-${GETH_VERSION}"
-            if [ ! -x ${GETH_PATH} ]; then
-              mkdir -p ${HOME}/.local/bin
-              TEMP=$(mktemp -d 2>/dev/null || mktemp -d -t 'gethtmp')
-              pushd ${TEMP}
-              wget -O geth.tar.gz ${GETH_URL_LINUX}
-              tar xzf geth.tar.gz
-              cd geth*/
-              install -m 755 geth ${GETH_PATH}
-            fi
-            ln -sf ${GETH_PATH} ${HOME}/.local/bin/geth
-            SOLC_PATH="${HOME}/.local/bin/solc-${OS_NAME}-${SOLC_VERSION}"
-            if [ ! -x ${SOLC_PATH} ]; then
-              mkdir -p ${HOME}/.local/bin
-              curl -L ${SOLC_URL_LINUX} > ${SOLC_PATH}
-              chmod 775 ${SOLC_PATH}
-            fi
-            ln -sf ${SOLC_PATH} ${HOME}/.local/bin/solc
-      - save_cache:
-          key: system-deps-geth-{{ .Environment.GETH_VERSION }}-solc-{{ .Environment.SOLC_VERSION }}
-          paths:
-            - "~/.local"
-      - persist_to_workspace:
-          root: "~"
-          paths:
-            - .local
-            - raiden
+  prepare-system-macos:
+    executor: macos
+    steps:
+      - prepare-system
 
   prepare-python-linux:
     parameters:
@@ -553,13 +559,13 @@ jobs:
 workflows:
   raiden-default:
     jobs:
-      - prepare-system
+      - prepare-system-linux
 
       - prepare-python-linux:
           name: prepare-python-linux-3.7
           py-version: '3.7'
           requires:
-            - prepare-system
+            - prepare-system-linux
 
       - lint:
           name: lint-3.7
@@ -639,19 +645,25 @@ workflows:
 
   deploy-release:
     jobs:
-      - prepare-system:
+      - prepare-system-linux:
+          filters:
+            <<: *only-tagged-version-filter
+
+      - prepare-system-macos:
           filters:
             <<: *only-tagged-version-filter
 
       - prepare-python-linux:
           py-version: '3.7'
           requires:
-            - prepare-system
+            - prepare-system-linux
           filters:
             <<: *only-tagged-version-filter
 
       - prepare-python-macos:
           py-version: '3.7'
+          requires:
+            - prepare-system-macos
           filters:
             <<: *only-tagged-version-filter
 
@@ -698,13 +710,13 @@ workflows:
 
   nightly:
     jobs:
-      - prepare-system
+      - prepare-system-linux
 
       - prepare-python-linux:
           name: prepare-python-linux-3.7
           py-version: '3.7'
           requires:
-          - prepare-system
+          - prepare-system-linux
 
       - lint:
           name: lint-3.7
@@ -786,9 +798,18 @@ workflows:
             requires:
               - finalize
 
+      - prepare-system-macos
+
+      - prepare-python-macos:
+          name: prepare-python-macos-3.7
+          py-version: '3.7'
+          requires:
+            - prepare-system-macos
+
       - build-binary-macos:
           requires:
             - finalize
+            - prepare-python-macos-3.7
 
       - deploy-digitalocean:
           context: "Raiden Context"
