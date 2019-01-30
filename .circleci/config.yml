@@ -217,11 +217,8 @@ jobs:
         at: "~"
     - config-path
     - run:
-        name: install requirements for lint check
-        command: pip install -r requirements-lint.txt
-    - run:
-        name: ""
-        command: git rev-parse HEAD
+        name: Validate CircleCI Config
+        command: python tools/check_circleci_config.py
     - run:
         name: lint test
         command: make lint
@@ -739,8 +736,8 @@ workflows:
 
       - test:
           name: test-integration-udp-3.7
-          resource: "medium"
           py-version: "3.7"
+          resource: "medium+"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "udp"
@@ -753,7 +750,7 @@ workflows:
       - test:
           name: test-integration-matrix-3.7
           py-version: "3.7"
-          resource: "medium"
+          resource: "medium+"
           test-type: "integration"
           blockchain-type: "geth"
           transport-layer: "matrix"
