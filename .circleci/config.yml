@@ -69,6 +69,13 @@ executors:
 
 
 commands:
+  conditional-skip:
+    description: "Check commit message for skip tag and skip job if found"
+    steps:
+      - run:
+          name: Skip Tag Check
+          command: source .circleci/conditional_skip.sh
+
   config-path:
     description: "set environment variables and change path to use venv"
     steps:
@@ -85,6 +92,7 @@ commands:
     steps:
       - attach_workspace:
           at: "~"
+      - conditional-skip
       - config-path
       - restore_cache:
           key: pip-cache-<< parameters.py-version >>
@@ -215,12 +223,13 @@ jobs:
     steps:
     - attach_workspace:
         at: "~"
+    - conditional-skip
     - config-path
     - run:
         name: Validate CircleCI Config
         command: python tools/check_circleci_config.py
     - run:
-        name: lint test
+        name: Run Lint
         command: make lint
 
   mypy:
@@ -235,13 +244,8 @@ jobs:
     steps:
     - attach_workspace:
         at: "~"
+    - conditional-skip
     - config-path
-    - run:
-        name: install requirements for mypy check
-        command: pip install -r requirements-lint.txt
-    - run:
-        name: ""
-        command: git rev-parse HEAD
     - run:
         name: mypy test
         command: make mypy
@@ -257,6 +261,7 @@ jobs:
     steps:
     - attach_workspace:
         at: "~"
+    - conditional-skip
     - config-path
     - run:
         name: Set Options
@@ -298,6 +303,7 @@ jobs:
     steps:
     - attach_workspace:
         at: "~"
+    - conditional-skip
     - config-path
     - restore_cache:
         key: ethash-{{ checksum "~/.local/bin/geth" }}
@@ -406,6 +412,8 @@ jobs:
     steps:
       - attach_workspace:
           at: "~"
+      - conditional-skip
+      - config-path
       - setup_remote_docker:
           docker_layer_caching: true
       - run:
@@ -427,6 +435,8 @@ jobs:
     steps:
       - attach_workspace:
           at: "~"
+      - conditional-skip
+      - config-path
       - run:
           name: Prepare build
           command: |
@@ -452,6 +462,8 @@ jobs:
             - "46:b3:a5:c3:d8:21:63:cd:de:6d:07:5d:0c:5d:ba:73"
       - attach_workspace:
           at: "~"
+      - conditional-skip
+      - config-path
       - run:
           name: Configure Git
           command: |
@@ -489,6 +501,7 @@ jobs:
     steps:
       - attach_workspace:
           at: "~"
+      - conditional-skip
       - config-path
       - run:
           name: upload-to-digitalocean
@@ -501,6 +514,7 @@ jobs:
     steps:
       - attach_workspace:
           at: "~"
+      - conditional-skip
       - when:
           condition: ${CIRCLE_TAG} && ${GITHUB_TOKEN}
           steps:
@@ -519,6 +533,7 @@ jobs:
     steps:
       - attach_workspace:
           at: "~"
+      - conditional-skip
       - config-path
       - run:
           name: "install twine"
