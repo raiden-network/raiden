@@ -135,6 +135,9 @@ commands:
           key: system-deps-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
           - "~/.local"
+      - run:
+          name: Fetch PR Base Commit
+          command: source .circleci/fetch_pr_base_commit.sh
       - persist_to_workspace:
           root: "~"
           paths:
@@ -401,6 +404,7 @@ jobs:
     steps:
       - attach_workspace:
           at: "~"
+      - conditional-skip
       - config-path
       - run:
           name: Report to Codecov
