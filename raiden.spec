@@ -1,8 +1,8 @@
 # -*- mode: python -*-
 from __future__ import print_function
 import sys
+import pdb
 import platform
-from distutils.spawn import find_executable
 
 from raiden.utils import get_system_spec
 
@@ -57,6 +57,13 @@ def Entrypoint(dist, group, name, scripts=None, pathex=None, hiddenimports=None,
         excludes=excludes,
         runtime_hooks=runtime_hooks,
         datas=datas
+    )
+
+
+if hasattr(pdb, 'pdb'):
+    # pdbpp moves the stdlib pdb to the `pdb` attribute of it's own patched pdb module
+    raise RuntimeError(
+        'pdbpp is installed with causes broken PyInstaller builds. Please uninstall it.',
     )
 
 
