@@ -6,7 +6,6 @@ from raiden.exceptions import ChannelOutdatedError
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.geth import wait_until_block
 from raiden.utils import privatekey_to_address
 from raiden.utils.signing import eth_sign
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
@@ -123,7 +122,9 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
     # update transfer
-    wait_until_block(c1_chain, c1_client.block_number() + TEST_SETTLE_TIMEOUT_MIN)
+    c1_chain.wait_until_block(
+        target_block_number=c1_client.block_number() + TEST_SETTLE_TIMEOUT_MIN,
+    )
 
     c2_token_network_proxy.settle(
         channel_identifier=channel_identifier,
@@ -216,7 +217,7 @@ def test_payment_channel_outdated_channel_close(
     assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
     # update transfer
-    wait_until_block(chain, client.block_number() + TEST_SETTLE_TIMEOUT_MIN)
+    chain.wait_until_block(target_block_number=client.block_number() + TEST_SETTLE_TIMEOUT_MIN)
 
     token_network_proxy.settle(
         channel_identifier=channel_identifier,

@@ -18,7 +18,6 @@ from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
-from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, dont_handle_secret_request_mock
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
@@ -466,7 +465,7 @@ def test_query_events(
     assert must_have_event(all_netting_channel_events, closed_event)
 
     settle_expiration = app0.raiden.chain.block_number() + settle_timeout + 5
-    wait_until_block(app0.raiden.chain, settle_expiration)
+    app0.raiden.chain.wait_until_block(target_block_number=settle_expiration)
 
     all_netting_channel_events = get_all_netting_channel_events(
         chain=app0.raiden.chain,
@@ -559,7 +558,7 @@ def test_secret_revealed_on_chain(
         settle_timeout +
         DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
-    wait_until_block(app0.raiden.chain, settle_expiration)
+    app0.raiden.chain.wait_until_block(target_block_number=settle_expiration)
 
     # TODO:
     # - assert on the transferred amounts on-chain (for settle and unlock)
