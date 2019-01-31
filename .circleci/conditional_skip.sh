@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Seems that circle calls this script with -e and we don't want
+# grep failure to stop the build
+set +e
+
 SKIP_TAG="\[skip tests\]"
 
 if [[ -a ~/.local/BASE_COMMIT ]]; then
@@ -16,3 +20,4 @@ if [[ ${PIPESTATUS[1]} == 0 ]]; then
     echo Skip tag found - skipping build
     circleci step halt
 fi
+set -e
