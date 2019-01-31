@@ -1,7 +1,9 @@
-from matrix_client.room import Room
-from matrix_client.errors import MatrixRequestError
-from raiden.network.transport.utils import matrix_join_global_room
 from unittest.mock import Mock
+
+from matrix_client.errors import MatrixRequestError
+from matrix_client.room import Room
+
+from raiden.network.transport.utils import matrix_join_global_room
 
 
 def test_matrix_join_global_room():
