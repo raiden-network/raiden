@@ -19,6 +19,7 @@ from raiden.exceptions import (
     TokenNotRegistered,
     UnknownTokenAddress,
 )
+from raiden.messages import RequestMonitoring, SignedBlindedBalanceProof
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.transfer import architecture, views
 from raiden.transfer.events import (
@@ -26,7 +27,7 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.transfer.state import NettingChannelState
+from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
@@ -347,7 +348,7 @@ class RaidenAPI:
         Raises:
             InvalidAddress: If either token_address or partner_address is not
                 20 bytes long.
-                TransactionThrew: May happen for multiple reasons:
+            TransactionThrew: May happen for multiple reasons:
                 - If the token approval fails, e.g. the token may validate if
                 account has enough balance for the allowance.
                 - The deposit failed, e.g. the allowance did not set the token
@@ -826,3 +827,31 @@ class RaidenAPI:
             ))
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
+
+    def create_monitoring_request(
+            self,
+            balance_proof: BalanceProofSignedState,
+            reward_amount: typing.TokenAmount,
+    ) -> typing.Optional[RequestMonitoring]:
+        """ This method can be used to create a `RequestMonitoring` message.
+        It will contain all data necessary for an external monitoring service to
+        - send an updateNonClosingBalanceProof transaction to the TokenNetwork contract,
+        for the `balance_proof` that we received from a channel partner.
+        - claim the `reward_amount` from the UDC.
+        """
+        assert isinstance(balance_proof, BalanceProofSignedState)
+
+        # create submessage `SignedBlindedBalanceProof` and create the `non_closing_signature`
+        onchain_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
+            balance_proof,
+        )
+        onchain_balance_proof.sign(self.raiden.signer)
+
+        # create RequestMonitoring message from the above + `reward_amount`
+        monitor_request = RequestMonitoring(
+            onchain_balance_proof=onchain_balance_proof,
+            reward_amount=reward_amount,
+        )
+        # sign RequestMonitoring and return
+        monitor_request.sign(self.raiden.signer)
+        return monitor_request
