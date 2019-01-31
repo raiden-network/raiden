@@ -339,12 +339,16 @@ class ConnectionManager:
             # or it's nonfunded channel), continue to ensure it's funded
             pass
 
+        total_deposit = self._initial_funding_per_partner
+        if total_deposit == 0:
+            return
+
         try:
             self.api.set_total_channel_deposit(
-                self.registry_address,
-                self.token_address,
-                partner,
-                self._initial_funding_per_partner,
+                registry_address=self.registry_address,
+                token_address=self.token_address,
+                partner_address=partner,
+                total_deposit=total_deposit,
             )
         except InvalidDBData:
             raise
