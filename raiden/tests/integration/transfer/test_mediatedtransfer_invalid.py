@@ -12,7 +12,6 @@ from raiden.tests.utils.factories import (
     make_address,
     make_privkey_address,
 )
-from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
@@ -281,9 +280,8 @@ def test_received_lockedtransfer_closedchannel(
         app0.raiden.address,
     )
 
-    wait_until_block(
-        app0.raiden.chain,
-        app0.raiden.chain.block_number() + 1,
+    app0.raiden.chain.wait_until_block(
+        target_block_number=app0.raiden.chain.block_number() + 1,
     )
 
     # Now receive one mediated transfer for the closed channel

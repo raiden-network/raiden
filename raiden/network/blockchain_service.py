@@ -102,8 +102,11 @@ class BlockChainService:
         return self.client.web3.eth.getBlock(block_number, False)
 
     def next_block(self) -> int:
+        target_block_number = self.block_number() + 1
+        self.wait_until_block(target_block_number=target_block_number)
+
+    def wait_until_block(self, target_block_number):
         current_block = self.block_number()
-        target_block_number = current_block + 1
 
         while current_block < target_block_number:
             current_block = self.block_number()

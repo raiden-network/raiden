@@ -10,7 +10,6 @@ from raiden.messages import LockedTransfer, LockExpired, RevealSecret
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.geth import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
 from raiden.tests.utils.transfer import (
@@ -535,7 +534,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     secrethash = sha3(secret)
     target_task = chain_state.payment_mapping.secrethashes_to_task[secrethash]
     lock_expiration = target_task.target_state.transfer.lock.expiration
-    wait_until_block(app1.raiden.chain, lock_expiration)
+    app1.raiden.chain.wait_until_block(target_block_number=lock_expiration)
 
     assert app1.raiden.default_secret_registry.check_registered(secrethash)
 
@@ -604,7 +603,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
     # wait until the last block to reveal the secret, hopefully we are not
     # missing a block during the test
-    wait_until_block(app2.raiden.chain, attack_transfer.lock.expiration - 1)
+    app2.raiden.chain.wait_until_block(target_block_number=attack_transfer.lock.expiration - 1)
 
     # since the attacker knows the secret he can net the lock
     attack_channel.netting_channel.unlock(
