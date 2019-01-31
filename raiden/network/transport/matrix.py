@@ -40,8 +40,8 @@ from raiden.messages import (
     decode as message_from_bytes,
     from_dict as message_from_dict,
 )
-from raiden.network.transport.utils import matrix_join_global_room, JOIN_RETRIES
 from raiden.network.transport.udp import udp_utils
+from raiden.network.transport.utils import JOIN_RETRIES, matrix_join_global_room
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialize import JSONSerializer
