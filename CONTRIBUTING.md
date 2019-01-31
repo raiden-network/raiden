@@ -186,7 +186,6 @@ isolate the python dependencies used by Raiden from your system:
 Install the development dependencies:
 
     pip install -r requirements-dev.txt -c constraints.txt
-    ./tools/install_synapse.sh
 
 ## Development Guidelines
 
