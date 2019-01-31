@@ -135,32 +135,6 @@ class HoldRaidenEvent(RaidenEventHandler):
                 self.release(raiden, hold.event)
 
 
-def dont_handle_secret_request_mock(app):
-    """Takes in a raiden app and returns a mock context where secret request is not processed
-
-    Example usage:
-
-    mock = dont_handle_secret_request_mock(app)
-    with mock:
-        # here we know that the transfer will not complete as long as we are
-        # inside the with context block
-        app.raiden.mediated_transfer_async(
-            token_network_identifier=token_network_identifier,
-            amount=amount,
-            target=target,
-            identifier=payment_identifier,
-        )
-    """
-    def do_nothing(raiden, message):
-        pass
-
-    return patch.object(
-        app.raiden.message_handler,
-        'handle_message_secretrequest',
-        side_effect=do_nothing,
-    )
-
-
 def dont_handle_lock_expired_mock(app):
     """Takes in a raiden app and returns a mock context where lock_expired is not processed
     """
