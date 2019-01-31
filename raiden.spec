@@ -63,7 +63,7 @@ def Entrypoint(dist, group, name, scripts=None, pathex=None, hiddenimports=None,
 if hasattr(pdb, 'pdb'):
     # pdbpp moves the stdlib pdb to the `pdb` attribute of it's own patched pdb module
     raise RuntimeError(
-        'pdbpp is installed with causes broken PyInstaller builds. Please uninstall it.',
+        'pdbpp is installed which causes broken PyInstaller builds. Please uninstall it.',
     )
 
 
