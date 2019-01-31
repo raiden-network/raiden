@@ -212,7 +212,7 @@ By default whenever you make a Pull Request the linter tests, smoketests, unit t
 
 This can take a lot of time and as such there are various labels you can add in the body of a commit in order to change which tests run on Travis. Following is a breakdown of those labels:
 
-- `[skip ci]`: This will skip all tests and run nothing. A repository administrator must merge the PR if you do this for the last commit.
+- `[skip tests]`: This will skip all tests and run nothing.
 - `[ci nightly]`: This will run no tests but start a nightly release build.
 - `[no ci integration]`: This will only run the linter, smoketest and unit tests. It is rather fast.
 - `[ci integration-general]`: This will run linter, smoke, unit and only the integration tests under the `integration/` directory but no other subdirectories. This will include our slowest integration tests at the moment. At the time of writing they take around 38 mins.
