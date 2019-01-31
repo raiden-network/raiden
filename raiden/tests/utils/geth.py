@@ -32,15 +32,6 @@ GethNodeDescription = namedtuple(
 )
 
 
-def wait_until_block(chain, block):
-    # we expect `next_block` to block until the next block, but, it could
-    # advance miss and advance two or more
-    curr_block = chain.block_number()
-    while curr_block < block:
-        curr_block = chain.next_block()
-        gevent.sleep(0.001)
-
-
 def geth_clique_extradata(extra_vanity, extra_seal):
     if len(extra_vanity) > 64:
         raise ValueError('extra_vanity length must be smaller-or-equal to 64')

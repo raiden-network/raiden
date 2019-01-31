@@ -4,7 +4,6 @@ import pytest
 from raiden import routing, waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
-from raiden.tests.utils.geth import wait_until_block
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 
@@ -246,13 +245,11 @@ def test_participant_selection(raiden_network, token_addresses):
     before_block = connection_manager.raiden.chain.block_number()
     wait_blocks = sender_channel.settle_timeout + 10
     # wait until both chains are synced?
-    wait_until_block(
-        connection_manager.raiden.chain,
-        before_block + wait_blocks,
+    connection_manager.raiden.chain.wait_until_block(
+        target_block_number=before_block + wait_blocks,
     )
-    wait_until_block(
-        receiver.chain,
-        before_block + wait_blocks,
+    receiver.chain.wait_until_block(
+        target_block_number=before_block + wait_blocks,
     )
     receiver_channel = RaidenAPI(receiver).get_channel_list(
         registry_address=registry_address,

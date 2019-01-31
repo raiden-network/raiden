@@ -13,7 +13,6 @@ from raiden.exceptions import (
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.tests.utils.geth import wait_until_block
 from raiden.utils.signing import eth_sign
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
@@ -287,7 +286,9 @@ def test_token_network_proxy_basics(
         assert 'not in an open state' in str(exc)
 
     # update transfer
-    wait_until_block(c1_chain, c1_chain.block_number() + TEST_SETTLE_TIMEOUT_MIN)
+    c1_chain.wait_until_block(
+        target_block_number=c1_chain.block_number() + TEST_SETTLE_TIMEOUT_MIN,
+    )
 
     # try to settle using incorrect data
     with pytest.raises(RaidenUnrecoverableError):
@@ -498,7 +499,7 @@ def test_token_network_proxy_update_transfer(
 
         assert 'cannot be settled before settlement window is over' in str(exc)
 
-    wait_until_block(c1_chain, c1_chain.block_number() + 10)
+    c1_chain.wait_until_block(target_block_number=c1_chain.block_number() + 10)
 
     # settling with an invalid amount
     with pytest.raises(RaidenUnrecoverableError):
