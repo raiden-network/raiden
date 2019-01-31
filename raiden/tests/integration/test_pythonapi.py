@@ -13,9 +13,11 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAddress,
 )
+from raiden.messages import RequestMonitoring
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
@@ -25,6 +27,7 @@ from raiden.tests.utils.transfer import (
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
 from raiden.transfer.state_change import ContractReceiveNewTokenNetwork
+from raiden.utils import create_default_identifier
 from raiden.utils.gas_reserve import (
     GAS_RESERVE_ESTIMATE_SECURITY_FACTOR,
     get_required_gas_estimate,
@@ -468,3 +471,50 @@ def test_set_deposit_limit_crash(raiden_network, token_amount, contract_manager,
             partner_address=partner_address,
             total_deposit=10000000000000000000000,
         )
+
+
+@pytest.mark.parametrize('deposit', [10])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_create_monitoring_request(
+        raiden_network,
+        number_of_nodes,
+        deposit,
+        token_addresses,
+        network_wait,
+        chain_id,
+):
+    app0, app1 = raiden_network
+    token_address = token_addresses[0]
+    chain_state = views.state_from_app(app0)
+    payment_network_id = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        chain_state=chain_state,
+        payment_network_id=payment_network_id,
+        token_address=token_address,
+    )
+
+    payment_identifier = create_default_identifier()
+    mediated_transfer(
+        initiator_app=app1,
+        target_app=app0,
+        token_network_identifier=token_network_identifier,
+        amount=1,
+        identifier=payment_identifier,
+    )
+    chain_state = views.state_from_raiden(app0.raiden)
+    channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state,
+        token_network_identifier,
+        app1.raiden.address,
+    )
+    balance_proof = channel_state.partner_state.balance_proof
+    api = RaidenAPI(app0.raiden)
+    request = api.create_monitoring_request(
+        balance_proof=balance_proof,
+        reward_amount=1,
+    )
+    assert request
+    as_dict = request.to_dict()
+    from_dict = RequestMonitoring.from_dict(as_dict)
+    assert from_dict.to_dict() == as_dict
