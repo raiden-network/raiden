@@ -89,12 +89,20 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit, transport_p
     assert token_events[0]['event'] == ChannelEvent.OPENED
 
     registry_address = api1.raiden.default_registry.address
+    # Check that giving a 0 total deposit is not accepted
+    with pytest.raises(DepositMismatch):
+        api1.set_total_channel_deposit(
+            registry_address=registry_address,
+            token_address=token_address,
+            partner_address=api2.address,
+            total_deposit=0,
+        )
     # Load the new state with the deposit
     api1.set_total_channel_deposit(
-        registry_address,
-        token_address,
-        api2.address,
-        deposit,
+        registry_address=registry_address,
+        token_address=token_address,
+        partner_address=api2.address,
+        total_deposit=deposit,
     )
 
     # let's make sure it's idempotent. Same deposit should raise deposit mismatch limit
