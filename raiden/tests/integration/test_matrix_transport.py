@@ -70,7 +70,7 @@ def mock_matrix(
         server=local_matrix_servers[0],
         server_name=local_matrix_servers[0].netloc,
         available_servers=[],
-        discovery_room='discovery',
+        global_rooms=['discovery'],
         private_rooms=private_rooms,
     )
 
@@ -204,7 +204,7 @@ def test_matrix_message_sync(
         retries_before_backoff,
 ):
     transport0 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -213,7 +213,7 @@ def test_matrix_message_sync(
         'private_rooms': private_rooms,
     })
     transport1 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -320,7 +320,7 @@ def test_matrix_message_retry(
     partner_address = make_address()
 
     transport = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -392,14 +392,14 @@ def test_join_invalid_discovery(
         retry_interval,
         retries_before_backoff,
 ):
-    """_join_discovery_room tries to join on all servers on available_servers config
+    """matrix_join_global_room tries to join on all servers on available_servers config
 
     If any of the servers isn't reachable by synapse, it'll return a 500 response, which needs
     to be handled, and if no discovery room is found on any of the available_servers, one in
     our current server should be created
     """
     transport = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -417,9 +417,7 @@ def test_join_invalid_discovery(
         None,
     )
     transport.log = MagicMock()
-
-    transport._join_discovery_room()
-    assert isinstance(transport._discovery_room, Room)
+    assert isinstance(transport._global_rooms.get('discovery'), Room)
 
     transport.stop()
     transport.get()
@@ -498,7 +496,7 @@ def test_matrix_discovery_room_offline_server(
 ):
 
     transport = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -508,5 +506,6 @@ def test_matrix_discovery_room_offline_server(
     })
     transport.start(MockRaidenService(None), MessageHandler(set()), '')
     gevent.sleep(.2)
+    assert transport._global_rooms.get('discovery')
     transport.stop()
     transport.get()

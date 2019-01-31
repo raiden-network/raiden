@@ -56,7 +56,7 @@ def matrix_transports(
         server = local_matrix_servers[transport_index % len(local_matrix_servers)]
         transports.append(
             MatrixTransport({
-                'discovery_room': 'discovery',
+                'global_rooms': ['discovery'],
                 'retries_before_backoff': retries_before_backoff,
                 'retry_interval': retry_interval,
                 'server': server,
