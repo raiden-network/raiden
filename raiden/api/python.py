@@ -7,6 +7,7 @@ from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
+    DepositMismatch,
     DepositOverLimit,
     DuplicatedChannelError,
     InsufficientFunds,
@@ -406,6 +407,9 @@ class RaidenAPI:
                     deposit_limit,
                 ),
             )
+
+        if total_deposit == 0:
+            raise DepositMismatch('Attempted to deposit with total deposit being 0')
 
         addendum = total_deposit - channel_state.our_state.contract_balance
 
