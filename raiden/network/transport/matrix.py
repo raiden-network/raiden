@@ -40,6 +40,7 @@ from raiden.messages import (
     decode as message_from_bytes,
     from_dict as message_from_dict,
 )
+from raiden.network.transport.utils import matrix_join_global_room, JOIN_RETRIES
 from raiden.network.transport.udp import udp_utils
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
@@ -92,7 +93,6 @@ class UserPresence(Enum):
 
 
 _PRESENCE_REACHABLE_STATES = {UserPresence.ONLINE, UserPresence.UNAVAILABLE}
-_JOIN_RETRIES = 5
 
 
 class _RetryQueue(Runnable):
@@ -319,15 +319,16 @@ class MatrixTransport(Runnable):
 
         self.greenlets = list()
 
-        self._discovery_room: Room = None
-
         # partner need to be in this dict to be listened on
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
         self._address_to_presence: Dict[Address, UserPresence] = dict()
         self._userid_to_presence: Dict[str, UserPresence] = dict()
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
 
-        self._discovery_room_alias = None
+        self._global_rooms: Dict[str, Optional[Room]] = {
+            suffix: None
+            for suffix in self._config['global_rooms']
+        }
 
         self._stop_event = gevent.event.Event()
         self._stop_event.set()
@@ -367,7 +368,16 @@ class MatrixTransport(Runnable):
             # wait on _handle_thread for initial sync
             # this is needed so the rooms are populated before we _inventory_rooms
             self._client._handle_thread.get()
-        self._join_discovery_room()
+
+        for suffix in self._global_rooms:
+            room_name = self._make_room_alias(suffix)  # e.g. raiden_ropsten_discovery
+            room = matrix_join_global_room(
+                self._client,
+                room_name,
+                self._config.get('available_servers') or (),
+            )
+            self._global_rooms[suffix] = room
+
         self._inventory_rooms()
 
         self._client.start_listener_thread()
@@ -573,7 +583,7 @@ class MatrixTransport(Runnable):
         rand = Random()  # deterministic, random secret for username suffixes
         rand.seed(seed)
         # try login and register on first 5 possible accounts
-        for i in range(_JOIN_RETRIES):
+        for i in range(JOIN_RETRIES):
             username = base_username
             if i:
                 username = f'{username}.{rand.randint(0, 0xffffffff):08x}'
@@ -619,67 +629,19 @@ class MatrixTransport(Runnable):
         name = encode_hex(self._sign(self._user_id.encode()))
         self._get_user(self._user_id).set_display_name(name)
 
-    def _join_discovery_room(self):
-        self._discovery_room_alias = self._make_room_alias(self._config['discovery_room'])
-
-        servers = self._config.get('available_servers') or list()
-        servers = [urlparse(s).netloc for s in servers if urlparse(s).netloc]
-        if self._server_name not in servers:
-            servers.append(self._server_name)
-        servers.sort(key=lambda s: '' if s == self._server_name else s)  # our server goes first
-
-        our_server_discovery_room_alias_full = f'#{self._discovery_room_alias}:{self._server_name}'
-
-        # try joining a discovery room on any of the available servers, starting with ours
-        for server in servers:
-            discovery_room_alias_full = f'#{self._discovery_room_alias}:{server}'
-            try:
-                discovery_room = self._client.join_room(discovery_room_alias_full)
-            except MatrixRequestError as ex:
-                if ex.code not in (403, 404, 500):
-                    raise
-                self.log.debug(
-                    'Could not join discovery room',
-                    room_alias_full=discovery_room_alias_full,
-                    _exception=ex,
-                )
-            else:
-                if our_server_discovery_room_alias_full not in discovery_room.aliases:
-                    # we managed to join a discovery room, but it's not aliased in our server
-                    discovery_room.add_room_alias(our_server_discovery_room_alias_full)
-                    discovery_room.aliases.append(our_server_discovery_room_alias_full)
-                break
-        else:
-            self.log.debug('Could not join any discovery room, trying to create one')
-            for _ in range(_JOIN_RETRIES):
-                try:
-                    discovery_room = self._client.create_room(
-                        self._discovery_room_alias,
-                        is_public=True,
-                    )
-                except MatrixRequestError as ex:
-                    if ex.code not in (400, 409):
-                        raise
-                    try:
-                        discovery_room = self._client.join_room(
-                            our_server_discovery_room_alias_full,
-                        )
-                    except MatrixRequestError as ex:
-                        if ex.code not in (404, 403):
-                            raise
-                    else:
-                        break
-                else:
-                    break
-            else:
-                raise TransportError('Could neither join nor create a discovery room')
-
-        self._discovery_room = discovery_room
-
     def _inventory_rooms(self):
         self.log.debug('Inventory rooms', rooms=self._client.rooms)
         for room in self._client.rooms.values():
-            if any(self._discovery_room_alias in alias for alias in room.aliases):
+            room_aliases = set(room.aliases)
+            if room.canonical_alias:
+                room_aliases.add(room.canonical_alias)
+            global_aliases = {self._make_room_alias(suffix) for suffix in self._global_rooms}
+            room_alias_is_global = any(
+                global_alias in room_alias
+                for global_alias in global_aliases
+                for room_alias in room_aliases
+            )
+            if room_alias_is_global:
                 continue
             # we add listener for all valid rooms, _handle_message should ignore them
             # if msg sender weren't start_health_check'ed yet
@@ -758,7 +720,7 @@ class MatrixTransport(Runnable):
         # _get_room_ids_for_address will take care of returning only matching rooms and
         # _leave_unused_rooms will clear it in the future, if and when needed
         last_ex = None
-        for _ in range(_JOIN_RETRIES):
+        for _ in range(JOIN_RETRIES):
             try:
                 room = self._client.join_room(room_id)
             except MatrixRequestError as e:
@@ -1091,7 +1053,7 @@ class MatrixTransport(Runnable):
         room_name_full = f'#{room_name}:{self._server_name}'
         invitees_uids = [user.user_id for user in invitees]
 
-        for _ in range(_JOIN_RETRIES):
+        for _ in range(JOIN_RETRIES):
             # try joining room
             try:
                 room = self._client.join_room(room_name_full)
@@ -1193,7 +1155,7 @@ class MatrixTransport(Runnable):
 
         self._userid_to_presence[user_id] = new_state
         self._update_address_presence(address)
-        # maybe inviting user used to also possibly invite user's from discovery presence changes
+        # maybe inviting user used to also possibly invite user's from presence changes
         self._spawn(self._maybe_invite_user, user)
 
     def _get_user_presence(self, user_id: str) -> UserPresence:
@@ -1348,8 +1310,9 @@ class MatrixTransport(Runnable):
 
         As all users are supposed to be in discovery room, its members dict is used for caching"""
         user_id: str = getattr(user, 'user_id', user)
-        if self._discovery_room and user_id in self._discovery_room._members:
-            duser = self._discovery_room._members[user_id]
+        discovery_room = self._global_rooms.get('discovery')
+        if discovery_room and user_id in discovery_room._members:
+            duser = discovery_room._members[user_id]
             # if handed a User instance with displayname set, update the discovery room cache
             if getattr(user, 'displayname', None):
                 duser.displayname = user.displayname
@@ -1500,8 +1463,8 @@ class MatrixTransport(Runnable):
                 return True
 
         for room_id, room in rooms:
-            if self._discovery_room and room_id == self._discovery_room.room_id:
-                # don't leave discovery room
+            if any(groom and groom.room_id == room_id for groom in self._global_rooms.values()):
+                # don't leave global room
                 continue
             if room_id not in keep_rooms:
                 self._spawn(leave, room)

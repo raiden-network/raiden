@@ -53,7 +53,7 @@ class App:  # pylint: disable=too-few-public-methods
             'matrix': {
                 # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
                 'available_servers': None,
-                'discovery_room': 'discovery',
+                'global_rooms': ['discovery'],
                 'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
                 'retry_interval': DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
                 'server': 'auto',
