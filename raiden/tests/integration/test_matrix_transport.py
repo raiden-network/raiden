@@ -354,9 +354,9 @@ def test_matrix_tx_error_handling(
     """
     app0, app1 = raiden_chain
     token_network = views.get_token_network_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_addresses[0],
+        chain_state=views.state_from_app(app0),
+        payment_network_id=app0.raiden.default_registry.address,
+        token_address=token_addresses[0],
     )
     channel_identifier = token_network.partneraddresses_to_channelidentifiers[app1.raiden.address]
     assert len(channel_identifier) == 1

@@ -12,6 +12,8 @@ Changelog
 * :bug:`3380` Connection manager no longer attempts deposit if per partner funds are zero.
 * :bug:`3369` Fix high CPU usage when the raiden node is idle.
 * :feature:`-` Set python 3.7 as a minimum python version requirement to run Raiden.
+* :bug:`2974` Alarm task is not longer blocking until transactions are mined.
+* :feature:`2793` Faster restarts, transactions are sent in parallel on restarts.
 
 * :release:`0.100.2-rc3 <2019-01-25>`
 * :feature:`-` Update WebUI to version 0.8.0 https://github.com/raiden-network/webui/releases/tag/v0.8.0
