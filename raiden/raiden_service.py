@@ -465,7 +465,7 @@ class RaidenService(Runnable):
         log.debug('Raiden Service stopped', node=pex(self.address))
 
     def add_pending_greenlet(self, greenlet: Greenlet):
-        """ Ensures an error on it crashes self/main greenlet. """
+        """ Ensures an error on the passed greenlet crashes self/main greenlet. """
 
         def remove(_):
             self.greenlets.remove(greenlet)
@@ -490,10 +490,20 @@ class RaidenService(Runnable):
         self.message_handler.on_message(self, message)
 
     def handle_and_track_state_change(self, state_change: StateChange):
+        """ Dispatch the state change and does not handle the exceptions.
+
+        When the method is used the exceptions are tracked and re-raised in the
+        raiden service thread.
+        """
         for greenlet in self.handle_state_change(state_change):
             self.add_pending_greenlet(greenlet)
 
     def handle_state_change(self, state_change: StateChange) -> List[Greenlet]:
+        """ Dispatch the state change and return the processing threads.
+
+        Use this for error reporting, failures in the returned greenlets,
+        should be re-raised using `gevent.joinall` with `raise_error=True`.
+        """
         assert self.wal
         log.debug(
             'State change',
@@ -552,7 +562,7 @@ class RaidenService(Runnable):
         Important:
 
             This is spawing a new greenlet for /each/ transaction. It's
-            therefore /required/ there is *NO* order among these.
+            therefore /required/ that there is *NO* order among these.
         """
         return gevent.spawn(self._handle_event, raiden_event)
 
