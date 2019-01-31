@@ -335,7 +335,7 @@ def create_apps(
                     'transport_type': 'matrix',
                     'transport': {
                         'matrix': {
-                            'discovery_room': 'discovery',
+                            'global_rooms': ['discovery'],
                             'retries_before_backoff': retries_before_backoff,
                             'retry_interval': retry_interval,
                             'server': local_matrix_url,
