@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3369` Fix high CPU usage when the raiden node is idle.
 * :feature:`-` Set python 3.7 as a minimum python version requirement to run Raiden.
 
 * :release:`0.100.2-rc3 <2019-01-25>`
