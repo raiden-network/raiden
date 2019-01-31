@@ -14,7 +14,7 @@ from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
 from raiden.transfer.architecture import SendMessageEvent
-from raiden.transfer.balance_proof import pack_balance_proof
+from raiden.transfer.balance_proof import pack_balance_proof, pack_balance_proof_update
 from raiden.transfer.events import SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -24,10 +24,10 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.state import HashTimeLockState
+from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3, typing
-from raiden.utils.signer import Signer, recover
+from raiden.utils.signer import Signer, recover, pack_data
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -1416,6 +1416,215 @@ class LockExpired(EnvelopeMessage):
         return expired_lock
 
 
+class SignedBlindedBalanceProof(SignedMessage):
+    """Message sub-field `onchain_balance_proof` for `RequestMonitoring`.
+    """
+
+    def __init__(
+            self,
+            channel_identifier: typing.ChannelID,
+            token_network_address: typing.TokenNetworkID,
+            nonce: typing.Nonce,
+            additional_hash: typing.AdditionalHash,
+            chain_id: typing.ChainID,
+            signature: typing.Signature,
+            balance_hash: typing.BalanceHash,
+    ) -> None:
+
+        super().__init__()
+        self.channel_identifier = channel_identifier
+        self.token_network_address = token_network_address
+        self.nonce = nonce
+        self.additional_hash = additional_hash
+        self.chain_id = chain_id
+        self.balance_hash = balance_hash
+        self.signature = signature
+        self.non_closing_signature = None
+
+    @classmethod
+    def from_balance_proof_signed_state(
+            cls: typing.SignedBlindedBalanceProof,
+            balance_proof: BalanceProofSignedState,
+    ) -> typing.SignedBlindedBalanceProof:
+        assert isinstance(balance_proof, BalanceProofSignedState)
+        return cls(
+            channel_identifier=balance_proof.channel_identifier,
+            token_network_address=balance_proof.token_network_identifier,
+            nonce=balance_proof.nonce,
+            additional_hash=balance_proof.message_hash,
+            chain_id=balance_proof.chain_id,
+            signature=balance_proof.signature,
+            balance_hash=hash_balance_data(
+                balance_proof.transferred_amount,
+                balance_proof.locked_amount,
+                balance_proof.locksroot,
+            ),
+        )
+
+    def _data_to_sign(self) -> bytes:
+        packed = pack_balance_proof(
+            nonce=self.nonce,
+            balance_hash=self.balance_hash,
+            additional_hash=self.additional_hash,
+            channel_identifier=self.channel_identifier,
+            token_network_identifier=self.token_network_address,
+            chain_id=self.chain_id,
+        )
+        return packed
+
+    def sign(self, signer: Signer):
+        # Important: we don't write the signature to `.signature`
+        data = self._data_to_sign()
+        self.non_closing_signature = signer.sign(data)
+
+    def pack(self) -> bytes:
+        packed = pack_balance_proof_update(
+            self.nonce,
+            self.balance_hash,
+            self.additional_hash,
+            self.channel_identifier,
+            self.token_network_address,
+            self.chain_id,
+            self.non_closing_signature,
+        )
+        return packed
+
+    def to_dict(self) -> typing.Dict:
+        """Message format according to monitoring service spec"""
+        return {
+            'type': self.__class__.__name__,
+            'channel_identifier': self.channel_identifier,
+            'token_network_address': to_normalized_address(self.token_network_address),
+            'balance_hash': encode_hex(self.balance_hash),
+            'nonce': self.nonce,
+            'additional_hash': encode_hex(self.additional_hash),
+            'signature': encode_hex(self.signature),
+            'chain_id': self.chain_id,
+        }
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict) -> typing.SignedBlindedBalanceProof:
+        assert data['type'] == cls.__name__
+        return cls(
+            channel_identifier=data['channel_identifier'],
+            token_network_address=decode_hex(data['token_network_address']),
+            balance_hash=decode_hex(data['balance_hash']),
+            nonce=int(data['nonce']),
+            additional_hash=decode_hex(data['additional_hash']),
+            signature=decode_hex(data['signature']),
+            chain_id=int(data['chain_id']),
+        )
+
+
+class RequestMonitoring(SignedMessage):
+    cmdid = messages.REQUESTMONITORING
+    """Message to request channel watching from a monitoring service.
+    Spec:
+        https://raiden-network-specification.readthedocs.io/en/latest/monitoring_service.html\
+#monitor-request
+    """
+
+    def __init__(
+            self,
+            onchain_balance_proof: SignedBlindedBalanceProof,
+            reward_amount: typing.TokenAmount,
+            reward_proof_signature: typing.Signature = b'',
+    ) -> None:
+        super().__init__()
+        assert onchain_balance_proof is not None
+        self.balance_proof = onchain_balance_proof
+        if not onchain_balance_proof.non_closing_signature:
+            raise ValueError('onchain_balance_proof needs to be signed')
+        self.non_closing_signature = onchain_balance_proof.non_closing_signature
+        self.reward_amount = reward_amount
+        if reward_proof_signature:
+            self.signature = reward_proof_signature
+
+    @property
+    def reward_proof_signature(self) -> typing.Signature:
+        return self.signature
+
+    @classmethod
+    def from_dict(cls, data) -> typing.RequestMonitoring:
+        assert data['type'] == cls.__name__
+        onchain_balance_proof = SignedBlindedBalanceProof.from_dict(
+            data['onchain_balance_proof'],
+        )
+        assert isinstance(onchain_balance_proof, SignedBlindedBalanceProof)
+        onchain_balance_proof.non_closing_signature = decode_hex(
+            data['non_closing_signature'],
+        )
+        return cls(
+            onchain_balance_proof=onchain_balance_proof,
+            reward_amount=int(data['reward_amount']),
+            reward_proof_signature=decode_hex(data['reward_proof_signature']),
+        )
+
+    def to_dict(self) -> typing.Dict:
+        """Message format according to monitoring service spec"""
+        return {
+            'type': self.__class__.__name__,
+            'onchain_balance_proof': self.balance_proof.to_dict(),
+            'non_closing_signature': encode_hex(self.non_closing_signature),
+            'reward_amount': self.reward_amount,
+            'reward_proof_signature': encode_hex(self.reward_proof_signature),
+        }
+
+    def _data_to_sign(self) -> bytes:
+        """ Return the binary data to be/which was signed """
+        packed = pack_data([
+            'uint256',
+            'uint256',
+            'address',
+            'uint256',
+            'uint256',
+        ], [
+            self.balance_proof.channel_identifier,
+            self.reward_amount,
+            self.balance_proof.token_network_address,
+            self.balance_proof.chain_id,
+            self.balance_proof.nonce,
+        ])
+        return packed
+
+    def sign(self, signer: Signer):
+        """ Sign message using `private_key`. """
+        message_data = self._data_to_sign()
+        self.signature = signer.sign(data=message_data)
+
+    def pack(self, packed) -> bytes:
+        packed.nonce = self.balance_proof.nonce
+        packed.chain_id = self.balance_proof.chain_id
+        packed.token_network_address = self.balance_proof.token_network_address
+        packed.channel_identifier = self.balance_proof.channel_identifier
+        packed.balance_hash = self.balance_proof.balance_hash
+        packed.signature = self.balance_proof.signature
+        packed.non_closing_signature = self.non_closing_signature
+        packed.reward_amount = self.reward_amount
+        packed.reward_proof_signature = self.reward_proof_signature
+        return packed
+
+    @classmethod
+    def unpack(cls, packed) -> typing.RequestMonitoring:
+        assert packed.balance_hash
+        onchain_balance_proof = SignedBlindedBalanceProof(
+            nonce=packed.nonce,
+            chain_id=packed.chain_id,
+            token_network_address=packed.token_network_address,
+            channel_identifier=packed.channel_identifier,
+            balance_hash=packed.balance_hash,
+            additional_hash=packed.additional_hash,
+            signature=packed.signature,
+        )
+        monitoring_request = cls(
+            onchain_balance_proof=onchain_balance_proof,
+            non_closing_signature=packed.non_closing_signature,
+            reward_amount=packed.reward_amount,
+            reward_proof_signature=packed.reward_proof_signature,
+        )
+        return monitoring_request
+
+
 CMDID_TO_CLASS = {
     messages.DELIVERED: Delivered,
     messages.LOCKEDTRANSFER: LockedTransfer,
@@ -1427,6 +1636,7 @@ CMDID_TO_CLASS = {
     messages.UNLOCK: Unlock,
     messages.SECRETREQUEST: SecretRequest,
     messages.LOCKEXPIRED: LockExpired,
+    messages.REQUESTMONITORING: RequestMonitoring,
 }
 
 CLASSNAME_TO_CLASS = {klass.__name__: klass for klass in CMDID_TO_CLASS.values()}
