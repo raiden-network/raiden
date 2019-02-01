@@ -2,7 +2,6 @@
 from collections import namedtuple
 
 import gevent
-from eth_utils import encode_hex
 from gevent import server
 
 from raiden import waiting
@@ -294,7 +293,6 @@ def create_apps(
 
     apps = []
     for idx, (blockchain, discovery, port) in enumerate(services):
-        private_key = blockchain.client.privkey
         address = blockchain.client.address
 
         host = '127.0.0.1'
@@ -303,7 +301,6 @@ def create_apps(
             'chain_id': chain_id,
             'environment_type': environment_type,
             'unrecoverable_error_should_crash': unrecoverable_error_should_crash,
-            'privatekey_hex': encode_hex(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],
