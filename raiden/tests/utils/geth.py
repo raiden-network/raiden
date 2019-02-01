@@ -16,7 +16,7 @@ from web3 import Web3
 
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB
-from raiden.utils import privatekey_to_address, privtopub, typing
+from raiden.utils import privatekey_to_address, privatekey_to_publickey, typing
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -248,7 +248,7 @@ def geth_wait_and_check(
 
 def geth_node_config(miner_pkey, p2p_port, rpc_port):
     address = privatekey_to_address(miner_pkey)
-    pub = remove_0x_prefix(encode_hex(privtopub(miner_pkey)))
+    pub = privatekey_to_publickey(miner_pkey).hex()
 
     config = {
         'nodekey': miner_pkey,

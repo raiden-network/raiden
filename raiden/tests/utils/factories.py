@@ -32,7 +32,7 @@ from raiden.transfer.state import (
     message_identifier_from_prng,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import privatekey_to_address, publickey_to_address, random_secret, sha3, typing
+from raiden.utils import privatekey_to_address, random_secret, sha3, typing
 from raiden.utils.signer import LocalSigner
 
 EMPTY = object()
@@ -114,8 +114,7 @@ def make_privatekey_address(
         privatekey: PrivateKey = EMPTY,
 ) -> typing.Tuple[PrivateKey, typing.Address]:
     privatekey = if_empty(privatekey, make_privatekey())
-    publickey = privatekey.public_key.format(compressed=False)
-    address = publickey_to_address(publickey)
+    address = LocalSigner(privatekey).address
     return privatekey, address
 
 
@@ -812,8 +811,7 @@ def make_signed_transfer_for(
         valid = channel_state.reveal_timeout < expiration < channel_state.settle_timeout
         assert valid, 'Expiration must be between reveal_timeout and settle_timeout.'
 
-    pubkey = properties.pkey.public_key.format(compressed=False)
-    assert publickey_to_address(pubkey) == properties.sender
+    assert privatekey_to_address(properties.pkey.secret) == properties.sender
 
     if properties.sender == channel_state.our_state.address:
         recipient = channel_state.partner_state.address
