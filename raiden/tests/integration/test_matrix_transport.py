@@ -468,16 +468,15 @@ def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval
     transport0.send_async(queueid2, message)
 
     with Timeout(retry_interval * 10, exception=False):
-        while not (
-                len(received_messages0) == 1 and
+        all_messages_received = False
+
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == 2 and
                 len(received_messages1) == 1 and
                 len(received_messages2) == 1
-        ):
+            )
             gevent.sleep(.1)
-
-    assert len(received_messages0) == 2
-    assert len(received_messages1) == 1
-    assert len(received_messages2) == 1
 
     transport0.stop()
     transport1.stop()
