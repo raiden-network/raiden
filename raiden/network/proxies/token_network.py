@@ -28,7 +28,7 @@ from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
-from raiden.utils import pex, privatekey_to_address, safe_gas_limit
+from raiden.utils import pex, safe_gas_limit
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     AdditionalHash,
@@ -124,7 +124,7 @@ class TokenNetwork:
         self.address = token_network_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.node_address = privatekey_to_address(self.client.privkey)
+        self.node_address = self.client.address
         self.open_channel_transactions = dict()
 
         # Forbids concurrent operations on the same channel
