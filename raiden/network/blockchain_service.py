@@ -12,7 +12,6 @@ from raiden.network.proxies import (
     TokenNetworkRegistry,
 )
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils import privatekey_to_address
 from raiden.utils.typing import (
     Address,
     ChannelID,
@@ -29,7 +28,6 @@ class BlockChainService:
 
     def __init__(
             self,
-            privatekey_bin: bytes,
             jsonrpc_client: JSONRPCClient,
             contract_manager: ContractManager = None,
     ):
@@ -41,8 +39,6 @@ class BlockChainService:
         self.identifier_to_payment_channel = dict()
 
         self.client = jsonrpc_client
-        self.private_key = privatekey_bin
-        self.node_address = privatekey_to_address(privatekey_bin)
         self.contract_manager = contract_manager
 
         self._token_creation_lock = Semaphore()
@@ -51,6 +47,10 @@ class BlockChainService:
         self._token_network_registry_creation_lock = Semaphore()
         self._secret_registry_creation_lock = Semaphore()
         self._payment_channel_creation_lock = Semaphore()
+
+    @property
+    def node_address(self) -> Address:
+        return self.client.address
 
     def block_number(self) -> int:
         return self.client.block_number()

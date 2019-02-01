@@ -23,7 +23,7 @@ def test_payment_channel_proxy_basics(
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_chain = BlockChainService(private_keys[1], c1_client)
+    c1_chain = BlockChainService(c1_client)
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
@@ -157,7 +157,7 @@ def test_payment_channel_outdated_channel_close(
     partner = privatekey_to_address(private_keys[0])
 
     client = JSONRPCClient(web3, private_keys[1])
-    chain = BlockChainService(private_keys[1], client)
+    chain = BlockChainService(client)
     token_network_proxy = TokenNetwork(
         jsonrpc_client=client,
         token_network_address=token_network_address,
