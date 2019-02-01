@@ -29,7 +29,7 @@ from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.utils import pex, privatekey_to_address, safe_gas_limit
-from raiden.utils.signing import eth_recover
+from raiden.utils.signer import recover
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -1004,12 +1004,12 @@ class TokenNetwork:
         )
 
         try:
-            signer_address = eth_recover(
+            signer_address = recover(
                 data=data_that_was_signed,
                 signature=closing_signature,
             )
 
-            # InvalidSignature is raised by eth_utils.eth_recover if signature
+            # InvalidSignature is raised by raiden.utils.signer.recover if signature
             # is not bytes or has the incorrect length
             #
             # ValueError is raised if the PublicKey instantiation failed, let it

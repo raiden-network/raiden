@@ -10,7 +10,7 @@ from web3 import EthereumTesterProvider, Web3
 from raiden.constants import TRANSACTION_GAS_LIMIT
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils.signing import eth_sign
+from raiden.utils.signer import LocalSigner
 from raiden_contracts.contract_manager import CONTRACTS_SOURCE_DIRS, ContractManager
 from raiden_contracts.utils.utils import get_pending_transfers_tree
 
@@ -171,7 +171,7 @@ def find_max_pending_transfers(gas_limit):
             token_network_identifier=token_network_identifier,
             chain_id=1,
         )
-        signature = eth_sign(privkey=tester.private_keys[1], data=data_to_sign)
+        signature = LocalSigner(tester.private_keys[1]).sign(data=data_to_sign)
 
         tester.call_transaction(
             'TokenNetwork',

@@ -43,7 +43,6 @@ from raiden.transfer.utils import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.utils import pex
-from raiden.utils.signing import eth_sign
 
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
@@ -297,7 +296,7 @@ class RaidenEventHandler:
                 chain_id=balance_proof.chain_id,
                 partner_signature=balance_proof.signature,
             )
-            our_signature = eth_sign(privkey=raiden.privkey, data=non_closing_data)
+            our_signature = raiden.signer.sign(data=non_closing_data)
 
             try:
                 channel.update_transfer(
