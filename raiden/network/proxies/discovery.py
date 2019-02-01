@@ -7,7 +7,7 @@ from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, privatekey_to_address, safe_gas_limit
+from raiden.utils import pex, safe_gas_limit
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     GAS_REQUIRED_FOR_ENDPOINT_REGISTER,
@@ -48,7 +48,7 @@ class Discovery:
         )
 
         self.address = discovery_address
-        self.node_address = privatekey_to_address(jsonrpc_client.privkey)
+        self.node_address = jsonrpc_client.address
         self.client = jsonrpc_client
         self.not_found_address = NULL_ADDRESS
         self.proxy = proxy

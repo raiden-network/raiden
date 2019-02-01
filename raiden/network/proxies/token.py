@@ -6,7 +6,7 @@ from raiden.exceptions import RaidenUnrecoverableError, TransactionThrew
 from raiden.network.rpc.client import check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils import pex, privatekey_to_address, safe_gas_limit
+from raiden.utils import pex, safe_gas_limit
 from raiden.utils.typing import Address, BlockSpecification, TokenAmount
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
@@ -37,7 +37,7 @@ class Token:
 
         self.address = token_address
         self.client = jsonrpc_client
-        self.node_address = privatekey_to_address(jsonrpc_client.privkey)
+        self.node_address = jsonrpc_client.address
         self.proxy = proxy
 
     def allowance(self, owner, spender, block_identifier):
