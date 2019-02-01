@@ -613,14 +613,15 @@ class RaidenAPI:
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
 
-        async_result = self.transfer_async(
+        payment_status = self.transfer_async(
             registry_address=registry_address,
             token_address=token_address,
             amount=amount,
             target=target,
             identifier=identifier,
         )
-        return async_result.wait(timeout=transfer_timeout)
+        payment_status.payment_done.wait(timeout=transfer_timeout)
+        return payment_status
 
     def transfer_async(
             self,
@@ -665,13 +666,13 @@ class RaidenAPI:
             payment_network_id=payment_network_identifier,
             token_address=token_address,
         )
-        async_result = self.raiden.mediated_transfer_async(
+        payment_status = self.raiden.mediated_transfer_async(
             token_network_identifier=token_network_identifier,
             amount=amount,
             target=target,
             identifier=identifier,
         )
-        return async_result
+        return payment_status
 
     def get_raiden_events_payment_history_with_timestamps(
             self,

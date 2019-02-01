@@ -41,15 +41,15 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
         payment_network_identifier,
         token_address,
     )
-    result = app0.raiden.mediated_transfer_async(
+    payment_status = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         deposit * 2,
         app1.raiden.address,
         identifier=1,
     )
 
-    assert result.successful()
-    assert result.get_nowait() is False
+    assert payment_status.payment_done.successful()
+    assert payment_status.payment_done.get_nowait() is False
 
     assert_synced_channel_state(
         token_network_identifier,
@@ -72,13 +72,13 @@ def test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
         payment_network_identifier,
         token_address,
     )
-    async_result = app0.raiden.mediated_transfer_async(
+    payment_status = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         amount,
         app1.raiden.address,
         identifier=1,
     )
-    assert async_result.wait() is False
+    assert payment_status.payment_done.wait() is False
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
