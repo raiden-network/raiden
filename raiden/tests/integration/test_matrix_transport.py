@@ -34,6 +34,7 @@ from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
+from raiden.transfer.state import BalanceProofUnsignedState, HashTimeLockState
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils import pex
 from raiden.utils.signer import LocalSigner
@@ -66,24 +67,20 @@ def mock_matrix(
     from raiden.network.transport.matrix.client import User
     monkeypatch.setattr(User, 'get_display_name', lambda _: 'random_display_name')
 
-    def mock_get_user(klass, user: Union[User, str]) -> User:  # pylint: disable=unused-argument
+    def mock_get_user(klass, user: Union[User, str]) -> User:
         return User(None, USERID1)
 
-    def mock_get_room_ids_for_address(  # pylint: disable=unused-argument
+    def mock_get_room_ids_for_address(
             klass,
             address: Address,
             filter_private: bool = None,
     ) -> List[str]:
         return ['!roomID:server']
 
-    def mock_set_room_id_for_address(  # pylint: disable=unused-argument
-            self,
-            address: Address,
-            room_id: Optional[str],
-    ):
+    def mock_set_room_id_for_address(self, address: Address, room_id: Optional[str]):
         pass
 
-    def mock_receive_message(klass, message):  # pylint: disable=unused-argument
+    def mock_receive_message(klass, message):
         # We are just unit testing the matrix transport receive so do nothing
         assert message
 
@@ -114,57 +111,13 @@ def mock_matrix(
     return transport
 
 
-def ping_pong_message_success(transport0, transport1):
-    queueid0 = QueueIdentifier(
-        recipient=transport0._raiden_service.address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    )
-
-    queueid1 = QueueIdentifier(
-        recipient=transport1._raiden_service.address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    )
-
-    received_messages0 = transport0._raiden_service.message_handler.bag
-    received_messages1 = transport1._raiden_service.message_handler.bag
-    number_of_received_messages0 = len(received_messages0)
-    number_of_received_messages1 = len(received_messages1)
-
-    message = Processed(message_identifier=number_of_received_messages0)
-    transport0._raiden_service.sign(message)
-
-    transport0.send_async(queueid1, message)
-    with Timeout(20, exception=False):
-        all_messages_received = False
-        while not all_messages_received:
-            all_messages_received = (
-                len(received_messages0) == number_of_received_messages0 + 1 and
-                len(received_messages1) == number_of_received_messages1 + 1
-            )
-            gevent.sleep(.1)
-    message = Processed(message_identifier=number_of_received_messages1)
-    transport1._raiden_service.sign(message)
-    transport1.send_async(queueid0, message)
-
-    with Timeout(20, exception=False):
-        all_messages_received = False
-        while not all_messages_received:
-            all_messages_received = (
-                len(received_messages0) == number_of_received_messages0 + 2 and
-                len(received_messages1) == number_of_received_messages1 + 2
-            )
-            gevent.sleep(.1)
-
-    return all_messages_received
-
-
 @pytest.fixture()
 def skip_userid_validation(monkeypatch):
     import raiden.network.transport.matrix
     import raiden.network.transport.matrix.transport
     import raiden.network.transport.matrix.utils
 
-    def mock_validate_userid_signature(user):  # pylint: disable=unused-argument
+    def mock_validate_userid_signature(user):
         return HOP1
 
     monkeypatch.setattr(
@@ -215,67 +168,46 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
     return room, event
 
 
-def test_normal_processing_hex(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_normal_processing_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     assert m._handle_message(room, event)
 
 
-def test_normal_processing_json(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_normal_processing_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=False)
     assert m._handle_message(room, event)
 
 
-def test_processing_invalid_json(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_processing_invalid_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_json = '{"foo": 1,'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_json)
     assert not m._handle_message(room, event)
 
 
-def test_sending_nonstring_body(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_sending_nonstring_body(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(overwrite_data=b'somebinarydata')
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_json(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_processing_invalid_message_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_message = '{"this": 1, "message": 5, "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_json(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_processing_invalid_message_cmdid_json(mock_matrix, skip_userid_validation):
     m = mock_matrix
     invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_hex(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_processing_invalid_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -283,10 +215,7 @@ def test_processing_invalid_hex(  # pylint: disable=unused-argument
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_hex(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -294,10 +223,7 @@ def test_processing_invalid_message_hex(  # pylint: disable=unused-argument
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_hex(  # pylint: disable=unused-argument
-        mock_matrix,
-        skip_userid_validation,
-):
+def test_processing_invalid_message_cmdid_hex(mock_matrix, skip_userid_validation):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -372,12 +298,10 @@ def test_matrix_message_sync(
             queue_identifier,
             message,
         )
-    with Timeout(retry_interval * 20, exception=False):
-        while not len(received_messages) == 10:
-            gevent.sleep(.1)
+
+    gevent.sleep(2)
 
     assert len(received_messages) == 10
-
     for i in range(5):
         assert any(getattr(m, 'message_identifier', -1) == i for m in received_messages)
 
@@ -417,7 +341,7 @@ def test_matrix_message_sync(
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
+def test_matrix_tx_error_handling(
         skip_if_not_matrix,
         skip_if_parity,
         raiden_chain,
@@ -435,7 +359,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
     )
     burn_eth(app0.raiden)
 
-    def make_tx(*args, **kwargs):  # pylint: disable=unused-argument
+    def make_tx(*args, **kwargs):
         close_channel = ActionChannelClose(
             canonical_identifier=channel_state.canonical_identifier,
         )
@@ -710,7 +634,6 @@ def test_monitoring_global_messages(
         private_rooms,
         retry_interval,
         retries_before_backoff,
-        monkeypatch,
 ):
     """
     Test that RaidenService sends RequestMonitoring messages to global
@@ -743,63 +666,34 @@ def test_monitoring_global_messages(
 
     raiden_service.transport = transport
     transport.log = MagicMock()
-
     balance_proof = make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1)
-    channel_state = make_channel_state()
-    channel_state.our_state.balance_proof = balance_proof
-    channel_state.partner_state.balance_proof = balance_proof
-    monkeypatch.setattr(
-        raiden.transfer.views,
-        'get_channelstate_by_canonical_identifier',
-        lambda *a, **kw: channel_state,
-    )
-    monkeypatch.setattr(
-        raiden.transfer.channel,
-        'get_balance',
-        lambda *a, **kw: 123,
-    )
-    raiden_service.user_deposit.effective_balance.return_value = 100
-
     update_monitoring_service_from_balance_proof(
-        raiden=raiden_service,
-        chain_state=None,
-        new_balance_proof=balance_proof,
+        raiden_service,
+        balance_proof,
     )
     gevent.idle()
 
-    with gevent.Timeout(2):
-        while ms_room.send_text.call_count < 1:
-            gevent.idle()
     assert ms_room.send_text.call_count == 1
     transport.stop()
     transport.get()
 
 
 @pytest.mark.parametrize('matrix_server_count', [1])
+@pytest.mark.parametrize('number_of_transports', [1])
+@pytest.mark.parametrize('global_rooms', [['discovery', PATH_FINDING_BROADCASTING_ROOM]])
 def test_pfs_global_messages(
-        local_matrix_servers,
-        private_rooms,
-        retry_interval,
-        retries_before_backoff,
+        matrix_transports,
         monkeypatch,
 ):
     """
-    Test that RaidenService sends UpdatePFS messages to global
-    PATH_FINDING_BROADCASTING_ROOM room on newly received balance proofs.
+    Test that `update_pfs` from `RaidenEventHandler` sends balance proof updates to the global
+    PATH_FINDING_BROADCASTING_ROOM room on Send($BalanceProof)* events, i.e. events, that send
+    a new balance proof to the channel partner.
     """
-    transport = MatrixTransport({
-        'global_rooms': ['discovery', PATH_FINDING_BROADCASTING_ROOM],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [local_matrix_servers[0]],
-        'private_rooms': private_rooms,
-    })
+    transport = matrix_transports[0]
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
-    raiden_service.config = dict(services=dict(monitoring_enabled=True))
 
     transport.start(
         raiden_service,
@@ -815,27 +709,74 @@ def test_pfs_global_messages(
     raiden_service.transport = transport
     transport.log = MagicMock()
 
-    balance_proof = make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1)
+    # create mock events that should trigger a send
+    lock = make_lock()
+    hash_time_lock = HashTimeLockState(lock.amount, lock.expiration, lock.secrethash)
 
-    channel_state = make_channel_state()
-    channel_state.our_state.balance_proof = balance_proof
-    channel_state.partner_state.balance_proof = balance_proof
+    def make_unsigned_balance_proof(nonce):
+        return BalanceProofUnsignedState.from_dict(
+            make_balance_proof(nonce=nonce, signer=LocalSigner(HOP1_KEY), amount=1).to_dict(),
+        )
+    transfer1 = LockedTransferUnsignedState(
+        balance_proof=make_unsigned_balance_proof(nonce=1),
+        payment_identifier=1,
+        token=b'1',
+        lock=hash_time_lock,
+        target=HOP1,
+        initiator=HOP1,
+    )
+    transfer2 = LockedTransferUnsignedState(
+        balance_proof=make_unsigned_balance_proof(nonce=2),
+        payment_identifier=1,
+        token=b'1',
+        lock=hash_time_lock,
+        target=HOP1,
+        initiator=HOP1,
+    )
+
+    send_balance_proof_events = [
+        SendLockedTransfer(HOP1, 1, 1, transfer1),
+        SendRefundTransfer(HOP1, 1, 1, transfer2),
+        SendBalanceProof(HOP1, 1, 1, 1, b'1', b'x' * 32, make_unsigned_balance_proof(nonce=3)),
+        SendLockExpired(HOP1, 1, make_unsigned_balance_proof(nonce=4), b'x' * 32),
+    ]
+    for num, event in enumerate(send_balance_proof_events):
+        assert event.balance_proof.nonce == num + 1
+    # make sure we cover all configured event types
+    assert all(event in [type(event) for event in send_balance_proof_events]
+               for event in SEND_BALANCE_PROOF_EVENTS)
+
+    event_handler = raiden_event_handler.RaidenEventHandler()
+
+    # let our mock objects pass validation
+    channelstate_mock = Mock()
+    channelstate_mock.reveal_timeout = 1
+
     monkeypatch.setattr(
-        raiden.raiden_service,
+        raiden_event_handler,
         'get_channelstate_by_token_network_and_partner',
-        lambda *a, **kw: channel_state,
+        lambda *args, **kwargs: channelstate_mock,
     )
-    update_path_finding_service_from_balance_proof(
-        raiden=raiden_service,
-        chain_state=None,
-        new_balance_proof=balance_proof,
-    )
+    monkeypatch.setattr(raiden_event_handler, 'state_from_raiden', lambda *args, **kwargs: 1)
+    monkeypatch.setattr(event_handler, 'handle_send_lockedtransfer', lambda *args, **kwargs: 1)
+    monkeypatch.setattr(event_handler, 'handle_send_refundtransfer', lambda *args, **kwargs: 1)
+
+    # handle the events
+    for event in send_balance_proof_events:
+        event_handler.on_raiden_event(
+            raiden_service,
+            event,
+        )
     gevent.idle()
 
-    with gevent.Timeout(2):
-        while pfs_room.send_text.call_count < 1:
-            gevent.idle()
-    assert pfs_room.send_text.call_count == 1
+    # ensure all events triggered a send for their respective balance_proof
+    # matrix transport may concatenate multiple messages send in one interval
+    assert pfs_room.send_text.call_count >= 1
+    concatenated_call_args = ' '.join(str(arg) for arg in pfs_room.send_text.call_args_list)
+    assert all(
+        f'"nonce": {i + 1}' in concatenated_call_args
+        for i in range(len(SEND_BALANCE_PROOF_EVENTS))
+    )
     transport.stop()
     transport.get()
 
@@ -933,23 +874,94 @@ def test_matrix_invite_private_room_happy_case(
     transport1.get()
 
 
-@pytest.mark.parametrize('private_rooms', [[True, True]])
-@pytest.mark.parametrize('matrix_server_count', [2])
-@pytest.mark.parametrize('number_of_transports', [2])
-def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
-    transport0, transport1 = matrix_transports
-    received_messages0 = set()
-    received_messages1 = set()
+def test_matrix_invite_private_room_unhappy_case_1(
+        local_matrix_servers,
+        private_rooms,
+        retry_interval,
+        retries_before_backoff,
+):
 
-    message_handler0 = MessageHandler(received_messages0)
-    message_handler1 = MessageHandler(received_messages1)
+    transport0 = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [],
+        'private_rooms': private_rooms,
+    })
+    transport1 = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [],
+        'private_rooms': private_rooms,
+    })
 
-    raiden_service0 = MockRaidenService(message_handler0)
-    raiden_service1 = MockRaidenService(message_handler1)
+    received_messages = set()
 
-    transport0.start(raiden_service0, message_handler0, '')
-    transport1.start(raiden_service1, message_handler1, '')
+    message_handler = MessageHandler(received_messages)
+    raiden_service0 = MockRaidenService(message_handler)
+    raiden_service1 = MockRaidenService(message_handler)
 
-    transport0.start_health_check(raiden_service1.address)
-    transport1.start_health_check(raiden_service0.address)
-    assert ping_pong_message_success(transport0, transport1)
+    raiden_service0.handle_state_change = MagicMock()
+    raiden_service1.handle_state_change = MagicMock()
+
+    transport0.start(
+        raiden_service0,
+        message_handler,
+        None,
+    )
+    transport1.start(
+        raiden_service1,
+        message_handler,
+        None,
+    )
+    gevent.sleep(1)
+
+    latest_auth_data_node0 = f'{transport1._user_id}/{transport1._client.api.token}'
+    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node0)
+    raiden_service1.handle_state_change.assert_called_with(update_transport_auth_data)
+
+    latest_auth_data_node1 = f'{transport0._user_id}/{transport0._client.api.token}'
+    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node1)
+    raiden_service0.handle_state_change.assert_called_with(update_transport_auth_data)
+
+    transport0.start_health_check(transport1._raiden_service.address)
+    transport1.start_health_check(transport0._raiden_service.address)
+
+    user_1 = transport0._get_user(transport0._address_to_userids[raiden_service1.address].pop())
+    user_0 = transport1._get_user(transport1._address_to_userids[raiden_service0.address].pop())
+
+    transport0._get_private_room([user_1])
+    transport1._get_private_room([user_0])
+    gevent.sleep(1)
+
+    room_id = transport1._get_room_for_address(raiden_service0.address).room_id
+
+    room_state_1 = transport1._client.api.get_room_state(room_id)
+
+    join_rule_1 = [
+        event['content'].get('join_rule')
+        for event in room_state_1
+        if event['type'] == 'm.room.join_rules'
+    ][0]
+
+    assert join_rule_1 == 'invite'
+
+    room_state_0 = transport0._client.api.get_room_state(room_id)
+
+    join_rule_0 = [
+        event['content'].get('join_rule')
+        for event in room_state_0
+        if event['type'] == 'm.room.join_rules'
+    ][0]
+
+    assert join_rule_0 == 'invite'
+
+    transport0.stop()
+    transport1.stop()
+    transport0.get()
+    transport1.get()
