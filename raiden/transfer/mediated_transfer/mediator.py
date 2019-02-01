@@ -30,10 +30,18 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
+    NODE_NETWORK_REACHABLE,
+    NODE_NETWORK_UNREACHABLE,
     NettingChannelState,
+    RouteState,
     message_identifier_from_prng,
 )
-from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
+from raiden.transfer.state_change import (
+    ActionChangeNodeNetworkState,
+    Block,
+    ContractReceiveSecretReveal,
+    ReceiveUnlock,
+)
 from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -44,6 +52,7 @@ from raiden.utils.typing import (
     ChannelMap,
     Dict,
     List,
+    NodeNetworkStateMap,
     Optional,
     PaymentAmount,
     Secret,
@@ -182,10 +191,29 @@ def has_secret_registration_started(
     return is_secret_registered_onchain or has_pending_transaction
 
 
+def filter_reachable_routes(
+        routes: List[RouteState],
+        nodeaddresses_to_networkstates: NodeNetworkStateMap,
+) -> List[RouteState]:
+    """This function makes sure we use reachable routes only."""
+    reachable_routes = []
+
+    for route in routes:
+        node_network_state = nodeaddresses_to_networkstates.get(
+            route.node_address,
+            NODE_NETWORK_UNREACHABLE,
+        )
+
+        if node_network_state == NODE_NETWORK_REACHABLE:
+            reachable_routes.append(route)
+
+    return reachable_routes
+
+
 def filter_used_routes(
         transfers_pair: List[MediationPairState],
-        routes: List['RouteState'],
-) -> List['RouteState']:
+        routes: List[RouteState],
+) -> List[RouteState]:
     """This function makes sure we filter routes that have already been used.
 
     So in a setup like this, we want to make sure that node 2, having tried to
@@ -194,8 +222,10 @@ def filter_used_routes(
     1 -> 2 -> 3 -> 4
          v         ^
          5 -> 6 -> 7
+    This function will return routes as provided in their original order.
     """
     channelid_to_route = {r.channel_identifier: r for r in routes}
+    routes_order = {route.node_address: index for index, route in enumerate(routes)}
 
     for pair in transfers_pair:
         channelid = pair.payer_transfer.balance_proof.channel_identifier
@@ -206,7 +236,10 @@ def filter_used_routes(
         if channelid in channelid_to_route:
             del channelid_to_route[channelid]
 
-    return list(channelid_to_route.values())
+    return sorted(
+        channelid_to_route.values(),
+        key=lambda route: routes_order[route.node_address],
+    )
 
 
 def get_payee_channel(
@@ -1009,6 +1042,7 @@ def mediate_transfer(
         possible_routes: List['RouteState'],
         payer_channel: NettingChannelState,
         channelidentifiers_to_channels: ChannelMap,
+        nodeaddresses_to_networkstates: NodeNetworkStateMap,
         pseudo_random_generator: random.Random,
         payer_transfer: LockedTransferSignedState,
         block_number: BlockNumber,
@@ -1021,6 +1055,10 @@ def mediate_transfer(
     send a refund back to the payer, allowing the payer to try a different
     route.
     """
+    available_routes = filter_reachable_routes(
+        possible_routes,
+        nodeaddresses_to_networkstates,
+    )
     available_routes = filter_used_routes(
         state.transfers_pair,
         possible_routes,
@@ -1075,6 +1113,7 @@ def mediate_transfer(
 def handle_init(
         state_change: ActionInitMediator,
         channelidentifiers_to_channels: ChannelMap,
+        nodeaddresses_to_networkstates: NodeNetworkStateMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult[Optional[MediatorTransferState]]:
@@ -1088,7 +1127,10 @@ def handle_init(
     if not payer_channel:
         return TransitionResult(None, [])
 
-    mediator_state = MediatorTransferState(from_transfer.lock.secrethash)
+    mediator_state = MediatorTransferState(
+        secrethash=from_transfer.lock.secrethash,
+        routes=routes,
+    )
 
     is_valid, events, _ = channel.handle_receive_lockedtransfer(
         payer_channel,
@@ -1105,6 +1147,7 @@ def handle_init(
         routes,
         payer_channel,
         channelidentifiers_to_channels,
+        nodeaddresses_to_networkstates,
         pseudo_random_generator,
         from_transfer,
         block_number,
@@ -1160,6 +1203,7 @@ def handle_refundtransfer(
         mediator_state: MediatorTransferState,
         mediator_state_change: ReceiveTransferRefund,
         channelidentifiers_to_channels: ChannelMap,
+        nodeaddresses_to_networkstates: NodeNetworkStateMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
@@ -1203,6 +1247,7 @@ def handle_refundtransfer(
             mediator_state_change.routes,
             payer_channel,
             channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates,
             pseudo_random_generator,
             payer_transfer,
             block_number,
@@ -1391,10 +1436,61 @@ def handle_lock_expired(
     return TransitionResult(mediator_state, events)
 
 
+def handle_node_change_network_state(
+        mediator_state: MediatorTransferState,
+        state_change: ActionChangeNodeNetworkState,
+        channelidentifiers_to_channels: ChannelMap,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+) -> TransitionResult:
+    """ If a certain node comes online:
+    1. Check if a channel exists with that node
+    2. Check that this channel is a route, check if the route is valid.
+    3. Check that the transfer was stuck because there was no route available.
+    4. Send the transfer again to this now-available route.
+    """
+    if state_change.network_state != NODE_NETWORK_REACHABLE:
+        return TransitionResult(mediator_state, list())
+
+    try:
+        route = next(
+            route for route in mediator_state.routes
+            if route.node_address == state_change.node_address
+        )
+    except StopIteration:
+        return TransitionResult(mediator_state, list())
+
+    if mediator_state.waiting_transfer is None:
+        return TransitionResult(mediator_state, list())
+
+    transfer = mediator_state.waiting_transfer.transfer
+    payer_channel_identifier = transfer.balance_proof.channel_identifier
+    payer_channel = channelidentifiers_to_channels.get(payer_channel_identifier)
+    payee_channel = channelidentifiers_to_channels.get(route.channel_identifier)
+
+    payee_channel_open = channel.get_status(payee_channel) == CHANNEL_STATE_OPENED
+    if not payee_channel or not payee_channel_open:
+        return TransitionResult(mediator_state, list())
+
+    return mediate_transfer(
+        state=mediator_state,
+        possible_routes=[route],
+        payer_channel=payer_channel,
+        channelidentifiers_to_channels=channelidentifiers_to_channels,
+        nodeaddresses_to_networkstates={
+            state_change.node_address: state_change.network_state,
+        },
+        pseudo_random_generator=pseudo_random_generator,
+        payer_transfer=mediator_state.waiting_transfer.transfer,
+        block_number=block_number,
+    )
+
+
 def state_transition(
         mediator_state: MediatorTransferState,
         state_change: StateChange,
         channelidentifiers_to_channels: ChannelMap,
+        nodeaddresses_to_networkstates: NodeNetworkStateMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
 ) -> TransitionResult[Optional[MediatorTransferState]]:
@@ -1414,6 +1510,7 @@ def state_transition(
             iteration = handle_init(
                 state_change,
                 channelidentifiers_to_channels,
+                nodeaddresses_to_networkstates,
                 pseudo_random_generator,
                 block_number,
             )
@@ -1433,6 +1530,7 @@ def state_transition(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates,
             pseudo_random_generator,
             block_number,
         )
@@ -1471,6 +1569,14 @@ def state_transition(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
+            block_number,
+        )
+    elif type(state_change) == ActionChangeNodeNetworkState:
+        iteration = handle_node_change_network_state(
+            mediator_state,
+            state_change,
+            channelidentifiers_to_channels,
+            pseudo_random_generator,
             block_number,
         )
 

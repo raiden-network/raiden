@@ -259,13 +259,19 @@ class MediatorTransferState(State):
         'secret',
         'transfers_pair',
         'waiting_transfer',
+        'routes',
     )
 
-    def __init__(self, secrethash: SecretHash):
+    def __init__(
+            self,
+            secrethash: SecretHash,
+            routes: List[RouteState],
+    ):
         self.secrethash = secrethash
         self.secret: Secret = None
         self.transfers_pair: List[MediationPairState] = list()
         self.waiting_transfer: WaitingTransferState = None
+        self.routes = routes
 
     def __repr__(self):
         return '<MediatorTransferState secrethash:{} qtd_transfers:{}>'.format(
@@ -279,7 +285,8 @@ class MediatorTransferState(State):
             self.secrethash == other.secrethash and
             self.secret == other.secret and
             self.transfers_pair == other.transfers_pair and
-            self.waiting_transfer == other.waiting_transfer
+            self.waiting_transfer == other.waiting_transfer and
+            self.routes == other.routes
         )
 
     def __ne__(self, other):
@@ -290,6 +297,7 @@ class MediatorTransferState(State):
             'secrethash': serialization.serialize_bytes(self.secrethash),
             'transfers_pair': self.transfers_pair,
             'waiting_transfer': self.waiting_transfer,
+            'routes': self.routes,
         }
 
         if self.secret is not None:
@@ -301,6 +309,7 @@ class MediatorTransferState(State):
     def from_dict(cls, data: Dict[str, Any]) -> 'MediatorTransferState':
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
+            routes=data['routes'],
         )
         restored.transfers_pair = data['transfers_pair']
         restored.waiting_transfer = data['waiting_transfer']
