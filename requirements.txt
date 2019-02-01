@@ -1,6 +1,7 @@
 cachetools
 coincurve
 colorama
+eth-keys
 eth-keyfile
 eth-utils
 filelock
