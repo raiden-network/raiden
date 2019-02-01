@@ -8,7 +8,7 @@ from itertools import zip_longest
 from typing import Iterable, List, Optional, Tuple, Union
 
 import gevent
-from coincurve import PrivateKey
+from eth_keys import keys
 from eth_utils import (
     add_0x_prefix,
     decode_hex,
@@ -23,7 +23,7 @@ import raiden
 from raiden import constants
 from raiden.exceptions import InvalidAddress
 from raiden.utils import typing
-from raiden.utils.signing import sha3
+from raiden.utils.signing import sha3  # noqa
 
 
 def random_secret():
@@ -129,23 +129,11 @@ def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
     """ Returns public key in bitcoins 'bin' encoding. """
     if not ishash(private_key_bin):
         raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
-    private_key = PrivateKey(private_key_bin)
-    return private_key.public_key.format(compressed=False)
-
-
-def publickey_to_address(publickey: bytes) -> typing.Address:
-    return typing.Address(sha3(publickey[1:])[12:])
+    return keys.PrivateKey(private_key_bin).public_key.to_bytes()
 
 
 def privatekey_to_address(private_key_bin: bytes) -> typing.Address:
-    return publickey_to_address(privatekey_to_publickey(private_key_bin))
-
-
-def privtopub(private_key_bin: bytes) -> bytes:
-    """ Returns public key in bitcoins 'bin_electrum' encoding. """
-    raw_pubkey = privatekey_to_publickey(private_key_bin)
-    assert raw_pubkey.startswith(b'\x04')
-    return raw_pubkey[1:]
+    return keys.PrivateKey(private_key_bin).public_key.to_canonical_address()
 
 
 def get_project_root() -> str:
