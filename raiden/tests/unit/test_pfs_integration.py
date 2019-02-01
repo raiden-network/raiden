@@ -404,7 +404,7 @@ def test_routing_mocked_pfs_unavailabe_peer(
         our_address=our_address,
     )
     address1, address2, address3 = addresses
-    channel_state1, _ = channel_states
+    _, channel_state2 = channel_states
 
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
@@ -453,5 +453,5 @@ def test_routing_mocked_pfs_unavailabe_peer(
                 },
             },
         )
-        assert routes[0].node_address == address1
-        assert routes[0].channel_identifier == channel_state1.identifier
+        assert routes[0].node_address == address2
+        assert routes[0].channel_identifier == channel_state2.identifier
