@@ -222,7 +222,7 @@ class RaidenEventHandler:
         # but the lock expiration will generate a second
         # EventPaymentSentFailed message which we can ignore here
         if payment_status:
-            payment_status.payment_done.set(None)
+            payment_status.payment_done.set(False)
 
     def handle_unlockfailed(
             self,
