@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 import click
 import filelock
 import structlog
-from eth_utils import encode_hex, to_canonical_address, to_checksum_address, to_normalized_address
+from eth_utils import to_canonical_address, to_checksum_address, to_normalized_address
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
@@ -229,7 +229,6 @@ def run_app(
     config['transport']['udp']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['transport']['udp']['nat_keepalive_timeout'] = timeout
-    config['privatekey_hex'] = encode_hex(privatekey_bin)
     config['unrecoverable_error_should_crash'] = unrecoverable_error_should_crash
     config['services']['pathfinding_service_address'] = pathfinding_service_address
     config['services']['pathfinding_max_paths'] = pathfinding_max_paths

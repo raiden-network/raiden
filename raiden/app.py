@@ -1,5 +1,5 @@
 import structlog
-from eth_utils import decode_hex, to_checksum_address
+from eth_utils import to_checksum_address
 
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
@@ -28,7 +28,6 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 class App:  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
-        'privatekey_hex': '',
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
         'contracts_path': contracts_precompiled_path(),
@@ -86,7 +85,6 @@ class App:  # pylint: disable=too-few-public-methods
             query_start_block=query_start_block,
             default_registry=default_registry,
             default_secret_registry=default_secret_registry,
-            private_key_bin=decode_hex(config['privatekey_hex']),
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,

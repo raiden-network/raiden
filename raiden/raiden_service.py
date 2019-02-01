@@ -209,7 +209,6 @@ class RaidenService(Runnable):
             query_start_block: BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
-            private_key_bin,
             transport,
             raiden_event_handler,
             message_handler,
@@ -217,9 +216,6 @@ class RaidenService(Runnable):
             discovery=None,
     ):
         super().__init__()
-        if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
-            raise ValueError('invalid private_key')
-
         self.tokennetworkids_to_connectionmanagers = dict()
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
@@ -229,12 +225,12 @@ class RaidenService(Runnable):
         self.default_secret_registry = default_secret_registry
         self.config = config
 
-        self.signer: Signer = LocalSigner(private_key_bin)
-        self.privkey = private_key_bin
+        self.privkey = self.chain.client.privkey
+        self.signer: Signer = LocalSigner(self.privkey)
         self.address = self.signer.address
         self.discovery = discovery
 
-        self.private_key = PrivateKey(private_key_bin)
+        self.private_key = PrivateKey(self.privkey)
         self.transport = transport
 
         self.blockchain_events = BlockchainEvents()
