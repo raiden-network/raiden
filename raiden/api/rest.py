@@ -1038,7 +1038,7 @@ class RestAPI:
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
-        if transfer_result is None:
+        if transfer_result is False:
             return api_error(
                 errors="Payment couldn't be completed "
                 "(insufficient funds, no route to target or target offline).",
