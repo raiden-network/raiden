@@ -62,6 +62,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         mediator_state=None,
         state_change=factories.mediator_make_init_action(channels, payer_transfer),
         channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -97,6 +98,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         mediator_state=new_state,
         state_change=receive_secret,
         channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
     )
@@ -135,7 +137,10 @@ def test_regression_send_refund():
     pseudo_random_generator = random.Random()
     setup = factories.make_transfers_pair(3)
 
-    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
+    mediator_state = MediatorTransferState(
+        secrethash=UNIT_SECRETHASH,
+        routes=setup.channels.get_routes(),
+    )
     mediator_state.transfers_pair = setup.transfers_pair
 
     last_pair = setup.transfers_pair[-1]
@@ -166,6 +171,7 @@ def test_regression_send_refund():
         mediator_state=mediator_state,
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
     )
@@ -209,6 +215,7 @@ def test_regression_send_refund():
         mediator_state=iteration.new_state,
         mediator_state_change=refund_state_change,
         channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
     )
@@ -232,6 +239,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         mediator_state=None,
         state_change=factories.mediator_make_init_action(channels, payer_transfer),
         channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
     )
@@ -251,6 +259,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         mediator_state=init_iteration.new_state,
         state_change=block,
         channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
     )
@@ -310,6 +319,7 @@ def test_regression_mediator_task_no_routes():
         mediator_state=None,
         state_change=init_state_change,
         channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
     )
@@ -351,6 +361,7 @@ def test_regression_mediator_task_no_routes():
             block_hash=None,
         ),
         channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
     )
@@ -364,6 +375,7 @@ def test_regression_mediator_task_no_routes():
             message_identifier=message_identifier,
         ),
         channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
     )
@@ -395,6 +407,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         mediator_state=None,
         state_change=init_state_change,
         channelidentifiers_to_channels=pair.channel_map,
+        nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
     )
@@ -416,6 +429,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         mediator_state=current_state,
         state_change=block,
         channelidentifiers_to_channels=pair.channel_map,
+        nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
     )
@@ -439,6 +453,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         mediator_state=current_state,
         state_change=receive_secret,
         channelidentifiers_to_channels=pair.channel_map,
+        nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=next_block.block_number,
     )
@@ -461,6 +476,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         mediator_state=current_state,
         state_change=next_block,
         channelidentifiers_to_channels=pair.channel_map,
+        nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
     )
@@ -476,7 +492,10 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
 
     setup = factories.make_transfers_pair(2, block_number=10)
 
-    mediator_state = MediatorTransferState(UNIT_SECRETHASH)
+    mediator_state = MediatorTransferState(
+        secrethash=UNIT_SECRETHASH,
+        routes=setup.channels.get_routes(),
+    )
     mediator_state.transfers_pair = setup.transfers_pair
 
     secret = UNIT_SECRET
@@ -489,6 +508,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         mediator_state=mediator_state,
         state_change=ReceiveSecretReveal(secret, payee_channel.partner_state.address),
         channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
     )
@@ -506,6 +526,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
             setup.block_number,
         ),
         channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
     )
@@ -536,6 +557,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
             message_identifier=message_identifier,
         ),
         channelidentifiers_to_channels=setup.channel_map,
+        nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
     )
