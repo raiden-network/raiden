@@ -4,8 +4,6 @@ import string
 from functools import singledispatch
 from typing import NamedTuple
 
-from coincurve import PrivateKey
-
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer
 from raiden.transfer import balance_proof, channel
@@ -105,16 +103,15 @@ def make_secret(i: int = EMPTY) -> bytes:
         return make_32bytes()
 
 
-def make_privatekey(privatekey_bin: bytes = EMPTY) -> PrivateKey:
-    privatekey_bin = if_empty(privatekey_bin, make_privatekey_bin())
-    return PrivateKey(privatekey_bin)
+def make_privatekey(privatekey_bin: bytes = EMPTY) -> bytes:
+    return if_empty(privatekey_bin, make_privatekey_bin())
 
 
 def make_privatekey_address(
-        privatekey: PrivateKey = EMPTY,
-) -> typing.Tuple[PrivateKey, typing.Address]:
+        privatekey: bytes = EMPTY,
+) -> typing.Tuple[bytes, typing.Address]:
     privatekey = if_empty(privatekey, make_privatekey())
-    address = LocalSigner(privatekey).address
+    address = privatekey_to_address(privatekey)
     return privatekey, address
 
 
@@ -299,7 +296,7 @@ def make_signed_transfer(
         channel_identifier: typing.ChannelID = EMPTY,
         token_network_address: typing.TokenNetworkID = EMPTY,
         token: typing.TargetAddress = EMPTY,
-        pkey: PrivateKey = EMPTY,
+        pkey: bytes = EMPTY,
         sender: typing.Address = EMPTY,
 ) -> LockedTransferSignedState:
 
@@ -364,7 +361,7 @@ def make_signed_balance_proof(
         channel_identifier: typing.ChannelID = EMPTY,
         locksroot: typing.Locksroot = EMPTY,
         extra_hash: typing.Keccak256 = EMPTY,
-        private_key: PrivateKey = EMPTY,
+        private_key: bytes = EMPTY,
         sender_address: typing.Address = EMPTY,
 ) -> BalanceProofSignedState:
 
@@ -433,20 +430,20 @@ UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = b'initiatorinitiatorin'
 UNIT_TRANSFER_TARGET = b'targettargettargetta'
 UNIT_TRANSFER_PKEY_BIN = sha3(b'transfer pkey')
-UNIT_TRANSFER_PKEY = PrivateKey(UNIT_TRANSFER_PKEY_BIN)
+UNIT_TRANSFER_PKEY = UNIT_TRANSFER_PKEY_BIN
 UNIT_TRANSFER_SENDER = privatekey_to_address(sha3(b'transfer pkey'))
-HOP1_KEY = PrivateKey(b'11111111111111111111111111111111')
-HOP2_KEY = PrivateKey(b'22222222222222222222222222222222')
-HOP3_KEY = PrivateKey(b'33333333333333333333333333333333')
-HOP4_KEY = PrivateKey(b'44444444444444444444444444444444')
-HOP5_KEY = PrivateKey(b'55555555555555555555555555555555')
-HOP6_KEY = PrivateKey(b'66666666666666666666666666666666')
-HOP1 = privatekey_to_address(b'11111111111111111111111111111111')
-HOP2 = privatekey_to_address(b'22222222222222222222222222222222')
-HOP3 = privatekey_to_address(b'33333333333333333333333333333333')
-HOP4 = privatekey_to_address(b'44444444444444444444444444444444')
-HOP5 = privatekey_to_address(b'55555555555555555555555555555555')
-HOP6 = privatekey_to_address(b'66666666666666666666666666666666')
+HOP1_KEY = b'11111111111111111111111111111111'
+HOP2_KEY = b'22222222222222222222222222222222'
+HOP3_KEY = b'33333333333333333333333333333333'
+HOP4_KEY = b'44444444444444444444444444444444'
+HOP5_KEY = b'55555555555555555555555555555555'
+HOP6_KEY = b'66666666666666666666666666666666'
+HOP1 = privatekey_to_address(HOP1_KEY)
+HOP2 = privatekey_to_address(HOP2_KEY)
+HOP3 = privatekey_to_address(HOP3_KEY)
+HOP4 = privatekey_to_address(HOP4_KEY)
+HOP5 = privatekey_to_address(HOP5_KEY)
+HOP6 = privatekey_to_address(HOP6_KEY)
 UNIT_CHAIN_ID = 337
 ADDR = b'addraddraddraddraddr'
 UNIT_TRANSFER_DESCRIPTION = make_transfer_description(secret=UNIT_SECRET)
@@ -528,7 +525,7 @@ def _(properties, defaults=None) -> TransactionExecutionStatus:
 
 class NettingChannelEndStateProperties(NamedTuple):
     address: typing.Address = EMPTY
-    privatekey: PrivateKey = EMPTY
+    privatekey: bytes = EMPTY
     balance: typing.TokenAmount = EMPTY
     merkletree_leaves: typing.MerkleTreeLeaves = EMPTY
     merkletree_width: int = EMPTY
@@ -633,7 +630,7 @@ class BalanceProofSignedStateProperties(NamedTuple):
     message_hash: typing.AdditionalHash = EMPTY
     signature: typing.Signature = EMPTY
     sender: typing.Address = EMPTY
-    pkey: PrivateKey = EMPTY
+    pkey: bytes = EMPTY
 
 
 BALANCE_PROOF_SIGNED_STATE_DEFAULTS = BalanceProofSignedStateProperties(
@@ -718,7 +715,7 @@ class LockedTransferSignedStateProperties(NamedTuple):
     transfer: LockedTransferProperties = EMPTY
     sender: typing.Address = EMPTY
     recipient: typing.Address = EMPTY
-    pkey: PrivateKey = EMPTY
+    pkey: bytes = EMPTY
     message_identifier: typing.MessageID = EMPTY
 
 
@@ -811,7 +808,7 @@ def make_signed_transfer_for(
         valid = channel_state.reveal_timeout < expiration < channel_state.settle_timeout
         assert valid, 'Expiration must be between reveal_timeout and settle_timeout.'
 
-    assert privatekey_to_address(properties.pkey.secret) == properties.sender
+    assert privatekey_to_address(properties.pkey) == properties.sender
 
     if properties.sender == channel_state.our_state.address:
         recipient = channel_state.partner_state.address
@@ -870,7 +867,7 @@ def make_signed_transfer_for(
 def pkeys_from_channel_state(
         properties: NettingChannelStateProperties,
         defaults: NettingChannelStateProperties = NETTING_CHANNEL_STATE_DEFAULTS,
-) -> typing.Tuple[typing.Optional[PrivateKey], typing.Optional[PrivateKey]]:
+) -> typing.Tuple[typing.Optional[bytes], typing.Optional[bytes]]:
 
     our_key = None
     if properties.our_state is not EMPTY:
@@ -895,8 +892,8 @@ class ChannelSet:
     def __init__(
             self,
             channels: typing.List[NettingChannelState],
-            our_privatekeys: typing.List[PrivateKey],
-            partner_privatekeys: typing.List[PrivateKey],
+            our_privatekeys: typing.List[bytes],
+            partner_privatekeys: typing.List[bytes],
     ):
         self.channels = channels
         self.our_privatekeys = our_privatekeys

@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Union
+from typing import Callable
 
-from coincurve import PrivateKey
 from eth_keys import keys
 from eth_keys.exceptions import BadSignature
 from eth_utils import keccak, to_checksum_address
@@ -81,12 +80,10 @@ class Signer(ABC):
 
 
 class LocalSigner(Signer):
-    """ Concrete Signer implementation using a local raw or coincurve private key """
+    """ Concrete Signer implementation using a local private key """
     private_key: keys.PrivateKey
 
-    def __init__(self, private_key: Union[bytes, PrivateKey]) -> None:
-        if isinstance(private_key, PrivateKey):
-            private_key = private_key.secret
+    def __init__(self, private_key: bytes) -> None:
         self.private_key = keys.PrivateKey(private_key)
         self.address = self.private_key.public_key.to_canonical_address()
 
