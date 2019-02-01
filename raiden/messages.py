@@ -27,7 +27,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import HashTimeLockState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3, typing
-from raiden.utils.signing import eth_recover, eth_sign
+from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -232,10 +232,10 @@ class SignedMessage(Message):
         # this slice must be from the end of the buffer
         return packed.data[:-field.size_bytes]
 
-    def sign(self, private_key):
-        """ Sign message using `private_key`. """
+    def sign(self, signer: Signer):
+        """ Sign message using signer. """
         message_data = self._data_to_sign()
-        self.signature = eth_sign(privkey=private_key, data=message_data)
+        self.signature = signer.sign(data=message_data)
 
     @property
     @cached(_senders_cache, key=attrgetter('signature'))
@@ -246,7 +246,7 @@ class SignedMessage(Message):
         message_signature = self.signature
 
         try:
-            address: Optional[Address] = eth_recover(
+            address: Optional[Address] = recover(
                 data=data_that_was_signed,
                 signature=message_signature,
             )

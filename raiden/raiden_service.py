@@ -53,15 +53,9 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import (
-    create_default_identifier,
-    lpex,
-    pex,
-    privatekey_to_address,
-    random_secret,
-    sha3,
-)
+from raiden.utils import create_default_identifier, lpex, pex, random_secret, sha3
 from raiden.utils.runnable import Runnable
+from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Address,
     BlockNumber,
@@ -234,12 +228,13 @@ class RaidenService(Runnable):
         self.query_start_block = query_start_block
         self.default_secret_registry = default_secret_registry
         self.config = config
+
+        self.signer: Signer = LocalSigner(private_key_bin)
         self.privkey = private_key_bin
-        self.address = privatekey_to_address(private_key_bin)
+        self.address = self.signer.address
         self.discovery = discovery
 
         self.private_key = PrivateKey(private_key_bin)
-        self.pubkey = self.private_key.public_key.format(compressed=False)
         self.transport = transport
 
         self.blockchain_events = BlockchainEvents()
@@ -678,7 +673,7 @@ class RaidenService(Runnable):
         if not isinstance(message, SignedMessage):
             raise ValueError('{} is not signable.'.format(repr(message)))
 
-        message.sign(self.private_key)
+        message.sign(self.signer)
 
     def install_all_blockchain_filters(
             self,
