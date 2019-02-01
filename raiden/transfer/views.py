@@ -481,8 +481,8 @@ def get_transfer_task(chain_state: ChainState, secrethash: SecretHash):
     return chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
 
-def get_all_transfer_tasks(chain_state: ChainState) -> List:
-    return list(chain_state.payment_mapping.secrethashes_to_task.values())
+def get_all_transfer_tasks(chain_state: ChainState) -> Dict:
+    return chain_state.payment_mapping.secrethashes_to_task
 
 
 def list_channelstate_for_tokennetwork(
