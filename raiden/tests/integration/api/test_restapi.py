@@ -15,13 +15,13 @@ from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, 
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
+from raiden.utils import sha3
 from raiden.waiting import wait_for_transfer_success
 from raiden_contracts.constants import (
     CONTRACT_HUMAN_STANDARD_TOKEN,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
-from raiden.utils import sha3
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
