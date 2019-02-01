@@ -7,6 +7,7 @@ from raiden.tests.utils import factories
 from raiden.transfer import node
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state_change import ActionInitChain
+from raiden.utils.signer import LocalSigner
 
 
 class MockTokenNetwork:
@@ -42,6 +43,7 @@ class MockRaidenService:
     def __init__(self, message_handler=None, state_transition=None):
         self.chain = MockChain()
         self.private_key, self.address = factories.make_privatekey_address()
+        self.signer = LocalSigner(self.private_key)
 
         self.chain.node_address = self.address
         self.message_handler = message_handler
@@ -71,4 +73,4 @@ class MockRaidenService:
         pass
 
     def sign(self, message):
-        message.sign(self.private_key)
+        message.sign(self.signer)

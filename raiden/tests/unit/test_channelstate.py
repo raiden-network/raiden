@@ -61,6 +61,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.utils import random_secret, sha3
+from raiden.utils.signer import LocalSigner
 
 PartnerStateModel = namedtuple(
     'PartnerStateModel',
@@ -452,6 +453,7 @@ def test_channelstate_receive_lockedtransfer():
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
+    signer2 = LocalSigner(privkey2)
     channel_state = create_channel_from_models(our_model1, partner_model1)
 
     # Step 1: Simulate receiving a transfer
@@ -517,7 +519,7 @@ def test_channelstate_receive_lockedtransfer():
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
     )
-    unlock_message.sign(privkey2)
+    unlock_message.sign(signer2)
     # Let's also create an invalid secret to test unlock with invalid chain id
     invalid_unlock_message = Unlock(
         chain_id=UNIT_CHAIN_ID + 1,
@@ -531,7 +533,7 @@ def test_channelstate_receive_lockedtransfer():
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
     )
-    invalid_unlock_message.sign(privkey2)
+    invalid_unlock_message.sign(signer2)
 
     balance_proof = balanceproof_from_envelope(unlock_message)
     unlock_state_change = ReceiveUnlock(
@@ -825,6 +827,7 @@ def test_interwoven_transfers():
 
     our_model, _ = create_model(70)
     partner_model, privkey2 = create_model(balance_for_all_transfers)
+    signer2 = LocalSigner(privkey2)
     channel_state = create_channel_from_models(our_model, partner_model)
 
     block_number = 1000
@@ -930,7 +933,7 @@ def test_interwoven_transfers():
                 locksroot=locksroot,
                 secret=lock_secret,
             )
-            unlock_message.sign(privkey2)
+            unlock_message.sign(signer2)
 
             balance_proof = balanceproof_from_envelope(unlock_message)
             unlock_state_change = ReceiveUnlock(

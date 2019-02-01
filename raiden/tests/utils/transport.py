@@ -17,7 +17,7 @@ from twisted.internet import defer
 
 from raiden.network.utils import get_free_port
 from raiden.utils.http import HTTPExecutor
-from raiden.utils.signing import eth_recover
+from raiden.utils.signer import recover
 
 _SYNAPSE_BASE_DIR_VAR_NAME = 'RAIDEN_TESTS_SYNAPSE_BASE_DIR'
 _SYNAPSE_LOGS_PATH = os.environ.get('RAIDEN_TESTS_SYNAPSE_LOGS_DIR', False)
@@ -91,7 +91,7 @@ class EthAuthProvider(object):
         user_addr_hex = user_match.group(1)
         user_addr = unhexlify(user_addr_hex[2:])
 
-        rec_addr = eth_recover(data=self.hs_hostname.encode(), signature=signature)
+        rec_addr = recover(data=self.hs_hostname.encode(), signature=signature)
         if not rec_addr or rec_addr != user_addr:
             self.log.error(
                 'invalid account password/signature. user=%r, signer=%r',
