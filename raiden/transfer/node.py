@@ -183,6 +183,7 @@ def subdispatch_to_paymenttask(
                     sub_task.mediator_state,
                     state_change,
                     token_network_state.channelidentifiers_to_channels,
+                    chain_state.nodeaddresses_to_networkstates,
                     pseudo_random_generator,
                     block_number,
                 )
@@ -299,6 +300,7 @@ def subdispatch_mediatortask(
             mediator_state,
             state_change,
             token_network_state.channelidentifiers_to_channels,
+            chain_state.nodeaddresses_to_networkstates,
             pseudo_random_generator,
             block_number,
         )
@@ -568,6 +570,15 @@ def handle_node_change_network_state(
     node_address = state_change.node_address
     network_state = state_change.network_state
     chain_state.nodeaddresses_to_networkstates[node_address] = network_state
+
+    for secrethash, subtask in chain_state.payment_mapping.secrethashes_to_task.items():
+        result = subdispatch_mediatortask(
+            chain_state=chain_state,
+            state_change=state_change,
+            secrethash=secrethash,
+            token_network_identifier=subtask.token_network_identifier,
+        )
+        events.extend(result.events)
 
     return TransitionResult(chain_state, events)
 
