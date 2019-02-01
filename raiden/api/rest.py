@@ -41,9 +41,9 @@ from raiden.api.v1.resources import (
     ChannelsResourceByTokenAndPartnerAddress,
     ConnectionsInfoResource,
     ConnectionsResource,
-    PendingTransfersResource,
     PartnersResourceByTokenAddress,
     PaymentResource,
+    PendingTransfersResource,
     RaidenInternalEventsResource,
     RegisterTokenResource,
     TokensResource,
@@ -98,6 +98,7 @@ ERROR_STATUS_CODES = [
     HTTPStatus.NOT_IMPLEMENTED,
     HTTPStatus.INTERNAL_SERVER_ERROR,
 ]
+
 
 URLS_V1 = [
     (

@@ -81,16 +81,43 @@ def event_filter_for_payments(
     return sent_and_target_matches or received_and_initiator_matches
 
 
-def transfer_data_from_transfer_task(transfer_task):
+def transfer_data_from_transfer(transfer) -> typing.Dict[str, typing.Any]:
+    return {
+        'payment_identifier': str(transfer.payment_identifier),
+        'token_address': to_checksum_address(transfer.token),
+        'token_network_identifier': to_checksum_address(
+            transfer.balance_proof.token_network_identifier,
+        ),
+        'channel_identifier': str(transfer.balance_proof.channel_identifier),
+        'initiator': to_checksum_address(transfer.initiator),
+        'target': to_checksum_address(transfer.target),
+        'transferred_amount': str(transfer.balance_proof.transferred_amount),
+        'locked_amount': str(transfer.balance_proof.locked_amount),
+    }
+
+
+def transfer_data_from_transfer_task(secrethash, transfer_task):
     role = views.role_from_transfer_task(transfer_task)
 
     if role == 'initiator':
-        transfer_data = transfer_task.manager_state.initiator.transfer_description.to_dict()
+        transfer_data = transfer_data_from_transfer(
+            transfer_task.manager_state.initiator_transfers[secrethash].transfer,
+        )
+
     elif role == 'mediator':
-        transfer_data = transfer_task.mediator_state.to_dict()
-        transfer_data['number_of_pairs'] = len(transfer_data.pop('transfers_pair'))
+        pairs = transfer_task.mediator_state.transfers_pair
+        if pairs:
+            transfer_data = transfer_data_from_transfer(pairs[-1].payer_transfer)
+        elif transfer_task.mediator_state.waiting_transfer:
+            transfer_data = transfer_data_from_transfer(
+                transfer_task.mediator_state.waiting_transfer.transfer,
+            )
+        else:
+            transfer_data = dict()
+
     elif role == 'target':
-        transfer_data = transfer_task.target_state.transfer.to_dict()
+        transfer_data = transfer_data_from_transfer(transfer_task.target_state.transfer)
+
     else:
         return None
 
@@ -868,5 +895,7 @@ class RaidenAPI:
     def get_pending_transfers(self):
         chain_state = views.state_from_raiden(self.raiden)
         transfer_tasks = views.get_all_transfer_tasks(chain_state)
-        return [transfer_data_from_transfer_task(task) for task in transfer_tasks]
-
+        return [
+            transfer_data_from_transfer_task(secrethash, task)
+            for secrethash, task in transfer_tasks.items()
+        ]
