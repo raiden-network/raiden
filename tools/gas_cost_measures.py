@@ -2,7 +2,6 @@ from os import urandom
 
 # increase block gas limit
 import eth_tester.backends.pyevm.main as pyevm_main
-from coincurve import PrivateKey
 from eth_tester import EthereumTester, PyEVMBackend
 from eth_utils import encode_hex
 from web3 import EthereumTesterProvider, Web3
@@ -22,11 +21,10 @@ class ContractTester:
         self.tester = EthereumTester(PyEVMBackend())
         self.web3 = Web3(EthereumTesterProvider(self.tester))
         if generate_keys > 0:
-            generated_keys = [urandom(32) for _ in range(generate_keys)]
-            self.private_keys = [PrivateKey(key) for key in generated_keys]
+            self.private_keys = [urandom(32) for _ in range(generate_keys)]
             self.accounts = [
-                self.tester.add_account(f'{encode_hex(key)}')
-                for key in generated_keys
+                self.tester.add_account(encode_hex(key))
+                for key in self.private_keys
             ]
             for account in self.accounts:
                 self.tester.send_transaction({
