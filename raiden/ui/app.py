@@ -249,7 +249,6 @@ def run_app(
     )
 
     blockchain_service = BlockChainService(
-        privatekey_bin=privatekey_bin,
         jsonrpc_client=rpc_client,
         # Not giving the contract manager here, but injecting it later
         # since we first need blockchain service to calculate the network id

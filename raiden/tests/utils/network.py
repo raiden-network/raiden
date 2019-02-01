@@ -15,7 +15,7 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils import merge_dict, privatekey_to_address
+from raiden.utils import merge_dict
 from raiden.waiting import wait_for_payment_network
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
@@ -290,13 +290,12 @@ def create_apps(
 ):
     """ Create the apps."""
     # pylint: disable=too-many-locals
-    services = zip(blockchain_services, endpoint_discovery_services)
+    services = zip(blockchain_services, endpoint_discovery_services, raiden_udp_ports)
 
     apps = []
-    for idx, (blockchain, discovery) in enumerate(services):
-        port = raiden_udp_ports[idx]
-        private_key = blockchain.private_key
-        address = privatekey_to_address(private_key)
+    for idx, (blockchain, discovery, port) in enumerate(services):
+        private_key = blockchain.client.privkey
+        address = blockchain.client.address
 
         host = '127.0.0.1'
 
@@ -406,7 +405,6 @@ def jsonrpc_services(
     for privkey in private_keys:
         rpc_client = JSONRPCClient(web3, privkey)
         blockchain = BlockChainService(
-            privatekey_bin=privkey,
             jsonrpc_client=rpc_client,
             contract_manager=contract_manager,
         )
