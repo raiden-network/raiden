@@ -133,4 +133,4 @@ ChannelMap = Dict[ChannelID, 'NettingChannelState']
 
 InitiatorTransfersMap = Dict[SecretHash, 'InitiatorTransferState']
 
-NodeNetworkStateMap = Dict[SecretHash, str]
+NodeNetworkStateMap = Dict[Address, str]
