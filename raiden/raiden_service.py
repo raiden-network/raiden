@@ -189,8 +189,8 @@ class PaymentStatus(NamedTuple):
     amount: TokenAmount
     token_network_identifier: TokenNetworkID
     payment_done: AsyncResult
-    secret: Secret
-    secret_hash: SecretHash
+    secret: Secret = None
+    secret_hash: SecretHash = None
 
     def matches(
             self,

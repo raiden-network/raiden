@@ -21,6 +21,7 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
+from raiden.utils import sha3
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -926,7 +927,13 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
     response = request.send().response
     assert_proper_response(response)
     response = response.json()
-    assert response == payment
+    # make sure that payment key/values are part of the response.
+    assert response.items() >= payment.items()
+    assert 'secret' in response
+    assert 'secret_hash' in response
+    assert len(response['secret']) == 64
+    assert len(response['secret_hash']) == 64
+    assert sha3(bytes.fromhex(response['secret'])).hex() == response['secret_hash']
 
 
 def assert_payment_conflict(responses):
