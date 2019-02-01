@@ -840,6 +840,99 @@ def test_pfs_global_messages(
     transport.get()
 
 
+def test_matrix_invite_private_room_happy_case(
+        local_matrix_servers,
+        private_rooms,
+        retry_interval,
+        retries_before_backoff,
+):
+
+    transport0 = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [],
+        'private_rooms': private_rooms,
+    })
+    transport1 = MatrixTransport({
+        'discovery_room': 'discovery',
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [],
+        'private_rooms': private_rooms,
+    })
+
+    received_messages = set()
+
+    message_handler = MessageHandler(received_messages)
+    raiden_service0 = MockRaidenService(message_handler)
+    raiden_service1 = MockRaidenService(message_handler)
+
+    raiden_service0.handle_state_change = MagicMock()
+    raiden_service1.handle_state_change = MagicMock()
+
+    transport0.start(
+        raiden_service0,
+        message_handler,
+        None,
+    )
+    transport1.start(
+        raiden_service1,
+        message_handler,
+        None,
+    )
+
+    gevent.sleep(1)
+
+    latest_auth_data_node0 = f'{transport1._user_id}/{transport1._client.api.token}'
+    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node0)
+    raiden_service1.handle_state_change.assert_called_with(update_transport_auth_data)
+
+    latest_auth_data_node1 = f'{transport0._user_id}/{transport0._client.api.token}'
+    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node1)
+    raiden_service0.handle_state_change.assert_called_with(update_transport_auth_data)
+
+    transport0.start_health_check(transport1._raiden_service.address)
+    transport1.start_health_check(transport0._raiden_service.address)
+
+    user_id_1 = transport0._address_to_userids[raiden_service1.address].pop()
+    user_1 = transport0._get_user(user_id_1)
+
+    transport0._get_private_room([user_1])
+    gevent.sleep(1)
+
+    room_id = transport1._get_room_for_address( raiden_service0.address).room_id
+
+    room_state_1 = transport1._client.api.get_room_state(room_id)
+
+    join_rule_1 = [
+        event['content'].get('join_rule')
+        for event in room_state_1
+        if event['type'] == 'm.room.join_rules'
+    ][0]
+
+    assert join_rule_1 == 'invite'
+
+    room_state_0 = transport0._client.api.get_room_state(room_id)
+
+    join_rule_0 = [
+        event['content'].get('join_rule')
+        for event in room_state_0
+        if event['type'] == 'm.room.join_rules'
+    ][0]
+
+    assert join_rule_0 == 'invite'
+
+    transport0.stop()
+    transport1.stop()
+    transport0.get()
+    transport1.get()
+
+
 @pytest.mark.parametrize('private_rooms', [[True, True]])
 @pytest.mark.parametrize('matrix_server_count', [2])
 @pytest.mark.parametrize('number_of_transports', [2])
