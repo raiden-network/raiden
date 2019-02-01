@@ -7,7 +7,6 @@ from typing import Dict, List, NamedTuple, Union
 import filelock
 import gevent
 import structlog
-from coincurve import PrivateKey
 from eth_utils import is_binary_address
 from gevent.event import AsyncResult, Event
 from gevent.lock import Semaphore
@@ -225,12 +224,9 @@ class RaidenService(Runnable):
         self.default_secret_registry = default_secret_registry
         self.config = config
 
-        self.privkey = self.chain.client.privkey
-        self.signer: Signer = LocalSigner(self.privkey)
+        self.signer: Signer = LocalSigner(self.chain.client.privkey)
         self.address = self.signer.address
         self.discovery = discovery
-
-        self.private_key = PrivateKey(self.privkey)
         self.transport = transport
 
         self.blockchain_events = BlockchainEvents()
