@@ -59,7 +59,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import pex
 from raiden.utils.runnable import Runnable
-from raiden.utils.signing import eth_recover, eth_sign
 from raiden.utils.typing import (
     Address,
     AddressHex,
@@ -1307,18 +1306,11 @@ class MatrixTransport(Runnable):
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """
-        return eth_sign(
-            privkey=self._raiden_service.private_key,
-            data=data,
-        )
+        return self._raiden_service.signer.sign(data=data)
 
-    @staticmethod
-    def _recover(data: bytes, signature: bytes) -> Address:
+    def _recover(self, data: bytes, signature: bytes) -> Address:
         """ Use eth_sign compatible hasher to recover address from signed data """
-        return eth_recover(
-            data=data,
-            signature=signature,
-        )
+        return self._raiden_service.signer.recover(data=data, signature=signature)
 
     def _validate_userid_signature(self, user: User) -> Optional[Address]:
         """ Validate a userId format and signature on displayName, and return its address"""
