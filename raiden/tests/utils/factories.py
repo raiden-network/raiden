@@ -33,7 +33,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import privatekey_to_address, publickey_to_address, random_secret, sha3, typing
-from raiden.utils.signing import eth_sign
+from raiden.utils.signer import LocalSigner
 
 EMPTY = object()
 
@@ -320,6 +320,7 @@ def make_signed_transfer(
     token_network_address = if_empty(token_network_address, UNIT_TOKEN_NETWORK_ADDRESS)
     token = if_empty(token, UNIT_TOKEN_ADDRESS)
     pkey = if_empty(pkey, UNIT_TRANSFER_PKEY)
+    signer = LocalSigner(pkey)
     sender = if_empty(sender, UNIT_TRANSFER_SENDER)
 
     assert locked_amount >= amount
@@ -350,7 +351,7 @@ def make_signed_transfer(
         target=target,
         initiator=initiator,
     )
-    transfer.sign(pkey)
+    transfer.sign(signer)
     assert transfer.sender == sender
 
     return lockedtransfersigned_from_message(transfer)
@@ -377,6 +378,7 @@ def make_signed_balance_proof(
     extra_hash = if_empty(extra_hash, make_keccak_hash())
     private_key = if_empty(private_key, make_privatekey())
     sender_address = if_empty(sender_address, make_address())
+    signer = LocalSigner(private_key)
 
     balance_hash = hash_balance_data(
         transferred_amount=transferred_amount,
@@ -392,7 +394,7 @@ def make_signed_balance_proof(
         chain_id=UNIT_CHAIN_ID,
     )
 
-    signature = eth_sign(privkey=private_key, data=data_to_sign)
+    signature = signer.sign(data=data_to_sign)
 
     return BalanceProofSignedState(
         nonce=nonce,
@@ -649,6 +651,7 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
     params.update(
         _properties_to_dict(params.pop('balance_proof'), defaults.balance_proof),
     )
+    signer = LocalSigner(params.pop('pkey'))
 
     if params['signature'] is EMPTY:
         keys = ('transferred_amount', 'locked_amount', 'locksroot')
@@ -662,7 +665,7 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
             **_partial_dict(params, *keys),
         )
 
-        params['signature'] = eth_sign(privkey=params.pop('pkey'), data=data_to_sign)
+        params['signature'] = signer.sign(data=data_to_sign)
 
     return BalanceProofSignedState(**params)
 
@@ -747,6 +750,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     )
 
     pkey = params.pop('pkey')
+    signer = LocalSigner(pkey)
     sender = params.pop('sender')
     params.update(transfer_params)
     params.update(balance_proof_params)
@@ -755,7 +759,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
         params['locksroot'] = lock.lockhash
 
     locked_transfer = LockedTransfer(lock=lock, **params)
-    locked_transfer.sign(pkey)
+    locked_transfer.sign(signer)
 
     assert locked_transfer.sender == sender
 

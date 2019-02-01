@@ -5,7 +5,6 @@ import pytest
 from raiden.constants import UINT64_MAX
 from raiden.messages import RevealSecret, SecretRequest, Unlock
 from raiden.tests.utils.factories import (
-    HOP1,
     HOP1_KEY,
     UNIT_CHAIN_ID,
     UNIT_SECRET,
@@ -15,6 +14,7 @@ from raiden.tests.utils.factories import (
 from raiden.tests.utils.messages import make_refund_transfer
 from raiden.tests.utils.transfer import sign_and_inject
 from raiden.transfer import views
+from raiden.utils.signer import LocalSigner
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -30,7 +30,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     )
 
     other_key = HOP1_KEY
-    other_address = HOP1
+    other_signer = LocalSigner(other_key)
     channel_identifier = make_channel_identifier()
 
     amount = 10
@@ -46,7 +46,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         amount=amount,
         secrethash=UNIT_SECRETHASH,
     )
-    sign_and_inject(refund_transfer_message, other_key, other_address, app0)
+    sign_and_inject(refund_transfer_message, other_signer, app0)
 
     unlock = Unlock(
         chain_id=UNIT_CHAIN_ID,
@@ -60,7 +60,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         locksroot=UNIT_SECRETHASH,
         secret=UNIT_SECRET,
     )
-    sign_and_inject(unlock, other_key, other_address, app0)
+    sign_and_inject(unlock, other_signer, app0)
 
     secret_request_message = SecretRequest(
         message_identifier=random.randint(0, UINT64_MAX),
@@ -69,10 +69,10 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         amount=1,
         expiration=refund_transfer_message.lock.expiration,
     )
-    sign_and_inject(secret_request_message, other_key, other_address, app0)
+    sign_and_inject(secret_request_message, other_signer, app0)
 
     reveal_secret_message = RevealSecret(
         message_identifier=random.randint(0, UINT64_MAX),
         secret=UNIT_SECRET,
     )
-    sign_and_inject(reveal_secret_message, other_key, other_address, app0)
+    sign_and_inject(reveal_secret_message, other_signer, app0)

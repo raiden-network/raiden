@@ -16,6 +16,7 @@ from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_Q
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state_change import ActionUpdateTransportAuthData
 from raiden.utils import pex
+from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List, Optional, Union
 from raiden_libs.network.matrix import Room
 
@@ -113,7 +114,7 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
             amount=1,
             expiration=10,
         )
-        message.sign(HOP1_KEY)
+        message.sign(LocalSigner(HOP1_KEY))
         data = message.encode()
         if convert_to_hex:
             data = '0x' + data.hex()
@@ -258,7 +259,7 @@ def test_matrix_message_sync(
 
     for i in range(5):
         message = Processed(i)
-        message.sign(transport0._raiden_service.private_key)
+        transport0._raiden_service.sign(message)
         transport0.send_async(
             queue_identifier,
             message,
@@ -277,7 +278,7 @@ def test_matrix_message_sync(
     # Send more messages while the other end is offline
     for i in range(10, 15):
         message = Processed(i)
-        message.sign(transport0._raiden_service.private_key)
+        transport0._raiden_service.sign(message)
         transport0.send_async(
             queue_identifier,
             message,
@@ -351,7 +352,7 @@ def test_matrix_message_retry(
 
     # Send the initial message
     message = Processed(0)
-    message.sign(transport._raiden_service.private_key)
+    transport._raiden_service.sign(message)
     chain_state.queueids_to_queues[queueid] = [message]
     retry_queue.enqueue_global(message)
 
@@ -462,7 +463,7 @@ def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval
         channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     )
     message = Processed(0)
-    message.sign(raiden_service0.private_key)
+    raiden_service0.sign(message)
 
     transport0.send_async(queueid1, message)
     transport0.send_async(queueid2, message)
