@@ -333,7 +333,7 @@ def test_insufficient_funds(raiden_network, token_addresses, deposit):
         deposit + 1,
         target=app1.raiden.address,
     )
-    assert not result
+    assert not result.payment_done.get()
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])

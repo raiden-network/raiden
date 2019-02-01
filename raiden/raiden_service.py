@@ -743,7 +743,7 @@ class RaidenService(Runnable):
             amount: TokenAmount,
             target: TargetAddress,
             identifier: PaymentID,
-    ) -> AsyncResult:
+    ) -> PaymentStatus:
         """ Transfer `amount` between this node and `target`.
 
         This method will start an asynchronous transfer, the transfer might fail
@@ -756,7 +756,7 @@ class RaidenService(Runnable):
         """
 
         secret = random_secret()
-        async_result = self.start_mediated_transfer_with_secret(
+        payment_status = self.start_mediated_transfer_with_secret(
             token_network_identifier,
             amount,
             target,
@@ -764,7 +764,7 @@ class RaidenService(Runnable):
             secret,
         )
 
-        return async_result
+        return payment_status
 
     def start_mediated_transfer_with_secret(
             self,
@@ -773,7 +773,7 @@ class RaidenService(Runnable):
             target: TargetAddress,
             identifier: PaymentID,
             secret: Secret,
-    ) -> AsyncResult:
+    ) -> PaymentStatus:
 
         secret_hash = sha3(secret)
         if self.default_secret_registry.check_registered(secret_hash):
@@ -799,7 +799,7 @@ class RaidenService(Runnable):
                         'Another payment with the same id is in flight',
                     )
 
-                return payment_status.payment_done
+                return payment_status
 
             payment_status = PaymentStatus(
                 payment_identifier=identifier,
@@ -824,7 +824,7 @@ class RaidenService(Runnable):
         # wal entry.
         self.handle_state_change(init_initiator_statechange)
 
-        return payment_status.payment_done
+        return payment_status
 
     def mediate_mediated_transfer(self, transfer: LockedTransfer):
         init_mediator_statechange = mediator_init(self, transfer)

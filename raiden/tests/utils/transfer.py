@@ -53,13 +53,13 @@ def transfer(initiator_app, target_app, token, amount, identifier):
         payment_network_identifier,
         token,
     )
-    async_result = initiator_app.raiden.mediated_transfer_async(
+    payment_status = initiator_app.raiden.mediated_transfer_async(
         token_network_identifier,
         amount,
         target_app.raiden.address,
         identifier,
     )
-    assert async_result.wait()
+    assert payment_status.payment_done.wait()
 
 
 def mediated_transfer(
@@ -75,13 +75,13 @@ def mediated_transfer(
     The secret will be revealed and the apps will be synchronized."""
     # pylint: disable=too-many-arguments
 
-    async_result = initiator_app.raiden.mediated_transfer_async(
+    payment_status = initiator_app.raiden.mediated_transfer_async(
         token_network_identifier,
         amount,
         target_app.raiden.address,
         identifier,
     )
-    assert async_result.wait(timeout), f'timeout for transfer id={identifier}'
+    assert payment_status.payment_done.wait(timeout), f'timeout for transfer id={identifier}'
     gevent.sleep(0.3)  # let the other nodes synch
 
 
