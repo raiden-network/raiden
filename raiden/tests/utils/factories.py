@@ -20,6 +20,7 @@ from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
 from raiden.transfer.merkle_tree import compute_layers, merkleroot
 from raiden.transfer.state import (
     EMPTY_MERKLE_ROOT,
+    NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     MerkleTreeState,
@@ -908,6 +909,10 @@ class ChannelSet:
     def channel_map(self) -> typing.ChannelMap:
         return {channel.identifier: channel for channel in self.channels}
 
+    @property
+    def nodeaddresses_to_networkstates(self) -> typing.NodeNetworkStateMap:
+        return {address: NODE_NETWORK_REACHABLE for address in self.ADDRESSES}
+
     def our_address(self, index: int) -> typing.Address:
         return self.channels[index].our_state.address
 
@@ -1072,3 +1077,10 @@ def make_transfers_pair(
         transfers_pairs.append(pair)
 
     return MediatorTransfersPair(channels, transfers_pairs, amount, block_number)
+
+
+def make_node_availability_map(nodes):
+    return {
+        node: NODE_NETWORK_REACHABLE
+        for node in nodes
+    }
