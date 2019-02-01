@@ -2,7 +2,6 @@
 import random
 
 import gevent
-from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
@@ -22,12 +21,13 @@ from raiden.transfer.state import (
     NettingChannelState,
     balanceproof_from_envelope,
 )
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import sha3
+from raiden.utils.signer import LocalSigner, Signer
 
 
-def sign_and_inject(message, key, address, app):
+def sign_and_inject(message, signer: Signer, app):
     """Sign the message with key and inject it directly in the app transport layer."""
-    message.sign(key)
+    message.sign(signer)
     MessageHandler().on_message(app.raiden, message)
 
 
@@ -231,8 +231,7 @@ def make_mediated_transfer(
     )
     mediated_transfer_msg = LockedTransfer.from_event(lockedtransfer)
 
-    sign_key = PrivateKey(pkey)
-    mediated_transfer_msg.sign(sign_key)
+    mediated_transfer_msg.sign(LocalSigner(pkey))
 
     # compute the signature
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
@@ -270,7 +269,8 @@ def make_receive_transfer_mediated(
     if not isinstance(lock, HashTimeLockState):
         raise ValueError('lock must be of type HashTimeLockState')
 
-    address = privatekey_to_address(privkey.secret)
+    signer = LocalSigner(privkey)
+    address = signer.address
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError('Private key does not match any of the participants.')
 
@@ -307,7 +307,7 @@ def make_receive_transfer_mediated(
         target=transfer_target,
         initiator=transfer_initiator,
     )
-    mediated_transfer_msg.sign(privkey)
+    mediated_transfer_msg.sign(signer)
 
     balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
 
@@ -338,7 +338,8 @@ def make_receive_expired_lock(
     if not isinstance(lock, HashTimeLockState):
         raise ValueError('lock must be of type HashTimeLockState')
 
-    address = privatekey_to_address(privkey.secret)
+    signer = LocalSigner(privkey)
+    address = signer.address
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
         raise ValueError('Private key does not match any of the participants.')
 
@@ -363,7 +364,7 @@ def make_receive_expired_lock(
         recipient=channel_state.partner_state.address,
         secrethash=lock.secrethash,
     )
-    lock_expired_msg.sign(privkey)
+    lock_expired_msg.sign(signer)
 
     balance_proof = balanceproof_from_envelope(lock_expired_msg)
 

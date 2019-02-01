@@ -36,6 +36,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import balanceproof_from_envelope, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
+from raiden.utils.signer import LocalSigner
 
 LONG_EXPIRATION = factories.create_properties(factories.LockedTransferSignedStateProperties(
     transfer=factories.LockedTransferProperties(expiration=30),
@@ -334,7 +335,7 @@ def test_regression_mediator_task_no_routes():
     )
     assert send_lock_expired
     lock_expired_message = message_from_sendevent(send_lock_expired, HOP1)
-    lock_expired_message.sign(channels.partner_privatekeys[0])
+    lock_expired_message.sign(LocalSigner(channels.partner_privatekeys[0]))
     balance_proof = balanceproof_from_envelope(lock_expired_message)
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)
@@ -522,7 +523,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     )
     assert send_lock_expired
     expired_message = message_from_sendevent(send_lock_expired, setup.channels.our_address(0))
-    expired_message.sign(setup.channels.partner_privatekeys[0])
+    expired_message.sign(LocalSigner(setup.channels.partner_privatekeys[0]))
     balance_proof = balanceproof_from_envelope(expired_message)
 
     message_identifier = message_identifier_from_prng(pseudo_random_generator)

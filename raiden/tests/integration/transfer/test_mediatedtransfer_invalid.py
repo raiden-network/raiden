@@ -21,6 +21,7 @@ from raiden.tests.utils.transfer import (
     wait_assert,
 )
 from raiden.transfer import views
+from raiden.utils.signer import LocalSigner
 
 
 @pytest.mark.parametrize('channels_per_node', [1])
@@ -133,8 +134,7 @@ def test_receive_lockedtransfer_invalidnonce(
 
     sign_and_inject(
         mediated_transfer_message,
-        app0.raiden.private_key,
-        app0.raiden.address,
+        app0.raiden.signer,
         app1,
     )
 
@@ -188,8 +188,7 @@ def test_receive_lockedtransfer_invalidsender(
 
     sign_and_inject(
         mediated_transfer_message,
-        other_key,
-        other_address,
+        LocalSigner(other_key),
         app0,
     )
 
@@ -242,8 +241,7 @@ def test_receive_lockedtransfer_invalidrecipient(
 
     sign_and_inject(
         mediated_transfer_message,
-        app0.raiden.private_key,
-        app0.raiden.address,
+        app0.raiden.signer,
         app1,
     )
 
@@ -308,8 +306,7 @@ def test_received_lockedtransfer_closedchannel(
 
     sign_and_inject(
         mediated_transfer_message,
-        app0.raiden.private_key,
-        app0.raiden.address,
+        app0.raiden.signer,
         app1,
     )
 

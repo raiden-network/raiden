@@ -7,7 +7,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import privatekey_to_address
-from raiden.utils.signing import eth_sign
+from raiden.utils.signer import LocalSigner
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
 from raiden_libs.messages import BalanceProof
 
@@ -98,10 +98,11 @@ def test_payment_channel_proxy_basics(
         chain_id=chain_id,
         transferred_amount=transferred_amount,
     )
-    balance_proof.signature = encode_hex(eth_sign(
-        privkey=encode_hex(private_keys[1]),
-        data=balance_proof.serialize_bin(),
-    ))
+    balance_proof.signature = encode_hex(
+        LocalSigner(private_keys[1]).sign(
+            data=balance_proof.serialize_bin(),
+        ),
+    )
     # correct close
     c2_token_network_proxy.close(
         channel_identifier=channel_identifier,
@@ -195,10 +196,11 @@ def test_payment_channel_outdated_channel_close(
         chain_id=chain_id,
         transferred_amount=0,
     )
-    balance_proof.signature = encode_hex(eth_sign(
-        privkey=encode_hex(private_keys[0]),
-        data=balance_proof.serialize_bin(),
-    ))
+    balance_proof.signature = encode_hex(
+        LocalSigner(private_keys[0]).sign(
+            data=balance_proof.serialize_bin(),
+        ),
+    )
     # correct close
     token_network_proxy.close(
         channel_identifier=channel_identifier,

@@ -9,13 +9,15 @@ from raiden.tests.utils.messages import (
     make_mediated_transfer,
     make_refund_transfer,
 )
+from raiden.utils.signer import LocalSigner
 
 PRIVKEY, ADDRESS = make_privkey_address()
+signer = LocalSigner(PRIVKEY)
 
 
 def test_signature():
     ping = Ping(nonce=0, current_protocol_version=0)
-    ping.sign(PRIVKEY)
+    ping.sign(signer)
     assert ping.sender == ADDRESS
 
 
