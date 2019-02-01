@@ -1020,7 +1020,7 @@ class RestAPI:
             identifier = create_default_identifier()
 
         try:
-            transfer_result = self.raiden_api.transfer(
+            payment_status = self.raiden_api.transfer(
                 registry_address=registry_address,
                 token_address=token_address,
                 target=target_address,
@@ -1038,7 +1038,7 @@ class RestAPI:
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
-        if transfer_result is False:
+        if payment_status.payment_done is False:
             return api_error(
                 errors="Payment couldn't be completed "
                 "(insufficient funds, no route to target or target offline).",
@@ -1052,8 +1052,8 @@ class RestAPI:
             'target_address': target_address,
             'amount': amount,
             'identifier': identifier,
-            'secret': transfer_result.get('secret').hex(),
-            'secret_hash': transfer_result.get('secret_hash').hex(),
+            'secret': payment_status.secret.hex(),
+            'secret_hash': payment_status.secret_hash.hex(),
         }
         result = self.payment_schema.dump(payment)
         return api_response(result=result.data)

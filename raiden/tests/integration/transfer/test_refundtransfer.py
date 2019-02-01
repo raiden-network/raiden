@@ -59,13 +59,14 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 
     refund_amount = deposit // 2
     identifier = 1
-    async_result = app0.raiden.mediated_transfer_async(
+    payment_status = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         refund_amount,
         app2.raiden.address,
         identifier,
     )
-    assert async_result.wait() is False, 'Must fail, there are no routes available'
+    msg = 'Must fail, there are no routes available'
+    assert payment_status.payment_done.wait() is False, msg
 
     # The transfer from app0 to app2 failed, so the balances did change.
     # Since the refund is not unlocked both channels have the corresponding
@@ -169,13 +170,14 @@ def test_refund_transfer(
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
     identifier_refund = 3
     amount_refund = 50
-    async_result = app0.raiden.mediated_transfer_async(
+    payment_status = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         amount_refund,
         app2.raiden.address,
         identifier_refund,
     )
-    assert async_result.wait() is False, 'there is no path with capacity, the transfer must fail'
+    msg = 'there is no path with capacity, the transfer must fail'
+    assert payment_status.payment_done.wait() is False, msg
 
     gevent.sleep(0.2)
 
@@ -356,13 +358,14 @@ def test_different_view_of_last_bp_during_unlock(
     # app2 doesn't have capacity, so a refund will be sent on app1 -> app0
     identifier_refund = 3
     amount_refund = 50
-    async_result = app0.raiden.mediated_transfer_async(
+    payment_status = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         amount_refund,
         app2.raiden.address,
         identifier_refund,
     )
-    assert async_result.wait() is False, 'there is no path with capacity, the transfer must fail'
+    msg = 'there is no path with capacity, the transfer must fail'
+    assert payment_status.payment_done.wait() is False, msg
 
     gevent.sleep(0.2)
 
@@ -551,13 +554,14 @@ def test_refund_transfer_after_2nd_hop(
     # app2 -> app1 -> app0
     identifier_refund = 3
     amount_refund = 50
-    async_result = app0.raiden.mediated_transfer_async(
+    payment_status = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         amount_refund,
         app3.raiden.address,
         identifier_refund,
     )
-    assert async_result.wait() is False, 'there is no path with capacity, the transfer must fail'
+    msg = 'there is no path with capacity, the transfer must fail'
+    assert payment_status.payment_done.wait() is False, msg
 
     gevent.sleep(0.2)
 

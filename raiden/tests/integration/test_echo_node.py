@@ -26,13 +26,13 @@ def test_event_transfer_received_success(
 
     for num, app in enumerate([app0, app1, app2]):
         amount = 1 + num
-        transfer_event = RaidenAPI(app.raiden).transfer_async(
+        payment_status = RaidenAPI(app.raiden).transfer_async(
             app.raiden.default_registry.address,
             token_address,
             amount,
             receiver_app.raiden.address,
         )
-        transfer_event.wait(timeout=20)
+        payment_status.payment_done.wait(timeout=20)
         expected[app.raiden.address] = amount
 
     # sleep is for the receiver's node to have time to process all events
@@ -73,14 +73,14 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
     # Create some transfers
     for num, app in enumerate([app0, app1, app2]):
         amount = 1 + num
-        transfer_event = RaidenAPI(app.raiden).transfer_async(
+        payment_status = RaidenAPI(app.raiden).transfer_async(
             app.raiden.default_registry.address,
             token_address,
             amount,
             echo_app.raiden.address,
             10 ** (num + 1),
         )
-        transfer_event.wait(timeout=20)
+        payment_status.payment_done.wait(timeout=20)
         expected.append(amount)
 
     while echo_node.num_handled_transfers < len(expected):
@@ -138,44 +138,44 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     # Let 6 participants enter the pool
     amount = 7
     for num, app in enumerate([app0, app1, app2, app3, app4, app5]):
-        transfer_event = RaidenAPI(app.raiden).transfer_async(
+        payment_status = RaidenAPI(app.raiden).transfer_async(
             app.raiden.default_registry.address,
             token_address,
             amount,
             echo_app.raiden.address,
             10 ** (num + 1),
         )
-        transfer_event.wait(timeout=20)
+        payment_status.payment_done.wait(timeout=20)
         expected.append(amount)
 
     # test duplicated identifier + amount is ignored
-    transfer_event = RaidenAPI(app5.raiden).transfer_async(
+    payment_status = RaidenAPI(app5.raiden).transfer_async(
         app.raiden.default_registry.address,
         token_address,
         amount,  # same amount as before
         echo_app.raiden.address,
         10 ** 6,  # app5 used this identifier before
-    ).wait(timeout=20)
+    ).payment_done.wait(timeout=20)
 
     # test pool size querying
     pool_query_identifier = 77  # unused identifier different from previous one
-    transfer_event = RaidenAPI(app5.raiden).transfer_async(
+    payment_status = RaidenAPI(app5.raiden).transfer_async(
         app.raiden.default_registry.address,
         token_address,
         amount,
         echo_app.raiden.address,
         pool_query_identifier,
-    ).wait(timeout=20)
+    ).payment_done.wait(timeout=20)
     expected.append(amount)
 
     # fill the pool
-    transfer_event = RaidenAPI(app6.raiden).transfer_async(
+    payment_status = RaidenAPI(app6.raiden).transfer_async(
         app.raiden.default_registry.address,
         token_address,
         amount,
         echo_app.raiden.address,
         10 ** 7,
-    ).wait(timeout=20)
+    ).payment_done.wait(timeout=20)
     expected.append(amount)
 
     while echo_node.num_handled_transfers < len(expected):

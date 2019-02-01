@@ -75,13 +75,13 @@ def test_regression_unfiltered_routes(
         payment_network_identifier,
         token,
     )
-    transfer = app0.raiden.mediated_transfer_async(
+    payment_status = app0.raiden.mediated_transfer_async(
         token_network_identifier=token_network_identifier,
         amount=1,
         target=app4.raiden.address,
         identifier=1,
     )
-    assert transfer.wait()
+    assert payment_status.payment_done.wait()
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -100,13 +100,13 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
         payment_network_identifier,
         token,
     )
-    transfer = app0.raiden.mediated_transfer_async(
+    payment_status = app0.raiden.mediated_transfer_async(
         token_network_identifier,
         amount=1,
         target=app2.raiden.address,
         identifier=identifier,
     )
-    assert transfer.wait()
+    assert payment_status.payment_done.wait()
 
     event = search_for_item(
         app1.raiden.wal.storage.get_events(),
