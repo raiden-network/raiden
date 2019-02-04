@@ -70,6 +70,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         nonce=0,
         additional_hash=EMPTY_HASH,
         signature=EMPTY_SIGNATURE,
+        given_block_identifier='latest',
     )
     waiting.wait_for_close(
         raiden=app0.raiden,

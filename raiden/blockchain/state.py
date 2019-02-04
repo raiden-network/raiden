@@ -13,7 +13,8 @@ def get_channel_state(
         payment_channel_proxy,
         opened_block_number,
 ):
-    channel_details = payment_channel_proxy.detail()
+    # LEFTODO: Supply a proper block id
+    channel_details = payment_channel_proxy.detail('latest')
 
     our_state = NettingChannelEndState(
         channel_details.participants_data.our_details.address,

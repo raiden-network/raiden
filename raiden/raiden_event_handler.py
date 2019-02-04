@@ -267,11 +267,13 @@ class RaidenEventHandler:
             channel_id=channel_close_event.channel_identifier,
         )
 
+        # LEFTODO: Supply a proper block id
         channel_proxy.close(
-            nonce,
-            balance_hash,
-            message_hash,
-            signature,
+            nonce=nonce,
+            balance_hash=balance_hash,
+            additional_hash=message_hash,
+            signature=signature,
+            block_identifier='latest',
         )
 
     def handle_contract_send_channelupdate(
@@ -299,12 +301,14 @@ class RaidenEventHandler:
             our_signature = raiden.signer.sign(data=non_closing_data)
 
             try:
+                # LEFTODO: Supply a proper block id
                 channel.update_transfer(
                     nonce=balance_proof.nonce,
                     balance_hash=balance_proof.balance_hash,
                     additional_hash=balance_proof.message_hash,
                     partner_signature=balance_proof.signature,
                     signature=our_signature,
+                    block_identifier='latest',
                 )
             except ChannelOutdatedError as e:
                 log.error(
@@ -413,7 +417,8 @@ class RaidenEventHandler:
             merkle_tree_leaves = get_batch_unlock(our_state)
 
         try:
-            payment_channel.unlock(merkle_tree_leaves)
+            # LEFTODO: Supply a proper block id
+            payment_channel.unlock(merkle_tree_leave=merkle_tree_leaves, block_identifier='latest')
         except ChannelOutdatedError as e:
             log.error(
                 str(e),
@@ -521,11 +526,13 @@ class RaidenEventHandler:
             partner_locked_amount = 0
             partner_locksroot = EMPTY_HASH
 
+        # LEFTODO: Supply a proper block id
         payment_channel.settle(
-            our_transferred_amount,
-            our_locked_amount,
-            our_locksroot,
-            partner_transferred_amount,
-            partner_locked_amount,
-            partner_locksroot,
+            transferred_amount=our_transferred_amount,
+            locked_amount=our_locked_amount,
+            locksroot=our_locksroot,
+            partner_transferred_amount=partner_transferred_amount,
+            partner_locked_amount=partner_locked_amount,
+            partner_locksroot=partner_locksroot,
+            block_identifier='latest',
         )
