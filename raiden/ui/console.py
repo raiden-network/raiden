@@ -233,7 +233,11 @@ class ConsoleTools:
         token_address = decode_hex(token_address_hex)
 
         registry = self._raiden.chain.token_network_registry(registry_address)
-        token_network_address = registry.add_token(token_address)
+        # LEFTODO: Supply a proper block id
+        token_network_address = registry.add_token(
+            token_address=token_address,
+            given_block_identifier='latest',
+        )
 
         # Register the channel manager with the raiden registry
         waiting.wait_for_payment_network(

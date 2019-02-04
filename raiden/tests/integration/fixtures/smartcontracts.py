@@ -42,7 +42,8 @@ def token_addresses(
 
     if register_tokens:
         for token in token_addresses:
-            deploy_service.token_network_registry(token_network_registry_address).add_token(token)
+            registry = deploy_service.token_network_registry(token_network_registry_address)
+            registry.add_token(token_address=token, given_block_identifier='latest')
 
     return token_addresses
 

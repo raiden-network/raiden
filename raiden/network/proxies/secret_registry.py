@@ -10,7 +10,7 @@ from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, safe_gas_limit, sha3
-from raiden.utils.typing import BlockSpecification, Keccak256, Secret
+from raiden.utils.typing import BlockNumber, BlockSpecification, Keccak256, Secret
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
 from raiden_contracts.contract_manager import ContractManager
 
@@ -48,10 +48,14 @@ class SecretRegistry:
         self.node_address = self.client.address
         self.open_secret_transactions = dict()
 
-    def register_secret(self, secret: Secret):
-        self.register_secret_batch([secret])
+    def register_secret(self, secret: Secret, given_block_identifier: BlockSpecification):
+        self.register_secret_batch([secret], given_block_identifier)
 
-    def register_secret_batch(self, secrets: List[Secret]):
+    def register_secret_batch(
+            self,
+            secrets: List[Secret],
+            given_block_identifier: BlockSpecification,
+    ):
         secrets_to_register = list()
         secrethashes_to_register = list()
         secrethashes_not_sent = list()
@@ -62,7 +66,7 @@ class SecretRegistry:
             secrethash_hex = encode_hex(secrethash)
 
             is_register_needed = (
-                not self.check_registered(secrethash) and
+                not self.check_registered(secrethash, given_block_identifier) and
                 secret not in self.open_secret_transactions
             )
             if is_register_needed:
@@ -124,11 +128,21 @@ class SecretRegistry:
 
         log.info('registerSecretBatch successful', **log_details)
 
-    def get_register_block_for_secrethash(self, secrethash: Keccak256) -> int:
-        return self.proxy.contract.functions.getSecretRevealBlockHeight(secrethash).call()
+    def get_register_block_for_secrethash(
+            self,
+            secrethash: Keccak256,
+            block_identifier: BlockSpecification,
+    ) -> BlockNumber:
+        return self.proxy.contract.functions.getSecretRevealBlockHeight(
+            secrethash,
+        ).call(block_identifier=block_identifier)
 
-    def check_registered(self, secrethash: Keccak256) -> bool:
-        return self.get_register_block_for_secrethash(secrethash) > 0
+    def check_registered(
+            self,
+            secrethash: Keccak256,
+            block_identifier: BlockSpecification,
+    ) -> bool:
+        return self.get_register_block_for_secrethash(secrethash, block_identifier) > 0
 
     def secret_registered_filter(
             self,

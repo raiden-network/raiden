@@ -89,7 +89,9 @@ class TokenNetworkRegistry:
 
         return address
 
-    def add_token(self, token_address: TokenAddress):
+    def add_token(self, token_address: TokenAddress, given_block_identifier: BlockSpecification):
+        # given_block_identifier is not really used in this function yet as there
+        # are no preconditions to check with the given block
         if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token')
 

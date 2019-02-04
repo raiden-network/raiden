@@ -20,7 +20,7 @@ def test_token_network_registry(
     bad_token_address = make_address()
     # try to register non-existing token network
     with pytest.raises(RaidenUnrecoverableError):
-        token_network_registry_proxy.add_token(bad_token_address)
+        token_network_registry_proxy.add_token(bad_token_address, 'latest')
     # create token network & register it
     test_token = deploy_token(
         deploy_client=deploy_client,
@@ -33,12 +33,14 @@ def test_token_network_registry(
     test_token_address = to_canonical_address(test_token.contract.address)
     event_filter = token_network_registry_proxy.tokenadded_filter()
     token_network_address = token_network_registry_proxy.add_token(
-        test_token_address,
+        token_address=test_token_address,
+        given_block_identifier='latest',
     )
 
     with pytest.raises(RaidenRecoverableError) as exc:
         token_network_address = token_network_registry_proxy.add_token(
-            test_token_address,
+            token_address=test_token_address,
+            given_block_identifier='latest',
         )
 
         assert 'Token already registered' in str(exc)

@@ -341,7 +341,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     secret_registry_proxy = alice_app.raiden.chain.secret_registry(
         secret_registry_address,
     )
-    secret_registry_proxy.register_secret(secret)
+    secret_registry_proxy.register_secret(secret=secret, given_block_identifier='latest')
 
     assert lock, 'the lock must still be part of the node state'
     msg = 'the secret must be registered before the lock expires'
@@ -537,7 +537,10 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     lock_expiration = target_task.target_state.transfer.lock.expiration
     app1.raiden.chain.wait_until_block(target_block_number=lock_expiration)
 
-    assert app1.raiden.default_secret_registry.check_registered(secrethash)
+    assert app1.raiden.default_secret_registry.check_registered(
+        secrethash=secrethash,
+        block_identifier='latest',
+    )
 
 
 @pytest.mark.xfail(reason='test incomplete')

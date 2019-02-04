@@ -241,7 +241,11 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_reveal_secret_event: ContractSendSecretReveal,
     ):
-        raiden.default_secret_registry.register_secret(channel_reveal_secret_event.secret)
+        # LEFTODO: Supply a proper block id
+        raiden.default_secret_registry.register_secret(
+            secret=channel_reveal_secret_event.secret,
+            given_block_identifier='latest',
+        )
 
     def handle_contract_send_channelclose(
             self,
@@ -418,7 +422,10 @@ class RaidenEventHandler:
 
         try:
             # LEFTODO: Supply a proper block id
-            payment_channel.unlock(merkle_tree_leave=merkle_tree_leaves, block_identifier='latest')
+            payment_channel.unlock(
+                merkle_tree_leaves=merkle_tree_leaves,
+                block_identifier='latest',
+            )
         except ChannelOutdatedError as e:
             log.error(
                 str(e),
