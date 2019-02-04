@@ -1,12 +1,16 @@
 from unittest.mock import Mock, create_autospec
 from urllib.parse import urlparse
 
-from eth_utils import decode_hex, to_canonical_address, to_normalized_address
+from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
 from matrix_client.errors import MatrixRequestError
 from matrix_client.room import Room
 from matrix_client.user import User
 
-from raiden.network.transport.matrix.utils import join_global_room, login_or_register
+from raiden.network.transport.matrix.utils import (
+    join_global_room,
+    login_or_register,
+    validate_userid_signature,
+)
 from raiden.tests.utils.factories import make_signer
 from raiden.utils.signer import recover
 
@@ -82,3 +86,53 @@ def test_login_or_register_default_user():
         data=client.user_id.encode(),
         signature=decode_hex(user.set_display_name.call_args[0][0]),
     ) == signer.address
+
+
+def test_validate_userid_signature():
+    ownserver = 'https://ownserver.com'
+    api = Mock()
+    api.base_url = ownserver
+    server_name = urlparse(ownserver).netloc
+
+    signer = make_signer()
+
+    user = Mock(spec=User)
+    user.api = api
+    user.user_id = f'@{to_normalized_address(signer.address)}:{server_name}'
+    user.displayname = None
+    user.get_display_name = Mock(side_effect=lambda: user.displayname)
+
+    # displayname is None, get_display_name will be called but continue to give None
+    assert validate_userid_signature(user) is None
+    assert user.get_display_name.call_count == 1
+
+    # successfuly recover valid displayname
+    user.displayname = encode_hex(signer.sign(user.user_id.encode()))
+    assert validate_userid_signature(user) == signer.address
+    assert user.get_display_name.call_count == 2
+
+    # assert another call will cache the result and avoid wasteful get_display_name call
+    assert validate_userid_signature(user) == signer.address
+    assert user.get_display_name.call_count == 2
+
+    # non-hex displayname should be gracefully handled
+    user.displayname = 'random gibberish'
+    assert validate_userid_signature(user) is None
+    assert user.get_display_name.call_count == 3
+
+    # valid signature but from another user should also return None
+    user.displayname = encode_hex(make_signer().sign(user.user_id.encode()))
+    assert validate_userid_signature(user) is None
+    assert user.get_display_name.call_count == 4
+
+    # same address, but different user_id, even if valid, should be rejected
+    # (prevent personification)
+    user.displayname = encode_hex(signer.sign(user.user_id.encode()))
+    user.user_id = f'@{to_normalized_address(signer.address)}.deadbeef:{server_name}'
+    assert validate_userid_signature(user) is None
+    assert user.get_display_name.call_count == 5
+
+    # but non-default but valid user_id should be accepted
+    user.displayname = encode_hex(signer.sign(user.user_id.encode()))
+    assert validate_userid_signature(user) == signer.address
+    assert user.get_display_name.call_count == 6

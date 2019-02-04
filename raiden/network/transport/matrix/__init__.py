@@ -1,5 +1,4 @@
 import json
-import re
 import time
 from binascii import Error as DecodeError
 from collections import defaultdict
@@ -12,7 +11,6 @@ import structlog
 from eth_utils import (
     decode_hex,
     is_binary_address,
-    to_canonical_address,
     to_checksum_address,
     to_normalized_address,
 )
@@ -22,7 +20,6 @@ from matrix_client.errors import MatrixError, MatrixRequestError
 from raiden.exceptions import (
     InvalidAddress,
     InvalidProtocolMessage,
-    InvalidSignature,
     TransportError,
     UnknownAddress,
     UnknownTokenAddress,
@@ -43,6 +40,7 @@ from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     join_global_room,
     login_or_register,
+    validate_userid_signature,
 )
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
@@ -62,7 +60,6 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils import pex
 from raiden.utils.runnable import Runnable
-from raiden.utils.signer import recover
 from raiden.utils.typing import (
     Address,
 
@@ -275,7 +272,6 @@ class _RetryQueue(Runnable):
 class MatrixTransport(Runnable):
     _room_prefix = 'raiden'
     _room_sep = '_'
-    _userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
     log = log
 
     def __init__(self, config: dict):
@@ -490,7 +486,7 @@ class MatrixTransport(Runnable):
             user_ids = {
                 user.user_id
                 for user in candidates
-                if self._validate_userid_signature(user) == node_address
+                if validate_userid_signature(user) == node_address
             }
             self.whitelist(node_address)
             self._address_to_userids[node_address].update(user_ids)
@@ -606,7 +602,7 @@ class MatrixTransport(Runnable):
 
         user = self._get_user(sender)
         user.displayname = sender_join_event['content'].get('displayname') or user.displayname
-        peer_address = self._validate_userid_signature(user)
+        peer_address = validate_userid_signature(user)
         if not peer_address:
             self.log.debug(
                 'Got invited to a room by invalid signed user - ignoring',
@@ -681,7 +677,7 @@ class MatrixTransport(Runnable):
             return False
 
         user = self._get_user(sender_id)
-        peer_address = self._validate_userid_signature(user)
+        peer_address = validate_userid_signature(user)
         if not peer_address:
             self.log.debug(
                 'Message from invalid user displayName signature',
@@ -935,7 +931,7 @@ class MatrixTransport(Runnable):
         peers = [
             user
             for user in candidates
-            if self._validate_userid_signature(user) == address
+            if validate_userid_signature(user) == address
         ]
         if not peers and not allow_missing_peers:
             self.log.error('No valid peer found', peer_address=address_hex)
@@ -1058,7 +1054,7 @@ class MatrixTransport(Runnable):
 
         user = self._get_user(user_id)
         user.displayname = event['content'].get('displayname') or user.displayname
-        address = self._validate_userid_signature(user)
+        address = validate_userid_signature(user)
         if not address:
             # Malformed address - skip
             return
@@ -1130,7 +1126,7 @@ class MatrixTransport(Runnable):
         self._raiden_service.handle_state_change(state_change)
 
     def _maybe_invite_user(self, user: User):
-        address = self._validate_userid_signature(user)
+        address = validate_userid_signature(user)
         if not address:
             return
 
@@ -1190,39 +1186,6 @@ class MatrixTransport(Runnable):
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """
         return self._raiden_service.signer.sign(data=data)
-
-    @staticmethod
-    def _recover(data: bytes, signature: bytes) -> Address:
-        """ Use eth_sign compatible hasher to recover address from signed data """
-        return recover(data=data, signature=signature)
-
-    def _validate_userid_signature(self, user: User) -> Optional[Address]:
-        """ Validate a userId format and signature on displayName, and return its address"""
-        # display_name should be an address in the self._userid_re format
-        match = self._userid_re.match(user.user_id)
-        if not match:
-            return None
-
-        encoded_address = match.group(1)
-        address: Address = to_canonical_address(encoded_address)
-
-        try:
-            displayname = user.get_display_name()
-            recovered = self._recover(
-                user.user_id.encode(),
-                decode_hex(displayname),
-            )
-            if not (address and recovered and recovered == address):
-                return None
-        except (
-                DecodeError,
-                TypeError,
-                InvalidSignature,
-                MatrixRequestError,
-                json.decoder.JSONDecodeError,
-        ):
-            return None
-        return address
 
     def _get_user(self, user: Union[User, str]) -> User:
         """Creates an User from an user_id, if none, or fetch a cached User
