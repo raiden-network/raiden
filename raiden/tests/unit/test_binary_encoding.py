@@ -8,7 +8,7 @@ from raiden.messages import Ping, Processed, decode
 from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.messages import make_mediated_transfer, make_refund_transfer
 from raiden.utils import sha3
-from raiden.utils.signer import LocalSigner
+from raiden.utils.signer import LocalSigner, recover
 
 PRIVKEY, ADDRESS = make_privkey_address()
 signer = LocalSigner(PRIVKEY)
@@ -23,21 +23,21 @@ def test_signature():
     message_data = ping._data_to_sign()
     # This signature will sometimes end up with v being 0, sometimes 1
     signature = signer.sign(data=message_data, v=0)
-    assert ADDRESS == signer.recover(message_data, signature)
+    assert ADDRESS == recover(message_data, signature)
     # This signature will sometimes end up with v being 27, sometimes 28
     signature = signer.sign(data=message_data, v=27)
-    assert ADDRESS == signer.recover(message_data, signature)
+    assert ADDRESS == recover(message_data, signature)
 
     # test that other v values are rejected
     signature = signature[:-1] + bytes([29])
     with pytest.raises(InvalidSignature):
-        signer.recover(message_data, signature)
+        recover(message_data, signature)
     signature = signature[:-1] + bytes([37])
     with pytest.raises(InvalidSignature):
-        signer.recover(message_data, signature)
+        recover(message_data, signature)
     signature = signature[:-1] + bytes([38])
     with pytest.raises(InvalidSignature):
-        signer.recover(message_data, signature)
+        recover(message_data, signature)
 
 
 def test_encoding():

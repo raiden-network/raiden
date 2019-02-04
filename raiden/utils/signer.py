@@ -44,15 +44,9 @@ class Signer(ABC):
     # attribute or cached property which represents the address of the account of this Signer
     address: Address
 
-    # hasher used for this Signer to sign and recover hash
-    # must be kept in sync with sign implementation, which may or may not allow changing it
-    # (e.g. privatekey local signing may use it, but eth_sign rpc always use \x19-prefixed-hasher)
-    # default hasher is eth_sign/personal_sign/eip191 compatible
-    hasher: Callable[[bytes], bytes] = staticmethod(eth_sign_sha3)
-
     @abstractmethod
     def sign(self, data: bytes, v: int = 27) -> bytes:
-        """ Sign data hash (from hasher) with this Signer's account """
+        """ Sign data hash (as of EIP191) with this Signer's account """
         pass
 
     # TODO: signTransaction (replace privkey on JSONRPCClient)
@@ -71,10 +65,6 @@ class Signer(ABC):
     def address_hex(self) -> AddressHex:
         return to_checksum_address(self.address)
 
-    def recover(self, data: bytes, signature: bytes) -> Address:
-        """ Use instance hasher to recover address from data hash and signature """
-        return recover(data=data, signature=signature, hasher=self.hasher)
-
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__} for {self.address_hex}>'
 
@@ -88,8 +78,9 @@ class LocalSigner(Signer):
         self.address = self.private_key.public_key.to_canonical_address()
 
     def sign(self, data: bytes, v: int = 27) -> bytes:
+        """ Sign data hash with local private key """
         assert v in (0, 27), 'Raiden is only signing messages with v in (0, 27)'
-        _hash = self.hasher(data)
+        _hash = eth_sign_sha3(data)
         signature = self.private_key.sign_msg_hash(message_hash=_hash)
         sig_bytes = signature.to_bytes()
         # adjust last byte to v
