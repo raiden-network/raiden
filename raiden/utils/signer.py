@@ -28,6 +28,8 @@ def recover(
     """ eth_recover address from data hash and signature """
     _hash = hasher(data)
 
+    # ecdsa_recover accepts only standard [0,1] v's so we add support also for [27,28] here
+    # anything else will raise BadSignature
     if signature[-1] >= 27:  # support (0,1,27,28) v values
         signature = signature[:-1] + bytes([signature[-1] - 27])
 
@@ -50,6 +52,7 @@ class Signer(ABC):
         pass
 
     # TODO: signTransaction (replace privkey on JSONRPCClient)
+    # issue: https://github.com/raiden-network/raiden/issues/3390
     # @abstractmethod
     # def signTransaction(self, transaction: dict) -> bytes:
     #     """ Allows Signers to sign transactions with account """
