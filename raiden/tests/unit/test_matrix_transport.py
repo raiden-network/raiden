@@ -1,18 +1,18 @@
 from unittest.mock import Mock, create_autospec
 from urllib.parse import urlparse
-from eth_utils import decode_hex, to_canonical_address, to_normalized_address
 
+from eth_utils import decode_hex, to_canonical_address, to_normalized_address
 from matrix_client.errors import MatrixRequestError
 from matrix_client.room import Room
 from matrix_client.user import User
 
-from raiden.network.transport.utils import matrix_join_global_room, matrix_login_or_register
+from raiden.network.transport.matrix.utils import join_global_room, login_or_register
 from raiden.tests.utils.factories import make_signer
 from raiden.utils.signer import recover
 
 
-def test_matrix_join_global_room():
-    """ matrix_join_global_room should try joining, fail and then create global public room """
+def test_join_global_room():
+    """ join_global_room should try joining, fail and then create global public room """
     ownserver = 'https://ownserver.com'
     api = Mock()
     api.base_url = ownserver
@@ -30,7 +30,7 @@ def test_matrix_join_global_room():
 
     room_name = 'raiden_ropsten_discovery'
 
-    room = matrix_join_global_room(
+    room = join_global_room(
         client=client,
         name=room_name,
         servers=['https://invalid.server'],
@@ -40,7 +40,7 @@ def test_matrix_join_global_room():
     assert room and isinstance(room, Room)
 
 
-def test_matrix_login_or_register_default_user():
+def test_login_or_register_default_user():
     ownserver = 'https://ownserver.com'
     api = Mock()
     api.base_url = ownserver
@@ -64,14 +64,14 @@ def test_matrix_login_or_register_default_user():
 
     signer = make_signer()
 
-    user = matrix_login_or_register(
+    user = login_or_register(
         client=client,
         signer=signer,
     )
 
     # client.user_id will be set by login
     assert client.user_id.startswith(f'@{to_normalized_address(signer.address)}')
-    # matrix_login_or_register returns our own user object
+    # login_or_register returns our own user object
     assert isinstance(user, User)
     # get_user must have been called once to generate above user
     client.get_user.assert_called_once_with(client.user_id)

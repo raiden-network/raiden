@@ -8,8 +8,8 @@ from gevent import Timeout
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import Processed, SecretRequest
-from raiden.network.transport import MatrixTransport
-from raiden.network.transport.matrix import UserPresence, _RetryQueue
+from raiden.network.transport.matrix import MatrixTransport, UserPresence, _RetryQueue
+from raiden.network.transport.matrix.client import Room
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
@@ -18,7 +18,6 @@ from raiden.transfer.state_change import ActionUpdateTransportAuthData
 from raiden.utils import pex
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List, Optional, Union
-from raiden_libs.network.matrix import Room
 
 USERID1 = '@Alice:Wonderland'
 
@@ -392,7 +391,7 @@ def test_join_invalid_discovery(
         retry_interval,
         retries_before_backoff,
 ):
-    """matrix_join_global_room tries to join on all servers on available_servers config
+    """join_global_room tries to join on all servers on available_servers config
 
     If any of the servers isn't reachable by synapse, it'll return a 500 response, which needs
     to be handled, and if no discovery room is found on any of the available_servers, one in
