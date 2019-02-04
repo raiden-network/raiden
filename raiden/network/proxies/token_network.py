@@ -1241,6 +1241,7 @@ class TokenNetwork:
                 block_identifier=block,
                 channel_identifier=channel_identifier,
             )
+            msg = ''
             if channel_settled is False:
                 msg = 'Channel is not in a settled state'
 
