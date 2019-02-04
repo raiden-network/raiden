@@ -43,7 +43,7 @@ def mock_matrix(
         private_rooms,
 ):
 
-    from matrix_client.user import User
+    from raiden.network.transport.matrix.client import User
     monkeypatch.setattr(User, 'get_display_name', lambda _: 'random_display_name')
 
     def mock_get_user(klass, user: Union[User, str]) -> User:
@@ -92,12 +92,20 @@ def mock_matrix(
 
 @pytest.fixture()
 def skip_userid_validation(monkeypatch):
-    def mock_validate_userid_signature(klass, user):
+    import raiden.network.transport.matrix
+    import raiden.network.transport.matrix.utils
+
+    def mock_validate_userid_signature(user):
         return HOP1
 
     monkeypatch.setattr(
-        MatrixTransport,
-        '_validate_userid_signature',
+        raiden.network.transport.matrix,
+        'validate_userid_signature',
+        mock_validate_userid_signature,
+    )
+    monkeypatch.setattr(
+        raiden.network.transport.matrix.utils,
+        'validate_userid_signature',
         mock_validate_userid_signature,
     )
 
