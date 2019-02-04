@@ -7,18 +7,17 @@ from urllib.parse import urlparse
 import structlog
 from eth_utils import encode_hex, to_normalized_address
 from matrix_client.errors import MatrixRequestError
-from matrix_client.user import User
 
 from raiden.exceptions import TransportError
 from raiden.utils.signer import Signer
-from raiden_libs.network.matrix import GMatrixClient, Room
+from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 
 log = structlog.get_logger(__name__)
 
 JOIN_RETRIES = 5
 
 
-def matrix_join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
+def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
     """Join or create a global public room with given name
 
     First, try to join room on own server (client-configured one)
@@ -86,7 +85,7 @@ def matrix_join_global_room(client: GMatrixClient, name: str, servers: Sequence[
     return global_room
 
 
-def matrix_login_or_register(
+def login_or_register(
         client: GMatrixClient,
         signer: Signer,
         prev_user_id: str = None,

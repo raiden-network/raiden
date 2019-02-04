@@ -12,6 +12,7 @@ gevent
 ipython<5.0.0
 marshmallow
 marshmallow_polyfield
+matrix-client
 miniupnpc
 mirakuru
 netifaces
