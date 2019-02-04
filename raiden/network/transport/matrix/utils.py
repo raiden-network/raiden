@@ -1,20 +1,27 @@
+import json
 import re
+from binascii import Error as DecodeError
 from collections import OrderedDict
+from operator import attrgetter
 from random import Random
-from typing import Sequence
+from typing import Optional, Sequence
 from urllib.parse import urlparse
 
 import structlog
-from eth_utils import encode_hex, to_normalized_address
+from cachetools import LRUCache, cached
+from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
+from gevent.lock import Semaphore
 from matrix_client.errors import MatrixRequestError
 
-from raiden.exceptions import TransportError
-from raiden.utils.signer import Signer
+from raiden.exceptions import InvalidSignature, TransportError
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
+from raiden.utils.signer import Signer, recover
+from raiden.utils.typing import Address
 
 log = structlog.get_logger(__name__)
 
 JOIN_RETRIES = 5
+userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
 
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
@@ -198,3 +205,33 @@ def login_or_register(
     user = client.get_user(client.user_id)
     user.set_display_name(name)
     return user
+
+
+@cached(cache=LRUCache(128), key=attrgetter('user_id', 'displayname'), lock=Semaphore())
+def validate_userid_signature(user: User) -> Optional[Address]:
+    """ Validate a userId format and signature on displayName, and return its address"""
+    # display_name should be an address in the userid_re format
+    match = userid_re.match(user.user_id)
+    if not match:
+        return None
+
+    encoded_address = match.group(1)
+    address: Address = to_canonical_address(encoded_address)
+
+    try:
+        displayname = user.get_display_name()
+        recovered = recover(
+            data=user.user_id.encode(),
+            signature=decode_hex(displayname),
+        )
+        if not (address and recovered and recovered == address):
+            return None
+    except (
+            DecodeError,
+            TypeError,
+            InvalidSignature,
+            MatrixRequestError,
+            json.decoder.JSONDecodeError,
+    ):
+        return None
+    return address
