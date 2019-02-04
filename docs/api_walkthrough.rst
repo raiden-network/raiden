@@ -96,7 +96,7 @@ To open a channel with another Raiden node four things are needed: the address o
    {
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
-       "balance": 1337,
+       "total_deposit": 1337,
        "settle_timeout": 500
    }
 
