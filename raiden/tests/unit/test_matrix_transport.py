@@ -136,3 +136,8 @@ def test_validate_userid_signature():
     user.displayname = encode_hex(signer.sign(user.user_id.encode()))
     assert validate_userid_signature(user) == signer.address
     assert user.get_display_name.call_count == 6
+
+    # non-compliant user_id shouldn't even call get_display_name
+    user.user_id = f'@my_user:{server_name}'
+    assert validate_userid_signature(user) is None
+    assert user.get_display_name.call_count == 6
