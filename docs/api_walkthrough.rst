@@ -103,7 +103,7 @@ To open a channel with another Raiden node four things are needed: the address o
 .. note::
    For the Raiden Red Eyes release the maximum deposit per node in a channel is limited to 0.075 worth of `W-ETH <https://weth.io/>`_. This means that the maximum amount of tokens in a channel is limited to 0.15 worth of W-ETH. This is done to mitigate risk since the Red Eyes release is an alpha testing version on the mainnet.
 
-At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <depositing-to-a-channel>` to a channel if need be.
+At this point the specific value of the ``total_deposit`` field isn't too important, since it's always possible to :ref:`deposit more tokens <depositing-to-a-channel>` to a channel if need be.
 
 Successfully opening a channel returns the following information:
 
@@ -118,6 +118,7 @@ Successfully opening a channel returns the following information:
        "partner_address": "0x61C808D82A3Ac53231750daDc13c777b59310bD9",
        "token_address": "0x9aBa529db3FF2D8409A1da4C9eB148879b046700",
        "balance": 1337,
+       "total_deposit": 1337, 
        "state": "opened",
        "settle_timeout": 500,
        "reveal_timeout": 10
