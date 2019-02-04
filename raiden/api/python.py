@@ -304,9 +304,11 @@ class RaidenAPI:
                 ))
 
             try:
+                # LEFTODO: Supply a proper block id
                 token_network.new_netting_channel(
                     partner=partner_address,
                     settle_timeout=settle_timeout,
+                    given_block_identifier='latest',
                 )
             except DuplicatedChannelError:
                 log.info('partner opened channel first')
@@ -426,7 +428,8 @@ class RaidenAPI:
 
         # set_total_deposit calls approve
         # token.approve(netcontract_address, addendum)
-        channel_proxy.set_total_deposit(total_deposit)
+        # LEFTODO: Supply a proper block id
+        channel_proxy.set_total_deposit(total_deposit, block_identifier='latest')
 
         target_address = self.raiden.address
         waiting.wait_for_participant_newbalance(

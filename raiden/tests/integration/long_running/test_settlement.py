@@ -477,6 +477,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     with pytest.raises(RaidenUnrecoverableError):
         netting_channel.unlock(
             merkle_tree_leaves=batch_unlock,
+            block_identifier='latest',
         )
 
     expected_balance0 = initial_balance0 + deposit0 - amount * 2
