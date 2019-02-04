@@ -5,14 +5,12 @@ from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
 from operator import itemgetter
-from random import Random
 from urllib.parse import urlparse
 
 import gevent
 import structlog
 from eth_utils import (
     decode_hex,
-    encode_hex,
     is_binary_address,
     to_canonical_address,
     to_checksum_address,
@@ -41,7 +39,11 @@ from raiden.messages import (
     from_dict as message_from_dict,
 )
 from raiden.network.transport.udp import udp_utils
-from raiden.network.transport.utils import JOIN_RETRIES, matrix_join_global_room
+from raiden.network.transport.utils import (
+    JOIN_RETRIES,
+    matrix_join_global_room,
+    matrix_login_or_register,
+)
 from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialize import JSONSerializer
@@ -357,7 +359,9 @@ class MatrixTransport(Runnable):
         else:
             prev_user_id = prev_access_token = None
 
-        self._login_or_register(
+        matrix_login_or_register(
+            client=self._client,
+            signer=self._raiden_service.signer,
             prev_user_id=prev_user_id,
             prev_access_token=prev_access_token,
         )
@@ -544,90 +548,6 @@ class MatrixTransport(Runnable):
     @property
     def _private_rooms(self) -> bool:
         return bool(self._config.get('private_rooms'))
-
-    def _login_or_register(self, prev_user_id=None, prev_access_token=None):
-        base_username = to_normalized_address(self._raiden_service.address)
-        _match_user = re.match(
-            f'^@{re.escape(base_username)}.*:{re.escape(self._server_name)}$',
-            prev_user_id or '',
-        )
-        if _match_user:  # same user as before
-            self.log.debug('Trying previous user login', user_id=prev_user_id)
-            self._client.set_access_token(user_id=prev_user_id, token=prev_access_token)
-
-            try:
-                self._client.api.get_devices()
-            except MatrixRequestError as ex:
-                self.log.debug(
-                    'Couldn\'t use previous login credentials, discarding',
-                    prev_user_id=prev_user_id,
-                    _exception=ex,
-                )
-            else:
-                prev_sync_limit = self._client.set_sync_limit(0)
-                self._client._sync()
-                self._client.set_sync_limit(prev_sync_limit)
-                self.log.debug('Success. Valid previous credentials', user_id=prev_user_id)
-                return
-        elif prev_user_id:
-            self.log.debug(
-                'Different server or account, discarding',
-                prev_user_id=prev_user_id,
-                current_address=base_username,
-                current_server=self._server_name,
-            )
-
-        # password is signed server address
-        password = encode_hex(self._sign(self._server_name.encode()))
-        seed = int.from_bytes(self._sign(b'seed')[-32:], 'big')
-        rand = Random()  # deterministic, random secret for username suffixes
-        rand.seed(seed)
-        # try login and register on first 5 possible accounts
-        for i in range(JOIN_RETRIES):
-            username = base_username
-            if i:
-                username = f'{username}.{rand.randint(0, 0xffffffff):08x}'
-
-            try:
-                self._client.login(username, password, sync=False)
-                prev_sync_limit = self._client.set_sync_limit(0)
-                self._client._sync()  # when logging, do initial_sync with limit=0
-                self._client.set_sync_limit(prev_sync_limit)
-                self.log.debug(
-                    'Login',
-                    homeserver=self._server_name,
-                    server_url=self._server_url,
-                    username=username,
-                )
-                break
-            except MatrixRequestError as ex:
-                if ex.code != 403:
-                    raise
-                self.log.debug(
-                    'Could not login. Trying register',
-                    homeserver=self._server_name,
-                    server_url=self._server_url,
-                    username=username,
-                )
-                try:
-                    self._client.register_with_password(username, password)
-                    self.log.debug(
-                        'Register',
-                        homeserver=self._server_name,
-                        server_url=self._server_url,
-                        username=username,
-                    )
-                    break
-                except MatrixRequestError as ex:
-                    if ex.code != 400:
-                        raise
-                    self.log.debug('Username taken. Continuing')
-                    continue
-        else:
-            raise ValueError('Could not register or login!')
-
-        name = encode_hex(self._sign(self._user_id.encode()))
-        self._get_user(self._user_id).set_display_name(name)
 
     def _inventory_rooms(self):
         self.log.debug('Inventory rooms', rooms=self._client.rooms)
