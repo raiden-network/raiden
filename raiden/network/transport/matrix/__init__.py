@@ -1215,7 +1215,8 @@ class MatrixTransport(Runnable):
 
         with self._account_data_lock:
             # no need to deepcopy, we don't modify lists in-place
-            _address_to_room_ids: Dict[AddressHex, List[_RoomID]] = self._client.account_data.get(
+            # type: Dict[AddressHex, List[_RoomID]]
+            _address_to_room_ids = self._client.account_data.get(
                 'network.raiden.rooms',
                 {},
             ).copy()
@@ -1277,11 +1278,12 @@ class MatrixTransport(Runnable):
 
             return room_ids
 
-    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]):
+    def _leave_unused_rooms(self, _address_to_room_ids):
         """
         Checks for rooms we've joined and which partner isn't health-checked and leave.
 
         **MUST** be called from a context that holds the `_account_data_lock`.
+        _address_to_room_ids: Dict[AddressHex, List[_RoomID]]
         """
         _msg = '_leave_unused_rooms called without account data lock'
         assert self._account_data_lock.locked(), _msg
