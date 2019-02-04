@@ -78,7 +78,7 @@ def test_payment_channel_proxy_basics(
 
     # test deposits
     initial_token_balance = 100
-    token_proxy.transfer(c1_client.address, initial_token_balance)
+    token_proxy.transfer(c1_client.address, initial_token_balance, 'latest')
     initial_balance_c1 = token_proxy.balance_of(c1_client.address)
     assert initial_balance_c1 == initial_token_balance
     initial_balance_c2 = token_proxy.balance_of(c2_client.address)

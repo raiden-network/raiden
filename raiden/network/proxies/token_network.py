@@ -719,7 +719,11 @@ class TokenNetwork:
         # in which case  the second `approve` will overwrite the first,
         # and the first `setTotalDeposit` will consume the allowance,
         #  making the second deposit fail.
-        token.approve(Address(self.address), amount_to_deposit)
+        token.approve(
+            allowed_address=Address(self.address),
+            allowance=amount_to_deposit,
+            given_block_identifier=block_identifier,
+        )
 
         return amount_to_deposit, log_details
 
@@ -832,7 +836,12 @@ class TokenNetwork:
             block_identifier=block_identifier,
         ).deposit
 
-        if token.allowance(self.node_address, self.address, block_identifier) < amount_to_deposit:
+        allowance = token.allowance(
+            owner=self.node_address,
+            spender=Address(self.address),
+            block_identifier=block_identifier,
+        )
+        if allowance < amount_to_deposit:
             msg = (
                 'The allowance is insufficient. Check concurrent deposits '
                 'for the same token network but different proxies.'

@@ -112,7 +112,7 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
         assert previous_balance >= deposit
 
         # the payment channel proxy will call approve
-        # token.approve(token_network_proxy.address, deposit)
+        # token.approve(token_network_proxy.address, deposit, 'latest')
         payment_channel_proxy.set_total_deposit(total_deposit=deposit, block_identifier='latest')
 
         # Balance must decrease by at least but not exactly `deposit` amount,
