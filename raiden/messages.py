@@ -27,7 +27,8 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3, typing
-from raiden.utils.signer import Signer, recover, pack_data
+from raiden.utils.signer import Signer, recover
+from raiden.utils.signing import pack_data
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -1443,9 +1444,9 @@ class SignedBlindedBalanceProof(SignedMessage):
 
     @classmethod
     def from_balance_proof_signed_state(
-            cls: typing.SignedBlindedBalanceProof,
+            cls: typing.Type[typing.T_SignedBlindedBalanceProof],
             balance_proof: BalanceProofSignedState,
-    ) -> typing.SignedBlindedBalanceProof:
+    ) -> typing.T_SignedBlindedBalanceProof:
         assert isinstance(balance_proof, BalanceProofSignedState)
         return cls(
             channel_identifier=balance_proof.channel_identifier,
@@ -1503,16 +1504,19 @@ class SignedBlindedBalanceProof(SignedMessage):
         }
 
     @classmethod
-    def from_dict(cls, data: typing.Dict) -> typing.SignedBlindedBalanceProof:
+    def from_dict(
+            cls: typing.Type[typing.T_SignedBlindedBalanceProof],
+            data: typing.Dict,
+    ) -> typing.T_SignedBlindedBalanceProof:
         assert data['type'] == cls.__name__
         return cls(
             channel_identifier=data['channel_identifier'],
             token_network_address=decode_hex(data['token_network_address']),
             balance_hash=decode_hex(data['balance_hash']),
-            nonce=int(data['nonce']),
+            nonce=typing.Nonce(int(data['nonce'])),
             additional_hash=decode_hex(data['additional_hash']),
             signature=decode_hex(data['signature']),
-            chain_id=int(data['chain_id']),
+            chain_id=typing.ChainID(int(data['chain_id'])),
         )
 
 
@@ -1545,7 +1549,10 @@ class RequestMonitoring(SignedMessage):
         return self.signature
 
     @classmethod
-    def from_dict(cls, data) -> typing.RequestMonitoring:
+    def from_dict(
+            cls: typing.Type[typing.T_RequestMonitoring],
+            data: typing.Dict,
+    ) -> typing.T_RequestMonitoring:
         assert data['type'] == cls.__name__
         onchain_balance_proof = SignedBlindedBalanceProof.from_dict(
             data['onchain_balance_proof'],
@@ -1588,11 +1595,10 @@ class RequestMonitoring(SignedMessage):
         return packed
 
     def sign(self, signer: Signer):
-        """ Sign message using `private_key`. """
         message_data = self._data_to_sign()
         self.signature = signer.sign(data=message_data)
 
-    def pack(self, packed) -> bytes:
+    def pack(self, packed: bytes) -> bytes:
         packed.nonce = self.balance_proof.nonce
         packed.chain_id = self.balance_proof.chain_id
         packed.token_network_address = self.balance_proof.token_network_address
@@ -1605,7 +1611,10 @@ class RequestMonitoring(SignedMessage):
         return packed
 
     @classmethod
-    def unpack(cls, packed) -> typing.RequestMonitoring:
+    def unpack(
+            cls: typing.Type[typing.T_RequestMonitoring],
+            packed: bytes,
+    ) -> typing.T_RequestMonitoring:
         assert packed.balance_hash
         onchain_balance_proof = SignedBlindedBalanceProof(
             nonce=packed.nonce,
