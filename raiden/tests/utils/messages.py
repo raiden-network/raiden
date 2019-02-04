@@ -6,8 +6,9 @@ from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer, RefundTransfer
 from raiden.tests.utils.factories import UNIT_CHAIN_ID, UNIT_CHANNEL_ID, make_privkey_address
 from raiden.tests.utils.tests import fixture_all_combinations
-from raiden.transfer.state import EMPTY_MERKLE_ROOT
+from raiden.transfer.state import EMPTY_MERKLE_ROOT, balanceproof_from_envelope
 from raiden.utils import sha3
+from raiden.utils.signer import Signer
 
 PRIVKEY, ADDRESS = make_privkey_address()
 INVALID_ADDRESSES = [
@@ -159,3 +160,43 @@ def make_mediated_transfer(
         initiator=initiator,
         fee=fee,
     )
+
+
+def make_balance_proof(
+        signer: Signer = None,
+        message_identifier=None,
+        payment_identifier=0,
+        nonce=1,
+        token_network_addresss=ADDRESS,
+        token=ADDRESS,
+        channel_identifier=UNIT_CHANNEL_ID,
+        transferred_amount=0,
+        locked_amount=None,
+        amount=1,
+        expiration=1,
+        locksroot=EMPTY_MERKLE_ROOT,
+        recipient=ADDRESS,
+        target=ADDRESS,
+        initiator=ADDRESS,
+        fee=0,
+):
+    mediated_transfer = make_mediated_transfer(
+        message_identifier=message_identifier,
+        payment_identifier=payment_identifier,
+        nonce=nonce,
+        token_network_addresss=token_network_addresss,
+        token=token,
+        channel_identifier=channel_identifier,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        amount=amount,
+        expiration=expiration,
+        locksroot=locksroot,
+        recipient=recipient,
+        target=target,
+        initiator=initiator,
+        fee=fee,
+    )
+    mediated_transfer.sign(signer)
+    balance_proof = balanceproof_from_envelope(mediated_transfer)
+    return balance_proof
