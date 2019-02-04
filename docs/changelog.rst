@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.100.2-rc4 <2019-02-04>`
 * :feature:`3317` Return the secretHash and the Secret as part of payment response
 * :bug:`3380` Connection manager no longer attempts deposit if per partner funds are zero.
 * :bug:`3369` Fix high CPU usage when the raiden node is idle.
