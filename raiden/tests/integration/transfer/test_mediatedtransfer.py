@@ -83,7 +83,7 @@ def test_locked_transfer_secret_registered_onchain(
     secret_registry_proxy = app0.raiden.chain.secret_registry(
         secret_registry_address,
     )
-    secret_registry_proxy.register_secret(transfer_secret)
+    secret_registry_proxy.register_secret(secret=transfer_secret, given_block_identifier='latest')
 
     # Test that sending a transfer with a secret already registered on-chain fails
     with pytest.raises(RaidenUnrecoverableError):

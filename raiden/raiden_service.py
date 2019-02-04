@@ -763,7 +763,12 @@ class RaidenService(Runnable):
     ) -> AsyncResult:
 
         secret_hash = sha3(secret)
-        if self.default_secret_registry.check_registered(secret_hash):
+        # LEFTODO: Supply a proper block id
+        secret_registered = self.default_secret_registry.check_registered(
+            secrethash=secret_hash,
+            block_identifier='latest',
+        )
+        if secret_registered:
             raise RaidenUnrecoverableError(
                 f'Attempted to initiate a locked transfer with secrethash {pex(secret_hash)}.'
                 f' That secret is already registered onchain.',

@@ -281,7 +281,10 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_v
         registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         contract_manager=contract_manager,
     )
-    registry.add_token(to_canonical_address(token.contract.address))
+    registry.add_token(
+        token_address=to_canonical_address(token.contract.address),
+        given_block_identifier='latest',
+    )
 
     print_step('Setting up Raiden')
 

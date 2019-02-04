@@ -40,13 +40,18 @@ class Token:
         self.node_address = jsonrpc_client.address
         self.proxy = proxy
 
-    def allowance(self, owner, spender, block_identifier):
+    def allowance(self, owner: Address, spender: Address, block_identifier: BlockSpecification):
         return self.proxy.contract.functions.allowance(
             to_checksum_address(owner),
             to_checksum_address(spender),
         ).call(block_identifier=block_identifier)
 
-    def approve(self, allowed_address: Address, allowance: TokenAmount):
+    def approve(
+            self,
+            allowed_address: Address,
+            allowance: TokenAmount,
+            given_block_identifier: BlockSpecification,
+    ):
         """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
@@ -54,6 +59,8 @@ class Token:
             For channel deposit please use the channel proxy, since it does
             additional validations.
         """
+        # Note that given_block_identifier is not used here as there
+        # are no preconditions to check before sending the transaction
 
         log_details = {
             'node': pex(self.node_address),
@@ -155,7 +162,14 @@ class Token:
             to_checksum_address(address),
         ).call(block_identifier=block_identifier)
 
-    def transfer(self, to_address, amount):
+    def transfer(
+            self,
+            to_address: Address,
+            amount: TokenAmount,
+            given_block_identifier: BlockSpecification,
+    ):
+        # Note that given_block_identifier is not used here as there
+        # are no preconditions to check before sending the transaction
         log_details = {
             'node': pex(self.node_address),
             'contract': pex(self.address),

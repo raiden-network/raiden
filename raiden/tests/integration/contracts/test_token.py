@@ -24,13 +24,13 @@ def test_token(
 
     # send some funds from deployer to generated address
     transfer_funds = 100
-    token_proxy.transfer(address, transfer_funds)
+    token_proxy.transfer(address, transfer_funds, 'latest')
     assert transfer_funds == token_proxy.balance_of(address)
     allow_funds = 100
-    token_proxy.approve(address, allow_funds)
+    token_proxy.approve(address, allow_funds, 'latest')
     assert allow_funds == token_proxy.proxy.contract.functions.allowance(
         to_checksum_address(deploy_client.address),
         to_checksum_address(address),
     ).call(block_identifier='latest')
-    other_token_proxy.transfer(deploy_client.address, transfer_funds)
+    other_token_proxy.transfer(deploy_client.address, transfer_funds, 'latest')
     assert token_proxy.balance_of(address) == 0

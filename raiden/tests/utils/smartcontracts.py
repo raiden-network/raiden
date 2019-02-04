@@ -72,8 +72,9 @@ def deploy_tokens_and_fund_accounts(
         # transfer from the creator to the other nodes
         for transfer_to in participants:
             deploy_service.token(token_address).transfer(
-                transfer_to,
-                token_amount // len(participants),
+                to_address=transfer_to,
+                amount=token_amount // len(participants),
+                given_block_identifier='latest',
             )
 
     return result
