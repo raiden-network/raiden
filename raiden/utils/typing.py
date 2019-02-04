@@ -121,8 +121,15 @@ SecretRegistryAddress = NewType('SecretRegistryAddress', T_SecretRegistryAddress
 T_Signature = bytes
 Signature = NewType('Signature', T_Signature)
 
-SignedBlindedBalanceProof = TypeVar('SignedBlindedBalanceProof', bound='SignedBlindedBalanceProof')
-RequestMonitoring = TypeVar('RequestMonitoring', bound='RequestMonitoring')
+T_SignedBlindedBalanceProof = TypeVar(
+    'T_SignedBlindedBalanceProof',
+    bound='raiden.messages.SignedBlindedBalanceProof',
+)
+
+T_RequestMonitoring = TypeVar(
+    'T_RequestMonitoring',
+    bound='raiden.messages.RequestMonitoring',
+)
 
 T_TransactionHash = bytes
 TransactionHash = NewType('TransactionHash', T_TransactionHash)
