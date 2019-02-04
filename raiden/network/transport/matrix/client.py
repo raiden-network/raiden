@@ -1,5 +1,4 @@
 import json
-import structlog
 import time
 from functools import wraps
 from itertools import repeat
@@ -7,6 +6,7 @@ from typing import Any, Callable, Container, Dict, Iterable, List, Optional
 from urllib.parse import quote
 
 import gevent
+import structlog
 from cachetools.func import ttl_cache
 from gevent.lock import Semaphore
 from matrix_client.api import MatrixHttpApi
@@ -207,10 +207,10 @@ class GMatrixClient(MatrixClient):
         )
 
     def listen_forever(
-        self,
-        timeout_ms: int = 30000,
-        exception_handler: Callable[[Exception], None] = None,
-        bad_sync_timeout: int = 5,
+            self,
+            timeout_ms: int = 30000,
+            exception_handler: Callable[[Exception], None] = None,
+            bad_sync_timeout: int = 5,
     ):
         """
         Keep listening for events forever.
@@ -328,9 +328,9 @@ class GMatrixClient(MatrixClient):
         return rooms
 
     def modify_presence_list(
-        self,
-        add_user_ids: List[str] = None,
-        remove_user_ids: List[str] = None,
+            self,
+            add_user_ids: List[str] = None,
+            remove_user_ids: List[str] = None,
     ):
         if add_user_ids is None:
             add_user_ids = []
@@ -439,10 +439,11 @@ class GMatrixClient(MatrixClient):
 
                 # Dispatch for client (global) listeners
                 for listener in self.listeners:
-                    if (
+                    should_call = (
                         listener['event_type'] is None or
                         listener['event_type'] == event['type']
-                    ):
+                    )
+                    if should_call:
                         self.call(listener['callback'], event)
 
             for event in sync_room['ephemeral']['events']:
@@ -450,10 +451,11 @@ class GMatrixClient(MatrixClient):
                 self.call(room._put_ephemeral_event, event)
 
                 for listener in self.ephemeral_listeners:
-                    if (
+                    should_call = (
                         listener['event_type'] is None or
                         listener['event_type'] == event['type']
-                    ):
+                    )
+                    if should_call:
                         self.call(listener['callback'], event)
 
             for event in sync_room['account_data']['events']:
