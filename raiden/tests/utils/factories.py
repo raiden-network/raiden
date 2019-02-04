@@ -31,7 +31,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import privatekey_to_address, random_secret, sha3, typing
-from raiden.utils.signer import LocalSigner
+from raiden.utils.signer import LocalSigner, Signer
 
 EMPTY = object()
 
@@ -113,6 +113,11 @@ def make_privatekey_address(
     privatekey = if_empty(privatekey, make_privatekey())
     address = privatekey_to_address(privatekey)
     return privatekey, address
+
+
+def make_signer(privatekey: bytes = EMPTY) -> Signer:
+    privatekey = if_empty(privatekey, make_privatekey())
+    return LocalSigner(privatekey)
 
 
 def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
