@@ -6,6 +6,7 @@ import pytest
 from raiden import message_handler, waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
@@ -473,10 +474,9 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 
     # The transfer locksroot must not contain the unlocked lock, the
     # unlock must fail.
-    with pytest.raises(Exception):
+    with pytest.raises(RaidenUnrecoverableError):
         netting_channel.unlock(
-            channelstate_0_1.partner_state.address,
-            batch_unlock,
+            merkle_tree_leaves=batch_unlock,
         )
 
     expected_balance0 = initial_balance0 + deposit0 - amount * 2
