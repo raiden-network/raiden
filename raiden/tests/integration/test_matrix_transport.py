@@ -829,14 +829,6 @@ def test_matrix_invite_private_room_happy_case(
 
     gevent.sleep(1)
 
-    latest_auth_data_node0 = f'{transport1._user_id}/{transport1._client.api.token}'
-    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node0)
-    raiden_service1.handle_state_change.assert_called_with(update_transport_auth_data)
-
-    latest_auth_data_node1 = f'{transport0._user_id}/{transport0._client.api.token}'
-    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node1)
-    raiden_service0.handle_state_change.assert_called_with(update_transport_auth_data)
-
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
 
@@ -846,7 +838,7 @@ def test_matrix_invite_private_room_happy_case(
     transport0._get_private_room([user_1])
     gevent.sleep(1)
 
-    room_id = transport1._get_room_for_address( raiden_service0.address).room_id
+    room_id = transport1._get_room_for_address(raiden_service0.address).room_id
 
     room_state_1 = transport1._client.api.get_room_state(room_id)
 
@@ -919,15 +911,8 @@ def test_matrix_invite_private_room_unhappy_case_1(
         message_handler,
         None,
     )
+
     gevent.sleep(1)
-
-    latest_auth_data_node0 = f'{transport1._user_id}/{transport1._client.api.token}'
-    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node0)
-    raiden_service1.handle_state_change.assert_called_with(update_transport_auth_data)
-
-    latest_auth_data_node1 = f'{transport0._user_id}/{transport0._client.api.token}'
-    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node1)
-    raiden_service0.handle_state_change.assert_called_with(update_transport_auth_data)
 
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
@@ -1021,7 +1006,10 @@ def test_matrix_invite_private_room_unhappy_case_2(
     assert transport1._address_to_presence[raiden_service0.address].value == 'online'
     assert transport0._address_to_presence[raiden_service1.address].value == 'online'
     transport1.stop()
-    gevent.sleep(1)
+    with Timeout(retry_interval * 20, exception=False):
+        while not transport0._address_to_presence[raiden_service1.address].value == 'offline':
+            gevent.sleep(.1)
+
     assert transport0._address_to_presence[raiden_service1.address].value == 'offline'
 
     user_1 = transport0._get_user(transport0._address_to_userids[raiden_service1.address].pop())
@@ -1044,7 +1032,7 @@ def test_matrix_invite_private_room_unhappy_case_2(
         if event['type'] == 'm.room.join_rules'
     ][0]
 
-    # assert join_rule_0 == 'invite' <-- the inviter's join is public for some reason
+    assert join_rule_0 == 'public'
 
     room_id_1 = transport1._get_room_for_address(raiden_service0.address).room_id
     room_state_1 = transport1._client.api.get_room_state(room_id_1)
@@ -1110,21 +1098,16 @@ def test_matrix_invite_private_room_unhappy_case_3(
 
     gevent.sleep(1)
 
-    latest_auth_data_node0 = f'{transport1._user_id}/{transport1._client.api.token}'
-    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node0)
-    raiden_service1.handle_state_change.assert_called_with(update_transport_auth_data)
-
-    latest_auth_data_node1 = f'{transport0._user_id}/{transport0._client.api.token}'
-    update_transport_auth_data = ActionUpdateTransportAuthData(latest_auth_data_node1)
-    raiden_service0.handle_state_change.assert_called_with(update_transport_auth_data)
-
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
 
     assert transport1._address_to_presence[raiden_service0.address].value == 'online'
     assert transport0._address_to_presence[raiden_service1.address].value == 'online'
     transport1.stop()
-    gevent.sleep(1)
+    with Timeout(retry_interval * 20, exception=False):
+        while not transport0._address_to_presence[raiden_service1.address].value == 'offline':
+            gevent.sleep(.1)
+
     assert transport0._address_to_presence[raiden_service1.address].value == 'offline'
 
     user_1 = transport0._get_user(
@@ -1132,14 +1115,17 @@ def test_matrix_invite_private_room_unhappy_case_3(
 
     transport0._get_private_room([user_1])
     gevent.sleep(1)
-
-    transport0.stop()
     transport1.start(
         raiden_service1,
         message_handler,
         None,
     )
     gevent.sleep(1)
+    transport0.stop()
+
+    with Timeout(retry_interval * 20, exception=False):
+        while not transport1._address_to_presence[raiden_service0.address].value == 'offline':
+            gevent.sleep(.1)
     assert transport1._address_to_presence[raiden_service0.address].value == 'offline'
 
     room_id_1 = transport1._get_room_for_address(raiden_service0.address).room_id
@@ -1156,3 +1142,111 @@ def test_matrix_invite_private_room_unhappy_case_3(
     transport1.stop()
     transport0.get()
     transport1.get()
+
+
+@pytest.mark.parametrize('matrix_server_count', [3])
+@pytest.mark.parametrize('number_of_transports', [3])
+def test_matrix_user_roaming(matrix_transports, retry_interval):
+    transport0, transport1, transport2 = matrix_transports
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
+
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
+
+    queueid1 = QueueIdentifier(
+        recipient=raiden_service1.address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+
+    message = Processed(0)
+    raiden_service0.sign(message)
+
+    transport0.send_async(queueid1, message)
+
+    with Timeout(retry_interval * 20, exception=False):
+        all_messages_received = False
+
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == 1 and
+                len(received_messages1) == 1
+            )
+            gevent.sleep(.1)
+
+    assert all_messages_received
+
+    transport0.stop()
+    with Timeout(retry_interval * 20, exception=False):
+        while not transport1._address_to_presence[raiden_service0.address].value == 'offline':
+            gevent.sleep(.1)
+
+    assert transport1._address_to_presence[raiden_service0.address].value == 'offline'
+
+    transport2.start(raiden_service0, message_handler0, '')
+
+    transport2.start_health_check(raiden_service1.address)
+
+    message = Processed(1)
+    raiden_service0.sign(message)
+
+    transport2.send_async(queueid1, message)
+
+    with Timeout(retry_interval * 20, exception=False):
+        all_messages_received = False
+
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == 2 and
+                len(received_messages1) == 2
+            )
+            gevent.sleep(.1)
+
+    assert all_messages_received
+
+    transport2.stop()
+    with Timeout(retry_interval * 20, exception=False):
+        while not transport1._address_to_presence[raiden_service0.address].value == 'offline':
+            gevent.sleep(.1)
+
+    assert transport1._address_to_presence[raiden_service0.address].value == 'offline'
+
+    transport0.start(raiden_service0, message_handler0, '')
+    with Timeout(retry_interval * 20, exception=False):
+        while not transport1._address_to_presence[raiden_service0.address].value == 'online':
+            gevent.sleep(.1)
+
+    assert transport1._address_to_presence[raiden_service0.address].value == 'online'
+
+    message = Processed(2)
+    raiden_service0.sign(message)
+
+    transport0.send_async(queueid1, message)
+
+    with Timeout(retry_interval * 20, exception=False):
+        all_messages_received = False
+
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == 3 and
+                len(received_messages1) == 3
+            )
+            gevent.sleep(.1)
+
+    assert all_messages_received
+
+    transport0.stop()
+    transport1.stop()
+
+    transport0.get()
+    transport1.get()
+    transport2.get()
