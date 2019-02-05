@@ -11,6 +11,7 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
 )
+from raiden.utils.typing import MYPY_ANNOTATION
 
 
 def subdispatch_to_channel_by_id(
@@ -279,6 +280,7 @@ def state_transition(
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     if type(state_change) == ActionChannelClose:
+        assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_channel_close(
             token_network_state,
             state_change,
@@ -286,11 +288,13 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelNew:
+        assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
         iteration = handle_channelnew(
             token_network_state,
             state_change,
         )
     elif type(state_change) == ContractReceiveChannelNewBalance:
+        assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
         iteration = handle_balance(
             token_network_state,
             state_change,
@@ -298,6 +302,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelClosed:
+        assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
         iteration = handle_closed(
             token_network_state,
             state_change,
@@ -305,6 +310,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelSettled:
+        assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
         iteration = handle_settled(
             token_network_state,
             state_change,
@@ -312,6 +318,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ContractReceiveUpdateTransfer:
+        assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
         iteration = handle_updated_transfer(
             token_network_state,
             state_change,
@@ -319,6 +326,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
+        assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_batch_unlock(
             token_network_state,
             state_change,
@@ -326,11 +334,13 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ContractReceiveRouteNew:
+        assert isinstance(state_change, ContractReceiveRouteNew), MYPY_ANNOTATION
         iteration = handle_newroute(
             token_network_state,
             state_change,
         )
     elif type(state_change) == ContractReceiveRouteClosed:
+        assert isinstance(state_change, ContractReceiveRouteClosed), MYPY_ANNOTATION
         iteration = handle_closeroute(
             token_network_state,
             state_change,

@@ -20,7 +20,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import NettingChannelState, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
-from raiden.utils.typing import Address, BlockNumber, List, Optional
+from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockNumber, List, Optional
 
 
 def sanity_check(
@@ -345,6 +345,7 @@ def state_transition(
 
     iteration = TransitionResult(target_state, list())
     if type(state_change) == ActionInitTarget:
+        assert isinstance(state_change, ActionInitTarget), MYPY_ANNOTATION
         if target_state is None:
             iteration = handle_inittarget(
                 state_change,
@@ -353,6 +354,7 @@ def state_transition(
                 block_number,
             )
     elif type(state_change) == Block:
+        assert isinstance(state_change, Block), MYPY_ANNOTATION
         assert state_change.block_number == block_number
 
         iteration = handle_block(
@@ -361,6 +363,7 @@ def state_transition(
             state_change.block_number,
         )
     elif type(state_change) == ReceiveSecretReveal:
+        assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_offchain_secretreveal(
             target_state=target_state,
             state_change=state_change,
@@ -369,18 +372,21 @@ def state_transition(
             block_number=block_number,
         )
     elif type(state_change) == ContractReceiveSecretReveal:
+        assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_onchain_secretreveal(
             target_state,
             state_change,
             channel_state,
         )
     elif type(state_change) == ReceiveUnlock:
+        assert isinstance(state_change, ReceiveUnlock), MYPY_ANNOTATION
         iteration = handle_unlock(
             target_state,
             state_change,
             channel_state,
         )
     elif type(state_change) == ReceiveLockExpired:
+        assert isinstance(state_change, ReceiveLockExpired), MYPY_ANNOTATION
         iteration = handle_lock_expired(
             target_state,
             state_change,
