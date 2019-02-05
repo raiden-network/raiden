@@ -1163,8 +1163,9 @@ def is_transaction_pending(chain_state, transaction, state_change):
     )
 
 
-def update_queues(iteration: TransitionResult, state_change: StateChange) -> None:
+def update_queues(iteration: TransitionResult[ChainState], state_change: StateChange) -> None:
     chain_state = iteration.new_state
+    assert chain_state is not None, 'chain_state must be set'
 
     if isinstance(state_change, ContractReceiveStateChange):
         pending_transactions = [
