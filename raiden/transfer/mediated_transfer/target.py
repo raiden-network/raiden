@@ -91,7 +91,7 @@ def handle_inittarget(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
     route = state_change.route
@@ -158,7 +158,7 @@ def handle_offchain_secretreveal(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[TargetTransferState]:
     """ Validates and handles a ReceiveSecretReveal state change. """
     valid_secret = is_valid_secret_reveal(
         state_change=state_change,
@@ -204,7 +204,7 @@ def handle_onchain_secretreveal(
         target_state: TargetTransferState,
         state_change: ContractReceiveSecretReveal,
         channel_state: NettingChannelState,
-) -> TransitionResult:
+) -> TransitionResult[TargetTransferState]:
     """ Validates and handles a ContractReceiveSecretReveal state change. """
     valid_secret = is_valid_secret_reveal(
         state_change=state_change,
@@ -230,7 +230,7 @@ def handle_unlock(
         target_state: TargetTransferState,
         state_change: ReceiveUnlock,
         channel_state: NettingChannelState,
-) -> TransitionResult:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ Handles a ReceiveUnlock state change. """
     balance_proof_sender = state_change.balance_proof.sender
 
@@ -270,7 +270,7 @@ def handle_block(
         target_state: TargetTransferState,
         channel_state: NettingChannelState,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[TargetTransferState]:
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
     """
@@ -312,7 +312,7 @@ def handle_lock_expired(
         state_change: ReceiveLockExpired,
         channel_state: NettingChannelState,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """Remove expired locks from channel states."""
     result = channel.handle_receive_lock_expired(
         channel_state=channel_state,
@@ -339,7 +339,7 @@ def state_transition(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[TargetTransferState]]:
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 

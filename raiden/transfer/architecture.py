@@ -10,7 +10,6 @@ from raiden.utils.typing import (
     Generic,
     List,
     MessageID,
-    Optional,
     T_BlockNumber,
     T_ChannelID,
     TransactionHash,
@@ -299,7 +298,7 @@ class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
         'events',
     )
 
-    def __init__(self, new_state: Optional[ST], events: List[Event]):
+    def __init__(self, new_state: ST, events: List[Event]):
         self.new_state = new_state
         self.events = events
 

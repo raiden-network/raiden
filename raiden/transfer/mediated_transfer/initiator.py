@@ -88,7 +88,7 @@ def handle_block(
         state_change: Block,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-) -> TransitionResult:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ Checks if the lock has expired, and if it has sends a remove expired
     lock and emits the failing events.
     """
@@ -216,7 +216,7 @@ def try_new_route(
         transfer_description: TransferDescriptionWithSecretState,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
 
     channel_state = next_channel_from_routes(
         available_routes,
@@ -298,7 +298,7 @@ def handle_secretrequest(
         state_change: ReceiveSecretRequest,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-) -> TransitionResult:
+) -> TransitionResult[InitiatorTransferState]:
 
     is_message_from_target = (
         state_change.sender == initiator_state.transfer_description.target and
@@ -359,7 +359,7 @@ def handle_offchain_secretreveal(
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-) -> TransitionResult:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ Once the next hop proves it knows the secret, the initiator can unlock
     the mediated transfer.
 
@@ -396,7 +396,7 @@ def handle_onchain_secretreveal(
         state_change: ContractReceiveSecretReveal,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-) -> TransitionResult:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     """ When a secret is revealed on-chain all nodes learn the secret.
 
     This check the on-chain secret corresponds to the one used by the
@@ -449,7 +449,7 @@ def state_transition(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[InitiatorTransferState]]:
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(
