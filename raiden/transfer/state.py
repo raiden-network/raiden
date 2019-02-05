@@ -301,7 +301,7 @@ class ChainState(State):
         self.pending_transactions = list()
         self.pseudo_random_generator = pseudo_random_generator
         self.queueids_to_queues: QueueIdsToQueues = dict()
-        self.last_transport_authdata = None
+        self.last_transport_authdata: Optional[str] = None
 
     def __repr__(self):
         return '<ChainState block:{} networks:{} qty_transfers:{} chain_id:{}>'.format(
@@ -469,7 +469,7 @@ class TokenNetworkState(State):
         self.network_graph = TokenNetworkGraphState(self.address)
 
         self.channelidentifiers_to_channels = dict()
-        self.partneraddresses_to_channelidentifiers = defaultdict(list)
+        self.partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = defaultdict(list)
 
     def __repr__(self):
         return '<TokenNetworkState id:{} token:{}>'.format(
