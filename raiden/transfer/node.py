@@ -59,6 +59,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     BlockNumber,
     ChannelID,
     List,
@@ -67,10 +68,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenNetworkID,
     Tuple,
-)
-
-MYPY_ANNOTATION = (
-    'This assert is used to tell mypy what is the type of the variable'
 )
 
 
