@@ -56,6 +56,7 @@ def get_db_version(db_filename: Path):
 @contextmanager
 def in_transaction(cursor):
     try:
+        cursor.execute('BEGIN')
         yield
         cursor.execute('COMMIT')
     except Exception as e:
