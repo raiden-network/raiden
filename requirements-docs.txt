@@ -1,0 +1,7 @@
+# Documentation
+sphinx==1.6.7
+sphinx_rtd_theme==0.4.0
+sphinxcontrib-httpdomain==1.7.0
+sphinxcontrib-httpexample==0.8.1
+sphinxcontrib-images==0.7.0
+releases==1.6.1
