@@ -756,7 +756,6 @@ def handle_state_change(
         chain_state: ChainState,
         state_change: StateChange,
 ) -> TransitionResult[ChainState]:
-
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(
@@ -769,6 +768,7 @@ def handle_state_change(
             chain_state,
             state_change,
         )
+        chain_state = iteration.new_state
     elif type(state_change) == ActionNewTokenNetwork:
         assert isinstance(state_change, ActionNewTokenNetwork), MYPY_ANNOTATION
         iteration = handle_new_token_network(
