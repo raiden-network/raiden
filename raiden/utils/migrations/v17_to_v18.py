@@ -1,6 +1,7 @@
 import json
 import sqlite3
 
+from raiden.exceptions import RaidenDBUpgradeError
 from raiden.transfer.state import RouteState
 from raiden.utils.typing import Any, Dict
 
@@ -26,11 +27,9 @@ def update_snapshot(
 def get_token_network_by_identifier(snapshot, token_network_identifier):
     identifiers_to_paymentnetworks = snapshot['identifiers_to_paymentnetworks']
     for paymentnetwork in identifiers_to_paymentnetworks.values():
-        token_network = paymentnetwork['tokenidentifiers_to_tokennetworks'].get(
-            token_network_identifier,
-        )
-        if not token_network:
-            return token_network
+        for token_network in paymentnetwork['tokennetworks']:
+            if token_network['address'] == token_network_identifier:
+                return token_network
     return None
 
 
@@ -65,12 +64,14 @@ def _transform_snapshot(raw_snapshot: Dict[Any, Any]):
             snapshot,
             token_network_identifier,
         )
-
-        channel_identifier = int(transfer['balance_proof']['channel_identifier'])
+        channel_identifier = transfer['balance_proof']['channel_identifier']
         channel = token_network.get('channelidentifiers_to_channels').get(channel_identifier)
         if not channel:
-            # Fail
-            raise Exception
+            raise RaidenDBUpgradeError(
+                'Upgrading to v18 failed. '
+                f'Could not find channel with identifier {channel_identifier} '
+                'in the current chain state.',
+            )
 
         # Only add the route for which the waiting transfer was intended.
         # At the time of migration, we cannot re-calculate the list of routes
