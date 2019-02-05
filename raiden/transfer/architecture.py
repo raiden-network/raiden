@@ -3,18 +3,18 @@ from copy import deepcopy
 
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils.typing import (
-    TypeVar,
-    Generic,
     Address,
     BlockExpiration,
     BlockNumber,
     ChannelID,
+    Generic,
     List,
     MessageID,
     Optional,
     T_BlockNumber,
     T_ChannelID,
     TransactionHash,
+    TypeVar,
 )
 
 # Quick overview

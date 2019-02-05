@@ -469,7 +469,9 @@ class TokenNetworkState(State):
         self.network_graph = TokenNetworkGraphState(self.address)
 
         self.channelidentifiers_to_channels = dict()
-        self.partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = defaultdict(list)
+        self.partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = defaultdict(
+            list,
+        )
 
     def __repr__(self):
         return '<TokenNetworkState id:{} token:{}>'.format(
