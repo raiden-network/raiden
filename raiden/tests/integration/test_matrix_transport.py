@@ -479,6 +479,8 @@ def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval
             )
             gevent.sleep(.1)
 
+    assert all_messages_received
+
     transport0.stop()
     transport1.stop()
     transport2.stop()
