@@ -3,6 +3,8 @@ from copy import deepcopy
 
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils.typing import (
+    TypeVar,
+    Generic,
     Address,
     BlockExpiration,
     BlockNumber,
@@ -282,7 +284,10 @@ class StateManager:
         return not self.__eq__(other)
 
 
-class TransitionResult:
+ST = TypeVar('ST', bound=State)
+
+
+class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
     """ Representes the result of applying a single state change.
 
     When a task is completed the new_state is set to None, allowing the parent
@@ -294,7 +299,7 @@ class TransitionResult:
         'events',
     )
 
-    def __init__(self, new_state: Optional[State], events: List[Event]):
+    def __init__(self, new_state: Optional[ST], events: List[Event]):
         self.new_state = new_state
         self.events = events
 
