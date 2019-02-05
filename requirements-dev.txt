@@ -3,6 +3,10 @@
 # Split out to allow quicker lint turnaround on CI
 -r requirements-lint.txt
 
+# split out to allow faster building of docs and to not require python 3.7
+# since they don't support it in RTD yet: https://github.com/rtfd/readthedocs.org/issues/4713
+-r requirements-docs.txt
+
 # Testing
 pytest-cov==2.5.1
 pytest-random==0.02
@@ -22,13 +26,6 @@ colour==0.1.5
 # Continuous Integration
 coverage==4.5.1
 
-# Documentation
-sphinx==1.6.7
-sphinx_rtd_theme==0.4.0
-sphinxcontrib-httpdomain==1.7.0
-sphinxcontrib-httpexample==0.8.1
-sphinxcontrib-images==0.7.0
-releases==1.6.1
 
 # Release
 bump2version==0.5.8
