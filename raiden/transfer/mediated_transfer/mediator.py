@@ -278,7 +278,7 @@ def sanity_check(state: MediatorTransferState) -> None:
 def clear_if_finalized(
         iteration: TransitionResult,
         channelidentifiers_to_channels: ChannelMap,
-) -> TransitionResult:
+) -> TransitionResult[Optional[MediatorTransferState]]:
     """Clear the mediator task if all the locks have been finalized.
 
     A lock is considered finalized if it has been removed from the merkle tree
@@ -958,7 +958,7 @@ def secret_learned(
         secret: Secret,
         secrethash: SecretHash,
         payee_address: Address,
-) -> TransitionResult:
+) -> TransitionResult[MediatorTransferState]:
     """ Unlock the payee lock, reveal the lock to the payer, and if necessary
     register the secret on-chain.
     """
@@ -1012,7 +1012,7 @@ def mediate_transfer(
         pseudo_random_generator: random.Random,
         payer_transfer: LockedTransferSignedState,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[MediatorTransferState]:
     """ Try a new route or fail back to a refund.
 
     The mediator can safely try a new route knowing that the tokens from
@@ -1077,7 +1077,7 @@ def handle_init(
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[MediatorTransferState]]:
     routes = state_change.routes
 
     from_route = state_change.from_route
@@ -1119,7 +1119,7 @@ def handle_block(
         state_change: Block,
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-) -> TransitionResult:
+) -> TransitionResult[MediatorTransferState]:
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time locks.
     Args:
@@ -1162,7 +1162,7 @@ def handle_refundtransfer(
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) ->TransitionResult:
+) ->TransitionResult[MediatorTransferState]:
     """ Validate and handle a ReceiveTransferRefund mediator_state change.
     A node might participate in mediated transfer more than once because of
     refund transfers, eg. A-B-C-B-D-T, B tried to mediate the transfer through
@@ -1221,7 +1221,7 @@ def handle_offchain_secretreveal(
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[MediatorTransferState]:
     """ Handles the secret reveal and sends SendBalanceProof/RevealSecret if necessary. """
     is_valid_reveal = is_valid_secret_reveal(
         state_change=mediator_state_change,
@@ -1269,7 +1269,7 @@ def handle_onchain_secretreveal(
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[MediatorTransferState]:
     """ The secret was revealed on-chain, set the state of all transfers to
     secret known.
     """
@@ -1312,7 +1312,7 @@ def handle_unlock(
         mediator_state: MediatorTransferState,
         state_change: ReceiveUnlock,
         channelidentifiers_to_channels: ChannelMap,
-) -> TransitionResult:
+) -> TransitionResult[MediatorTransferState]:
     """ Handle a ReceiveUnlock state change. """
     events = list()
     balance_proof_sender = state_change.balance_proof.sender
@@ -1354,7 +1354,7 @@ def handle_lock_expired(
         state_change: ReceiveLockExpired,
         channelidentifiers_to_channels: ChannelMap,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[MediatorTransferState]:
     events = list()
 
     for transfer_pair in mediator_state.transfers_pair:
@@ -1397,7 +1397,7 @@ def state_transition(
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[MediatorTransferState]]:
     """ State machine for a node mediating a transfer. """
     # pylint: disable=too-many-branches
     # Notes:
