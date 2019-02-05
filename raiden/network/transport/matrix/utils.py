@@ -1,7 +1,6 @@
 import json
 import re
 from binascii import Error as DecodeError
-from collections import OrderedDict
 from operator import attrgetter
 from random import Random
 from typing import Optional, Sequence
@@ -33,18 +32,18 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
 
     Params:
         client: matrix-python-sdk client instance
-        name: name or alias of the room (without #-prefix or server's name suffix)
+        name: name or alias of the room (without #-prefix or server name suffix)
         servers: optional: sequence of known/available servers to try to find the room in
     Returns:
         matrix's Room instance linked to client
     """
-    assert urlparse(client.api.base_url).netloc, 'Invalid client\'s homeserver url'
-    servers = [
+    our_server_name = urlparse(client.api.base_url).netloc
+    assert our_server_name, 'Invalid client\'s homeserver url'
+    servers = [our_server_name] + [  # client's own server first
         urlparse(s).netloc
-        for s in ([client.api.base_url] + list(servers))  # client's own server first
-        if urlparse(s).netloc
+        for s in servers
+        if urlparse(s).netloc not in {None, '', our_server_name}
     ]
-    servers = list(OrderedDict.fromkeys(servers))  # dedupe, keep order
 
     our_server_global_room_alias_full = f'#{name}:{servers[0]}'
 
