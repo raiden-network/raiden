@@ -79,9 +79,12 @@ STATE_TRANSFER_FINAL = (
 )
 
 
-def is_lock_valid(expiration, block_number) -> bool:
+def is_lock_valid(
+        expiration: BlockExpiration,
+        block_number: BlockNumber,
+) -> bool:
     """ True if the lock has not expired. """
-    return block_number <= expiration
+    return block_number <= BlockNumber(expiration)
 
 
 def is_safe_to_wait(
@@ -893,7 +896,7 @@ def events_to_remove_expired_locks(
         channelidentifiers_to_channels: ChannelMap,
         block_number: BlockNumber,
         pseudo_random_generator: random.Random,
-):
+) -> List[Event]:
     """ Clear the channels which have expired locks.
 
     This only considers the *sent* transfers, received transfers can only be
@@ -954,7 +957,7 @@ def secret_learned(
         secret: Secret,
         secrethash: SecretHash,
         payee_address: Address,
-):
+) -> TransitionResult:
     """ Unlock the payee lock, reveal the lock to the payer, and if necessary
     register the secret on-chain.
     """
