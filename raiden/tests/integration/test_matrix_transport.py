@@ -93,6 +93,7 @@ def mock_matrix(
 @pytest.fixture()
 def skip_userid_validation(monkeypatch):
     import raiden.network.transport.matrix
+    import raiden.network.transport.matrix.transport
     import raiden.network.transport.matrix.utils
 
     def mock_validate_userid_signature(user):
@@ -100,6 +101,11 @@ def skip_userid_validation(monkeypatch):
 
     monkeypatch.setattr(
         raiden.network.transport.matrix,
+        'validate_userid_signature',
+        mock_validate_userid_signature,
+    )
+    monkeypatch.setattr(
+        raiden.network.transport.matrix.transport,
         'validate_userid_signature',
         mock_validate_userid_signature,
     )
@@ -424,7 +430,8 @@ def test_join_invalid_discovery(
         None,
     )
     transport.log = MagicMock()
-    assert isinstance(transport._global_rooms.get('discovery'), Room)
+    discovery_room_name = transport._make_room_alias('discovery')
+    assert isinstance(transport._global_rooms.get(discovery_room_name), Room)
 
     transport.stop()
     transport.get()
@@ -513,6 +520,9 @@ def test_matrix_discovery_room_offline_server(
     })
     transport.start(MockRaidenService(None), MessageHandler(set()), '')
     gevent.sleep(.2)
-    assert transport._global_rooms.get('discovery')
+
+    discovery_room_name = transport._make_room_alias('discovery')
+    assert isinstance(transport._global_rooms.get(discovery_room_name), Room)
+
     transport.stop()
     transport.get()
