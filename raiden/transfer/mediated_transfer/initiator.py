@@ -29,6 +29,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, StateChange
 from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     Address,
     BlockExpiration,
     BlockNumber,
@@ -450,6 +451,7 @@ def state_transition(
         block_number: BlockNumber,
 ) -> TransitionResult:
     if type(state_change) == Block:
+        assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(
             initiator_state,
             state_change,
@@ -457,6 +459,7 @@ def state_transition(
             pseudo_random_generator,
         )
     elif type(state_change) == ReceiveSecretRequest:
+        assert isinstance(state_change, ReceiveSecretRequest), MYPY_ANNOTATION
         iteration = handle_secretrequest(
             initiator_state,
             state_change,
@@ -464,6 +467,7 @@ def state_transition(
             pseudo_random_generator,
         )
     elif type(state_change) == ReceiveSecretReveal:
+        assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_offchain_secretreveal(
             initiator_state,
             state_change,
@@ -471,6 +475,7 @@ def state_transition(
             pseudo_random_generator,
         )
     elif type(state_change) == ContractReceiveSecretReveal:
+        assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_onchain_secretreveal(
             initiator_state,
             state_change,
@@ -479,4 +484,5 @@ def state_transition(
         )
     else:
         iteration = TransitionResult(initiator_state, list())
+
     return iteration

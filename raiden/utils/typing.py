@@ -1,6 +1,10 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import Dict, List, NewType, Optional, Tuple, Union
 
+MYPY_ANNOTATION = (
+    'This assert is used to tell mypy what is the type of the variable'
+)
+
 T_ABI = dict
 ABI = NewType('ABI', T_ABI)
 

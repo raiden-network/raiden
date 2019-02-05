@@ -74,6 +74,7 @@ from raiden.transfer.utils import hash_balance_data
 from raiden.utils import pex
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     Address,
     Any,
     Balance,
@@ -1904,41 +1905,48 @@ def state_transition(
     iteration = TransitionResult(channel_state, events)
 
     if type(state_change) == Block:
+        assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(
             channel_state,
             state_change,
             block_number,
         )
     elif type(state_change) == ActionChannelClose:
+        assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_action_close(
             channel_state,
             state_change,
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelClosed:
+        assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
         iteration = handle_channel_closed(
             channel_state,
             state_change,
         )
     elif type(state_change) == ContractReceiveUpdateTransfer:
+        assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
         iteration = handle_channel_updated_transfer(
             channel_state,
             state_change,
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelSettled:
+        assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
         iteration = handle_channel_settled(
             channel_state,
             state_change,
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelNewBalance:
+        assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
         iteration = handle_channel_newbalance(
             channel_state,
             state_change,
             block_number,
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
+        assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_channel_batch_unlock(
             channel_state,
             state_change,

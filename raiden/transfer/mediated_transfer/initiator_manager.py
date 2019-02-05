@@ -19,7 +19,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import RouteState
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
-from raiden.utils.typing import BlockNumber, ChannelMap, List, SecretHash, cast
+from raiden.utils.typing import MYPY_ANNOTATION, BlockNumber, ChannelMap, List, SecretHash, cast
 
 
 def clear_if_finalized(iteration: TransitionResult) -> TransitionResult:
@@ -476,6 +476,7 @@ def state_transition(
 ) -> TransitionResult:
     # pylint: disable=unidiomatic-typecheck
     if type(state_change) == Block:
+        assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(
             payment_state,
             state_change,
@@ -484,6 +485,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ActionInitInitiator:
+        assert isinstance(state_change, ActionInitInitiator), MYPY_ANNOTATION
         iteration = handle_init(
             payment_state,
             state_change,
@@ -492,6 +494,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ReceiveSecretRequest:
+        assert isinstance(state_change, ReceiveSecretRequest), MYPY_ANNOTATION
         iteration = handle_secretrequest(
             payment_state,
             state_change,
@@ -500,6 +503,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ReceiveTransferRefundCancelRoute:
+        assert isinstance(state_change, ReceiveTransferRefundCancelRoute), MYPY_ANNOTATION
         iteration = handle_transferrefundcancelroute(
             payment_state,
             state_change,
@@ -508,11 +512,13 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ActionCancelPayment:
+        assert isinstance(state_change, ActionCancelPayment), MYPY_ANNOTATION
         iteration = handle_cancelpayment(
             payment_state,
             channelidentifiers_to_channels,
         )
     elif type(state_change) == ReceiveSecretReveal:
+        assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_offchain_secretreveal(
             payment_state,
             state_change,
@@ -521,6 +527,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ReceiveLockExpired:
+        assert isinstance(state_change, ReceiveLockExpired), MYPY_ANNOTATION
         iteration = handle_lock_expired(
             payment_state,
             state_change,
@@ -529,6 +536,7 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ContractReceiveSecretReveal:
+        assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_onchain_secretreveal(
             payment_state,
             state_change,

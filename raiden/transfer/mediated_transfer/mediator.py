@@ -36,6 +36,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
 from raiden.utils.typing import (
+    MYPY_ANNOTATION,
     Address,
     BlockExpiration,
     BlockNumber,
@@ -1407,7 +1408,8 @@ def state_transition(
 
     iteration = TransitionResult(mediator_state, list())
 
-    if isinstance(state_change, ActionInitMediator):
+    if type(state_change) == ActionInitMediator:
+        assert isinstance(state_change, ActionInitMediator), MYPY_ANNOTATION
         if mediator_state is None:
             iteration = handle_init(
                 state_change,
@@ -1416,7 +1418,8 @@ def state_transition(
                 block_number,
             )
 
-    elif isinstance(state_change, Block):
+    elif type(state_change) == Block:
+        assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(
             mediator_state,
             state_change,
@@ -1424,7 +1427,8 @@ def state_transition(
             pseudo_random_generator,
         )
 
-    elif isinstance(state_change, ReceiveTransferRefund):
+    elif type(state_change) == ReceiveTransferRefund:
+        assert isinstance(state_change, ReceiveTransferRefund), MYPY_ANNOTATION
         iteration = handle_refundtransfer(
             mediator_state,
             state_change,
@@ -1433,7 +1437,8 @@ def state_transition(
             block_number,
         )
 
-    elif isinstance(state_change, ReceiveSecretReveal):
+    elif type(state_change) == ReceiveSecretReveal:
+        assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_offchain_secretreveal(
             mediator_state,
             state_change,
@@ -1442,7 +1447,8 @@ def state_transition(
             block_number,
         )
 
-    elif isinstance(state_change, ContractReceiveSecretReveal):
+    elif type(state_change) == ContractReceiveSecretReveal:
+        assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
         iteration = handle_onchain_secretreveal(
             mediator_state,
             state_change,
@@ -1451,14 +1457,16 @@ def state_transition(
             block_number,
         )
 
-    elif isinstance(state_change, ReceiveUnlock):
+    elif type(state_change) == ReceiveUnlock:
+        assert isinstance(state_change, ReceiveUnlock), MYPY_ANNOTATION
         iteration = handle_unlock(
             mediator_state,
             state_change,
             channelidentifiers_to_channels,
         )
 
-    elif isinstance(state_change, ReceiveLockExpired):
+    elif type(state_change) == ReceiveLockExpired:
+        assert isinstance(state_change, ReceiveLockExpired), MYPY_ANNOTATION
         iteration = handle_lock_expired(
             mediator_state,
             state_change,
