@@ -10,10 +10,12 @@ import structlog
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
 from raiden.storage.versions import older_db_file
 from raiden.utils.migrations.v16_to_v17 import upgrade_initiator_manager
+from raiden.utils.migrations.v17_to_v18 import upgrade_mediators_with_waiting_transfer
 from raiden.utils.typing import Callable
 
 UPGRADES_LIST = [
     upgrade_initiator_manager,
+    upgrade_mediators_with_waiting_transfer,
 ]
 
 
