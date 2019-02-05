@@ -39,14 +39,14 @@ def clear_if_finalized(iteration: TransitionResult) -> TransitionResult:
 def transfer_exists(
         payment_state: InitiatorPaymentState,
         secrethash: SecretHash,
-):
+) -> bool:
     return secrethash in payment_state.initiator_transfers
 
 
 def cancel_other_transfers(
         payment_state: InitiatorPaymentState,
         unlocked_secrethash: SecretHash,
-):
+) -> None:
     for initiator_state in payment_state.initiator_transfers.values():
         initiator_state.transfer_state = 'transfer_cancelled'
 
