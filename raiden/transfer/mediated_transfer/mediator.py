@@ -4,7 +4,7 @@ import random
 from raiden.constants import MAXIMUM_PENDING_TRANSFERS
 from raiden.transfer import channel, secret_registry
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
-from raiden.transfer.events import ContractSendSecretReveal, SendProcessed
+from raiden.transfer.events import SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventUnexpectedSecretReveal,
@@ -840,7 +840,7 @@ def events_for_onchain_secretreveal_if_closed(
         transfers_pair: List[MediationPairState],
         secret: Secret,
         secrethash: SecretHash,
-) -> Sequence[ContractSendSecretReveal]:
+) -> List[Event]:
     """ Register the secret on-chain if the payer channel is already closed and
     the mediator learned the secret off-chain.
 
@@ -852,7 +852,7 @@ def events_for_onchain_secretreveal_if_closed(
         If the secret is learned before the channel is closed, then the channel
         will register the secrets in bulk, not the transfer.
     """
-    events = list()
+    events: List[Event] = list()
 
     all_payer_channels = []
     for pair in transfers_pair:

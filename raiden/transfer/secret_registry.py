@@ -1,3 +1,4 @@
+from raiden.transfer.architecture import Event
 from raiden.transfer.channel import get_status
 from raiden.transfer.events import ContractSendSecretReveal
 from raiden.transfer.state import (
@@ -12,8 +13,8 @@ def events_for_onchain_secretreveal(
         channel_state: NettingChannelState,
         secret: Secret,
         expiration: BlockExpiration,
-) -> List[ContractSendSecretReveal]:
-    events = list()
+) -> List[Event]:
+    events: List[Event] = list()
 
     if not isinstance(secret, T_Secret):
         raise ValueError('secret must be a Secret instance')
