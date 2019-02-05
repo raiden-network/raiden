@@ -8,7 +8,7 @@ from typing import Dict
 import gevent
 import gevent.pool
 import structlog
-from eth_utils import encode_hex, to_checksum_address
+from eth_utils import encode_hex, to_checksum_address, to_hex
 from flask import Flask, make_response, request, send_from_directory, url_for
 from flask.json import jsonify
 from flask_cors import CORS
@@ -1052,8 +1052,8 @@ class RestAPI:
             'target_address': target_address,
             'amount': amount,
             'identifier': identifier,
-            'secret': payment_status.secret.hex(),
-            'secret_hash': payment_status.secret_hash.hex(),
+            'secret': to_hex(payment_status.secret),
+            'secret_hash': to_hex(payment_status.secret_hash),
         }
         result = self.payment_schema.dump(payment)
         return api_response(result=result.data)
