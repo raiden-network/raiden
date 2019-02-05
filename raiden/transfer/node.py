@@ -148,7 +148,7 @@ def subdispatch_to_paymenttask(
 ) -> TransitionResult:
     block_number = chain_state.block_number
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
-    events = list()
+    events: List[Event] = list()
     sub_iteration = None
 
     if sub_task:
@@ -286,7 +286,7 @@ def subdispatch_mediatortask(
     else:
         is_valid_subtask = False
 
-    events = list()
+    events: List[Event] = list()
     if is_valid_subtask:
         token_network_state = views.get_token_network_by_identifier(
             chain_state,
@@ -474,7 +474,7 @@ def handle_chain_init(
             state_change.our_address,
             state_change.chain_id,
         )
-    events = list()
+    events: List[Event] = list()
     return TransitionResult(chain_state, events)
 
 
@@ -493,7 +493,7 @@ def handle_token_network_action(
     assert payment_network_state, 'We should always get a payment_network_state'
     payment_network_id = payment_network_state.address
 
-    events = list()
+    events: List[Event] = list()
     if token_network_state:
         pseudo_random_generator = chain_state.pseudo_random_generator
         iteration = token_network.state_transition(
@@ -551,7 +551,7 @@ def handle_new_token_network(
         token_network_state,
     )
 
-    events = list()
+    events: List[Event] = list()
     return TransitionResult(chain_state, events)
 
 
@@ -559,7 +559,7 @@ def handle_node_change_network_state(
         chain_state: ChainState,
         state_change: ActionChangeNodeNetworkState,
 ) -> TransitionResult:
-    events = list()
+    events: List[Event] = list()
 
     node_address = state_change.node_address
     network_state = state_change.network_state
@@ -583,7 +583,7 @@ def handle_new_payment_network(
         chain_state: ChainState,
         state_change: ContractReceiveNewPaymentNetwork,
 ) -> TransitionResult:
-    events = list()
+    events: List[Event] = list()
 
     payment_network = state_change.payment_network
     payment_network_identifier = payment_network.address
@@ -597,7 +597,7 @@ def handle_tokenadded(
         chain_state: ChainState,
         state_change: ContractReceiveNewTokenNetwork,
 ) -> TransitionResult:
-    events = list()
+    events: List[Event] = list()
     maybe_add_tokennetwork(
         chain_state,
         state_change.payment_network_identifier,
@@ -712,7 +712,7 @@ def handle_processed(
         chain_state: ChainState,
         state_change: ReceiveProcessed,
 ) -> TransitionResult:
-    events = list()
+    events: List[Event] = list()
     # Clean up message queue
     for queueid in list(chain_state.queueids_to_queues.keys()):
         inplace_delete_message_queue(chain_state, state_change, queueid)
