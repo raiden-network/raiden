@@ -3,7 +3,13 @@ from http import HTTPStatus
 import gevent
 import grequests
 import pytest
-from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
+from eth_utils import (
+    is_checksum_address,
+    to_bytes,
+    to_canonical_address,
+    to_checksum_address,
+    to_hex,
+)
 from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
@@ -931,9 +937,11 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
     assert response.items() >= payment.items()
     assert 'secret' in response
     assert 'secret_hash' in response
-    assert len(response['secret']) == 64
-    assert len(response['secret_hash']) == 64
-    assert sha3(bytes.fromhex(response['secret'])).hex() == response['secret_hash']
+    assert len(response['secret']) == 66
+    assert len(response['secret_hash']) == 66
+
+    generated_secret_hash = to_hex(sha3(to_bytes(hexstr=response['secret'])))
+    assert generated_secret_hash == response['secret_hash']
 
 
 def assert_payment_conflict(responses):
