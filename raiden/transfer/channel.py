@@ -680,7 +680,7 @@ def valid_lockedtransfer_check(
 def refund_transfer_matches_received(
         refund_transfer: LockedTransferSignedState,
         received_transfer: LockedTransferUnsignedState,
-):
+) -> bool:
     refund_transfer_sender = refund_transfer.balance_proof.sender
     # Ignore a refund from the target
     if refund_transfer_sender == received_transfer.target:
@@ -897,7 +897,7 @@ def get_distributable(
 
 def get_batch_unlock(
         end_state: NettingChannelEndState,
-) -> Optional[MerkleTreeLeaves]:
+) -> MerkleTreeLeaves:
     """ Unlock proof for an entire merkle tree of pending locks
 
     The unlock proof contains all the merkle tree data, tightly packed, needed by the token
@@ -1011,7 +1011,10 @@ def get_status(channel_state):
     return result
 
 
-def _del_unclaimed_lock(end_state: NettingChannelEndState, secrethash: SecretHash):
+def _del_unclaimed_lock(
+        end_state: NettingChannelEndState,
+        secrethash: SecretHash,
+) -> None:
     if secrethash in end_state.secrethashes_to_lockedlocks:
         del end_state.secrethashes_to_lockedlocks[secrethash]
 
@@ -1108,7 +1111,7 @@ def compute_merkletree_with(
 def compute_merkletree_without(
         merkletree: MerkleTreeState,
         lockhash: LockHash,
-) -> MerkleTreeState:
+) -> Optional[MerkleTreeState]:
     # Use None to inform the caller the lockshash is unknown
     result = None
 
@@ -1228,6 +1231,9 @@ def create_unlock(
         our_state.merkletree,
         lock.lockhash,
     )
+    msg = 'the lock is pending, it must be in the merkletree'
+    assert merkletree is not None, msg
+
     locksroot = merkleroot(merkletree)
 
     token_address = channel_state.token_address
@@ -1556,7 +1562,7 @@ def handle_action_close(
         channel_state: NettingChannelState,
         close: ActionChannelClose,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[NettingChannelState]:
     msg = 'caller must make sure the ids match'
     assert channel_state.identifier == close.channel_identifier, msg
 
@@ -1568,7 +1574,7 @@ def handle_refundtransfer(
         received_transfer: LockedTransferUnsignedState,
         channel_state: NettingChannelState,
         refund: ReceiveTransferRefund,
-):
+) -> EventsOrError:
     is_valid, msg, merkletree = is_valid_refund(
         refund=refund,
         channel_state=channel_state,
@@ -1603,7 +1609,7 @@ def handle_receive_lock_expired(
         channel_state: NettingChannelState,
         state_change: ReceiveLockExpired,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[NettingChannelState]:
     """Remove expired locks from channel states."""
     is_valid, msg, merkletree = is_valid_lock_expired(
         state_change=state_change,
@@ -1717,7 +1723,7 @@ def handle_block(
         channel_state: NettingChannelState,
         state_change: Block,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[NettingChannelState]:
     assert state_change.block_number == block_number
 
     events = list()
@@ -1751,7 +1757,7 @@ def handle_block(
 def handle_channel_closed(
         channel_state: NettingChannelState,
         state_change: ContractReceiveChannelClosed,
-) -> TransitionResult:
+) -> TransitionResult[NettingChannelState]:
     events = list()
 
     just_closed = (
@@ -1794,7 +1800,7 @@ def handle_channel_updated_transfer(
         channel_state: NettingChannelState,
         state_change: ContractReceiveUpdateTransfer,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[NettingChannelState]:
     if state_change.channel_identifier == channel_state.identifier:
         # update transfer was called, make sure we don't call it again
         channel_state.update_transaction = TransactionExecutionStatus(
@@ -1810,7 +1816,7 @@ def handle_channel_settled(
         channel_state: NettingChannelState,
         state_change: ContractReceiveChannelSettled,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[NettingChannelState]]:
     events: List[Event] = list()
 
     # At the moment each participant unlocks its receiving half of the
@@ -1847,7 +1853,7 @@ def handle_channel_newbalance(
         channel_state: NettingChannelState,
         state_change: ContractReceiveChannelNewBalance,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[NettingChannelState]:
     deposit_transaction = state_change.deposit_transaction
 
     if is_transaction_confirmed(deposit_transaction.deposit_block_number, block_number):
@@ -1879,7 +1885,7 @@ def apply_channel_newbalance(
 def handle_channel_batch_unlock(
         channel_state: NettingChannelState,
         state_change: ContractReceiveChannelBatchUnlock,
-) -> TransitionResult:
+) -> TransitionResult[Optional[NettingChannelState]]:
     events = list()
 
     # Unlock is allowed by the smart contract only on a settled channel.
@@ -1898,7 +1904,7 @@ def state_transition(
         state_change: StateChange,
         pseudo_random_generator: Any,
         block_number: BlockNumber,
-) -> TransitionResult:
+) -> TransitionResult[Optional[NettingChannelState]]:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     events: List[Event] = list()
