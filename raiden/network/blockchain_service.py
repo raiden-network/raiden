@@ -212,6 +212,6 @@ class BlockChainService:
         return self.identifier_to_payment_channel[dict_key]
 
     @property
-    @ttl_cache(ttl=30)
+    @ttl_cache(ttl=300)  # Check if the underlying eth network changed every 5 mins
     def network_id(self) -> int:
         return int(self.client.web3.version.network)
