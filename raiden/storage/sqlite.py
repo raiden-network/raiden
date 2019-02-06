@@ -7,6 +7,8 @@ from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec
 from raiden.utils.typing import Any, Dict, NamedTuple, Optional, Tuple
 
+from .serialize import SerdeBase
+
 # The latest DB version
 RAIDEN_DB_VERSION = 17
 
@@ -28,8 +30,8 @@ def assert_sqlite_version() -> bool:
     return True
 
 
-class SQLiteStorage:
-    def __init__(self, database_path, serializer):
+class SQLiteStorage(SerdeBase):
+    def __init__(self, database_path):
         conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.text_factory = str
         conn.execute('PRAGMA foreign_keys=ON')
@@ -57,7 +59,6 @@ class SQLiteStorage:
         # Improve on this and find a better way to protect against this potential race
         # condition.
         self.write_lock = threading.Lock()
-        self.serializer = serializer
 
         self.update_version()
 
@@ -99,24 +100,20 @@ class SQLiteStorage:
         return int(query[0][0])
 
     def write_state_change(self, state_change, log_time):
-        serialized_data = self.serializer.serialize(state_change)
-
         with self.write_lock, self.conn:
             cursor = self.conn.execute(
                 'INSERT INTO state_changes(identifier, data, log_time) VALUES(null, ?, ?)',
-                (serialized_data, log_time),
+                (state_change, log_time),
             )
             last_id = cursor.lastrowid
 
         return last_id
 
     def write_state_snapshot(self, statechange_id, snapshot):
-        serialized_data = self.serializer.serialize(snapshot)
-
         with self.write_lock, self.conn:
             cursor = self.conn.execute(
                 'INSERT INTO state_snapshot(statechange_id, data) VALUES(?, ?)',
-                (statechange_id, serialized_data),
+                (statechange_id, snapshot),
             )
             last_id = cursor.lastrowid
 
@@ -129,17 +126,12 @@ class SQLiteStorage:
             state_change_identifier: Id of the state change that generate these events.
             events: List of Event objects.
         """
-        events_data = [
-            (None, state_change_identifier, log_time, self.serializer.serialize(event))
-            for event in events
-        ]
-
         with self.write_lock, self.conn:
             self.conn.executemany(
                 'INSERT INTO state_events('
                 '   identifier, source_statechange_id, log_time, data'
                 ') VALUES(?, ?, ?, ?)',
-                events_data,
+                events,
             )
 
     def get_latest_state_snapshot(self) -> Optional[Tuple[int, Any]]:
@@ -147,16 +139,15 @@ class SQLiteStorage:
         cursor = self.conn.execute(
             'SELECT statechange_id, data from state_snapshot ORDER BY identifier DESC LIMIT 1',
         )
-        serialized = cursor.fetchall()
+        rows = cursor.fetchall()
 
-        result = None
-        if serialized:
-            assert len(serialized) == 1
-            last_applied_state_change_id = serialized[0][0]
-            snapshot_state = self.serializer.deserialize(serialized[0][1])
+        if rows:
+            assert len(rows) == 1
+            last_applied_state_change_id = rows[0][0]
+            snapshot_state = rows[0][1]
             return (last_applied_state_change_id, snapshot_state)
 
-        return result
+        return None
 
     def get_snapshot_closest_to_state_change(
             self,
@@ -190,7 +181,7 @@ class SQLiteStorage:
         if serialized:
             assert len(serialized) == 1, 'LIMIT 1 must return one element'
             last_applied_state_change_id = serialized[0][0]
-            snapshot_state = self.serializer.deserialize(serialized[0][1])
+            snapshot_state = serialized[0][1]
             result = (last_applied_state_change_id, snapshot_state)
         else:
             result = (0, None)
@@ -228,7 +219,7 @@ class SQLiteStorage:
             if row:
                 event_id = row[0]
                 state_change_identifier = row[1]
-                event = self.serializer.deserialize(row[2])
+                event = row[2]
                 result = EventRecord(
                     event_identifier=event_id,
                     state_change_identifier=state_change_identifier,
@@ -270,7 +261,7 @@ class SQLiteStorage:
             row = cursor.fetchone()
             if row:
                 state_change_identifier = row[0]
-                state_change = self.serializer.deserialize(row[1])
+                state_change = row[1]
                 result = StateChangeRecord(
                     state_change_identifier=state_change_identifier,
                     data=state_change,
@@ -311,10 +302,7 @@ class SQLiteStorage:
             )
 
         try:
-            result = [
-                self.serializer.deserialize(entry[0])
-                for entry in cursor.fetchall()
-            ]
+            result = [entry[0] for entry in cursor.fetchall()]
         except AttributeError:
             raise InvalidDBData(
                 'Your local database is corrupt. Bailing ...',
@@ -347,14 +335,112 @@ class SQLiteStorage:
     def get_events_with_timestamps(self, limit: int = None, offset: int = None):
         entries = self._query_events(limit, offset)
         result = [
-            TimestampedEvent(self.serializer.deserialize(entry[0]), entry[1])
+            TimestampedEvent(entry[0], entry[1])
             for entry in entries
         ]
         return result
 
     def get_events(self, limit: int = None, offset: int = None):
         entries = self._query_events(limit, offset)
-        return [self.serializer.deserialize(entry[0]) for entry in entries]
+        return [entry[0] for entry in entries]
 
     def __del__(self):
         self.conn.close()
+
+
+class SerializedSQLiteStorage(SQLiteStorage):
+    def __init__(self, database_path, serializer: SerdeBase):
+        super.__init__(database_path)
+
+        self.serializer = serializer
+
+    def write_state_change(self, state_change, log_time):
+        serialized_data = self.serializer.serialize(state_change)
+        return super().write_state_change(serialized_data, log_time)
+
+    def write_state_snapshot(self, statechange_id, snapshot):
+        serialized_data = self.serializer.serialize(snapshot)
+        return super().write_state_snapshot(statechange_id, serialized_data)
+
+    def write_events(self, state_change_identifier, events, log_time):
+        """ Save events.
+
+        Args:
+            state_change_identifier: Id of the state change that generate these events.
+            events: List of Event objects.
+        """
+        events_data = [
+            (None, state_change_identifier, log_time, self.serializer.serialize(event))
+            for event in events
+        ]
+        return super().write_events(state_change_identifier, events_data, log_time)
+
+    def get_latest_state_snapshot(self) -> Optional[Tuple[int, Any]]:
+        """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""
+        row = super().get_latest_state_snapshot()
+
+        if row:
+            last_applied_state_change_id = row[0]
+            snapshot_state = self.serializer.deserialize(row[1])
+            return (last_applied_state_change_id, snapshot_state)
+
+        return None
+
+    def get_snapshot_closest_to_state_change(
+            self,
+            state_change_identifier: int,
+    ) -> Tuple[int, Any]:
+        """ Get snapshots earlier than state_change with provided ID. """
+
+        row = super().get_snapshot_closest_to_state_change(state_change_identifier)
+
+        if row:
+            last_applied_state_change_id = row[0]
+            snapshot_state = self.serializer.deserialize(row[1])
+            result = (last_applied_state_change_id, snapshot_state)
+        else:
+            result = (0, None)
+
+        return result
+
+    def get_latest_event_by_data_field(
+            self,
+            filters: Dict[str, Any],
+    ) -> EventRecord:
+        """ Return all state changes filtered by a named field and value."""
+        event = super().get_latest_event_by_data_field(filters)
+
+        if event.event_identifier > 0:
+            event.data = self.serializer.deserialize(event.data)
+
+        return event
+
+    def get_latest_state_change_by_data_field(
+            self,
+            filters: Dict[str, str],
+    ) -> StateChangeRecord:
+        """ Return all state changes filtered by a named field and value."""
+
+        state_change = super().get_latest_state_change_by_data_field(filters)
+
+        if state_change.state_change_identifier > 0:
+            state_change = self.serializer.deserialize(state_change.data)
+
+        return state_change
+
+    def get_statechanges_by_identifier(self, from_identifier, to_identifier):
+        state_changes = super().get_statechanges_by_identifier(from_identifier, to_identifier)
+        return [
+            self.serializer.deserialize(state_change)
+            for state_change in state_changes
+        ]
+
+    def get_events_with_timestamps(self, limit: int = None, offset: int = None):
+        events = super().get_events_with_timestamps(limit, offset)
+        for event in events:
+            event.wrapped_event = self.serializer.deserialize(event.wrapped_event)
+        return events
+
+    def get_events(self, limit: int = None, offset: int = None):
+        events = super().get_events(limit, offset)
+        return [self.serializer.deserialize(event) for event in events]
