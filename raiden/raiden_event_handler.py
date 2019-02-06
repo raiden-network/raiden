@@ -540,3 +540,24 @@ class RaidenEventHandler:
             partner_locksroot=partner_locksroot,
             block_identifier='latest',
         )
+
+
+class RaidenMonitoringEventHandler(RaidenEventHandler):
+    # pylint: disable=no-self-use
+
+    def on_raiden_event(self, raiden: RaidenService, event: Event):
+        if type(event) == EventPaymentReceivedSuccess:
+            self.handle_received_payment(raiden, event)
+
+        # Call base class to trigger other side-effects
+        super().on_raiden_event(raiden, event)
+
+    def handle_received_payment(
+            self,
+            raiden: RaidenService,
+            payment_received: EventPaymentReceivedSuccess,
+    ):
+        log.info(
+            'Received payment, sending balance proof to Monitoring Service',
+            evt=payment_received,
+        )

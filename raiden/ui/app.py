@@ -24,7 +24,7 @@ from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
-from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_event_handler import RaidenEventHandler, RaidenMonitoringEventHandler
 from raiden.settings import (
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
@@ -190,6 +190,7 @@ def run_app(
         unrecoverable_error_should_crash,
         pathfinding_service_address,
         pathfinding_max_paths,
+        enable_monitoring,
         config=None,
         extra_config=None,
         **kwargs,
@@ -232,6 +233,7 @@ def run_app(
     config['unrecoverable_error_should_crash'] = unrecoverable_error_should_crash
     config['services']['pathfinding_service_address'] = pathfinding_service_address
     config['services']['pathfinding_max_paths'] = pathfinding_max_paths
+    config['services']['monitoring_enabled'] = enable_monitoring
 
     parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
     if not parsed_eth_rpc_endpoint.scheme:
@@ -387,6 +389,10 @@ def run_app(
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     raiden_event_handler = RaidenEventHandler()
+    if config['services']['monitoring_enabled'] is True:
+        log.info('Monitoring support is enabled. Setting up BP broadcasting.')
+        raiden_event_handler = RaidenMonitoringEventHandler()
+
     message_handler = MessageHandler()
 
     try:
