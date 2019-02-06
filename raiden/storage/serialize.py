@@ -1,6 +1,19 @@
 import importlib
 import json
 
+from raiden.utils.typing import Any
+
+
+class SerdeBase:
+    """ Base interface for serialization / deserialization. """
+    @staticmethod
+    def serialize(obj: Any):
+        raise NotImplementedError
+
+    @staticmethod
+    def deserialize(data: str):
+        raise NotImplementedError
+
 
 class RaidenJSONEncoder(json.JSONEncoder):
     """ A custom JSON encoder to provide convenience
@@ -58,7 +71,7 @@ class RaidenJSONDecoder(json.JSONDecoder):
         return klass
 
 
-class JSONSerializer:
+class JSONSerializer(SerdeBase):
     @staticmethod
     def serialize(obj):
         return json.dumps(obj, cls=RaidenJSONEncoder)
