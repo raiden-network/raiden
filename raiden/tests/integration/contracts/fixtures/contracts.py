@@ -57,7 +57,7 @@ def token_network_proxy(deploy_client, token_network_contract, contract_manager)
 
 
 @pytest.fixture(name='token_contract')
-def deploy_network_and_return_jsonrpc_proxy(deploy_client, contract_manager):
+def deploy_token_and_return_jsonrpc_proxy(deploy_client, contract_manager):
     return deploy_token(
         deploy_client=deploy_client,
         contract_manager=contract_manager,
