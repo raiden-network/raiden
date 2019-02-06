@@ -6,7 +6,6 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
-    CONTRACT_TOKEN_NETWORK_REGISTRY,
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
@@ -29,35 +28,11 @@ def secret_registry_proxy(deploy_client, secret_registry_address, contract_manag
     )
 
 
-@pytest.fixture(name='token_network_registry_contract')
-def deploy_token_network_registry_and_return_jsonrpc_proxy(
-        chain_id,
-        deploy_client,
-        contract_manager,
-        secret_registry_address,
-):
-    compiled = {
-        CONTRACT_TOKEN_NETWORK_REGISTRY: contract_manager.get_contract(
-            CONTRACT_TOKEN_NETWORK_REGISTRY,
-        ),
-    }
-    return deploy_client.deploy_solidity_contract(
-        CONTRACT_TOKEN_NETWORK_REGISTRY,
-        compiled,
-        constructor_parameters=[
-            secret_registry_address,
-            chain_id,
-            TEST_SETTLE_TIMEOUT_MIN,
-            TEST_SETTLE_TIMEOUT_MAX,
-        ],
-    )
-
-
 @pytest.fixture
-def token_network_registry_proxy(deploy_client, token_network_registry_contract, contract_manager):
+def token_network_registry_proxy(deploy_client, token_network_registry_address, contract_manager):
     return TokenNetworkRegistry(
         jsonrpc_client=deploy_client,
-        registry_address=to_canonical_address(token_network_registry_contract.contract.address),
+        registry_address=to_canonical_address(token_network_registry_address),
         contract_manager=contract_manager,
     )
 
