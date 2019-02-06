@@ -6,7 +6,7 @@ Raiden Red Eyes Mainnet Tutorial
 
 Introduction
 =============
-In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. For this tutorial we use the `Red Eyes release <https://github.com/raiden-network/raiden/releases/tag/v0.100.1>`_. More information on the Red Eyes release can be found here(INSERT LINK ONCE READY). Since the Red Eyes release is a `bug bounty release <https://bounty.raiden.network>`_, certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
+In this tutorial we show how to use Raiden to do off chain payments using the Raiden Network on the Ethereum mainnet. For this tutorial we use the `Red Eyes release <https://github.com/raiden-network/raiden/releases/tag/v0.100.1>`_. More information on the Red Eyes release can be found `here <https://medium.com/raiden-network/red-eyes-mainnet-release-announcement-d48235bbef3c>`_. Since the Red Eyes release is a `bug bounty release <https://bounty.raiden.network>`_, certain limits have been made to the amount of tokens that can be deposited in channels. This is done in order to minimize the funds that are potentially lost in case something goes wrong.
 
 Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version. The current version is version 1.
 
