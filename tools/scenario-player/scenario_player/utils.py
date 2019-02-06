@@ -68,6 +68,11 @@ class LogBuffer:
         return reversed(list(slice_))
 
 
+class ConcatenableNone:
+    def __radd__(self, other):
+        return other
+
+
 class DummyStream:
     def write(self, content):
         pass
