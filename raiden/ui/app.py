@@ -239,7 +239,7 @@ def run_app(
 
     web3 = _setup_web3(eth_rpc_endpoint)
     given_network_id = network_id
-    node_network_id = int(web3.version.network)
+    node_network_id = int(web3.version.network)  # pylint: disable=no-member
     known_given_network_id = given_network_id in ID_TO_NETWORKNAME
     known_node_network_id = node_network_id in ID_TO_NETWORKNAME
 
