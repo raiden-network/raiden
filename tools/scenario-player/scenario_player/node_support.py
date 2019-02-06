@@ -285,7 +285,6 @@ class NodeRunner:
             (
                 ':info,'
                 'raiden:debug,'
-                'raiden_libs:debug,'
                 'raiden_contracts:debug,'
                 'raiden.api.rest.pywsgi:warning'
             ),
