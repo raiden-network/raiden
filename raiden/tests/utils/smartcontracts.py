@@ -90,8 +90,8 @@ def deploy_contract_web3(
         contract_name: contract_manager.get_contract(contract_name),
     }
     contract_proxy = deploy_client.deploy_solidity_contract(
-        contract_name,
-        compiled,
+        contract_name=contract_name,
+        all_contracts=compiled,
         constructor_parameters=constructor_arguments,
     )
     return typing.Address(to_canonical_address(contract_proxy.contract.address))
