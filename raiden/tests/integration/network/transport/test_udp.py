@@ -6,7 +6,7 @@ from raiden.transfer import state, views
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_udp_reachable_node(raiden_network, skip_if_not_udp):
-    """A node that answers the ping message must have it state set to
+    """A node that answers the ping message must have its state set to
     reachable.
     """
     app0, app1 = raiden_network
@@ -32,7 +32,7 @@ def test_udp_reachable_node(raiden_network, skip_if_not_udp):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_udp_unreachable_node(raiden_network, skip_if_not_udp):
-    """A node that does *not* answer the ping message must have it state set to
+    """A node that does *not* answer the ping message must have its state set to
     reachable.
     """
     app0, app1 = raiden_network
