@@ -2,6 +2,10 @@ import json
 import sqlite3
 
 
+SOURCE_VERSION = 16
+TARGET_VERSION = 17
+
+
 def get_snapshots(cursor):
     cursor.execute('SELECT identifier, data FROM state_snapshot')
     snapshots = cursor.fetchall()
@@ -60,5 +64,7 @@ def upgrade_initiator_manager(cursor: sqlite3.Cursor, old_version: int, current_
     """ InitiatorPaymentState was changed so that the "initiator"
     attribute is renamed to "initiator_transfers" and converted to a list.
     """
-    if current_version > 16 and old_version == 16:
+    if old_version == SOURCE_VERSION:
         _transform_snapshots(cursor)
+
+    return TARGET_VERSION
