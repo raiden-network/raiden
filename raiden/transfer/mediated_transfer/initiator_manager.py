@@ -230,12 +230,6 @@ def handle_cancelpayment(
         channelidentifiers_to_channels: ChannelMap,
 ) -> TransitionResult:
     """ Cancel the payment and all related transfers. """
-    channel_identifier = payment_state.initiator.channel_identifier
-    channel_state = channelidentifiers_to_channels.get(channel_identifier)
-
-    if channel_state is None:
-        iteration = TransitionResult(payment_state, list())
-
     # Cannot cancel a transfer after the secret is revealed
     events = list()
     for initiator_state in payment_state.initiator_transfers.values():
@@ -473,28 +467,6 @@ def handle_secretrequest(
     return TransitionResult(payment_state, sub_iteration.events)
 
 
-def handle_receive_secretrequest(
-        payment_state: InitiatorPaymentState,
-        state_change: ReceiveSecretReveal,
-        channelidentifiers_to_channels: ChannelMap,
-        pseudo_random_generator: random.Random,
-):
-    channel_identifier = payment_state.initiator.channel_identifier
-    channel_state = channelidentifiers_to_channels.get(channel_identifier)
-
-    if channel_state is None:
-        return TransitionResult(payment_state, list())
-
-    sub_iteration = initiator.handle_secretrequest(
-        payment_state.initiator,
-        state_change,
-        channel_state,
-        pseudo_random_generator,
-    )
-    iteration = iteration_from_sub(payment_state, sub_iteration)
-    return iteration
-
-
 def state_transition(
         payment_state: InitiatorPaymentState,
         state_change: StateChange,
@@ -520,11 +492,12 @@ def state_transition(
             block_number,
         )
     elif type(state_change) == ReceiveSecretRequest:
-        iteration = handle_receive_secretrequest(
+        iteration = handle_secretrequest(
             payment_state,
             state_change,
             channelidentifiers_to_channels,
             pseudo_random_generator,
+            block_number,
         )
     elif type(state_change) == ReceiveTransferRefundCancelRoute:
         iteration = handle_transferrefundcancelroute(
