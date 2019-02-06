@@ -263,3 +263,44 @@ def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
     )
     log.debug('Matrix homeserver RTT times', rtt_times=sorted_servers)
     return sorted_servers
+
+
+def make_client(servers: Sequence[str], *args, **kwargs) -> GMatrixClient:
+    """Given a list of possible servers, chooses the closest available and create a GMatrixClient
+
+    Params:
+        servers: list of servers urls, with scheme (http or https)
+        Rest of args and kwargs are forwarded to GMatrixClient constructor
+    Returns:
+        GMatrixClient instance for one of the available servers
+    """
+    if len(servers) > 1:
+        sorted_servers = [
+            server_url
+            for (server_url, _) in sort_servers_closest(servers)
+        ]
+        log.info(
+            'Automatically selecting matrix homeserver based on RTT',
+            sorted_servers=sorted_servers,
+        )
+    elif len(servers) == 1:
+        sorted_servers = servers
+    else:
+        raise TransportError('No valid servers list given')
+
+    last_ex = None
+    for server_url in sorted_servers:
+        server_url: str = server_url
+        client = GMatrixClient(server_url, *args, **kwargs)
+        try:
+            client.api._send('GET', '/versions', api_path='/_matrix/client')
+        except MatrixError as ex:
+            log.warning('Selected server not usable', server_url=server_url, _exception=ex)
+            last_ex = ex
+        else:
+            break
+    else:
+        raise TransportError(
+            'Unable to find a reachable Matrix server. Please check your network connectivity.',
+        ) from last_ex
+    return client
