@@ -65,6 +65,7 @@ class App:  # pylint: disable=too-few-public-methods
         'services': {
             'pathfinding_service_address': None,
             'pathfinding_max_paths': 3,
+            'monitoring_enabled': False,
         },
     }
 

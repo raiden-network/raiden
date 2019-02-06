@@ -213,10 +213,15 @@ def options(func):
             ),
             option(
                 '--pathfinding-max-paths',
-                help='sets maximum paths to be requested from the pathfinding service.',
+                help='Set maximum paths to be requested from the pathfinding service.',
                 default=3,
                 type=int,
                 show_default=True,
+            ),
+            option(
+                '--enable-monitoring',
+                help='Enable the broadcasting of balance proofs to the monitoring services',
+                is_flag=True,
             ),
         ),
         option_group(
