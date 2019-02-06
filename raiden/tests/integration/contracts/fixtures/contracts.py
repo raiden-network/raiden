@@ -13,30 +13,31 @@ from raiden_contracts.constants import (
 )
 
 
-@pytest.fixture
-def deploy_contract(deploy_client, contract_manager):
-    """Deploy a contract using raiden-contracts contract manager"""
-    def f(contract_name: str, args=None):
-        if args is None:
-            args = []
-        compiled = {
-            contract_name: contract_manager.get_contract(contract_name),
-        }
-        return deploy_client.deploy_solidity_contract(
-            contract_name,
-            compiled,
-            constructor_parameters=args,
-        )
-    return f
-
-
-@pytest.fixture
-def secret_registry_contract(deploy_contract):
-    return deploy_contract(CONTRACT_SECRET_REGISTRY)
+@pytest.fixture(name='secret_registry_contract')
+def deploy_secret_register_and_return_jsonrpc_proxy(deploy_client, contract_manager):
+    """This uses the JSONRPCClient to deploy the secret registry smart
+    contract, and returns a JSONRPCClient proxy to interact with the smart
+    contract.
+    """
+    compiled = {
+        CONTRACT_SECRET_REGISTRY: contract_manager.get_contract(CONTRACT_SECRET_REGISTRY),
+    }
+    return deploy_client.deploy_solidity_contract(
+        CONTRACT_SECRET_REGISTRY,
+        compiled,
+    )
 
 
 @pytest.fixture
 def secret_registry_proxy(deploy_client, secret_registry_contract, contract_manager):
+    """This uses the available SecretRegistry JSONRPCClient proxy to
+    instantiate a Raiden proxy.
+
+    The JSONRPCClient proxy just exposes the functions from the smart contract
+    as methods in a generate python object, the Raiden proxy uses it to
+    provider alternative interfaces *and* most importantly to do additional
+    error checking (reason for transaction failure, gas usage, etc.).
+    """
     return SecretRegistry(
         jsonrpc_client=deploy_client,
         secret_registry_address=to_canonical_address(secret_registry_contract.contract.address),
@@ -44,11 +45,22 @@ def secret_registry_proxy(deploy_client, secret_registry_contract, contract_mana
     )
 
 
-@pytest.fixture
-def token_network_registry_contract(chain_id, deploy_contract, secret_registry_contract):
-    return deploy_contract(
+@pytest.fixture(name='token_network_registry_contract')
+def deploy_token_network_registry_and_return_jsonrpc_proxy(
+        chain_id,
+        deploy_client,
+        contract_manager,
+        secret_registry_contract,
+):
+    compiled = {
+        CONTRACT_TOKEN_NETWORK_REGISTRY: contract_manager.get_contract(
+            CONTRACT_TOKEN_NETWORK_REGISTRY,
+        ),
+    }
+    return deploy_client.deploy_solidity_contract(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
-        [
+        compiled,
+        constructor_parameters=[
             secret_registry_contract.contract.address,
             chain_id,
             TEST_SETTLE_TIMEOUT_MIN,
@@ -66,17 +78,23 @@ def token_network_registry_proxy(deploy_client, token_network_registry_contract,
     )
 
 
-@pytest.fixture
-def token_network_contract(
+@pytest.fixture(name='token_network_contract')
+def deploy_token_network_and_return_jsonrpc_proxy(
         chain_id,
-        deploy_contract,
+        deploy_client,
         secret_registry_contract,
         token_contract,
-        environment_type,
+        contract_manager,
 ):
-    return deploy_contract(
+    compiled = {
+        CONTRACT_TOKEN_NETWORK: contract_manager.get_contract(
+            CONTRACT_TOKEN_NETWORK,
+        ),
+    }
+    return deploy_client.deploy_solidity_contract(
         CONTRACT_TOKEN_NETWORK,
-        [
+        compiled,
+        constructor_parameters=[
             token_contract.contract.address,
             secret_registry_contract.contract.address,
             chain_id,
@@ -96,8 +114,8 @@ def token_network_proxy(deploy_client, token_network_contract, contract_manager)
     )
 
 
-@pytest.fixture
-def token_contract(deploy_client, contract_manager):
+@pytest.fixture(name='token_contract')
+def deploy_network_and_return_jsonrpc_proxy(deploy_client, contract_manager):
     return deploy_token(
         deploy_client=deploy_client,
         contract_manager=contract_manager,
