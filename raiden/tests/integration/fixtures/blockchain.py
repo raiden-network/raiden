@@ -106,11 +106,6 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3):
 
 
 @pytest.fixture
-def testing_contracts_version():
-    return None
-
-
-@pytest.fixture
 def contract_manager(environment_type):
     version = None
     if environment_type == Environment.DEVELOPMENT:
