@@ -12,6 +12,7 @@ from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
 from raiden.storage.versions import older_db_file
 from raiden.utils.migrations.v16_to_v17 import upgrade_initiator_manager
+from raiden.utils.typing import Callable
 
 UPGRADES_LIST = [
     upgrade_initiator_manager,
@@ -26,10 +27,10 @@ def get_file_lock(db_filename: Path):
     return filelock.FileLock(lock_file_name)
 
 
-def update_version(cursor):
+def update_version(cursor, version):
     cursor.execute(
         'INSERT OR REPLACE INTO settings(name, value) VALUES(?, ?)',
-        ('version', str(RAIDEN_DB_VERSION)),
+        ('version', str(version)),
     )
 
 
@@ -120,20 +121,31 @@ class UpgradeManager:
 
             storage = SQLiteStorage(str(self._current_db_filename), JSONSerializer())
 
-            log.debug(f'Upgrading database to v{RAIDEN_DB_VERSION}')
+            log.debug(f'Upgrading database from {older_version} to v{RAIDEN_DB_VERSION}')
 
             cursor = storage.conn.cursor()
             with in_transaction(cursor):
                 try:
+                    version_iteration = older_version
                     for upgrade_func in UPGRADES_LIST:
-                        upgrade_func(cursor, older_version, RAIDEN_DB_VERSION)
+                        version_iteration = self._run_upgrade_func(
+                            cursor,
+                            upgrade_func,
+                            version_iteration,
+                        )
 
-                    update_version(cursor)
+                    update_version(cursor, RAIDEN_DB_VERSION)
                     # Prevent the upgrade from happening on next restart
                     self._backup_old_db(old_db_filename)
                 except RaidenDBUpgradeError:
                     self._delete_current_db()
                     raise
+
+    def _run_upgrade_func(self, cursor: sqlite3.Cursor, func: Callable, version: int):
+        """ Run the migration function, store the version and advance the version. """
+        new_version = func(cursor, version, RAIDEN_DB_VERSION)
+        update_version(cursor, new_version)
+        return new_version
 
     def _backup_old_db(self, filename):
         backup_name = filename.replace('_log.db', '_log.backup')
