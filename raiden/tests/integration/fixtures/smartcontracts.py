@@ -60,7 +60,7 @@ def endpoint_registry_address(deploy_client, contract_manager) -> typing.Address
 
 
 @pytest.fixture(name='secret_registry_address')
-def deploy_secret_registyr_and_return_address(deploy_client, contract_manager) -> typing.Address:
+def deploy_secret_registry_and_return_address(deploy_client, contract_manager) -> typing.Address:
     address = deploy_contract_web3(
         contract_name=CONTRACT_SECRET_REGISTRY,
         deploy_client=deploy_client,
