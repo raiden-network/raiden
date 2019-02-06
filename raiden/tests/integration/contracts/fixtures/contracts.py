@@ -5,7 +5,6 @@ from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNet
 from raiden.tests.utils import factories
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import (
-    CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     TEST_SETTLE_TIMEOUT_MAX,
@@ -13,24 +12,8 @@ from raiden_contracts.constants import (
 )
 
 
-@pytest.fixture(name='secret_registry_contract_address')
-def deploy_secret_register_and_return_jsonrpc_proxy(deploy_client, contract_manager):
-    """This uses the JSONRPCClient to deploy the secret registry smart
-    contract, and returns a JSONRPCClient proxy to interact with the smart
-    contract.
-    """
-    compiled = {
-        CONTRACT_SECRET_REGISTRY: contract_manager.get_contract(CONTRACT_SECRET_REGISTRY),
-    }
-    secret_registry_proxy_ = deploy_client.deploy_solidity_contract(
-        CONTRACT_SECRET_REGISTRY,
-        compiled,
-    )
-    return secret_registry_proxy_.contract.address
-
-
 @pytest.fixture
-def secret_registry_proxy(deploy_client, secret_registry_contract_address, contract_manager):
+def secret_registry_proxy(deploy_client, secret_registry_address, contract_manager):
     """This uses the available SecretRegistry JSONRPCClient proxy to
     instantiate a Raiden proxy.
 
@@ -41,7 +24,7 @@ def secret_registry_proxy(deploy_client, secret_registry_contract_address, contr
     """
     return SecretRegistry(
         jsonrpc_client=deploy_client,
-        secret_registry_address=to_canonical_address(secret_registry_contract_address),
+        secret_registry_address=to_canonical_address(secret_registry_address),
         contract_manager=contract_manager,
     )
 
@@ -51,7 +34,7 @@ def deploy_token_network_registry_and_return_jsonrpc_proxy(
         chain_id,
         deploy_client,
         contract_manager,
-        secret_registry_contract_address,
+        secret_registry_address,
 ):
     compiled = {
         CONTRACT_TOKEN_NETWORK_REGISTRY: contract_manager.get_contract(
@@ -62,7 +45,7 @@ def deploy_token_network_registry_and_return_jsonrpc_proxy(
         CONTRACT_TOKEN_NETWORK_REGISTRY,
         compiled,
         constructor_parameters=[
-            secret_registry_contract_address,
+            secret_registry_address,
             chain_id,
             TEST_SETTLE_TIMEOUT_MIN,
             TEST_SETTLE_TIMEOUT_MAX,
@@ -83,7 +66,7 @@ def token_network_registry_proxy(deploy_client, token_network_registry_contract,
 def deploy_token_network_and_return_jsonrpc_proxy(
         chain_id,
         deploy_client,
-        secret_registry_contract_address,
+        secret_registry_address,
         token_contract,
         contract_manager,
 ):
@@ -97,7 +80,7 @@ def deploy_token_network_and_return_jsonrpc_proxy(
         compiled,
         constructor_parameters=[
             token_contract.contract.address,
-            secret_registry_contract_address,
+            secret_registry_address,
             chain_id,
             TEST_SETTLE_TIMEOUT_MIN,
             TEST_SETTLE_TIMEOUT_MAX,
