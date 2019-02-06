@@ -79,7 +79,10 @@ def test_token_network_proxy_basics(
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_chain = BlockChainService(c1_client)
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+    )
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,
@@ -370,7 +373,10 @@ def test_token_network_proxy_update_transfer(
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
     c1_client = JSONRPCClient(web3, private_keys[1])
-    c1_chain = BlockChainService(c1_client)
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+    )
     c2_client = JSONRPCClient(web3, private_keys[2])
     c1_token_network_proxy = TokenNetwork(
         jsonrpc_client=c1_client,

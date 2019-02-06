@@ -552,10 +552,9 @@ def smoketest(ctx, debug):
 
         raiden_stdout = StringIO()
         with contextlib.redirect_stdout(raiden_stdout):
-            try:
-                # invoke the raiden app
-                app = run_app(**args)
+            app = run_app(**args)
 
+            try:
                 raiden_api = RaidenAPI(app.raiden)
                 rest_api = RestAPI(raiden_api)
                 (api_host, api_port) = split_endpoint(args['api_address'])
