@@ -1417,7 +1417,7 @@ class LockExpired(EnvelopeMessage):
         return expired_lock
 
 
-class SignedBlindedBalanceProof(SignedMessage):
+class SignedBlindedBalanceProof:
     """Message sub-field `onchain_balance_proof` for `RequestMonitoring`.
     """
 
@@ -1440,6 +1440,8 @@ class SignedBlindedBalanceProof(SignedMessage):
         self.chain_id = chain_id
         self.balance_hash = balance_hash
         self.signature = signature
+        if not signature:
+            raise ValueError('balance proof is not signed')
         self.non_closing_signature = None
 
     @classmethod
@@ -1463,32 +1465,23 @@ class SignedBlindedBalanceProof(SignedMessage):
         )
 
     def _data_to_sign(self) -> bytes:
-        packed = pack_balance_proof(
+        packed = pack_balance_proof_update(
             nonce=self.nonce,
             balance_hash=self.balance_hash,
             additional_hash=self.additional_hash,
             channel_identifier=self.channel_identifier,
             token_network_identifier=self.token_network_address,
             chain_id=self.chain_id,
+            partner_signature=self.signature,
         )
         return packed
 
-    def sign(self, signer: Signer):
+    def _sign(self, signer: Signer) -> typing.Signature:
+        """Internal function for the overall `sign` function of `RequestMonitoring`.
+        """
         # Important: we don't write the signature to `.signature`
         data = self._data_to_sign()
-        self.non_closing_signature = signer.sign(data)
-
-    def pack(self) -> bytes:
-        packed = pack_balance_proof_update(
-            self.nonce,
-            self.balance_hash,
-            self.additional_hash,
-            self.channel_identifier,
-            self.token_network_address,
-            self.chain_id,
-            self.non_closing_signature,
-        )
-        return packed
+        return signer.sign(data)
 
     def to_dict(self) -> typing.Dict:
         """Message format according to monitoring service spec"""
@@ -1532,17 +1525,22 @@ class RequestMonitoring(SignedMessage):
             self,
             onchain_balance_proof: SignedBlindedBalanceProof,
             reward_amount: typing.TokenAmount,
+            non_closing_signature: typing.Signature = b'',
             reward_proof_signature: typing.Signature = b'',
     ) -> None:
         super().__init__()
-        assert onchain_balance_proof is not None
+        if onchain_balance_proof is None:
+            raise ValueError('no balance proof given')
         self.balance_proof = onchain_balance_proof
-        if not onchain_balance_proof.non_closing_signature:
-            raise ValueError('onchain_balance_proof needs to be signed')
-        self.non_closing_signature = onchain_balance_proof.non_closing_signature
         self.reward_amount = reward_amount
+        if non_closing_signature:
+            self.non_closing_signature = non_closing_signature
+        else:
+            self.non_closing_signature = None
         if reward_proof_signature:
             self.signature = reward_proof_signature
+        else:
+            self.signature = None
 
     @property
     def reward_proof_signature(self) -> typing.Signature:
@@ -1558,22 +1556,24 @@ class RequestMonitoring(SignedMessage):
             data['onchain_balance_proof'],
         )
         assert isinstance(onchain_balance_proof, SignedBlindedBalanceProof)
-        onchain_balance_proof.non_closing_signature = decode_hex(
-            data['non_closing_signature'],
-        )
         return cls(
             onchain_balance_proof=onchain_balance_proof,
             reward_amount=int(data['reward_amount']),
+            non_closing_signature=decode_hex(data['non_closing_signature']),
             reward_proof_signature=decode_hex(data['reward_proof_signature']),
         )
 
     def to_dict(self) -> typing.Dict:
         """Message format according to monitoring service spec"""
+        if not self.non_closing_signature:
+            raise ValueError('onchain_balance_proof needs to be signed')
+        if not self.reward_proof_signature:
+            raise ValueError('monitoring request needs to be signed')
         return {
             'type': self.__class__.__name__,
             'onchain_balance_proof': self.balance_proof.to_dict(),
-            'non_closing_signature': encode_hex(self.non_closing_signature),
             'reward_amount': self.reward_amount,
+            'non_closing_signature': encode_hex(self.non_closing_signature),
             'reward_proof_signature': encode_hex(self.reward_proof_signature),
         }
 
@@ -1595,6 +1595,11 @@ class RequestMonitoring(SignedMessage):
         return packed
 
     def sign(self, signer: Signer):
+        """This method signs twice:
+            - the `non_closing_signature` for the balance proof update
+            - the `reward_proof_signature` for the monitoring request
+        """
+        self.non_closing_signature = self.balance_proof._sign(signer)
         message_data = self._data_to_sign()
         self.signature = signer.sign(data=message_data)
 
@@ -1604,6 +1609,7 @@ class RequestMonitoring(SignedMessage):
         packed.token_network_address = self.balance_proof.token_network_address
         packed.channel_identifier = self.balance_proof.channel_identifier
         packed.balance_hash = self.balance_proof.balance_hash
+        packed.additional_hash = self.balance_proof.additional_hash
         packed.signature = self.balance_proof.signature
         packed.non_closing_signature = self.non_closing_signature
         packed.reward_amount = self.reward_amount

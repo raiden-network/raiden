@@ -49,21 +49,20 @@ def test_amount_out_of_bounds(amount, make):
 
 
 def test_request_monitoring():
-    balance_proof = make_balance_proof(signer=signer, amount=1)
+    partner_signer = LocalSigner(PARTNER_PRIVKEY)
+    balance_proof = make_balance_proof(signer=partner_signer, amount=1)
     partner_signed_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
         balance_proof,
     )
-    with pytest.raises(ValueError):
-        request_monitoring = RequestMonitoring(
-            onchain_balance_proof=partner_signed_balance_proof,
-            reward_amount=55,
-        )
-    partner_signer = LocalSigner(PARTNER_PRIVKEY)
-    partner_signed_balance_proof.sign(partner_signer)
     request_monitoring = RequestMonitoring(
         onchain_balance_proof=partner_signed_balance_proof,
         reward_amount=55,
     )
     assert request_monitoring
-    request_monitoring.sign(partner_signer)
-    assert RequestMonitoring.from_dict(request_monitoring.to_dict()) == request_monitoring
+    with pytest.raises(ValueError):
+        request_monitoring.to_dict()
+    request_monitoring.sign(signer)
+    as_dict = request_monitoring.to_dict()
+    assert RequestMonitoring.from_dict(as_dict) == request_monitoring
+    packed = request_monitoring.pack(request_monitoring.packed())
+    assert RequestMonitoring.unpack(packed) == request_monitoring

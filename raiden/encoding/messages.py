@@ -49,6 +49,7 @@ channel_identifier = make_field('channel_identifier', 32, '32s', integer(0, UINT
 locksroot = make_field('locksroot', 32, '32s')
 secrethash = make_field('secrethash', 32, '32s')
 balance_hash = make_field('balance_hash', 32, '32s')
+additional_hash = make_field('additional_hash', 32, '32s')
 secret = make_field('secret', 32, '32s')
 transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, UINT256_MAX))
 locked_amount = make_field('locked_amount', 32, '32s', integer(0, UINT256_MAX))
@@ -237,6 +238,7 @@ RequestMonitoring = namedbuffer(
         token_network_address,
         channel_identifier,
         balance_hash,
+        additional_hash,
         signature,
         non_closing_signature,
         reward_amount,
