@@ -1604,6 +1604,10 @@ class RequestMonitoring(SignedMessage):
         self.signature = signer.sign(data=message_data)
 
     def pack(self, packed: bytes) -> bytes:
+        if self.non_closing_signature is None:
+            raise ValueError('non_closing_signature missing, did you forget to sign()?')
+        if self.reward_proof_signature is None:
+            raise ValueError('reward_proof_signature missing, did you forget to sign()?')
         packed.nonce = self.balance_proof.nonce
         packed.chain_id = self.balance_proof.chain_id
         packed.token_network_address = self.balance_proof.token_network_address
