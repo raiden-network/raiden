@@ -1,6 +1,7 @@
 import pytest
-from eth_utils import to_checksum_address
+from eth_utils import to_canonical_address, to_checksum_address
 
+from raiden.network.proxies import SecretRegistry
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_tokens_and_fund_accounts
 from raiden.utils import privatekey_to_address, typing
 from raiden_contracts.constants import (
@@ -10,8 +11,8 @@ from raiden_contracts.constants import (
 )
 
 
-@pytest.fixture
-def token_addresses(
+@pytest.fixture(name='token_addresses')
+def deploy_all_tokens_register_and_return_their_addresses(
         token_amount,
         number_of_tokens,
         private_keys,
@@ -58,8 +59,8 @@ def endpoint_registry_address(deploy_client, contract_manager) -> typing.Address
     return address
 
 
-@pytest.fixture
-def secret_registry_address(deploy_client, contract_manager) -> typing.Address:
+@pytest.fixture(name='secret_registry_address')
+def deploy_secret_registyr_and_return_address(deploy_client, contract_manager) -> typing.Address:
     address = deploy_contract_web3(
         contract_name=CONTRACT_SECRET_REGISTRY,
         deploy_client=deploy_client,
@@ -69,7 +70,24 @@ def secret_registry_address(deploy_client, contract_manager) -> typing.Address:
 
 
 @pytest.fixture
-def token_network_registry_address(
+def secret_registry_proxy(deploy_client, secret_registry_address, contract_manager):
+    """This uses the available SecretRegistry JSONRPCClient proxy to
+    instantiate a Raiden proxy.
+
+    The JSONRPCClient proxy just exposes the functions from the smart contract
+    as methods in a generate python object, the Raiden proxy uses it to
+    provider alternative interfaces *and* most importantly to do additional
+    error checking (reason for transaction failure, gas usage, etc.).
+    """
+    return SecretRegistry(
+        jsonrpc_client=deploy_client,
+        secret_registry_address=to_canonical_address(secret_registry_address),
+        contract_manager=contract_manager,
+    )
+
+
+@pytest.fixture(name='token_network_registry_address')
+def deploy_token_network_registry_and_return_address(
         deploy_client,
         secret_registry_address,
         chain_id,

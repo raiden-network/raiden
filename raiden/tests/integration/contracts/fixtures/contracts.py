@@ -1,7 +1,7 @@
 import pytest
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
+from raiden.network.proxies import Token, TokenNetwork, TokenNetworkRegistry
 from raiden.tests.utils import factories
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import (
@@ -9,23 +9,6 @@ from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
 )
-
-
-@pytest.fixture
-def secret_registry_proxy(deploy_client, secret_registry_address, contract_manager):
-    """This uses the available SecretRegistry JSONRPCClient proxy to
-    instantiate a Raiden proxy.
-
-    The JSONRPCClient proxy just exposes the functions from the smart contract
-    as methods in a generate python object, the Raiden proxy uses it to
-    provider alternative interfaces *and* most importantly to do additional
-    error checking (reason for transaction failure, gas usage, etc.).
-    """
-    return SecretRegistry(
-        jsonrpc_client=deploy_client,
-        secret_registry_address=to_canonical_address(secret_registry_address),
-        contract_manager=contract_manager,
-    )
 
 
 @pytest.fixture
