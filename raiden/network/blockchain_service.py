@@ -29,7 +29,7 @@ class BlockChainService:
     def __init__(
             self,
             jsonrpc_client: JSONRPCClient,
-            contract_manager: ContractManager = None,
+            contract_manager: ContractManager,
     ):
         self.address_to_discovery = dict()
         self.address_to_secret_registry = dict()
@@ -57,9 +57,6 @@ class BlockChainService:
 
     def get_block(self, block_identifier):
         return self.client.web3.eth.getBlock(block_identifier=block_identifier)
-
-    def inject_contract_manager(self, contract_manager: ContractManager):
-        self.contract_manager = contract_manager
 
     def is_synced(self) -> bool:
         result = self.client.web3.eth.syncing
