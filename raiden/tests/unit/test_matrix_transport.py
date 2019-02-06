@@ -1,3 +1,5 @@
+import pytest
+import random
 from unittest.mock import Mock, create_autospec
 from urllib.parse import urlparse
 
@@ -6,9 +8,11 @@ from matrix_client.errors import MatrixRequestError
 from matrix_client.room import Room
 from matrix_client.user import User
 
+from raiden.exceptions import TransportError
 from raiden.network.transport.matrix.utils import (
     join_global_room,
     login_or_register,
+    sort_servers_closest,
     validate_userid_signature,
 )
 from raiden.tests.utils.factories import make_signer
@@ -141,3 +145,28 @@ def test_validate_userid_signature():
     user.user_id = f'@my_user:{server_name}'
     assert validate_userid_signature(user) is None
     assert user.get_display_name.call_count == 6
+
+
+def test_sort_servers_closest(monkeypatch):
+    import raiden.network.transport.matrix.utils
+
+    cnt = 0
+
+    def random_or_none(url):
+        nonlocal cnt
+        cnt += 1
+        return random.random() if cnt % 3 else None
+
+    mock_get_http_rtt = Mock(spec=raiden.network.utils.get_http_rtt, side_effect=random_or_none)
+
+    monkeypatch.setattr(raiden.network.transport.matrix.utils, 'get_http_rtt', mock_get_http_rtt)
+
+    with pytest.raises(TransportError):
+        sort_servers_closest(['ftp://server1.com', 'server2.com'])
+
+    server_count = 9
+    sorted_servers = sort_servers_closest([f'https://server{i}.xyz' for i in range(server_count)])
+    rtts = [rtt for (_, rtt) in sorted_servers]
+
+    assert len(sorted_servers) <= server_count
+    assert all(rtts) and rtts == sorted(rtts)
