@@ -1,19 +1,21 @@
+import gevent
 import json
 import re
 from binascii import Error as DecodeError
-from operator import attrgetter
+from operator import attrgetter, itemgetter
 from random import Random
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
 import structlog
 from cachetools import LRUCache, cached
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
 from gevent.lock import Semaphore
-from matrix_client.errors import MatrixRequestError
+from matrix_client.errors import MatrixError, MatrixRequestError
 
 from raiden.exceptions import InvalidSignature, TransportError
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
+from raiden.network.utils import get_http_rtt
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address
 
@@ -234,3 +236,30 @@ def validate_userid_signature(user: User) -> Optional[Address]:
     ):
         return None
     return address
+
+
+def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
+    """Sorts a list of servers by http round-trip time
+
+    Params:
+        servers: sequence of http server urls
+    Returns:
+        sequence of pairs of url,rtt in seconds, sorted by rtt, excluding failed servers
+        (possibly empty)
+    """
+    if not {urlparse(url).scheme for url in servers} <= {'http', 'https'}:
+        raise TransportError('Invalid server urls')
+
+    get_rtt_jobs = [
+        gevent.spawn(lambda url: (url, get_http_rtt(url)), server_url)
+        for server_url
+        in servers
+    ]
+    # these tasks should never raise, returns None on errors
+    gevent.joinall(get_rtt_jobs, raise_error=False)  # block and wait tasks
+    sorted_servers: List[Tuple[str, float]] = sorted(
+        (job.value for job in get_rtt_jobs if job.value[1] is not None),
+        key=itemgetter(1),
+    )
+    log.debug('Matrix homeserver RTT times', rtt_times=sorted_servers)
+    return sorted_servers
