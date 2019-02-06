@@ -25,7 +25,7 @@ from raiden.exceptions import (
 )
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
-from raiden.tasks import check_gas_reserve, check_version
+from raiden.tasks import check_gas_reserve, check_network_id, check_version
 from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.runnable import Runnable
@@ -158,6 +158,14 @@ class NodeRunner:
 
         # spawn a greenlet to handle the gas reserve check
         tasks.append(gevent.spawn(check_gas_reserve, app_.raiden))
+        # spawn a greenlet to handle the periodic check for the network id
+        tasks.append(gevent.spawn(
+            check_network_id,
+            app_.raiden.chain.network_id,
+            app_.raiden.chain.client.web3,
+        ))
+
+        # spawn a greenlet to handle the functions
 
         self._startup_hook()
 

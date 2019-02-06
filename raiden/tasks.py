@@ -16,6 +16,7 @@ from raiden.utils.runnable import Runnable
 
 CHECK_VERSION_INTERVAL = 3 * 60 * 60
 CHECK_GAS_RESERVE_INTERVAL = 5 * 60
+CHECK_NETWORK_ID_INTERVAL = 5 * 60
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
 SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
@@ -92,6 +93,20 @@ def check_gas_reserve(raiden):
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
 
 
+def check_network_id(network_id, web3: Web3):
+    """ Check periodically if the underlying ethereum client's network id has changed"""
+    while True:
+        current_id = int(web3.version.network)
+        if network_id != current_id:
+            raise RuntimeError(
+                f'Raiden was running on network with id {network_id} and it detected '
+                f'that the underlying ethereum client network id changed to {current_id}.'
+                f' Changing the underlying blockchain while the Raiden node is running '
+                f'is not supported.',
+            )
+        gevent.sleep(CHECK_NETWORK_ID_INTERVAL)
+
+
 class AlarmTask(Runnable):
     """ Task to notify when a block is mined. """
 
@@ -145,8 +160,6 @@ class AlarmTask(Runnable):
         assert self.chain_id, 'chain_id not set'
         assert self.known_block_number is not None, 'known_block_number not set'
 
-        chain_id = self.chain_id
-
         sleep_time = self.sleep_time
         while self._stop_event.wait(sleep_time) is not True:
             try:
@@ -156,17 +169,9 @@ class AlarmTask(Runnable):
 
             self._maybe_run_callbacks(latest_block)
 
-            if chain_id != self.chain.network_id:
-                raise RuntimeError(
-                    'Changing the underlying blockchain while the Raiden node is running '
-                    'is not supported.',
-                )
-
     def first_run(self, known_block_number):
         """ Blocking call to update the local state, if necessary. """
         assert self.callbacks, 'callbacks not set'
-
-        chain_id = self.chain.network_id
         latest_block = self.chain.get_block(block_identifier='latest')
 
         log.debug(
@@ -178,7 +183,7 @@ class AlarmTask(Runnable):
         )
 
         self.known_block_number = known_block_number
-        self.chain_id = chain_id
+        self.chain_id = self.chain.network_id
         self._maybe_run_callbacks(latest_block)
 
     def _maybe_run_callbacks(self, latest_block):
