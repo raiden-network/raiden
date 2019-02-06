@@ -529,7 +529,7 @@ def smoketest(ctx, debug):
         ctx.parent.params['transport'],
         ctx.parent.params['matrix_server'],
         print_step,
-        'pre_limits',  # smoke test should work with pre-limits contract version
+        '0.3._',  # smoke test should work with pre-limits contract version
     )
     args = result['args']
     contract_addresses = result['contract_addresses']

@@ -15,7 +15,7 @@ def blockchain_provider():
         transport='matrix',
         matrix_server='auto',
         print_step=lambda x: None,
-        contracts_version=None,  # cli tests should work with production contracts
+        contracts_version='0.4.0',  # cli tests should work with production contracts
     )
     args = result['args']
     # The setup of the testchain returns a TextIOWrapper but
