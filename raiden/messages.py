@@ -1542,6 +1542,21 @@ class RequestMonitoring(SignedMessage):
         else:
             self.signature = None
 
+    @classmethod
+    def from_balance_proof_signed_state(
+            cls: typing.Type[typing.T_SignedBlindedBalanceProof],
+            balance_proof: BalanceProofSignedState,
+            reward_amount: typing.TokenAmount,
+    ) -> typing.T_RequestMonitoring:
+        assert isinstance(balance_proof, BalanceProofSignedState)
+        onchain_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
+            balance_proof=balance_proof,
+        )
+        return cls(
+            onchain_balance_proof=onchain_balance_proof,
+            reward_amount=reward_amount,
+        )
+
     @property
     def reward_proof_signature(self) -> typing.Signature:
         return self.signature

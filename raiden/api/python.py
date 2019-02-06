@@ -19,7 +19,7 @@ from raiden.exceptions import (
     TokenNotRegistered,
     UnknownTokenAddress,
 )
-from raiden.messages import RequestMonitoring, SignedBlindedBalanceProof
+from raiden.messages import RequestMonitoring
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
 from raiden.transfer import architecture, views
 from raiden.transfer.events import (
@@ -839,17 +839,9 @@ class RaidenAPI:
         for the `balance_proof` that we received from a channel partner.
         - claim the `reward_amount` from the UDC.
         """
-        assert isinstance(balance_proof, BalanceProofSignedState)
-
-        # create submessage `SignedBlindedBalanceProof` and create the `non_closing_signature`
-        onchain_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
-            balance_proof,
-        )
-        onchain_balance_proof.sign(self.raiden.signer)
-
         # create RequestMonitoring message from the above + `reward_amount`
-        monitor_request = RequestMonitoring(
-            onchain_balance_proof=onchain_balance_proof,
+        monitor_request = RequestMonitoring.from_balance_proof_signed_state(
+            balance_proof=balance_proof,
             reward_amount=reward_amount,
         )
         # sign RequestMonitoring and return

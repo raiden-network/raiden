@@ -66,3 +66,23 @@ def test_request_monitoring():
     assert RequestMonitoring.from_dict(as_dict) == request_monitoring
     packed = request_monitoring.pack(request_monitoring.packed())
     assert RequestMonitoring.unpack(packed) == request_monitoring
+    # RequestMonitoring can be created directly from BalanceProofSignedState
+    direct_created = RequestMonitoring.from_balance_proof_signed_state(
+        balance_proof,
+        reward_amount=55,
+    )
+    with pytest.raises(ValueError):
+        # equality test uses `validated` packed format
+        assert direct_created == request_monitoring
+
+    direct_created.sign(signer)
+    # Instances created from same balance proof are equal
+    assert direct_created == request_monitoring
+    other_balance_proof = make_balance_proof(signer=partner_signer, amount=2)
+    other_instance = RequestMonitoring.from_balance_proof_signed_state(
+        other_balance_proof,
+        reward_amount=55,
+    )
+    other_instance.sign(signer)
+    # different balance proof ==> non-equality
+    assert other_instance != request_monitoring
