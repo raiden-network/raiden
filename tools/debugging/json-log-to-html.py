@@ -14,7 +14,7 @@ from copy import copy
 from datetime import datetime
 from html import escape
 from json import JSONDecodeError
-from typing import Any, Dict, Iterable, Set
+from typing import Any, Dict, Iterable, Set, Tuple
 
 import click
 from click import UsageError
@@ -25,6 +25,9 @@ from eth_utils import is_address, to_canonical_address
 from raiden.utils import pex
 
 Record = namedtuple('Line', ('event', 'timestamp', 'logger', 'level', 'fields'))
+
+TIME_PAST = datetime(1970, 1, 1)
+TIME_FUTURE = datetime(9999, 1, 1)
 
 TEMPLATE = """\
 <!doctype html>
@@ -40,6 +43,7 @@ body {{
 }}
 table {{
     white-space: nowrap;
+    border: none;
 }}
 table tr.head {{
     position: sticky;
@@ -61,6 +65,9 @@ table tr td:first-child {{
 }}
 table td {{
     padding-right: 5px;
+}}
+table tr:hover {{
+    background-color: #902020;
 }}
 .lvl-debug {{
     color: #20d0d0;
@@ -116,7 +123,7 @@ def parse_log(log_file):
         log_records.append(
             Record(
                 line_dict.pop('event'),
-                line_dict.pop('timestamp'),
+                datetime.fromisoformat(line_dict.pop('timestamp')),
                 line_dict.pop('logger'),
                 line_dict.pop('level'),
                 line_dict,
@@ -133,11 +140,15 @@ def filter_records(
         *,
         drop_events: Set[str],
         drop_loggers: Set[str],
+        time_range: Tuple[datetime, datetime],
 ):
+    time_from, time_to = time_range
     for record in log_records:
         drop = (
             record.event.lower() in drop_events or
-            record.logger in drop_loggers
+            record.logger in drop_loggers or
+            record.timestamp < time_from or
+            record.timestamp > time_to
         )
         if not drop:
             yield record
@@ -197,7 +208,7 @@ def render(name: str, log_records: Iterable[Record], record_count: int, known_fi
         row = [
             f"<tr class=\"lvl-{record.level}\">"
             f"<td>{i:0{digits}d} <b style=\"color: {event_color}\">{record.event}</b></td>"
-            f"<td>{record.timestamp}</td>"
+            f"<td>{record.timestamp.isoformat()}</td>"
             f"<td>{record.logger}</td>"
             f"<td>{record.level}</td>"
             "<td>",
@@ -275,7 +286,24 @@ def colorize_value(value, min_luminance):
         'Behaves as -r / --replacements but reads the JSON object from the given file.'
     ),
 )
-def main(log_file, drop_event, drop_logger, replacements, replacements_from_file, output):
+@click.option(
+    '-t',
+    '--time-range',
+    default='^',
+    help=(
+        'Specify a time range of log messages to process. '
+        'Format: "[<from>]^[<to>]", both in ISO8601'
+    ),
+)
+def main(
+    log_file,
+    drop_event,
+    drop_logger,
+    replacements,
+    replacements_from_file,
+    time_range,
+    output,
+):
     if replacements_from_file:
         replacements = replacements_from_file.read()
     if not replacements:
@@ -284,7 +312,16 @@ def main(log_file, drop_event, drop_logger, replacements, replacements_from_file
         replacements = json.loads(replacements)
     except (JSONDecodeError, UnicodeDecodeError) as ex:
         raise UsageError(f'Option "--replacements" contains invalid JSON: {ex}') from ex
+
+    time_from, _, time_to = time_range.partition('^')
+    time_range = (
+        datetime.fromisoformat(time_from) if time_from else TIME_PAST,
+        datetime.fromisoformat(time_to) if time_to else TIME_FUTURE,
+    )
+
+    click.echo('Parsing log...')
     log_records, known_fields = parse_log(log_file)
+
     prog_bar = click.progressbar(log_records, label='Rendering', file=_default_text_stderr())
     with prog_bar as log_records_progr:
         print(
@@ -295,6 +332,7 @@ def main(log_file, drop_event, drop_logger, replacements, replacements_from_file
                         log_records_progr,
                         drop_events=set(d.lower() for d in drop_event),
                         drop_loggers=set(l.lower() for l in drop_logger),
+                        time_range=time_range,
                     ),
                     replacements,
                 ),
