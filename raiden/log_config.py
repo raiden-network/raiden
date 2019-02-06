@@ -15,7 +15,7 @@ DEFAULT_LOG_LEVEL = 'INFO'
 MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
 LOG_BACKUP_COUNT = 3
 
-_FIRST_PARTY_PACKAGES = frozenset(['raiden', 'raiden_libs', 'raiden_contracts'])
+_FIRST_PARTY_PACKAGES = frozenset(['raiden', 'raiden_contracts'])
 
 
 def _chain(first_func, *funcs) -> Callable:

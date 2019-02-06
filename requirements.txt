@@ -25,7 +25,6 @@ pystun-patched-for-raiden
 pytest
 pytoml
 raiden-contracts
-raiden-libs
 raiden-webui
 requests
 structlog
