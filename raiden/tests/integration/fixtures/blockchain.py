@@ -107,9 +107,9 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3):
 
 @pytest.fixture
 def contract_manager(environment_type):
-    version = None
+    version = '0.4.0'
     if environment_type == Environment.DEVELOPMENT:
-        version = 'pre_limits'
+        version = '0.3._'
 
     return ContractManager(contracts_precompiled_path(version))
 

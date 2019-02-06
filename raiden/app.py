@@ -30,7 +30,7 @@ class App:  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
-        'contracts_path': contracts_precompiled_path(),
+        'contracts_path': contracts_precompiled_path('0.4.0'),
         'database_path': '',
         'transport_type': 'udp',
         'blockchain': {
