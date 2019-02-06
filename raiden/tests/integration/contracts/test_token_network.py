@@ -13,13 +13,13 @@ from raiden.exceptions import (
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.tests.integration.contracts import BalanceProof
 from raiden.utils.signer import LocalSigner
 from raiden_contracts.constants import (
     TEST_SETTLE_TIMEOUT_MAX,
     TEST_SETTLE_TIMEOUT_MIN,
     MessageTypeId,
 )
-from raiden_libs.messages import BalanceProof
 
 
 def test_token_network_deposit_race(
