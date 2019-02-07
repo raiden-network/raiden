@@ -1,30 +1,12 @@
 import json
-import sqlite3
 
-from raiden.exceptions import RaidenDBUpgradeError
+from raiden.exceptions import ChannelNotFound
+from raiden.storage.sqlite import SQLiteStorage
 from raiden.transfer.state import RouteState
 from raiden.utils.typing import Any, Dict
 
 SOURCE_VERSION = 17
 TARGET_VERSION = 18
-
-
-def get_snapshots(cursor: sqlite3.Cursor):
-    cursor.execute('SELECT identifier, data FROM state_snapshot')
-    snapshots = cursor.fetchall()
-    for snapshot in snapshots:
-        yield snapshot[0], snapshot[1]
-
-
-def update_snapshot(
-        cursor: sqlite3.Cursor,
-        identifier: int,
-        new_snapshot: Dict[Any, Any],
-):
-    cursor.execute(
-        'UPDATE state_snapshot SET data=? WHERE identifier=?',
-        (new_snapshot, identifier),
-    )
 
 
 def get_token_network_by_identifier(snapshot, token_network_identifier):
@@ -70,7 +52,7 @@ def _transform_snapshot(raw_snapshot: Dict[Any, Any]):
         channel_identifier = transfer['balance_proof']['channel_identifier']
         channel = token_network.get('channelidentifiers_to_channels').get(channel_identifier)
         if not channel:
-            raise RaidenDBUpgradeError(
+            raise ChannelNotFound(
                 'Upgrading to v18 failed. '
                 f'Could not find channel with identifier {channel_identifier} '
                 'in the current chain state.',
@@ -89,18 +71,18 @@ def _transform_snapshot(raw_snapshot: Dict[Any, Any]):
     return json.dumps(snapshot)
 
 
-def _add_routes_to_mediator(cursor: sqlite3.Cursor):
-    for identifier, snapshot in get_snapshots(cursor):
-        new_snapshot = _transform_snapshot(snapshot)
-        update_snapshot(cursor, identifier, new_snapshot)
+def _add_routes_to_mediator(storage: SQLiteStorage):
+    for snapshot in storage.get_snapshots():
+        new_snapshot = _transform_snapshot(snapshot.data)
+        storage.update_snapshot(snapshot.identifier, new_snapshot)
 
 
 def upgrade_mediators_with_waiting_transfer(
-        cursor: sqlite3.Cursor,
+        storage: SQLiteStorage,
         old_version: int,
         current_version: int,
 ):
     if old_version == SOURCE_VERSION:
-        _add_routes_to_mediator(cursor)
+        _add_routes_to_mediator(storage)
 
     return TARGET_VERSION
