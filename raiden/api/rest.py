@@ -184,6 +184,7 @@ def api_response(result, status_code=HTTPStatus.OK):
     else:
         data = json.dumps(result)
 
+    log.debug('Request successful', response=result, status_code=status_code)
     response = make_response((
         data,
         status_code,
@@ -194,6 +195,7 @@ def api_response(result, status_code=HTTPStatus.OK):
 
 def api_error(errors, status_code):
     assert status_code in ERROR_STATUS_CODES, 'Programming error, unexpected error status code'
+    log.error('Error processing request', errors=errors, status_code=status_code)
     response = make_response((
         json.dumps(dict(errors=errors)),
         status_code,
