@@ -9,4 +9,6 @@ else
     export ARCHIVE_TAG="nightly-${DATE}-v${RAIDEN_VERSION}"
 fi
 
+echo "export ARCHIVE_TAG=${ARCHIVE_TAG}" >> ${BASH_ENV}
+
 set +ex

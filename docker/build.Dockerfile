@@ -23,9 +23,6 @@ RUN git fetch --tags | true
 RUN pip install -U 'pip<19.0.0' setuptools setuptools_scm
 RUN pip install -r requirements.txt -c constraints.txt
 
-# build contracts and web_ui
-RUN python setup.py build
-
 # install raiden and pyinstaller
 RUN pip install -c constraints.txt .
 RUN pip install pyinstaller

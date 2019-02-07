@@ -66,6 +66,7 @@ executors:
     working_directory: ~/raiden
     environment:
       <<: *default-environment
+      PYTHON_VERSION_SHORT: << parameters.py-version >>
 
 
 commands:
@@ -85,65 +86,90 @@ commands:
             echo 'export PATH=~/venv-${PYTHON_VERSION_SHORT}/bin:~/.local/bin:${PATH}' >> ${BASH_ENV}
             echo 'export RAIDEN_VERSION=$(python setup.py --version)' >> ${BASH_ENV}
 
-  prepare-system:
+  checkout-and-persist:
     steps:
-      - run:
-          name: Preparing environment
-          command: |
-            echo "export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')" >> ${BASH_ENV}
-            echo ${GETH_VERSION} > /tmp/geth-version
-            echo ${SOLC_VERSION} > /tmp/solc-version
-            echo "SHA: ${CIRCLE_SHA1}"
-            echo "TAG: ${CIRCLE_TAG}"
-
       - checkout
-
       # This needs to be done here in order for the .egg-info directory to be included in the
       # workspace. Luckily we don't need a virtualenv for this step.
       - run:
           name: Generate .egg-info
           command: python setup.py egg_info
-
-      - restore_cache:
-          key: system-deps-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
-
-      - run:
-          name: Installing System Dependencies
-          command: .circleci/fetch_geth_solc.sh
-      - save_cache:
-          key: system-deps-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
-          paths:
-          - "~/.local"
-      - run:
-          name: Fetch PR Base Commit
-          command: source .circleci/fetch_pr_base_commit.sh
       - persist_to_workspace:
           root: "~"
           paths:
-          - .local
           - raiden
 
-  prepare-python:
+  attach-and-link:
     parameters:
       py-version:
         <<: *py-version-template
     steps:
       - attach_workspace:
           at: "~"
+      - run:
+          name: Link platform local binaries
+          command: |
+            export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
+            [[ -d ~/.local-${OS_NAME} ]] && ln -s ~/.local-${OS_NAME} ~/.local || true
+            [[ -d ~/venv-<< parameters.py-version >>-${OS_NAME} ]] && ln -s ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >> || true
+
+  prepare-system:
+    steps:
+      - run:
+          name: Get cache key
+          command: |
+            echo ${GETH_VERSION} > /tmp/geth-version
+            echo ${SOLC_VERSION} > /tmp/solc-version
+      - restore_cache:
+          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+      - attach-and-link
+      - run:
+          name: Preparing environment
+          command: |
+            echo "export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')" >> ${BASH_ENV}
+            echo "SHA: ${CIRCLE_SHA1}"
+            echo "TAG: ${CIRCLE_TAG}"
+      - run:
+          name: Installing System Dependencies
+          command: |
+            export LOCAL_BASE=~/.local-${OS_NAME}
+            .circleci/fetch_geth_solc.sh
+            ln -s ${LOCAL_BASE} ~/.local
+      - save_cache:
+          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          paths:
+            - "~/.local-*"
+      - run:
+          name: Fetch PR Base Commit
+          command: source .circleci/fetch_pr_base_commit.sh
+      - persist_to_workspace:
+          root: "~"
+          paths:
+            - ".local-*"
+
+  prepare-python:
+    parameters:
+      py-version:
+        <<: *py-version-template
+    steps:
+      - attach-and-link:
+          py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
       - restore_cache:
-          key: pip-cache-<< parameters.py-version >>
+          key: pip-cache-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
           keys:
-          - 'python-deps-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}'
-          - 'python-deps-<< parameters.py-version >>-'
+          - 'python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}'
+          - 'python-deps-v2-{{ arch }}-<< parameters.py-version >>-'
       - run:
           name: Creating virtualenv
           command: |
+            export OS_NAME=$(uname -s | sed s/Darwin/macos/ | tr '[:lower:]' '[:upper:]')
             if [ ! -x ~/venv-<< parameters.py-version >>/bin/python ]; then
-              python -m venv ~/venv-<< parameters.py-version >>
+              python<< parameters.py-version >> -m venv ~/venv-<< parameters.py-version >>-${OS_NAME}
             fi
+            ln -nfs ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >>
             echo 'export VENV_PATH="$HOME/venv-<< parameters.py-version >>"' >> ${BASH_ENV}
       - run:
           name: Installing dependencies
@@ -153,19 +179,24 @@ commands:
             pip install -c constraints.txt readme_renderer pyinstaller s3cmd
             pip install -c constraints.txt -r requirements-dev.txt -e .
       - save_cache:
-          key: python-deps-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}
+          key: python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}
           paths:
-          - "~/venv-<< parameters.py-version >>"
+          - "~/venv-<< parameters.py-version >>-*"
       - save_cache:
-          key: pip-cache-<< parameters.py-version >>
+          key: pip-cache-{{ arch }}-<< parameters.py-version >>
           paths:
           - "~/.cache/pip"
       - persist_to_workspace:
           root: "~"
           paths:
-          - venv-<< parameters.py-version >>
+          - venv-<< parameters.py-version >>-*
 
 jobs:
+  checkout:
+    executor: docker
+    steps:
+      - checkout-and-persist
+
   prepare-system-linux:
     executor: docker
     steps:
@@ -209,16 +240,16 @@ jobs:
       py-version: << parameters.py-version >>
 
     steps:
-    - attach_workspace:
-        at: "~"
-    - conditional-skip
-    - config-path
-    - run:
-        name: Validate CircleCI Config
-        command: python tools/check_circleci_config.py
-    - run:
-        name: Run Lint
-        command: make lint
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+      - run:
+          name: Validate CircleCI Config
+          command: python tools/check_circleci_config.py
+      - run:
+          name: Run Lint
+          command: make lint
 
   mypy:
     parameters:
@@ -230,13 +261,13 @@ jobs:
       py-version: << parameters.py-version >>
 
     steps:
-    - attach_workspace:
-        at: "~"
-    - conditional-skip
-    - config-path
-    - run:
-        name: mypy test
-        command: make mypy
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+      - run:
+          name: mypy test
+          command: make mypy
 
   smoketest:
     parameters:
@@ -247,18 +278,18 @@ jobs:
       py-version: << parameters.py-version >>
 
     steps:
-    - attach_workspace:
-        at: "~"
-    - conditional-skip
-    - config-path
-    - run:
-        name: Set Options
-        command: |
-          set -e
-          set -x
-    - run:
-        name: Running Raiden Smoketest with << parameters.transport-layer >>
-        command: raiden --transport=<< parameters.transport-layer >> smoketest << parameters.additional-args >>
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+      - run:
+          name: Set Options
+          command: |
+            set -e
+            set -x
+      - run:
+          name: Running Raiden Smoketest with << parameters.transport-layer >>
+          command: raiden --transport=<< parameters.transport-layer >> smoketest << parameters.additional-args >>
 
   test:
     parameters:
@@ -289,100 +320,103 @@ jobs:
     parallelism: << parameters.parallelism >>
 
     steps:
-    - attach_workspace:
-        at: "~"
-    - conditional-skip
-    - config-path
-    - restore_cache:
-        key: ethash-{{ checksum "~/.local/bin/geth" }}
-    - restore_cache:
-        keys:
-          - synapse-keys-v1
-          - synapse-keys-
-    # Remove any existing .coverage files so we don't persist them again, causing a conflict.
-    - run:
-        name: Prepare coverage
-        command: |
-          mkdir -p ${COVERAGE_DIR}
-          rm ${COVERAGE_DIR}/.coverage* || true
-    - run:
-        name: Select tests
-        command: |
-          pytest \
-            raiden/tests/<< parameters.test-type >> \
-            --collect-only \
-            --quiet \
-            --blockchain-type=<< parameters.blockchain-type >> \
-            --transport=<< parameters.transport-layer >> \
-            << parameters.additional-args >> \
-            | \
-          grep '::' | \
-          circleci tests split --split-by=timings --timings-type=testname | \
-          grep '::' > selected-tests.txt
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+      - restore_cache:
+          key: ethash-{{ checksum "~/.local/bin/geth" }}
+      - restore_cache:
+          keys:
+            - synapse-keys-v1
+            - synapse-keys-
+      # Remove any existing .coverage files so we don't persist them again, causing a conflict.
+      - run:
+          name: Prepare coverage
+          command: |
+            mkdir -p ${COVERAGE_DIR}
+            rm ${COVERAGE_DIR}/.coverage* || true
+      - run:
+          name: Select tests
+          command: |
+            pytest \
+              raiden/tests/<< parameters.test-type >> \
+              --collect-only \
+              --quiet \
+              --blockchain-type=<< parameters.blockchain-type >> \
+              --transport=<< parameters.transport-layer >> \
+              << parameters.additional-args >> \
+              | \
+            grep '::' | \
+            circleci tests split --split-by=timings --timings-type=testname | \
+            grep '::' > selected-tests.txt
 
-          cat selected-tests.txt
+            cat selected-tests.txt
 
-    - run:
-        name: Run tests
-        command: |
-          mkdir -p test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>
-          coverage run \
-            --include="~/raiden/**/*" \
-            --parallel-mode \
-            --module pytest \
-            raiden/tests \
-            -vvvvvv \
-            --log-config='raiden:DEBUG' \
-            --random \
-            --junit-xml=test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>/results.xml \
-            --blockchain-type=<< parameters.blockchain-type >> \
-            --transport=<< parameters.transport-layer >> \
-            --select-fail-on-missing \
-            --select-from-file selected-tests.txt \
-            << parameters.additional-args >>
+      - run:
+          name: Run tests
+          command: |
+            mkdir -p test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>
+            coverage run \
+              --include="~/raiden/**/*" \
+              --parallel-mode \
+              --module pytest \
+              raiden/tests \
+              -vvvvvv \
+              --log-config='raiden:DEBUG' \
+              --random \
+              --junit-xml=test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>/results.xml \
+              --blockchain-type=<< parameters.blockchain-type >> \
+              --transport=<< parameters.transport-layer >> \
+              --select-fail-on-missing \
+              --select-from-file selected-tests.txt \
+              << parameters.additional-args >>
 
-    - run:
-        name: Store coverage
-        command: |
-          mv .coverage* ${COVERAGE_DIR}
+      - run:
+          name: Store coverage
+          command: |
+            mv .coverage* ${COVERAGE_DIR}
 
-    - persist_to_workspace:
-        root: "~"
-        paths:
-          - "./raiden/coverage"
+      - persist_to_workspace:
+          root: "~"
+          paths:
+            - "./raiden/coverage"
 
-    - save_cache:
-        key: ethash-{{ checksum "~/.local/bin/geth" }}
-        paths:
-        - "~/.ethash"
+      - save_cache:
+          key: ethash-{{ checksum "~/.local/bin/geth" }}
+          paths:
+          - "~/.ethash"
 
-    - save_cache:
-        key: synapse-keys-v1
-        paths:
-          - "~/.cache/synapse"
+      - save_cache:
+          key: synapse-keys-v1
+          paths:
+            - "~/.cache/synapse"
 
-    - store_test_results:
-        path: test-reports
+      - store_test_results:
+          path: test-reports
 
-    - store_artifacts:
-        path: test-reports
-        destination: test-reports
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
 
-    - store_artifacts:
-        path: /tmp/synapse-logs
-        destination: synapse-logs
+      - store_artifacts:
+          path: /tmp/synapse-logs
+          destination: synapse-logs
 
-    - store_artifacts:
-        path: /tmp/geth/logs
-        destination: geth-logs
+      - store_artifacts:
+          path: /tmp/geth/logs
+          destination: geth-logs
 
   finalize:
+    parameters:
+      py-version:
+        <<: *py-version-template
     executor:
       name: docker
       py-version: "3.7"
     steps:
-      - attach_workspace:
-          at: "~"
+      - attach-and-link:
+          py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
       - run:
@@ -394,13 +428,17 @@ jobs:
             codecov
 
   build-binary-linux:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
     executor:
       name: docker
       py-version: "3.7"
 
     steps:
-      - attach_workspace:
-          at: "~"
+      - attach-and-link:
+          py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
       - setup_remote_docker:
@@ -417,20 +455,23 @@ jobs:
             - raiden/dist/archive
 
   build-binary-macos:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
     executor:
       name: macos
       py-version: "3.7"
 
     steps:
-      - attach_workspace:
-          at: "~"
+      - attach-and-link:
+          py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
       - run:
           name: Prepare build
           command: |
             pip uninstall -y pdbpp
-            python setup.py build
             mkdir -p dist/archive
             source .circleci/get_archive_tag.sh
       - run:
@@ -439,8 +480,16 @@ jobs:
             pyinstaller --noconfirm --clean raiden.spec
             zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip dist/raiden-${ARCHIVE_TAG}-macOS
             echo raiden-${ARCHIVE_TAG}-macOS.zip > dist/archive/_LATEST-macOS.txt
+      - persist_to_workspace:
+          root: "~"
+          paths:
+            - raiden/dist/archive
 
   deploy-homebrew:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
     executor:
       name: docker
       py-version: "3.7"
@@ -449,8 +498,8 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "46:b3:a5:c3:d8:21:63:cd:de:6d:07:5d:0c:5d:ba:73"
-      - attach_workspace:
-          at: "~"
+      - attach-and-link:
+          py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
       - run:
@@ -483,13 +532,17 @@ jobs:
 
 
   deploy-digitalocean:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
     executor:
       name: docker
       py-version: "3.7"
 
     steps:
-      - attach_workspace:
-          at: "~"
+      - attach-and-link:
+          py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
       - run:
@@ -497,12 +550,16 @@ jobs:
           command: .circleci/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ $DO_S3_BUCKET_NAME ams3.digitaloceanspaces.com
 
   deploy-github-release:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
     working_directory: ~/raiden
     docker:
       - image: cibuilds/github:0.10
     steps:
-      - attach_workspace:
-          at: "~"
+      - attach-and-link:
+          py-version: << parameters.py-version >>
       - conditional-skip
       - when:
           condition: ${CIRCLE_TAG} && ${GITHUB_TOKEN}
@@ -515,13 +572,17 @@ jobs:
                   ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${RAIDEN_VERSION} build/archive/
 
   deploy-pypi:
+    parameters:
+      py-version:
+        <<: *py-version-template
+
     executor:
       name: docker
       py-version: "3.7"
 
     steps:
-      - attach_workspace:
-          at: "~"
+      - attach-and-link:
+          py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
       - run:
@@ -542,7 +603,11 @@ jobs:
 workflows:
   raiden-default:
     jobs:
-      - prepare-system-linux
+      - checkout
+
+      - prepare-system-linux:
+          requires:
+            - checkout
 
       - prepare-python-linux:
           name: prepare-python-linux-3.7
@@ -628,11 +693,19 @@ workflows:
 
   deploy-release:
     jobs:
+      - checkout:
+          filters:
+            <<: *only-tagged-version-filter
+
       - prepare-system-linux:
+          requires:
+            - checkout
           filters:
             <<: *only-tagged-version-filter
 
       - prepare-system-macos:
+          requires:
+            - checkout
           filters:
             <<: *only-tagged-version-filter
 
@@ -693,7 +766,11 @@ workflows:
 
   nightly:
     jobs:
-      - prepare-system-linux
+      - checkout
+
+      - prepare-system-linux:
+          requires:
+            - checkout
 
       - prepare-python-linux:
           name: prepare-python-linux-3.7
@@ -781,7 +858,9 @@ workflows:
             requires:
               - finalize
 
-      - prepare-system-macos
+      - prepare-system-macos:
+          requires:
+            - checkout
 
       - prepare-python-macos:
           name: prepare-python-macos-3.7
