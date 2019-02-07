@@ -44,6 +44,8 @@ from raiden.api.v1.resources import (
     PartnersResourceByTokenAddress,
     PaymentResource,
     PendingTransfersResource,
+    PendingTransfersResourceByTokenAddress,
+    PendingTransfersResourceByTokenAndPartnerAddress,
     RaidenInternalEventsResource,
     RegisterTokenResource,
     TokensResource,
@@ -154,6 +156,14 @@ URLS_V1 = [
     (
         '/pending_transfers',
         PendingTransfersResource,
+    ),
+    (
+        '/pending_transfers/<hexaddress:token_address>',
+        PendingTransfersResourceByTokenAddress,
+    ),
+    (
+        '/pending_transfers/<hexaddress:token_address>/<hexaddress:partner_address>',
+        PendingTransfersResourceByTokenAndPartnerAddress,
     ),
 
     (
@@ -1226,5 +1236,8 @@ class RestAPI:
             )
         return result
 
-    def get_pending_transfers(self):
-        return api_response(self.raiden_api.get_pending_transfers())
+    def get_pending_transfers(self, token_address=None, partner_address=None):
+        return api_response(self.raiden_api.get_pending_transfers(
+            token_address=token_address,
+            partner_address=partner_address,
+        ))
