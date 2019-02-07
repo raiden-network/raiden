@@ -22,7 +22,7 @@ from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlre
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
-from raiden.settings import INITIAL_PORT
+from raiden.settings import DEFAULT_NO_LIMITS_CONTRACT_VERSION, INITIAL_PORT
 from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
 from raiden.utils import get_system_spec, merge_dict, split_endpoint
 from raiden.utils.cli import (
@@ -529,7 +529,8 @@ def smoketest(ctx, debug):
         ctx.parent.params['transport'],
         ctx.parent.params['matrix_server'],
         print_step,
-        '0.3._',  # smoke test should work with pre-limits contract version
+        # smoke test should work with pre-limits contract version
+        DEFAULT_NO_LIMITS_CONTRACT_VERSION,
     )
     args = result['args']
     contract_addresses = result['contract_addresses']
