@@ -8,7 +8,7 @@ from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec
 from raiden.utils.typing import Any, Dict, NamedTuple, Optional, Tuple
 
-from .serialize import SerdeBase
+from .serialize import SerializationBase
 
 # The latest DB version
 RAIDEN_DB_VERSION = 17
@@ -37,7 +37,7 @@ def assert_sqlite_version() -> bool:
     return True
 
 
-class SQLiteStorage(SerdeBase):
+class SQLiteStorage(SerializationBase):
     def __init__(self, database_path):
         conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.text_factory = str
@@ -391,7 +391,7 @@ class SQLiteStorage(SerdeBase):
 
 
 class SerializedSQLiteStorage(SQLiteStorage):
-    def __init__(self, database_path, serializer: SerdeBase):
+    def __init__(self, database_path, serializer: SerializationBase):
         super().__init__(database_path)
 
         self.serializer = serializer
