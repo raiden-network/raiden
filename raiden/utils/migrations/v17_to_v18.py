@@ -5,6 +5,9 @@ from raiden.exceptions import RaidenDBUpgradeError
 from raiden.transfer.state import RouteState
 from raiden.utils.typing import Any, Dict
 
+SOURCE_VERSION = 17
+TARGET_VERSION = 18
+
 
 def get_snapshots(cursor: sqlite3.Cursor):
     cursor.execute('SELECT identifier, data FROM state_snapshot')
@@ -97,5 +100,7 @@ def upgrade_mediators_with_waiting_transfer(
         old_version: int,
         current_version: int,
 ):
-    if current_version > 17:
+    if old_version == SOURCE_VERSION:
         _add_routes_to_mediator(cursor)
+
+    return TARGET_VERSION
