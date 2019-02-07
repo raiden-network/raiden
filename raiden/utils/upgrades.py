@@ -27,7 +27,8 @@ def get_file_lock(db_filename: Path):
     return filelock.FileLock(lock_file_name)
 
 
-def update_version(cursor, version):
+def update_version(storage: SQLiteStorage, version: int):
+    cursor = storage.conn.cursor()
     cursor.execute(
         'INSERT OR REPLACE INTO settings(name, value) VALUES(?, ?)',
         ('version', str(version)),
@@ -55,7 +56,8 @@ def get_db_version(db_filename: Path):
 
 
 @contextmanager
-def in_transaction(cursor):
+def in_transaction(storage: SQLiteStorage):
+    cursor = storage.conn.cursor()
     try:
         cursor.execute('BEGIN')
         yield
@@ -119,12 +121,11 @@ class UpgradeManager:
 
             self._copy(str(old_db_filename), str(self._current_db_filename))
 
-            storage = SQLiteStorage(str(self._current_db_filename), JSONSerializer())
+            storage = SQLiteStorage(str(self._current_db_filename))
 
             log.debug(f'Upgrading database from {older_version} to v{RAIDEN_DB_VERSION}')
 
-            cursor = storage.conn.cursor()
-            with in_transaction(cursor):
+            with in_transaction(storage):
                 try:
                     version_iteration = older_version
                     for upgrade_func in UPGRADES_LIST:
@@ -134,7 +135,7 @@ class UpgradeManager:
                             version_iteration,
                         )
 
-                    update_version(cursor, RAIDEN_DB_VERSION)
+                    update_version(storage, RAIDEN_DB_VERSION)
                     # Prevent the upgrade from happening on next restart
                     self._backup_old_db(old_db_filename)
                 except RaidenDBUpgradeError:
