@@ -26,8 +26,10 @@ from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler, RaidenMonitoringEventHandler
 from raiden.settings import (
+    DEFAULT_LIMITS_CONTRACT_VERSION,
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
+    DEFAULT_NO_LIMITS_CONTRACT_VERSION,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
@@ -278,8 +280,12 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
-    contracts_version = '0.3._' if environment_type == Environment.DEVELOPMENT else '0.4.0'
+    if environment_type == Environment.DEVELOPMENT:
+        contracts_version = DEFAULT_NO_LIMITS_CONTRACT_VERSION
+    else:
+        contracts_version = DEFAULT_LIMITS_CONTRACT_VERSION
     config['contracts_path'] = contracts_precompiled_path(contracts_version)
+
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
         deployment_data = get_contracts_deployed(node_network_id, contracts_version)
         not_allowed = (  # for now we only disallow mainnet with test configuration

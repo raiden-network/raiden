@@ -1,7 +1,6 @@
 import json
 import sqlite3
 
-
 SOURCE_VERSION = 16
 TARGET_VERSION = 17
 
