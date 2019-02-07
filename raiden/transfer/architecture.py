@@ -264,6 +264,11 @@ class StateManager:
 
         assert isinstance(iteration, TransitionResult)
 
+        balance_proofs = self.detect_balance_proof_change(self.current_state, iteration.new_state)
+        # we may now have any newly received and accepted balance proofs...
+        if len(balance_proofs):
+            pass
+
         self.current_state = iteration.new_state
         events = iteration.events
 
@@ -271,6 +276,50 @@ class StateManager:
         assert all(isinstance(e, Event) for e in events)
 
         return events
+
+    def detect_balance_proof_change(self, old_state, current_state):
+        """Compare two states for any changed received balance_proofs"""
+        def go(input_, operations):
+            """Helper function to shorthand chained attribute access"""
+            for operation in operations:
+                try:
+                    input_ = operation[0](input_, operation[1])
+                except AttributeError:
+                    return []
+            return input_
+
+        ops = []
+        balance_proofs = []
+
+        ops.append((getattr, 'identifiers_to_paymentnetworks'))
+        for payment_network_identifier in go(current_state, ops):
+            if payment_network_identifier not in go(old_state, ops):
+                continue
+            ops.append((dict.get, payment_network_identifier))
+            ops.append((getattr, 'tokenidentifiers_to_tokennetworks'))
+
+            for token_identifier in go(current_state, ops):
+                if token_identifier not in go(old_state, ops):
+                    continue
+                ops.append((dict.get, token_identifier))
+                ops.append((getattr, 'channelidentifiers_to_channels'))
+
+                for channel_identifier in go(current_state, ops):
+                    if channel_identifier not in go(old_state, ops):
+                        continue
+                    ops.append((dict.get, channel_identifier))
+
+                    channel_old = go(old_state, ops)
+                    channel_current = go(current_state, ops)
+                    if (
+                            channel_old.partner_state.balance_proof !=
+                            channel_current.partner_state.balance_proof
+                    ):
+                        balance_proofs.append(channel_current.partner_state.balance_proof)
+                    ops = ops[:-1]
+                ops = ops[:-2]
+            ops = ops[:-2]
+        return balance_proofs
 
     def __eq__(self, other):
         return (
