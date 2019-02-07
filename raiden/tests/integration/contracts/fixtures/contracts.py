@@ -1,18 +1,16 @@
 import pytest
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address
 
 from raiden.network.proxies import Token, TokenNetwork, TokenNetworkRegistry
-from raiden.tests.utils import factories
 from raiden.tests.utils.smartcontracts import deploy_token
-from raiden_contracts.constants import (
-    CONTRACT_TOKEN_NETWORK,
-    TEST_SETTLE_TIMEOUT_MAX,
-    TEST_SETTLE_TIMEOUT_MIN,
-)
 
 
-@pytest.fixture
-def token_network_registry_proxy(deploy_client, token_network_registry_address, contract_manager):
+@pytest.fixture(name='token_network_registry_proxy')
+def create_token_network_registry_proxy(
+        deploy_client,
+        token_network_registry_address,
+        contract_manager,
+):
     return TokenNetworkRegistry(
         jsonrpc_client=deploy_client,
         registry_address=to_canonical_address(token_network_registry_address),
@@ -20,35 +18,22 @@ def token_network_registry_proxy(deploy_client, token_network_registry_address, 
     )
 
 
-@pytest.fixture
-def token_network_proxy(
-        chain_id,
+@pytest.fixture(name='token_network_proxy')
+def register_token_and_return_the_network_proxy(
         contract_manager,
         deploy_client,
-        secret_registry_address,
         token_contract,
-        token_network_contract,
+        token_network_registry_proxy,
 ):
-    compiled = {
-        CONTRACT_TOKEN_NETWORK: contract_manager.get_contract(
-            CONTRACT_TOKEN_NETWORK,
-        ),
-    }
-    token_network_contract = deploy_client.deploy_solidity_contract(
-        CONTRACT_TOKEN_NETWORK,
-        compiled,
-        constructor_parameters=[
-            token_contract.contract.address,
-            secret_registry_address,
-            chain_id,
-            TEST_SETTLE_TIMEOUT_MIN,
-            TEST_SETTLE_TIMEOUT_MAX,
-            to_checksum_address(factories.make_address()),
-        ],
+    token_address = to_canonical_address(token_contract.contract.address)
+    token_network_address = token_network_registry_proxy.add_token(
+        token_address=token_address,
+        given_block_identifier='latest',
     )
+
     return TokenNetwork(
         jsonrpc_client=deploy_client,
-        token_network_address=to_canonical_address(token_network_contract.contract.address),
+        token_network_address=token_network_address,
         contract_manager=contract_manager,
     )
 
