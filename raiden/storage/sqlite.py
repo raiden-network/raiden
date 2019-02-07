@@ -1,5 +1,6 @@
 import sqlite3
 import threading
+from contextlib import contextmanager
 
 from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
@@ -65,7 +66,7 @@ class SQLiteStorage(SerdeBase):
         # Improve on this and find a better way to protect against this potential race
         # condition.
         self.write_lock = threading.Lock()
-
+        self.in_transaction = False
         self.update_version()
 
     def update_version(self):
@@ -74,14 +75,14 @@ class SQLiteStorage(SerdeBase):
             'INSERT OR REPLACE INTO settings(name, value) VALUES(?, ?)',
             ('version', str(RAIDEN_DB_VERSION)),
         )
-        self.conn.commit()
+        self.maybe_commit()
 
     def log_run(self):
         """ Log timestamp and raiden version to help with debugging """
         version = get_system_spec()['raiden']
         cursor = self.conn.cursor()
         cursor.execute('INSERT INTO runs(raiden_version) VALUES (?)', [version])
-        self.conn.commit()
+        self.maybe_commit()
 
     def get_version(self) -> int:
         cursor = self.conn.cursor()
@@ -365,6 +366,25 @@ class SQLiteStorage(SerdeBase):
             'UPDATE state_snapshot SET data=? WHERE identifier=?',
             (new_snapshot, identifier),
         )
+        self.maybe_commit()
+
+    def maybe_commit(self):
+        if not self.in_transaction:
+            self.conn.commit()
+
+    @contextmanager
+    def transaction(self):
+        cursor = self.conn.cursor()
+        self.in_transaction = True
+        try:
+            cursor.execute('BEGIN')
+            yield
+            cursor.execute('COMMIT')
+        except Exception:
+            cursor.execute('ROLLBACK')
+            raise
+        finally:
+            self.in_transaction = False
 
     def __del__(self):
         self.conn.close()
