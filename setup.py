@@ -1,10 +1,5 @@
 #!/usr/bin/env python
-import distutils.log
-import os
-import subprocess
-from distutils.spawn import find_executable
-
-from setuptools import Command, find_packages, setup
+from setuptools import find_packages, setup
 from setuptools.command.test import test as TestCommand
 
 
