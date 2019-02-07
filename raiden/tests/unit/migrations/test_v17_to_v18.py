@@ -4,14 +4,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.state_change import ActionInitChain
 from raiden.utils.upgrades import UpgradeManager
 
 
 def setup_storage(db_path):
-    storage = SQLiteStorage(str(db_path), JSONSerializer())
+    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
 
     chain_state_data = Path(__file__).parent / 'data/v17_chainstate.json'
     chain_state = chain_state_data.read_text()
@@ -50,7 +50,7 @@ def test_upgrade_v17_to_v18(tmp_path):
     manager = UpgradeManager(db_filename=str(db_path))
     manager.run()
 
-    storage = SQLiteStorage(str(db_path), JSONSerializer())
+    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
     _, snapshot = storage.get_latest_state_snapshot()
 
     secrethash = list(snapshot.payment_mapping.secrethashes_to_task.keys())[0]
