@@ -13,14 +13,14 @@ from raiden.utils.typing import (
     ChannelID,
     Locksroot,
     TokenAmount,
-    TokenNetworkID,
+    TokenNetworkAddress,
 )
 
 
 def get_state_change_with_balance_proof_by_balance_hash(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         channel_identifier: ChannelID,
         balance_hash: BalanceHash,
         sender: Address,
@@ -43,7 +43,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
 def get_state_change_with_balance_proof_by_locksroot(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         channel_identifier: ChannelID,
         locksroot: Locksroot,
         sender: Address,
@@ -67,7 +67,7 @@ def get_state_change_with_balance_proof_by_locksroot(
 def get_event_with_balance_proof_by_balance_hash(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         channel_identifier: ChannelID,
         balance_hash: BalanceHash,
 ) -> sqlite.EventRecord:
@@ -88,7 +88,7 @@ def get_event_with_balance_proof_by_balance_hash(
 def get_event_with_balance_proof_by_locksroot(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         channel_identifier: ChannelID,
         locksroot: Locksroot,
 ) -> sqlite.EventRecord:

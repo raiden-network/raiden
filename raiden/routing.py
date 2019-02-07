@@ -73,7 +73,7 @@ def check_channel_constraints(
 
 def get_best_routes(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
+        token_network_id: typing.TokenNetworkAddress,
         from_address: typing.InitiatorAddress,
         to_address: typing.TargetAddress,
         amount: int,
@@ -113,7 +113,7 @@ def get_best_routes(
 
 def get_best_routes_internal(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
+        token_network_id: typing.TokenNetworkAddress,
         from_address: typing.InitiatorAddress,
         to_address: typing.TargetAddress,
         amount: int,
@@ -202,7 +202,7 @@ def get_best_routes_internal(
 
 def get_best_routes_pfs(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
+        token_network_id: typing.TokenNetworkAddress,
         from_address: typing.InitiatorAddress,
         to_address: typing.TargetAddress,
         amount: int,

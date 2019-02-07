@@ -32,7 +32,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAddress,
     TokenAmount,
-    TokenNetworkID,
+    TokenNetworkAddress,
 )
 
 # Upgrade pyflakes to 2.0.0 and remove the 'if' and '# noqa'.
@@ -610,7 +610,7 @@ class TransferDescriptionWithSecretState(State):
             payment_network_identifier: PaymentNetworkID,
             payment_identifier: PaymentID,
             amount: TokenAmount,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             initiator: InitiatorAddress,
             target: TargetAddress,
             secret: Secret,

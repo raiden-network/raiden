@@ -46,7 +46,6 @@ from raiden.utils.typing import (
     T_ChannelState,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -1019,7 +1018,7 @@ class TokenNetwork:
             balance_hash=balance_hash,
             additional_hash=additional_hash,
             channel_identifier=channel_identifier,
-            token_network_identifier=TokenNetworkID(self.address),
+            token_network_identifier=TokenNetworkAddress(self.address),
             chain_id=self.proxy.contract.functions.chain_id().call(),
         )
 

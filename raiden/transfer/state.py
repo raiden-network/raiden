@@ -44,7 +44,7 @@ from raiden.utils.typing import (
     T_TokenAmount,
     TokenAddress,
     TokenAmount,
-    TokenNetworkID,
+    TokenNetworkAddress,
     Union,
 )
 
@@ -123,7 +123,7 @@ class InitiatorTask(State):
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             manager_state: State,
     ):
         self.token_network_identifier = token_network_identifier
@@ -167,7 +167,7 @@ class MediatorTask(State):
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             mediator_state,
     ):
         self.token_network_identifier = token_network_identifier
@@ -214,7 +214,7 @@ class TargetTask(State):
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             target_state,
     ):
@@ -456,7 +456,7 @@ class TokenNetworkState(State):
         'partneraddresses_to_channelidentifiers',
     )
 
-    def __init__(self, address: TokenNetworkID, token_address: TokenAddress):
+    def __init__(self, address: TokenNetworkAddress, token_address: TokenAddress):
 
         if not isinstance(address, T_Address):
             raise ValueError('address must be an address instance')
@@ -551,7 +551,7 @@ class TokenNetworkGraphState(State):
         'channel_identifier_to_participants',
     )
 
-    def __init__(self, token_network_address: TokenNetworkID):
+    def __init__(self, token_network_address: TokenNetworkAddress):
         self.token_network_id = token_network_address
         self.network = networkx.Graph()
         self.channel_identifier_to_participants = {}
@@ -734,7 +734,7 @@ class BalanceProofUnsignedState(State):
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,  # FIXME: is this used anywhere
             chain_id: ChainID,
     ):
@@ -873,7 +873,7 @@ class BalanceProofSignedState(State):
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             message_hash: Keccak256,
             signature: Signature,
@@ -1490,7 +1490,7 @@ class NettingChannelState(State):
             chain_id: ChainID,
             token_address: TokenAddress,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             reveal_timeout: BlockTimeout,
             settle_timeout: BlockTimeout,
             our_state: NettingChannelEndState,

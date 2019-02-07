@@ -6,7 +6,7 @@ from raiden.utils.typing import (
     ChannelID,
     Nonce,
     Signature,
-    TokenNetworkID,
+    TokenNetworkAddress,
 )
 from raiden_contracts.constants import MessageTypeId
 
@@ -16,7 +16,7 @@ def pack_balance_proof(
         balance_hash: BalanceHash,
         additional_hash: AdditionalHash,
         channel_identifier: ChannelID,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         chain_id: ChainID,
         msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF,
 ) -> bytes:
@@ -49,7 +49,7 @@ def pack_balance_proof_update(
         balance_hash: BalanceHash,
         additional_hash: AdditionalHash,
         channel_identifier: ChannelID,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         chain_id: ChainID,
         partner_signature: Signature,
 ) -> bytes:

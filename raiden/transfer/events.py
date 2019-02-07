@@ -28,7 +28,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
 )
 
 # pylint: disable=too-many-arguments,too-few-public-methods
@@ -44,7 +43,7 @@ class ContractSendChannelClose(ContractSendEvent):
             self,
             channel_identifier: ChannelID,
             token_address: TokenAddress,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             balance_proof: Optional[BalanceProofSignedState],
     ):
         self.channel_identifier = channel_identifier
@@ -155,7 +154,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             self,
             expiration: BlockExpiration,
             channel_identifier: ChannelID,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             balance_proof: BalanceProofSignedState,
     ):
         super().__init__(expiration)
@@ -213,7 +212,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def __init__(
             self,
             token_address: TokenAddress,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             participant: Address,
     ):
@@ -336,7 +335,7 @@ class EventPaymentSentSuccess(Event):
     def __init__(
             self,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             identifier: PaymentID,
             amount: TokenAmount,
             target: TargetAddress,
@@ -411,7 +410,7 @@ class EventPaymentSentFailed(Event):
     def __init__(
             self,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             identifier: PaymentID,
             target: TargetAddress,
             reason: str,
@@ -487,7 +486,7 @@ class EventPaymentReceivedSuccess(Event):
     def __init__(
             self,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             identifier: PaymentID,
             amount: TokenAmount,
             initiator: InitiatorAddress,

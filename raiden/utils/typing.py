@@ -100,9 +100,6 @@ TokenAddress = NewType('TokenAddress', T_TokenAddress)
 T_TokenNetworkAddress = bytes
 TokenNetworkAddress = NewType('TokenNetworkAddress', T_TokenNetworkAddress)
 
-T_TokenNetworkID = bytes
-TokenNetworkID = NewType('TokenNetworkID', T_TokenNetworkID)
-
 T_TokenAmount = int
 TokenAmount = NewType('TokenAmount', T_TokenAmount)
 

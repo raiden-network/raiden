@@ -39,9 +39,9 @@ from raiden.utils.typing import (
     T_Secret,
     T_SecretHash,
     T_SecretRegistryAddress,
-    T_TokenNetworkID,
+    T_TokenNetworkAddress,
     TokenAmount,
-    TokenNetworkID,
+    TokenNetworkAddress,
     TransactionHash,
     TransferID,
 )
@@ -177,7 +177,7 @@ class ActionChannelClose(StateChange):
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
     ):
         self.token_network_identifier = token_network_identifier
@@ -249,7 +249,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_state: NettingChannelState,
             block_number: BlockNumber,
     ):
@@ -302,7 +302,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             self,
             transaction_hash: TransactionHash,
             transaction_from: Address,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             block_number: BlockNumber,
     ):
@@ -465,7 +465,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             deposit_transaction: TransactionChannelNewBalance,
             block_number: BlockNumber,
@@ -526,7 +526,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             block_number: BlockNumber,
     ):
@@ -820,7 +820,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             participant: Address,
             partner: Address,
             locksroot: Locksroot,
@@ -829,7 +829,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             block_number: BlockNumber,
     ):
 
-        if not isinstance(token_network_identifier, T_TokenNetworkID):
+        if not isinstance(token_network_identifier, T_TokenNetworkAddress):
             raise ValueError('token_network_identifier must be of type TokenNtetworkIdentifier')
 
         if not isinstance(participant, T_Address):
@@ -910,7 +910,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             participant1: Address,
             participant2: Address,
@@ -984,7 +984,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             block_number: BlockNumber,
     ):
@@ -1033,7 +1033,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             channel_identifier: ChannelID,
             nonce: Nonce,
             block_number: BlockNumber,

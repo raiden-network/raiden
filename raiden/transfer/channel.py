@@ -98,7 +98,6 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
     Tuple,
 )
 
@@ -1393,7 +1392,7 @@ def create_sendexpiredlock(
         locked_lock: HashTimeLockState,
         pseudo_random_generator: random.Random,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         channel_identifier: ChannelID,
         recipient: Address,
 ) -> Tuple[Optional[SendLockExpired], Optional[MerkleTreeState]]:

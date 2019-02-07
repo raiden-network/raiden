@@ -316,7 +316,7 @@ class EnvelopeMessage(SignedMessage):
             balance_hash=balance_hash,
             additional_hash=self.message_hash,
             channel_identifier=self.channel_identifier,
-            token_network_identifier=typing.TokenNetworkID(self.token_network_address),
+            token_network_identifier=typing.TokenNetworkAddress(self.token_network_address),
             chain_id=self.chain_id,
         )
         return balance_proof_packed

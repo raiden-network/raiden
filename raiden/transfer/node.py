@@ -66,7 +66,7 @@ from raiden.utils.typing import (
     PaymentNetworkID,
     SecretHash,
     TokenAddress,
-    TokenNetworkID,
+    TokenNetworkAddress,
     Tuple,
 )
 
@@ -217,7 +217,7 @@ def subdispatch_to_paymenttask(
 def subdispatch_initiatortask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
 
@@ -268,7 +268,7 @@ def subdispatch_initiatortask(
 def subdispatch_mediatortask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
 
@@ -319,7 +319,7 @@ def subdispatch_mediatortask(
 def subdispatch_targettask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         channel_identifier: ChannelID,
         secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:

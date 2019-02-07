@@ -141,7 +141,7 @@ def make_channel_state(
         partner_address: typing.Address = EMPTY,
         token_address: typing.TokenAddress = EMPTY,
         payment_network_identifier: typing.PaymentNetworkID = EMPTY,
-        token_network_identifier: typing.TokenNetworkID = EMPTY,
+        token_network_identifier: typing.TokenNetworkAddress = EMPTY,
         channel_identifier: typing.ChannelID = EMPTY,
         reveal_timeout: typing.BlockTimeout = EMPTY,
         settle_timeout: int = EMPTY,
@@ -198,7 +198,7 @@ def make_transfer_description(
         payment_network_identifier: typing.PaymentNetworkID = EMPTY,
         payment_identifier: typing.PaymentID = EMPTY,
         amount: typing.TokenAmount = EMPTY,
-        token_network: typing.TokenNetworkID = EMPTY,
+        token_network: typing.TokenNetworkAddress = EMPTY,
         initiator: typing.InitiatorAddress = EMPTY,
         target: typing.TargetAddress = EMPTY,
         secret: typing.Secret = EMPTY,
@@ -235,7 +235,7 @@ def make_transfer(
         nonce: typing.Nonce = EMPTY,
         transferred_amount: typing.TokenAmount = EMPTY,
         locked_amount: typing.TokenAmount = EMPTY,
-        token_network_identifier: typing.TokenNetworkID = EMPTY,
+        token_network_identifier: typing.TokenNetworkAddress = EMPTY,
         channel_identifier: typing.ChannelID = EMPTY,
         locksroot: typing.Locksroot = EMPTY,
         token: typing.TargetAddress = EMPTY,
@@ -299,7 +299,7 @@ def make_signed_transfer(
         locksroot: typing.Locksroot = EMPTY,
         recipient: typing.Address = EMPTY,
         channel_identifier: typing.ChannelID = EMPTY,
-        token_network_address: typing.TokenNetworkID = EMPTY,
+        token_network_address: typing.TokenNetworkAddress = EMPTY,
         token: typing.TargetAddress = EMPTY,
         pkey: bytes = EMPTY,
         sender: typing.Address = EMPTY,
@@ -362,7 +362,7 @@ def make_signed_balance_proof(
         nonce: typing.Nonce = EMPTY,
         transferred_amount: typing.TokenAmount = EMPTY,
         locked_amount: typing.TokenAmount = EMPTY,
-        token_network_address: typing.TokenNetworkID = EMPTY,
+        token_network_address: typing.TokenNetworkAddress = EMPTY,
         channel_identifier: typing.ChannelID = EMPTY,
         locksroot: typing.Locksroot = EMPTY,
         extra_hash: typing.Keccak256 = EMPTY,
@@ -462,7 +462,7 @@ RANDOM_FACTORIES = {
     typing.ChainID: make_chain_id,
     typing.ChannelID: make_channel_identifier,
     typing.PaymentNetworkID: make_payment_network_identifier,
-    typing.TokenNetworkID: make_payment_network_identifier,
+    typing.TokenNetworkAddress: make_payment_network_identifier,
     NettingChannelState: make_channel_state,
 }
 
@@ -566,7 +566,7 @@ class NettingChannelStateProperties(NamedTuple):
     chain_id: typing.ChainID = EMPTY
     token_address: typing.TokenAddress = EMPTY
     payment_network_identifier: typing.PaymentNetworkID = EMPTY
-    token_network_identifier: typing.TokenNetworkID = EMPTY
+    token_network_identifier: typing.TokenNetworkAddress = EMPTY
 
     reveal_timeout: typing.BlockTimeout = EMPTY
     settle_timeout: typing.BlockTimeout = EMPTY
@@ -607,7 +607,7 @@ class BalanceProofProperties(NamedTuple):
     transferred_amount: typing.TokenAmount = EMPTY
     locked_amount: typing.TokenAmount = EMPTY
     locksroot: typing.Locksroot = EMPTY
-    token_network_identifier: typing.TokenNetworkID = EMPTY
+    token_network_identifier: typing.TokenNetworkAddress = EMPTY
     channel_identifier: typing.ChannelID = EMPTY
     chain_id: typing.ChainID = EMPTY
 

@@ -42,7 +42,7 @@ EVENTS_PAYMENT_HISTORY_RELATED = (
 
 def event_filter_for_payments(
         event: architecture.Event,
-        token_network_identifier: typing.TokenNetworkID = None,
+        token_network_identifier: typing.TokenNetworkAddress = None,
         partner_address: typing.Address = None,
 ) -> bool:
     """Filters out non payment history related events

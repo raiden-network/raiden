@@ -66,7 +66,6 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
 )
 from raiden.utils.upgrades import UpgradeManager
 from raiden_contracts.contract_manager import ContractManager
@@ -104,7 +103,7 @@ def initiator_init(
         transfer_identifier: PaymentID,
         transfer_amount: PaymentAmount,
         transfer_secret: Secret,
-        token_network_identifier: TokenNetworkID,
+        token_network_identifier: TokenNetworkAddress,
         target_address: TargetAddress,
 ):
 
@@ -180,14 +179,14 @@ class PaymentStatus(NamedTuple):
     """
     payment_identifier: PaymentID
     amount: TokenAmount
-    token_network_identifier: TokenNetworkID
+    token_network_identifier: TokenNetworkAddress
     payment_done: AsyncResult
     secret: Secret = None
     secret_hash: SecretHash = None
 
     def matches(
             self,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             amount: TokenAmount,
     ):
         return (
@@ -703,7 +702,7 @@ class RaidenService(Runnable):
 
     def connection_manager_for_token_network(
             self,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
     ) -> ConnectionManager:
         if not is_binary_address(token_network_identifier):
             raise InvalidAddress('token address is not valid.')
@@ -726,7 +725,7 @@ class RaidenService(Runnable):
 
     def mediated_transfer_async(
             self,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             amount: TokenAmount,
             target: TargetAddress,
             identifier: PaymentID,
@@ -755,7 +754,7 @@ class RaidenService(Runnable):
 
     def start_mediated_transfer_with_secret(
             self,
-            token_network_identifier: TokenNetworkID,
+            token_network_identifier: TokenNetworkAddress,
             amount: TokenAmount,
             target: TargetAddress,
             identifier: PaymentID,
