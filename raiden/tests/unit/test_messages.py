@@ -3,6 +3,7 @@ import pytest
 from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof
 from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.messages import (
+    ADDRESS as PARTNER_ADDRESS,
     MEDIATED_TRANSFER_INVALID_VALUES,
     PRIVKEY as PARTNER_PRIVKEY,
     REFUND_TRANSFER_INVALID_VALUES,
@@ -11,7 +12,12 @@ from raiden.tests.utils.messages import (
     make_mediated_transfer,
     make_refund_transfer,
 )
-from raiden.utils.signer import LocalSigner
+from raiden.transfer.balance_proof import (
+    pack_balance_proof,
+    pack_balance_proof_update,
+    pack_reward_proof,
+)
+from raiden.utils.signer import LocalSigner, recover
 
 PRIVKEY, ADDRESS = make_privkey_address()
 signer = LocalSigner(PRIVKEY)
@@ -86,3 +92,38 @@ def test_request_monitoring():
     other_instance.sign(signer)
     # different balance proof ==> non-equality
     assert other_instance != request_monitoring
+
+    # test signature verification
+    reward_proof_data = pack_reward_proof(
+        request_monitoring.balance_proof.channel_identifier,
+        request_monitoring.reward_amount,
+        request_monitoring.balance_proof.token_network_address,
+        request_monitoring.balance_proof.chain_id,
+        request_monitoring.balance_proof.nonce,
+    )
+
+    assert recover(reward_proof_data, request_monitoring.reward_proof_signature) == ADDRESS
+
+    blinded_data = pack_balance_proof_update(
+        nonce=request_monitoring.balance_proof.nonce,
+        balance_hash=request_monitoring.balance_proof.balance_hash,
+        additional_hash=request_monitoring.balance_proof.additional_hash,
+        channel_identifier=request_monitoring.balance_proof.channel_identifier,
+        token_network_identifier=request_monitoring.balance_proof.token_network_address,
+        chain_id=request_monitoring.balance_proof.chain_id,
+        partner_signature=request_monitoring.balance_proof.signature,
+    )
+    assert recover(blinded_data, request_monitoring.non_closing_signature) == ADDRESS
+
+    balance_proof_data = pack_balance_proof(
+        nonce=request_monitoring.balance_proof.nonce,
+        balance_hash=request_monitoring.balance_proof.balance_hash,
+        additional_hash=request_monitoring.balance_proof.additional_hash,
+        channel_identifier=request_monitoring.balance_proof.channel_identifier,
+        token_network_identifier=request_monitoring.balance_proof.token_network_address,
+        chain_id=request_monitoring.balance_proof.chain_id,
+    )
+    assert recover(
+        balance_proof_data,
+        request_monitoring.balance_proof.signature,
+    ) == PARTNER_ADDRESS
