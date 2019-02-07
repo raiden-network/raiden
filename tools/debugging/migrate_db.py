@@ -5,7 +5,6 @@ import click
 import gevent
 import structlog
 
-from raiden.exceptions import InvalidDBData, RaidenDBUpgradeError
 from raiden.storage import serialize, sqlite
 from raiden.utils.upgrades import UpgradeManager
 
@@ -25,7 +24,7 @@ def upgrade_db(current_version: int, new_version: int):
     )
     try:
         manager.run()
-    except (RaidenDBUpgradeError, InvalidDBData) as e:
+    except Exception as e:
         manager.restore_backup()
         log.error(f'Failed to upgrade database: {str(e)}')
 

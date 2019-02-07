@@ -1,14 +1,12 @@
 import os
 import shutil
 import sqlite3
-from contextlib import closing, contextmanager
+from contextlib import closing
 from pathlib import Path
 
 import filelock
 import structlog
 
-from raiden.exceptions import RaidenDBUpgradeError
-from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
 from raiden.storage.versions import older_db_file
 from raiden.utils.migrations.v16_to_v17 import upgrade_initiator_manager
@@ -53,19 +51,6 @@ def get_db_version(db_filename: Path):
         return int(query[0][0])
     except sqlite3.OperationalError:
         return 0
-
-
-@contextmanager
-def in_transaction(storage: SQLiteStorage):
-    cursor = storage.conn.cursor()
-    try:
-        cursor.execute('BEGIN')
-        yield
-        cursor.execute('COMMIT')
-    except Exception as e:
-        cursor.execute('ROLLBACK')
-        log.error(f'Failed to upgrade database: {str(e)}')
-        raise
 
 
 class UpgradeManager:
@@ -125,12 +110,12 @@ class UpgradeManager:
 
             log.debug(f'Upgrading database from {older_version} to v{RAIDEN_DB_VERSION}')
 
-            with in_transaction(storage):
-                try:
+            try:
+                with storage.transaction():
                     version_iteration = older_version
                     for upgrade_func in UPGRADES_LIST:
                         version_iteration = self._run_upgrade_func(
-                            cursor,
+                            storage,
                             upgrade_func,
                             version_iteration,
                         )
@@ -138,9 +123,10 @@ class UpgradeManager:
                     update_version(storage, RAIDEN_DB_VERSION)
                     # Prevent the upgrade from happening on next restart
                     self._backup_old_db(old_db_filename)
-                except RaidenDBUpgradeError:
-                    self._delete_current_db()
-                    raise
+            except Exception as e:
+                self._delete_current_db()
+                log.error(f'Failed to upgrade database: {str(e)}')
+                raise
 
     def _run_upgrade_func(self, cursor: sqlite3.Cursor, func: Callable, version: int) -> int:
         """ Run the migration function, store the version and advance the version. """
