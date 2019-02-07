@@ -53,6 +53,16 @@ def test_upgrade_manager_restores_backup(tmp_path):
 
 
 def test_sequential_version_numbers(tmp_path):
+    """ Test that the version received by each migration
+    function is sequantially incremented according to the
+    version returned by the previous migration.
+    Sequence of events:
+    - The first migration runs and returns v16 as the
+      version it upgraded the database to.
+    - The next migration should receive the old_version
+      as v16 returned previously.
+    - the above goes on for subsequent migrations.
+    """
     db_path = tmp_path / Path('v19_log.db')
     upgrade_manager = UpgradeManager(db_filename=db_path)
 
