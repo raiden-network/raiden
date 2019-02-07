@@ -507,6 +507,41 @@ class MatrixTransport(Runnable):
 
         self._send_with_retry(queue_identifier, message)
 
+    def send_global(self, room: str, message: Message) -> None:
+        """Sends a message to one of the global rooms
+
+        These rooms aren't listened and therefore no reply could be heard, so these messages are
+        sent in a send-and-forget async way.
+        The actual room name is composed from the suffix given as parameter and chain name or id
+        e.g.: raiden_ropsten_discovery
+        Params:
+            room: name suffix as passed in config['global_rooms'] list
+            message: Message instance to be serialized and sent
+        """
+        room_name = self._make_room_alias(room)
+        if room_name not in self._global_rooms:
+            self.log.warning(
+                'Tried to send_global message to an unknown global room. Ignoring.',
+                message=message,
+                room_suffix=room,
+                room_name=room_name,
+                global_rooms=self._global_rooms,
+            )
+            return
+
+        def _send_global():
+            text = JSONSerializer.serialize(message)
+            room = self._global_rooms[room_name]
+            self.log.debug(
+                'Send global',
+                room_name=room_name,
+                room=room,
+                data=text.replace('\n', '\\n'),
+            )
+            room.send_text(text)
+
+        self._spawn(_send_global)
+
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
         chain_state = views.state_from_raiden(self._raiden_service)
