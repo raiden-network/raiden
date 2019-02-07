@@ -141,7 +141,7 @@ class UpgradeManager:
                     self._delete_current_db()
                     raise
 
-    def _run_upgrade_func(self, cursor: sqlite3.Cursor, func: Callable, version: int):
+    def _run_upgrade_func(self, cursor: sqlite3.Cursor, func: Callable, version: int) -> int:
         """ Run the migration function, store the version and advance the version. """
         new_version = func(cursor, version, RAIDEN_DB_VERSION)
         update_version(cursor, new_version)
