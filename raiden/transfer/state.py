@@ -735,7 +735,7 @@ class BalanceProofUnsignedState(State):
             locked_amount: TokenAmount,
             locksroot: Locksroot,
             token_network_identifier: TokenNetworkID,
-            channel_identifier: ChannelID,  # FIXME: is this used anywhere
+            channel_identifier: ChannelID,
             chain_id: ChainID,
     ):
         if not isinstance(nonce, int):
