@@ -312,6 +312,66 @@ Querying Information About Channels and Tokens
    :resjsonarr address partner_address: The partner we have a channel with
    :resjsonarr link channel: A link to the channel resource
 
+.. http:get:: /api/(version)/pending_transfers
+
+   Returns a list of all transfers that have not been completed yet.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/pending_transfers HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      [
+         {
+            "channel_identifier": "255",
+            "initiator": "0x5E1a3601538f94c9e6D2B40F7589030ac5885FE7",
+            "locked_amount": "119",
+            "payment_identifier": "1",
+            "role": "initiator",
+            "target": "0x00AF5cBfc8dC76cd599aF623E60F763228906F3E",
+            "token_address": "0xd0A1E359811322d97991E03f863a0C30C2cF029C",
+            "token_network_identifier": "0x111157460c0F41EfD9107239B7864c062aA8B978",
+            "transferred_amount": "331"
+         }
+
+      ]
+
+   :statuscode 200: Successful query
+   :statuscode 500: Internal Raiden node error
+   :resjsonarr string role: One of "initiator", "mediator" and "target"
+
+.. http:get:: /api/(version)/pending_transfers/(token_address)
+
+   Like above, but limited to pending transfers of the specified token. The response format is the same.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/pending_transfers/0xd0A1E359811322d97991E03f863a0C30C2cF029C HTTP/1.1
+      Host: localhost:5001
+
+.. http:get:: /api/(version)/pending_transfers/(token_address)/(partner_address)
+
+   Like above, but limited to the specified channel. Returns an empty list if the channel does not exist.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/pending_transfers/0xd0A1E359811322d97991E03f863a0C30C2cF029C/0x2c4b0Bdac486d492E3cD701F4cA87e480AE4C685 HTTP/1.1
+      Host: localhost:5001
+
+
 Channel Management
 ==================
 
