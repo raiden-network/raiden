@@ -14,7 +14,11 @@ from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
 from raiden.transfer.architecture import SendMessageEvent
-from raiden.transfer.balance_proof import pack_balance_proof, pack_balance_proof_update
+from raiden.transfer.balance_proof import (
+    pack_balance_proof,
+    pack_balance_proof_update,
+    pack_reward_proof,
+)
 from raiden.transfer.events import SendProcessed
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -28,7 +32,6 @@ from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3, typing
 from raiden.utils.signer import Signer, recover
-from raiden.utils.signing import pack_data
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
@@ -1594,19 +1597,13 @@ class RequestMonitoring(SignedMessage):
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
-        packed = pack_data([
-            'uint256',
-            'uint256',
-            'address',
-            'uint256',
-            'uint256',
-        ], [
+        packed = pack_reward_proof(
             self.balance_proof.channel_identifier,
             self.reward_amount,
             self.balance_proof.token_network_address,
             self.balance_proof.chain_id,
             self.balance_proof.nonce,
-        ])
+        )
         return packed
 
     def sign(self, signer: Signer):
