@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from raiden.messages import Lock
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -139,7 +139,7 @@ def test_get_state_change_with_balance_proof():
     querying the database.
     """
     serializer = JSONSerializer
-    storage = SQLiteStorage(':memory:', serializer)
+    storage = SerializedSQLiteStorage(':memory:', serializer)
     counter = itertools.count()
 
     lock_expired = ReceiveLockExpired(
@@ -218,7 +218,7 @@ def test_get_event_with_balance_proof():
     querying the database.
     """
     serializer = JSONSerializer
-    storage = SQLiteStorage(':memory:', serializer)
+    storage = SerializedSQLiteStorage(':memory:', serializer)
     counter = itertools.count()
 
     lock_expired = SendLockExpired(
@@ -286,7 +286,7 @@ def test_get_event_with_balance_proof():
 def test_log_run():
     with patch('raiden.storage.sqlite.get_system_spec') as get_speck_mock:
         get_speck_mock.return_value = dict(raiden='1.2.3')
-        store = SQLiteStorage(':memory:', None)
+        store = SerializedSQLiteStorage(':memory:', None)
         store.log_run()
     cursor = store.conn.cursor()
     cursor.execute('SELECT started_at, raiden_version FROM runs')

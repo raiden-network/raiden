@@ -5,14 +5,14 @@ from pathlib import Path
 from unittest.mock import ANY, Mock, patch
 
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.state_change import ActionInitChain
 from raiden.utils.upgrades import UpgradeManager, get_db_version
 
 
 def setup_storage(db_path):
-    storage = SQLiteStorage(str(db_path), JSONSerializer())
+    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
     storage.write_state_change(
         ActionInitChain(
             pseudo_random_generator=random.Random(),
@@ -43,7 +43,7 @@ def test_upgrade_manager_restores_backup(tmp_path):
 
     # Once restored, the state changes written above should be
     # in the restored database
-    storage = SQLiteStorage(str(db_path), JSONSerializer())
+    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
     state_change_record = storage.get_latest_state_change_by_data_field(
         {'_type': 'raiden.transfer.state_change.ActionInitChain'},
     )
