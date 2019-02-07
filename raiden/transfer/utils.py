@@ -20,7 +20,7 @@ from raiden.utils.typing import (
 def get_state_change_with_balance_proof_by_balance_hash(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         channel_identifier: ChannelID,
         balance_hash: BalanceHash,
         sender: Address,
@@ -33,7 +33,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
     """
     return storage.get_latest_state_change_by_data_field({
         'balance_proof.chain_id': chain_id,
-        'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
+        'balance_proof.token_network_address': to_checksum_address(token_network_address),
         'balance_proof.channel_identifier': str(channel_identifier),
         'balance_proof.balance_hash': serialize_bytes(balance_hash),
         'balance_proof.sender': to_checksum_address(sender),
@@ -43,7 +43,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
 def get_state_change_with_balance_proof_by_locksroot(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         channel_identifier: ChannelID,
         locksroot: Locksroot,
         sender: Address,
@@ -57,7 +57,7 @@ def get_state_change_with_balance_proof_by_locksroot(
     """
     return storage.get_latest_state_change_by_data_field({
         'balance_proof.chain_id': chain_id,
-        'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
+        'balance_proof.token_network_address': to_checksum_address(token_network_address),
         'balance_proof.channel_identifier': str(channel_identifier),
         'balance_proof.locksroot': serialize_bytes(locksroot),
         'balance_proof.sender': to_checksum_address(sender),
@@ -67,7 +67,7 @@ def get_state_change_with_balance_proof_by_locksroot(
 def get_event_with_balance_proof_by_balance_hash(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         channel_identifier: ChannelID,
         balance_hash: BalanceHash,
 ) -> sqlite.EventRecord:
@@ -79,7 +79,7 @@ def get_event_with_balance_proof_by_balance_hash(
     """
     return storage.get_latest_event_by_data_field({
         'balance_proof.chain_id': chain_id,
-        'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
+        'balance_proof.token_network_address': to_checksum_address(token_network_address),
         'balance_proof.channel_identifier': str(channel_identifier),
         'balance_proof.balance_hash': serialize_bytes(balance_hash),
     })
@@ -88,7 +88,7 @@ def get_event_with_balance_proof_by_balance_hash(
 def get_event_with_balance_proof_by_locksroot(
         storage: sqlite.SQLiteStorage,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         channel_identifier: ChannelID,
         locksroot: Locksroot,
 ) -> sqlite.EventRecord:
@@ -100,7 +100,7 @@ def get_event_with_balance_proof_by_locksroot(
     """
     return storage.get_latest_event_by_data_field({
         'balance_proof.chain_id': chain_id,
-        'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
+        'balance_proof.token_network_address': to_checksum_address(token_network_address),
         'balance_proof.channel_identifier': str(channel_identifier),
         'balance_proof.locksroot': serialize_bytes(locksroot),
     })

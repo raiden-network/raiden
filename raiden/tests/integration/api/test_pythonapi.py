@@ -31,7 +31,7 @@ def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, r
     """Uses RaidenAPI to go through a complete channel lifecycle."""
     node1, node2 = raiden_network
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(node1),
         node1.raiden.default_registry.address,
         token_address,
@@ -60,7 +60,7 @@ def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, r
     channels = api1.get_channel_list(registry_address, token_address, api2.address)
     assert len(channels) == 1
 
-    channel12 = get_channelstate(node1, node2, token_network_identifier)
+    channel12 = get_channelstate(node1, node2, token_network_address)
     assert channel.get_status(channel12) == CHANNEL_STATE_OPENED
 
     channel_event_list1 = api1.get_blockchain_events_channel(
@@ -110,7 +110,7 @@ def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, r
             deposit,
         )
 
-    channel12 = get_channelstate(node1, node2, token_network_identifier)
+    channel12 = get_channelstate(node1, node2, token_network_address)
 
     assert channel.get_status(channel12) == CHANNEL_STATE_OPENED
     assert channel.get_balance(channel12.our_state, channel12.partner_state) == deposit
@@ -139,7 +139,7 @@ def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, r
     api1.channel_close(registry_address, token_address, api2.address)
 
     # Load the new state with the channel closed
-    channel12 = get_channelstate(node1, node2, token_network_identifier)
+    channel12 = get_channelstate(node1, node2, token_network_address)
 
     event_list3 = api1.get_blockchain_events_channel(
         token_address,
@@ -161,7 +161,7 @@ def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, r
         node1.raiden,
         ContractReceiveChannelSettled,
         {
-            'token_network_identifier': token_network_identifier,
+            'token_network_address': token_network_address,
             'channel_identifier': channel12.identifier,
         },
         retry_timeout,

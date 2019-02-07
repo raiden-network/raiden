@@ -103,7 +103,7 @@ def initiator_init(
         transfer_identifier: PaymentID,
         transfer_amount: PaymentAmount,
         transfer_secret: Secret,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         target_address: TargetAddress,
 ):
 
@@ -113,7 +113,7 @@ def initiator_init(
         raiden.default_registry.address,
         transfer_identifier,
         transfer_amount,
-        token_network_identifier,
+        token_network_address,
         InitiatorAddress(raiden.address),
         target_address,
         transfer_secret,
@@ -121,7 +121,7 @@ def initiator_init(
     previous_address = None
     routes = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
-        token_network_id=token_network_identifier,
+        token_network_address=token_network_address,
         from_address=InitiatorAddress(raiden.address),
         to_address=target_address,
         amount=transfer_amount,
@@ -139,7 +139,7 @@ def mediator_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
     routes = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
-        token_network_id=from_transfer.balance_proof.token_network_identifier,
+        token_network_address=from_transfer.balance_proof.token_network_address,
         from_address=raiden.address,
         to_address=from_transfer.target,
         amount=from_transfer.lock.amount,
@@ -179,18 +179,18 @@ class PaymentStatus(NamedTuple):
     """
     payment_identifier: PaymentID
     amount: TokenAmount
-    token_network_identifier: TokenNetworkAddress
+    token_network_address: TokenNetworkAddress
     payment_done: AsyncResult
     secret: Secret = None
     secret_hash: SecretHash = None
 
     def matches(
             self,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             amount: TokenAmount,
     ):
         return (
-            token_network_identifier == self.token_network_identifier and
+            token_network_address == self.token_network_address and
             amount == self.amount
         )
 
@@ -583,7 +583,7 @@ class RaidenService(Runnable):
             self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
                 payment_identifier=identifier,
                 amount=balance_proof.transferred_amount,
-                token_network_identifier=balance_proof.token_network_identifier,
+                token_network_address=balance_proof.token_network_address,
                 payment_done=AsyncResult(),
             )
 
@@ -674,7 +674,7 @@ class RaidenService(Runnable):
     ):
         with self.event_poll_lock:
             node_state = views.state_from_raiden(self)
-            token_networks = views.get_token_network_identifiers(
+            token_networks = views.get_token_network_addresses(
                 node_state,
                 token_network_registry_proxy.address,
             )
@@ -702,30 +702,30 @@ class RaidenService(Runnable):
 
     def connection_manager_for_token_network(
             self,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
     ) -> ConnectionManager:
-        if not is_binary_address(token_network_identifier):
+        if not is_binary_address(token_network_address):
             raise InvalidAddress('token address is not valid.')
 
-        known_token_networks = views.get_token_network_identifiers(
+        known_token_networks = views.get_token_network_addresses(
             views.state_from_raiden(self),
             self.default_registry.address,
         )
 
-        if token_network_identifier not in known_token_networks:
+        if token_network_address not in known_token_networks:
             raise InvalidAddress('token is not registered.')
 
-        manager = self.tokennetworkids_to_connectionmanagers.get(token_network_identifier)
+        manager = self.tokennetworkids_to_connectionmanagers.get(token_network_address)
 
         if manager is None:
-            manager = ConnectionManager(self, token_network_identifier)
-            self.tokennetworkids_to_connectionmanagers[token_network_identifier] = manager
+            manager = ConnectionManager(self, token_network_address)
+            self.tokennetworkids_to_connectionmanagers[token_network_address] = manager
 
         return manager
 
     def mediated_transfer_async(
             self,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             amount: TokenAmount,
             target: TargetAddress,
             identifier: PaymentID,
@@ -743,7 +743,7 @@ class RaidenService(Runnable):
 
         secret = random_secret()
         payment_status = self.start_mediated_transfer_with_secret(
-            token_network_identifier,
+            token_network_address,
             amount,
             target,
             identifier,
@@ -754,7 +754,7 @@ class RaidenService(Runnable):
 
     def start_mediated_transfer_with_secret(
             self,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             amount: TokenAmount,
             target: TargetAddress,
             identifier: PaymentID,
@@ -782,7 +782,7 @@ class RaidenService(Runnable):
             payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
             if payment_status:
                 payment_status_matches = payment_status.matches(
-                    token_network_identifier,
+                    token_network_address,
                     amount,
                 )
                 if not payment_status_matches:
@@ -795,7 +795,7 @@ class RaidenService(Runnable):
             payment_status = PaymentStatus(
                 payment_identifier=identifier,
                 amount=amount,
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 payment_done=AsyncResult(),
                 secret=secret,
                 secret_hash=secret_hash,
@@ -807,7 +807,7 @@ class RaidenService(Runnable):
             transfer_identifier=identifier,
             transfer_amount=amount,
             transfer_secret=secret,
-            token_network_identifier=token_network_identifier,
+            token_network_address=token_network_address,
             target_address=target,
         )
 

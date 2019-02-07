@@ -41,7 +41,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     token_address = token_addresses[0]
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         payment_network_identifier,
         token_address,
@@ -52,7 +52,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     mediated_transfer(
         initiator_app=app1,
         target_app=app2,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=exhaust_amount,
         identifier=1,
     )
@@ -60,7 +60,7 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     refund_amount = deposit // 2
     identifier = 1
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier,
+        token_network_address,
         refund_amount,
         app2.raiden.address,
         identifier,
@@ -82,14 +82,14 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     assert send_refundtransfer
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit, [send_lockedtransfer.transfer.lock],
         app1, deposit, [send_refundtransfer.transfer.lock],
     )
 
     # This channel was exhausted to force the refund transfer
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, 0, [],
         app2, deposit * 2, [],
     )
@@ -122,7 +122,7 @@ def test_refund_transfer(
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         payment_network_identifier,
         token_address,
@@ -134,7 +134,7 @@ def test_refund_transfer(
     mediated_transfer(
         app0,
         app2,
-        token_network_identifier,
+        token_network_address,
         amount_path,
         identifier_path,
         timeout=network_wait * number_of_nodes,
@@ -146,7 +146,7 @@ def test_refund_transfer(
     mediated_transfer(
         initiator_app=app1,
         target_app=app2,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount_drain,
         identifier=identifier_drain,
         timeout=network_wait,
@@ -156,12 +156,12 @@ def test_refund_transfer(
     gevent.sleep(0.2)
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit - amount_path, [],
         app1, deposit + amount_path, [],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
     )
@@ -171,7 +171,7 @@ def test_refund_transfer(
     identifier_refund = 3
     amount_refund = 50
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier,
+        token_network_address,
         amount_refund,
         app2.raiden.address,
         identifier_refund,
@@ -203,12 +203,12 @@ def test_refund_transfer(
 
     # Both channels have the amount locked because of the refund message
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit - amount_path, [lockstate_from_lock(lock)],
         app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
     )
@@ -307,7 +307,7 @@ def test_different_view_of_last_bp_during_unlock(
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         payment_network_identifier,
         token_address,
@@ -322,7 +322,7 @@ def test_different_view_of_last_bp_during_unlock(
     mediated_transfer(
         app0,
         app2,
-        token_network_identifier,
+        token_network_address,
         amount_path,
         identifier_path,
         timeout=network_wait * number_of_nodes,
@@ -334,7 +334,7 @@ def test_different_view_of_last_bp_during_unlock(
     mediated_transfer(
         initiator_app=app1,
         target_app=app2,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount_drain,
         identifier=identifier_drain,
         timeout=network_wait,
@@ -344,12 +344,12 @@ def test_different_view_of_last_bp_during_unlock(
     gevent.sleep(0.2)
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit - amount_path, [],
         app1, deposit + amount_path, [],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
     )
@@ -359,7 +359,7 @@ def test_different_view_of_last_bp_during_unlock(
     identifier_refund = 3
     amount_refund = 50
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier,
+        token_network_address,
         amount_refund,
         app2.raiden.address,
         identifier_refund,
@@ -391,12 +391,12 @@ def test_different_view_of_last_bp_during_unlock(
 
     # Both channels have the amount locked because of the refund message
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit - amount_path, [lockstate_from_lock(lock)],
         app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, deposit - amount_path - amount_drain, [],
         app2, deposit + amount_path + amount_drain, [],
     )
@@ -447,7 +447,7 @@ def test_different_view_of_last_bp_during_unlock(
     app1.raiden.start()
     # test for https://github.com/raiden-network/raiden/issues/3216
     assert count == 1, 'Update transfer should have only been called once during restart'
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
     # and we wait for settlement
     wait_for_settle(
@@ -500,7 +500,7 @@ def test_refund_transfer_after_2nd_hop(
     app0, app1, app2, app3 = raiden_chain
     token_address = token_addresses[0]
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         payment_network_identifier,
         token_address,
@@ -512,7 +512,7 @@ def test_refund_transfer_after_2nd_hop(
     mediated_transfer(
         initiator_app=app0,
         target_app=app3,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount_path,
         identifier=identifier_path,
         timeout=network_wait * number_of_nodes,
@@ -524,7 +524,7 @@ def test_refund_transfer_after_2nd_hop(
     mediated_transfer(
         initiator_app=app2,
         target_app=app3,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount_drain,
         identifier=identifier_drain,
         timeout=network_wait,
@@ -534,17 +534,17 @@ def test_refund_transfer_after_2nd_hop(
     gevent.sleep(0.2)
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit - amount_path, [],
         app1, deposit + amount_path, [],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, deposit - amount_path, [],
         app2, deposit + amount_path, [],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app2, deposit - amount_path - amount_drain, [],
         app3, deposit + amount_path + amount_drain, [],
     )
@@ -555,7 +555,7 @@ def test_refund_transfer_after_2nd_hop(
     identifier_refund = 3
     amount_refund = 50
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier,
+        token_network_address,
         amount_refund,
         app3.raiden.address,
         identifier_refund,
@@ -600,17 +600,17 @@ def test_refund_transfer_after_2nd_hop(
 
     # channels have the amount locked because of the refund message
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit - amount_path, [lockstate_from_lock(lock1)],
         app1, deposit + amount_path, [lockstate_from_lock(refund_lock1)],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, deposit - amount_path, [lockstate_from_lock(lock2)],
         app2, deposit + amount_path, [lockstate_from_lock(refund_lock2)],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app2, deposit - amount_path - amount_drain, [],
         app3, deposit + amount_path + amount_drain, [],
     )

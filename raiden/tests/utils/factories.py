@@ -141,7 +141,7 @@ def make_channel_state(
         partner_address: typing.Address = EMPTY,
         token_address: typing.TokenAddress = EMPTY,
         payment_network_identifier: typing.PaymentNetworkID = EMPTY,
-        token_network_identifier: typing.TokenNetworkAddress = EMPTY,
+        token_network_address: typing.TokenNetworkAddress = EMPTY,
         channel_identifier: typing.ChannelID = EMPTY,
         reveal_timeout: typing.BlockTimeout = EMPTY,
         settle_timeout: int = EMPTY,
@@ -156,7 +156,7 @@ def make_channel_state(
         payment_network_identifier,
         make_payment_network_identifier(),
     )
-    token_network_identifier = if_empty(token_network_identifier, make_address())
+    token_network_address = if_empty(token_network_address, make_address())
     channel_identifier = if_empty(channel_identifier, make_channel_identifier())
     reveal_timeout = if_empty(reveal_timeout, UNIT_REVEAL_TIMEOUT)
     settle_timeout = if_empty(settle_timeout, UNIT_SETTLE_TIMEOUT)
@@ -183,7 +183,7 @@ def make_channel_state(
         chain_id=UNIT_CHAIN_ID,
         token_address=token_address,
         payment_network_identifier=payment_network_identifier,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         our_state=our_state,
@@ -218,7 +218,7 @@ def make_transfer_description(
         payment_network_identifier=payment_network_identifier,
         payment_identifier=payment_identifier,
         amount=amount,
-        token_network_identifier=token_network,
+        token_network_address=token_network,
         initiator=initiator,
         target=target,
         secret=secret,
@@ -235,7 +235,7 @@ def make_transfer(
         nonce: typing.Nonce = EMPTY,
         transferred_amount: typing.TokenAmount = EMPTY,
         locked_amount: typing.TokenAmount = EMPTY,
-        token_network_identifier: typing.TokenNetworkAddress = EMPTY,
+        token_network_address: typing.TokenNetworkAddress = EMPTY,
         channel_identifier: typing.ChannelID = EMPTY,
         locksroot: typing.Locksroot = EMPTY,
         token: typing.TargetAddress = EMPTY,
@@ -248,7 +248,7 @@ def make_transfer(
     identifier = if_empty(identifier, 1)
     nonce = if_empty(nonce, 1)
     transferred_amount = if_empty(transferred_amount, 0)
-    token_network_identifier = if_empty(token_network_identifier, UNIT_TOKEN_NETWORK_ADDRESS)
+    token_network_address = if_empty(token_network_address, UNIT_TOKEN_NETWORK_ADDRESS)
     channel_identifier = if_empty(channel_identifier, UNIT_CHANNEL_ID)
     token = if_empty(token, UNIT_TOKEN_ADDRESS)
 
@@ -270,7 +270,7 @@ def make_transfer(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channel_identifier,
         chain_id=UNIT_CHAIN_ID,
     )
@@ -391,7 +391,7 @@ def make_signed_balance_proof(
         balance_hash=balance_hash,
         additional_hash=extra_hash,
         channel_identifier=channel_identifier,
-        token_network_identifier=token_network_address,
+        token_network_address=token_network_address,
         chain_id=UNIT_CHAIN_ID,
     )
 
@@ -402,7 +402,7 @@ def make_signed_balance_proof(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        token_network_identifier=token_network_address,
+        token_network_address=token_network_address,
         channel_identifier=channel_identifier,
         message_hash=extra_hash,
         signature=signature,
@@ -566,7 +566,7 @@ class NettingChannelStateProperties(NamedTuple):
     chain_id: typing.ChainID = EMPTY
     token_address: typing.TokenAddress = EMPTY
     payment_network_identifier: typing.PaymentNetworkID = EMPTY
-    token_network_identifier: typing.TokenNetworkAddress = EMPTY
+    token_network_address: typing.TokenNetworkAddress = EMPTY
 
     reveal_timeout: typing.BlockTimeout = EMPTY
     settle_timeout: typing.BlockTimeout = EMPTY
@@ -584,7 +584,7 @@ NETTING_CHANNEL_STATE_DEFAULTS = NettingChannelStateProperties(
     chain_id=UNIT_CHAIN_ID,
     token_address=UNIT_TOKEN_ADDRESS,
     payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
-    token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     our_state=NETTING_CHANNEL_END_STATE_DEFAULTS,
@@ -607,7 +607,7 @@ class BalanceProofProperties(NamedTuple):
     transferred_amount: typing.TokenAmount = EMPTY
     locked_amount: typing.TokenAmount = EMPTY
     locksroot: typing.Locksroot = EMPTY
-    token_network_identifier: typing.TokenNetworkAddress = EMPTY
+    token_network_address: typing.TokenNetworkAddress = EMPTY
     channel_identifier: typing.ChannelID = EMPTY
     chain_id: typing.ChainID = EMPTY
 
@@ -617,7 +617,7 @@ BALANCE_PROOF_DEFAULTS = BalanceProofProperties(
     transferred_amount=UNIT_TRANSFER_AMOUNT,
     locked_amount=0,
     locksroot=EMPTY_MERKLE_ROOT,
-    token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     channel_identifier=UNIT_CHANNEL_ID,
     chain_id=UNIT_CHAIN_ID,
 )
@@ -658,7 +658,7 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
         keys = ('transferred_amount', 'locked_amount', 'locksroot')
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
-        keys = ('nonce', 'channel_identifier', 'token_network_identifier')
+        keys = ('nonce', 'channel_identifier', 'token_network_address')
         data_to_sign = balance_proof.pack_balance_proof(
             balance_hash=balance_hash,
             additional_hash=params['message_hash'],
@@ -755,7 +755,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     sender = params.pop('sender')
     params.update(transfer_params)
     params.update(balance_proof_params)
-    params['token_network_address'] = params.pop('token_network_identifier')
+    params['token_network_address'] = params.pop('token_network_address')
     if params['locksroot'] == EMPTY_MERKLE_ROOT:
         params['locksroot'] = lock.lockhash
 

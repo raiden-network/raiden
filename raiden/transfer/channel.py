@@ -304,7 +304,7 @@ def is_valid_signature(
     )
 
     # The balance proof must be tied to a single channel instance, through the
-    # chain_id, token_network_identifier, and channel_identifier, otherwise the
+    # chain_id, token_network_address, and channel_identifier, otherwise the
     # on-chain contract would be susceptible to replay attacks across channels.
     #
     # The balance proof must also authenticate the offchain balance (blinded in
@@ -315,7 +315,7 @@ def is_valid_signature(
         balance_hash=balance_hash,
         additional_hash=balance_proof.message_hash,
         channel_identifier=balance_proof.channel_identifier,
-        token_network_identifier=balance_proof.token_network_identifier,
+        token_network_address=balance_proof.token_network_address,
         chain_id=balance_proof.chain_id,
     )
 
@@ -385,13 +385,13 @@ def is_balance_proof_usable_onchain(
         )
         result = (False, msg)
 
-    elif received_balance_proof.token_network_identifier != channel_state.token_network_identifier:
-        # Informational message, the token_network_identifier **validated by
+    elif received_balance_proof.token_network_address != channel_state.token_network_address:
+        # Informational message, the token_network_address **validated by
         # the signature** must match for the balance_proof to be valid.
         msg = (
-            f"token_network_identifier does not match. "
-            f"expected: {channel_state.token_network_identifier} "
-            f"got: {received_balance_proof.token_network_identifier}."
+            f"token_network_address does not match. "
+            f"expected: {channel_state.token_network_address} "
+            f"got: {received_balance_proof.token_network_address}."
         )
         result = (False, msg)
 
@@ -1181,7 +1181,7 @@ def create_sendlockedtransfer(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        token_network_identifier=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         channel_identifier=channel_state.identifier,
         chain_id=channel_state.chain_id,
     )
@@ -1246,7 +1246,7 @@ def create_unlock(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        token_network_identifier=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         channel_identifier=channel_state.identifier,
         chain_id=channel_state.chain_id,
     )
@@ -1378,7 +1378,7 @@ def events_for_close(
         close_event = ContractSendChannelClose(
             channel_state.identifier,
             channel_state.token_address,
-            channel_state.token_network_identifier,
+            channel_state.token_network_address,
             balance_proof,
         )
 
@@ -1392,7 +1392,7 @@ def create_sendexpiredlock(
         locked_lock: HashTimeLockState,
         pseudo_random_generator: random.Random,
         chain_id: ChainID,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         channel_identifier: ChannelID,
         recipient: Address,
 ) -> Tuple[Optional[SendLockExpired], Optional[MerkleTreeState]]:
@@ -1416,7 +1416,7 @@ def create_sendexpiredlock(
         transferred_amount=transferred_amount,
         locked_amount=updated_locked_amount,
         locksroot=locksroot,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channel_identifier,
         chain_id=chain_id,
     )
@@ -1444,7 +1444,7 @@ def events_for_expired_lock(
         locked_lock=locked_lock,
         pseudo_random_generator=pseudo_random_generator,
         chain_id=channel_state.chain_id,
-        token_network_identifier=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         channel_identifier=channel_state.identifier,
         recipient=channel_state.partner_state.address,
     )
@@ -1739,7 +1739,7 @@ def handle_block(
             )
             event = ContractSendChannelSettle(
                 channel_state.identifier,
-                TokenNetworkAddress(channel_state.token_network_identifier),
+                TokenNetworkAddress(channel_state.token_network_address),
             )
             events.append(event)
 
@@ -1782,7 +1782,7 @@ def handle_channel_closed(
             update = ContractSendChannelUpdateTransfer(
                 expiration,
                 channel_state.identifier,
-                channel_state.token_network_identifier,
+                channel_state.token_network_address,
                 balance_proof,
             )
             channel_state.update_transaction = TransactionExecutionStatus(
@@ -1829,7 +1829,7 @@ def handle_channel_settled(
         if not is_settle_pending and merkle_tree_leaves:
             onchain_unlock = ContractSendChannelBatchUnlock(
                 channel_state.token_address,
-                channel_state.token_network_identifier,
+                channel_state.token_network_address,
                 channel_state.identifier,
                 channel_state.partner_state.address,
             )

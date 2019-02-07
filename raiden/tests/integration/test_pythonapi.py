@@ -195,7 +195,7 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
@@ -203,9 +203,9 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
 
     api0 = RaidenAPI(app0.raiden)
 
-    old_state = get_channelstate(app0, app1, token_network_identifier)
+    old_state = get_channelstate(app0, app1, token_network_address)
     api0.set_total_channel_deposit(registry_address, token_address, app1.raiden.address, 210)
-    new_state = get_channelstate(app0, app1, token_network_identifier)
+    new_state = get_channelstate(app0, app1, token_network_address)
 
     assert new_state.our_state.contract_balance == old_state.our_state.contract_balance + 10
 
@@ -286,7 +286,7 @@ def test_token_swap(raiden_network, deposit, token_addresses):
 def test_api_channel_events(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
@@ -296,7 +296,7 @@ def test_api_channel_events(raiden_chain, token_addresses):
     mediated_transfer(
         initiator_app=app0,
         target_app=app1,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount,
         identifier=1,
     )

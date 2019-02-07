@@ -249,13 +249,13 @@ def wait_for_settle_all_channels(
     for payment_network_id, payment_network_state in id_paymentnetworkstate:
 
         id_tokennetworkstate = payment_network_state.tokenidentifiers_to_tokennetworks.items()
-        for token_network_id, token_network_state in id_tokennetworkstate:
+        for token_network_address, token_network_state in id_tokennetworkstate:
             channel_ids = token_network_state.channelidentifiers_to_channels.keys()
 
             wait_for_settle(
                 raiden,
                 payment_network_id,
-                token_network_id,
+                token_network_address,
                 channel_ids,
                 retry_timeout,
             )

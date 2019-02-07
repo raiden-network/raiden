@@ -302,7 +302,7 @@ def test_api_get_channel_list(
     assert channel_info['partner_address'] == partner_address
     assert channel_info['token_address'] == to_checksum_address(token_address)
     assert channel_info['total_deposit'] == 0
-    assert 'token_network_identifier' in channel_info
+    assert 'token_network_address' in channel_info
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -371,7 +371,7 @@ def test_api_open_and_deposit_channel(
     })
     assert check_dict_nested_attrs(response, expected_response)
 
-    token_network_identifier = response['token_network_identifier']
+    token_network_address = response['token_network_address']
 
     # now let's open a channel and make a deposit too
     second_partner_address = '0x29FA6cf0Cce24582a9B20DB94Be4B6E017896038'
@@ -400,7 +400,7 @@ def test_api_open_and_deposit_channel(
         'balance': total_deposit,
         'state': CHANNEL_STATE_OPENED,
         'channel_identifier': second_channel_id,
-        'token_network_identifier': token_network_identifier,
+        'token_network_address': token_network_address,
         'total_deposit': total_deposit,
     })
     assert check_dict_nested_attrs(response, expected_response)
@@ -453,7 +453,7 @@ def test_api_open_and_deposit_channel(
         'state': CHANNEL_STATE_OPENED,
         'balance': total_deposit,
         'total_deposit': total_deposit,
-        'token_network_identifier': token_network_identifier,
+        'token_network_address': token_network_address,
     }
     assert check_dict_nested_attrs(response, expected_response)
 
@@ -479,7 +479,7 @@ def test_api_open_and_deposit_channel(
         'state': CHANNEL_STATE_OPENED,
         'balance': total_deposit,
         'total_deposit': total_deposit,
-        'token_network_identifier': token_network_identifier,
+        'token_network_address': token_network_address,
     }
     assert check_dict_nested_attrs(response, expected_response)
 
@@ -544,7 +544,7 @@ def test_api_open_close_and_settle_channel(
     })
     assert check_dict_nested_attrs(response, expected_response)
 
-    token_network_identifier = response['token_network_identifier']
+    token_network_address = response['token_network_address']
 
     # let's close the channel
     request = grequests.patch(
@@ -559,7 +559,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
     assert_proper_response(response)
     expected_response = {
-        'token_network_identifier': token_network_identifier,
+        'token_network_address': token_network_address,
         'channel_identifier': channel_identifier,
         'partner_address': partner_address,
         'token_address': to_checksum_address(token_address),

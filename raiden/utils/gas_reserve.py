@@ -57,7 +57,7 @@ def _get_required_gas_estimate_for_state(raiden) -> int:
     gas_estimate = 0
 
     for token_address in token_addresses:
-        token_network_address = views.get_token_network_identifier_by_token_address(
+        token_network_address = views.get_token_network_address_by_token_address(
             chain_state=chain_state,
             payment_network_id=registry_address,
             token_address=token_address,

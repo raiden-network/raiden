@@ -28,7 +28,7 @@ def test_send_queued_messages(
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state,
         payment_network_id,
         token_address,
@@ -44,7 +44,7 @@ def test_send_queued_messages(
         identifier = 1
         for _ in range(spent_amount):
             app0.raiden.mediated_transfer_async(
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 amount=amount,
                 target=app1.raiden.address,
                 identifier=identifier,
@@ -122,7 +122,7 @@ def test_send_queued_messages(
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0_restart, deposit - spent_amount, [],
         app1, deposit + spent_amount, [],
     )

@@ -31,10 +31,10 @@ def sign_and_inject(message, signer: Signer, app):
     MessageHandler().on_message(app.raiden, message)
 
 
-def get_channelstate(app0, app1, token_network_identifier) -> NettingChannelState:
+def get_channelstate(app0, app1, token_network_address) -> NettingChannelState:
     channel_state = views.get_channelstate_by_token_network_and_partner(
         views.state_from_app(app0),
-        token_network_identifier,
+        token_network_address,
         app1.raiden.address,
     )
     return channel_state
@@ -48,13 +48,13 @@ def transfer(initiator_app, target_app, token, amount, identifier):
     will also be revealed.
     """
     payment_network_identifier = initiator_app.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(initiator_app),
         payment_network_identifier,
         token,
     )
     payment_status = initiator_app.raiden.mediated_transfer_async(
-        token_network_identifier,
+        token_network_address,
         amount,
         target_app.raiden.address,
         identifier,
@@ -65,7 +65,7 @@ def transfer(initiator_app, target_app, token, amount, identifier):
 def mediated_transfer(
         initiator_app,
         target_app,
-        token_network_identifier,
+        token_network_address,
         amount,
         identifier=None,
         timeout=5,
@@ -76,7 +76,7 @@ def mediated_transfer(
     # pylint: disable=too-many-arguments
 
     payment_status = initiator_app.raiden.mediated_transfer_async(
-        token_network_identifier,
+        token_network_address,
         amount,
         target_app.raiden.address,
         identifier,
@@ -86,7 +86,7 @@ def mediated_transfer(
 
 
 def assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0,
         balance0,
         pending_locks0,
@@ -101,8 +101,8 @@ def assert_synced_channel_state(
         hasn't been delivered yet or has been completely lost."""
     # pylint: disable=too-many-arguments
 
-    channel0 = get_channelstate(app0, app1, token_network_identifier)
-    channel1 = get_channelstate(app1, app0, token_network_identifier)
+    channel0 = get_channelstate(app0, app1, token_network_address)
+    channel1 = get_channelstate(app1, app0, token_network_address)
 
     assert channel0.our_state.contract_balance == channel1.partner_state.contract_balance
     assert channel0.partner_state.contract_balance == channel1.our_state.contract_balance
@@ -296,7 +296,7 @@ def make_receive_transfer_mediated(
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=nonce,
-        token_network_address=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         token=channel_state.token_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount,
@@ -360,7 +360,7 @@ def make_receive_expired_lock(
         locked_amount=locked_amount,
         locksroot=locksroot,
         channel_identifier=channel_state.identifier,
-        token_network_address=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         recipient=channel_state.partner_state.address,
         secrethash=lock.secrethash,
     )

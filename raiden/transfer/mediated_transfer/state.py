@@ -598,7 +598,7 @@ class TransferDescriptionWithSecretState(State):
         'payment_network_identifier',
         'payment_identifier',
         'amount',
-        'token_network_identifier',
+        'token_network_address',
         'initiator',
         'target',
         'secret',
@@ -610,7 +610,7 @@ class TransferDescriptionWithSecretState(State):
             payment_network_identifier: PaymentNetworkID,
             payment_identifier: PaymentID,
             amount: TokenAmount,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             initiator: InitiatorAddress,
             target: TargetAddress,
             secret: Secret,
@@ -620,7 +620,7 @@ class TransferDescriptionWithSecretState(State):
         self.payment_network_identifier = payment_network_identifier
         self.payment_identifier = payment_identifier
         self.amount = amount
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.initiator = initiator
         self.target = target
         self.secret = secret
@@ -632,7 +632,7 @@ class TransferDescriptionWithSecretState(State):
             'TransferDescriptionWithSecretState token_network:{} amount:{} target:{} secrethash:{}'
             '>'
         ).format(
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.amount,
             pex(self.target),
             pex(self.secrethash),
@@ -644,7 +644,7 @@ class TransferDescriptionWithSecretState(State):
             self.payment_network_identifier == other.payment_network_identifier and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.initiator == other.initiator and
             self.target == other.target and
             self.secret == other.secret and
@@ -659,7 +659,7 @@ class TransferDescriptionWithSecretState(State):
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'payment_identifier': str(self.payment_identifier),
             'amount': str(self.amount),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'initiator': to_checksum_address(self.initiator),
             'target': to_checksum_address(self.target),
             'secret': serialization.serialize_bytes(self.secret),
@@ -671,7 +671,7 @@ class TransferDescriptionWithSecretState(State):
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             payment_identifier=int(data['payment_identifier']),
             amount=int(data['amount']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             initiator=to_canonical_address(data['initiator']),
             target=to_canonical_address(data['target']),
             secret=serialization.deserialize_bytes(data['secret']),

@@ -23,7 +23,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     app0 = raiden_network[0]
     token_address = token_addresses[0]
 
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
@@ -37,7 +37,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     refund_transfer_message = make_refund_transfer(
         payment_identifier=1,
         nonce=1,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         token=token_address,
         channel_identifier=channel_identifier,
         transferred_amount=amount,
@@ -54,7 +54,7 @@ def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
         payment_identifier=1,
         nonce=1,
         channel_identifier=channel_identifier,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         transferred_amount=amount,
         locked_amount=0,
         locksroot=UNIT_SECRETHASH,

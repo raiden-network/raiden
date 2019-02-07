@@ -150,18 +150,18 @@ def get_payment_network_identifiers(
     return list(chain_state.identifiers_to_paymentnetworks.keys())
 
 
-def get_token_network_registry_by_token_network_identifier(
+def get_token_network_registry_by_token_network_address(
         chain_state: ChainState,
-        token_network_identifier: Address,
+        token_network_address: Address,
 ) -> Optional[PaymentNetworkState]:
     for payment_network in chain_state.identifiers_to_paymentnetworks.values():
-        if token_network_identifier in payment_network.tokenidentifiers_to_tokennetworks:
+        if token_network_address in payment_network.tokenidentifiers_to_tokennetworks:
             return payment_network
 
     return None
 
 
-def get_token_network_identifier_by_token_address(
+def get_token_network_address_by_token_address(
         chain_state: ChainState,
         payment_network_id: PaymentNetworkID,
         token_address: TokenAddress,
@@ -172,12 +172,12 @@ def get_token_network_identifier_by_token_address(
         token_address,
     )
 
-    token_network_id = getattr(token_network, 'address', None)
+    token_network_address = getattr(token_network, 'address', None)
 
-    return token_network_id
+    return token_network_address
 
 
-def get_token_network_identifiers(
+def get_token_network_addresses(
         chain_state: ChainState,
         payment_network_id: PaymentNetworkID,
 ) -> List[TokenNetworkAddress]:
@@ -251,26 +251,28 @@ def get_token_network_by_token_address(
 ) -> Optional[TokenNetworkState]:
 
     payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
-    token_network_id = None
+    token_network_address = None
 
     if payment_network is not None:
-        token_network_id = payment_network.tokenaddresses_to_tokenidentifiers.get(token_address)
+        token_network_address = payment_network.tokenaddresses_to_tokenidentifiers.get(
+            token_address,
+        )
 
-    if token_network_id:
-        return payment_network.tokenidentifiers_to_tokennetworks.get(token_network_id)
+    if token_network_address:
+        return payment_network.tokenidentifiers_to_tokennetworks.get(token_network_address)
 
     return None
 
 
 def get_token_network_by_identifier(
         chain_state: ChainState,
-        token_network_id: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
 ) -> Optional[TokenNetworkState]:
 
     token_network_state = None
     for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
         token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
-            token_network_id,
+            token_network_address,
         )
         if token_network_state:
             return token_network_state
@@ -310,13 +312,13 @@ def get_channelstate_for(
 
 def get_channelstate_by_token_network_and_partner(
         chain_state: ChainState,
-        token_network_id: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         partner_address: Address,
 ) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
         chain_state,
-        token_network_id,
+        token_network_address,
     )
 
     channel_state = None
@@ -335,15 +337,15 @@ def get_channelstate_by_token_network_and_partner(
     return channel_state
 
 
-def get_channelstate_by_token_network_identifier(
+def get_channelstate_by_token_network_address(
         chain_state: ChainState,
-        token_network_id: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         channel_id: ChannelID,
 ) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
         chain_state,
-        token_network_id,
+        token_network_address,
     )
 
     channel_state = None

@@ -58,13 +58,13 @@ def create_square_network_topology(
     # create new channels as participant
     channel_new_state_change1 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
+        token_network_address=token_network_state.address,
         channel_state=channel_state1,
         block_number=open_block_number,
     )
     channel_new_state_change2 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
+        token_network_address=token_network_state.address,
         channel_state=channel_state2,
         block_number=open_block_number,
     )
@@ -92,7 +92,7 @@ def create_square_network_topology(
     # create new channels without being participant
     channel_new_state_change3 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
+        token_network_address=token_network_state.address,
         channel_identifier=3,
         participant1=address2,
         participant2=address3,
@@ -113,7 +113,7 @@ def create_square_network_topology(
 
     channel_new_state_change4 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
+        token_network_address=token_network_state.address,
         channel_identifier=4,
         participant1=address3,
         participant2=address1,
@@ -180,7 +180,7 @@ def test_routing_mocked_pfs_happy_path(
     with patch.object(requests, 'get', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             from_address=our_address,
             to_address=address1,
             amount=50,
@@ -222,7 +222,7 @@ def test_routing_mocked_pfs_request_error(
     with patch.object(requests, 'get', side_effect=requests.RequestException()):
         routes = get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             from_address=our_address,
             to_address=address1,
             amount=50,
@@ -282,7 +282,7 @@ def test_routing_mocked_pfs_bad_http_code(
     with patch.object(requests, 'get', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             from_address=our_address,
             to_address=address1,
             amount=50,
@@ -328,7 +328,7 @@ def test_routing_mocked_pfs_invalid_json(
     with patch.object(requests, 'get', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             from_address=our_address,
             to_address=address1,
             amount=50,
@@ -374,7 +374,7 @@ def test_routing_mocked_pfs_invalid_json_structure(
     with patch.object(requests, 'get', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             from_address=our_address,
             to_address=address1,
             amount=50,
@@ -441,7 +441,7 @@ def test_routing_mocked_pfs_unavailabe_peer(
     with patch.object(requests, 'get', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
-            token_network_id=token_network_state.address,
+            token_network_address=token_network_state.address,
             from_address=our_address,
             to_address=address1,
             amount=50,

@@ -335,13 +335,13 @@ def stress_send_and_receive_parallel_transfers(
     gevent.wait(foward_transfers + backwards_transfers)
 
 
-def assert_channels(raiden_network, token_network_identifier, deposit):
+def assert_channels(raiden_network, token_network_address, deposit):
     pairs = list(zip(raiden_network, raiden_network[1:] + [raiden_network[0]]))
 
     for first, second in pairs:
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             first, deposit, [],
             second, deposit, [],
         )
@@ -375,7 +375,7 @@ def test_stress(
     rest_apis = start_apiserver_for_network(raiden_network, port_generator)
     identifier_generator = count()
 
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(raiden_network[0]),
         raiden_network[0].raiden.default_registry.address,
         token_address,
@@ -384,7 +384,7 @@ def test_stress(
     for _ in range(2):
         assert_channels(
             raiden_network,
-            token_network_identifier,
+            token_network_address,
             deposit,
         )
 
@@ -404,7 +404,7 @@ def test_stress(
 
         assert_channels(
             raiden_network,
-            token_network_identifier,
+            token_network_address,
             deposit,
         )
 
@@ -424,7 +424,7 @@ def test_stress(
 
         assert_channels(
             raiden_network,
-            token_network_identifier,
+            token_network_address,
             deposit,
         )
 

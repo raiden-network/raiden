@@ -738,7 +738,7 @@ class RestAPI:
         connection_managers = dict()
 
         for token in self.raiden_api.get_tokens_list(registry_address):
-            token_network_identifier = views.get_token_network_identifier_by_token_address(
+            token_network_address = views.get_token_network_address_by_token_address(
                 views.state_from_raiden(self.raiden_api.raiden),
                 payment_network_id=registry_address,
                 token_address=token,
@@ -746,7 +746,7 @@ class RestAPI:
 
             try:
                 connection_manager = self.raiden_api.raiden.connection_manager_for_token_network(
-                    token_network_identifier,
+                    token_network_address,
                 )
             except InvalidAddress:
                 connection_manager = None

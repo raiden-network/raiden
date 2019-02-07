@@ -3,7 +3,7 @@ This script is meant to be used as a template to step through a provided DB file
 for debugging a specific issue.
 It constructs the chain_state through the state_manager and uses the WAL
 to replay all state changes through the state machines until all state changes are consumed.
-The parameters (token_network_identifier and partner_address) will help filter out all
+The parameters (token_network_address and partner_address) will help filter out all
 state changes until a channel is found with the provided token network address and partner.
 The ignored state changes will still be applied, but they will just not be printed out.
 """
@@ -131,7 +131,7 @@ class Translator(dict):
         return self._regex.sub(self, text)
 
 
-def replay_wal(storage, token_network_identifier, partner_address, translator=None):
+def replay_wal(storage, token_network_address, partner_address, translator=None):
     all_state_changes = storage.get_statechanges_by_identifier(
         from_identifier=0,
         to_identifier='latest',
@@ -147,7 +147,7 @@ def replay_wal(storage, token_network_identifier, partner_address, translator=No
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state,
-            to_canonical_address(token_network_identifier),
+            to_canonical_address(token_network_address),
             to_canonical_address(partner_address),
         )
 
@@ -170,7 +170,7 @@ def replay_wal(storage, token_network_identifier, partner_address, translator=No
     type=click.Path(exists=True),
 )
 @click.argument(
-    'token-network-identifier',
+    'token-network-address',
 )
 @click.argument(
     'partner-address',
@@ -185,13 +185,13 @@ def replay_wal(storage, token_network_identifier, partner_address, translator=No
     'checksummed) with "[Bob]" and all mentions of "identifier" with "[XXX]. '
     'It also allows you to use "Bob" as parameter value for "-n" and "-p" switches.',
 )
-def main(db_file, token_network_identifier, partner_address, names_translator):
+def main(db_file, token_network_address, partner_address, names_translator):
     if names_translator:
         translator = Translator(json.load(names_translator))
         lookup = {v: k for k, v in translator.items()}
-        token_network_identifier = lookup.get(
-            token_network_identifier,
-            token_network_identifier,
+        token_network_address = lookup.get(
+            token_network_address,
+            token_network_address,
         )
         partner_address = lookup.get(
             partner_address,
@@ -202,7 +202,7 @@ def main(db_file, token_network_identifier, partner_address, names_translator):
 
     replay_wal(
         storage=sqlite.SQLiteStorage(db_file, serialize.JSONSerializer()),
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         partner_address=partner_address,
         translator=translator,
     )

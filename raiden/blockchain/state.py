@@ -57,7 +57,7 @@ def get_channel_state(
         chain_id=channel_details.chain_id,
         token_address=token_address,
         payment_network_identifier=payment_network_identifier,
-        token_network_identifier=token_network_address,
+        token_network_address=token_network_address,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         our_state=our_state,

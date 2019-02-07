@@ -43,12 +43,12 @@ class ContractSendChannelClose(ContractSendEvent):
             self,
             channel_identifier: ChannelID,
             token_address: TokenAddress,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             balance_proof: Optional[BalanceProofSignedState],
     ):
         self.channel_identifier = channel_identifier
         self.token_address = token_address
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.balance_proof = balance_proof
 
     def __repr__(self):
@@ -57,7 +57,7 @@ class ContractSendChannelClose(ContractSendEvent):
         ).format(
             self.channel_identifier,
             pex(self.token_address),
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.balance_proof,
         )
 
@@ -66,7 +66,7 @@ class ContractSendChannelClose(ContractSendEvent):
             isinstance(other, ContractSendChannelClose) and
             self.channel_identifier == other.channel_identifier and
             self.token_address == other.token_address and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.balance_proof == other.balance_proof
         )
 
@@ -77,7 +77,7 @@ class ContractSendChannelClose(ContractSendEvent):
         result = {
             'channel_identifier': str(self.channel_identifier),
             'token_address': to_checksum_address(self.token_address),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'balance_proof': self.balance_proof,
 
         }
@@ -88,7 +88,7 @@ class ContractSendChannelClose(ContractSendEvent):
         restored = cls(
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             token_address=to_canonical_address(data['token_address']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             balance_proof=data['balance_proof'],
         )
 
@@ -101,29 +101,29 @@ class ContractSendChannelSettle(ContractSendEvent):
     def __init__(
             self,
             channel_identifier: ChannelID,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
 
     ):
         if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be a ChannelID instance')
 
-        if not isinstance(token_network_identifier, T_TokenNetworkAddress):
-            raise ValueError('token_network_identifier must be a TokenNetworkAddress instance')
+        if not isinstance(token_network_address, T_TokenNetworkAddress):
+            raise ValueError('token_network_address must be a TokenNetworkAddress instance')
 
         self.channel_identifier = channel_identifier
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
 
     def __repr__(self):
         return '<ContractSendChannelSettle channel:{} token_network:{}>'.format(
             self.channel_identifier,
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, ContractSendChannelSettle) and
             self.channel_identifier == other.channel_identifier and
-            self.token_network_identifier == other.token_network_identifier
+            self.token_network_address == other.token_network_address
         )
 
     def __ne__(self, other):
@@ -132,7 +132,7 @@ class ContractSendChannelSettle(ContractSendEvent):
     def to_dict(self) -> Dict[str, Any]:
         result = {
             'channel_identifier': str(self.channel_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
         }
 
         return result
@@ -141,7 +141,7 @@ class ContractSendChannelSettle(ContractSendEvent):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelSettle':
         restored = cls(
             channel_identifier=ChannelID(int(data['channel_identifier'])),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
         )
 
         return restored
@@ -154,13 +154,13 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             self,
             expiration: BlockExpiration,
             channel_identifier: ChannelID,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             balance_proof: BalanceProofSignedState,
     ):
         super().__init__(expiration)
 
         self.channel_identifier = channel_identifier
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.balance_proof = balance_proof
 
     def __repr__(self):
@@ -168,7 +168,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             '<ContractSendChannelUpdateTransfer channel:{} token_network:{} balance_proof:{}>'
         ).format(
             self.channel_identifier,
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.balance_proof,
         )
 
@@ -176,7 +176,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
         return (
             isinstance(other, ContractSendChannelUpdateTransfer) and
             self.channel_identifier == other.channel_identifier and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.balance_proof == other.balance_proof and
             super().__eq__(other)
         )
@@ -188,7 +188,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
         result = {
             'expiration': str(self.expiration),
             'channel_identifier': str(self.channel_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'balance_proof': self.balance_proof,
         }
 
@@ -199,7 +199,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
         restored = cls(
             expiration=int(data['expiration']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             balance_proof=data['balance_proof'],
         )
 
@@ -212,23 +212,23 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def __init__(
             self,
             token_address: TokenAddress,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             channel_identifier: ChannelID,
             participant: Address,
     ):
         self.token_address = token_address
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.channel_identifier = channel_identifier
         self.participant = participant
 
     def __repr__(self):
         return (
             '<ContractSendChannelBatchUnlock '
-            'token_address: {} token_network_id:{} channel:{} participant:{}'
+            'token_address: {} token_network_address:{} channel:{} participant:{}'
             '>'
         ).format(
             pex(self.token_address),
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.channel_identifier,
             pex(self.participant),
         )
@@ -237,7 +237,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         return (
             isinstance(other, ContractSendChannelBatchUnlock) and
             self.token_address == other.token_address and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.channel_identifier == other.channel_identifier and
             self.participant == other.participant
         )
@@ -248,7 +248,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def to_dict(self) -> Dict[str, Any]:
         result = {
             'token_address': to_checksum_address(self.token_address),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'channel_identifier': str(self.channel_identifier),
             'participant': to_checksum_address(self.participant),
         }
@@ -259,7 +259,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelBatchUnlock':
         restored = cls(
             token_address=to_canonical_address(data['token_address']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             participant=to_canonical_address(data['participant']),
         )
@@ -335,13 +335,13 @@ class EventPaymentSentSuccess(Event):
     def __init__(
             self,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             identifier: PaymentID,
             amount: TokenAmount,
             target: TargetAddress,
     ):
         self.payment_network_identifier = payment_network_identifier
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.identifier = identifier
         self.amount = amount
         self.target = target
@@ -350,13 +350,13 @@ class EventPaymentSentSuccess(Event):
         return (
             '<'
             'EventPaymentSentSuccess payment_network_identifier:{} '
-            'token_network_identifier:{} '
+            'token_network_address:{} '
             'identifier:{} amount:{} '
             'target:{}'
             '>'
         ).format(
             pex(self.payment_network_identifier),
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.identifier,
             self.amount,
             pex(self.target),
@@ -369,7 +369,7 @@ class EventPaymentSentSuccess(Event):
             self.amount == other.amount and
             self.target == other.target and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.token_network_identifier == other.token_network_identifier
+            self.token_network_address == other.token_network_address
         )
 
     def __ne__(self, other):
@@ -378,7 +378,7 @@ class EventPaymentSentSuccess(Event):
     def to_dict(self) -> Dict[str, Any]:
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'identifier': str(self.identifier),
             'amount': str(self.amount),
             'target': to_checksum_address(self.target),
@@ -390,7 +390,7 @@ class EventPaymentSentSuccess(Event):
     def from_dict(cls, data: Dict[str, Any]) -> 'EventPaymentSentSuccess':
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             identifier=int(data['identifier']),
             amount=int(data['amount']),
             target=to_canonical_address(data['target']),
@@ -410,13 +410,13 @@ class EventPaymentSentFailed(Event):
     def __init__(
             self,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             identifier: PaymentID,
             target: TargetAddress,
             reason: str,
     ):
         self.payment_network_identifier = payment_network_identifier
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.identifier = identifier
         self.target = target
         self.reason = reason
@@ -425,12 +425,12 @@ class EventPaymentSentFailed(Event):
         return (
             '<'
             'EventPaymentSentFailed payment_network_identifier:{} '
-            'token_network_identifier:{} '
+            'token_network_address:{} '
             'id:{} target:{} reason:{} '
             '>'
         ).format(
             pex(self.payment_network_identifier),
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.identifier,
             pex(self.target),
             self.reason,
@@ -440,7 +440,7 @@ class EventPaymentSentFailed(Event):
         return (
             isinstance(other, EventPaymentSentFailed) and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.identifier == other.identifier and
             self.target == other.target and
             self.reason == other.reason
@@ -452,7 +452,7 @@ class EventPaymentSentFailed(Event):
     def to_dict(self) -> Dict[str, Any]:
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'identifier': str(self.identifier),
             'target': to_checksum_address(self.target),
             'reason': self.reason,
@@ -464,7 +464,7 @@ class EventPaymentSentFailed(Event):
     def from_dict(cls, data: Dict[str, Any]) -> 'EventPaymentSentFailed':
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             identifier=int(data['identifier']),
             target=to_canonical_address(data['target']),
             reason=data['reason'],
@@ -486,7 +486,7 @@ class EventPaymentReceivedSuccess(Event):
     def __init__(
             self,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             identifier: PaymentID,
             amount: TokenAmount,
             initiator: InitiatorAddress,
@@ -501,18 +501,18 @@ class EventPaymentReceivedSuccess(Event):
         self.amount = amount
         self.initiator = initiator
         self.payment_network_identifier = payment_network_identifier
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
 
     def __repr__(self):
         return (
             '<'
             'EventPaymentReceivedSuccess payment_network_identifier:{} '
-            'token_network_identifier:{} identifier:{} '
+            'token_network_address:{} identifier:{} '
             'amount:{} initiator:{} '
             '>'
         ).format(
             pex(self.payment_network_identifier),
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.identifier,
             self.amount,
             pex(self.initiator),
@@ -525,7 +525,7 @@ class EventPaymentReceivedSuccess(Event):
             self.amount == other.amount and
             self.initiator == other.initiator and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.token_network_identifier == other.token_network_identifier
+            self.token_network_address == other.token_network_address
         )
 
     def __ne__(self, other):
@@ -534,7 +534,7 @@ class EventPaymentReceivedSuccess(Event):
     def to_dict(self) -> Dict[str, Any]:
         result = {
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'identifier': str(self.identifier),
             'amount': str(self.amount),
             'initiator': to_checksum_address(self.initiator),
@@ -546,7 +546,7 @@ class EventPaymentReceivedSuccess(Event):
     def from_dict(cls, data: Dict[str, Any]) -> 'EventPaymentReceivedSuccess':
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             identifier=int(data['identifier']),
             amount=int(data['amount']),
             initiator=to_canonical_address(data['initiator']),

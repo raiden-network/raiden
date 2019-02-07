@@ -330,7 +330,7 @@ def test_events_for_refund():
             expiration=expiration,
             balance_proof=BalanceProofProperties(
                 channel_identifier=refund_channel.identifier,
-                token_network_identifier=refund_channel.token_network_identifier,
+                token_network_address=refund_channel.token_network_address,
                 transferred_amount=0,
                 locked_amount=10,
             ),
@@ -516,7 +516,7 @@ def test_events_for_balanceproof():
                 'transferred_amount': UNIT_TRANSFER_AMOUNT,
                 'locked_amount': 0,
                 # 'locksroot':  ignored here
-                'token_network_identifier': UNIT_TOKEN_NETWORK_ADDRESS,
+                'token_network_address': UNIT_TOKEN_NETWORK_ADDRESS,
                 'channel_identifier': payee_channel.identifier,
                 'chain_id': UNIT_CHAIN_ID,
             },
@@ -1091,7 +1091,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
                 initiator=HOP1,
                 target=target_attacker2,
                 balance_proof=BalanceProofProperties(
-                    token_network_identifier=bc_channel.token_network_identifier,
+                    token_network_address=bc_channel.token_network_address,
                 ),
             ),
         ),
@@ -1454,7 +1454,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     channel_closed = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=factories.make_address(),
-        token_network_identifier=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         channel_identifier=channel_state.identifier,
         block_number=block_number,
     )
@@ -1524,7 +1524,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         balance_proof=BalanceProofProperties(
             nonce=2,
             transferred_amount=transfer.balance_proof.transferred_amount,
-            token_network_identifier=transfer.balance_proof.token_network_identifier,
+            token_network_address=transfer.balance_proof.token_network_address,
             channel_identifier=channels[0].identifier,
         ),
         message_hash=transfer.lock.secrethash,
@@ -1618,7 +1618,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
         balance_proof=BalanceProofProperties(
             nonce=2,
             transferred_amount=transfer.balance_proof.transferred_amount,
-            token_network_identifier=transfer.balance_proof.token_network_identifier,
+            token_network_address=transfer.balance_proof.token_network_address,
             channel_identifier=channels[0].identifier,
         ),
         message_hash=transfer.lock.secrethash,

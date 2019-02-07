@@ -7,18 +7,18 @@ from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock
 def test_is_transaction_effect_satisfied(
         chain_state,
         token_network_state,
-        token_network_id,
+        token_network_address,
         netting_channel_state,
 ):
     transaction = ContractSendChannelBatchUnlock(
         token_address=token_network_state.token_address,
-        token_network_identifier=token_network_id,
+        token_network_address=token_network_address,
         channel_identifier=netting_channel_state.identifier,
         participant=HOP2,
     )
     state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=UNIT_SECRETHASH,
-        token_network_identifier=token_network_id,
+        token_network_address=token_network_address,
         participant=HOP1,
         partner=HOP2,
         locksroot=EMPTY_MERKLE_ROOT,

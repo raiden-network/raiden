@@ -223,14 +223,14 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     token_address = token_addresses[0]
 
     registry_address = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
     )
 
-    channel0 = get_channelstate(app0, app1, token_network_identifier)
-    channel1 = get_channelstate(app1, app0, token_network_identifier)
+    channel0 = get_channelstate(app0, app1, token_network_address)
+    channel1 = get_channelstate(app1, app0, token_network_address)
     assert channel0 is None
     assert channel1 is None
 
@@ -243,7 +243,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, 0, [],
         app1, 0, [],
     )
@@ -265,7 +265,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit, [],
         app1, 0, [],
     )
@@ -287,7 +287,7 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit, [],
         app1, deposit, [],
     )
@@ -306,7 +306,7 @@ def test_query_events(
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         registry_address,
         token_address,
@@ -397,7 +397,7 @@ def test_query_events(
     assert channelcount0 + 1 == channelcount1
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, 0, [],
         app1, 0, [],
     )
@@ -411,14 +411,14 @@ def test_query_events(
 
     all_netting_channel_events = get_all_netting_channel_events(
         chain=app0.raiden.chain,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=app0.raiden.contract_manager,
     )
 
     deposit_events = get_netting_channel_deposit_events(
         chain=app0.raiden.chain,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=contract_manager,
     )
@@ -442,14 +442,14 @@ def test_query_events(
 
     all_netting_channel_events = get_all_netting_channel_events(
         chain=app0.raiden.chain,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=app0.raiden.contract_manager,
     )
 
     closed_events = get_netting_channel_closed_events(
         chain=app0.raiden.chain,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=contract_manager,
     )
@@ -469,14 +469,14 @@ def test_query_events(
 
     all_netting_channel_events = get_all_netting_channel_events(
         chain=app0.raiden.chain,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=app0.raiden.contract_manager,
     )
 
     settled_events = get_netting_channel_settled_events(
         chain=app0.raiden.chain,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         netting_channel_identifier=channel_id,
         contract_manager=contract_manager,
     )
@@ -503,7 +503,7 @@ def test_secret_revealed_on_chain(
     """ A node must reveal the secret on-chain if it's known and the channel is closed. """
     app0, app1, app2 = raiden_chain
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
@@ -521,7 +521,7 @@ def test_secret_revealed_on_chain(
     app1_hold_event_handler.hold_unlock_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
+        token_network_address,
         amount,
         target,
         identifier,
@@ -536,7 +536,7 @@ def test_secret_revealed_on_chain(
             retry_interval,
         )
 
-    channel_state2_1 = get_channelstate(app2, app1, token_network_identifier)
+    channel_state2_1 = get_channelstate(app2, app1, token_network_address)
     pending_lock = channel_state2_1.partner_state.secrethashes_to_unlockedlocks.get(secrethash)
     msg = "The lock must be registered in unlocked locks since the secret is known"
     assert pending_lock is not None, msg
@@ -548,7 +548,7 @@ def test_secret_revealed_on_chain(
     channel_close_event = ContractSendChannelClose(
         channel_identifier=channel_state2_1.identifier,
         token_address=channel_state2_1.token_address,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         balance_proof=channel_state2_1.partner_state.balance_proof,
     )
     app2.raiden.raiden_event_handler.on_raiden_event(app2.raiden, channel_close_event)
@@ -566,7 +566,7 @@ def test_secret_revealed_on_chain(
     # The channel app0-app1 should continue with the protocol off-chain, once
     # the secret is released on-chain by app2
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0, deposit - amount, [],
         app1, deposit + amount, [],
     )
@@ -591,17 +591,17 @@ def test_clear_closed_queue(raiden_network, token_addresses, deposit, network_wa
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     chain_state0 = views.state_from_app(app0)
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state0,
         app0.raiden.default_registry.address,
         token_address,
     )
     token_network = views.get_token_network_by_identifier(
         chain_state0,
-        token_network_identifier,
+        token_network_address,
     )
 
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
     assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
         app1.raiden.address
@@ -616,7 +616,7 @@ def test_clear_closed_queue(raiden_network, token_addresses, deposit, network_wa
     amount = 10
     payment_identifier = 1337
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount,
         target=target,
         identifier=payment_identifier,

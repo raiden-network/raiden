@@ -70,13 +70,13 @@ def test_regression_unfiltered_routes(
     )
 
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         payment_network_identifier,
         token,
     )
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=1,
         target=app4.raiden.address,
         identifier=1,
@@ -95,13 +95,13 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
 
     identifier = 1
     payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         payment_network_identifier,
         token,
     )
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier,
+        token_network_address,
         amount=1,
         target=app2.raiden.address,
         identifier=identifier,
@@ -154,12 +154,12 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     """
     app0, app1 = raiden_network
     token = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token,
     )
-    channelstate_0_1 = get_channelstate(app0, app1, token_network_identifier)
+    channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
 
     payment_identifier = 1
     secret = sha3(b'test_regression_multiple_revealsecret')
@@ -207,13 +207,13 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     )
     app0.raiden.sign(reveal_secret)
 
-    token_network_identifier = channelstate_0_1.token_network_identifier
+    token_network_address = channelstate_0_1.token_network_address
     unlock = Unlock(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=random.randint(0, UINT64_MAX),
         payment_identifier=payment_identifier,
         nonce=mediated_transfer.nonce + 1,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channelstate_0_1.identifier,
         transferred_amount=lock_amount,
         locked_amount=0,

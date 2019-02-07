@@ -120,7 +120,7 @@ def setup_initiator_tests(
         our_address=our_address,
         partner_address=partner_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
@@ -154,17 +154,17 @@ def test_next_route():
     channel1 = factories.make_channel(
         our_balance=amount,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel2 = factories.make_channel(
         our_balance=0,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel3 = factories.make_channel(
         our_balance=amount,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     pseudo_random_generator = random.Random()
 
@@ -212,7 +212,7 @@ def test_init_with_usable_routes():
     channel1 = factories.make_channel(
         our_balance=UNIT_TRANSFER_AMOUNT,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
@@ -246,7 +246,7 @@ def test_init_with_usable_routes():
     transfer = send_mediated_transfer.transfer
     expiration = initiator.get_initial_lock_expiration(block_number, channel1.reveal_timeout)
 
-    assert transfer.balance_proof.token_network_identifier == channel1.token_network_identifier
+    assert transfer.balance_proof.token_network_address == channel1.token_network_address
     assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount
     assert transfer.lock.expiration == expiration
     assert transfer.lock.secrethash == factories.UNIT_TRANSFER_DESCRIPTION.secrethash
@@ -493,19 +493,19 @@ def test_refund_transfer_next_route():
         our_address=our_address,
         partner_address=refund_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel2 = factories.make_channel(
         our_balance=0,
         our_address=our_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel3 = factories.make_channel(
         our_balance=amount,
         our_address=our_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
 
     channel_map = {
@@ -626,7 +626,7 @@ def test_refund_transfer_no_more_routes():
         nonce=2,
         transferred_amount=original_transfer.balance_proof.transferred_amount,
         locked_amount=0,
-        token_network_address=original_transfer.balance_proof.token_network_identifier,
+        token_network_address=original_transfer.balance_proof.token_network_address,
         channel_identifier=setup.channel.identifier,
         locksroot=EMPTY_MERKLE_ROOT,
         extra_hash=original_transfer.lock.secrethash,
@@ -636,7 +636,7 @@ def test_refund_transfer_no_more_routes():
         nonce=2,
         transferred_amount=original_transfer.balance_proof.transferred_amount,
         locked_amount=0,
-        token_network_address=original_transfer.balance_proof.token_network_identifier,
+        token_network_address=original_transfer.balance_proof.token_network_address,
         channel_identifier=setup.channel.identifier,
         locksroot=EMPTY_MERKLE_ROOT,
         extra_hash=original_transfer.lock.secrethash,
@@ -849,7 +849,7 @@ def test_init_with_maximum_pending_transfers_exceeded():
     channel1 = factories.make_channel(
         our_balance=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
@@ -928,12 +928,12 @@ def test_initiator_lock_expired():
     channel1 = factories.make_channel(
         our_balance=amount,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel2 = factories.make_channel(
         our_balance=0,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     pseudo_random_generator = random.Random()
 
@@ -996,7 +996,7 @@ def test_initiator_lock_expired():
     # Since the lock expired make sure we also get the payment sent failed event
     payment_failed = search_for_item(iteration.events, EventPaymentSentFailed, {
         'payment_network_identifier': channel1.payment_network_identifier,
-        'token_network_identifier': channel1.token_network_identifier,
+        'token_network_address': channel1.token_network_address,
         'identifier': UNIT_TRANSFER_IDENTIFIER,
         'target': transfer.target,
         'reason': 'lock expired',
@@ -1066,7 +1066,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
     channel_closed = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=factories.make_address(),
-        token_network_identifier=setup.channel.token_network_identifier,
+        token_network_address=setup.channel.token_network_address,
         channel_identifier=setup.channel.identifier,
         block_number=block_number,
     )
@@ -1206,7 +1206,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
     channel_closed = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=factories.make_address(),
-        token_network_identifier=setup.channel.token_network_identifier,
+        token_network_address=setup.channel.token_network_address,
         channel_identifier=setup.channel.identifier,
         block_number=block_number,
     )
@@ -1292,19 +1292,19 @@ def test_secret_reveal_cancel_other_transfers():
         our_address=our_address,
         partner_address=refund_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel2 = factories.make_channel(
         our_balance=0,
         our_address=our_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel3 = factories.make_channel(
         our_balance=amount,
         our_address=our_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
 
     channel_map = {
@@ -1494,13 +1494,13 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         our_address=our_address,
         partner_address=refund_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
     channel2 = factories.make_channel(
         our_balance=amount,
         our_address=our_address,
         token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     )
 
     channel_map = {
@@ -1570,7 +1570,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         nonce=2,
         transferred_amount=initial_transfer.balance_proof.transferred_amount,
         locked_amount=0,
-        token_network_address=initial_transfer.balance_proof.token_network_identifier,
+        token_network_address=initial_transfer.balance_proof.token_network_address,
         channel_identifier=channel1.identifier,
         locksroot=EMPTY_MERKLE_ROOT,
         extra_hash=initial_transfer.lock.secrethash,

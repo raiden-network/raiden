@@ -16,7 +16,7 @@ def pack_balance_proof(
         balance_hash: BalanceHash,
         additional_hash: AdditionalHash,
         channel_identifier: ChannelID,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         chain_id: ChainID,
         msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF,
 ) -> bytes:
@@ -34,7 +34,7 @@ def pack_balance_proof(
         'uint256',
         'bytes32',
     ], [
-        token_network_identifier,
+        token_network_address,
         chain_id,
         msg_type,
         channel_identifier,
@@ -49,7 +49,7 @@ def pack_balance_proof_update(
         balance_hash: BalanceHash,
         additional_hash: AdditionalHash,
         channel_identifier: ChannelID,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         chain_id: ChainID,
         partner_signature: Signature,
 ) -> bytes:
@@ -63,7 +63,7 @@ def pack_balance_proof_update(
         balance_hash=balance_hash,
         additional_hash=additional_hash,
         channel_identifier=channel_identifier,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         chain_id=chain_id,
         msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
     ) + partner_signature

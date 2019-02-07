@@ -122,7 +122,7 @@ def test_participant_selection(raiden_network, token_addresses):
     ]
     gevent.wait(connect_greenlets)
 
-    token_network_registry_address = views.get_token_network_identifier_by_token_address(
+    token_network_registry_address = views.get_token_network_address_by_token_address(
         views.state_from_raiden(raiden_network[0].raiden),
         payment_network_id=registry_address,
         token_address=token_address,
@@ -163,7 +163,7 @@ def test_participant_selection(raiden_network, token_addresses):
                 continue
             routes = routing.get_best_routes(
                 chain_state=node_state,
-                token_network_id=network_state.address,
+                token_network_address=network_state.address,
                 from_address=app.raiden.address,
                 to_address=target.raiden.address,
                 amount=1,

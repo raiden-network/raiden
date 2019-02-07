@@ -117,28 +117,28 @@ def message_identifier_from_prng(prng):
 
 class InitiatorTask(State):
     __slots__ = (
-        'token_network_identifier',
+        'token_network_address',
         'manager_state',
     )
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             manager_state: State,
     ):
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.manager_state = manager_state
 
     def __repr__(self):
-        return '<InitiatorTask token_network_identifier:{} state:{}>'.format(
-            pex(self.token_network_identifier),
+        return '<InitiatorTask token_network_address:{} state:{}>'.format(
+            pex(self.token_network_address),
             self.manager_state,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, InitiatorTask) and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.manager_state == other.manager_state
         )
 
@@ -147,42 +147,42 @@ class InitiatorTask(State):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'manager_state': self.manager_state,
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'InitiatorTask':
         return cls(
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             manager_state=data['manager_state'],
         )
 
 
 class MediatorTask(State):
     __slots__ = (
-        'token_network_identifier',
+        'token_network_address',
         'mediator_state',
     )
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             mediator_state,
     ):
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.mediator_state = mediator_state
 
     def __repr__(self):
-        return '<MediatorTask token_network_identifier:{} state:{}>'.format(
-            pex(self.token_network_identifier),
+        return '<MediatorTask token_network_address:{} state:{}>'.format(
+            pex(self.token_network_address),
             self.mediator_state,
         )
 
     def __eq__(self, other):
         return (
             isinstance(other, MediatorTask) and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.mediator_state == other.mediator_state
         )
 
@@ -191,14 +191,14 @@ class MediatorTask(State):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'mediator_state': self.mediator_state,
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'MediatorTask':
         restored = cls(
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             mediator_state=data['mediator_state'],
         )
 
@@ -207,24 +207,24 @@ class MediatorTask(State):
 
 class TargetTask(State):
     __slots__ = (
-        'token_network_identifier',
+        'token_network_address',
         'channel_identifier',
         'target_state',
     )
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             channel_identifier: ChannelID,
             target_state,
     ):
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.target_state = target_state
         self.channel_identifier = channel_identifier
 
     def __repr__(self):
-        return '<TargetTask token_network_identifier:{} channel_identifier:{} state:{}>'.format(
-            pex(self.token_network_identifier),
+        return '<TargetTask token_network_address:{} channel_identifier:{} state:{}>'.format(
+            pex(self.token_network_address),
             self.channel_identifier,
             self.target_state,
         )
@@ -232,7 +232,7 @@ class TargetTask(State):
     def __eq__(self, other):
         return (
             isinstance(other, TargetTask) and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.target_state == other.target_state and
             self.channel_identifier == other.channel_identifier
         )
@@ -242,7 +242,7 @@ class TargetTask(State):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'channel_identifier': str(self.channel_identifier),
             'target_state': self.target_state,
         }
@@ -250,7 +250,7 @@ class TargetTask(State):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'TargetTask':
         restored = cls(
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             target_state=data['target_state'],
         )
@@ -546,13 +546,13 @@ class TokenNetworkGraphState(State):
     """
 
     __slots__ = (
-        'token_network_id',
+        'token_network_address',
         'network',
         'channel_identifier_to_participants',
     )
 
     def __init__(self, token_network_address: TokenNetworkAddress):
-        self.token_network_id = token_network_address
+        self.token_network_address = token_network_address
         self.network = networkx.Graph()
         self.channel_identifier_to_participants = {}
 
@@ -562,7 +562,7 @@ class TokenNetworkGraphState(State):
     def __eq__(self, other):
         return (
             isinstance(other, TokenNetworkGraphState) and
-            self.token_network_id == other.token_network_id and
+            self.token_network_address == other.token_network_address and
             self._to_comparable_graph() == other._to_comparable_graph() and
             self.channel_identifier_to_participants == other.channel_identifier_to_participants
         )
@@ -577,7 +577,7 @@ class TokenNetworkGraphState(State):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'token_network_id': to_checksum_address(self.token_network_id),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'network': serialization.serialize_networkx_graph(self.network),
             'channel_identifier_to_participants': map_dict(
                 str,  # keys in json can only be strings
@@ -589,7 +589,7 @@ class TokenNetworkGraphState(State):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'TokenNetworkGraphState':
         restored = cls(
-            token_network_address=to_canonical_address(data['token_network_id']),
+            token_network_address=to_canonical_address(data['token_network_address']),
         )
         restored.network = serialization.deserialize_networkx_graph(data['network'])
         restored.channel_identifier_to_participants = map_dict(
@@ -723,7 +723,7 @@ class BalanceProofUnsignedState(State):
         'transferred_amount',
         'locked_amount',
         'locksroot',
-        'token_network_identifier',
+        'token_network_address',
         'channel_identifier',
         'chain_id',
     )
@@ -734,7 +734,7 @@ class BalanceProofUnsignedState(State):
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             channel_identifier: ChannelID,  # FIXME: is this used anywhere
             chain_id: ChainID,
     ):
@@ -778,7 +778,7 @@ class BalanceProofUnsignedState(State):
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.channel_identifier = channel_identifier
         self.chain_id = chain_id
 
@@ -793,7 +793,7 @@ class BalanceProofUnsignedState(State):
             self.transferred_amount,
             self.locked_amount,
             pex(self.locksroot),
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.channel_identifier,
             self.chain_id,
         )
@@ -805,7 +805,7 @@ class BalanceProofUnsignedState(State):
             self.transferred_amount == other.transferred_amount and
             self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.channel_identifier == other.channel_identifier and
             self.chain_id == other.chain_id
         )
@@ -827,7 +827,7 @@ class BalanceProofUnsignedState(State):
             'transferred_amount': str(self.transferred_amount),
             'locked_amount': str(self.locked_amount),
             'locksroot': serialization.serialize_bytes(self.locksroot),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'channel_identifier': str(self.channel_identifier),
             'chain_id': self.chain_id,
             # Makes the balance hash available to query
@@ -841,7 +841,7 @@ class BalanceProofUnsignedState(State):
             transferred_amount=TokenAmount(int(data['transferred_amount'])),
             locked_amount=TokenAmount(int(data['locked_amount'])),
             locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             chain_id=data['chain_id'],
         )
@@ -859,7 +859,7 @@ class BalanceProofSignedState(State):
         'transferred_amount',
         'locked_amount',
         'locksroot',
-        'token_network_identifier',
+        'token_network_address',
         'channel_identifier',
         'message_hash',
         'signature',
@@ -873,7 +873,7 @@ class BalanceProofSignedState(State):
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             channel_identifier: ChannelID,
             message_hash: Keccak256,
             signature: Signature,
@@ -892,8 +892,8 @@ class BalanceProofSignedState(State):
         if not isinstance(locksroot, T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(token_network_identifier, T_Address):
-            raise ValueError('token_network_identifier must be an address instance')
+        if not isinstance(token_network_address, T_Address):
+            raise ValueError('token_network_address must be an address instance')
 
         if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be an ChannelID instance')
@@ -938,7 +938,7 @@ class BalanceProofSignedState(State):
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.channel_identifier = channel_identifier
         self.message_hash = message_hash
         self.signature = signature
@@ -957,7 +957,7 @@ class BalanceProofSignedState(State):
             self.transferred_amount,
             self.locked_amount,
             pex(self.locksroot),
-            pex(self.token_network_identifier),
+            pex(self.token_network_address),
             self.channel_identifier,
             pex(self.message_hash),
             pex(self.signature),
@@ -972,7 +972,7 @@ class BalanceProofSignedState(State):
             self.transferred_amount == other.transferred_amount and
             self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.channel_identifier == other.channel_identifier and
             self.message_hash == other.message_hash and
             self.signature == other.signature and
@@ -997,7 +997,7 @@ class BalanceProofSignedState(State):
             'transferred_amount': str(self.transferred_amount),
             'locked_amount': str(self.locked_amount),
             'locksroot': serialization.serialize_bytes(self.locksroot),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'channel_identifier': str(self.channel_identifier),
             'message_hash': serialization.serialize_bytes(self.message_hash),
             'signature': serialization.serialize_bytes(self.signature),
@@ -1014,7 +1014,7 @@ class BalanceProofSignedState(State):
             transferred_amount=TokenAmount(int(data['transferred_amount'])),
             locked_amount=TokenAmount(int(data['locked_amount'])),
             locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             message_hash=Keccak256(serialization.deserialize_bytes(data['message_hash'])),
             signature=Signature(serialization.deserialize_bytes(data['signature'])),
@@ -1471,7 +1471,7 @@ class NettingChannelState(State):
         'chain_id',
         'token_address',
         'payment_network_identifier',
-        'token_network_identifier',
+        'token_network_address',
         'reveal_timeout',
         'settle_timeout',
         'our_state',
@@ -1490,7 +1490,7 @@ class NettingChannelState(State):
             chain_id: ChainID,
             token_address: TokenAddress,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkAddress,
+            token_network_address: TokenNetworkAddress,
             reveal_timeout: BlockTimeout,
             settle_timeout: BlockTimeout,
             our_state: NettingChannelEndState,
@@ -1544,7 +1544,7 @@ class NettingChannelState(State):
         self.chain_id = chain_id
         self.token_address = token_address
         self.payment_network_identifier = payment_network_identifier
-        self.token_network_identifier = token_network_identifier
+        self.token_network_address = token_network_address
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
         self.our_state = our_state
@@ -1573,7 +1573,7 @@ class NettingChannelState(State):
             self.our_state == other.our_state and
             self.partner_state == other.partner_state and
             self.token_address == other.token_address and
-            self.token_network_identifier == other.token_network_identifier and
+            self.token_network_address == other.token_network_address and
             self.reveal_timeout == other.reveal_timeout and
             self.settle_timeout == other.settle_timeout and
             self.deposit_transaction_queue == other.deposit_transaction_queue and
@@ -1602,7 +1602,7 @@ class NettingChannelState(State):
             'chain_id': self.chain_id,
             'token_address': to_checksum_address(self.token_address),
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'reveal_timeout': str(self.reveal_timeout),
             'settle_timeout': str(self.settle_timeout),
             'our_state': self.our_state,
@@ -1629,7 +1629,7 @@ class NettingChannelState(State):
             chain_id=data['chain_id'],
             token_address=to_canonical_address(data['token_address']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             reveal_timeout=int(data['reveal_timeout']),
             settle_timeout=int(data['settle_timeout']),
             our_state=data['our_state'],

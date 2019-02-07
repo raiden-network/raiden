@@ -82,13 +82,13 @@ def get_networks(
     )
 
     if payment_network_state:
-        token_network_id = payment_network_state.tokenaddresses_to_tokenidentifiers.get(
+        token_network_address = payment_network_state.tokenaddresses_to_tokenidentifiers.get(
             token_address,
         )
 
-    if token_network_id:
+    if token_network_address:
         token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
-            token_network_id,
+            token_network_address,
         )
 
     return payment_network_state, token_network_state
@@ -156,10 +156,10 @@ def subdispatch_to_paymenttask(
         pseudo_random_generator = chain_state.pseudo_random_generator
 
         if isinstance(sub_task, InitiatorTask):
-            token_network_identifier = sub_task.token_network_identifier
+            token_network_address = sub_task.token_network_address
             token_network_state = views.get_token_network_by_identifier(
                 chain_state,
-                token_network_identifier,
+                token_network_address,
             )
             if token_network_state:
                 sub_iteration = initiator_manager.state_transition(
@@ -172,10 +172,10 @@ def subdispatch_to_paymenttask(
                 events = sub_iteration.events
 
         elif isinstance(sub_task, MediatorTask):
-            token_network_identifier = sub_task.token_network_identifier
+            token_network_address = sub_task.token_network_address
             token_network_state = views.get_token_network_by_identifier(
                 chain_state,
-                token_network_identifier,
+                token_network_address,
             )
 
             if token_network_state:
@@ -189,12 +189,12 @@ def subdispatch_to_paymenttask(
                 events = sub_iteration.events
 
         elif isinstance(sub_task, TargetTask):
-            token_network_identifier = sub_task.token_network_identifier
+            token_network_address = sub_task.token_network_address
             channel_identifier = sub_task.channel_identifier
 
-            channel_state = views.get_channelstate_by_token_network_identifier(
+            channel_state = views.get_channelstate_by_token_network_address(
                 chain_state,
-                token_network_identifier,
+                token_network_address,
                 channel_identifier,
             )
 
@@ -217,7 +217,7 @@ def subdispatch_to_paymenttask(
 def subdispatch_initiatortask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
 
@@ -230,7 +230,7 @@ def subdispatch_initiatortask(
 
     elif sub_task and isinstance(sub_task, InitiatorTask):
         is_valid_subtask = (
-            token_network_identifier == sub_task.token_network_identifier
+            token_network_address == sub_task.token_network_address
         )
         manager_state = sub_task.manager_state
     else:
@@ -242,7 +242,7 @@ def subdispatch_initiatortask(
 
         token_network_state = views.get_token_network_by_identifier(
             chain_state,
-            token_network_identifier,
+            token_network_address,
         )
         iteration = initiator_manager.state_transition(
             manager_state,
@@ -255,7 +255,7 @@ def subdispatch_initiatortask(
 
         if iteration.new_state:
             sub_task = InitiatorTask(
-                token_network_identifier,
+                token_network_address,
                 iteration.new_state,
             )
             chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
@@ -268,7 +268,7 @@ def subdispatch_initiatortask(
 def subdispatch_mediatortask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
 
@@ -281,7 +281,7 @@ def subdispatch_mediatortask(
 
     elif sub_task and isinstance(sub_task, MediatorTask):
         is_valid_subtask = (
-            token_network_identifier == sub_task.token_network_identifier
+            token_network_address == sub_task.token_network_address
         )
         mediator_state = sub_task.mediator_state
     else:
@@ -291,7 +291,7 @@ def subdispatch_mediatortask(
     if is_valid_subtask:
         token_network_state = views.get_token_network_by_identifier(
             chain_state,
-            token_network_identifier,
+            token_network_address,
         )
 
         pseudo_random_generator = chain_state.pseudo_random_generator
@@ -306,7 +306,7 @@ def subdispatch_mediatortask(
 
         if iteration.new_state:
             sub_task = MediatorTask(
-                token_network_identifier,
+                token_network_address,
                 iteration.new_state,
             )
             chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
@@ -319,7 +319,7 @@ def subdispatch_mediatortask(
 def subdispatch_targettask(
         chain_state: ChainState,
         state_change: StateChange,
-        token_network_identifier: TokenNetworkAddress,
+        token_network_address: TokenNetworkAddress,
         channel_identifier: ChannelID,
         secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
@@ -333,7 +333,7 @@ def subdispatch_targettask(
 
     elif sub_task and isinstance(sub_task, TargetTask):
         is_valid_subtask = (
-            token_network_identifier == sub_task.token_network_identifier
+            token_network_address == sub_task.token_network_address
         )
         target_state = sub_task.target_state
     else:
@@ -342,9 +342,9 @@ def subdispatch_targettask(
     events = list()
     channel_state = None
     if is_valid_subtask:
-        channel_state = views.get_channelstate_by_token_network_identifier(
+        channel_state = views.get_channelstate_by_token_network_address(
             chain_state,
-            token_network_identifier,
+            token_network_address,
             channel_identifier,
         )
 
@@ -362,7 +362,7 @@ def subdispatch_targettask(
 
         if iteration.new_state:
             sub_task = TargetTask(
-                token_network_identifier,
+                token_network_address,
                 channel_identifier,
                 iteration.new_state,
             )
@@ -378,7 +378,7 @@ def maybe_add_tokennetwork(
         payment_network_identifier: PaymentNetworkID,
         token_network_state: TokenNetworkState,
 ):
-    token_network_identifier = token_network_state.address
+    token_network_address = token_network_state.address
     token_address = token_network_state.token_address
 
     payment_network_state, token_network_state_previous = get_networks(
@@ -400,8 +400,8 @@ def maybe_add_tokennetwork(
         ids_to_tokens = payment_network_state.tokenidentifiers_to_tokennetworks
         addresses_to_ids = payment_network_state.tokenaddresses_to_tokenidentifiers
 
-        ids_to_tokens[token_network_identifier] = token_network_state
-        addresses_to_ids[token_address] = token_network_identifier
+        ids_to_tokens[token_network_address] = token_network_state
+        addresses_to_ids[token_address] = token_network_address
 
 
 def sanity_check(iteration: TransitionResult[ChainState]):
@@ -485,11 +485,11 @@ def handle_token_network_action(
 ) -> TransitionResult[ChainState]:
     token_network_state = views.get_token_network_by_identifier(
         chain_state,
-        state_change.token_network_identifier,
+        state_change.token_network_address,
     )
-    payment_network_state = views.get_token_network_registry_by_token_network_identifier(
+    payment_network_state = views.get_token_network_registry_by_token_network_address(
         chain_state,
-        state_change.token_network_identifier,
+        state_change.token_network_address,
     )
     assert payment_network_state, 'We should always get a payment_network_state'
     payment_network_id = payment_network_state.address
@@ -516,9 +516,9 @@ def handle_contract_receive_channel_closed(
         state_change: ContractReceiveChannelClosed,
 ) -> TransitionResult[ChainState]:
     # cleanup queue for channel
-    channel_state = views.get_channelstate_by_token_network_identifier(
+    channel_state = views.get_channelstate_by_token_network_address(
         chain_state=chain_state,
-        token_network_id=state_change.token_network_identifier,
+        token_network_address=state_change.token_network_address,
         channel_id=state_change.channel_identifier,
     )
     if channel_state:
@@ -643,7 +643,7 @@ def handle_init_initiator(
     return subdispatch_initiatortask(
         chain_state,
         state_change,
-        transfer.token_network_identifier,
+        transfer.token_network_address,
         secrethash,
     )
 
@@ -654,12 +654,12 @@ def handle_init_mediator(
 ) -> TransitionResult[ChainState]:
     transfer = state_change.from_transfer
     secrethash = transfer.lock.secrethash
-    token_network_identifier = transfer.balance_proof.token_network_identifier
+    token_network_address = transfer.balance_proof.token_network_address
 
     return subdispatch_mediatortask(
         chain_state,
         state_change,
-        token_network_identifier,
+        token_network_address,
         secrethash,
     )
 
@@ -671,12 +671,12 @@ def handle_init_target(
     transfer = state_change.transfer
     secrethash = transfer.lock.secrethash
     channel_identifier = transfer.balance_proof.channel_identifier
-    token_network_identifier = transfer.balance_proof.token_network_identifier
+    token_network_address = transfer.balance_proof.token_network_address
 
     return subdispatch_targettask(
         chain_state,
         state_change,
-        token_network_identifier,
+        token_network_address,
         channel_identifier,
         secrethash,
     )
@@ -1002,7 +1002,7 @@ def is_transaction_effect_satisfied(
     is_valid_update_transfer = (
         isinstance(state_change, ContractReceiveUpdateTransfer) and
         isinstance(transaction, ContractSendChannelUpdateTransfer) and
-        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.token_network_address == transaction.token_network_address and
         state_change.channel_identifier == transaction.channel_identifier and
         state_change.nonce == transaction.balance_proof.nonce
     )
@@ -1015,7 +1015,7 @@ def is_transaction_effect_satisfied(
     is_valid_close = (
         isinstance(state_change, ContractReceiveChannelClosed) and
         isinstance(transaction, ContractSendChannelClose) and
-        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.token_network_address == transaction.token_network_address and
         state_change.channel_identifier == transaction.channel_identifier
     )
     if is_valid_close:
@@ -1024,7 +1024,7 @@ def is_transaction_effect_satisfied(
     is_valid_settle = (
         isinstance(state_change, ContractReceiveChannelSettled) and
         isinstance(transaction, ContractSendChannelSettle) and
-        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.token_network_address == transaction.token_network_address and
         state_change.channel_identifier == transaction.channel_identifier
     )
     if is_valid_settle:
@@ -1061,14 +1061,14 @@ def is_transaction_effect_satisfied(
         if partner_address:
             channel_state = views.get_channelstate_by_token_network_and_partner(
                 chain_state,
-                state_change.token_network_identifier,
+                state_change.token_network_address,
                 partner_address,
             )
 
             if channel_state:
                 is_our_batch_unlock = (
                     state_change.participant == our_address and
-                    state_change.token_network_identifier == transaction.token_network_identifier
+                    state_change.token_network_address == transaction.token_network_address
                 )
                 if is_our_batch_unlock:
                     return True
@@ -1119,7 +1119,7 @@ def is_transaction_invalidated(transaction, state_change):
     is_our_failed_update_transfer = (
         isinstance(state_change, ContractReceiveChannelSettled) and
         isinstance(transaction, ContractSendChannelUpdateTransfer) and
-        state_change.token_network_identifier == transaction.token_network_identifier and
+        state_change.token_network_address == transaction.token_network_address and
         state_change.channel_identifier == transaction.channel_identifier
     )
     if is_our_failed_update_transfer:

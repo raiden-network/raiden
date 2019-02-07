@@ -264,7 +264,7 @@ class RaidenEventHandler:
             message_hash = EMPTY_HASH
 
         channel_proxy = raiden.chain.payment_channel(
-            token_network_address=channel_close_event.token_network_identifier,
+            token_network_address=channel_close_event.token_network_address,
             channel_id=channel_close_event.channel_identifier,
         )
 
@@ -286,7 +286,7 @@ class RaidenEventHandler:
 
         if balance_proof:
             channel = raiden.chain.payment_channel(
-                token_network_address=channel_update_event.token_network_identifier,
+                token_network_address=channel_update_event.token_network_address,
                 channel_id=channel_update_event.channel_identifier,
             )
 
@@ -295,7 +295,7 @@ class RaidenEventHandler:
                 balance_hash=balance_proof.balance_hash,
                 additional_hash=balance_proof.message_hash,
                 channel_identifier=balance_proof.channel_identifier,
-                token_network_identifier=balance_proof.token_network_identifier,
+                token_network_address=balance_proof.token_network_address,
                 chain_id=balance_proof.chain_id,
                 partner_signature=balance_proof.signature,
             )
@@ -322,13 +322,13 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
-        token_network_identifier = channel_unlock_event.token_network_identifier
+        token_network_address = channel_unlock_event.token_network_address
         channel_identifier = channel_unlock_event.channel_identifier
         participant = channel_unlock_event.participant
         token_address = channel_unlock_event.token_address
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            token_network_address=token_network_identifier,
+            token_network_address=token_network_address,
             channel_id=channel_identifier,
         )
         token_network: TokenNetwork = payment_channel.token_network
@@ -359,7 +359,7 @@ class RaidenEventHandler:
             state_change_record = get_state_change_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
                 locksroot=partner_locksroot,
                 sender=participants_details.partner_details.address,
@@ -369,7 +369,7 @@ class RaidenEventHandler:
             event_record = get_event_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
                 locksroot=our_locksroot.balance_hash,
             )
@@ -391,7 +391,7 @@ class RaidenEventHandler:
                 f'Failed to find state/event that match current channel locksroots. '
                 f'chain_id:{raiden.chain.network_id} '
                 f'token:{to_checksum_address(token_address)} '
-                f'token_network:{to_checksum_address(token_network_identifier)} '
+                f'token_network:{to_checksum_address(token_network_address)} '
                 f'channel:{channel_identifier} '
                 f'participant:{to_checksum_address(participant)} '
                 f'our_locksroot:{to_hex(our_locksroot)} '
@@ -435,11 +435,11 @@ class RaidenEventHandler:
             channel_settle_event: ContractSendChannelSettle,
     ):
         chain_id = raiden.chain.network_id
-        token_network_identifier = channel_settle_event.token_network_identifier
+        token_network_address = channel_settle_event.token_network_address
         channel_identifier = channel_settle_event.channel_identifier
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            token_network_address=channel_settle_event.token_network_identifier,
+            token_network_address=channel_settle_event.token_network_address,
             channel_id=channel_settle_event.channel_identifier,
         )
 
@@ -456,7 +456,7 @@ class RaidenEventHandler:
 
         log_details = {
             'chain_id': chain_id,
-            'token_network_identifier': token_network_identifier,
+            'token_network_address': token_network_address,
             'channel_identifier': channel_identifier,
             'node': pex(raiden.address),
             'partner': to_checksum_address(partner_details.address),
@@ -480,7 +480,7 @@ class RaidenEventHandler:
             event_record = get_event_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
                 chain_id=chain_id,
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
                 balance_hash=our_details.balance_hash,
             )
@@ -507,7 +507,7 @@ class RaidenEventHandler:
             state_change_record = get_state_change_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
                 chain_id=chain_id,
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 channel_identifier=channel_identifier,
                 balance_hash=partner_details.balance_hash,
                 sender=participants_details.partner_details.address,

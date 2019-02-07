@@ -39,7 +39,7 @@ def test_recovery_happy_case(
 
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state,
         payment_network_id,
         token_address,
@@ -52,7 +52,7 @@ def test_recovery_happy_case(
         mediated_transfer(
             app0,
             app2,
-            token_network_identifier,
+            token_network_address,
             amount,
             timeout=network_wait * number_of_nodes,
         )
@@ -93,12 +93,12 @@ def test_recovery_happy_case(
     app0_restart.start()
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0_restart, deposit - spent_amount, [],
         app1, deposit + spent_amount, [],
     )
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, deposit - spent_amount, [],
         app2, deposit + spent_amount, [],
     )
@@ -121,28 +121,28 @@ def test_recovery_happy_case(
     mediated_transfer(
         app2,
         app0_restart,
-        token_network_identifier,
+        token_network_address,
         amount,
         timeout=network_wait * number_of_nodes * 2,
     )
     mediated_transfer(
         initiator_app=app0_restart,
         target_app=app2,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount,
         identifier=identifier,
         timeout=network_wait * number_of_nodes * 2,
     )
 
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app0_restart, deposit - spent_amount, [],
         app1, deposit + spent_amount, [],
     )
 
     wait_for_payment.wait()
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         app1, deposit - spent_amount, [],
         app2, deposit + spent_amount, [],
     )
@@ -164,7 +164,7 @@ def test_recovery_unhappy_case(
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state,
         payment_network_id,
         token_address,
@@ -177,7 +177,7 @@ def test_recovery_unhappy_case(
         mediated_transfer(
             app0,
             app2,
-            token_network_identifier,
+            token_network_address,
             amount,
             timeout=network_wait * number_of_nodes,
         )
@@ -243,7 +243,7 @@ def test_recovery_unhappy_case(
     )
 
     assert search_for_item(state_changes, ContractReceiveChannelSettled, {
-        'token_network_identifier': token_network_identifier,
+        'token_network_address': token_network_address,
         'channel_identifier': channel01.identifier,
     })
 

@@ -73,7 +73,7 @@ def check_channel_constraints(
 
 def get_best_routes(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkAddress,
+        token_network_address: typing.TokenNetworkAddress,
         from_address: typing.InitiatorAddress,
         to_address: typing.TargetAddress,
         amount: int,
@@ -85,7 +85,7 @@ def get_best_routes(
     if services_config and services_config['pathfinding_service_address'] is not None:
         pfs_answer_ok, pfs_routes = get_best_routes_pfs(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             from_address=from_address,
             to_address=to_address,
             amount=amount,
@@ -103,7 +103,7 @@ def get_best_routes(
 
     return get_best_routes_internal(
         chain_state=chain_state,
-        token_network_id=token_network_id,
+        token_network_address=token_network_address,
         from_address=from_address,
         to_address=to_address,
         amount=amount,
@@ -113,7 +113,7 @@ def get_best_routes(
 
 def get_best_routes_internal(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkAddress,
+        token_network_address: typing.TokenNetworkAddress,
         from_address: typing.InitiatorAddress,
         to_address: typing.TargetAddress,
         amount: int,
@@ -132,7 +132,7 @@ def get_best_routes_internal(
 
     token_network = views.get_token_network_by_identifier(
         chain_state,
-        token_network_id,
+        token_network_address,
     )
 
     network_statuses = views.get_networkstatuses(chain_state)
@@ -152,7 +152,7 @@ def get_best_routes_internal(
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state,
-            token_network_id,
+            token_network_address,
             partner_address,
         )
 
@@ -202,7 +202,7 @@ def get_best_routes_internal(
 
 def get_best_routes_pfs(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkAddress,
+        token_network_address: typing.TokenNetworkAddress,
         from_address: typing.InitiatorAddress,
         to_address: typing.TargetAddress,
         amount: int,
@@ -211,7 +211,7 @@ def get_best_routes_pfs(
 ) -> Tuple[bool, List[RouteState]]:
     pfs_path = '{}/api/v1/{}/paths'.format(
         config['pathfinding_service_address'],
-        to_checksum_address(token_network_id),
+        to_checksum_address(token_network_address),
     )
     payload = {
         'from': to_checksum_address(from_address),
@@ -280,7 +280,7 @@ def get_best_routes_pfs(
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
             chain_state=chain_state,
-            token_network_id=token_network_id,
+            token_network_address=token_network_address,
             partner_address=partner_address,
         )
 

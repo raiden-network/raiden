@@ -177,7 +177,7 @@ class PartnersPerTokenListSchema(BaseListSchema):
 
 class ChannelStateSchema(BaseSchema):
     channel_identifier = fields.Integer(attribute='identifier')
-    token_network_identifier = AddressField()
+    token_network_address = AddressField()
     token_address = AddressField()
     partner_address = fields.Method('get_partner_address')
     settle_timeout = fields.Integer()

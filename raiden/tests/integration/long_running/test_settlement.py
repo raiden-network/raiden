@@ -28,7 +28,7 @@ from raiden.transfer.state_change import (
 from raiden.utils import sha3
 
 
-def wait_for_batch_unlock(app, token_network_id, participant, partner):
+def wait_for_batch_unlock(app, token_network_address, participant, partner):
     unlock_event = None
     while not unlock_event:
         gevent.sleep(1)
@@ -39,7 +39,7 @@ def wait_for_batch_unlock(app, token_network_id, participant, partner):
         )
 
         unlock_event = search_for_item(state_changes, ContractReceiveChannelBatchUnlock, {
-            'token_network_identifier': token_network_id,
+            'token_network_address': token_network_address,
             'participant': participant,
             'partner': partner,
         })
@@ -51,17 +51,17 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
     )
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(app0),
-        token_network_identifier,
+        token_network_address,
     )
 
-    channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
+    channel_identifier = get_channelstate(app0, app1, token_network_address).identifier
 
     assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
         app1.raiden.address
@@ -102,7 +102,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
 
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(app0),
-        token_network_identifier,
+        token_network_address,
     )
 
     assert channel_identifier not in token_network.partneraddresses_to_channelidentifiers[
@@ -115,14 +115,14 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
     )
 
     assert search_for_item(state_changes, ContractReceiveChannelClosed, {
-        'token_network_identifier': token_network_identifier,
+        'token_network_address': token_network_address,
         'channel_identifier': channel_identifier,
         'transaction_from': app1.raiden.address,
         'block_number': channel_state.close_transaction.finished_block_number,
     })
 
     assert search_for_item(state_changes, ContractReceiveChannelSettled, {
-        'token_network_identifier': token_network_identifier,
+        'token_network_address': token_network_address,
         'channel_identifier': channel_identifier,
     })
 
@@ -132,7 +132,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     """Test lock expiry and removal."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(alice_app),
         alice_app.raiden.default_registry.address,
         token_address,
@@ -145,10 +145,10 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
 
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(alice_app),
-        token_network_identifier,
+        token_network_address,
     )
 
-    channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     channel_identifier = channel_state.identifier
 
     assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
@@ -178,7 +178,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     )
 
     alice_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
+        token_network_address,
         alice_to_bob_amount,
         target,
         identifier,
@@ -186,7 +186,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     )
     transfer1_received.wait()
 
-    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     lock = channel.get_lock(alice_bob_channel_state.our_state, transfer_1_secrethash)
 
     # This is the current state of the protocol:
@@ -195,16 +195,16 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     #    B -> A SecretRequest
     #    - protocol didn't continue
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         alice_app, deposit, [lock],
         bob_app, deposit, [],
     )
 
     # Verify lock is registered in both channel states
-    alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    alice_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     assert transfer_1_secrethash in alice_channel_state.our_state.secrethashes_to_lockedlocks
 
-    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
+    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
     assert transfer_1_secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
@@ -212,11 +212,11 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
 
     remove_expired_lock_received.wait()
 
-    alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    alice_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     assert transfer_1_secrethash not in alice_channel_state.our_state.secrethashes_to_lockedlocks
 
     # Verify Bob received the message and processed the LockExpired message
-    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
+    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
     assert transfer_1_secrethash not in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
@@ -229,7 +229,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_2_secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
+        token_network_address,
         alice_to_bob_amount,
         target,
         identifier,
@@ -241,7 +241,7 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_chain_state = views.state_from_raiden(alice_app.raiden)
     assert transfer_2_secrethash in alice_chain_state.payment_mapping.secrethashes_to_task
 
-    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_identifier)
+    bob_channel_state = get_channelstate(bob_app, alice_app, token_network_address)
     assert transfer_2_secrethash in bob_channel_state.partner_state.secrethashes_to_lockedlocks
 
 
@@ -252,7 +252,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     registry_address = alice_app.raiden.default_registry.address
     token_address = token_addresses[0]
     token_proxy = alice_app.raiden.chain.token(token_address)
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(alice_app),
         alice_app.raiden.default_registry.address,
         token_address,
@@ -266,10 +266,10 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(alice_app),
-        token_network_identifier,
+        token_network_address,
     )
 
-    channel_identifier = get_channelstate(alice_app, bob_app, token_network_identifier).identifier
+    channel_identifier = get_channelstate(alice_app, bob_app, token_network_address).identifier
 
     assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
         bob_app.raiden.address
@@ -290,7 +290,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
+        token_network_address,
         alice_to_bob_amount,
         target,
         identifier,
@@ -299,7 +299,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
     gevent.sleep(1)  # wait for the messages to be exchanged
 
-    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_address)
     lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
 
     # This is the current state of the protocol:
@@ -308,7 +308,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     #    B -> A SecretRequest
     #    - protocol didn't continue
     assert_synced_channel_state(
-        token_network_identifier,
+        token_network_address,
         alice_app, deposit, [lock],
         bob_app, deposit, [],
     )
@@ -358,7 +358,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(bob_app),
-        token_network_identifier,
+        token_network_address,
     )
 
     assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
@@ -369,14 +369,14 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     with gevent.Timeout(10):
         wait_for_batch_unlock(
             bob_app,
-            token_network_identifier,
+            token_network_address,
             alice_bob_channel_state.partner_state.address,
             alice_bob_channel_state.our_state.address,
         )
 
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(bob_app),
-        token_network_identifier,
+        token_network_address,
     )
 
     assert channel_identifier not in token_network.partneraddresses_to_channelidentifiers[
@@ -400,7 +400,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     amount = 30
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
@@ -426,7 +426,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
+        token_network_address,
         amount,
         target,
         identifier,
@@ -436,7 +436,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     secret_available.wait()  # wait for the messages to be exchanged
 
     # Save the merkle tree leaves from the pending transfer, used to test the unlock
-    channelstate_0_1 = get_channelstate(app0, app1, token_network_identifier)
+    channelstate_0_1 = get_channelstate(app0, app1, token_network_address)
     batch_unlock = channel.get_batch_unlock(channelstate_0_1.our_state)
     assert batch_unlock
 
@@ -448,7 +448,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     mediated_transfer(
         initiator_app=app0,
         target_app=app1,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount,
         identifier=2,
     )
@@ -468,7 +468,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
     )
 
     netting_channel = app1.raiden.chain.payment_channel(
-        token_network_identifier,
+        token_network_address,
         channelstate_0_1.identifier,
     )
 
@@ -492,7 +492,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit):
 def test_automatic_secret_registration(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
@@ -511,7 +511,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
+        token_network_address,
         amount,
         target,
         identifier,
@@ -561,7 +561,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
     token = token_addresses[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token,
@@ -579,7 +579,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
+        token_network_address,
         amount,
         target,
         identifier,
@@ -588,11 +588,11 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
     gevent.sleep(1)  # wait for the messages to be exchanged
 
-    attack_channel = get_channelstate(app2, app1, token_network_identifier)
+    attack_channel = get_channelstate(app2, app1, token_network_address)
     attack_transfer = None  # TODO
     attack_contract = attack_channel.external_state.netting_channel.address
     hub_contract = (
-        get_channelstate(app1, app0, token_network_identifier)
+        get_channelstate(app1, app0, token_network_address)
         .external_state
         .netting_channel.address
     )
@@ -652,13 +652,13 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         views.state_from_app(app0),
         app0.raiden.default_registry.address,
         token_address,
     )
 
-    channel0 = get_channelstate(app0, app1, token_network_identifier)
+    channel0 = get_channelstate(app0, app1, token_network_address)
     token_proxy = app0.raiden.chain.token(channel0.token_address)
     initial_balance0 = token_proxy.balance_of(app0.raiden.address)
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
@@ -667,7 +667,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     mediated_transfer(
         initiator_app=app0,
         target_app=app1,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount0_1,
     )
 
@@ -675,7 +675,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     mediated_transfer(
         initiator_app=app1,
         target_app=app0,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount1_1,
     )
 
@@ -683,7 +683,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     mediated_transfer(
         initiator_app=app0,
         target_app=app1,
-        token_network_identifier=token_network_identifier,
+        token_network_address=token_network_address,
         amount=amount0_2,
     )
 
@@ -714,7 +714,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
 
     # check that the channel is properly settled and that Bob's client
     # automatically called updateTransfer() to reflect the actual transactions
-    assert token_proxy.balance_of(token_network_identifier) == 0
+    assert token_proxy.balance_of(token_network_address) == 0
     total0 = amount0_1 + amount0_2
     total1 = amount1_1
     expected_balance0 = initial_balance0 + deposit - total0 + total1

@@ -640,7 +640,7 @@
           "address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
           "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
           "network_graph": {
-            "token_network_id": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+            "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
             "network": "[[\"0xf2fBCC167cc3f24a620798E27b4BB084dD275253\", \"0x4d6FA60E64C7E520899A9aeDD40cB1E6992027F0\"], [\"0xf1e4b4782BB6cd56a1feB9cDA58C167bb5669F36\", \"0xD6e68536eCe0Eac02b39317FdCE814087Bae6118\"], [\"0x0e5215997B8232ace7cC0DEb04dFeB60a4C0beB1\", \"0x4252ccc23552bf3D3eeDFAB8e286815831479bDa\"], [\"0x4d6FA60E64C7E520899A9aeDD40cB1E6992027F0\", \"0xf0DAca3B7Cb562059D89bD5d8291a482b20f9D52\"], [\"0x4d6FA60E64C7E520899A9aeDD40cB1E6992027F0\", \"0xB2C94bBaf307C6DfBf70Cc2537385553385a345b\"], [\"0xE03E70e33F2AC48ceC3be5C0C7B06a0f25Ad5610\", \"0xB2C94bBaf307C6DfBf70Cc2537385553385a345b\"], [\"0x49BA4db35Ef1a1fcA7A973993308A8B091C82F98\", \"0xAAAAAA219100005A77eF9dEf76b24dfB2cD6B35e\"], [\"0x49BA4db35Ef1a1fcA7A973993308A8B091C82F98\", \"0x7B80776a3257DaAf29DAE103F844e065fC3d0726\"], [\"0xAAAAAA219100005A77eF9dEf76b24dfB2cD6B35e\", \"0x7B80776a3257DaAf29DAE103F844e065fC3d0726\"], [\"0x00808a9250F145e5fD8FEBD1ba804aAA8cAE649b\", \"0x7B80776a3257DaAf29DAE103F844e065fC3d0726\"], [\"0x7B80776a3257DaAf29DAE103F844e065fC3d0726\", \"0xB2C94bBaf307C6DfBf70Cc2537385553385a345b\"], [\"0x4972EC8Bb4d53bcE667fDE1E1A585f01772E9Ef2\", \"0xbA5d887bE693F960f8acfc6717495ce0f2334da8\"], [\"0xbA5d887bE693F960f8acfc6717495ce0f2334da8\", \"0xDFE84e389a21d6ba59F3513597B9229FC43Cf94d\"], [\"0xDFE84e389a21d6ba59F3513597B9229FC43Cf94d\", \"0x4bFA865BDDB97fDDC871Ab8BdDF390e293ebD015\"]]",
             "channel_identifier_to_participants": {
               "49": [
@@ -709,7 +709,7 @@
               "chain_id": 1,
               "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
               "payment_network_identifier": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",
-              "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+              "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
               "reveal_timeout": "50",
               "settle_timeout": "500",
               "our_state": {
@@ -738,7 +738,7 @@
                   "transferred_amount": "0",
                   "locked_amount": "5",
                   "locksroot": "0xc2640a2bc19999c18dc2589a459dc5e0b837aeee378f3339276ae4cfab5ab446",
-                  "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+                  "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
                   "channel_identifier": "82",
                   "chain_id": 1,
                   "balance_hash": "0x8e895d6b4d5a63b7cd074290da501f5552b4bb86af0fcdb93737d44f242c7fdf",
@@ -764,7 +764,7 @@
                   "transferred_amount": "7",
                   "locked_amount": "0",
                   "locksroot": "0x0000000000000000000000000000000000000000000000000000000000000000",
-                  "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+                  "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
                   "channel_identifier": "82",
                   "message_hash": "0x0b9228d2fd97b82702549a6ec992c6ff0e40c09b30949dfdc3e5dc515af60b1b",
                   "signature": "0x6aef6c2018760411d6b33199c971c91af508ba6b98a3383f50c596be18caf9524beb9cd1974c45f7bb738f94775b8af27ed13fa867d9dab62edb9cd3e25e17ea1c",
@@ -792,7 +792,7 @@
               "chain_id": 1,
               "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
               "payment_network_identifier": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",
-              "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+              "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
               "reveal_timeout": "50",
               "settle_timeout": "500",
               "our_state": {
@@ -825,7 +825,7 @@
                   "transferred_amount": "1",
                   "locked_amount": "0",
                   "locksroot": "0x0000000000000000000000000000000000000000000000000000000000000000",
-                  "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+                  "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
                   "channel_identifier": "83",
                   "message_hash": "0x9ed01b4fdf5585587cbb06c0c784cc27489acce3f4ec47f3d76fb1b3e6718a86",
                   "signature": "0x8c5c00bdfd37e01efab638a59247945f7e35fffa7f6cb982f58e1f85dc79249a0edfa1e32abd340d51eda976361dc9f31c305bf8e4d7ac2e660eb64c549353b91b",
@@ -853,7 +853,7 @@
               "chain_id": 1,
               "token_address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
               "payment_network_identifier": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",
-              "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+              "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
               "reveal_timeout": "50",
               "settle_timeout": "500",
               "our_state": {
@@ -929,14 +929,14 @@
   "payment_mapping": {
     "secrethashes_to_task": {
       "0x59d8dd1e6b553e3923e51c2f1c3efb1f9c832cffcc98a5b4710da7343babc6c4": {
-        "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+        "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
         "manager_state": {
           "initiator": {
             "transfer_description": {
               "payment_network_identifier": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",
               "payment_identifier": "1545220689525",
               "amount": "5",
-              "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+              "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
               "initiator": "0x4d6FA60E64C7E520899A9aeDD40cB1E6992027F0",
               "target": "0xf0DAca3B7Cb562059D89bD5d8291a482b20f9D52",
               "secret": "0x11bd1870cbfb9f855f72ccf60bb3800ad91b4832f5508895a366e00e667356da",
@@ -952,7 +952,7 @@
                 "transferred_amount": "0",
                 "locked_amount": "5",
                 "locksroot": "0xc2640a2bc19999c18dc2589a459dc5e0b837aeee378f3339276ae4cfab5ab446",
-                "token_network_identifier": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
+                "token_network_address": "0xa5C9ECf54790334B73E5DfA1ff5668eB425dC474",
                 "channel_identifier": "82",
                 "chain_id": 1,
                 "balance_hash": "0x8e895d6b4d5a63b7cd074290da501f5552b4bb86af0fcdb93737d44f242c7fdf",

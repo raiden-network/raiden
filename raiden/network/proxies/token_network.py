@@ -1018,7 +1018,7 @@ class TokenNetwork:
             balance_hash=balance_hash,
             additional_hash=additional_hash,
             channel_identifier=channel_identifier,
-            token_network_identifier=TokenNetworkAddress(self.address),
+            token_network_address=TokenNetworkAddress(self.address),
             chain_id=self.proxy.contract.functions.chain_id().call(),
         )
 

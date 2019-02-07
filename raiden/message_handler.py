@@ -96,7 +96,7 @@ class MessageHandler:
 
         routes = get_best_routes(
             chain_state=chain_state,
-            token_network_id=typing.TokenNetworkAddress(token_network_address),
+            token_network_address=typing.TokenNetworkAddress(token_network_address),
             from_address=typing.InitiatorAddress(raiden.address),
             to_address=from_transfer.target,
             amount=from_transfer.lock.amount,

@@ -69,7 +69,7 @@ def events_for_unlock_lock(
 
     payment_sent_success = EventPaymentSentSuccess(
         payment_network_identifier=channel_state.payment_network_identifier,
-        token_network_identifier=channel_state.token_network_identifier,
+        token_network_address=channel_state.token_network_address,
         identifier=transfer_description.payment_identifier,
         amount=transfer_description.amount,
         target=transfer_description.target,
@@ -139,7 +139,7 @@ def handle_block(
         #       Related issue: https://github.com/raiden-network/raiden/issues/2329
         payment_failed = EventPaymentSentFailed(
             payment_network_identifier=transfer_description.payment_network_identifier,
-            token_network_identifier=transfer_description.token_network_identifier,
+            token_network_address=transfer_description.token_network_address,
             identifier=payment_identifier,
             target=transfer_description.target,
             reason=reason,
@@ -233,7 +233,7 @@ def try_new_route(
 
         transfer_failed = EventPaymentSentFailed(
             payment_network_identifier=transfer_description.payment_network_identifier,
-            token_network_identifier=transfer_description.token_network_identifier,
+            token_network_address=transfer_description.token_network_address,
             identifier=transfer_description.payment_identifier,
             target=transfer_description.target,
             reason=reason,
@@ -270,7 +270,7 @@ def send_lockedtransfer(
         block_number: BlockNumber,
 ) -> SendLockedTransfer:
     """ Create a mediated transfer using channel. """
-    assert channel_state.token_network_identifier == transfer_description.token_network_identifier
+    assert channel_state.token_network_address == transfer_description.token_network_address
 
     lock_expiration = get_initial_lock_expiration(
         block_number,

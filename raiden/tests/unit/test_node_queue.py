@@ -131,7 +131,7 @@ def test_channel_closed_must_clear_ordered_messages(
     closed = state_change.ContractReceiveChannelClosed(
         transaction_hash=EMPTY_HASH,
         transaction_from=recipient,
-        token_network_identifier=token_network_state.address,
+        token_network_address=token_network_state.address,
         channel_identifier=channel_identifier,
         block_number=1,
     )

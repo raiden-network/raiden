@@ -82,7 +82,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.address_to_channel[partner_address] = factories.make_channel(
             our_balance=1000,
             partner_balance=1000,
-            token_network_identifier=self.token_network_id,
+            token_network_address=self.token_network_address,
             our_address=self.address,
             partner_address=partner_address,
         )
@@ -94,7 +94,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
         channel_new_state_change = ContractReceiveChannelNew(
             factories.make_transaction_hash(),
-            self.token_network_id,
+            self.token_network_address,
             self.address_to_channel[partner_address],
             self.block_number,
         )
@@ -122,9 +122,9 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             factories.UNIT_CHAIN_ID,
         )
 
-        self.token_network_id = factories.make_address()
+        self.token_network_address = factories.make_address()
         self.token_id = factories.make_address()
-        self.token_network_state = TokenNetworkState(self.token_network_id, self.token_id)
+        self.token_network_state = TokenNetworkState(self.token_network_address, self.token_id)
 
         self.payment_network_id = factories.make_payment_network_identifier()
         self.payment_network_state = PaymentNetworkState(
@@ -264,7 +264,7 @@ class InitiatorMixin:
             payment_network_identifier=self.payment_network_id,
             payment_identifier=payment_id,
             amount=amount,
-            token_network_identifier=self.token_network_id,
+            token_network_address=self.token_network_address,
             initiator=self.address,
             target=target,
             secret=secret,
@@ -424,7 +424,7 @@ class OnChainMixin:
 
         channel_settled_state_change = ContractReceiveChannelSettled(
             transaction_hash=factories.make_transaction_hash(),
-            token_network_identifier=channel.token_network_identifier,
+            token_network_address=channel.token_network_address,
             channel_identifier=channel.identifier,
             block_number=self.block_number + 1,
         )

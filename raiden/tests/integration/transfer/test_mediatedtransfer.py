@@ -27,7 +27,7 @@ def test_mediated_transfer(
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state,
         payment_network_id,
         token_address,
@@ -37,7 +37,7 @@ def test_mediated_transfer(
     mediated_transfer(
         app0,
         app2,
-        token_network_identifier,
+        token_network_address,
         amount,
         timeout=network_wait * number_of_nodes,
     )
@@ -45,14 +45,14 @@ def test_mediated_transfer(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0, deposit - amount, [],
             app1, deposit + amount, [],
         )
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1, deposit - amount, [],
             app2, deposit + amount, [],
         )
@@ -69,7 +69,7 @@ def test_locked_transfer_secret_registered_onchain(
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state,
         payment_network_id,
         token_address,
@@ -88,7 +88,7 @@ def test_locked_transfer_secret_registered_onchain(
     # Test that sending a transfer with a secret already registered on-chain fails
     with pytest.raises(RaidenUnrecoverableError):
         app0.raiden.start_mediated_transfer_with_secret(
-            token_network_identifier,
+            token_network_address,
             amount,
             target,
             identifier,
@@ -132,7 +132,7 @@ def test_mediated_transfer_with_entire_deposit(
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state,
         payment_network_id,
         token_address,
@@ -140,7 +140,7 @@ def test_mediated_transfer_with_entire_deposit(
     mediated_transfer(
         app0,
         app2,
-        token_network_identifier,
+        token_network_address,
         deposit,
         timeout=network_wait * number_of_nodes,
     )
@@ -148,7 +148,7 @@ def test_mediated_transfer_with_entire_deposit(
     mediated_transfer(
         app2,
         app0,
-        token_network_identifier,
+        token_network_address,
         deposit * 2,
         timeout=network_wait * number_of_nodes,
     )
@@ -156,14 +156,14 @@ def test_mediated_transfer_with_entire_deposit(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0, deposit * 2, [],
             app1, 0, [],
         )
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1, deposit * 2, [],
             app2, 0, [],
         )
@@ -203,7 +203,7 @@ def test_mediated_transfer_messages_out_of_order(
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
+    token_network_address = views.get_token_network_address_by_token_address(
         chain_state,
         payment_network_id,
         token_address,
@@ -213,7 +213,7 @@ def test_mediated_transfer_messages_out_of_order(
     mediated_transfer(
         app0,
         app2,
-        token_network_identifier,
+        token_network_address,
         amount,
         timeout=network_wait * number_of_nodes,
     )
@@ -221,14 +221,14 @@ def test_mediated_transfer_messages_out_of_order(
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app0, deposit - amount, [],
             app1, deposit + amount, [],
         )
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
-            token_network_identifier,
+            token_network_address,
             app1, deposit - amount, [],
             app2, deposit + amount, [],
         )

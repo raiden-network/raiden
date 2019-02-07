@@ -55,7 +55,7 @@ def make_balance_proof_from_counter(counter) -> BalanceProofUnsignedState:
         transferred_amount=next(counter),
         locked_amount=next(counter),
         locksroot=sha3(next(counter).to_bytes(1, 'big')),
-        token_network_identifier=factories.make_address(),
+        token_network_address=factories.make_address(),
         channel_identifier=next(counter),
         chain_id=next(counter),
     )
@@ -118,7 +118,7 @@ def make_from_route_from_counter(counter):
             transfer=factories.LockedTransferProperties(
                 balance_proof=factories.BalanceProofProperties(
                     transferred_amount=0,
-                    token_network_identifier=from_channel.token_network_identifier,
+                    token_network_address=from_channel.token_network_address,
                 ),
                 amount=1,
                 expiration=expiration,
@@ -205,7 +205,7 @@ def test_get_state_change_with_balance_proof():
         state_change_record = get_state_change_with_balance_proof_by_balance_hash(
             storage=storage,
             chain_id=balance_proof.chain_id,
-            token_network_identifier=balance_proof.token_network_identifier,
+            token_network_address=balance_proof.token_network_address,
             channel_identifier=balance_proof.channel_identifier,
             sender=balance_proof.sender,
             balance_hash=balance_proof.balance_hash,
@@ -273,7 +273,7 @@ def test_get_event_with_balance_proof():
         event_record = get_event_with_balance_proof_by_balance_hash(
             storage=storage,
             chain_id=balance_proof.chain_id,
-            token_network_identifier=balance_proof.token_network_identifier,
+            token_network_address=balance_proof.token_network_address,
             channel_identifier=balance_proof.channel_identifier,
             balance_hash=balance_proof.balance_hash,
         )

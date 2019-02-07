@@ -198,7 +198,7 @@ def test_channelstate_update_contract_balance():
     )
     state_change = ContractReceiveChannelNewBalance(
         factories.make_transaction_hash(),
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         deposit_transaction,
         block_number,
@@ -245,7 +245,7 @@ def test_channelstate_decreasing_contract_balance():
     )
     state_change = ContractReceiveChannelNewBalance(
         factories.make_transaction_hash(),
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         deposit_transaction,
         deposit_block_number,
@@ -285,7 +285,7 @@ def test_channelstate_repeated_contract_balance():
     )
     state_change = ContractReceiveChannelNewBalance(
         factories.make_transaction_hash(),
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         deposit_transaction,
         deposit_block_number,
@@ -339,7 +339,7 @@ def test_deposit_must_wait_for_confirmation():
     )
     new_balance = ContractReceiveChannelNewBalance(
         factories.make_transaction_hash(),
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         deposit_transaction,
         block_number,
@@ -506,13 +506,13 @@ def test_channelstate_receive_lockedtransfer():
     # - Update the balances
     transferred_amount = 0
     message_identifier = random.randint(0, UINT64_MAX)
-    token_network_identifier = channel_state.token_network_identifier
+    token_network_address = channel_state.token_network_address
     unlock_message = Unlock(
         chain_id=UNIT_CHAIN_ID,
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=2,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
@@ -526,7 +526,7 @@ def test_channelstate_receive_lockedtransfer():
         message_identifier=message_identifier,
         payment_identifier=1,
         nonce=2,
-        token_network_address=token_network_identifier,
+        token_network_address=token_network_address,
         channel_identifier=channel_state.identifier,
         transferred_amount=transferred_amount + lock_amount,
         locked_amount=0,
@@ -737,7 +737,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
 
 def test_invalid_timeouts():
     token_address = factories.make_address()
-    token_network_identifier = factories.make_address()
+    token_network_address = factories.make_address()
     payment_network_identifier = factories.make_payment_network_identifier()
     reveal_timeout = 5
     settle_timeout = 10
@@ -769,7 +769,7 @@ def test_invalid_timeouts():
             chain_id=UNIT_CHAIN_ID,
             token_address=token_address,
             payment_network_identifier=payment_network_identifier,
-            token_network_identifier=token_network_identifier,
+            token_network_address=token_network_address,
             reveal_timeout=large_reveal_timeout,
             settle_timeout=small_settle_timeout,
             our_state=our_state,
@@ -787,7 +787,7 @@ def test_invalid_timeouts():
                 chain_id=UNIT_CHAIN_ID,
                 token_address=token_address,
                 payment_network_identifier=payment_network_identifier,
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 reveal_timeout=invalid_value,
                 settle_timeout=settle_timeout,
                 our_state=our_state,
@@ -803,7 +803,7 @@ def test_invalid_timeouts():
                 chain_id=UNIT_CHAIN_ID,
                 token_address=token_address,
                 payment_network_identifier=payment_network_identifier,
-                token_network_identifier=token_network_identifier,
+                token_network_address=token_network_address,
                 reveal_timeout=reveal_timeout,
                 settle_timeout=invalid_value,
                 our_state=our_state,
@@ -836,7 +836,7 @@ def test_interwoven_transfers():
     locked_amount = 0
     our_model_current = our_model
     partner_model_current = partner_model
-    token_network_address = channel_state.token_network_identifier
+    token_network_address = channel_state.token_network_address
 
     for i, (lock_amount, lock_secret) in enumerate(zip(lock_amounts, lock_secrets)):
         nonce += 1
@@ -1323,7 +1323,7 @@ def test_channelstate_unlock_without_locks():
     state_change = ContractReceiveChannelClosed(
         factories.make_transaction_hash(),
         our_model1.participant_address,
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         closed_block_number,
     )
@@ -1420,7 +1420,7 @@ def test_channelstate_unlock():
     close_state_change = ContractReceiveChannelClosed(
         factories.make_transaction_hash(),
         partner_model1.participant_address,
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         closed_block_number,
     )
@@ -1430,7 +1430,7 @@ def test_channelstate_unlock():
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
     settle_state_change = ContractReceiveChannelSettled(
         factories.make_transaction_hash(),
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         settle_block_number,
     )
@@ -1534,7 +1534,7 @@ def test_settle_transaction_must_be_sent_only_once():
     close_state_change = ContractReceiveChannelClosed(
         factories.make_transaction_hash(),
         partner_model1.participant_address,
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         closed_block_number,
     )
@@ -1543,7 +1543,7 @@ def test_settle_transaction_must_be_sent_only_once():
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
     settle_state_change = ContractReceiveChannelSettled(
         factories.make_transaction_hash(),
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         settle_block_number,
     )
@@ -1574,7 +1574,7 @@ def test_action_close_must_change_the_channel_state():
     pseudo_random_generator = random.Random()
     block_number = 10
     state_change = ActionChannelClose(
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
     )
     iteration = channel.state_transition(
@@ -1623,7 +1623,7 @@ def test_update_must_be_called_if_close_lost_race():
     pseudo_random_generator = random.Random()
     block_number = 10
     state_change = ActionChannelClose(
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
     )
     iteration = channel.state_transition(
@@ -1637,7 +1637,7 @@ def test_update_must_be_called_if_close_lost_race():
     state_change = ContractReceiveChannelClosed(
         factories.make_transaction_hash(),
         partner_model1.participant_address,
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         closed_block_number,
     )
@@ -1656,7 +1656,7 @@ def test_update_transfer():
     pseudo_random_generator = random.Random()
     block_number = 10
     state_change = ActionChannelClose(
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
     )
     iteration = channel.state_transition(
@@ -1674,7 +1674,7 @@ def test_update_transfer():
     channel_close_state_change = ContractReceiveChannelClosed(
         factories.make_transaction_hash(),
         partner_model1.participant_address,
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         closed_block_number,
     )
@@ -1689,7 +1689,7 @@ def test_update_transfer():
 
     update_transfer_state_change = ContractReceiveUpdateTransfer(
         partner_model1.participant_address,
-        channel_state.token_network_identifier,
+        channel_state.token_network_address,
         channel_state.identifier,
         23,
         closed_block_number + 1,

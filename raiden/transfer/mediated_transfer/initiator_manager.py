@@ -257,7 +257,7 @@ def handle_cancelpayment(
 
             cancel = EventPaymentSentFailed(
                 payment_network_identifier=channel_state.payment_network_identifier,
-                token_network_identifier=channel_state.token_network_identifier,
+                token_network_address=channel_state.token_network_address,
                 identifier=transfer_description.payment_identifier,
                 target=transfer_description.target,
                 reason='user canceled payment',
@@ -319,7 +319,7 @@ def handle_transferrefundcancelroute(
         old_description.payment_network_identifier,
         old_description.payment_identifier,
         old_description.amount,
-        old_description.token_network_identifier,
+        old_description.token_network_address,
         old_description.initiator,
         old_description.target,
         state_change.secret,
