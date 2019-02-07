@@ -6,6 +6,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import Discovery, SecretRegistry, TokenNetworkRegistry
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
+    DEFAULT_LIMITS_CONTRACT_VERSION,
     DEFAULT_NAT_INVITATION_TIMEOUT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     DEFAULT_NAT_KEEPALIVE_TIMEOUT,
@@ -30,7 +31,7 @@ class App:  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
-        'contracts_path': contracts_precompiled_path('0.4.0'),
+        'contracts_path': contracts_precompiled_path(DEFAULT_LIMITS_CONTRACT_VERSION),
         'database_path': '',
         'transport_type': 'udp',
         'blockchain': {
