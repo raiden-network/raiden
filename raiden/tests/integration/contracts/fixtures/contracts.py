@@ -20,20 +20,21 @@ def token_network_registry_proxy(deploy_client, token_network_registry_address, 
     )
 
 
-@pytest.fixture(name='token_network_contract')
-def deploy_token_network_and_return_jsonrpc_proxy(
+@pytest.fixture
+def token_network_proxy(
         chain_id,
+        contract_manager,
         deploy_client,
         secret_registry_address,
         token_contract,
-        contract_manager,
+        token_network_contract,
 ):
     compiled = {
         CONTRACT_TOKEN_NETWORK: contract_manager.get_contract(
             CONTRACT_TOKEN_NETWORK,
         ),
     }
-    return deploy_client.deploy_solidity_contract(
+    token_network_contract = deploy_client.deploy_solidity_contract(
         CONTRACT_TOKEN_NETWORK,
         compiled,
         constructor_parameters=[
@@ -45,10 +46,6 @@ def deploy_token_network_and_return_jsonrpc_proxy(
             to_checksum_address(factories.make_address()),
         ],
     )
-
-
-@pytest.fixture
-def token_network_proxy(deploy_client, token_network_contract, contract_manager):
     return TokenNetwork(
         jsonrpc_client=deploy_client,
         token_network_address=to_canonical_address(token_network_contract.contract.address),
