@@ -686,7 +686,7 @@ class EventUnexpectedSecretReveal(Event):
     def from_dict(
             cls,
             data: Dict[str, Any],
-    )-> 'EventUnexpectedSecretReveal':
+    ) -> 'EventUnexpectedSecretReveal':
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
             reason=data['reason'],

@@ -15,7 +15,7 @@ def deploy_token(
         decimals: int,
         token_name: str,
         token_symbol: str,
-)-> ContractProxy:
+) -> ContractProxy:
     token_address = deploy_contract_web3(
         contract_name=CONTRACT_HUMAN_STANDARD_TOKEN,
         deploy_client=deploy_client,
