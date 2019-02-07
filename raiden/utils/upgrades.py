@@ -85,7 +85,7 @@ class UpgradeManager:
         with the new version. However, the previous version's data
         is going to exist in a file whose name contains the old version.
         Therefore, running the migration means that we have to copy
-        all data to the current version's database, execute the migration
+        all data to the current version's database and execute the migration
         functions.
         """
         old_db_filename = older_db_file(str(self._current_db_filename.parent))
