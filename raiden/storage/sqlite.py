@@ -24,6 +24,12 @@ class StateChangeRecord(NamedTuple):
     data: Any
 
 
+class SnapshotRecord(NamedTuple):
+    identifier: int
+    state_change_identifier: int
+    data: Any
+
+
 def assert_sqlite_version() -> bool:
     if sqlite3.sqlite_version_info < SQLITE_MIN_REQUIRED_VERSION:
         return False
@@ -176,12 +182,12 @@ class SQLiteStorage(SerdeBase):
             'ORDER BY identifier DESC LIMIT 1',
             (state_change_identifier, ),
         )
-        serialized = cursor.fetchall()
+        rows = cursor.fetchall()
 
-        if serialized:
-            assert len(serialized) == 1, 'LIMIT 1 must return one element'
-            last_applied_state_change_id = serialized[0][0]
-            snapshot_state = serialized[0][1]
+        if rows:
+            assert len(rows) == 1, 'LIMIT 1 must return one element'
+            last_applied_state_change_id = rows[0][0]
+            snapshot_state = rows[0][1]
             result = (last_applied_state_change_id, snapshot_state)
         else:
             result = (0, None)
@@ -334,15 +340,31 @@ class SQLiteStorage(SerdeBase):
 
     def get_events_with_timestamps(self, limit: int = None, offset: int = None):
         entries = self._query_events(limit, offset)
-        result = [
+        return [
             TimestampedEvent(entry[0], entry[1])
             for entry in entries
         ]
-        return result
 
     def get_events(self, limit: int = None, offset: int = None):
         entries = self._query_events(limit, offset)
         return [entry[0] for entry in entries]
+
+    def get_snapshots(self):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT identifier, statechange_id, data FROM state_snapshot')
+        snapshots = cursor.fetchall()
+
+        return [
+            SnapshotRecord(snapshot[0], snapshot[1], snapshot[2])
+            for snapshot in snapshots
+        ]
+
+    def update_snapshot(self, identifier, new_snapshot):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'UPDATE state_snapshot SET data=? WHERE identifier=?',
+            (new_snapshot, identifier),
+        )
 
     def __del__(self):
         self.conn.close()
@@ -350,7 +372,7 @@ class SQLiteStorage(SerdeBase):
 
 class SerializedSQLiteStorage(SQLiteStorage):
     def __init__(self, database_path, serializer: SerdeBase):
-        super.__init__(database_path)
+        super().__init__(database_path)
 
         self.serializer = serializer
 
@@ -394,7 +416,7 @@ class SerializedSQLiteStorage(SQLiteStorage):
 
         row = super().get_snapshot_closest_to_state_change(state_change_identifier)
 
-        if row:
+        if row[1]:
             last_applied_state_change_id = row[0]
             snapshot_state = self.serializer.deserialize(row[1])
             result = (last_applied_state_change_id, snapshot_state)
@@ -411,7 +433,11 @@ class SerializedSQLiteStorage(SQLiteStorage):
         event = super().get_latest_event_by_data_field(filters)
 
         if event.event_identifier > 0:
-            event.data = self.serializer.deserialize(event.data)
+            event = EventRecord(
+                event_identifier=event.event_identifier,
+                state_change_identifier=event.state_change_identifier,
+                data=self.serializer.deserialize(event.data),
+            )
 
         return event
 
@@ -424,7 +450,10 @@ class SerializedSQLiteStorage(SQLiteStorage):
         state_change = super().get_latest_state_change_by_data_field(filters)
 
         if state_change.state_change_identifier > 0:
-            state_change = self.serializer.deserialize(state_change.data)
+            state_change = StateChangeRecord(
+                state_change_identifier=state_change.state_change_identifier,
+                data=self.serializer.deserialize(state_change.data),
+            )
 
         return state_change
 
@@ -437,9 +466,13 @@ class SerializedSQLiteStorage(SQLiteStorage):
 
     def get_events_with_timestamps(self, limit: int = None, offset: int = None):
         events = super().get_events_with_timestamps(limit, offset)
-        for event in events:
-            event.wrapped_event = self.serializer.deserialize(event.wrapped_event)
-        return events
+        return [
+            TimestampedEvent(
+                self.serializer.deserialize(event.wrapped_event),
+                event.log_time,
+            )
+            for event in events
+        ]
 
     def get_events(self, limit: int = None, offset: int = None):
         events = super().get_events(limit, offset)
