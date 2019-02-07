@@ -3,14 +3,13 @@ import time
 from binascii import Error as DecodeError
 from collections import defaultdict
 from enum import Enum
-from operator import itemgetter
 from urllib.parse import urlparse
 
 import gevent
 import structlog
 from eth_utils import decode_hex, is_binary_address, to_checksum_address, to_normalized_address
 from gevent.lock import Semaphore
-from matrix_client.errors import MatrixError, MatrixRequestError
+from matrix_client.errors import MatrixRequestError
 
 from raiden.exceptions import (
     InvalidAddress,
@@ -34,10 +33,10 @@ from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
     join_global_room,
     login_or_register,
+    make_client,
     validate_userid_signature,
 )
 from raiden.network.transport.udp import udp_utils
-from raiden.network.utils import get_http_rtt
 from raiden.raiden_service import RaidenService
 from raiden.storage.serialize import JSONSerializer
 from raiden.transfer import views
@@ -273,40 +272,29 @@ class MatrixTransport(Runnable):
         self._config = config
         self._raiden_service: RaidenService = None
 
+        if config['server'] == 'auto':
+            available_servers = config['available_servers']
+        elif urlparse(config['server']).scheme in {'http', 'https'}:
+            available_servers = [config['server']]
+        else:
+            raise TransportError('Invalid matrix server specified (valid values: "auto" or a URL)')
+
         def _http_retry_delay() -> Iterable[float]:
             # below constants are defined in raiden.app.App.DEFAULT_CONFIG
             return udp_utils.timeout_exponential_backoff(
-                self._config['retries_before_backoff'],
-                self._config['retry_interval'] / 5,
-                self._config['retry_interval'],
+                config['retries_before_backoff'],
+                config['retry_interval'] / 5,
+                config['retry_interval'],
             )
 
-        while True:
-            self._server_url: str = self._select_server(config)
-            self._server_name = config.get('server_name', urlparse(self._server_url).netloc)
-            client_class = config.get('client_class', GMatrixClient)
-            self._client: GMatrixClient = client_class(
-                self._server_url,
-                http_pool_maxsize=4,
-                http_retry_timeout=40,
-                http_retry_delay=_http_retry_delay,
-            )
-            try:
-                self._client.api._send('GET', '/versions', api_path='/_matrix/client')
-                break
-            except MatrixError as ex:
-                if config['server'] != 'auto':
-                    raise TransportError(
-                        f"Could not connect to requested server '{config['server']}'",
-                    ) from ex
-
-                config['available_servers'].remove(self._server_url)
-                if len(config['available_servers']) == 0:
-                    raise TransportError(
-                        f"Unable to find a reachable Matrix server. "
-                        f"Please check your network connectivity.",
-                    ) from ex
-                log.warning(f"Selected server '{self._server_url}' not usable. Retrying.")
+        self._client: GMatrixClient = make_client(
+            available_servers,
+            http_pool_maxsize=4,
+            http_retry_timeout=40,
+            http_retry_delay=_http_retry_delay,
+        )
+        self._server_url = self._client.api.base_url
+        self._server_name = config.get('server_name', urlparse(self._server_url).netloc)
 
         self.greenlets = list()
 
@@ -1138,40 +1126,6 @@ class MatrixTransport(Runnable):
                     room=room,
                     exc_info=True,
                 )
-
-    def _select_server(self, config):
-        server = config['server']
-        if server.startswith('http'):
-            return server
-        elif server != 'auto':
-            raise TransportError('Invalid matrix server specified (valid values: "auto" or a URL)')
-
-        def _get_rtt(server_name):
-            return server_name, get_http_rtt(server_name)
-
-        get_rtt_jobs = [
-            gevent.spawn(_get_rtt, server_name)
-            for server_name
-            in config['available_servers']
-        ]
-        gevent.joinall(get_rtt_jobs, raise_error=True)
-        sorted_servers = sorted(
-            (job.value for job in get_rtt_jobs if job.value[1] is not None),
-            key=itemgetter(1),
-        )
-        self.log.debug('Matrix homeserver RTT times', rtt_times=sorted_servers)
-        if not sorted_servers:
-            raise TransportError(
-                'Could not select a Matrix server. No candidates remaining. '
-                'Please check your network connectivity.',
-            )
-        best_server, rtt = sorted_servers[0]
-        self.log.info(
-            'Automatically selecting matrix homeserver based on RTT',
-            homeserver=best_server,
-            rtt=rtt,
-        )
-        return best_server
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """

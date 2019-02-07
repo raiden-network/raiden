@@ -1,4 +1,3 @@
-import gevent
 import json
 import re
 from binascii import Error as DecodeError
@@ -7,6 +6,7 @@ from random import Random
 from typing import List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
+import gevent
 import structlog
 from cachetools import LRUCache, cached
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address

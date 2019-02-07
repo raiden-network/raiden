@@ -1,8 +1,8 @@
-import pytest
 import random
 from unittest.mock import Mock, create_autospec
 from urllib.parse import urlparse
 
+import pytest
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
 from matrix_client.errors import MatrixRequestError
 from matrix_client.room import Room
