@@ -526,3 +526,54 @@ def test_matrix_discovery_room_offline_server(
 
     transport.stop()
     transport.get()
+
+
+def test_matrix_send_global(
+        caplog,
+        local_matrix_servers,
+        retries_before_backoff,
+        retry_interval,
+        private_rooms,
+):
+    transport = MatrixTransport({
+        'global_rooms': ['discovery', 'monitoring'],
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [local_matrix_servers[0]],
+        'private_rooms': private_rooms,
+    })
+    transport.start(MockRaidenService(None), MessageHandler(set()), '')
+    gevent.idle()
+
+    ms_room_name = transport._make_room_alias('monitoring')
+    ms_room = transport._global_rooms.get(ms_room_name)
+    assert isinstance(ms_room, Room)
+
+    ms_room.send_text = MagicMock(spec=ms_room.send_text)
+
+    for i in range(5):
+        message = Processed(i)
+        transport._raiden_service.sign(message)
+        transport.send_global(
+            'monitoring',
+            message,
+        )
+
+    gevent.idle()
+
+    assert ms_room.send_text.call_count == 5
+
+    message = Processed(10)
+    transport.send_global(
+        'unknown_suffix',
+        message,
+    )
+
+    # there's a warning for the unknown suffix, but no exception should be raised or new send_text
+    assert ms_room.send_text.call_count == 5
+    assert any(record.levelname == 'WARNING' for record in caplog.records)
+
+    transport.stop()
+    transport.get()
