@@ -594,7 +594,7 @@ class EventInvalidReceivedTransferRefund(Event):
     def from_dict(
             cls,
             data: Dict[str, Any],
-    )-> 'EventInvalidReceivedTransferRefund':
+    ) -> 'EventInvalidReceivedTransferRefund':
         restored = cls(
             payment_identifier=int(data['payment_identifier']),
             reason=data['reason'],
@@ -641,7 +641,7 @@ class EventInvalidReceivedLockExpired(Event):
     def from_dict(
             cls,
             data: Dict[str, Any],
-    )-> 'EventInvalidReceivedLockExpired':
+    ) -> 'EventInvalidReceivedLockExpired':
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
             reason=data['reason'],
@@ -688,7 +688,7 @@ class EventInvalidReceivedLockedTransfer(Event):
     def from_dict(
             cls,
             data: Dict[str, Any],
-    )-> 'EventInvalidReceivedLockedTransfer':
+    ) -> 'EventInvalidReceivedLockedTransfer':
         restored = cls(
             payment_identifier=int(data['payment_identifier']),
             reason=data['reason'],
@@ -735,7 +735,7 @@ class EventInvalidReceivedUnlock(Event):
     def from_dict(
             cls,
             data: Dict[str, Any],
-    )-> 'EventInvalidReceivedUnlock':
+    ) -> 'EventInvalidReceivedUnlock':
         restored = cls(
             secrethash=serialization.deserialize_bytes(data['secrethash']),
             reason=data['reason'],
