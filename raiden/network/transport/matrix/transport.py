@@ -57,6 +57,7 @@ from raiden.utils.runnable import Runnable
 from raiden.utils.typing import (
     Address,
     AddressHex,
+    Any,
     Callable,
     Dict,
     Iterable,
@@ -68,6 +69,7 @@ from raiden.utils.typing import (
     Set,
     Tuple,
     Union,
+    cast,
 )
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
@@ -1159,11 +1161,11 @@ class MatrixTransport(Runnable):
 
         with self._account_data_lock:
             # no need to deepcopy, we don't modify lists in-place
-            # type: Dict[AddressHex, List[_RoomID]]
-            _address_to_room_ids = self._client.account_data.get(
-                'network.raiden.rooms',
-                {},
-            ).copy()
+            # cast generic Dict[str, Any] to types we expect, to satisfy mypy, runtime no-op
+            _address_to_room_ids = cast(
+                Dict[AddressHex, List[_RoomID]],
+                self._client.account_data.get('network.raiden.rooms', {}).copy(),
+            )
 
             changed = False
             if not room_id:  # falsy room_id => clear list
@@ -1222,18 +1224,20 @@ class MatrixTransport(Runnable):
 
             return room_ids
 
-    def _leave_unused_rooms(self, _address_to_room_ids):
+    def _leave_unused_rooms(self, _address_to_room_ids: Dict[AddressHex, List[_RoomID]]):
         """
         Checks for rooms we've joined and which partner isn't health-checked and leave.
 
         **MUST** be called from a context that holds the `_account_data_lock`.
-        _address_to_room_ids: Dict[AddressHex, List[_RoomID]]
         """
         _msg = '_leave_unused_rooms called without account data lock'
         assert self._account_data_lock.locked(), _msg
 
-        # TODO: Remove the next two lines and check if transfers start hanging again
-        self._client.set_account_data('network.raiden.rooms', _address_to_room_ids)
+        # TODO: Remove the next five lines and check if transfers start hanging again
+        self._client.set_account_data(
+            'network.raiden.rooms',  # back from cast in _set_room_id_for_address
+            cast(Dict[str, Any], _address_to_room_ids),
+        )
         return
 
         # cache in a set all whitelisted addresses
