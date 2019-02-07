@@ -7,7 +7,7 @@ from raiden.constants import Environment
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import DEFAULT_LIMITS_CONTRACT_VERSION, DEFAULT_NO_LIMITS_CONTRACT_VERSION
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockchain
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
@@ -108,9 +108,9 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3):
 
 @pytest.fixture
 def contract_manager(environment_type):
-    version = DEFAULT_LIMITS_CONTRACT_VERSION
+    version = RED_EYES_CONTRACT_VERSION
     if environment_type == Environment.DEVELOPMENT:
-        version = DEFAULT_NO_LIMITS_CONTRACT_VERSION
+        version = DEVELOPMENT_CONTRACT_VERSION
 
     return ContractManager(contracts_precompiled_path(version))
 
