@@ -1162,7 +1162,7 @@ def handle_refundtransfer(
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) ->TransitionResult[MediatorTransferState]:
+) -> TransitionResult[MediatorTransferState]:
     """ Validate and handle a ReceiveTransferRefund mediator_state change.
     A node might participate in mediated transfer more than once because of
     refund transfers, eg. A-B-C-B-D-T, B tried to mediate the transfer through
