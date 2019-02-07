@@ -247,7 +247,7 @@ def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
         sequence of pairs of url,rtt in seconds, sorted by rtt, excluding failed servers
         (possibly empty)
     """
-    if not {urlparse(url).scheme for url in servers} <= {'http', 'https'}:
+    if not {urlparse(url).scheme for url in servers}.issubset({'http', 'https'}):
         raise TransportError('Invalid server urls')
 
     get_rtt_jobs = [
