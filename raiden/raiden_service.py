@@ -287,7 +287,10 @@ class RaidenService(Runnable):
 
         self.maybe_upgrade_db()
 
-        storage = sqlite.SQLiteStorage(self.database_path, serialize.JSONSerializer())
+        storage = sqlite.SerializedSQLiteStorage(
+            database_path=self.database_path,
+            serializer=serialize.JSONSerializer(),
+        )
         storage.log_run()
         self.wal = wal.restore_to_state_change(
             transition_function=node.state_transition,
