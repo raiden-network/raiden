@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.settings import DEFAULT_LIMITS_CONTRACT_VERSION
+from raiden.settings import RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.smoketest import setup_testchain_and_raiden
 
 
@@ -17,7 +17,7 @@ def blockchain_provider():
         matrix_server='auto',
         print_step=lambda x: None,
         # cli tests should work with production contracts
-        contracts_version=DEFAULT_LIMITS_CONTRACT_VERSION,
+        contracts_version=RED_EYES_CONTRACT_VERSION,
     )
     args = result['args']
     # The setup of the testchain returns a TextIOWrapper but

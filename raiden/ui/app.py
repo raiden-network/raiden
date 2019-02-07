@@ -26,11 +26,11 @@ from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler, RaidenMonitoringEventHandler
 from raiden.settings import (
-    DEFAULT_LIMITS_CONTRACT_VERSION,
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
-    DEFAULT_NO_LIMITS_CONTRACT_VERSION,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    DEVELOPMENT_CONTRACT_VERSION,
+    RED_EYES_CONTRACT_VERSION,
 )
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
 from raiden.utils import is_supported_client, pex, split_endpoint, typing
@@ -281,9 +281,9 @@ def run_app(
     contract_addresses_known = False
     contracts = dict()
     if environment_type == Environment.DEVELOPMENT:
-        contracts_version = DEFAULT_NO_LIMITS_CONTRACT_VERSION
+        contracts_version = DEVELOPMENT_CONTRACT_VERSION
     else:
-        contracts_version = DEFAULT_LIMITS_CONTRACT_VERSION
+        contracts_version = RED_EYES_CONTRACT_VERSION
     config['contracts_path'] = contracts_precompiled_path(contracts_version)
 
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
