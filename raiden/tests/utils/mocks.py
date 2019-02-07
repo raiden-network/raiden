@@ -1,7 +1,7 @@
 import random
 
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.tests.utils import factories
 from raiden.transfer import node
@@ -53,7 +53,7 @@ class MockRaidenService:
 
         serializer = JSONSerializer
         state_manager = StateManager(state_transition, None)
-        storage = SQLiteStorage(':memory:', serializer)
+        storage = SerializedSQLiteStorage(':memory:', serializer)
         self.wal = WriteAheadLog(state_manager, storage)
 
         state_change = ActionInitChain(

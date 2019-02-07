@@ -201,7 +201,7 @@ def main(db_file, token_network_identifier, partner_address, names_translator):
         translator = None
 
     replay_wal(
-        storage=sqlite.SQLiteStorage(db_file, serialize.JSONSerializer()),
+        storage=sqlite.SerializedSQLiteStorage(db_file, serialize.JSONSerializer()),
         token_network_identifier=token_network_identifier,
         partner_address=partner_address,
         translator=translator,
