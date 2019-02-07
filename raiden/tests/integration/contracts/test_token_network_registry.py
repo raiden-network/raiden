@@ -11,8 +11,15 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 def test_token_network_registry(
         deploy_client,
         contract_manager,
-        token_network_registry_proxy: TokenNetworkRegistry,
+        token_network_registry_address,
 ):
+    registry_address = to_canonical_address(token_network_registry_address)
+
+    token_network_registry_proxy = TokenNetworkRegistry(
+        jsonrpc_client=deploy_client,
+        registry_address=registry_address,
+        contract_manager=contract_manager,
+    )
 
     assert token_network_registry_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
     assert token_network_registry_proxy.settlement_timeout_max() == TEST_SETTLE_TIMEOUT_MAX
