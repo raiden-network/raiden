@@ -442,7 +442,7 @@ class UDPTransport(Runnable):
             message: Message,
     ) -> None:
         """ This method exists only for interface compatibility with MatrixTransport """
-        self.log.warning('UDP has no global room mechanism. Ignoring.')
+        self.log.warning('UDP is unable to send global messages. Ignoring')
 
     def maybe_send(self, recipient: typing.Address, message: Message):
         """ Send message to recipient if the transport is running. """
