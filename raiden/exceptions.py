@@ -22,6 +22,11 @@ class HashLengthNot32(RaidenError):
     pass
 
 
+class UnknownEventType(RaidenError):
+    """Raised if decoding of an event failed."""
+    pass
+
+
 # Exceptions raised due to user interaction (the user may be another software)
 
 class ChannelNotFound(RaidenError):
