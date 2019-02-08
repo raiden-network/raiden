@@ -48,8 +48,8 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
         identifier=1,
     )
 
+    assert payment_status.payment_done.get(timeout=5) is False
     assert payment_status.payment_done.successful()
-    assert payment_status.payment_done.get_nowait() is False
 
     assert_synced_channel_state(
         token_network_identifier,
