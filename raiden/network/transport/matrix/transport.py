@@ -510,8 +510,8 @@ class MatrixTransport(Runnable):
     def send_global(self, room: str, message: Message) -> None:
         """Sends a message to one of the global rooms
 
-        These rooms aren't listened and therefore no reply could be heard, so these messages are
-        sent in a send-and-forget async way.
+        These rooms aren't being listened on and therefore no reply could be heard, so these
+        messages are sent in a send-and-forget async way.
         The actual room name is composed from the suffix given as parameter and chain name or id
         e.g.: raiden_ropsten_discovery
         Params:
@@ -519,15 +519,7 @@ class MatrixTransport(Runnable):
             message: Message instance to be serialized and sent
         """
         room_name = self._make_room_alias(room)
-        if room_name not in self._global_rooms:
-            self.log.warning(
-                'Tried to send_global message to an unknown global room. Ignoring.',
-                message=message,
-                room_suffix=room,
-                room_name=room_name,
-                global_rooms=self._global_rooms,
-            )
-            return
+        assert self._global_rooms.get(room_name), f'Unknown global room: {room_name!r}'
 
         def _send_global():
             text = JSONSerializer.serialize(message)

@@ -529,7 +529,6 @@ def test_matrix_discovery_room_offline_server(
 
 
 def test_matrix_send_global(
-        caplog,
         local_matrix_servers,
         retries_before_backoff,
         retry_interval,
@@ -565,15 +564,12 @@ def test_matrix_send_global(
 
     assert ms_room.send_text.call_count == 5
 
-    message = Processed(10)
-    transport.send_global(
-        'unknown_suffix',
-        message,
-    )
-
-    # there's a warning for the unknown suffix, but no exception should be raised or new send_text
-    assert ms_room.send_text.call_count == 5
-    assert any(record.levelname == 'WARNING' for record in caplog.records)
+    # unknown room suffix is an error
+    with pytest.raises(AssertionError):
+        transport.send_global(
+            'unknown_suffix',
+            Processed(10),
+        )
 
     transport.stop()
     transport.get()
