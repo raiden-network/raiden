@@ -5,8 +5,9 @@ from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, RevealSecret
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.factories import UNIT_TRANSFER_INITIATOR, make_signed_transfer
+from raiden.tests.utils.factories import UNIT_TRANSFER_INITIATOR, make_secret, make_signed_transfer
 from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer, wait_assert
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
@@ -169,37 +170,47 @@ def test_mediated_transfer_with_entire_deposit(
         )
 
 
-class _patch_transport:
-    def __init__(self, transport_patched):
-        self.patched = transport_patched
-        self.patched._receive_message_unpatched = self.patched._receive_message
-        self.patched._receive_message = lambda msg: self._receive_message(msg)
-        self.done = False
-        self.message = None
-
-    def _receive_message(self, message):
-        if not self.done and self.message is None and isinstance(message, LockedTransfer):
-            self.message = message
-            return
-        self.patched._receive_message_unpatched(message)
-        if not self.done and self.message is not None and isinstance(message, RevealSecret):
-            self.patched._receive_message(self.message)
-            self.done = True
-
-
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_mediated_transfer_messages_out_of_order(
         raiden_network,
-        number_of_nodes,
         deposit,
         token_addresses,
         network_wait,
         skip_if_not_matrix,
 ):
+    """Raiden must properly handle repeated locked transfer messages."""
     app0, app1, app2 = raiden_network
-    _patch_transport(app1.raiden.transport)
-    _patch_transport(app2.raiden.transport)
+
+    app1_wait_for_message = WaitForMessage()
+    app2_wait_for_message = WaitForMessage()
+
+    app1.raiden.message_handler = app1_wait_for_message
+    app2.raiden.message_handler = app2_wait_for_message
+
+    secret = make_secret(0)
+    secrethash = sha3(secret)
+
+    # Save the messages, these will be processed again
+    app1_mediatedtransfer = app1_wait_for_message.wait_for_message(
+        LockedTransfer,
+        {'lock': {'secrethash': secrethash}},
+    )
+    app2_mediatedtransfer = app2_wait_for_message.wait_for_message(
+        LockedTransfer,
+        {'lock': {'secrethash': secrethash}},
+    )
+    # Wait until the node receives a reveal secret to redispatch the locked
+    # transfer message
+    app1_revealsecret = app1_wait_for_message.wait_for_message(
+        RevealSecret,
+        {'secret': secret},
+    )
+    app2_revealsecret = app2_wait_for_message.wait_for_message(
+        RevealSecret,
+        {'secret': secret},
+    )
+
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
@@ -210,14 +221,33 @@ def test_mediated_transfer_messages_out_of_order(
     )
 
     amount = 10
-    mediated_transfer(
-        app0,
-        app2,
+    identifier = 1
+    transfer_received = app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier,
         amount,
-        timeout=network_wait * number_of_nodes,
+        app2.raiden.address,
+        identifier,
+        secret,
     )
 
+    # - Wait until reveal secret is received to replay the message
+    # - The secret is revealed backwards, app2 should be first
+    # - The locked transfer is sent before the secret reveal, so the mediated
+    #   transfers async results must be set and `get_nowait` can be used
+    app2_revealsecret.get(timeout=network_wait)
+    mediated_transfer_msg = app2_mediatedtransfer.get_nowait()
+    app2.raiden.message_handler.handle_message_lockedtransfer(
+        app2.raiden,
+        mediated_transfer_msg,
+    )
+
+    app1_revealsecret.get(timeout=network_wait)
+    app1.raiden.message_handler.handle_message_lockedtransfer(
+        app1.raiden,
+        app1_mediatedtransfer.get_nowait(),
+    )
+
+    transfer_received.payment_done.wait()
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
@@ -225,6 +255,7 @@ def test_mediated_transfer_messages_out_of_order(
             app0, deposit - amount, [],
             app1, deposit + amount, [],
         )
+
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
