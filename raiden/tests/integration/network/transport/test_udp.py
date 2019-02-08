@@ -88,6 +88,6 @@ def test_suite_survives_unhandled_exception(raiden_network):
     assert hasattr(raiden_service, 'exception')
     assert raiden_service.exception is None
     raiden_service.alarm.register_callback(do_fail)
-    gevent.sleep(raiden_service.alarm.sleep_time * 2)
+    raiden_service.join(timeout=5)
     assert raiden_service.exception is not None
     assert isinstance(raiden_service.exception, UnhandledTestException)
