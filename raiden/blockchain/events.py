@@ -4,7 +4,7 @@ from typing import Dict, List
 from eth_utils import to_canonical_address
 
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
-from raiden.exceptions import InvalidBlockNumberInput
+from raiden.exceptions import InvalidBlockNumberInput, UnknownEventType
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry
 from raiden.utils import pex, typing
@@ -24,7 +24,6 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
-    EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
     ChannelEvent,
 )
@@ -145,49 +144,53 @@ def get_all_netting_channel_events(
     )
 
 
-def decode_event_to_internal(event):
-    """ Enforce the binary encoding of address for internal usage. """
-    data = event.event_data
-
-    if data['args'].get('channel_identifier'):
-        data['channel_identifier'] = data['args'].get('channel_identifier')
-
+def decode_event_to_internal(abi, log_event):
+    """ Enforce the binary for internal usage. """
     # Note: All addresses inside the event_data must be decoded.
-    if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
-        data['token_network_address'] = to_canonical_address(data['args']['token_network_address'])
-        data['token_address'] = to_canonical_address(data['args']['token_address'])
 
-    elif data['event'] == ChannelEvent.OPENED:
-        data['participant1'] = to_canonical_address(data['args']['participant1'])
-        data['participant2'] = to_canonical_address(data['args']['participant2'])
-        data['settle_timeout'] = data['args']['settle_timeout']
+    decoded_event = decode_event(abi, log_event)
 
-    elif data['event'] == ChannelEvent.DEPOSIT:
-        data['deposit'] = data['args']['total_deposit']
-        data['participant'] = to_canonical_address(data['args']['participant'])
+    if not decoded_event:
+        raise UnknownEventType()
 
-    elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
-        data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
+    # copy the attribute dict because that data structure is immutable
+    data = dict(decoded_event)
+    args = dict(data['args'])
 
-    elif data['event'] == ChannelEvent.CLOSED:
-        data['closing_participant'] = to_canonical_address(data['args']['closing_participant'])
+    data['args'] = args
+    # translate from web3's to raiden's name convention
+    data['block_number'] = log_event.pop('blockNumber')
+    data['transaction_hash'] = log_event.pop('transactionHash')
 
-    elif data['event'] == ChannelEvent.SETTLED:
-        data['participant1_amount'] = data['args']['participant1_amount']
-        data['participant2_amount'] = data['args']['participant2_amount']
+    assert data['block_number'], 'The event must have the block_number'
+    assert data['transaction_hash'], 'The event must have the transaction hash field'
 
-    elif data['event'] == ChannelEvent.UNLOCKED:
-        data['unlocked_amount'] = data['args']['unlocked_amount']
-        data['returned_tokens'] = data['args']['returned_tokens']
-        data['participant'] = to_canonical_address(data['args']['participant'])
-        data['partner'] = to_canonical_address(data['args']['partner'])
-        data['locksroot'] = data['args']['locksroot']
+    event = data['event']
+    if event == EVENT_TOKEN_NETWORK_CREATED:
+        args['token_network_address'] = to_canonical_address(args['token_network_address'])
+        args['token_address'] = to_canonical_address(args['token_address'])
 
-    elif data['event'] == EVENT_SECRET_REVEALED:
-        data['secrethash'] = data['args']['secrethash']
-        data['secret'] = data['args']['secret']
+    elif event == ChannelEvent.OPENED:
+        args['participant1'] = to_canonical_address(args['participant1'])
+        args['participant2'] = to_canonical_address(args['participant2'])
 
-    return event
+    elif event == ChannelEvent.DEPOSIT:
+        args['participant'] = to_canonical_address(args['participant'])
+
+    elif event == ChannelEvent.BALANCE_PROOF_UPDATED:
+        args['closing_participant'] = to_canonical_address(args['closing_participant'])
+
+    elif event == ChannelEvent.CLOSED:
+        args['closing_participant'] = to_canonical_address(args['closing_participant'])
+
+    elif event == ChannelEvent.UNLOCKED:
+        args['participant'] = to_canonical_address(args['participant'])
+        args['partner'] = to_canonical_address(args['partner'])
+
+    return Event(
+        originating_contract=to_canonical_address(log_event['address']),
+        event_data=data,
+    )
 
 
 class Event:
@@ -215,18 +218,7 @@ class BlockchainEvents:
             assert isinstance(event_listener.filter, StatelessFilter)
 
             for log_event in event_listener.filter.get_new_entries(block_number):
-                decoded_event = dict(decode_event(
-                    event_listener.abi,
-                    log_event,
-                ))
-
-                if decoded_event:
-                    decoded_event['block_number'] = log_event.get('blockNumber', 0)
-                    event = Event(
-                        to_canonical_address(log_event['address']),
-                        decoded_event,
-                    )
-                    yield decode_event_to_internal(event)
+                yield decode_event_to_internal(event_listener.abi, log_event)
 
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:

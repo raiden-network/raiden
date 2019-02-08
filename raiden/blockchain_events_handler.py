@@ -1,8 +1,7 @@
 import gevent
 import structlog
-from eth_utils import to_canonical_address
 
-from raiden.blockchain.events import Event, decode_event_to_internal
+from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
@@ -19,7 +18,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import data_decoder, pex, typing
+from raiden.utils import pex, typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -32,17 +31,16 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def handle_tokennetwork_new(raiden, event: Event):
     """ Handles a `TokenNetworkCreated` event. """
     data = event.event_data
-    token_network_address = data['token_network_address']
+    args = data['args']
+    block_number = data['block_number']
+    token_network_address = args['token_network_address']
+    token_address = typing.TokenAddress(args['token_address'])
 
     token_network_proxy = raiden.chain.token_network(token_network_address)
     raiden.blockchain_events.add_token_network_listener(
         token_network_proxy=token_network_proxy,
         contract_manager=raiden.contract_manager,
-        from_block=data['blockNumber'],
-    )
-
-    token_address = typing.TokenAddress(
-        data_decoder(event.event_data['args']['token_address']),
+        from_block=block_number,
     )
 
     token_network_state = TokenNetworkState(
@@ -50,26 +48,26 @@ def handle_tokennetwork_new(raiden, event: Event):
         token_address,
     )
 
-    transaction_hash = event.event_data['transactionHash']
-    assert transaction_hash, 'A mined transaction must have the hash field'
+    transaction_hash = event.event_data['transaction_hash']
 
     new_token_network = ContractReceiveNewTokenNetwork(
         transaction_hash=transaction_hash,
         payment_network_identifier=event.originating_contract,
         token_network=token_network_state,
-        block_number=data['block_number'],
+        block_number=block_number,
     )
     raiden.handle_state_change(new_token_network)
 
 
 def handle_channel_new(raiden, event: Event):
     data = event.event_data
+    block_number = data['block_number']
+    args = data['args']
     token_network_identifier = event.originating_contract
-    transaction_hash = event.event_data['transactionHash']
-    assert transaction_hash, 'A mined transaction must have the hash field'
-    channel_identifier = data['channel_identifier']
-    participant1 = data['participant1']
-    participant2 = data['participant2']
+    transaction_hash = event.event_data['transaction_hash']
+    channel_identifier = args['channel_identifier']
+    participant1 = args['participant1']
+    participant2 = args['participant2']
     is_participant = raiden.address in (participant1, participant2)
 
     # Raiden node is participant
@@ -85,14 +83,14 @@ def handle_channel_new(raiden, event: Event):
             token_network_identifier,
             raiden.config['reveal_timeout'],
             channel_proxy,
-            event.event_data['block_number'],
+            block_number,
         )
 
         new_channel = ContractReceiveChannelNew(
             transaction_hash=transaction_hash,
             token_network_identifier=token_network_identifier,
             channel_state=channel_state,
-            block_number=data['block_number'],
+            block_number=block_number,
         )
         raiden.handle_state_change(new_channel)
 
@@ -109,7 +107,7 @@ def handle_channel_new(raiden, event: Event):
             channel_identifier=channel_identifier,
             participant1=participant1,
             participant2=participant2,
-            block_number=data['block_number'],
+            block_number=block_number,
         )
         raiden.handle_state_change(new_route)
 
@@ -122,13 +120,13 @@ def handle_channel_new(raiden, event: Event):
 
 def handle_channel_new_balance(raiden, event: Event):
     data = event.event_data
-    channel_identifier = data['channel_identifier']
+    args = data['args']
+    block_number = data['block_number']
+    channel_identifier = args['channel_identifier']
     token_network_identifier = event.originating_contract
-    participant_address = data['participant']
-    total_deposit = data['args']['total_deposit']
-    deposit_block_number = data['block_number']
-    transaction_hash = data['transactionHash']
-    assert transaction_hash, 'A mined transaction must have the hash field'
+    participant_address = args['participant']
+    total_deposit = args['total_deposit']
+    transaction_hash = data['transaction_hash']
 
     previous_channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -146,7 +144,7 @@ def handle_channel_new_balance(raiden, event: Event):
         deposit_transaction = TransactionChannelNewBalance(
             participant_address,
             total_deposit,
-            deposit_block_number,
+            block_number,
         )
 
         newbalance_statechange = ContractReceiveChannelNewBalance(
@@ -154,7 +152,7 @@ def handle_channel_new_balance(raiden, event: Event):
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
             deposit_transaction=deposit_transaction,
-            block_number=data['block_number'],
+            block_number=block_number,
         )
         raiden.handle_state_change(newbalance_statechange)
 
@@ -175,9 +173,10 @@ def handle_channel_new_balance(raiden, event: Event):
 def handle_channel_closed(raiden, event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
-    channel_identifier = data['channel_identifier']
-    transaction_hash = data['transactionHash']
-    assert transaction_hash, 'A mined transaction must have the hash field'
+    block_number = data['block_number']
+    args = data['args']
+    channel_identifier = args['channel_identifier']
+    transaction_hash = data['transaction_hash']
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -190,10 +189,10 @@ def handle_channel_closed(raiden, event: Event):
         # closing_participant field
         channel_closed = ContractReceiveChannelClosed(
             transaction_hash=transaction_hash,
-            transaction_from=data['closing_participant'],
+            transaction_from=args['closing_participant'],
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
-            block_number=data['block_number'],
+            block_number=block_number,
         )
         raiden.handle_state_change(channel_closed)
     else:
@@ -202,7 +201,7 @@ def handle_channel_closed(raiden, event: Event):
             transaction_hash=transaction_hash,
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
-            block_number=data['block_number'],
+            block_number=block_number,
         )
         raiden.handle_state_change(channel_closed)
 
@@ -210,9 +209,9 @@ def handle_channel_closed(raiden, event: Event):
 def handle_channel_update_transfer(raiden, event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
-    channel_identifier = data['channel_identifier']
-    transaction_hash = data['transactionHash']
-    assert transaction_hash, 'A mined transaction must have the hash field'
+    args = data['args']
+    channel_identifier = args['channel_identifier']
+    transaction_hash = data['transaction_hash']
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -225,7 +224,7 @@ def handle_channel_update_transfer(raiden, event: Event):
             transaction_hash=transaction_hash,
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
-            nonce=data['args']['nonce'],
+            nonce=args['nonce'],
             block_number=data['block_number'],
         )
         raiden.handle_state_change(channel_transfer_updated)
@@ -234,10 +233,9 @@ def handle_channel_update_transfer(raiden, event: Event):
 def handle_channel_settled(raiden, event: Event):
     data = event.event_data
     token_network_identifier = event.originating_contract
-    channel_identifier = event.event_data['channel_identifier']
+    channel_identifier = data['args']['channel_identifier']
 
-    transaction_hash = data['transactionHash']
-    assert transaction_hash, 'A mined transaction must have the hash field'
+    transaction_hash = data['transaction_hash']
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -258,18 +256,18 @@ def handle_channel_settled(raiden, event: Event):
 def handle_channel_batch_unlock(raiden, event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
+    args = data['args']
 
-    transaction_hash = data['transactionHash']
-    assert transaction_hash, 'A mined transaction must have the hash field'
+    transaction_hash = data['transaction_hash']
 
     unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=transaction_hash,
         token_network_identifier=token_network_identifier,
-        participant=data['participant'],
-        partner=data['partner'],
-        locksroot=data['locksroot'],
-        unlocked_amount=data['unlocked_amount'],
-        returned_tokens=data['returned_tokens'],
+        participant=args['participant'],
+        partner=args['partner'],
+        locksroot=args['locksroot'],
+        unlocked_amount=args['unlocked_amount'],
+        returned_tokens=args['returned_tokens'],
         block_number=data['block_number'],
     )
 
@@ -279,15 +277,15 @@ def handle_channel_batch_unlock(raiden, event: Event):
 def handle_secret_revealed(raiden, event: Event):
     secret_registry_address = event.originating_contract
     data = event.event_data
+    args = data['args']
 
-    transaction_hash = data['transactionHash']
-    assert transaction_hash, 'A mined transaction must have the hash field'
+    transaction_hash = data['transaction_hash']
 
     registeredsecret_state_change = ContractReceiveSecretReveal(
         transaction_hash=transaction_hash,
         secret_registry_address=secret_registry_address,
-        secrethash=data['secrethash'],
-        secret=data['secret'],
+        secrethash=args['secrethash'],
+        secret=args['secret'],
         block_number=data['block_number'],
     )
 
@@ -299,34 +297,33 @@ def on_blockchain_event(raiden, event: Event):
     log.debug(
         'Blockchain event',
         node=pex(raiden.address),
-        contract=pex(to_canonical_address(data['address'])),
-        chain_event=event,
+        contract=pex(event.originating_contract),
+        event_data=data,
     )
 
-    event = decode_event_to_internal(event)
-
-    if data['event'] == EVENT_TOKEN_NETWORK_CREATED:
+    event_name = data['event']
+    if event_name == EVENT_TOKEN_NETWORK_CREATED:
         handle_tokennetwork_new(raiden, event)
 
-    elif data['event'] == ChannelEvent.OPENED:
+    elif event_name == ChannelEvent.OPENED:
         handle_channel_new(raiden, event)
 
-    elif data['event'] == ChannelEvent.DEPOSIT:
+    elif event_name == ChannelEvent.DEPOSIT:
         handle_channel_new_balance(raiden, event)
 
-    elif data['event'] == ChannelEvent.BALANCE_PROOF_UPDATED:
+    elif event_name == ChannelEvent.BALANCE_PROOF_UPDATED:
         handle_channel_update_transfer(raiden, event)
 
-    elif data['event'] == ChannelEvent.CLOSED:
+    elif event_name == ChannelEvent.CLOSED:
         handle_channel_closed(raiden, event)
 
-    elif data['event'] == ChannelEvent.SETTLED:
+    elif event_name == ChannelEvent.SETTLED:
         handle_channel_settled(raiden, event)
 
-    elif data['event'] == EVENT_SECRET_REVEALED:
+    elif event_name == EVENT_SECRET_REVEALED:
         handle_secret_revealed(raiden, event)
 
-    elif data['event'] == ChannelEvent.UNLOCKED:
+    elif event_name == ChannelEvent.UNLOCKED:
         handle_channel_batch_unlock(raiden, event)
 
     else:
