@@ -1828,6 +1828,12 @@ def test_filter_reachable_routes():
 
 
 def test_node_change_network_state_reachable_node():
+    """ Test that a mediator who has a waiting_transfer
+    set (the transfer couldn't be sent forward or backward
+    due to availability or capacity issues) will retry
+    mediating the waiting_transfer as soon as this transfer's
+    next hop becomes available.
+    """
     setup = factories.make_transfers_pair(2)
 
     # Also add transfer sender channel
