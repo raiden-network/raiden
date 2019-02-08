@@ -97,7 +97,6 @@ def get_best_routes_internal(
             partner_address,
         )
 
-        # check channel state
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(
                 'Channel is not opened, ignoring',
