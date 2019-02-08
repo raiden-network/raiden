@@ -28,10 +28,10 @@ def setup_storage(db_path):
 
     cursor = storage.conn.cursor()
     cursor.execute(
-        """
+        '''
         INSERT INTO state_snapshot(identifier, statechange_id, data)
         VALUES(1, 1, ?)
-        """, (chain_state,),
+        ''', (chain_state,),
     )
     storage.conn.commit()
     return storage
