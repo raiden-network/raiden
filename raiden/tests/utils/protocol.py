@@ -2,7 +2,7 @@ from collections import defaultdict
 from unittest.mock import patch
 
 import structlog
-from gevent.event import AsyncResult, Event as GeventEvent
+from gevent.event import AsyncResult
 
 from raiden.message_handler import MessageHandler
 from raiden.messages import Message
@@ -18,7 +18,8 @@ log = structlog.get_logger(__name__)
 
 class MessageWaiting(typing.NamedTuple):
     attributes: dict
-    message_received_event: GeventEvent
+    message_type: type
+    async_result: AsyncResult
 
 
 class Hold(typing.NamedTuple):
@@ -32,20 +33,24 @@ class WaitForMessage(MessageHandler):
     def __init__(self):
         self.waiting = defaultdict(list)
 
-    def wait_for_message(self, message_type: Message, attributes: dict):
+    def wait_for_message(self, message_type: type, attributes: dict) -> AsyncResult:
         assert not any(attributes == waiting.attributes for waiting in self.waiting[message_type])
-        event = GeventEvent()
-        self.waiting[message_type].append(MessageWaiting(attributes, event))
-        return event
+        waiting = MessageWaiting(
+            attributes=attributes,
+            message_type=Message,
+            async_result=AsyncResult(),
+        )
+        self.waiting[message_type].append(waiting)
+        return waiting.async_result
 
-    def on_message(self, raiden: RaidenService, message: Message):
+    def on_message(self, raiden: RaidenService, message: Message) -> None:
         # First handle the message, and then set the events, to ensure the
-        # expected side-effects of the message is applied
+        # expected side-effects of the message are applied
         super().on_message(raiden, message)
 
         for waiting in self.waiting[type(message)]:
             if check_nested_attrs(message, waiting.attributes):
-                waiting.message_received_event.set()
+                waiting.async_result.set(message)
 
 
 class HoldRaidenEvent(RaidenEventHandler):
