@@ -137,6 +137,7 @@ def test_payment_statuses_are_restored(
         number_of_nodes,
         token_addresses,
         network_wait,
+        skip_if_not_matrix,
 ):
     """ Test that when the Raiden is restarted, the dictionary of
     `targets_to_identifiers_to_statuses` is populated before the transport
