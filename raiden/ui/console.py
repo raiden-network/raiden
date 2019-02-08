@@ -5,15 +5,16 @@ import time
 
 import gevent
 import IPython
-from eth_utils import decode_hex, encode_hex, to_checksum_address
+from eth_utils import decode_hex, to_checksum_address
 from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.network.proxies import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
-from raiden.utils import get_contract_path, typing
-from raiden.utils.solc import compile_files_cwd
+from raiden.utils import typing
+from raiden.utils.smart_contracts import deploy_contract_web3
+from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 
 GUI_GEVENT = 'gevent'
 
@@ -193,18 +194,15 @@ class ConsoleTools:
         Returns:
             token_address_hex: the hex encoded address of the new token/token.
         """
-        contract_path = get_contract_path('HumanStandardToken.sol')
-        # Deploy a new ERC20 token
         with gevent.Timeout(timeout):
-            token_proxy = self._chain.client.deploy_solidity_contract(
-                'HumanStandardToken',
-                compile_files_cwd([contract_path]),
-                dict(),
-                (initial_alloc, name, decimals, symbol),
-                contract_path=contract_path,
+            token_address = deploy_contract_web3(
+                CONTRACT_HUMAN_STANDARD_TOKEN,
+                self._chain.client,
+                contract_manager=self._raiden.contract_manager,
+                constructor_arguments=(initial_alloc, name, decimals, symbol),
             )
 
-        token_address_hex = encode_hex(token_proxy.contract_address)
+        token_address_hex = to_checksum_address(token_address)
         if auto_register:
             self.register_token(registry_address, token_address_hex)
         print("Successfully created {}the token '{}'.".format(

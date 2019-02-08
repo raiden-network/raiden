@@ -1,9 +1,8 @@
-from eth_utils import to_canonical_address
-
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import typing
+from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -78,20 +77,3 @@ def deploy_tokens_and_fund_accounts(
             )
 
     return result
-
-
-def deploy_contract_web3(
-        contract_name: str,
-        deploy_client: JSONRPCClient,
-        contract_manager: ContractManager,
-        constructor_arguments: typing.Tuple[typing.Any, ...] = (),
-) -> typing.Address:
-    compiled = {
-        contract_name: contract_manager.get_contract(contract_name),
-    }
-    contract_proxy = deploy_client.deploy_solidity_contract(
-        contract_name=contract_name,
-        all_contracts=compiled,
-        constructor_parameters=constructor_arguments,
-    )
-    return typing.Address(to_canonical_address(contract_proxy.contract.address))

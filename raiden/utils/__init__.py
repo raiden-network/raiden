@@ -148,16 +148,6 @@ def get_relative_path(file_name) -> str:
     return file_name.replace(prefix + '/', '')
 
 
-def get_contract_path(contract_name: str) -> str:
-    contract_path = os.path.join(
-        get_project_root(),
-        'smart_contracts',
-        contract_name,
-    )
-    assert os.path.isfile(contract_path)
-    return get_relative_path(contract_path)
-
-
 def get_system_spec() -> typing.Dict[str, str]:
     """Collect information about the system and installation.
     """
