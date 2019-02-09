@@ -252,7 +252,12 @@ class RaidenService(Runnable):
             os.makedirs(database_dir, exist_ok=True)
 
             self.database_dir = database_dir
-            # Prevent concurrent access to the same db
+
+            # Two raiden processes must not write to the same database, even
+            # though the database itself may be consistent. If more than one
+            # nodes writes state changes to the same WAL there are no
+            # guarantees about recovery, this happens because during recovery
+            # the WAL replay can not be deterministic.
             self.lock_file = os.path.join(self.database_dir, '.lock')
             self.db_lock = filelock.FileLock(self.lock_file)
         else:
