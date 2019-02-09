@@ -43,10 +43,17 @@ class SQLiteStorage(SerializationBase):
         conn.text_factory = str
         conn.execute('PRAGMA foreign_keys=ON')
 
-        # Small optimization since Raiden's database are not shared. References:
+        # Skip the acquire/release cycle for the exclusive write lock.
+        # References:
         # https://sqlite.org/atomiccommit.html#_exclusive_access_mode
         # https://sqlite.org/pragma.html#pragma_locking_mode
         conn.execute('PRAGMA locking_mode=EXCLUSIVE')
+
+        # Keep the journal around and skip inode updates.
+        # References:
+        # https://sqlite.org/atomiccommit.html#_persistent_rollback_journals
+        # https://sqlite.org/pragma.html#pragma_journal_mode
+        conn.execute('PRAGMA journal_mode=PERSIST')
 
         self.conn = conn
 
