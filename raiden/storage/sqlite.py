@@ -42,6 +42,12 @@ class SQLiteStorage(SerializationBase):
         conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.text_factory = str
         conn.execute('PRAGMA foreign_keys=ON')
+
+        # Small optimization since Raiden's database are not shared. References:
+        # https://sqlite.org/atomiccommit.html#_exclusive_access_mode
+        # https://sqlite.org/pragma.html#pragma_locking_mode
+        conn.execute('PRAGMA locking_mode=EXCLUSIVE')
+
         self.conn = conn
 
         with conn:
