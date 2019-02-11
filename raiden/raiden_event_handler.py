@@ -3,10 +3,10 @@ from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
-from raiden.messages import message_from_sendevent
+from raiden.messages import RequestMonitoring, message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.storage.restore import channel_state_until_state_change
-from raiden.transfer.architecture import Event
+from raiden.transfer.architecture import Event, EventNewBalanceProofReceived
 from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.channel import get_batch_unlock
 from raiden.transfer.events import (
@@ -49,6 +49,7 @@ RaidenService = 'RaidenService'
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (
+    EventNewBalanceProofReceived,
     EventPaymentReceivedSuccess,
     EventUnlockSuccess,
     EventUnlockClaimFailed,
@@ -546,18 +547,28 @@ class RaidenMonitoringEventHandler(RaidenEventHandler):
     # pylint: disable=no-self-use
 
     def on_raiden_event(self, raiden: RaidenService, event: Event):
-        if type(event) == EventPaymentReceivedSuccess:
-            self.handle_received_payment(raiden, event)
+        if type(event) == EventNewBalanceProofReceived:
+            self.handle_received_balance_proof(raiden, event)
 
         # Call base class to trigger other side-effects
         super().on_raiden_event(raiden, event)
 
-    def handle_received_payment(
+    def handle_received_balance_proof(
             self,
             raiden: RaidenService,
-            payment_received: EventPaymentReceivedSuccess,
+            new_balance_proof_event: EventNewBalanceProofReceived,
     ):
         log.info(
-            'Received payment, sending balance proof to Monitoring Service',
-            evt=payment_received,
+            'Received balance proof, creating message for Monitoring Service',
+            evt=new_balance_proof_event,
+        )
+        reward_amount = 0  # FIXME: default reward is 0, should come from elsewhere
+        monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
+            new_balance_proof_event.balance_proof,
+            reward_amount,
+        )
+        monitoring_message.sign(raiden.signer)
+        raiden.transport.send_global(
+            'monitoring',
+            monitoring_message,
         )
