@@ -6,7 +6,7 @@ import tempfile
 from eth_utils import remove_0x_prefix
 from web3 import HTTPProvider, Web3
 
-from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockchain
+from raiden.tests.utils.geth import EthNodeDescription, run_private_blockchain
 from raiden.utils import privatekey_to_address, sha3
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
@@ -40,7 +40,7 @@ def main():
         p2p_port = START_PORT + i
         rpc_port = START_RPCPORT + i
 
-        description = GethNodeDescription(
+        description = EthNodeDescription(
             node_key,
             rpc_port,
             p2p_port,
@@ -54,7 +54,7 @@ def main():
 
     verbosity = 0
     random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
-    geth_processes = geth_run_private_blockchain(  # NOQA
+    geth_processes = run_private_blockchain(  # NOQA
         web3,
         DEFAULT_ACCOUNTS,
         geth_nodes,
