@@ -789,7 +789,7 @@ def test_matrix_invite_private_room_happy_case(
 ):
 
     transport0 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -798,7 +798,7 @@ def test_matrix_invite_private_room_happy_case(
         'private_rooms': private_rooms,
     })
     transport1 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -874,7 +874,7 @@ def test_matrix_invite_private_room_unhappy_case_1(
 ):
 
     transport0 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -883,7 +883,7 @@ def test_matrix_invite_private_room_unhappy_case_1(
         'private_rooms': private_rooms,
     })
     transport1 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -960,7 +960,7 @@ def test_matrix_invite_private_room_unhappy_case_2(
 ):
 
     transport0 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -969,7 +969,7 @@ def test_matrix_invite_private_room_unhappy_case_2(
         'private_rooms': private_rooms,
     })
     transport1 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -1058,7 +1058,7 @@ def test_matrix_invite_private_room_unhappy_case_3(
         retries_before_backoff,
 ):
     transport0 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -1067,7 +1067,7 @@ def test_matrix_invite_private_room_unhappy_case_3(
         'private_rooms': private_rooms,
     })
     transport1 = MatrixTransport({
-        'discovery_room': 'discovery',
+        'global_rooms': ['discovery'],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
