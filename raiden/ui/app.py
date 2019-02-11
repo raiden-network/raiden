@@ -9,7 +9,7 @@ from eth_utils import to_canonical_address, to_checksum_address, to_normalized_a
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
-from raiden.constants import SQLITE_MIN_REQUIRED_VERSION, Environment
+from raiden.constants import MONITORING_BROADCASTING_ROOM, SQLITE_MIN_REQUIRED_VERSION, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AddressWrongContract,
@@ -157,6 +157,10 @@ def _setup_matrix(config):
         available_servers = get_matrix_servers(available_servers_url)
         log.debug('Fetching available matrix servers', available_servers=available_servers)
         config['transport']['matrix']['available_servers'] = available_servers
+
+    # Add monitoring service broadcast room if enabled
+    if config['services']['monitoring_enabled'] is True:
+        config['transport']['matrix']['global_rooms'].append(MONITORING_BROADCASTING_ROOM)
 
     try:
         transport = MatrixTransport(config['transport']['matrix'])
