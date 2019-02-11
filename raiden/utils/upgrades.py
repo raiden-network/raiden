@@ -78,6 +78,7 @@ class UpgradeManager:
        from retrying the migration on the next restart.
     8. If the migration is successful, rename the older DB to prevent (1) from detecting it again.
     """
+
     def __init__(self, db_filename: str):
         self._current_db_filename = Path(db_filename)
 
@@ -91,6 +92,9 @@ class UpgradeManager:
         functions.
         """
         old_db_filename = older_db_file(str(self._current_db_filename.parent))
+
+        if old_db_filename is None:
+            return
 
         with get_file_lock(old_db_filename), get_file_lock(self._current_db_filename):
             if get_db_version(self._current_db_filename) == RAIDEN_DB_VERSION:
