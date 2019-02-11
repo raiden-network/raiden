@@ -4,6 +4,7 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import mediated_transfer
 from raiden.transfer import views
+from raiden.transfer.architecture import EventNewBalanceProofReceived
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockSuccess,
@@ -48,6 +49,7 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
         mediator_events = app1.raiden.wal.storage.get_events()
         return (
             search_for_item(mediator_events, EventUnlockSuccess, {}) and
+            search_for_item(mediator_events, EventNewBalanceProofReceived, {}) and
             search_for_item(mediator_events, EventUnlockClaimSuccess, {})
         )
 
@@ -58,6 +60,7 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
         return (
             search_for_item(target_events, SendSecretRequest, {}) and
             search_for_item(target_events, SendSecretReveal, {}) and
+            search_for_item(target_events, EventNewBalanceProofReceived, {}) and
             search_for_item(target_events, EventUnlockClaimSuccess, {})
         )
 
