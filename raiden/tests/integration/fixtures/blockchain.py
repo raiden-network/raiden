@@ -8,7 +8,7 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
-from raiden.tests.utils.geth import GethNodeDescription, geth_run_private_blockchain
+from raiden.tests.utils.geth import EthNodeDescription, run_private_blockchain
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils import privatekey_to_address
@@ -17,6 +17,8 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
 _GETH_LOGDIR = os.environ.get('RAIDEN_TESTS_GETH_LOGSDIR', False)
+_GETH_DATADIR = os.environ.get('RAIDEN_TESTS_GETH_DATADIR', False)
+_PARITY_DATADIR = os.environ.get('RAIDEN_TESTS_PARITY_DATADIR')
 
 
 @pytest.fixture
@@ -46,61 +48,60 @@ def web3(
     keys_to_fund.add(deploy_key)
     keys_to_fund = sorted(keys_to_fund)
 
-    if blockchain_type == 'geth':
-        host = '0.0.0.0'
-        rpc_port = blockchain_rpc_ports[0]
-        endpoint = f'http://{host}:{rpc_port}'
-        web3 = Web3(HTTPProvider(endpoint))
-
-        assert len(blockchain_private_keys) == len(blockchain_rpc_ports)
-        assert len(blockchain_private_keys) == len(blockchain_p2p_ports)
-
-        geth_nodes = [
-            GethNodeDescription(
-                key,
-                rpc,
-                p2p,
-                miner=(pos == 0),
-            )
-            for pos, (key, rpc, p2p) in enumerate(zip(
-                blockchain_private_keys,
-                blockchain_rpc_ports,
-                blockchain_p2p_ports,
-            ))
-        ]
-
-        accounts_to_fund = [
-            privatekey_to_address(key)
-            for key in keys_to_fund
-        ]
-
-        base_datadir = str(tmpdir)
-
-        if _GETH_LOGDIR:
-            base_logdir = os.path.join(_GETH_LOGDIR, request.node.name)
-        else:
-            base_logdir = os.path.join(base_datadir, 'logs')
-
-        geth_processes = geth_run_private_blockchain(
-            web3=web3,
-            accounts_to_fund=accounts_to_fund,
-            geth_nodes=geth_nodes,
-            base_datadir=base_datadir,
-            log_dir=base_logdir,
-            chain_id=chain_id,
-            verbosity=request.config.option.verbose,
-            random_marker=random_marker,
-        )
-
-        yield web3
-
-        for process in geth_processes:
-            process.terminate()
-
-        cleanup_tasks()
-
-    else:
+    if blockchain_type not in ('geth', 'parity'):
         raise ValueError(f'unknown blockchain_type {blockchain_type}')
+
+    host = '0.0.0.0'
+    rpc_port = blockchain_rpc_ports[0]
+    endpoint = f'http://{host}:{rpc_port}'
+    web3 = Web3(HTTPProvider(endpoint))
+
+    assert len(blockchain_private_keys) == len(blockchain_rpc_ports)
+    assert len(blockchain_private_keys) == len(blockchain_p2p_ports)
+
+    eth_nodes = [
+        EthNodeDescription(
+            key,
+            rpc,
+            p2p,
+            miner=(pos == 0),
+        )
+        for pos, (key, rpc, p2p) in enumerate(zip(
+            blockchain_private_keys,
+            blockchain_rpc_ports,
+            blockchain_p2p_ports,
+        ))
+    ]
+
+    accounts_to_fund = [
+        privatekey_to_address(key)
+        for key in keys_to_fund
+    ]
+
+    base_datadir = str(tmpdir)
+
+    if _GETH_LOGDIR:
+        base_logdir = os.path.join(_GETH_LOGDIR, request.node.name)
+    else:
+        base_logdir = os.path.join(base_datadir, 'logs')
+
+    geth_processes = run_private_blockchain(
+        web3=web3,
+        accounts_to_fund=accounts_to_fund,
+        eth_nodes=eth_nodes,
+        base_datadir=base_datadir,
+        log_dir=base_logdir,
+        chain_id=chain_id,
+        verbosity=request.config.option.verbose,
+        random_marker=random_marker,
+    )
+
+    yield web3
+
+    for process in geth_processes:
+        process.terminate()
+
+    cleanup_tasks()
 
 
 @pytest.fixture

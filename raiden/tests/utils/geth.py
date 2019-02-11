@@ -6,7 +6,6 @@ import subprocess
 import sys
 import termios
 import time
-from collections import namedtuple
 
 import gevent
 import requests
@@ -17,23 +16,20 @@ from web3 import Web3
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
-from raiden.utils.typing import Dict, List
+from raiden.utils.typing import Any, Dict, List, NamedTuple
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-GethNodeDescription = namedtuple(
-    'GethNodeDescription',
-    [
-        'private_key',
-        'rpc_port',
-        'p2p_port',
-        'miner',
-    ],
-)
+class EthNodeDescription(NamedTuple):
+    private_key: Any  # TODO
+    rpc_port: int
+    p2p_port: int
+    miner: bool
+    blockchain_type: str = 'geth'
 
 
-def geth_clique_extradata(extra_vanity, extra_seal):
+def clique_extradata(extra_vanity, extra_seal):
     if len(extra_vanity) > 64:
         raise ValueError('extra_vanity length must be smaller-or-equal to 64')
 
@@ -130,7 +126,7 @@ def geth_create_account(datadir: str, privkey: bytes):
     assert create.returncode == 0
 
 
-def geth_generate_poa_genesis(
+def eth_generate_poa_genesis(
         genesis_path: str,
         accounts_addresses: List[str],
         seal_address: str,
@@ -157,7 +153,7 @@ def geth_generate_poa_genesis(
 
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
 
-    genesis['extraData'] = geth_clique_extradata(
+    genesis['extraData'] = clique_extradata(
         random_marker,
         remove_0x_prefix(to_normalized_address(seal_address)),
     )
@@ -189,17 +185,17 @@ def geth_init_datadir(datadir: str, genesis_path: str):
         raise ValueError(msg)
 
 
-def geth_wait_and_check(
+def eth_wait_and_check(
         web3,
         accounts_addresses,
         random_marker,
         processes_list,
 ):
-    """ Wait until the geth cluster is ready.
+    """ Wait until the geth/parity cluster is ready.
 
     This will raise an exception if either:
 
-    - The geth process exists (sucessfully or not)
+    - The geth/parity process exits (successfully or not)
     - The JSON RPC interface is not available after a very short moment
     """
     jsonrpc_running = False
@@ -247,7 +243,7 @@ def geth_wait_and_check(
             raise ValueError('account is with a balance of 0')
 
 
-def geth_node_config(miner_pkey, p2p_port, rpc_port):
+def eth_node_config(miner_pkey, p2p_port, rpc_port):
     address = privatekey_to_address(miner_pkey)
     pub = privatekey_to_publickey(miner_pkey).hex()
 
@@ -264,7 +260,7 @@ def geth_node_config(miner_pkey, p2p_port, rpc_port):
     return config
 
 
-def geth_node_config_set_bootnodes(nodes_configuration: Dict) -> None:
+def eth_node_config_set_bootnodes(nodes_configuration: Dict) -> None:
     bootnodes = ','.join(node['enode'] for node in nodes_configuration)
 
     for config in nodes_configuration:
@@ -301,35 +297,44 @@ def geth_prepare_datadir(datadir, genesis_file):
     geth_init_datadir(datadir, node_genesis_path)
 
 
-def geth_nodes_to_cmds(
+def eth_nodes_to_cmds(
         nodes_configuration,
-        geth_nodes,
+        eth_nodes,
         base_datadir,
         genesis_file,
         chain_id,
         verbosity,
 ):
     cmds = []
-    for config, node in zip(nodes_configuration, geth_nodes):
-        datadir = geth_node_to_datadir(config, base_datadir)
-        geth_prepare_datadir(datadir, genesis_file)
+    for config, node in zip(nodes_configuration, eth_nodes):
+        if node.blockchain_type == 'geth':
+            datadir = geth_node_to_datadir(config, base_datadir)
+            geth_prepare_datadir(datadir, genesis_file)
 
-        if node.miner:
-            geth_create_account(datadir, node.private_key)
+            if node.miner:
+                geth_create_account(datadir, node.private_key)
 
-        commandline = geth_to_cmd(config, datadir, chain_id, verbosity)
+            commandline = geth_to_cmd(config, datadir, chain_id, verbosity)
+
+        elif node.blockchain_type == 'parity':
+            # TODO
+            commandline = ''
+
+        else:
+            assert False, f'Invalid blockchain type {config.blockchain_type}'
+
         cmds.append(commandline)
 
     return cmds
 
 
-def geth_run_nodes(
-        geth_nodes: List[GethNodeDescription],
+def eth_run_nodes(
+        eth_nodes: List[EthNodeDescription],
         nodes_configuration: List[Dict],
         base_datadir: str,
         genesis_file: str,
         chain_id: int,
-        verbosity: str,
+        verbosity: int,
         logdir: str,
 ):
     os.makedirs(logdir, exist_ok=True)
@@ -338,9 +343,9 @@ def geth_run_nodes(
     with open(password_path, 'w') as handler:
         handler.write(DEFAULT_PASSPHRASE)
 
-    cmds = geth_nodes_to_cmds(
+    cmds = eth_nodes_to_cmds(
         nodes_configuration,
-        geth_nodes,
+        eth_nodes,
         base_datadir,
         genesis_file,
         chain_id,
@@ -378,10 +383,10 @@ def geth_run_nodes(
     return processes_list
 
 
-def geth_run_private_blockchain(
+def run_private_blockchain(
         web3: Web3,
         accounts_to_fund: List[bytes],
-        geth_nodes: List[GethNodeDescription],
+        eth_nodes: List[EthNodeDescription],
         base_datadir: str,
         log_dir: str,
         chain_id: int,
@@ -394,7 +399,7 @@ def geth_run_private_blockchain(
         web3: A Web3 instance used to check when the private chain is running.
         accounts_to_fund: Accounts that will start with funds in
             the private chain.
-        geth_nodes: A list of geth node
+        eth_nodes: A list of geth node
             description, containing the details of each node of the private
             chain.
         base_datadir: Directory used to store the geth databases.
@@ -405,8 +410,8 @@ def geth_run_private_blockchain(
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
 
     nodes_configuration = []
-    for node in geth_nodes:
-        config = geth_node_config(
+    for node in eth_nodes:
+        config = eth_node_config(
             node.private_key,
             node.p2p_port,
             node.rpc_port,
@@ -419,11 +424,11 @@ def geth_run_private_blockchain(
 
         nodes_configuration.append(config)
 
-    geth_node_config_set_bootnodes(nodes_configuration)
+    eth_node_config_set_bootnodes(nodes_configuration)
 
-    seal_account = privatekey_to_address(geth_nodes[0].private_key)
+    seal_account = privatekey_to_address(eth_nodes[0].private_key)
     genesis_path = os.path.join(base_datadir, 'custom_genesis.json')
-    geth_generate_poa_genesis(
+    eth_generate_poa_genesis(
         genesis_path,
         accounts_to_fund,
         seal_account,
@@ -435,8 +440,8 @@ def geth_run_private_blockchain(
     if isinstance(sys.stdin, io.IOBase):
         term_settings = termios.tcgetattr(sys.stdin)
 
-    processes_list = geth_run_nodes(
-        geth_nodes=geth_nodes,
+    processes_list = eth_run_nodes(
+        eth_nodes=eth_nodes,
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,
         genesis_file=genesis_path,
@@ -446,7 +451,7 @@ def geth_run_private_blockchain(
     )
 
     try:
-        geth_wait_and_check(
+        eth_wait_and_check(
             web3=web3,
             accounts_addresses=accounts_to_fund,
             random_marker=random_marker,
