@@ -905,19 +905,17 @@ class RaidenAPI:
     def get_pending_transfers(self, token_address=None, partner_address=None):
         chain_state = views.state_from_raiden(self.raiden)
         transfer_tasks = views.get_all_transfer_tasks(chain_state)
+        channel_id = None
 
-        if token_address is not None and partner_address is not None:
-            try:
+        if token_address is not None:
+            if self.raiden.default_registry.get_token_network(token_address) is None:
+                raise UnknownTokenAddress(f'Token {token_address} not found.')
+            if partner_address is not None:
                 partner_channel = self.get_channel(
                     registry_address=self.raiden.default_registry.address,
                     token_address=token_address,
                     partner_address=partner_address,
                 )
-            except ChannelNotFound:
-                # just return an empty list if queried for a nonexisting channel
-                return list()
-            channel_id = partner_channel.identifier
-        else:
-            channel_id = None
+                channel_id = partner_channel.identifier
 
         return transfer_tasks_view(transfer_tasks, token_address, channel_id)
