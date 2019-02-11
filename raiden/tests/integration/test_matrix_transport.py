@@ -568,13 +568,6 @@ def test_matrix_send_global(
 
     assert ms_room.send_text.call_count == 5
 
-    # unknown room suffix is an error
-    with pytest.raises(AssertionError):
-        transport.send_global(
-            'unknown_suffix',
-            Processed(10),
-        )
-
     transport.stop()
     transport.get()
 
