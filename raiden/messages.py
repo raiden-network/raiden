@@ -50,15 +50,22 @@ from raiden.utils.typing import (
 
 __all__ = (
     'Delivered',
+    'EnvelopeMessage',
     'Lock',
     'LockedTransfer',
     'LockedTransferBase',
+    'LockExpired',
+    'Message',
     'Ping',
+    'Pong',
     'Processed',
     'RefundTransfer',
-    'Unlock',
+    'RequestMonitoring',
+    'RevealSecret',
     'SecretRequest',
+    'SignedBlindedBalanceProof',
     'SignedMessage',
+    'Unlock',
     'decode',
     'from_dict',
 )
