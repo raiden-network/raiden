@@ -127,3 +127,5 @@ def test_request_monitoring():
         balance_proof_data,
         request_monitoring.balance_proof.signature,
     ) == PARTNER_ADDRESS
+
+    assert request_monitoring.verify_request_monitoring(PARTNER_ADDRESS, ADDRESS)

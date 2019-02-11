@@ -1605,11 +1605,11 @@ class RequestMonitoring(SignedMessage):
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
         packed = pack_reward_proof(
-            self.balance_proof.channel_identifier,
-            self.reward_amount,
-            self.balance_proof.token_network_address,
-            self.balance_proof.chain_id,
-            self.balance_proof.nonce,
+            channel_identifier=self.balance_proof.channel_identifier,
+            reward_amount=self.reward_amount,
+            token_network_address=self.balance_proof.token_network_address,
+            chain_id=self.balance_proof.chain_id,
+            nonce=self.balance_proof.nonce,
         )
         return packed
 
@@ -1661,6 +1661,43 @@ class RequestMonitoring(SignedMessage):
             reward_proof_signature=packed.reward_proof_signature,
         )
         return monitoring_request
+
+    def verify_request_monitoring(
+            self,
+            partner_address: typing.Address,
+            requesting_address: typing.Address,
+    ) -> bool:
+        """ One should only use this method to verify integrity and signatures of a
+        RequestMonitoring message. """
+        balance_proof_data = pack_balance_proof(
+            nonce=self.balance_proof.nonce,
+            balance_hash=self.balance_proof.balance_hash,
+            additional_hash=self.balance_proof.additional_hash,
+            channel_identifier=self.balance_proof.channel_identifier,
+            token_network_identifier=self.balance_proof.token_network_address,
+            chain_id=self.balance_proof.chain_id,
+        )
+        blinded_data = pack_balance_proof_update(
+            nonce=self.balance_proof.nonce,
+            balance_hash=self.balance_proof.balance_hash,
+            additional_hash=self.balance_proof.additional_hash,
+            channel_identifier=self.balance_proof.channel_identifier,
+            token_network_identifier=self.balance_proof.token_network_address,
+            chain_id=self.balance_proof.chain_id,
+            partner_signature=self.balance_proof.signature,
+        )
+        reward_proof_data = pack_reward_proof(
+            channel_identifier=self.balance_proof.channel_identifier,
+            reward_amount=self.reward_amount,
+            token_network_address=self.balance_proof.token_network_address,
+            chain_id=self.balance_proof.chain_id,
+            nonce=self.balance_proof.nonce,
+        )
+        return (
+            recover(balance_proof_data, self.balance_proof.signature) == partner_address and
+            recover(blinded_data, self.non_closing_signature) == requesting_address and
+            recover(reward_proof_data, self.reward_proof_signature) == requesting_address
+        )
 
 
 CMDID_TO_CLASS = {
