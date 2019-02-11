@@ -280,10 +280,13 @@ class StateManager:
 
         assert isinstance(iteration, TransitionResult)
 
-        balance_proofs = self.detect_balance_proof_change(self.current_state, iteration.new_state)
-        # we may now have any newly received and accepted balance proofs...
-        if len(balance_proofs):
-            pass
+        # if any balance proofs have changed, create events
+        balance_proofs = self.detect_balance_proof_change(
+            self.current_state,
+            iteration.new_state,
+        )
+        for balance_proof in balance_proofs:
+            iteration.events.append(EventNewBalanceProofReceived(balance_proof))
 
         self.current_state = iteration.new_state
         events = iteration.events
