@@ -67,7 +67,7 @@ def latest_confirmed_block_hash(
         confirmation_blocks: int,
 ) -> BlockHash:
     block_number = max(0, chain_state.block_number - confirmation_blocks)
-    return web3.getBlock(block_number)['hash']
+    return bytes(web3.getBlock(block_number)['hash'])
 
 
 def latest_confirmed_block_hash_from_raiden(raiden) -> BlockHash:
@@ -77,6 +77,10 @@ def latest_confirmed_block_hash_from_raiden(raiden) -> BlockHash:
         web3=raiden.chain.client.web3,
         confirmation_block=raiden.config['blockchain']['confirmation_blocks'],
     )
+
+
+def blockhash_from_blocknumber(blockchain_service, block_number: BlockNumber) -> BlockHash:
+    return bytes(blockchain_service.client.web3.eth.getBlock(block_number)['hash'])
 
 
 def count_token_network_channels(
