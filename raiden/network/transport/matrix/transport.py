@@ -520,6 +520,14 @@ class MatrixTransport(Runnable):
             message: Message instance to be serialized and sent
         """
         room_name = make_room_alias(self.network_id, room)
+        if room_name not in self._global_rooms:
+            room = join_global_room(
+                self._client,
+                room_name,
+                self._config.get('available_servers') or (),
+            )
+            self._global_rooms[room_name] = room
+
         assert self._global_rooms.get(room_name), f'Unknown global room: {room_name!r}'
 
         def _send_global():
