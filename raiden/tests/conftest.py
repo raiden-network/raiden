@@ -23,7 +23,7 @@ from raiden.utils.cli import LogLevelConfigType
 def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
-        choices=['geth'],
+        choices=['geth', 'parity'],
         default='geth',
     )
 

@@ -27,12 +27,12 @@ from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
 from raiden.tests.fixtures.variables import DEFAULT_PASSPHRASE
 from raiden.tests.utils.geth import (
-    GethNodeDescription,
-    geth_node_config,
-    geth_node_config_set_bootnodes,
+    EthNodeDescription,
+    eth_node_config,
+    eth_node_config_set_bootnodes,
     geth_node_to_datadir,
-    geth_run_nodes,
-    geth_wait_and_check,
+    eth_run_nodes,
+    eth_wait_and_check,
 )
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
@@ -215,7 +215,7 @@ def setup_testchain(print_step):
     p2p_port = next(free_port)
     base_datadir = os.environ['RST_DATADIR']
 
-    description = GethNodeDescription(
+    description = EthNodeDescription(
         private_key=TEST_PRIVKEY,
         rpc_port=rpc_port,
         p2p_port=p2p_port,
@@ -226,7 +226,7 @@ def setup_testchain(print_step):
     web3 = Web3(HTTPProvider(endpoint_uri=eth_rpc_endpoint))
     web3.middleware_stack.inject(geth_poa_middleware, layer=0)
 
-    config = geth_node_config(
+    config = eth_node_config(
         description.private_key,
         description.p2p_port,
         description.rpc_port,
@@ -239,13 +239,13 @@ def setup_testchain(print_step):
     })
 
     nodes_configuration = [config]
-    geth_node_config_set_bootnodes(nodes_configuration)
+    eth_node_config_set_bootnodes(nodes_configuration)
     keystore = os.path.join(geth_node_to_datadir(config, base_datadir), 'keystore')
 
     logdir = os.path.join(base_datadir, 'logs')
 
-    processes_list = geth_run_nodes(
-        geth_nodes=[description],
+    processes_list = eth_run_nodes(
+        eth_nodes=[description],
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,
         genesis_file=os.path.join(get_project_root(), 'smoketest_genesis.json'),
@@ -257,7 +257,7 @@ def setup_testchain(print_step):
     try:
         # the marker is hardcoded in the genesis file
         random_marker = remove_0x_prefix(encode_hex(b'raiden'))
-        geth_wait_and_check(
+        eth_wait_and_check(
             web3=web3,
             accounts_addresses=[],
             random_marker=random_marker,
