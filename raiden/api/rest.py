@@ -1237,7 +1237,10 @@ class RestAPI:
         return result
 
     def get_pending_transfers(self, token_address=None, partner_address=None):
-        return api_response(self.raiden_api.get_pending_transfers(
-            token_address=token_address,
-            partner_address=partner_address,
-        ))
+        try:
+            return api_response(self.raiden_api.get_pending_transfers(
+                token_address=token_address,
+                partner_address=partner_address,
+            ))
+        except (ChannelNotFound, UnknownTokenAddress) as e:
+            return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
