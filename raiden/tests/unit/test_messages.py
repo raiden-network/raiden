@@ -148,3 +148,103 @@ def test_update_pfs():
     assert message.signature == b''
     message.sign(signer)
     assert recover(message._data_to_sign(), message.signature) == ADDRESS
+
+
+def test_tamper_request_monitoring_():
+    """ This test shows ways, how the current implementation of the RequestMonitoring's
+    signature scheme might be used by an attacker to tamper with the BalanceProof that is
+    incorporated in the RequestMonitoring Message."""
+    partner_signer = LocalSigner(PARTNER_PRIVKEY)
+
+    balance_proof = make_balance_proof(signer=partner_signer, amount=1)
+    partner_signed_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
+        balance_proof,
+    )
+    request_monitoring = RequestMonitoring(
+        onchain_balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+    )
+    request_monitoring.sign(signer)
+
+    """This is the signature, that is supposed to authenticate the message that a monitoring
+    service receives from a node. Note: It is generated on a valid Balance proof here and reused to
+    authenticate invalid messages throughout the rest of the test."""
+    exploited_signature = request_monitoring.reward_proof_signature
+
+    reward_proof_data = pack_reward_proof(
+        request_monitoring.balance_proof.channel_identifier,
+        request_monitoring.reward_amount,
+        request_monitoring.balance_proof.token_network_address,
+        request_monitoring.balance_proof.chain_id,
+        request_monitoring.balance_proof.nonce,
+    )
+
+    """An attacker can change the balance hash"""
+    partner_signed_balance_proof.balance_hash = 'tampered'.encode()
+
+    tampered_balance_hash_request_monitoring = RequestMonitoring(
+        onchain_balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+    )
+
+    tampered_balance_hash_reward_proof_data = pack_reward_proof(
+        tampered_balance_hash_request_monitoring.balance_proof.channel_identifier,
+        tampered_balance_hash_request_monitoring.reward_amount,
+        tampered_balance_hash_request_monitoring.balance_proof.token_network_address,
+        tampered_balance_hash_request_monitoring.balance_proof.chain_id,
+        tampered_balance_hash_request_monitoring.balance_proof.nonce,
+    )
+    """The signature works/is unaffected by that change"""
+    assert recover(reward_proof_data, exploited_signature) == recover(
+        tampered_balance_hash_reward_proof_data,
+        exploited_signature,
+    )
+    assert recover(tampered_balance_hash_reward_proof_data, exploited_signature) == ADDRESS
+
+    """An attacker can change the additional_hash"""
+    partner_signed_balance_proof.additional_hash = 'tampered'.encode()
+
+    tampered_additional_hash_request_monitoring = RequestMonitoring(
+        onchain_balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+    )
+
+    tampered_additional_hash_reward_proof_data = pack_reward_proof(
+        tampered_additional_hash_request_monitoring.balance_proof.channel_identifier,
+        tampered_additional_hash_request_monitoring.reward_amount,
+        tampered_additional_hash_request_monitoring.balance_proof.token_network_address,
+        tampered_additional_hash_request_monitoring.balance_proof.chain_id,
+        tampered_additional_hash_request_monitoring.balance_proof.nonce,
+    )
+
+    """The signature works/is unaffected by that change"""
+    assert recover(reward_proof_data, exploited_signature) == recover(
+        tampered_additional_hash_reward_proof_data,
+        exploited_signature,
+    )
+    assert recover(tampered_additional_hash_reward_proof_data,
+                   exploited_signature) == ADDRESS
+
+    """An attacker can change the non_closing_signature"""
+    partner_signed_balance_proof.non_closing_signature = 'tampered'.encode()
+
+    tampered_non_closing_signature_request_monitoring = RequestMonitoring(
+        onchain_balance_proof=partner_signed_balance_proof,
+        reward_amount=55,
+    )
+
+    tampered_non_closing_signature_reward_proof_data = pack_reward_proof(
+        tampered_non_closing_signature_request_monitoring.balance_proof.channel_identifier,
+        tampered_non_closing_signature_request_monitoring.reward_amount,
+        tampered_non_closing_signature_request_monitoring.balance_proof.token_network_address,
+        tampered_non_closing_signature_request_monitoring.balance_proof.chain_id,
+        tampered_non_closing_signature_request_monitoring.balance_proof.nonce,
+    )
+
+    """The signature works/is unaffected by that change"""
+    assert recover(reward_proof_data, exploited_signature) == recover(
+        tampered_non_closing_signature_reward_proof_data,
+        exploited_signature,
+    )
+    assert recover(tampered_non_closing_signature_reward_proof_data, exploited_signature) == \
+        ADDRESS
