@@ -150,10 +150,10 @@ def test_update_pfs():
     assert recover(message._data_to_sign(), message.signature) == ADDRESS
 
 
-def test_tamper_request_monitoring_():
+def test_tamper_request_monitoring():
     """ This test shows ways, how the current implementation of the RequestMonitoring's
     signature scheme might be used by an attacker to tamper with the BalanceProof that is
-    incorporated in the RequestMonitoring Message."""
+    incorporated in the RequestMonitoring message, if not all three signatures are verified."""
     partner_signer = LocalSigner(PARTNER_PRIVKEY)
 
     balance_proof = make_balance_proof(signer=partner_signer, amount=1)
@@ -166,9 +166,9 @@ def test_tamper_request_monitoring_():
     )
     request_monitoring.sign(signer)
 
-    """This is the signature, that is supposed to authenticate the message that a monitoring
-    service receives from a node. Note: It is generated on a valid Balance proof here and reused to
-    authenticate invalid messages throughout the rest of the test."""
+    # This is the signature, that is supposed to authenticate the message that a monitoring
+    # service receives from a node. Note: It is generated on a valid Balance proof here and reused
+    # to authenticate invalid messages throughout the rest of the test.
     exploited_signature = request_monitoring.reward_proof_signature
 
     reward_proof_data = pack_reward_proof(
@@ -179,7 +179,7 @@ def test_tamper_request_monitoring_():
         request_monitoring.balance_proof.nonce,
     )
 
-    """An attacker can change the balance hash"""
+    # An attacker might change the balance hash
     partner_signed_balance_proof.balance_hash = 'tampered'.encode()
 
     tampered_balance_hash_request_monitoring = RequestMonitoring(
@@ -194,14 +194,22 @@ def test_tamper_request_monitoring_():
         tampered_balance_hash_request_monitoring.balance_proof.chain_id,
         tampered_balance_hash_request_monitoring.balance_proof.nonce,
     )
-    """The signature works/is unaffected by that change"""
-    assert recover(reward_proof_data, exploited_signature) == recover(
+    # The signature works/is unaffected by that change...
+    recovered_address_tampered = recover(
         tampered_balance_hash_reward_proof_data,
         exploited_signature,
     )
+
+    assert recover(reward_proof_data, exploited_signature) == recovered_address_tampered
     assert recover(tampered_balance_hash_reward_proof_data, exploited_signature) == ADDRESS
 
-    """An attacker can change the additional_hash"""
+    # ...but overall verification fails
+    assert not tampered_balance_hash_request_monitoring.verify_request_monitoring(
+        PARTNER_ADDRESS,
+        ADDRESS,
+    )
+
+    # An attacker might change the additional_hash
     partner_signed_balance_proof.additional_hash = 'tampered'.encode()
 
     tampered_additional_hash_request_monitoring = RequestMonitoring(
@@ -217,15 +225,22 @@ def test_tamper_request_monitoring_():
         tampered_additional_hash_request_monitoring.balance_proof.nonce,
     )
 
-    """The signature works/is unaffected by that change"""
-    assert recover(reward_proof_data, exploited_signature) == recover(
+    # The signature works/is unaffected by that change...
+
+    recovered_address_tampered = recover(
         tampered_additional_hash_reward_proof_data,
         exploited_signature,
     )
-    assert recover(tampered_additional_hash_reward_proof_data,
-                   exploited_signature) == ADDRESS
 
-    """An attacker can change the non_closing_signature"""
+    assert recover(reward_proof_data, exploited_signature) == recovered_address_tampered
+    assert recovered_address_tampered == ADDRESS
+
+    # ...but overall verification fails
+    assert not tampered_balance_hash_request_monitoring.verify_request_monitoring(
+        PARTNER_ADDRESS,
+        ADDRESS,
+    )
+    # An attacker can change the non_closing_signature
     partner_signed_balance_proof.non_closing_signature = 'tampered'.encode()
 
     tampered_non_closing_signature_request_monitoring = RequestMonitoring(
@@ -241,10 +256,17 @@ def test_tamper_request_monitoring_():
         tampered_non_closing_signature_request_monitoring.balance_proof.nonce,
     )
 
-    """The signature works/is unaffected by that change"""
-    assert recover(reward_proof_data, exploited_signature) == recover(
+    # The signature works/is unaffected by that change...
+
+    recovered_address_tampered = recover(
         tampered_non_closing_signature_reward_proof_data,
         exploited_signature,
     )
-    assert recover(tampered_non_closing_signature_reward_proof_data, exploited_signature) == \
-        ADDRESS
+    assert recover(reward_proof_data, exploited_signature) == recovered_address_tampered
+    assert recovered_address_tampered == ADDRESS
+
+    # ...but overall verification fails
+    assert not tampered_non_closing_signature_request_monitoring.verify_request_monitoring(
+        PARTNER_ADDRESS,
+        ADDRESS,
+    )
