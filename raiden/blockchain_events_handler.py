@@ -41,13 +41,13 @@ def handle_tokennetwork_new(raiden: 'RaidenService', event: Event):
     block_number = data['block_number']
     token_network_address = args['token_network_address']
     token_address = typing.TokenAddress(args['token_address'])
-    latest_block_hash = views.latest_confirmed_block_hash_from_raiden(raiden)
+    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
 
     token_network_proxy = raiden.chain.token_network(token_network_address)
     raiden.blockchain_events.add_token_network_listener(
         token_network_proxy=token_network_proxy,
         contract_manager=raiden.contract_manager,
-        from_block=block_number,
+        from_block=block_hash,
     )
 
     token_network_state = TokenNetworkState(
@@ -61,7 +61,7 @@ def handle_tokennetwork_new(raiden: 'RaidenService', event: Event):
         transaction_hash=transaction_hash,
         payment_network_identifier=event.originating_contract,
         token_network=token_network_state,
-        block_number=block_number,
+        block_hash=block_hash,
     )
     raiden.handle_state_change(new_token_network)
 
