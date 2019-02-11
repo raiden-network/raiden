@@ -11,8 +11,11 @@ from raiden.messages import Processed, SecretRequest
 from raiden.network.transport.matrix import MatrixTransport, UserPresence, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
+from raiden.raiden_event_handler import RaidenMonitoringEventHandler
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
+from raiden.tests.utils.messages import make_balance_proof
 from raiden.tests.utils.mocks import MockRaidenService
+from raiden.transfer.architecture import EventNewBalanceProofReceived
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state_change import ActionUpdateTransportAuthData
@@ -572,5 +575,55 @@ def test_matrix_send_global(
             Processed(10),
         )
 
+    transport.stop()
+    transport.get()
+
+
+def test_monitoring_global_messages(
+        local_matrix_servers,
+        private_rooms,
+        retry_interval,
+        retries_before_backoff,
+):
+    """
+    Test that RaidenMonitoringEventHandler sends RequestMonitoring messages to global
+    'monitoring' room on EventNewBalanceProofReceived.
+    """
+    transport = MatrixTransport({
+        'global_rooms': ['discovery', 'monitoring'],
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [local_matrix_servers[0]],
+        'private_rooms': private_rooms,
+    })
+    transport._client.api.retry_timeout = 0
+    transport._send_raw = MagicMock()
+    raiden_service = MockRaidenService(None)
+
+    transport.start(
+        raiden_service,
+        raiden_service.message_handler,
+        None,
+    )
+
+    ms_room_name = transport._make_room_alias('monitoring')
+    ms_room = transport._global_rooms.get(ms_room_name)
+    assert isinstance(ms_room, Room)
+    ms_room.send_text = MagicMock(spec=ms_room.send_text)
+
+    raiden_service.transport = transport
+    transport.log = MagicMock()
+    new_balance_proof_event = EventNewBalanceProofReceived(
+        make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1),
+    )
+    RaidenMonitoringEventHandler().on_raiden_event(
+        raiden_service,
+        new_balance_proof_event,
+    )
+    gevent.idle()
+
+    assert ms_room.send_text.call_count == 1
     transport.stop()
     transport.get()
