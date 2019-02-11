@@ -281,11 +281,10 @@ class StateManager:
         assert isinstance(iteration, TransitionResult)
 
         # if any balance proofs have changed, create events
-        balance_proofs = self.detect_balance_proof_change(
-            self.current_state,
-            iteration.new_state,
-        )
-        for balance_proof in balance_proofs:
+        for balance_proof in self.detect_balance_proof_change(
+                self.current_state,
+                iteration.new_state,
+        ):
             iteration.events.append(EventNewBalanceProofReceived(balance_proof))
 
         self.current_state = iteration.new_state
@@ -298,47 +297,63 @@ class StateManager:
 
     def detect_balance_proof_change(self, old_state, current_state):
         """Compare two states for any changed received balance_proofs"""
-        def go(input_, operations):
-            """Helper function to shorthand chained attribute access"""
-            for operation in operations:
-                try:
-                    input_ = operation[0](input_, operation[1])
-                except AttributeError:
-                    return []
-            return input_
+        if old_state == current_state:
+            return
+        # Assuming, there is no transition None->new balance proof:
+        if not hasattr(old_state, 'identifiers_to_paymentnetworks'):
+            return
+        for old_payment_network_identifier, current_payment_network_identifier in zip(
+                old_state.identifiers_to_paymentnetworks,
+                current_state.identifiers_to_paymentnetworks,
+        ):
 
-        ops = []
-        balance_proofs = []
-
-        ops.append((getattr, 'identifiers_to_paymentnetworks'))
-        for payment_network_identifier in go(current_state, ops):
-            if payment_network_identifier not in go(old_state, ops):
+            if current_payment_network_identifier is None:
                 continue
-            ops.append((dict.get, payment_network_identifier))
-            ops.append((getattr, 'tokenidentifiers_to_tokennetworks'))
+            old_payment_network = old_state.identifiers_to_paymentnetworks[
+                old_payment_network_identifier
+            ]
+            current_payment_network = current_state.identifiers_to_paymentnetworks[
+                current_payment_network_identifier
+            ]
+            if old_payment_network == current_payment_network:
+                continue
 
-            for token_identifier in go(current_state, ops):
-                if token_identifier not in go(old_state, ops):
+            for old_token_network_identifier, current_token_network_identifier in zip(
+                    old_payment_network.tokenidentifiers_to_tokennetworks,
+                    current_payment_network.tokenidentifiers_to_tokennetworks,
+            ):
+
+                if current_token_network_identifier is None:
                     continue
-                ops.append((dict.get, token_identifier))
-                ops.append((getattr, 'channelidentifiers_to_channels'))
+                old_token_network = old_payment_network.tokenidentifiers_to_tokennetworks[
+                    old_token_network_identifier
+                ]
+                current_token_network = current_payment_network.tokenidentifiers_to_tokennetworks[
+                    current_token_network_identifier
+                ]
+                if old_token_network == current_token_network:
+                    continue
 
-                for channel_identifier in go(current_state, ops):
-                    if channel_identifier not in go(old_state, ops):
+                for old_channel_identifier, current_channel_identifier in zip(
+                        old_token_network.channelidentifiers_to_channels,
+                        current_token_network.channelidentifiers_to_channels,
+                ):
+                    if current_channel_identifier is None:
                         continue
-                    ops.append((dict.get, channel_identifier))
-
-                    channel_old = go(old_state, ops)
-                    channel_current = go(current_state, ops)
+                    old_channel = old_token_network.channelidentifiers_to_channels[
+                        old_channel_identifier
+                    ]
+                    current_channel = current_token_network.channelidentifiers_to_channels[
+                        current_channel_identifier
+                    ]
+                    if old_channel == current_channel:
+                        continue
                     if (
-                            channel_old.partner_state.balance_proof !=
-                            channel_current.partner_state.balance_proof
+                            old_channel.partner_state.balance_proof !=
+                            current_channel.partner_state.balance_proof and
+                            current_channel.partner_state.balance_proof is not None
                     ):
-                        balance_proofs.append(channel_current.partner_state.balance_proof)
-                    ops = ops[:-1]
-                ops = ops[:-2]
-            ops = ops[:-2]
-        return balance_proofs
+                        yield current_channel.partner_state.balance_proof
 
     def __eq__(self, other):
         return (
