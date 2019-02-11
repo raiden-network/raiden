@@ -6,7 +6,7 @@ import gevent
 import pytest
 from gevent import Timeout
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import MONITORING_BROADCASTING_ROOM, UINT64_MAX
 from raiden.messages import Processed, SecretRequest
 from raiden.network.transport.matrix import MatrixTransport, UserPresence, _RetryQueue
 from raiden.network.transport.matrix.client import Room
@@ -539,7 +539,7 @@ def test_matrix_send_global(
         private_rooms,
 ):
     transport = MatrixTransport({
-        'global_rooms': ['discovery', 'monitoring'],
+        'global_rooms': ['discovery', MONITORING_BROADCASTING_ROOM],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -550,7 +550,7 @@ def test_matrix_send_global(
     transport.start(MockRaidenService(None), MessageHandler(set()), '')
     gevent.idle()
 
-    ms_room_name = make_room_alias(transport.network_id, 'monitoring')
+    ms_room_name = make_room_alias(transport.network_id, MONITORING_BROADCASTING_ROOM)
     ms_room = transport._global_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
 
@@ -560,7 +560,7 @@ def test_matrix_send_global(
         message = Processed(i)
         transport._raiden_service.sign(message)
         transport.send_global(
-            'monitoring',
+            MONITORING_BROADCASTING_ROOM,
             message,
         )
 
@@ -580,10 +580,10 @@ def test_monitoring_global_messages(
 ):
     """
     Test that RaidenMonitoringEventHandler sends RequestMonitoring messages to global
-    'monitoring' room on EventNewBalanceProofReceived.
+    MONITORING_BROADCASTING_ROOM room on EventNewBalanceProofReceived.
     """
     transport = MatrixTransport({
-        'global_rooms': ['discovery', 'monitoring'],
+        'global_rooms': ['discovery', MONITORING_BROADCASTING_ROOM],
         'retries_before_backoff': retries_before_backoff,
         'retry_interval': retry_interval,
         'server': local_matrix_servers[0],
@@ -601,7 +601,7 @@ def test_monitoring_global_messages(
         None,
     )
 
-    ms_room_name = transport._make_room_alias('monitoring')
+    ms_room_name = transport._make_room_alias(MONITORING_BROADCASTING_ROOM)
     ms_room = transport._global_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
