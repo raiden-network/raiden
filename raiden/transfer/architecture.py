@@ -137,6 +137,22 @@ class SendMessageEvent(Event):
         return not self.__eq__(other)
 
 
+class EventNewBalanceProofReceived(Event):
+    """ Event for newly received balance proofs. Useful for notifying monitoring services. """
+
+    def __init__(self, balance_proof):
+        self.balance_proof = balance_proof
+
+    def to_dict(self):
+        return {
+            'balance_proof': self.balance_proof.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['balance_proof'])
+
+
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
 
