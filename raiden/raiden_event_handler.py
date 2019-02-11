@@ -1,7 +1,7 @@
 import structlog
 from eth_utils import to_checksum_address, to_hex
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
+from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, MONITORING_BROADCASTING_ROOM
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import RequestMonitoring, message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
@@ -569,6 +569,6 @@ class RaidenMonitoringEventHandler(RaidenEventHandler):
         )
         monitoring_message.sign(raiden.signer)
         raiden.transport.send_global(
-            'monitoring',
+            MONITORING_BROADCASTING_ROOM,
             monitoring_message,
         )
