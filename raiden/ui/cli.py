@@ -207,7 +207,10 @@ def options(func):
             ),
             option(
                 '--pathfinding-service-address',
-                help='"host:port" for the raiden pathfinding service to request paths.',
+                help=(
+                    'URL for the raiden pathfinding service to request paths.\n'
+                    'Example: https://pfs-ropsten.services-dev.raiden.network'
+                ),
                 type=str,
                 show_default=True,
             ),
