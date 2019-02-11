@@ -41,6 +41,7 @@ def handle_tokennetwork_new(raiden: 'RaidenService', event: Event):
     block_number = data['block_number']
     token_network_address = args['token_network_address']
     token_address = typing.TokenAddress(args['token_address'])
+    latest_block_hash = views.latest_confirmed_block_hash_from_raiden(raiden)
 
     token_network_proxy = raiden.chain.token_network(token_network_address)
     raiden.blockchain_events.add_token_network_listener(
