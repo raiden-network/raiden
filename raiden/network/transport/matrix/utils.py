@@ -18,11 +18,14 @@ from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address
+from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
 
 JOIN_RETRIES = 5
 userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
+room_name_separator = '_'
+room_name_prefix = 'raiden'
 
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
@@ -304,3 +307,20 @@ def make_client(servers: Sequence[str], *args, **kwargs) -> GMatrixClient:
             'Unable to find a reachable Matrix server. Please check your network connectivity.',
         ) from last_ex
     return client
+
+
+def make_room_alias(chain_id: int, *suffixes: str) -> str:
+    """Given a chain_id and any number of suffixes (global room names, pair of addresses),
+    compose and return the canonical room name for raiden network
+
+    network name from raiden_contracts.constants.ID_TO_NETWORKNAME is used for name, if available,
+    else numeric id
+    Params:
+        chain_id: numeric blockchain id for that room, as raiden rooms are per-chain specific
+        *suffixes: one or more suffixes for the name
+    Returns:
+        Qualified full room name. e.g.:
+            make_room_alias(3, 'discovery') == 'raiden_ropsten_discovery'
+    """
+    network_name = ID_TO_NETWORKNAME.get(chain_id, str(chain_id))
+    return room_name_separator.join([room_name_prefix, network_name, *suffixes])
