@@ -478,7 +478,13 @@ class RaidenService(Runnable):
             state_change=_redact_secret(serialize.JSONSerializer.serialize(state_change)),
         )
 
+        old_state = views.state_from_raiden(self)
+
         event_list = self.wal.log_and_dispatch(state_change)
+
+        current_state = views.state_from_raiden(self)
+        for balance_proof in views.detect_balance_proof_change(old_state, current_state):
+            event_list.append(EventNewBalanceProofReceived(balance_proof))
 
         if self.dispatch_events_lock.locked():
             return []
