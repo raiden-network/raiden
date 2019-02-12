@@ -327,6 +327,7 @@ def test_handle_onchain_secretreveal():
         secrethash=EMPTY_HASH_KECCAK,
         secret=EMPTY_HASH,
         block_number=block_number_prior_the_expiration,
+        block_hash=factories.make_block_hash(),
     )
     onchain_secret_reveal_iteration = target.state_transition(
         target_state=offchain_secret_reveal_iteration.new_state,

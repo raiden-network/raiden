@@ -73,10 +73,11 @@ def test_write_read_log():
     wal = new_wal(state_transition_noop)
 
     block_number = 1337
+    block_hash = factories.make_transaction_hash()
     block = Block(
         block_number=block_number,
         gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
+        block_hash=block_hash,
     )
     unlocked_amount = 10
     returned_amount = 5
@@ -92,6 +93,7 @@ def test_write_read_log():
         unlocked_amount=unlocked_amount,
         returned_tokens=returned_amount,
         block_number=block_number,
+        block_hash=block_hash,
     )
 
     state_changes1 = wal.storage.get_statechanges_by_identifier(

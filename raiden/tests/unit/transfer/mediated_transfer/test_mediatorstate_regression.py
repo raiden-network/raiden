@@ -519,11 +519,12 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     mediator.state_transition(
         mediator_state=mediator_state,
         state_change=ContractReceiveSecretReveal(
-            transaction_hash,
-            secret_registry_address,
-            secrethash,
-            secret,
-            setup.block_number,
+            transaction_hash=transaction_hash,
+            secret_registry_address=secret_registry_address,
+            secrethash=secrethash,
+            secret=secret,
+            block_number=setup.block_number,
+            block_hash=factories.make_block_hash(),
         ),
         channelidentifiers_to_channels=setup.channel_map,
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,

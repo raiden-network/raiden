@@ -28,6 +28,7 @@ def create_square_network_topology(
     typing.List[NettingChannelState],
 ]:
     open_block_number = 10
+    open_block_hash = factories.make_block_hash()
     pseudo_random_generator = random.Random()
     address1 = factories.make_address()
     address2 = factories.make_address()
@@ -62,12 +63,14 @@ def create_square_network_topology(
         token_network_identifier=token_network_state.address,
         channel_state=channel_state1,
         block_number=open_block_number,
+        block_hash=open_block_hash,
     )
     channel_new_state_change2 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
         token_network_identifier=token_network_state.address,
         channel_state=channel_state2,
         block_number=open_block_number,
+        block_hash=open_block_hash,
     )
 
     channel_new_iteration1 = token_network.state_transition(
@@ -98,6 +101,7 @@ def create_square_network_topology(
         participant1=address2,
         participant2=address3,
         block_number=open_block_number,
+        block_hash=open_block_hash,
     )
 
     channel_new_iteration3 = token_network.state_transition(
@@ -119,6 +123,7 @@ def create_square_network_topology(
         participant1=address3,
         participant2=address1,
         block_number=open_block_number,
+        block_hash=open_block_hash,
     )
     channel_new_iteration4 = token_network.state_transition(
         payment_network_identifier=payment_network_state.address,

@@ -311,6 +311,10 @@ class RaidenService(Runnable):
             # network, to reconstruct all token network graphs and find opened
             # channels
             last_log_block_number = self.query_start_block
+            last_log_block_hash = views.blockhash_from_blocknumber(
+                self.chain,
+                last_log_block_number,
+            )
 
             state_change = ActionInitChain(
                 random.Random(),
@@ -325,9 +329,10 @@ class RaidenService(Runnable):
                 [],  # empty list of token network states as it's the node's startup
             )
             state_change = ContractReceiveNewPaymentNetwork(
-                constants.EMPTY_HASH,
-                payment_network,
-                last_log_block_number,
+                transaction_hash=constants.EMPTY_HASH,
+                payment_network=payment_network,
+                block_number=last_log_block_number,
+                block_hash=last_log_block_hash,
             )
             self.handle_state_change(state_change)
         else:
