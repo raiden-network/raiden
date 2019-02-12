@@ -562,6 +562,22 @@ class EventUnlockFailed(Event):
         return restored
 
 
+class EventNewBalanceProofReceived(Event):
+    """ Event for newly received balance proofs. Useful for notifying monitoring services. """
+
+    def __init__(self, balance_proof):
+        self.balance_proof = balance_proof
+
+    def to_dict(self):
+        return {
+            'balance_proof': self.balance_proof.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(data['balance_proof'])
+
+
 class EventUnlockClaimSuccess(Event):
     """ Event emitted when a lock claim succeded. """
 
