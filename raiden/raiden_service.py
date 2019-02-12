@@ -638,11 +638,23 @@ class RaidenService(Runnable):
         """ populate targets_to_identifiers_to_statuses.
         """
         payment_tasks = chain_state.payment_mapping.secrethashes_to_task
-        for secrethash, task in payment_tasks.items():
+        for task in payment_tasks.values():
             if not isinstance(task, InitiatorTask):
                 continue
 
-            transfer = task.manager_state.initiator_transfers[secrethash].transfer
+            transfers_list = task.manager_state.initiator_transfers
+
+            # PaymentStatus needs to be registered with data
+            # related to the transfer regardless of which one.
+            # What this means is that the initial transfer with
+            # the task's secrethash might have been removed;
+            # Because it's lock expired or the secret is known.
+            # But since the payment status needs to only
+            # know about target, payment_identifier and
+            # balance_proof, any transfer in the list should
+            # be fine to use to register the payment status.
+            secrethash = list(transfers_list.keys())[0]
+            transfer = transfers_list[secrethash].transfer
             self._register_payment_status(
                 target=transfer.target,
                 identifier=transfer.payment_identifier,
