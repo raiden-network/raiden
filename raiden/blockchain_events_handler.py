@@ -55,6 +55,7 @@ def handle_tokennetwork_new(raiden, event: Event):
         transaction_hash=transaction_hash,
         payment_network_identifier=event.originating_contract,
         token_network=token_network_state,
+        block_number=block_number,
         block_hash=block_hash,
     )
     raiden.handle_state_change(new_token_network)
@@ -63,6 +64,7 @@ def handle_tokennetwork_new(raiden, event: Event):
 def handle_channel_new(raiden, event: Event):
     data = event.event_data
     block_number = data['block_number']
+    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
     args = data['args']
     token_network_identifier = event.originating_contract
     transaction_hash = event.event_data['transaction_hash']
@@ -92,6 +94,7 @@ def handle_channel_new(raiden, event: Event):
             token_network_identifier=token_network_identifier,
             channel_state=channel_state,
             block_number=block_number,
+            block_hash=block_hash,
         )
         raiden.handle_state_change(new_channel)
 
@@ -109,6 +112,7 @@ def handle_channel_new(raiden, event: Event):
             participant1=participant1,
             participant2=participant2,
             block_number=block_number,
+            block_hash=block_hash,
         )
         raiden.handle_state_change(new_route)
 
@@ -123,6 +127,7 @@ def handle_channel_new_balance(raiden, event: Event):
     data = event.event_data
     args = data['args']
     block_number = data['block_number']
+    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
     channel_identifier = args['channel_identifier']
     token_network_identifier = event.originating_contract
     participant_address = args['participant']
@@ -154,6 +159,7 @@ def handle_channel_new_balance(raiden, event: Event):
             channel_identifier=channel_identifier,
             deposit_transaction=deposit_transaction,
             block_number=block_number,
+            block_hash=block_hash,
         )
         raiden.handle_state_change(newbalance_statechange)
 
@@ -178,6 +184,7 @@ def handle_channel_closed(raiden, event: Event):
     args = data['args']
     channel_identifier = args['channel_identifier']
     transaction_hash = data['transaction_hash']
+    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -194,6 +201,7 @@ def handle_channel_closed(raiden, event: Event):
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
             block_number=block_number,
+            block_hash=block_hash,
         )
         raiden.handle_state_change(channel_closed)
     else:
@@ -203,6 +211,7 @@ def handle_channel_closed(raiden, event: Event):
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
             block_number=block_number,
+            block_hash=block_hash,
         )
         raiden.handle_state_change(channel_closed)
 
@@ -213,6 +222,8 @@ def handle_channel_update_transfer(raiden, event: Event):
     args = data['args']
     channel_identifier = args['channel_identifier']
     transaction_hash = data['transaction_hash']
+    block_number = data['block_number']
+    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -226,7 +237,8 @@ def handle_channel_update_transfer(raiden, event: Event):
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
             nonce=args['nonce'],
-            block_number=data['block_number'],
+            block_number=block_number,
+            block_hash=block_hash,
         )
         raiden.handle_state_change(channel_transfer_updated)
 
@@ -235,6 +247,7 @@ def handle_channel_settled(raiden, event: Event):
     data = event.event_data
     token_network_identifier = event.originating_contract
     channel_identifier = data['args']['channel_identifier']
+    block_number = data['block_number']
 
     transaction_hash = data['transaction_hash']
 
@@ -249,7 +262,8 @@ def handle_channel_settled(raiden, event: Event):
             transaction_hash=transaction_hash,
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
-            block_number=data['block_number'],
+            block_number=block_number,
+            block_hash=views.blockhash_from_blocknumber(raiden.chain, block_number),
         )
         raiden.handle_state_change(channel_settled)
 
@@ -258,7 +272,8 @@ def handle_channel_batch_unlock(raiden, event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
     args = data['args']
-
+    block_number = data['block_number']
+    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
     transaction_hash = data['transaction_hash']
 
     unlock_state_change = ContractReceiveChannelBatchUnlock(
@@ -269,7 +284,8 @@ def handle_channel_batch_unlock(raiden, event: Event):
         locksroot=args['locksroot'],
         unlocked_amount=args['unlocked_amount'],
         returned_tokens=args['returned_tokens'],
-        block_number=data['block_number'],
+        block_number=block_number,
+        block_hash=block_hash,
     )
 
     raiden.handle_state_change(unlock_state_change)
@@ -279,15 +295,17 @@ def handle_secret_revealed(raiden, event: Event):
     secret_registry_address = event.originating_contract
     data = event.event_data
     args = data['args']
+    block_number = data['block_number']
+    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
 
     transaction_hash = data['transaction_hash']
-
     registeredsecret_state_change = ContractReceiveSecretReveal(
         transaction_hash=transaction_hash,
         secret_registry_address=secret_registry_address,
         secrethash=args['secrethash'],
         secret=args['secret'],
-        block_number=data['block_number'],
+        block_number=block_number,
+        block_hash=block_hash,
     )
 
     raiden.handle_state_change(registeredsecret_state_change)

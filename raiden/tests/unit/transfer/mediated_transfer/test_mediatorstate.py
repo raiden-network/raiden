@@ -950,6 +950,7 @@ def test_mediator_secret_reveal_empty_hash():
         secrethash=secrethash,
         secret=EMPTY_HASH,
         block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
     iteration = mediator.state_transition(
         mediator_state=current_state,
@@ -1497,6 +1498,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
     channel_close_transition = channel.state_transition(
         channel_state=channel_state,
