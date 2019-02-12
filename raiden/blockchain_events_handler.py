@@ -256,7 +256,6 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     channel_identifier = data['args']['channel_identifier']
     block_number = data['block_number']
     block_hash = bytes(data['blockHash'])
-
     transaction_hash = data['transaction_hash']
 
     channel_state = views.get_channelstate_by_token_network_identifier(
@@ -305,7 +304,6 @@ def handle_secret_revealed(raiden: 'RaidenService', event: Event):
     args = data['args']
     block_number = data['block_number']
     block_hash = bytes(data['blockHash'])
-
     transaction_hash = data['transaction_hash']
     registeredsecret_state_change = ContractReceiveSecretReveal(
         transaction_hash=transaction_hash,
