@@ -92,7 +92,7 @@ pytest==4.1.1
 python-dateutil==2.7.5
 pytoml==0.1.19
 pytz==2018.5
-raiden-contracts==0.9.0
+raiden-contracts==0.10.1
 raiden-webui==0.8.0
 requests==2.20.0
 rlp==1.0.2
