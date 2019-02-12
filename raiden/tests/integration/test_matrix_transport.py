@@ -15,8 +15,10 @@ from raiden.raiden_event_handler import RaidenMonitoringEventHandler
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.messages import make_balance_proof
 from raiden.tests.utils.mocks import MockRaidenService
-from raiden.transfer.architecture import EventNewBalanceProofReceived
-from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.mediated_transfer.events import (
+    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    EventNewBalanceProofReceived,
+)
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state_change import ActionUpdateTransportAuthData
 from raiden.utils import pex
