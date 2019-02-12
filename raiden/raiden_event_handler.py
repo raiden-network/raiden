@@ -6,7 +6,7 @@ from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import RequestMonitoring, message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.storage.restore import channel_state_until_state_change
-from raiden.transfer.architecture import Event, EventNewBalanceProofReceived
+from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.channel import get_batch_unlock
 from raiden.transfer.events import (
@@ -25,6 +25,7 @@ from raiden.transfer.events import (
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer.events import (
+    EventNewBalanceProofReceived,
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
     EventUnlockFailed,

@@ -4,8 +4,8 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import mediated_transfer
 from raiden.transfer import views
-from raiden.transfer.architecture import EventNewBalanceProofReceived
 from raiden.transfer.mediated_transfer.events import (
+    EventNewBalanceProofReceived,
     EventUnlockClaimSuccess,
     EventUnlockSuccess,
     SendSecretRequest,
