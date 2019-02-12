@@ -93,10 +93,11 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         partner_address = self.new_channel()
 
         channel_new_state_change = ContractReceiveChannelNew(
-            factories.make_transaction_hash(),
-            self.token_network_id,
-            self.address_to_channel[partner_address],
-            self.block_number,
+            transaction_hash=factories.make_transaction_hash(),
+            token_network_identifier=self.token_network_id,
+            channel_state=self.address_to_channel[partner_address],
+            block_number=self.block_number,
+            block_hash=factories.make_block_hash(),
         )
         node.state_transition(self.chain_state, channel_new_state_change)
 
@@ -427,6 +428,7 @@ class OnChainMixin:
             token_network_identifier=channel.token_network_identifier,
             channel_identifier=channel.identifier,
             block_number=self.block_number + 1,
+            block_hash=factories.make_block_hash(),
         )
 
         node.state_transition(self.chain_state, channel_settled_state_change)

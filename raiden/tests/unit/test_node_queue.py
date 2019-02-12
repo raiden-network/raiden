@@ -134,6 +134,7 @@ def test_channel_closed_must_clear_ordered_messages(
         token_network_identifier=token_network_state.address,
         channel_identifier=channel_identifier,
         block_number=1,
+        block_hash=factories.make_block_hash(),
     )
 
     iteration = node.handle_state_change(

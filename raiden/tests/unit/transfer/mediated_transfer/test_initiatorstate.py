@@ -1060,6 +1060,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
     closed.
     """
     block_number = 10
+    block_hash = factories.make_block_hash()
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=block_number)
 
     channel_closed = ContractReceiveChannelClosed(
@@ -1068,6 +1069,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
         token_network_identifier=setup.channel.token_network_identifier,
         channel_identifier=setup.channel.identifier,
         block_number=block_number,
+        block_hash=block_hash,
     )
     channel_close_transition = channel.state_transition(
         channel_state=setup.channel,
@@ -1081,7 +1083,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
     block = Block(
         block_number=expiration_block_number,
         gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
+        block_hash=factories.make_block_hash(),
     )
     channel_map = {channel_state.identifier: channel_state}
     iteration = initiator_manager.state_transition(
@@ -1110,6 +1112,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
         secrethash=transfer.lock.secrethash,
         secret=UNIT_SECRET,
         block_number=transfer.lock.expiration,
+        block_hash=factories.make_block_hash(),
     )
 
     message_identifier = message_identifier_from_prng(deepcopy(setup.prng))
@@ -1145,6 +1148,7 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
         secrethash=transfer.lock.secrethash,
         secret=EMPTY_HASH,
         block_number=transfer.lock.expiration,
+        block_hash=factories.make_block_hash(),
     )
 
     iteration = initiator_manager.handle_onchain_secretreveal(
@@ -1175,6 +1179,7 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
         secrethash=transfer.lock.secrethash,
         secret=UNIT_SECRET,
         block_number=transfer.lock.expiration + 1,
+        block_hash=factories.make_block_hash(),
     )
 
     iteration = initiator_manager.handle_onchain_secretreveal(
@@ -1208,6 +1213,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         token_network_identifier=setup.channel.token_network_identifier,
         channel_identifier=setup.channel.identifier,
         block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
 
     channel_close_transition = channel.state_transition(
@@ -1224,6 +1230,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         secrethash=transfer.lock.secrethash,
         secret=UNIT_SECRET,
         block_number=transfer.lock.expiration,
+        block_hash=factories.make_block_hash(),
     )
 
     channel_map = {

@@ -84,6 +84,10 @@ def make_transaction_hash() -> typing.TransactionHash:
     return typing.TransactionHash(make_32bytes())
 
 
+def make_block_hash() -> typing.BlockHash:
+    return typing.BlockHash(make_32bytes())
+
+
 def make_privatekey_bin() -> bin:
     return make_32bytes()
 
