@@ -1,5 +1,5 @@
 from raiden.transfer import channel
-from raiden.transfer.architecture import ContractSendEvent
+from raiden.transfer.architecture import ContractSendEvent, State
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_CLOSING,
@@ -8,6 +8,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLING,
     CHANNEL_STATE_UNUSABLE,
     NODE_NETWORK_UNKNOWN,
+    BalanceProofSignedState,
     ChainState,
     InitiatorTask,
     MediatorTask,
@@ -24,6 +25,7 @@ from raiden.utils.typing import (
     Callable,
     ChannelID,
     Dict,
+    Iterator,
     List,
     Optional,
     PaymentNetworkID,
@@ -562,3 +564,60 @@ def filter_channels_by_status(
             states.append(channel_state)
 
     return states
+
+
+def detect_balance_proof_change(
+        old_state: State,
+        current_state: State,
+) -> Iterator[BalanceProofSignedState]:
+    """ Compare two states for any received balance_proofs that are not in `old_state`. """
+    if old_state == current_state:
+        return
+    for payment_network_identifier in current_state.identifiers_to_paymentnetworks:
+        try:
+            old_payment_network = old_state.identifiers_to_paymentnetworks.get(
+                payment_network_identifier,
+            )
+        except AttributeError:
+            old_payment_network = None
+        current_payment_network = current_state.identifiers_to_paymentnetworks[
+            payment_network_identifier
+        ]
+        if old_payment_network == current_payment_network:
+            continue
+
+        for token_network_identifier in current_payment_network.tokenidentifiers_to_tokennetworks:
+            try:
+                old_token_network = old_payment_network.tokenidentifiers_to_tokennetworks.get(
+                    token_network_identifier,
+                )
+            except AttributeError:
+                old_token_network = None
+            current_token_network = current_payment_network.tokenidentifiers_to_tokennetworks[
+                token_network_identifier
+            ]
+            if old_token_network == current_token_network:
+                continue
+
+            for channel_identifier in current_token_network.channelidentifiers_to_channels:
+                try:
+                    old_channel = old_token_network.channelidentifiers_to_channels.get(
+                        channel_identifier,
+                    )
+                except AttributeError:
+                    old_channel = None
+                current_channel = current_token_network.channelidentifiers_to_channels[
+                    channel_identifier
+                ]
+                if current_channel == old_channel:
+                    continue
+
+                elif (
+                        current_channel.partner_state.balance_proof is not None and
+                        (
+                            old_channel is None or
+                            old_channel.partner_state.balance_proof !=
+                            current_channel.partner_state.balance_proof
+                        )
+                ):
+                    yield current_channel.partner_state.balance_proof

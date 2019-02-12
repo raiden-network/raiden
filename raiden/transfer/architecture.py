@@ -280,13 +280,6 @@ class StateManager:
 
         assert isinstance(iteration, TransitionResult)
 
-        # if any balance proofs have changed, create events
-        for balance_proof in self.detect_balance_proof_change(
-                self.current_state,
-                iteration.new_state,
-        ):
-            iteration.events.append(EventNewBalanceProofReceived(balance_proof))
-
         self.current_state = iteration.new_state
         events = iteration.events
 
@@ -294,66 +287,6 @@ class StateManager:
         assert all(isinstance(e, Event) for e in events)
 
         return events
-
-    def detect_balance_proof_change(self, old_state, current_state):
-        """Compare two states for any changed received balance_proofs"""
-        if old_state == current_state:
-            return
-        # Assuming, there is no transition None->new balance proof:
-        if not hasattr(old_state, 'identifiers_to_paymentnetworks'):
-            return
-        for old_payment_network_identifier, current_payment_network_identifier in zip(
-                old_state.identifiers_to_paymentnetworks,
-                current_state.identifiers_to_paymentnetworks,
-        ):
-
-            if current_payment_network_identifier is None:
-                continue
-            old_payment_network = old_state.identifiers_to_paymentnetworks[
-                old_payment_network_identifier
-            ]
-            current_payment_network = current_state.identifiers_to_paymentnetworks[
-                current_payment_network_identifier
-            ]
-            if old_payment_network == current_payment_network:
-                continue
-
-            for old_token_network_identifier, current_token_network_identifier in zip(
-                    old_payment_network.tokenidentifiers_to_tokennetworks,
-                    current_payment_network.tokenidentifiers_to_tokennetworks,
-            ):
-
-                if current_token_network_identifier is None:
-                    continue
-                old_token_network = old_payment_network.tokenidentifiers_to_tokennetworks[
-                    old_token_network_identifier
-                ]
-                current_token_network = current_payment_network.tokenidentifiers_to_tokennetworks[
-                    current_token_network_identifier
-                ]
-                if old_token_network == current_token_network:
-                    continue
-
-                for old_channel_identifier, current_channel_identifier in zip(
-                        old_token_network.channelidentifiers_to_channels,
-                        current_token_network.channelidentifiers_to_channels,
-                ):
-                    if current_channel_identifier is None:
-                        continue
-                    old_channel = old_token_network.channelidentifiers_to_channels[
-                        old_channel_identifier
-                    ]
-                    current_channel = current_token_network.channelidentifiers_to_channels[
-                        current_channel_identifier
-                    ]
-                    if old_channel == current_channel:
-                        continue
-                    if (
-                            old_channel.partner_state.balance_proof !=
-                            current_channel.partner_state.balance_proof and
-                            current_channel.partner_state.balance_proof is not None
-                    ):
-                        yield current_channel.partner_state.balance_proof
 
     def __eq__(self, other):
         return (
