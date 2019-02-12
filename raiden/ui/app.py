@@ -21,6 +21,7 @@ from raiden.exceptions import (
 from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
+from raiden.network.pathfinding import get_pfs_info
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
@@ -250,6 +251,27 @@ def run_app(
     node_network_id = int(web3.version.network)  # pylint: disable=no-member
     known_given_network_id = given_network_id in ID_TO_NETWORKNAME
     known_node_network_id = node_network_id in ID_TO_NETWORKNAME
+
+    if config['services']['pathfinding_service_address'] is None:
+        click.secho(
+            "There is no pathfinding service defined, basic routing will be used",
+        )
+    else:
+        pathfinding_service_info = get_pfs_info(config['services']['pathfinding_service_address'])
+        if not pathfinding_service_info:
+            click.secho(
+                "There is a error with the pathfinding service "
+                f"'{config['services']['pathfinding_service_address']}' "
+                f"you defined."
+                "Raiden will shut down. Please update your settings.",
+            )
+            sys.exit(1)
+        else:
+            click.secho(
+                f"'{pathfinding_service_info['message']}'. "
+                f"You have chosen pathfinding operator '{pathfinding_service_info['operator']}' "
+                f"with the running version '{pathfinding_service_info['version']}' ",
+            )
 
     if node_network_id != given_network_id:
         if known_given_network_id and known_node_network_id:

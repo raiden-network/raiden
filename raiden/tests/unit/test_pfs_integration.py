@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 import requests
 from eth_utils import to_checksum_address
 
+from raiden.network.pathfinding import get_pfs_info
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.transfer import token_network
@@ -136,6 +137,35 @@ def create_square_network_topology(
         [address1, address2, address3],
         (channel_state1, channel_state2),
     )
+
+
+def test_get_pfs_info_success():
+    json_data = {
+        'message': "This is your favorite pathfinding service",
+        'operator': "John Doe",
+        'version': "0.0.1",
+    }
+
+    response = Mock()
+    response.configure_mock(status_code=200)
+    response.json = Mock(return_value=json_data)
+
+    with patch.object(requests, 'get', return_value=response):
+        pathfinding_service_info = get_pfs_info("url")
+
+        assert pathfinding_service_info['message'] == 'This is your favorite pathfinding service'
+        assert pathfinding_service_info['operator'] == 'John Doe'
+        assert pathfinding_service_info['version'] == '0.0.1'
+
+
+def test_get_pfs_info_request_error():
+    response = Mock()
+    response.configure_mock(status_code=400)
+
+    with patch.object(requests, 'get', side_effect=requests.RequestException()):
+        pathfinding_service_info = get_pfs_info("url")
+
+    assert pathfinding_service_info is False
 
 
 def test_routing_mocked_pfs_happy_path(
