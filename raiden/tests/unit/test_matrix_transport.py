@@ -15,6 +15,7 @@ from raiden.network.transport.matrix.utils import (
     join_global_room,
     login_or_register,
     make_client,
+    make_room_alias,
     sort_servers_closest,
     validate_userid_signature,
 )
@@ -210,3 +211,9 @@ def test_make_client(monkeypatch):
         client = make_client([url])
         assert isinstance(client, raiden.network.transport.matrix.client.GMatrixClient)
         assert client.api.base_url == url
+
+
+def test_make_room_alias():
+    assert make_room_alias(1, 'discovery') == 'raiden_mainnet_discovery'
+    assert make_room_alias(3, '0xdeadbeef', '0xabbacada') == 'raiden_ropsten_0xdeadbeef_0xabbacada'
+    assert make_room_alias(1337, 'monitoring') == 'raiden_1337_monitoring'
