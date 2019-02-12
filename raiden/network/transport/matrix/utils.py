@@ -23,9 +23,9 @@ from raiden_contracts.constants import ID_TO_NETWORKNAME
 log = structlog.get_logger(__name__)
 
 JOIN_RETRIES = 5
-userid_re = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
-room_name_separator = '_'
-room_name_prefix = 'raiden'
+USERID_RE = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
+ROOM_NAME_SEPARATOR = '_'
+ROOM_NAME_PREFIX = 'raiden'
 
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
@@ -214,8 +214,8 @@ def login_or_register(
 @cached(cache=LRUCache(128), key=attrgetter('user_id', 'displayname'), lock=Semaphore())
 def validate_userid_signature(user: User) -> Optional[Address]:
     """ Validate a userId format and signature on displayName, and return its address"""
-    # display_name should be an address in the userid_re format
-    match = userid_re.match(user.user_id)
+    # display_name should be an address in the USERID_RE format
+    match = USERID_RE.match(user.user_id)
     if not match:
         return None
 
@@ -323,4 +323,4 @@ def make_room_alias(chain_id: int, *suffixes: str) -> str:
             make_room_alias(3, 'discovery') == 'raiden_ropsten_discovery'
     """
     network_name = ID_TO_NETWORKNAME.get(chain_id, str(chain_id))
-    return room_name_separator.join([room_name_prefix, network_name, *suffixes])
+    return ROOM_NAME_SEPARATOR.join([ROOM_NAME_PREFIX, network_name, *suffixes])
