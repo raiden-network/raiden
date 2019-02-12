@@ -82,27 +82,21 @@ def _copy(old_db_filename, current_db_filename):
 
 
 class UpgradeManager:
-    """ This class is responsible for figuring out which migrations
-    need to be executed in order to bring the database up to date
-    with the current implementation.
-    Here's how upgrade cycle looks like. Assuming:
-    (a) The user used to run version 16
-    (b) Has downloaded the newer version, say 18.
-    So the upgrade would:
-    1. Look to see what older databases we have.
-    2. If no previous db file is found, it would skip the upgrade since no older DB was found.
-    3. If the database for the current version exists, skip the upgrade since it's been
-       done already.
-    4. If there is no file for the current database, copy the old one (v16) to (v18).
-    5. Run every migration, where every migration will get the old version and the new version.
-       The migration will compare versions against the version it's upgrading and decide whether
-       to proceed with the migration or not.
-    6. Once all migration functions are executed, the transaction is committed and the
-       database is ready.
-    7. In case of an exception, revert all changes and delete the DB file from filesystem
-       to prevent (3).
-       from retrying the migration on the next restart.
-    8. If the migration is successful, rename the older DB to prevent (1) from detecting it again.
+    """ Run migrations when a database upgrade is necesary.
+
+    Skip the upgrade if either:
+
+    - There is no previous DB
+    - There is a current DB file and the version in settings matches.
+
+    Upgrade procedure:
+
+    - Copy the old file to the latest version (e.g. copy version v16 as v18).
+    - In a transaction: Run every migration. Each migration must decide whether
+      to proceed or not.
+    - If a single migration fails: The transaction is not commited and the DB
+      copy is deleted.
+    - If every migration succeeds: Rename the old DB.
     """
 
     def __init__(self, db_filename: str):
