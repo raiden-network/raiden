@@ -46,6 +46,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import (
     BalanceProofUnsignedState,
     ChainState,
+    InitiatorTask,
     PaymentNetworkState,
     RouteState,
 )
@@ -383,7 +384,7 @@ class RaidenService(Runnable):
         chain_state = views.state_from_raiden(self)
         self._initialize_transactions_queues(chain_state)
         self._initialize_whitelists(chain_state)
-
+        self._initialize_payment_statuses(chain_state)
         # send messages in queue before starting transport,
         # this is necessary to avoid a race where, if the transport is started
         # before the messages are queued, actions triggered by it can cause new
@@ -528,6 +529,7 @@ class RaidenService(Runnable):
             self.wal.snapshot()
             self.snapshot_group = new_snapshot_group
 
+        print(event_list)
         return event_list
 
     def set_node_network_state(self, node_address: Address, network_state: str):
@@ -632,6 +634,21 @@ class RaidenService(Runnable):
                     else:
                         raise
 
+    def _initialize_payment_statuses(self, chain_state: ChainState):
+        """ populate targets_to_identifiers_to_statuses.
+        """
+        payment_tasks = chain_state.payment_mapping.secrethashes_to_task
+        for secrethash, task in payment_tasks.items():
+            if not isinstance(task, InitiatorTask):
+                continue
+
+            transfer = task.manager_state.initiator_transfers[secrethash].transfer
+            self._register_payment_status(
+                target=transfer.target,
+                identifier=transfer.payment_identifier,
+                balance_proof=transfer.balance_proof,
+            )
+
     def _initialize_messages_queues(self, chain_state: ChainState):
         """ Push the queues to the transport and populate
         targets_to_identifiers_to_statuses.
@@ -642,18 +659,6 @@ class RaidenService(Runnable):
             self.start_health_check_for(queue_identifier.recipient)
 
             for event in event_queue:
-                is_initiator = (
-                    type(event) == SendLockedTransfer and
-                    event.transfer.initiator == self.address
-                )
-
-                if is_initiator:
-                    self._register_payment_status(
-                        target=event.transfer.target,
-                        identifier=event.transfer.payment_identifier,
-                        balance_proof=event.transfer.balance_proof,
-                    )
-
                 message = message_from_sendevent(event, self.address)
                 self.sign(message)
                 self.transport.send_async(queue_identifier, message)
