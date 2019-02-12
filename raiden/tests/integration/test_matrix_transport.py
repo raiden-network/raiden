@@ -10,6 +10,7 @@ from raiden.constants import UINT64_MAX
 from raiden.messages import Processed, SecretRequest
 from raiden.network.transport.matrix import MatrixTransport, UserPresence, _RetryQueue
 from raiden.network.transport.matrix.client import Room
+from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
@@ -430,7 +431,7 @@ def test_join_invalid_discovery(
         None,
     )
     transport.log = MagicMock()
-    discovery_room_name = transport._make_room_alias('discovery')
+    discovery_room_name = make_room_alias(transport.network_id, 'discovery')
     assert isinstance(transport._global_rooms.get(discovery_room_name), Room)
 
     transport.stop()
@@ -521,7 +522,7 @@ def test_matrix_discovery_room_offline_server(
     transport.start(MockRaidenService(None), MessageHandler(set()), '')
     gevent.sleep(.2)
 
-    discovery_room_name = transport._make_room_alias('discovery')
+    discovery_room_name = make_room_alias(transport.network_id, 'discovery')
     assert isinstance(transport._global_rooms.get(discovery_room_name), Room)
 
     transport.stop()
@@ -546,7 +547,7 @@ def test_matrix_send_global(
     transport.start(MockRaidenService(None), MessageHandler(set()), '')
     gevent.idle()
 
-    ms_room_name = transport._make_room_alias('monitoring')
+    ms_room_name = make_room_alias(transport.network_id, 'monitoring')
     ms_room = transport._global_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
 
