@@ -168,13 +168,15 @@ def test_payment_statuses_are_restored(
     amount = 1
     spent_amount = 7
     identifier = 1
+
     for _ in range(spent_amount):
-        app0.raiden.mediated_transfer_async(
+        payment_status = app0.raiden.mediated_transfer_async(
             token_network_identifier=token_network_identifier,
             amount=amount,
             target=app1.raiden.address,
             identifier=identifier,
         )
+        assert payment_status.payment_identifier == identifier
         identifier += 1
 
     raiden_event_handler = RaidenEventHandler()
