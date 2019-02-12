@@ -10,6 +10,7 @@ import time
 import gevent
 import requests
 import structlog
+from eth_keyfile import create_keyfile_json
 from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
 from web3 import Web3
 
@@ -22,7 +23,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class EthNodeDescription(NamedTuple):
-    private_key: Any  # TODO
+    private_key: bytes
     rpc_port: int
     p2p_port: int
     miner: bool
@@ -96,6 +97,43 @@ def geth_to_cmd(
     return cmd
 
 
+def parity_to_cmd(node: Dict, datadir: str, chain_id: int, chain_spec: str) -> List[str]:
+
+    node_config = {
+        'nodekeyhex': 'node-key',
+        'password': 'password',
+        'port': 'port',
+        'rpcport': 'jsonrpc-port',
+    }
+
+    cmd = ['parity']
+
+    for config, option in node_config.items():
+        if config in node:
+            cmd.append(f'--{option}={str(node[config])}')
+
+    cmd.extend([
+        '--jsonrpc-apis=eth,net,web3,parity',
+        '--jsonrpc-interface=0.0.0.0',
+        '--no-discovery',
+        '--no-ws',
+        '--min-gas-price=1800000000', # todo *180000
+        f'--base-path={datadir}',
+        f'--chain={chain_spec}',
+        f'--network-id={str(chain_id)}',
+    ])
+
+    if node.get('mine', False):
+        cmd.extend([
+            f"--engine-signer={to_checksum_address(node['address'])}",
+            '--force-sealing',
+        ])
+
+    log.debug('parity command', command=cmd)
+
+    return cmd
+
+
 def geth_create_account(datadir: str, privkey: bytes):
     """
     Create an account in `datadir` -- since we're not interested
@@ -126,7 +164,96 @@ def geth_create_account(datadir: str, privkey: bytes):
     assert create.returncode == 0
 
 
-def eth_generate_poa_genesis(
+PARITY_CHAIN_SPEC_STUB = {
+    "name": "RaidenTestChain",
+    "engine": {
+        "authorityRound": {
+            "params": {
+                "stepDuration": 5,
+            },
+        },
+    },
+    "params": {
+        "gasLimitBoundDivisor": "0x0400",
+        "maximumExtraDataSize": "0x20",
+        "minGasLimit": "0x1388",
+        "networkID": 337,
+        "eip155Transition": "0x0",
+        "eip98Transition": "0x7fffffffffffff",
+        "eip140Transition": "0x0",
+        "eip211Transition": "0x0",
+        "eip214Transition": "0x0",
+        "eip658Transition": "0x0",
+    },
+    "genesis": {
+        "seal": {
+            "authorityRound": {
+                "step": "0x0",
+                "signature": (
+                    "0x00000000000000000000000000000000000000000000000000000000000000000"
+                    "00000000000000000000000000000000000000000000000000000000000000000"
+                ),
+            },
+        },
+        "difficulty": "0x20000",
+        "author": "0x0000000000000000000000000000000000000000",
+        "timestamp": "0x00",
+        "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "gasLimit": "0x2540BE400",
+    },
+    "accounts": {
+        "0x0000000000000000000000000000000000000001": {
+            "balance": "1",
+            "builtin": {
+                "name": "ecrecover",
+                "pricing": {"linear": {"base": 3000, "word": 0}},
+            },
+        },
+        "0x0000000000000000000000000000000000000002": {
+            "balance": "1",
+            "builtin": {
+                "name": "sha256",
+                "pricing": {"linear": {"base": 60, "word": 12}},
+            },
+        },
+        "0x0000000000000000000000000000000000000003": {
+            "balance": "1",
+            "builtin": {
+                "name": "ripemd160",
+                "pricing": {"linear": {"base": 600, "word": 120}},
+            },
+        },
+        "0x0000000000000000000000000000000000000004": {
+            "balance": "1",
+            "builtin": {
+                "name": "identity",
+                "pricing": {"linear": {"base": 15, "word": 3}},
+            },
+        },
+    },
+}
+
+
+def parity_generate_chain_spec(
+        spec_path: str,
+        accounts_addresses: List[bytes],
+        seal_account: str,
+        random_marker: str,
+):
+    chain_spec = PARITY_CHAIN_SPEC_STUB.copy()
+    chain_spec['accounts'].update({
+        to_checksum_address(address): {'balance': 1000000000000000000}
+        for address in accounts_addresses
+    })
+    chain_spec['engine']['authorityRound']['params']['validators'] = {
+        'list': [to_checksum_address(seal_account)],
+    }
+    chain_spec['genesis']['extraData'] = f'0x{random_marker:0<64}'
+    with open(spec_path, "w") as spec_file:
+        json.dump(chain_spec, spec_file)
+
+
+def geth_generate_poa_genesis(
         genesis_path: str,
         accounts_addresses: List[str],
         seal_address: str,
@@ -185,6 +312,42 @@ def geth_init_datadir(datadir: str, genesis_path: str):
         raise ValueError(msg)
 
 
+def parity_write_key_file(key, keyhex, password, base_path):
+
+    path = f'{base_path}/{(keyhex[:8]).lower()}'
+    try:
+        os.makedirs(f'{path}')
+    except os.error:  # Directory already exists
+        pass
+
+    password = DEFAULT_PASSPHRASE
+    keyfile_json = create_keyfile_json(key, bytes(password, 'utf-8'))
+    with open(f'{path}/keyfile', 'w') as keyfile:
+        json.dump(keyfile_json, keyfile)
+
+    return path
+
+
+def parity_create_account(key, keyhex, password, base_path, chain_spec):
+
+    path = parity_write_key_file(key, keyhex, password, base_path)
+    process = subprocess.Popen((
+        'parity',
+        'account',
+        'import',
+        f'--base-path={path}',
+        f'--chain={chain_spec}',
+        f'--password={password}',
+        f'{path}/keyfile',
+    ))
+
+    return_code = process.wait()
+    if return_code:
+        raise RuntimeError(
+            f'Creation of parity signer account failed with return code {return_code}',
+        )
+
+
 def eth_wait_and_check(
         web3,
         accounts_addresses,
@@ -209,7 +372,7 @@ def eth_wait_and_check(
                 ['0x0', False],
             )
         except requests.exceptions.ConnectionError:
-            gevent.sleep(0.5)
+            gevent.sleep(.5)
             tries -= 1
         else:
             jsonrpc_running = True
@@ -317,8 +480,10 @@ def eth_nodes_to_cmds(
             commandline = geth_to_cmd(config, datadir, chain_id, verbosity)
 
         elif node.blockchain_type == 'parity':
-            # TODO
-            commandline = ''
+            datadir = geth_node_to_datadir(config, base_datadir)  # todo changes for parity needed?
+
+            chain_spec = f'{base_datadir}/chainspec.json'
+            commandline = parity_to_cmd(config, datadir, chain_id, chain_spec)
 
         else:
             assert False, f'Invalid blockchain type {config.blockchain_type}'
@@ -358,7 +523,7 @@ def eth_run_nodes(
         logfile = open(log_path, 'w')
         stdout = logfile
 
-        if '--unlock' in cmd:
+        if 'geth' in cmd and '--unlock' in cmd:
             process = subprocess.Popen(
                 cmd,
                 universal_newlines=True,
@@ -424,16 +589,36 @@ def run_private_blockchain(
 
         nodes_configuration.append(config)
 
-    eth_node_config_set_bootnodes(nodes_configuration)
-
+    blockchain_type = eth_nodes[0].blockchain_type
+    genesis_path = None
     seal_account = privatekey_to_address(eth_nodes[0].private_key)
-    genesis_path = os.path.join(base_datadir, 'custom_genesis.json')
-    eth_generate_poa_genesis(
-        genesis_path,
-        accounts_to_fund,
-        seal_account,
-        random_marker,
-    )
+
+    if blockchain_type == 'geth':
+        eth_node_config_set_bootnodes(nodes_configuration)
+
+        genesis_path = os.path.join(base_datadir, 'custom_genesis.json')
+        geth_generate_poa_genesis(
+            genesis_path,
+            accounts_to_fund,
+            seal_account,
+            random_marker,
+        )
+
+    elif blockchain_type == 'parity':
+        chainspec_path = f'{base_datadir}/chainspec.json'
+        parity_generate_chain_spec(
+            chainspec_path,
+            accounts_to_fund,
+            seal_account,
+            random_marker,
+        )
+        parity_create_account(
+            nodes_configuration[0]['nodekey'],
+            nodes_configuration[0]['nodekeyhex'],
+            nodes_configuration[0]['password'],
+            base_datadir,
+            chainspec_path,
+        )
 
     # check that the test is running on non-capture mode, and if it is save
     # current term settings before running geth

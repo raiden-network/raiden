@@ -20,6 +20,15 @@ if [[ ! -x ${GETH_PATH} ]]; then
 fi
 ln -sf ${GETH_PATH} ${LOCAL_BASE}/bin/geth
 
+PARITY_PATH="${LOCAL_BASE}/bin/parity-${OS_NAME}-${PARITY_VERSION}"
+if [[ ! -x ${PARITY_PATH} ]]; then
+  mkdir -p ${LOCAL_BASE}/bin
+  PARITY_URL_VAR="PARITY_URL_${OS_NAME}"
+  curl -L ${!PARITY_URL_VAR} > ${PARITY_PATH}
+  chmod 775 ${PARITY_PATH}
+fi
+ln -sf ${PARITY_PATH} ${LOCAL_BASE}/bin/parity
+
 SOLC_PATH="${LOCAL_BASE}/bin/solc-${OS_NAME}-${SOLC_VERSION}"
 if [[ ! -x ${SOLC_PATH} ]]; then
   mkdir -p ${LOCAL_BASE}/bin
