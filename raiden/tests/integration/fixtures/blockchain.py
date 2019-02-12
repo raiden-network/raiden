@@ -65,6 +65,7 @@ def web3(
             rpc,
             p2p,
             miner=(pos == 0),
+            blockchain_type=blockchain_type,
         )
         for pos, (key, rpc, p2p) in enumerate(zip(
             blockchain_private_keys,
