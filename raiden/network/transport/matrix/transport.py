@@ -11,6 +11,7 @@ from eth_utils import decode_hex, is_binary_address, to_checksum_address, to_nor
 from gevent.lock import Semaphore
 from matrix_client.errors import MatrixRequestError
 
+from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.exceptions import (
     InvalidAddress,
     InvalidProtocolMessage,
@@ -34,6 +35,7 @@ from raiden.network.transport.matrix.utils import (
     join_global_room,
     login_or_register,
     make_client,
+    make_room_alias,
     validate_userid_signature,
 )
 from raiden.network.transport.udp import udp_utils
@@ -71,7 +73,6 @@ from raiden.utils.typing import (
     Union,
     cast,
 )
-from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
 
@@ -350,7 +351,7 @@ class MatrixTransport(Runnable):
             self._client._handle_thread.get()
 
         for suffix in self._config['global_rooms']:
-            room_name = self._make_room_alias(suffix)  # e.g. raiden_ropsten_discovery
+            room_name = make_room_alias(self.network_id, suffix)  # e.g. raiden_ropsten_discovery
             room = join_global_room(
                 self._client,
                 room_name,
@@ -518,7 +519,7 @@ class MatrixTransport(Runnable):
             room: name suffix as passed in config['global_rooms'] list
             message: Message instance to be serialized and sent
         """
-        room_name = self._make_room_alias(room)
+        room_name = make_room_alias(self.network_id, room)
         assert self._global_rooms.get(room_name), f'Unknown global room: {room_name!r}'
 
         def _send_global():
@@ -544,9 +545,8 @@ class MatrixTransport(Runnable):
         return getattr(self, '_client', None) and getattr(self._client, 'user_id', None)
 
     @property
-    def _network_name(self) -> str:
-        netid = self._raiden_service.chain.network_id
-        return ID_TO_NETWORKNAME.get(netid, str(netid))
+    def network_id(self) -> str:
+        return self._raiden_service.chain.network_id
 
     @property
     def _private_rooms(self) -> bool:
@@ -926,7 +926,7 @@ class MatrixTransport(Runnable):
             to_normalized_address(address)
             for address in [address, self._raiden_service.address]
         ])
-        room_name = self._make_room_alias(*address_pair)
+        room_name = make_room_alias(self.network_id, *address_pair)
 
         # no room with expected name => create one and invite peer
         candidates = [
@@ -1042,9 +1042,6 @@ class MatrixTransport(Runnable):
             )
 
         return room
-
-    def _make_room_alias(self, *parts):
-        return self._room_sep.join([self._room_prefix, self._network_name, *parts])
 
     def _handle_presence_change(self, event):
         """
@@ -1165,7 +1162,9 @@ class MatrixTransport(Runnable):
 
         As all users are supposed to be in discovery room, its members dict is used for caching"""
         user_id: str = getattr(user, 'user_id', user)
-        discovery_room = self._global_rooms.get(self._make_room_alias('discovery'))
+        discovery_room = self._global_rooms.get(
+            make_room_alias(self.network_id, DISCOVERY_DEFAULT_ROOM),
+        )
         if discovery_room and user_id in discovery_room._members:
             duser = discovery_room._members[user_id]
             # if handed a User instance with displayname set, update the discovery room cache
