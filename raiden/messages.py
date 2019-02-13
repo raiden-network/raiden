@@ -28,7 +28,11 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
+from raiden.transfer.state import (
+    BalanceProofSignedState,
+    BalanceProofUnsignedState,
+    HashTimeLockState,
+)
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3, typing
 from raiden.utils.signer import Signer, recover
@@ -1700,6 +1704,112 @@ class RequestMonitoring(SignedMessage):
         )
 
 
+class UpdatePFS(SignedMessage):
+    cmdid = messages.UPDATEPFS
+    """ Message to inform a pathfinding service about a capacity change. """
+
+    def __init__(
+            self,
+            nonce: typing.Nonce,
+            transferred_amount: typing.TokenAmount,
+            locked_amount: typing.TokenAmount,
+            locksroot: typing.Locksroot,
+            token_network_address: typing.TokenNetworkAddress,
+            channel_identifier: typing.ChannelID,
+            chain_id: typing.ChainID,
+            reveal_timeout: int,
+            signature: typing.Optional[typing.Signature] = None,
+    ) -> None:
+        self.chain_id = chain_id
+        self.nonce = nonce
+        self.transferred_amount = transferred_amount
+        self.locked_amount = locked_amount
+        self.locksroot = locksroot
+        self.channel_identifier = channel_identifier
+        self.token_network_address = token_network_address
+        self.reveal_timeout = reveal_timeout
+        if signature is None:
+            self.signature = b''
+        else:
+            self.signature = signature
+
+    @classmethod
+    def from_balance_proof(
+            cls: typing.Type[typing.T_UpdatePFS],
+            balance_proof: BalanceProofUnsignedState,
+            reveal_timeout: int,
+    ) -> typing.T_UpdatePFS:
+        assert isinstance(balance_proof, BalanceProofUnsignedState)
+        return cls(
+            nonce=balance_proof.nonce,
+            transferred_amount=balance_proof.transferred_amount,
+            locked_amount=balance_proof.locked_amount,
+            locksroot=balance_proof.locksroot,
+            token_network_address=balance_proof.token_network_identifier,
+            channel_identifier=balance_proof.channel_identifier,
+            chain_id=balance_proof.chain_id,
+            reveal_timeout=reveal_timeout,
+        )
+
+    def to_dict(self) -> typing.Dict:
+        return {
+            'type': self.__class__.__name__,
+            'chain_id': self.chain_id,
+            'nonce': self.nonce,
+            'token_network_address': to_normalized_address(self.token_network_address),
+            'channel_identifier': self.channel_identifier,
+            'transferred_amount': self.transferred_amount,
+            'locked_amount': self.locked_amount,
+            'locksroot': encode_hex(self.locksroot),
+            'signature': encode_hex(self.signature),
+            'reveal_timeout': self.reveal_timeout,
+        }
+
+    @classmethod
+    def from_dict(
+            cls: typing.Type[typing.T_UpdatePFS],
+            data: typing.Dict,
+    ) -> typing.T_UpdatePFS:
+        return cls(
+            nonce=data['nonce'],
+            transferred_amount=data['transferred_amount'],
+            locked_amount=data['locked_amount'],
+            locksroot=data['locksroot'],
+            token_network_address=data['token_network_identifier'],
+            channel_identifier=data['channel_identifier'],
+            chain_id=data['chain_id'],
+            reveal_timeout=data['reveal_timeout'],
+        )
+
+    def pack(self, packed: bytes) -> bytes:
+        packed.chain_id = self.chain_id
+        packed.nonce = self.nonce
+        packed.token_network_address = self.token_network_address
+        packed.channel_identifier = self.channel_identifier
+        packed.transferred_amount = self.transferred_amount
+        packed.locked_amount = self.locked_amount
+        packed.locksroot = self.locksroot
+        packed.reveal_timeout = self.reveal_timeout
+        packed.signature = self.signature
+
+    @classmethod
+    def unpack(
+            cls: typing.Type[typing.T_UpdatePFS],
+            packed: bytes,
+    ) -> typing.T_UpdatePFS:
+        return cls(
+            chain_id=packed.chain_id,
+            nonce=packed.nonce,
+            token_network_address=packed.token_network_address,
+            channel_identifier=packed.channel_identifier,
+            transferred_amount=packed.transferred_amount,
+            locked_amount=packed.locked_amount,
+            locksroot=packed.locksroot,
+            reveal_timeout=packed.reveal_timeout,
+            signature=packed.signature,
+        )
+
+
 CMDID_TO_CLASS = {
     messages.DELIVERED: Delivered,
     messages.LOCKEDTRANSFER: LockedTransfer,
@@ -1712,6 +1822,7 @@ CMDID_TO_CLASS = {
     messages.SECRETREQUEST: SecretRequest,
     messages.LOCKEXPIRED: LockExpired,
     messages.REQUESTMONITORING: RequestMonitoring,
+    messages.UPDATEPFS: UpdatePFS,
 }
 
 CLASSNAME_TO_CLASS = {klass.__name__: klass for klass in CMDID_TO_CLASS.values()}
