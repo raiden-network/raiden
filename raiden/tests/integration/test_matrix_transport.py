@@ -603,7 +603,7 @@ def test_monitoring_global_messages(
         None,
     )
 
-    ms_room_name = transport._make_room_alias(MONITORING_BROADCASTING_ROOM)
+    ms_room_name = make_room_alias(transport.network_id, MONITORING_BROADCASTING_ROOM)
     ms_room = transport._global_rooms.get(ms_room_name)
     assert isinstance(ms_room, Room)
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
