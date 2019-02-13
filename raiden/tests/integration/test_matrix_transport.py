@@ -549,14 +549,6 @@ def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval
 
     assert all_messages_received
 
-    transport0.stop()
-    transport1.stop()
-    transport2.stop()
-
-    transport0.get()
-    transport1.get()
-    transport2.get()
-
 
 def test_matrix_discovery_room_offline_server(
         local_matrix_servers,
@@ -781,31 +773,25 @@ def test_pfs_global_messages(
     transport.get()
 
 
+@pytest.mark.parametrize('room_privacy_settings', [
+    [True, True, 'invite'],
+    [True, False, 'invite'],
+    [False, True, 'public'],
+    [False, False, 'public'],
+])
+@pytest.mark.parametrize('number_of_transports', [2])
+@pytest.mark.parametrize('matrix_server_count', [2])
 def test_matrix_invite_private_room_happy_case(
         local_matrix_servers,
-        private_rooms,
         retry_interval,
         retries_before_backoff,
+        is_private_to_join_rule,
+        matrix_transports,
 ):
-
-    transport0 = MatrixTransport({
-        'global_rooms': ['discovery'],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [],
-        'private_rooms': private_rooms,
-    })
-    transport1 = MatrixTransport({
-        'global_rooms': ['discovery'],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [],
-        'private_rooms': private_rooms,
-    })
+    is_private0, is_private1, expected_join_rule = is_private_to_join_rule
+    transport0, transport1 = matrix_transports
+    transport0._config['private_rooms'] = is_private0
+    transport1._config['private_rooms'] = is_private1
 
     received_messages = set()
 
@@ -832,176 +818,147 @@ def test_matrix_invite_private_room_happy_case(
     transport0.start_health_check(transport1._raiden_service.address)
     transport1.start_health_check(transport0._raiden_service.address)
 
-    user_id_1 = transport0._address_to_userids[raiden_service1.address].pop()
-    user_1 = transport0._get_user(user_id_1)
+    room_id = transport0._get_room_for_address(raiden_service1.address).room_id
+    room_state0 = transport0._client.api.get_room_state(room_id)
 
-    transport0._get_private_room([user_1])
+    join_rule0 = [
+        event['content'].get('join_rule')
+        for event in room_state0
+        if event['type'] == 'm.room.join_rules'
+    ][0]
+
+    assert join_rule0 == expected_join_rule
     gevent.sleep(1)
 
-    room_id = transport1._get_room_for_address(raiden_service0.address).room_id
+    room_state1 = transport1._client.api.get_room_state(room_id)
 
-    room_state_1 = transport1._client.api.get_room_state(room_id)
-
-    join_rule_1 = [
+    join_rule1 = [
         event['content'].get('join_rule')
-        for event in room_state_1
+        for event in room_state1
         if event['type'] == 'm.room.join_rules'
     ][0]
 
-    assert join_rule_1 == 'invite'
-
-    room_state_0 = transport0._client.api.get_room_state(room_id)
-
-    join_rule_0 = [
-        event['content'].get('join_rule')
-        for event in room_state_0
-        if event['type'] == 'm.room.join_rules'
-    ][0]
-
-    assert join_rule_0 == 'invite'
-
-    transport0.stop()
-    transport1.stop()
-    transport0.get()
-    transport1.get()
+    assert join_rule1 == expected_join_rule
 
 
-def test_matrix_invite_private_room_unhappy_case_1(
+@pytest.mark.parametrize('room_privacy_settings', [
+    [True, True, 'invite', 'invite'],
+    [True, False, 'invite', 'public'],
+    [False, True, 'public', 'invite'],
+    [False, False, 'public', 'public'],
+])
+@pytest.mark.parametrize('matrix_server_count', [2])
+@pytest.mark.parametrize('number_of_transports', [2])
+def test_matrix_invite_private_room_unhappy_case1(
         local_matrix_servers,
-        private_rooms,
         retry_interval,
         retries_before_backoff,
+        is_private_to_join_rule,
+        matrix_transports,
 ):
+    is_private0, is_private1, expected_join_rule0, expected_join_rule1 = is_private_to_join_rule
+    received_messages0 = set()
+    received_messages1 = set()
 
-    transport0 = MatrixTransport({
-        'global_rooms': ['discovery'],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [],
-        'private_rooms': private_rooms,
-    })
-    transport1 = MatrixTransport({
-        'global_rooms': ['discovery'],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [],
-        'private_rooms': private_rooms,
-    })
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
 
-    received_messages = set()
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
 
-    message_handler = MessageHandler(received_messages)
-    raiden_service0 = MockRaidenService(message_handler)
-    raiden_service1 = MockRaidenService(message_handler)
+    transport0, transport1 = matrix_transports
+    transport0._config['private_rooms'] = is_private0
+    transport1._config['private_rooms'] = is_private1
 
     raiden_service0.handle_state_change = MagicMock()
     raiden_service1.handle_state_change = MagicMock()
 
-    transport0.start(
-        raiden_service0,
-        message_handler,
-        None,
-    )
-    transport1.start(
-        raiden_service1,
-        message_handler,
-        None,
-    )
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
 
-    gevent.sleep(1)
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
 
-    transport0.start_health_check(transport1._raiden_service.address)
-    transport1.start_health_check(transport0._raiden_service.address)
+    room_id0 = transport0._get_room_for_address(raiden_service1.address).room_id
+    room_id1 = transport1._get_room_for_address(raiden_service0.address).room_id
 
-    user_1 = transport0._get_user(transport0._address_to_userids[raiden_service1.address].pop())
-    user_0 = transport1._get_user(transport1._address_to_userids[raiden_service0.address].pop())
+    # two different rooms are created at the same time
+    room_state0 = transport0._client.api.get_room_state(room_id0)
+    room_state1 = transport1._client.api.get_room_state(room_id0)
 
-    transport0._get_private_room([user_1])
-    transport1._get_private_room([user_0])
-    gevent.sleep(1)
-
-    room_id = transport1._get_room_for_address(raiden_service0.address).room_id
-
-    room_state_1 = transport1._client.api.get_room_state(room_id)
-
-    join_rule_1 = [
+    join_rule0 = [
         event['content'].get('join_rule')
-        for event in room_state_1
+        for event in room_state0
+        if event['type'] == 'm.room.join_rules'
+    ][0]
+    join_rule1 = [
+        event['content'].get('join_rule')
+        for event in room_state1
+        if event['type'] == 'm.room.join_rules'
+    ][0]
+    gevent.sleep(1)
+
+    # both clients have the correct view of the created room
+    assert join_rule0 == expected_join_rule0
+    assert join_rule1 == expected_join_rule0
+
+    room_state0 = transport0._client.api.get_room_state(room_id1)
+    room_state1 = transport1._client.api.get_room_state(room_id1)
+
+    join_rule0 = [
+        event['content'].get('join_rule')
+        for event in room_state0
         if event['type'] == 'm.room.join_rules'
     ][0]
 
-    assert join_rule_1 == 'invite'
-
-    room_state_0 = transport0._client.api.get_room_state(room_id)
-
-    join_rule_0 = [
+    join_rule1 = [
         event['content'].get('join_rule')
-        for event in room_state_0
+        for event in room_state1
         if event['type'] == 'm.room.join_rules'
     ][0]
 
-    assert join_rule_0 == 'invite'
-
-    transport0.stop()
-    transport1.stop()
-    transport0.get()
-    transport1.get()
+    # both clients have the correct view of the created room
+    assert join_rule0 == expected_join_rule1
+    assert join_rule1 == expected_join_rule1
 
 
+@pytest.mark.parametrize('room_privacy_settings', [
+    [True, True, 'invite', 'invite'],
+    [True, False, 'invite', 'invite'],
+    [False, True, 'public', 'invite'],
+    [False, False, 'public', 'public'],
+])
+@pytest.mark.parametrize('matrix_server_count', [2])
+@pytest.mark.parametrize('number_of_transports', [2])
 def test_matrix_invite_private_room_unhappy_case_2(
         local_matrix_servers,
-        private_rooms,
         retry_interval,
         retries_before_backoff,
+        is_private_to_join_rule,
+        matrix_transports,
 ):
+    is_private0, is_private1, expected_join_rule0, expected_join_rule1 = is_private_to_join_rule
+    received_messages0 = set()
+    received_messages1 = set()
 
-    transport0 = MatrixTransport({
-        'global_rooms': ['discovery'],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [],
-        'private_rooms': private_rooms,
-    })
-    transport1 = MatrixTransport({
-        'global_rooms': ['discovery'],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [],
-        'private_rooms': private_rooms,
-    })
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
 
-    received_messages = set()
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
 
-    message_handler = MessageHandler(received_messages)
-    raiden_service0 = MockRaidenService(message_handler)
-    raiden_service1 = MockRaidenService(message_handler)
+    transport0, transport1 = matrix_transports
+    transport0._config['private_rooms'] = is_private0
+    transport1._config['private_rooms'] = is_private1
 
     raiden_service0.handle_state_change = MagicMock()
     raiden_service1.handle_state_change = MagicMock()
 
-    transport0.start(
-        raiden_service0,
-        message_handler,
-        None,
-    )
-    transport1.start(
-        raiden_service1,
-        message_handler,
-        None,
-    )
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
 
-    gevent.sleep(1)
-
-    transport0.start_health_check(transport1._raiden_service.address)
-    transport1.start_health_check(transport0._raiden_service.address)
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
 
     assert transport1._address_to_presence[raiden_service0.address].value == 'online'
     assert transport0._address_to_presence[raiden_service1.address].value == 'online'
@@ -1012,94 +969,72 @@ def test_matrix_invite_private_room_unhappy_case_2(
 
     assert transport0._address_to_presence[raiden_service1.address].value == 'offline'
 
-    user_1 = transport0._get_user(transport0._address_to_userids[raiden_service1.address].pop())
-    transport0._get_private_room([user_1])
-    gevent.sleep(1)
-
-    transport1.start(
-        raiden_service1,
-        message_handler,
-        None,
-    )
+    room_id0 = transport0._get_room_for_address(raiden_service1.address).room_id
 
     gevent.sleep(1)
-    room_id_0 = transport0._get_room_for_address(raiden_service1.address).room_id
-    room_state_0 = transport0._client.api.get_room_state(room_id_0)
 
-    join_rule_0 = [
+    transport1.start(raiden_service1, message_handler1, None)
+
+    gevent.sleep(1)
+    room_state0 = transport0._client.api.get_room_state(room_id0)
+
+    join_rule0 = [
         event['content'].get('join_rule')
-        for event in room_state_0
+        for event in room_state0
         if event['type'] == 'm.room.join_rules'
     ][0]
 
-    assert join_rule_0 == 'public'
+    assert join_rule0 == expected_join_rule0
 
-    room_id_1 = transport1._get_room_for_address(raiden_service0.address).room_id
-    room_state_1 = transport1._client.api.get_room_state(room_id_1)
+    room_id1 = transport1._get_room_for_address(raiden_service0.address).room_id
+    room_state1 = transport1._client.api.get_room_state(room_id1)
 
-    join_rule_1 = [
+    join_rule1 = [
         event['content'].get('join_rule')
-        for event in room_state_1
+        for event in room_state1
         if event['type'] == 'm.room.join_rules'
     ][0]
 
-    assert join_rule_1 == 'invite'
-
-    transport0.stop()
-    transport1.stop()
-    transport0.get()
-    transport1.get()
+    assert join_rule1 == expected_join_rule1
 
 
+@pytest.mark.parametrize('room_privacy_settings', [
+    [True, True, 'invite', 'invite'],
+    [True, False, 'invite', 'invite'],
+    [False, True, 'public', 'invite'],
+    [False, False, 'public', 'public'],
+])
+@pytest.mark.parametrize('matrix_server_count', [2])
+@pytest.mark.parametrize('number_of_transports', [2])
 def test_matrix_invite_private_room_unhappy_case_3(
         local_matrix_servers,
-        private_rooms,
         retry_interval,
         retries_before_backoff,
+        is_private_to_join_rule,
+        matrix_transports,
 ):
-    transport0 = MatrixTransport({
-        'global_rooms': ['discovery'],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [],
-        'private_rooms': private_rooms,
-    })
-    transport1 = MatrixTransport({
-        'global_rooms': ['discovery'],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [],
-        'private_rooms': private_rooms,
-    })
+    is_private0, is_private1, expected_join_rule0, expected_join_rule1 = is_private_to_join_rule
+    received_messages0 = set()
+    received_messages1 = set()
 
-    received_messages = set()
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
 
-    message_handler = MessageHandler(received_messages)
-    raiden_service0 = MockRaidenService(message_handler)
-    raiden_service1 = MockRaidenService(message_handler)
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    transport0, transport1 = matrix_transports
+    transport0._config['private_rooms'] = is_private0
+    transport1._config['private_rooms'] = is_private1
 
     raiden_service0.handle_state_change = MagicMock()
     raiden_service1.handle_state_change = MagicMock()
 
-    transport0.start(
-        raiden_service0,
-        message_handler,
-        None,
-    )
-    transport1.start(
-        raiden_service1,
-        message_handler,
-        None,
-    )
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
 
-    gevent.sleep(1)
-
-    transport0.start_health_check(transport1._raiden_service.address)
-    transport1.start_health_check(transport0._raiden_service.address)
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
 
     assert transport1._address_to_presence[raiden_service0.address].value == 'online'
     assert transport0._address_to_presence[raiden_service1.address].value == 'online'
@@ -1110,38 +1045,41 @@ def test_matrix_invite_private_room_unhappy_case_3(
 
     assert transport0._address_to_presence[raiden_service1.address].value == 'offline'
 
-    user_1 = transport0._get_user(
-        transport0._address_to_userids[raiden_service1.address].pop())
-
-    transport0._get_private_room([user_1])
+    room_id0 = transport0._get_room_for_address(raiden_service1.address).room_id
     gevent.sleep(1)
     transport1.start(
         raiden_service1,
-        message_handler,
+        message_handler1,
         None,
     )
     gevent.sleep(1)
     transport0.stop()
+
+    room_state0 = transport0._client.api.get_room_state(room_id0)
+
+    join_rule0 = [
+        event['content'].get('join_rule')
+        for event in room_state0
+        if event['type'] == 'm.room.join_rules'
+    ][0]
+
+    assert join_rule0 == expected_join_rule0
 
     with Timeout(retry_interval * 20, exception=False):
         while not transport1._address_to_presence[raiden_service0.address].value == 'offline':
             gevent.sleep(.1)
     assert transport1._address_to_presence[raiden_service0.address].value == 'offline'
 
-    room_id_1 = transport1._get_room_for_address(raiden_service0.address).room_id
-    room_state_1 = transport1._client.api.get_room_state(room_id_1)
+    room_id1 = transport1._get_room_for_address(raiden_service0.address).room_id
+    room_state1 = transport1._client.api.get_room_state(room_id1)
 
-    join_rule_1 = [
+    join_rule1 = [
         event['content'].get('join_rule')
-        for event in room_state_1
+        for event in room_state1
         if event['type'] == 'm.room.join_rules'
     ][0]
 
-    assert join_rule_1 == 'invite'
-
-    transport1.stop()
-    transport0.get()
-    transport1.get()
+    assert join_rule1 == expected_join_rule1
 
 
 @pytest.mark.parametrize('matrix_server_count', [3])
@@ -1243,10 +1181,3 @@ def test_matrix_user_roaming(matrix_transports, retry_interval):
             gevent.sleep(.1)
 
     assert all_messages_received
-
-    transport0.stop()
-    transport1.stop()
-
-    transport0.get()
-    transport1.get()
-    transport2.get()
