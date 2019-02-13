@@ -75,6 +75,11 @@ class InvalidAddress(RaidenError):
     pass
 
 
+class InvalidSecretOrSecretHash(RaidenError):
+    """ Raised when the user provided value is not a valid secret. """
+    pass
+
+
 class InvalidAmount(RaidenError):
     """ Raised when the user provided value is not a positive integer and
     cannot be used to define a transfer value.

@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :feature:`2436` Add an API endpoint to list pending transfers
+* :feature:`3318` allow secret and/or hash with payment request
 * :feature:`3425` Update raiden-contracts package to version 0.9.0
 
 * :release:`0.100.2-rc4 <2019-02-04>`

@@ -1,7 +1,7 @@
 import math
 from enum import Enum
 
-from eth_utils import keccak, to_checksum_address
+from eth_utils import keccak, to_checksum_address, to_hex
 
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 PROTOCOL_VERSION = 1
@@ -19,6 +19,9 @@ NULL_ADDRESS = to_checksum_address(NULL_ADDRESS_BYTES)
 EMPTY_HASH = bytes(32)
 EMPTY_HASH_KECCAK = keccak(EMPTY_HASH)
 EMPTY_SIGNATURE = bytes(65)
+
+SECRET_HASH_HEXSTRING_LENGTH = len(to_hex(EMPTY_HASH))
+SECRET_HEXSTRING_LENGTH = SECRET_HASH_HEXSTRING_LENGTH
 
 
 class EthClient(Enum):
