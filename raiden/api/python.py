@@ -27,7 +27,8 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
+from raiden.transfer.mediated_transfer.state import LockedTransferState
+from raiden.transfer.state import BalanceProofSignedState, NettingChannelState, TransferTask
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
@@ -81,7 +82,7 @@ def event_filter_for_payments(
     return sent_and_target_matches or received_and_initiator_matches
 
 
-def flatten_transfer(transfer, role) -> typing.Dict[str, typing.Any]:
+def flatten_transfer(transfer: LockedTransferState, role: str) -> typing.Dict[str, typing.Any]:
     return {
         'payment_identifier': str(transfer.payment_identifier),
         'token_address': to_checksum_address(transfer.token),
@@ -97,7 +98,10 @@ def flatten_transfer(transfer, role) -> typing.Dict[str, typing.Any]:
     }
 
 
-def get_transfer_from_task(secrethash, transfer_task):
+def get_transfer_from_task(
+        secrethash: typing.SecretHash,
+        transfer_task: TransferTask,
+) -> LockedTransferState:
     transfer = None
     role = views.role_from_transfer_task(transfer_task)
 
@@ -115,7 +119,11 @@ def get_transfer_from_task(secrethash, transfer_task):
     return transfer, role
 
 
-def transfer_tasks_view(transfer_tasks, token_address=None, channel_id=None):
+def transfer_tasks_view(
+        transfer_tasks: typing.Dict[typing.SecretHash, TransferTask],
+        token_address: typing.TokenAddress = None,
+        channel_id: typing.ChannelID = None,
+) -> typing.List[typing.Dict[str, typing.Any]]:
     view = list()
 
     for secrethash, transfer_task in transfer_tasks.items():
@@ -902,7 +910,11 @@ class RaidenAPI:
         monitor_request.sign(self.raiden.signer)
         return monitor_request
 
-    def get_pending_transfers(self, token_address=None, partner_address=None):
+    def get_pending_transfers(
+            self,
+            token_address: typing.TokenAddress = None,
+            partner_address: typing.Address = None,
+    ) -> typing.List[typing.Dict[str, typing.Any]]:
         chain_state = views.state_from_raiden(self.raiden)
         transfer_tasks = views.get_all_transfer_tasks(chain_state)
         channel_id = None
