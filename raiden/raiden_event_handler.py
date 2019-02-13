@@ -1,9 +1,14 @@
 import structlog
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, MONITORING_BROADCASTING_ROOM
+from raiden.constants import (
+    EMPTY_HASH,
+    EMPTY_SIGNATURE,
+    MONITORING_BROADCASTING_ROOM,
+    PATH_FINDING_BROADCASTING_ROOM,
+)
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
-from raiden.messages import RequestMonitoring, message_from_sendevent
+from raiden.messages import RequestMonitoring, UpdatePFS, message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.transfer.architecture import Event
@@ -43,6 +48,7 @@ from raiden.transfer.utils import (
     get_state_change_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
 )
+from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils import pex
 
 # type alias to avoid both circular dependencies and flake8 errors
@@ -61,11 +67,20 @@ UNEVENTFUL_EVENTS = (
     EventInvalidReceivedUnlock,
 )
 
+SEND_BALANCE_PROOF_EVENTS = (
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
+)
+
 
 class RaidenEventHandler:
 
     def on_raiden_event(self, raiden: RaidenService, event: Event):
         # pylint: disable=too-many-branches
+        if type(event) in SEND_BALANCE_PROOF_EVENTS:
+            self.update_pfs(raiden, event)
 
         if type(event) == SendLockExpired:
             self.handle_send_lockexpired(raiden, event)
@@ -541,6 +556,29 @@ class RaidenEventHandler:
             partner_locksroot=partner_locksroot,
             block_identifier='latest',
         )
+
+    def update_pfs(self, raiden: RaidenService, event: Event):
+        channel_state = get_channelstate_by_token_network_and_partner(
+            chain_state=state_from_raiden(raiden),
+            token_network_id=to_canonical_address(
+                event.balance_proof.token_network_identifier,
+            ),
+            partner_address=to_canonical_address(event.recipient),
+        )
+        if channel_state is not None:
+            msg = UpdatePFS.from_balance_proof(
+                balance_proof=event.balance_proof,
+                reveal_timeout=channel_state.reveal_timeout,
+            )
+            msg.sign(raiden.signer)
+            raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, msg)
+            log.debug('sent a PFS Update')
+        else:
+            log.error(
+                'tried to send a balance proof in non-existant channel',
+                token_network_id=event.balance_proof.token_network_identifier,
+                partner_address=pex(event.recipient),
+            )
 
 
 class RaidenMonitoringEventHandler(RaidenEventHandler):
