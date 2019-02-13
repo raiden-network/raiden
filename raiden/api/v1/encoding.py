@@ -24,7 +24,7 @@ class InvalidEndpoint(NotFound):
 
 
 class HexAddressConverter(BaseConverter):
-    def to_python(self, value):
+    def to_python(self, value):  # pylint: disable=no-self-use
         if not is_0x_prefixed(value):
             raise InvalidEndpoint('Not a valid hex address, 0x prefix missing.')
 
@@ -38,7 +38,7 @@ class HexAddressConverter(BaseConverter):
 
         return value
 
-    def to_url(self, value):
+    def to_url(self, value):  # pylint: disable=no-self-use
         return to_checksum_address(value)
 
 
@@ -50,7 +50,7 @@ class AddressField(fields.Field):
         'invalid_size': 'Not a valid hex encoded address, decoded address is not 20 bytes long.',
     }
 
-    def _serialize(self, value, attr, obj):
+    def _serialize(self, value, attr, obj):  # pylint: disable=no-self-use
         return to_checksum_address(value)
 
     def _deserialize(self, value, attr, data):
@@ -72,10 +72,10 @@ class AddressField(fields.Field):
 
 
 class DataField(fields.Field):
-    def _serialize(self, value, attr, obj):
+    def _serialize(self, value, attr, obj):  # pylint: disable=no-self-use
         return data_encoder(value)
 
-    def _deserialize(self, value, attr, data):
+    def _deserialize(self, value, attr, data):  # pylint: disable=no-self-use
         return data_decoder(value)
 
 
@@ -195,10 +195,10 @@ class ChannelStateSchema(BaseSchema):
             channel_state.partner_state,
         )
 
-    def get_state(self, channel_state):
+    def get_state(self, channel_state):  # pylint: disable=no-self-use
         return channel.get_status(channel_state)
 
-    def get_total_deposit(self, channel_state):
+    def get_total_deposit(self, channel_state):  # pylint: disable=no-self-use
         """Return our total deposit in the contract for this channel"""
         return channel_state.our_total_deposit
 

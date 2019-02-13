@@ -55,6 +55,32 @@ def get_db_version(db_filename: Path):
         return 0
 
 
+def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int) -> int:
+    """ Run the migration function, store the version and advance the version. """
+    new_version = func(cursor, version, RAIDEN_DB_VERSION)
+    update_version(cursor, new_version)
+    return new_version
+
+
+def _backup_old_db(filename):
+    backup_name = filename.replace('_log.db', '_log.backup')
+    shutil.move(filename, backup_name)
+
+
+def _copy(old_db_filename, current_db_filename):
+    old_conn = sqlite3.connect(
+        old_db_filename,
+        detect_types=sqlite3.PARSE_DECLTYPES,
+    )
+    current_conn = sqlite3.connect(
+        current_db_filename,
+        detect_types=sqlite3.PARSE_DECLTYPES,
+    )
+
+    with closing(old_conn), closing(current_conn):
+        old_conn.backup(current_conn)
+
+
 class UpgradeManager:
     """ This class is responsible for figuring out which migrations
     need to be executed in order to bring the database up to date
@@ -110,7 +136,7 @@ class UpgradeManager:
                 # There are no older versions to upgrade from.
                 return
 
-            self._copy(str(old_db_filename), str(self._current_db_filename))
+            _copy(str(old_db_filename), str(self._current_db_filename))
 
             storage = SQLiteStorage(str(self._current_db_filename))
 
@@ -120,7 +146,7 @@ class UpgradeManager:
                 with storage.transaction():
                     version_iteration = older_version
                     for upgrade_func in UPGRADES_LIST:
-                        version_iteration = self._run_upgrade_func(
+                        version_iteration = _run_upgrade_func(
                             storage,
                             upgrade_func,
                             version_iteration,
@@ -128,34 +154,11 @@ class UpgradeManager:
 
                     update_version(storage, RAIDEN_DB_VERSION)
                     # Prevent the upgrade from happening on next restart
-                    self._backup_old_db(old_db_filename)
+                    _backup_old_db(old_db_filename)
             except Exception as e:
                 self._delete_current_db()
                 log.error(f'Failed to upgrade database: {str(e)}')
                 raise
 
-    def _run_upgrade_func(self, cursor: sqlite3.Cursor, func: Callable, version: int) -> int:
-        """ Run the migration function, store the version and advance the version. """
-        new_version = func(cursor, version, RAIDEN_DB_VERSION)
-        update_version(cursor, new_version)
-        return new_version
-
-    def _backup_old_db(self, filename):
-        backup_name = filename.replace('_log.db', '_log.backup')
-        shutil.move(filename, backup_name)
-
     def _delete_current_db(self):
         os.remove(str(self._current_db_filename))
-
-    def _copy(self, old_db_filename, current_db_filename):
-        old_conn = sqlite3.connect(
-            old_db_filename,
-            detect_types=sqlite3.PARSE_DECLTYPES,
-        )
-        current_conn = sqlite3.connect(
-            current_db_filename,
-            detect_types=sqlite3.PARSE_DECLTYPES,
-        )
-
-        with closing(old_conn), closing(current_conn):
-            old_conn.backup(current_conn)

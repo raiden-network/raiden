@@ -33,6 +33,25 @@ def _chain(first_func, *funcs) -> Callable:
     return wrapper
 
 
+def _match_list(
+        module_rule: Tuple[List[str], str],
+        logger_name: str,
+) -> Tuple[int, str]:
+    logger_modules_split = logger_name.split('.') if logger_name else []
+
+    modules_split: List[str] = module_rule[0]
+    level: str = module_rule[1]
+
+    if logger_modules_split == modules_split:
+        return sys.maxsize, level
+    else:
+        num_modules = len(modules_split)
+        if logger_modules_split[:num_modules] == modules_split:
+            return num_modules, level
+        else:
+            return 0, None
+
+
 class LogFilter:
     """ Utility for filtering log records on module level rules """
 
@@ -51,30 +70,11 @@ class LogFilter:
             for logger, level in config.items()
         ]
 
-    def _match_list(
-            self,
-            module_rule: Tuple[List[str], str],
-            logger_name: str,
-    ) -> Tuple[int, str]:
-        logger_modules_split = logger_name.split('.') if logger_name else []
-
-        modules_split: List[str] = module_rule[0]
-        level: str = module_rule[1]
-
-        if logger_modules_split == modules_split:
-            return sys.maxsize, level
-        else:
-            num_modules = len(modules_split)
-            if logger_modules_split[:num_modules] == modules_split:
-                return num_modules, level
-            else:
-                return 0, None
-
     def _get_log_level(self, logger_name: str) -> str:
         best_match_length = 0
         best_match_level = self._default_level
         for module in self._log_rules:
-            match_length, level = self._match_list(module, logger_name)
+            match_length, level = _match_list(module, logger_name)
 
             if match_length > best_match_length:
                 best_match_length = match_length
