@@ -3,6 +3,7 @@ Changelog
 =========
 
 * :feature:`2436` Add an API endpoint to list pending transfers
+* :bug:`3475` Properly check async_result in rest api payments
 * :feature:`3318` allow secret and/or hash with payment request
 * :feature:`3425` Update raiden-contracts package to version 0.9.0
 

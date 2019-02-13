@@ -1072,7 +1072,7 @@ class RestAPI:
                 status_code=HTTPStatus.PAYMENT_REQUIRED,
             )
 
-        if payment_status.payment_done is False:
+        if payment_status.payment_done.get() is False:
             return api_error(
                 errors="Payment couldn't be completed "
                 "(insufficient funds, no route to target or target offline).",
