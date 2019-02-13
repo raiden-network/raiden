@@ -156,14 +156,17 @@ URLS_V1 = [
     (
         '/pending_transfers',
         PendingTransfersResource,
+        'pending_transfers_resource',
     ),
     (
         '/pending_transfers/<hexaddress:token_address>',
         PendingTransfersResourceByTokenAddress,
+        'pending_transfers_resource_by_token',
     ),
     (
         '/pending_transfers/<hexaddress:token_address>/<hexaddress:partner_address>',
         PendingTransfersResourceByTokenAndPartnerAddress,
+        'pending_transfers_resource_by_token_and_partner',
     ),
 
     (
