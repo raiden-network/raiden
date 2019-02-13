@@ -1493,7 +1493,7 @@ class SignedBlindedBalanceProof:
         data = self._data_to_sign()
         return signer.sign(data)
 
-    def to_dict(self) -> typing.Dict:
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         """Message format according to monitoring service spec"""
         return {
             'type': self.__class__.__name__,
