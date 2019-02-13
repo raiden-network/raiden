@@ -89,7 +89,7 @@ ARCHIVE_TAG_ARG=
 ifdef ARCHIVE_TAG
 ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=$(ARCHIVE_TAG)
 else
-ARCHIVE_TAG=v$(shell python setup.py --version)
+ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=v$(shell python setup.py --version)
 endif
 
 GITHUB_ACCESS_TOKEN_ARG=
