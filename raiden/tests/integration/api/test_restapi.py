@@ -14,7 +14,12 @@ from eth_utils import (
 from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
-from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
+from raiden.constants import (
+    GENESIS_BLOCK_NUMBER,
+    SECRET_HASH_HEXSTRING_LENGTH,
+    SECRET_HEXSTRING_LENGTH,
+    Environment,
+)
 from raiden.messages import LockedTransfer, Unlock
 from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
@@ -938,12 +943,179 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
     response = request.send().response
     assert_proper_response(response)
     response = response.json()
+    assert_payment_secret_and_hash(response, payment)
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_api_payments_with_secret(api_server_test_instance, raiden_network, token_addresses):
+    _, app1 = raiden_network
+    amount = 200
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+    secret = '0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f3349b6e50fc9ca44f1'
+    secret_hash = to_hex(sha3(to_bytes(hexstr=secret)))
+    bad_secret = 'Not Hex String. 0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f33'
+    bad_secret_hash = 'Not Hex String. 0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f33'
+    short_secret = '0x123'
+    short_secret_hash = 'Short secret hash'
+
+    our_address = api_server_test_instance.rest_api.raiden_api.address
+
+    payment = {
+        'initiator_address': to_checksum_address(our_address),
+        'target_address': to_checksum_address(target_address),
+        'token_address': to_checksum_address(token_address),
+        'amount': amount,
+        'identifier': identifier,
+    }
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            'amount': amount,
+            'identifier': identifier,
+            'secret': short_secret,
+        },
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            'amount': amount,
+            'identifier': identifier,
+            'secret': bad_secret,
+        },
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            'amount': amount,
+            'identifier': identifier,
+            'secret_hash': short_secret_hash,
+        },
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            'amount': amount,
+            'identifier': identifier,
+            'secret_hash': bad_secret_hash,
+        },
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            'amount': amount,
+            'identifier': identifier,
+            'secret_hash': secret_hash,
+        },
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            'amount': amount,
+            'identifier': identifier,
+            'secret': secret,
+            'secret_hash': secret,
+        },
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            'amount': amount,
+            'identifier': identifier,
+            'secret': secret,
+        },
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    response = response.json()
+    assert_payment_secret_and_hash(response, payment)
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={
+            'amount': amount,
+            'identifier': identifier,
+            'secret': secret,
+            'secret_hash': secret_hash,
+        },
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    response = response.json()
+
+    assert_payment_secret_and_hash(response, payment)
+
+    assert secret == response['secret']
+    assert secret_hash == response['secret_hash']
+
+
+def assert_payment_secret_and_hash(response, payment):
     # make sure that payment key/values are part of the response.
     assert response.items() >= payment.items()
     assert 'secret' in response
     assert 'secret_hash' in response
-    assert len(response['secret']) == 66
-    assert len(response['secret_hash']) == 66
+    assert len(response['secret']) == SECRET_HEXSTRING_LENGTH
+    assert len(response['secret_hash']) == SECRET_HASH_HEXSTRING_LENGTH
 
     generated_secret_hash = to_hex(sha3(to_bytes(hexstr=response['secret'])))
     assert generated_secret_hash == response['secret_hash']
