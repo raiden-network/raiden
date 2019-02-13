@@ -1,3 +1,4 @@
+import json
 from http import HTTPStatus
 
 import gevent
@@ -14,12 +15,16 @@ from flask import url_for
 
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
+from raiden.messages import LockedTransfer, Unlock
 from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
+from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
-from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.protocol import HoldRaidenEvent, WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
+from raiden.transfer import views
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
 from raiden.utils import sha3
 from raiden.waiting import wait_for_transfer_success
@@ -666,7 +671,7 @@ def test_api_open_channel_invalid_input(
     assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
     channel_data_obj['settle_timeout'] = TEST_SETTLE_TIMEOUT_MAX - 1
-    channel_data_obj['token_address'] = to_checksum_address(make_address())
+    channel_data_obj['token_address'] = to_checksum_address(factories.make_address())
     request = grequests.put(
         api_url_for(
             api_server_test_instance,
@@ -1763,3 +1768,88 @@ def test_channel_events_raiden(api_server_test_instance, raiden_network, token_a
     )
     response = request.send().response
     assert_proper_response(response)
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+def test_pending_transfers_endpoint(raiden_network, token_addresses):
+    initiator, mediator, target = raiden_network
+    amount = 200
+    identifier = 42
+
+    token_address = token_addresses[0]
+    token_network_id = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(mediator),
+        mediator.raiden.default_registry.address,
+        token_address,
+    )
+
+    initiator_server = create_api_server(initiator, 8575)
+    mediator_server = create_api_server(mediator, 8576)
+    target_server = create_api_server(target, 8577)
+
+    target.raiden.raiden_event_handler = target_hold = HoldRaidenEvent()
+    target.raiden.message_handler = target_wait = WaitForMessage()
+    mediator.raiden.message_handler = mediator_wait = WaitForMessage()
+
+    secret = factories.make_secret()
+    secrethash = sha3(secret)
+
+    request = grequests.get(api_url_for(
+        mediator_server,
+        'pending_transfers_resource_by_token',
+        token_address=token_address,
+    ))
+    response = request.send().response
+    assert response.status_code == 200 and response.content == b'[]'
+
+    target_hold.hold_secretrequest_for(secrethash=secrethash)
+
+    initiator.raiden.start_mediated_transfer_with_secret(
+        token_network_identifier=token_network_id,
+        amount=amount,
+        target=target.raiden.address,
+        identifier=identifier,
+        secret=secret,
+    )
+
+    transfer_arrived = target_wait.wait_for_message(LockedTransfer, {'payment_identifier': 42})
+    transfer_arrived.wait()
+
+    for server in (initiator_server, mediator_server, target_server):
+        request = grequests.get(api_url_for(server, 'pending_transfers_resource'))
+        response = request.send().response
+        assert response.status_code == 200
+        content = json.loads(response.content)
+        assert len(content) == 1
+        assert content[0]['payment_identifier'] == str(identifier)
+        assert content[0]['locked_amount'] == str(amount)
+        assert content[0]['token_address'] == to_checksum_address(token_address)
+        assert content[0]['token_network_identifier'] == to_checksum_address(token_network_id)
+
+    mediator_unlock = mediator_wait.wait_for_message(Unlock, {})
+    target_unlock = target_wait.wait_for_message(Unlock, {})
+    target_hold.release_secretrequest_for(target.raiden, secrethash)
+    gevent.wait((mediator_unlock, target_unlock))
+
+    for server in (initiator_server, mediator_server, target_server):
+        request = grequests.get(api_url_for(server, 'pending_transfers_resource'))
+        response = request.send().response
+        assert response.status_code == 200 and response.content == b'[]'
+
+    request = grequests.get(api_url_for(
+        initiator_server,
+        'pending_transfers_resource_by_token',
+        token_address=to_hex(b'notaregisteredtokenn'),
+    ))
+    response = request.send().response
+    assert response.status_code == 404 and b'Token' in response.content
+
+    request = grequests.get(api_url_for(
+        target_server,
+        'pending_transfers_resource_by_token_and_partner',
+        token_address=token_address,
+        partner_address=to_hex(b'~nonexistingchannel~'),
+    ))
+    response = request.send().response
+    assert response.status_code == 404 and b'Channel' in response.content
