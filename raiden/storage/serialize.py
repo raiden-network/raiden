@@ -4,6 +4,38 @@ import json
 from raiden.utils.typing import Any
 
 
+def _import_type(type_name):
+    module_name, _, klass_name = type_name.rpartition('.')
+
+    try:
+        module = importlib.import_module(module_name, None)
+    except ModuleNotFoundError:
+        raise TypeError(f'Module {module_name} does not exist')
+
+    if not hasattr(module, klass_name):
+        raise TypeError(f'Could not find {module_name}.{klass_name}')
+    klass = getattr(module, klass_name)
+    return klass
+
+
+def object_hook(data):
+    """
+    detects the type of a JSON object, imports the class
+    of that type and calls `to_dict`
+    """
+    if '_type' in data:
+        obj = None
+        obj_type = data['_type']
+
+        klass = _import_type(obj_type)
+        if hasattr(klass, 'from_dict'):
+            obj = klass.from_dict(data)
+
+        return obj
+
+    return data
+
+
 class SerializationBase:
     """ Base interface for serialization / deserialization. """
     @staticmethod
@@ -38,37 +70,7 @@ class RaidenJSONDecoder(json.JSONDecoder):
     """
 
     def __init__(self, *args, **kwargs):
-        json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
-
-    def object_hook(self, data):
-        """
-        detects the type of a JSON object, imports the class
-        of that type and calls `to_dict`
-        """
-        if '_type' in data:
-            obj = None
-            obj_type = data['_type']
-
-            klass = self._import_type(obj_type)
-            if hasattr(klass, 'from_dict'):
-                obj = klass.from_dict(data)
-
-            return obj
-
-        return data
-
-    def _import_type(self, type_name):
-        module_name, _, klass_name = type_name.rpartition('.')
-
-        try:
-            module = importlib.import_module(module_name, None)
-        except ModuleNotFoundError:
-            raise TypeError(f'Module {module_name} does not exist')
-
-        if not hasattr(module, klass_name):
-            raise TypeError(f'Could not find {module_name}.{klass_name}')
-        klass = getattr(module, klass_name)
-        return klass
+        json.JSONDecoder.__init__(self, object_hook=object_hook, *args, **kwargs)
 
 
 class JSONSerializer(SerializationBase):

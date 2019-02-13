@@ -381,7 +381,7 @@ class GMatrixClient(MatrixClient):
     def get_user_presence(self, user_id: str) -> str:
         return self.api._send('GET', f'/presence/{quote(user_id)}/status').get('presence')
 
-    def call(self, callback, *args, **kwargs):
+    def call(self, callback, *args, **kwargs):  # pylint: disable=no-self-use
         return callback(*args, **kwargs)
 
     def _sync(self, timeout_ms=30000):

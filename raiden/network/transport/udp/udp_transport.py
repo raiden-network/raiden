@@ -285,7 +285,7 @@ class UDPTransport(Runnable):
 
         return self.addresses_events[recipient]
 
-    def whitelist(self, address: typing.Address):
+    def whitelist(self, address: typing.Address):  # pylint: disable=no-self-use
         """Whitelist peer address to receive communications from
 
         This may be called before transport is started, to ensure events generated during

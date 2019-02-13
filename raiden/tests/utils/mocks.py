@@ -12,7 +12,7 @@ from raiden.utils.signer import LocalSigner
 
 class MockTokenNetwork:
 
-    def detail_participants(
+    def detail_participants(  # pylint: disable=no-self-use
             self,
             participant1,
             participant2,
