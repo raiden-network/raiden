@@ -3,7 +3,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
-from raiden.transfer.state import BalanceProofUnsignedState
+from raiden.transfer.state import BalanceProofSignedState, BalanceProofUnsignedState
 from raiden.utils import pex, serialization, sha3
 from raiden.utils.typing import (
     Address,
@@ -15,8 +15,10 @@ from raiden.utils.typing import (
     PaymentID,
     Secret,
     SecretHash,
+    T_EventNewBalanceProofReceived,
     TokenAddress,
     TokenAmount,
+    Type,
 )
 
 # According to the smart contracts as of 07/08:
@@ -565,16 +567,19 @@ class EventUnlockFailed(Event):
 class EventNewBalanceProofReceived(Event):
     """ Event for newly received balance proofs. Useful for notifying monitoring services. """
 
-    def __init__(self, balance_proof):
+    def __init__(self, balance_proof: BalanceProofSignedState) -> None:
         self.balance_proof = balance_proof
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {
             'balance_proof': self.balance_proof.to_dict(),
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(
+            cls: Type[T_EventNewBalanceProofReceived],
+            data: Dict[str, any],
+    ) -> T_EventNewBalanceProofReceived:
         return cls(data['balance_proof'])
 
 
