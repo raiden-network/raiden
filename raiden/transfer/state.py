@@ -115,7 +115,11 @@ def message_identifier_from_prng(prng):
     return prng.randint(0, UINT64_MAX)
 
 
-class InitiatorTask(State):
+class TransferTask(State):
+    pass
+
+
+class InitiatorTask(TransferTask):
     __slots__ = (
         'token_network_identifier',
         'manager_state',
@@ -159,7 +163,7 @@ class InitiatorTask(State):
         )
 
 
-class MediatorTask(State):
+class MediatorTask(TransferTask):
     __slots__ = (
         'token_network_identifier',
         'mediator_state',
@@ -205,7 +209,7 @@ class MediatorTask(State):
         return restored
 
 
-class TargetTask(State):
+class TargetTask(TransferTask):
     __slots__ = (
         'token_network_identifier',
         'channel_identifier',

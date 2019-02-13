@@ -16,6 +16,7 @@ from raiden.transfer.state import (
     QueueIdsToQueues,
     TargetTask,
     TokenNetworkState,
+    TransferTask,
 )
 from raiden.utils.typing import (
     Address,
@@ -462,7 +463,7 @@ def get_channelstate_settled(
     )
 
 
-def role_from_transfer_task(transfer_task) -> str:
+def role_from_transfer_task(transfer_task: TransferTask) -> str:
     if isinstance(transfer_task, InitiatorTask):
         return 'initiator'
     elif isinstance(transfer_task, MediatorTask):
@@ -481,7 +482,7 @@ def get_transfer_task(chain_state: ChainState, secrethash: SecretHash):
     return chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
 
-def get_all_transfer_tasks(chain_state: ChainState) -> Dict:
+def get_all_transfer_tasks(chain_state: ChainState) -> Dict[SecretHash, TransferTask]:
     return chain_state.payment_mapping.secrethashes_to_task
 
 

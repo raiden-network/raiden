@@ -402,7 +402,11 @@ class TargetTransferState(State):
         return restored
 
 
-class LockedTransferUnsignedState(State):
+class LockedTransferState(State):
+    pass
+
+
+class LockedTransferUnsignedState(LockedTransferState):
     """ State for a transfer created by the local node which contains a hash
     time lock and may be sent.
     """
@@ -495,7 +499,7 @@ class LockedTransferUnsignedState(State):
         return restored
 
 
-class LockedTransferSignedState(State):
+class LockedTransferSignedState(LockedTransferState):
     """ State for a received transfer which contains a hash time lock and a
     signed balance proof.
     """
