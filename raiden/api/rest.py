@@ -66,6 +66,7 @@ from raiden.exceptions import (
     InvalidAmount,
     InvalidBlockNumberInput,
     InvalidNumberInput,
+    InvalidSecretOrSecretHash,
     InvalidSettleTimeout,
     PaymentConflict,
     SamePeerAddress,
@@ -1026,6 +1027,8 @@ class RestAPI:
             target_address: typing.Address,
             amount: typing.TokenAmount,
             identifier: typing.PaymentID,
+            secret: typing.Secret,
+            secret_hash: typing.SecretHash,
     ):
         log.debug(
             'Initiating payment',
@@ -1035,6 +1038,8 @@ class RestAPI:
             target_address=to_checksum_address(target_address),
             amount=amount,
             payment_identifier=identifier,
+            secret=secret,
+            secret_hash=secret_hash,
         )
 
         if identifier is None:
@@ -1047,8 +1052,16 @@ class RestAPI:
                 target=target_address,
                 amount=amount,
                 identifier=identifier,
+                secret=secret,
+                secret_hash=secret_hash,
             )
-        except (InvalidAmount, InvalidAddress, PaymentConflict, UnknownTokenAddress) as e:
+        except (
+                InvalidAmount,
+                InvalidAddress,
+                InvalidSecretOrSecretHash,
+                PaymentConflict,
+                UnknownTokenAddress,
+        ) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,

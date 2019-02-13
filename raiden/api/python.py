@@ -1,9 +1,14 @@
 import structlog
-from eth_utils import is_binary_address, to_checksum_address
+from eth_utils import is_binary_address, is_hex, to_bytes, to_checksum_address
 
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
-from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
+from raiden.constants import (
+    GENESIS_BLOCK_NUMBER,
+    SECRET_HASH_HEXSTRING_LENGTH,
+    SECRET_HEXSTRING_LENGTH,
+    Environment,
+)
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     ChannelNotFound,
@@ -14,6 +19,7 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAddress,
     InvalidAmount,
+    InvalidSecretOrSecretHash,
     InvalidSettleTimeout,
     RaidenRecoverableError,
     TokenNotRegistered,
@@ -30,7 +36,7 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.state import LockedTransferState
 from raiden.transfer.state import BalanceProofSignedState, NettingChannelState, TransferTask
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils import pex, typing
+from raiden.utils import pex, sha3, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -672,6 +678,8 @@ class RaidenAPI:
             target: typing.Address,
             identifier: typing.PaymentID = None,
             transfer_timeout: int = None,
+            secret: typing.Secret = None,
+            secret_hash: typing.SecretHash = None,
     ):
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
@@ -682,6 +690,8 @@ class RaidenAPI:
             amount=amount,
             target=target,
             identifier=identifier,
+            secret=secret,
+            secret_hash=secret_hash,
         )
         payment_status.payment_done.wait(timeout=transfer_timeout)
         return payment_status
@@ -693,6 +703,8 @@ class RaidenAPI:
             amount: typing.TokenAmount,
             target: typing.Address,
             identifier: typing.PaymentID = None,
+            secret: typing.Secret = None,
+            secret_hash: typing.SecretHash = None,
     ):
 
         if not isinstance(amount, int):
@@ -706,6 +718,34 @@ class RaidenAPI:
 
         if not is_binary_address(target):
             raise InvalidAddress('target address is not valid.')
+
+        if secret is not None:
+            if len(secret) != SECRET_HEXSTRING_LENGTH:
+                raise InvalidSecretOrSecretHash(
+                    'secret length should be ' +
+                    str(SECRET_HEXSTRING_LENGTH) +
+                    '.',
+                )
+            if not is_hex(secret):
+                raise InvalidSecretOrSecretHash('provided secret is not an hexadecimal string.')
+            secret = to_bytes(hexstr=secret)
+
+        if secret_hash is not None:
+            if len(secret_hash) != SECRET_HASH_HEXSTRING_LENGTH:
+                raise InvalidSecretOrSecretHash(
+                    'secret_hash length should be ' +
+                    str(SECRET_HASH_HEXSTRING_LENGTH) +
+                    '.',
+                )
+            if not is_hex(secret_hash):
+                raise InvalidSecretOrSecretHash('secret_hash is not an hexadecimal string.')
+            secret_hash = to_bytes(hexstr=secret_hash)
+
+        if secret is None and secret_hash is not None:
+            raise InvalidSecretOrSecretHash('secret_hash without a secret is not supported yet.')
+
+        if secret is not None and secret_hash is not None and secret_hash != sha3(secret):
+            raise InvalidSecretOrSecretHash('provided secret and secret_hash do not match.')
 
         valid_tokens = views.get_token_network_addresses_for(
             views.state_from_raiden(self.raiden),
@@ -734,6 +774,8 @@ class RaidenAPI:
             amount=amount,
             target=target,
             identifier=identifier,
+            secret=secret,
+            secret_hash=secret_hash,
         )
         return payment_status
 

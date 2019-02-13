@@ -738,6 +738,8 @@ class RaidenService(Runnable):
             amount: TokenAmount,
             target: TargetAddress,
             identifier: PaymentID,
+            secret: Secret = None,
+            secret_hash: SecretHash = None,
     ) -> PaymentStatus:
         """ Transfer `amount` between this node and `target`.
 
@@ -749,14 +751,16 @@ class RaidenService(Runnable):
             - Network speed, making the transfer sufficiently fast so it doesn't
               expire.
         """
+        if secret is None:
+            secret = random_secret()
 
-        secret = random_secret()
         payment_status = self.start_mediated_transfer_with_secret(
             token_network_identifier,
             amount,
             target,
             identifier,
             secret,
+            secret_hash,
         )
 
         return payment_status
@@ -768,9 +772,12 @@ class RaidenService(Runnable):
             target: TargetAddress,
             identifier: PaymentID,
             secret: Secret,
+            secret_hash: SecretHash = None,
     ) -> PaymentStatus:
 
-        secret_hash = sha3(secret)
+        if secret_hash is None:
+            secret_hash = sha3(secret)
+
         # LEFTODO: Supply a proper block id
         secret_registered = self.default_secret_registry.check_registered(
             secrethash=secret_hash,
