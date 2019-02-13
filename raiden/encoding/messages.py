@@ -20,6 +20,7 @@ REVEALSECRET = 11
 DELIVERED = 12
 LOCKEXPIRED = 13
 REQUESTMONITORING = 20
+UPDATEPFS = 30
 
 
 # pylint: disable=invalid-name
@@ -56,6 +57,7 @@ locked_amount = make_field('locked_amount', 32, '32s', integer(0, UINT256_MAX))
 amount = make_field('amount', 32, '32s', integer(0, UINT256_MAX))
 reward_amount = make_field('reward_amount', 32, '32s', integer(0, UINT256_MAX))
 fee = make_field('fee', 32, '32s', integer(0, UINT256_MAX))
+reveal_timeout = make_field('reveal_timeout', 32, '32s', integer(0, UINT256_MAX))
 
 signature = make_field('signature', 65, '65s')
 non_closing_signature = make_field('non_closing_signature', 65, '65s')
@@ -246,6 +248,24 @@ RequestMonitoring = namedbuffer(
     ],
 )
 
+
+UpdatePFS = namedbuffer(
+    'update_pfs',
+    [
+        cmdid(UPDATEPFS),
+        pad(3),
+        nonce,
+        chain_id,
+        token_network_address,
+        channel_identifier,
+        transferred_amount,
+        locked_amount,
+        locksroot,
+        reveal_timeout,
+        signature,
+    ],
+)
+
 CMDID_MESSAGE = {
     PROCESSED: Processed,
     PING: Ping,
@@ -258,6 +278,7 @@ CMDID_MESSAGE = {
     DELIVERED: Delivered,
     LOCKEXPIRED: LockExpired,
     REQUESTMONITORING: RequestMonitoring,
+    UPDATEPFS: UpdatePFS,
 }
 
 
