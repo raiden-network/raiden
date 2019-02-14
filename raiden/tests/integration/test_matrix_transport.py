@@ -1,25 +1,36 @@
 import json
 import random
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import gevent
 import pytest
 from gevent import Timeout
 
-from raiden.constants import MONITORING_BROADCASTING_ROOM, UINT64_MAX
+from raiden import raiden_event_handler
+from raiden.constants import (
+    MONITORING_BROADCASTING_ROOM,
+    PATH_FINDING_BROADCASTING_ROOM,
+    UINT64_MAX,
+)
 from raiden.messages import Processed, SecretRequest
 from raiden.network.transport.matrix import MatrixTransport, UserPresence, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
-from raiden.raiden_event_handler import RaidenMonitoringEventHandler
+from raiden.raiden_event_handler import SEND_BALANCE_PROOF_EVENTS, RaidenMonitoringEventHandler
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
-from raiden.tests.utils.messages import make_balance_proof
+from raiden.tests.utils.messages import make_balance_proof, make_lock
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventNewBalanceProofReceived,
+    SendBalanceProof,
+    SendLockedTransfer,
+    SendLockExpired,
+    SendRefundTransfer,
 )
+from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.queue_identifier import QueueIdentifier
+from raiden.transfer.state import BalanceProofUnsignedState, HashTimeLockState
 from raiden.transfer.state_change import ActionUpdateTransportAuthData
 from raiden.utils import pex
 from raiden.utils.signer import LocalSigner
@@ -620,5 +631,98 @@ def test_monitoring_global_messages(
     gevent.idle()
 
     assert ms_room.send_text.call_count == 1
+    transport.stop()
+    transport.get()
+
+
+def test_pfs_global_messages(
+        local_matrix_servers,
+        private_rooms,
+        retry_interval,
+        retries_before_backoff,
+        monkeypatch,
+):
+    """
+    Test that `update_pfs` from `RaidenEventHandler` sends balance proof updates to the global
+    PATH_FINDING_BROADCASTING_ROOM room on Send($BalanceProof)* events, i.e. events, that send
+    a new balance proof to the channel partner.
+    """
+    transport = MatrixTransport({
+        'global_rooms': ['discovery', PATH_FINDING_BROADCASTING_ROOM],
+        'retries_before_backoff': retries_before_backoff,
+        'retry_interval': retry_interval,
+        'server': local_matrix_servers[0],
+        'server_name': local_matrix_servers[0].netloc,
+        'available_servers': [local_matrix_servers[0]],
+        'private_rooms': private_rooms,
+    })
+    transport._client.api.retry_timeout = 0
+    transport._send_raw = MagicMock()
+    raiden_service = MockRaidenService(None)
+
+    transport.start(
+        raiden_service,
+        raiden_service.message_handler,
+        None,
+    )
+
+    ms_room_name = make_room_alias(transport.network_id, PATH_FINDING_BROADCASTING_ROOM)
+    ms_room = transport._global_rooms.get(ms_room_name)
+    assert isinstance(ms_room, Room)
+    ms_room.send_text = MagicMock(spec=ms_room.send_text)
+
+    raiden_service.transport = transport
+    transport.log = MagicMock()
+
+    # create mock events that should trigger a send
+    lock = make_lock()
+    hash_time_lock = HashTimeLockState(lock.amount, lock.expiration, lock.secrethash)
+
+    balance_proof = BalanceProofUnsignedState.from_dict(
+        make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1).to_dict(),
+    )
+    transfer = LockedTransferUnsignedState(
+        balance_proof=balance_proof,
+        payment_identifier=1,
+        token=b'1',
+        lock=hash_time_lock,
+        target=HOP1,
+        initiator=HOP1,
+    )
+
+    send_balance_proof_events = [
+        SendBalanceProof(HOP1, 1, 1, 1, b'1', b'x' * 32, balance_proof),
+        SendLockedTransfer(HOP1, 1, 1, transfer),
+        SendLockExpired(HOP1, 1, balance_proof, b'x' * 32),
+        SendRefundTransfer(HOP1, 1, 1, transfer),
+    ]
+    # make sure we cover all configured event types
+    assert [type(event) for event in send_balance_proof_events] == list(SEND_BALANCE_PROOF_EVENTS)
+
+    event_handler = raiden_event_handler.RaidenEventHandler()
+
+    # let our mock objects pass validation
+    channelstate_mock = Mock()
+    channelstate_mock.reveal_timeout = 1
+
+    monkeypatch.setattr(
+        raiden_event_handler,
+        'get_channelstate_by_token_network_and_partner',
+        lambda *args, **kwargs: channelstate_mock,
+    )
+    monkeypatch.setattr(raiden_event_handler, 'state_from_raiden', lambda *args, **kwargs: 1)
+    monkeypatch.setattr(event_handler, 'handle_send_lockedtransfer', lambda *args, **kwargs: 1)
+    monkeypatch.setattr(event_handler, 'handle_send_refundtransfer', lambda *args, **kwargs: 1)
+
+    # handle the events
+    for event in send_balance_proof_events:
+        event_handler.on_raiden_event(
+            raiden_service,
+            event,
+        )
+    gevent.idle()
+
+    # ensure all events triggered a send
+    assert ms_room.send_text.call_count == len(SEND_BALANCE_PROOF_EVENTS)
     transport.stop()
     transport.get()
