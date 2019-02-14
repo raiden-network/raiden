@@ -27,19 +27,18 @@ def setup_storage(db_path):
 
 def test_upgrade_manager_restores_backup(tmp_path):
     db_path = tmp_path / Path('v17_log.db')
-    upgrade_manager = UpgradeManager(db_filename=db_path)
 
     old_db_filename = tmp_path / Path('v16_log.db')
-    storage = None
 
     storage = setup_storage(old_db_filename)
 
     with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
         storage.update_version()
+        storage.conn.close()
 
     with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
         older_db_file.return_value = str(old_db_filename)
-        upgrade_manager.run()
+        UpgradeManager(db_filename=db_path).run()
 
     # Once restored, the state changes written above should be
     # in the restored database
@@ -64,10 +63,8 @@ def test_sequential_version_numbers(tmp_path):
     - the above goes on for subsequent migrations.
     """
     db_path = tmp_path / Path('v19_log.db')
-    upgrade_manager = UpgradeManager(db_filename=db_path)
 
     old_db_filename = tmp_path / Path('v16_log.db')
-    storage = None
 
     upgrade_functions = [Mock(), Mock(), Mock()]
 
@@ -78,6 +75,7 @@ def test_sequential_version_numbers(tmp_path):
     with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
         storage = setup_storage(old_db_filename)
         storage.update_version()
+        storage.conn.close()
 
     with ExitStack() as stack:
         stack.enter_context(patch(
@@ -91,7 +89,7 @@ def test_sequential_version_numbers(tmp_path):
         older_db_file = stack.enter_context(patch('raiden.utils.upgrades.older_db_file'))
         older_db_file.return_value = str(old_db_filename)
 
-        upgrade_manager.run()
+        UpgradeManager(db_filename=db_path).run()
 
         upgrade_functions[0].assert_called_once_with(ANY, 16, 19)
         upgrade_functions[1].assert_called_once_with(ANY, 17, 19)

@@ -53,18 +53,16 @@ class SQLiteStorage(SerializationBase):
         # References:
         # https://sqlite.org/atomiccommit.html#_persistent_rollback_journals
         # https://sqlite.org/pragma.html#pragma_journal_mode
-        conn.execute('PRAGMA journal_mode=PERSIST')
-
-        self.conn = conn
+        try:
+            conn.execute('PRAGMA journal_mode=PERSIST')
+        except sqlite3.DatabaseError:
+            raise InvalidDBData(
+                f'Existing DB {database_path} was found to be corrupt at Raiden startup. '
+                f'Manual user intervention required. Bailing.',
+            )
 
         with conn:
-            try:
-                conn.executescript(DB_SCRIPT_CREATE_TABLES)
-            except sqlite3.DatabaseError:
-                raise InvalidDBData(
-                    'Existing DB {} was found to be corrupt at Raiden startup. '
-                    'Manual user intervention required. Bailing ...'.format(database_path),
-                )
+            conn.executescript(DB_SCRIPT_CREATE_TABLES)
 
         # When writting to a table where the primary key is the identifier and we want
         # to return said identifier we use cursor.lastrowid, which uses sqlite's last_insert_rowid
@@ -78,6 +76,7 @@ class SQLiteStorage(SerializationBase):
         # TODO (If possible):
         # Improve on this and find a better way to protect against this potential race
         # condition.
+        self.conn = conn
         self.write_lock = threading.Lock()
         self.in_transaction = False
         self.update_version()
