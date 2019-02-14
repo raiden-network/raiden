@@ -43,13 +43,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ActionInitTarget,
 )
-from raiden.transfer.state import (
-    BalanceProofUnsignedState,
-    ChainState,
-    InitiatorTask,
-    PaymentNetworkState,
-    RouteState,
-)
+from raiden.transfer.state import ChainState, InitiatorTask, PaymentNetworkState, RouteState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionInitChain,
@@ -529,7 +523,6 @@ class RaidenService(Runnable):
             self.wal.snapshot()
             self.snapshot_group = new_snapshot_group
 
-        print(event_list)
         return event_list
 
     def set_node_network_state(self, node_address: Address, network_state: str):
@@ -593,20 +586,6 @@ class RaidenService(Runnable):
             )
             self.handle_state_change(state_change)
 
-    def _register_payment_status(
-            self,
-            target: TargetAddress,
-            identifier: PaymentID,
-            balance_proof: BalanceProofUnsignedState,
-    ):
-        with self.payment_identifier_lock:
-            self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
-                payment_identifier=identifier,
-                amount=balance_proof.transferred_amount,
-                token_network_identifier=balance_proof.token_network_identifier,
-                payment_done=AsyncResult(),
-            )
-
     def _initialize_transactions_queues(self, chain_state: ChainState):
         pending_transactions = views.get_pending_transactions(chain_state)
 
@@ -635,36 +614,30 @@ class RaidenService(Runnable):
                         raise
 
     def _initialize_payment_statuses(self, chain_state: ChainState):
-        """ populate targets_to_identifiers_to_statuses.
-        """
-        payment_tasks = chain_state.payment_mapping.secrethashes_to_task
-        for task in payment_tasks.values():
-            if not isinstance(task, InitiatorTask):
-                continue
+        """ Re-initialize targets_to_identifiers_to_statuses. """
 
-            transfers_list = task.manager_state.initiator_transfers
+        with self.payment_identifier_lock:
+            for task in chain_state.payment_mapping.secrethashes_to_task.values():
+                if not isinstance(task, InitiatorTask):
+                    continue
 
-            # PaymentStatus needs to be registered with data
-            # related to the transfer regardless of which one.
-            # What this means is that the initial transfer with
-            # the task's secrethash might have been removed;
-            # Because it's lock expired or the secret is known.
-            # But since the payment status needs to only
-            # know about target, payment_identifier and
-            # balance_proof, any transfer in the list should
-            # be fine to use to register the payment status.
-            secrethash = list(transfers_list.keys())[0]
-            transfer = transfers_list[secrethash].transfer
-            self._register_payment_status(
-                target=transfer.target,
-                identifier=transfer.payment_identifier,
-                balance_proof=transfer.balance_proof,
-            )
+                # Every transfer in the transfers_list must have the same target
+                # and payment_identifier, so using the first transfer is
+                # sufficient.
+                initiator = next(iter(task.manager_state.initiator_transfers.values()))
+                transfer = initiator.transfer
+                target = transfer.target
+                identifier = transfer.payment_identifier
+                balance_proof = transfer.balance_proof
+                self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
+                    payment_identifier=identifier,
+                    amount=balance_proof.transferred_amount,
+                    token_network_identifier=balance_proof.token_network_identifier,
+                    payment_done=AsyncResult(),
+                )
 
     def _initialize_messages_queues(self, chain_state: ChainState):
-        """ Push the queues to the transport and populate
-        targets_to_identifiers_to_statuses.
-        """
+        """ Push the message queues to the transport. """
         events_queues = views.get_all_messagequeues(chain_state)
 
         for queue_identifier, event_queue in events_queues.items():
