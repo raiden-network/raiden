@@ -75,7 +75,7 @@ def latest_confirmed_block_hash_from_raiden(raiden) -> BlockHash:
     return latest_confirmed_block_hash(
         chain_state=chain,
         web3=raiden.chain.client.web3,
-        confirmation_block=raiden.config['blockchain']['confirmation_blocks'],
+        confirmation_blocks=raiden.config['blockchain']['confirmation_blocks'],
     )
 
 
