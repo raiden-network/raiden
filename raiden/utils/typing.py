@@ -132,11 +132,6 @@ T_RequestMonitoring = TypeVar(
 )
 
 
-T_EventNewBalanceProofReceived = TypeVar(
-    'T_EventNewBalanceProofReceived',
-    bound='raiden.transfer.mediated_transfer.events.EventNewBalanceProofReceived',
-)
-
 T_TransactionHash = bytes
 TransactionHash = NewType('TransactionHash', T_TransactionHash)
 

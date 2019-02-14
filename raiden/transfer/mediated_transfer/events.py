@@ -15,10 +15,8 @@ from raiden.utils.typing import (
     PaymentID,
     Secret,
     SecretHash,
-    T_EventNewBalanceProofReceived,
     TokenAddress,
     TokenAmount,
-    Type,
 )
 
 # According to the smart contracts as of 07/08:
@@ -567,7 +565,7 @@ class EventUnlockFailed(Event):
 class EventNewBalanceProofReceived(Event):
     """ Event for newly received balance proofs. Useful for notifying monitoring services. """
 
-    def __init__(self, balance_proof: BalanceProofSignedState) -> None:
+    def __init__(self, balance_proof: BalanceProofSignedState):
         self.balance_proof = balance_proof
 
     def to_dict(self) -> Dict[str, Any]:
@@ -577,9 +575,9 @@ class EventNewBalanceProofReceived(Event):
 
     @classmethod
     def from_dict(
-            cls: Type[T_EventNewBalanceProofReceived],
+            cls,
             data: Dict[str, any],
-    ) -> T_EventNewBalanceProofReceived:
+    ):
         return cls(data['balance_proof'])
 
 
