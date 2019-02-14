@@ -154,5 +154,7 @@ class UpgradeManager:
                 log.error(f'Failed to upgrade database: {str(e)}')
                 raise
 
+            storage.conn.close()
+
     def _delete_current_db(self):
         os.remove(str(self._current_db_filename))
