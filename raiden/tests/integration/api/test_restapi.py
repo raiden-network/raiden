@@ -972,7 +972,11 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_api_payments_with_secret(api_server_test_instance, raiden_network, token_addresses):
+def test_api_payments_secret_hash_errors(
+        api_server_test_instance,
+        raiden_network,
+        token_addresses,
+):
     _, app1 = raiden_network
     amount = 200
     identifier = 42
@@ -984,16 +988,6 @@ def test_api_payments_with_secret(api_server_test_instance, raiden_network, toke
     bad_secret_hash = 'Not Hex String. 0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f33'
     short_secret = '0x123'
     short_secret_hash = 'Short secret hash'
-
-    our_address = api_server_test_instance.rest_api.raiden_api.address
-
-    payment = {
-        'initiator_address': to_checksum_address(our_address),
-        'target_address': to_checksum_address(target_address),
-        'token_address': to_checksum_address(token_address),
-        'amount': amount,
-        'identifier': identifier,
-    }
 
     request = grequests.post(
         api_url_for(
@@ -1092,6 +1086,30 @@ def test_api_payments_with_secret(api_server_test_instance, raiden_network, toke
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
 
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_api_payments_with_secret_no_hash(
+        api_server_test_instance,
+        raiden_network,
+        token_addresses,
+):
+    _, app1 = raiden_network
+    amount = 200
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+    secret = '0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f3349b6e50fc9ca44f1'
+
+    our_address = api_server_test_instance.rest_api.raiden_api.address
+
+    payment = {
+        'initiator_address': to_checksum_address(our_address),
+        'target_address': to_checksum_address(target_address),
+        'token_address': to_checksum_address(token_address),
+        'amount': amount,
+        'identifier': identifier,
+    }
+
     request = grequests.post(
         api_url_for(
             api_server_test_instance,
@@ -1109,6 +1127,32 @@ def test_api_payments_with_secret(api_server_test_instance, raiden_network, toke
     assert_proper_response(response)
     response = response.json()
     assert_payment_secret_and_hash(response, payment)
+    assert secret == response['secret']
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_api_payments_with_secret_and_hash(
+        api_server_test_instance,
+        raiden_network,
+        token_addresses,
+):
+    _, app1 = raiden_network
+    amount = 200
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+    secret = '0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f3349b6e50fc9ca44f1'
+    secret_hash = to_hex(sha3(to_bytes(hexstr=secret)))
+
+    our_address = api_server_test_instance.rest_api.raiden_api.address
+
+    payment = {
+        'initiator_address': to_checksum_address(our_address),
+        'target_address': to_checksum_address(target_address),
+        'token_address': to_checksum_address(token_address),
+        'amount': amount,
+        'identifier': identifier,
+    }
 
     request = grequests.post(
         api_url_for(
@@ -1127,9 +1171,7 @@ def test_api_payments_with_secret(api_server_test_instance, raiden_network, toke
     response = request.send().response
     assert_proper_response(response)
     response = response.json()
-
     assert_payment_secret_and_hash(response, payment)
-
     assert secret == response['secret']
     assert secret_hash == response['secret_hash']
 
