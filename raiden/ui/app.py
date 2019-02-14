@@ -270,8 +270,11 @@ def run_app(
             click.secho(
                 f"'{pathfinding_service_info['message']}'. "
                 f"You have chosen pathfinding operator '{pathfinding_service_info['operator']}' "
-                f"with the running version '{pathfinding_service_info['version']}' ",
+                f"with the running version '{pathfinding_service_info['version']}' "
+                f"on chain_id: '{pathfinding_service_info['network_info']['chain_id']}."
+                f"Requesting a path will cost you: '{pathfinding_service_info['price_info']}",
             )
+            log.info('Using PFS', pfs_info=pathfinding_service_info)
 
     if node_network_id != given_network_id:
         if known_given_network_id and known_node_network_id:
