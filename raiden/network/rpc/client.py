@@ -52,6 +52,14 @@ from raiden.utils.typing import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def logs_blocks_sanity_check(from_block: BlockSpecification, to_block: BlockSpecification) -> None:
+    """Checks that the from/to blocks passed onto log calls contain only appropriate types"""
+    is_valid_from = isinstance(from_block, int) or isinstance(from_block, str)
+    assert is_valid_from, 'event log from block can be integer or latest,pending, earliest'
+    is_valid_to = isinstance(to_block, int) or isinstance(to_block, str)
+    assert is_valid_to, 'event log to block can be integer or latest,pending, earliest'
+
+
 def geth_assert_rpc_interfaces(web3: Web3):
 
     try:
@@ -750,6 +758,7 @@ class JSONRPCClient:
             to_block: BlockSpecification = 'latest',
     ) -> StatelessFilter:
         """ Create a filter in the ethereum node. """
+        logs_blocks_sanity_check(from_block, to_block)
         return StatelessFilter(
             self.web3,
             {
@@ -768,6 +777,7 @@ class JSONRPCClient:
             to_block: BlockSpecification = 'latest',
     ) -> List[Dict]:
         """ Get events for the given query. """
+        logs_blocks_sanity_check(from_block, to_block)
         return self.web3.eth.getLogs({
             'fromBlock': from_block,
             'toBlock': to_block,

@@ -47,7 +47,7 @@ def handle_tokennetwork_new(raiden: 'RaidenService', event: Event):
     raiden.blockchain_events.add_token_network_listener(
         token_network_proxy=token_network_proxy,
         contract_manager=raiden.contract_manager,
-        from_block=block_hash,
+        from_block=block_number,
     )
 
     token_network_state = TokenNetworkState(
