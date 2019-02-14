@@ -700,11 +700,14 @@ class MatrixTransport(Runnable):
         # _get_room_ids_for_address will take care of returning only matching rooms and
         # _leave_unused_rooms will clear it in the future, if and when needed
         last_ex: Optional[Exception] = None
+        retry_interval = 0.1
         for _ in range(JOIN_RETRIES):
             try:
                 room = self._client.join_room(room_id)
             except MatrixRequestError as e:
                 last_ex = e
+                gevent.sleep(retry_interval)
+                retry_interval = retry_interval * 2
             else:
                 break
         else:

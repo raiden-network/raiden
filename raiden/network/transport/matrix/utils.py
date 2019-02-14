@@ -22,7 +22,7 @@ from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
 
-JOIN_RETRIES = 5
+JOIN_RETRIES = 10
 USERID_RE = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
 ROOM_NAME_SEPARATOR = '_'
 ROOM_NAME_PREFIX = 'raiden'
