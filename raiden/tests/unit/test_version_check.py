@@ -159,7 +159,8 @@ def test_version_check_api_rate_limit_exceeded():
     version = parse_version('0.17.1.dev205+ge7a0c6ad')
 
     class Response():
-        def json(self):  # pylint: disable=no-self-use
+        @staticmethod
+        def json():
             response = """{"message": "API rate limit exceeded for 62.96.232.178. (But here's the
              good news: Authenticated requests get a higher rate limit. Check out the
             documentation for more details.)", "documentation_url":
@@ -177,7 +178,8 @@ def test_version_check():
     version = parse_version('0.17.1.dev205+ge7a0c6ad')
 
     class Response():
-        def json(self):  # pylint: disable=no-self-use
+        @staticmethod
+        def json():
             return json.loads(LATEST_RELEASE_RESPONSE.replace('\n', ''))
 
     def fake_request(endpoint):

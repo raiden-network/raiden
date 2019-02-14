@@ -12,8 +12,8 @@ from raiden.utils.signer import LocalSigner
 
 class MockTokenNetwork:
 
-    def detail_participants(  # pylint: disable=no-self-use
-            self,
+    @staticmethod
+    def detail_participants(
             participant1,
             participant2,
             block_identifier,
