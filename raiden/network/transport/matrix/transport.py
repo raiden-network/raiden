@@ -703,7 +703,6 @@ class MatrixTransport(Runnable):
         retry_interval = 0.1
         for _ in range(JOIN_RETRIES):
             try:
-                gevent.sleep(.1)
                 room = self._client.join_room(room_id)
             except MatrixRequestError as e:
                 last_ex = e
