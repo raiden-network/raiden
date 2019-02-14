@@ -63,7 +63,6 @@ UNEVENTFUL_EVENTS = (
 
 
 class RaidenEventHandler:
-    # pylint: disable=no-self-use
 
     def on_raiden_event(self, raiden: RaidenService, event: Event):
         # pylint: disable=too-many-branches
@@ -107,8 +106,8 @@ class RaidenEventHandler:
                 node=pex(raiden.address),
             )
 
+    @staticmethod
     def handle_send_lockexpired(
-            self,
             raiden: RaidenService,
             send_lock_expired: SendLockExpired,
     ):
@@ -119,8 +118,8 @@ class RaidenEventHandler:
             lock_expired_message,
         )
 
+    @staticmethod
     def handle_send_lockedtransfer(
-            self,
             raiden: RaidenService,
             send_locked_transfer: SendLockedTransfer,
     ):
@@ -131,8 +130,8 @@ class RaidenEventHandler:
             mediated_transfer_message,
         )
 
+    @staticmethod
     def handle_send_secretreveal(
-            self,
             raiden: RaidenService,
             reveal_secret_event: SendSecretReveal,
     ):
@@ -143,8 +142,8 @@ class RaidenEventHandler:
             reveal_secret_message,
         )
 
+    @staticmethod
     def handle_send_balanceproof(
-            self,
             raiden: RaidenService,
             balance_proof_event: SendBalanceProof,
     ):
@@ -155,8 +154,8 @@ class RaidenEventHandler:
             unlock_message,
         )
 
+    @staticmethod
     def handle_send_secretrequest(
-            self,
             raiden: RaidenService,
             secret_request_event: SendSecretRequest,
     ):
@@ -167,8 +166,8 @@ class RaidenEventHandler:
             secret_request_message,
         )
 
+    @staticmethod
     def handle_send_refundtransfer(
-            self,
             raiden: RaidenService,
             refund_transfer_event: SendRefundTransfer,
     ):
@@ -179,8 +178,8 @@ class RaidenEventHandler:
             refund_transfer_message,
         )
 
+    @staticmethod
     def handle_send_processed(
-            self,
             raiden: RaidenService,
             processed_event: SendProcessed,
     ):
@@ -191,8 +190,8 @@ class RaidenEventHandler:
             processed_message,
         )
 
+    @staticmethod
     def handle_paymentsentsuccess(
-            self,
             raiden: RaidenService,
             payment_sent_success_event: EventPaymentSentSuccess,
     ):
@@ -205,8 +204,8 @@ class RaidenEventHandler:
         # see: https://github.com/raiden-network/raiden/pull/3191
         payment_status.payment_done.set(True)
 
+    @staticmethod
     def handle_paymentsentfailed(
-            self,
             raiden: RaidenService,
             payment_sent_failed_event: EventPaymentSentFailed,
     ):
@@ -222,8 +221,8 @@ class RaidenEventHandler:
         if payment_status:
             payment_status.payment_done.set(False)
 
+    @staticmethod
     def handle_unlockfailed(
-            self,
             raiden: RaidenService,
             unlock_failed_event: EventUnlockFailed,
     ):
@@ -235,8 +234,8 @@ class RaidenEventHandler:
             node=pex(raiden.address),
         )
 
+    @staticmethod
     def handle_contract_send_secretreveal(
-            self,
             raiden: RaidenService,
             channel_reveal_secret_event: ContractSendSecretReveal,
     ):
@@ -246,8 +245,8 @@ class RaidenEventHandler:
             given_block_identifier='latest',
         )
 
+    @staticmethod
     def handle_contract_send_channelclose(
-            self,
             raiden: RaidenService,
             channel_close_event: ContractSendChannelClose,
     ):
@@ -279,8 +278,8 @@ class RaidenEventHandler:
             block_identifier='latest',
         )
 
+    @staticmethod
     def handle_contract_send_channelupdate(
-            self,
             raiden: RaidenService,
             channel_update_event: ContractSendChannelUpdateTransfer,
     ):
@@ -319,8 +318,8 @@ class RaidenEventHandler:
                     node=pex(raiden.address),
                 )
 
+    @staticmethod
     def handle_contract_send_channelunlock(
-            self,
             raiden: RaidenService,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
@@ -431,8 +430,8 @@ class RaidenEventHandler:
                 node=pex(raiden.address),
             )
 
+    @staticmethod
     def handle_contract_send_channelsettle(
-            self,
             raiden: RaidenService,
             channel_settle_event: ContractSendChannelSettle,
     ):
@@ -545,7 +544,6 @@ class RaidenEventHandler:
 
 
 class RaidenMonitoringEventHandler(RaidenEventHandler):
-    # pylint: disable=no-self-use
 
     def on_raiden_event(self, raiden: RaidenService, event: Event):
         if type(event) == EventNewBalanceProofReceived:
@@ -554,8 +552,8 @@ class RaidenMonitoringEventHandler(RaidenEventHandler):
         # Call base class to trigger other side-effects
         super().on_raiden_event(raiden, event)
 
+    @staticmethod
     def handle_received_balance_proof(
-            self,
             raiden: RaidenService,
             new_balance_proof_event: EventNewBalanceProofReceived,
     ):
