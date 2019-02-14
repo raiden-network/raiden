@@ -1,6 +1,6 @@
 import pytest
 
-from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof
+from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof, UpdatePFS
 from raiden.tests.utils.factories import make_privkey_address
 from raiden.tests.utils.messages import (
     ADDRESS as PARTNER_ADDRESS,
@@ -17,6 +17,7 @@ from raiden.transfer.balance_proof import (
     pack_balance_proof_update,
     pack_reward_proof,
 )
+from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils.signer import LocalSigner, recover
 
 PRIVKEY, ADDRESS = make_privkey_address()
@@ -129,3 +130,16 @@ def test_request_monitoring():
     ) == PARTNER_ADDRESS
 
     assert request_monitoring.verify_request_monitoring(PARTNER_ADDRESS, ADDRESS)
+
+
+def test_update_pfs():
+    balance_proof = BalanceProofUnsignedState.from_dict(
+        make_balance_proof(signer=signer, amount=1).to_dict(),
+    )
+    message = UpdatePFS.from_balance_proof(
+        balance_proof=balance_proof,
+        reveal_timeout=1,
+    )
+    assert message.signature == b''
+    message.sign(signer)
+    assert recover(message._data_to_sign(), message.signature) == ADDRESS
