@@ -50,7 +50,6 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLING,
     CHANNEL_STATE_UNUSABLE,
     CHANNEL_STATES_PRIOR_TO_CLOSED,
-    EMPTY_MERKLE_TREE,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
@@ -62,6 +61,7 @@ from raiden.transfer.state import (
     TransactionOrder,
     UnlockPartialProofState,
     UnlockProofState,
+    make_empty_merkle_tree,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -1127,7 +1127,7 @@ def compute_merkletree_without(
         if leaves:
             result = MerkleTreeState(compute_layers(leaves))
         else:
-            result = EMPTY_MERKLE_TREE
+            result = make_empty_merkle_tree()
 
     return result
 

@@ -36,7 +36,7 @@ def compute_layers(elements):
     """
 
     elements = list(elements)  # consume generators
-    assert elements, 'Use EMPTY_MERKLE_TREE if there are no elements'
+    assert elements, 'Use make_empty_merkle_tree if there are no elements'
 
     if not all(isinstance(item, bytes) for item in elements):
         raise ValueError('all elements must be bytes')

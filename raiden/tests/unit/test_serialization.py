@@ -8,7 +8,7 @@ from raiden.storage.serialize import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state, state_change
 from raiden.transfer.merkle_tree import compute_layers
-from raiden.transfer.state import EMPTY_MERKLE_TREE
+from raiden.transfer.state import make_empty_merkle_tree
 from raiden.utils import serialization
 
 
@@ -126,7 +126,7 @@ def test_serialization_merkletree_layers():
 
 
 def test_serialization_merkletree_layers_empty():
-    tree = EMPTY_MERKLE_TREE
+    tree = make_empty_merkle_tree()
 
     data = serialization.serialize_merkletree_layers(tree.layers)
     restored = serialization.deserialize_merkletree_layers(data)

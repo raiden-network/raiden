@@ -82,10 +82,8 @@ def serialize_merkletree_layers(data) -> typing.List[str]:
 def deserialize_merkletree_layers(data: typing.List[str]):
     elements = map_list(deserialize_bytes, data)
     if len(elements) == 0:
-        return [
-            [],           # the leaves are empty
-            [bytes(32)],  # the root is the constant 0
-        ]
+        from raiden.transfer.state import make_empty_merkle_tree
+        return make_empty_merkle_tree().layers
 
     return compute_layers(elements)
 
