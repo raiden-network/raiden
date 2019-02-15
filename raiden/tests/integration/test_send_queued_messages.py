@@ -6,10 +6,12 @@ from raiden.app import App
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEvent, dont_handle_node_change_network_state
 from raiden.tests.utils.transfer import assert_synced_channel_state
 from raiden.transfer import views
+from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
 
 
@@ -216,3 +218,10 @@ def test_payment_statuses_are_restored(
         target_balance=spent_amount,
         retry_timeout=network_wait,
     )
+
+    for identifier in range(spent_amount):
+        assert raiden_events_search_for_item(
+            app0_restart.raiden,
+            EventPaymentSentSuccess,
+            {'identifier': identifier + 1, 'amount': 1},
+        )
