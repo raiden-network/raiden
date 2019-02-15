@@ -447,6 +447,9 @@ class RaidenService(Runnable):
 
         self.blockchain_events.uninstall_all_event_listeners()
 
+        # Close storage DB to release internal DB lock
+        self.wal.storage.conn.close()
+
         if self.db_lock is not None:
             self.db_lock.release()
 
