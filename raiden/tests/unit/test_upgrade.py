@@ -53,7 +53,7 @@ def test_upgrade_manager_restores_backup(tmp_path):
 
 def test_sequential_version_numbers(tmp_path):
     """ Test that the version received by each migration
-    function is sequantially incremented according to the
+    function is sequentially incremented according to the
     version returned by the previous migration.
     Sequence of events:
     - The first migration runs and returns v16 as the
