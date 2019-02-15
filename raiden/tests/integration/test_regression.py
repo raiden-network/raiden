@@ -3,7 +3,7 @@ import random
 import gevent
 import pytest
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX
 from raiden.messages import Lock, LockedTransfer, RevealSecret, Unlock
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
@@ -13,7 +13,6 @@ from raiden.tests.utils.network import payment_channel_open_and_deposit
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
-from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.utils import sha3
 
 # pylint: disable=too-many-locals

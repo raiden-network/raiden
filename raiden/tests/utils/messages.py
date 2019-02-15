@@ -2,11 +2,11 @@
 import random
 import string
 
-from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer, RefundTransfer
 from raiden.tests.utils.factories import UNIT_CHAIN_ID, UNIT_CHANNEL_ID, make_privkey_address
 from raiden.tests.utils.tests import fixture_all_combinations
-from raiden.transfer.state import EMPTY_MERKLE_ROOT, balanceproof_from_envelope
+from raiden.transfer.state import balanceproof_from_envelope
 from raiden.utils import sha3
 from raiden.utils.signer import Signer
 

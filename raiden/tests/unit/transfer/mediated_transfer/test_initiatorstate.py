@@ -5,7 +5,7 @@ from typing import NamedTuple
 
 import pytest
 
-from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import EMPTY_HASH, EMPTY_MERKLE_ROOT, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -46,7 +46,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.state import (
-    EMPTY_MERKLE_ROOT,
     HashTimeLockState,
     NettingChannelState,
     RouteState,

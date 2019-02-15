@@ -6,7 +6,7 @@ from functools import total_ordering
 import networkx
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
 
-from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import SendMessageEvent, State
@@ -1777,7 +1777,6 @@ class TransactionOrder(State):
         return restored
 
 
-EMPTY_MERKLE_ROOT: Locksroot = bytes(32)
 EMPTY_MERKLE_TREE = MerkleTreeState([
     [],                   # the leaves are empty
     [EMPTY_MERKLE_ROOT],  # the root is the constant 0

@@ -4,7 +4,7 @@ from typing import NamedTuple
 
 import pytest
 
-from raiden.constants import EMPTY_HASH, EMPTY_HASH_KECCAK, UINT64_MAX
+from raiden.constants import EMPTY_HASH, EMPTY_HASH_KECCAK, EMPTY_MERKLE_ROOT, UINT64_MAX
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -37,7 +37,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveSecretReveal,
 )
-from raiden.transfer.state import EMPTY_MERKLE_ROOT
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.utils import typing
 
