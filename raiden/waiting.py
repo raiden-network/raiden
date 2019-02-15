@@ -107,7 +107,7 @@ def wait_for_payment_balance(
         target_balance: typing.TokenAmount,
         retry_timeout: float,
 ) -> None:
-    """Wait until a given channels balance exceeds the target balance.
+    """Wait until a given channel's balance exceeds the target balance.
 
     Note:
         This does not time out, use gevent.Timeout.
