@@ -638,7 +638,7 @@ class RaidenService(Runnable):
                 balance_proof = transfer.balance_proof
                 self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
                     payment_identifier=identifier,
-                    amount=balance_proof.locked_amount,
+                    amount=transfer.lock.amount,
                     token_network_identifier=balance_proof.token_network_identifier,
                     payment_done=AsyncResult(),
                 )
