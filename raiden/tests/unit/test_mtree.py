@@ -1,5 +1,6 @@
 import pytest
 
+from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.exceptions import HashLengthNot32
 from raiden.transfer.merkle_tree import (
     MERKLEROOT,
@@ -8,7 +9,7 @@ from raiden.transfer.merkle_tree import (
     merkleroot,
     validate_proof,
 )
-from raiden.transfer.state import EMPTY_MERKLE_ROOT, MerkleTreeState
+from raiden.transfer.state import MerkleTreeState
 from raiden.utils import sha3
 
 

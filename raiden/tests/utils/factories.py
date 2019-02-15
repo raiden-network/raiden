@@ -4,7 +4,7 @@ import string
 from functools import singledispatch
 from typing import NamedTuple
 
-from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer
 from raiden.transfer import balance_proof, channel
 from raiden.transfer.mediated_transfer import mediator
@@ -19,7 +19,6 @@ from raiden.transfer.mediated_transfer.state import (
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
 from raiden.transfer.merkle_tree import compute_layers, merkleroot
 from raiden.transfer.state import (
-    EMPTY_MERKLE_ROOT,
     NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
     BalanceProofUnsignedState,

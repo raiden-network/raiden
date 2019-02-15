@@ -4,7 +4,12 @@ import random
 
 from eth_utils import encode_hex
 
-from raiden.constants import EMPTY_HASH_KECCAK, MAXIMUM_PENDING_TRANSFERS, UINT256_MAX
+from raiden.constants import (
+    EMPTY_HASH_KECCAK,
+    EMPTY_MERKLE_ROOT,
+    MAXIMUM_PENDING_TRANSFERS,
+    UINT256_MAX,
+)
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.balance_proof import pack_balance_proof
@@ -45,7 +50,6 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLING,
     CHANNEL_STATE_UNUSABLE,
     CHANNEL_STATES_PRIOR_TO_CLOSED,
-    EMPTY_MERKLE_ROOT,
     EMPTY_MERKLE_TREE,
     BalanceProofSignedState,
     BalanceProofUnsignedState,

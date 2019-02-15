@@ -1,4 +1,5 @@
-from raiden.tests.utils.factories import EMPTY_MERKLE_ROOT, HOP1, HOP2, UNIT_SECRETHASH
+from raiden.constants import EMPTY_MERKLE_ROOT
+from raiden.tests.utils.factories import HOP1, HOP2, UNIT_SECRETHASH
 from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.node import is_transaction_effect_satisfied
 from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock

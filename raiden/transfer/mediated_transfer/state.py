@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING
 
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
 
+from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.transfer.architecture import State
 from raiden.transfer.state import (
-    EMPTY_MERKLE_ROOT,
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
