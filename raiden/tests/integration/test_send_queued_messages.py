@@ -131,8 +131,8 @@ def test_send_queued_messages(
     )
 
 
-@pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
 def test_payment_statuses_are_restored(
         raiden_network,
@@ -152,8 +152,7 @@ def test_payment_statuses_are_restored(
     started the transfers.
     Related issue: https://github.com/raiden-network/raiden/issues/3432
     """
-    # Topology app0 -> app1 -> app2
-    app0, app1, app2 = raiden_network
+    app0, app1 = raiden_network
 
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -166,19 +165,6 @@ def test_payment_statuses_are_restored(
 
     app0.event_handler = HoldRaidenEvent()
     app0.event_handler.hold(SendSecretReveal, {})
-    app2.event_handler = HoldRaidenEvent()
-    app2.event_handler.hold(SendSecretRequest, {})
-
-    # make one transfer from app0 to app2 so that the locked amount
-    # in the app0-app1 channel also includes collateral from other channels
-    identifier = 42
-    payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier=token_network_identifier,
-        amount=2,
-        target=app2.raiden.address,
-        identifier=identifier,
-    )
-    assert payment_status.payment_identifier == identifier
 
     # make a few transfers from app0 to app1
     amount = 1
@@ -197,24 +183,7 @@ def test_payment_statuses_are_restored(
 
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
-    # Bring down both app0 and app1 so that we can check app0's payment statuses
-    # during restart being sure that the payments won't complete (and pop the mapping)
-    # before we are done checking
-    app1_restart = App(
-        config=app1.config,
-        chain=app1.raiden.chain,
-        query_start_block=0,
-        default_registry=app1.raiden.default_registry,
-        default_secret_registry=app1.raiden.default_secret_registry,
-        transport=MatrixTransport(
-            app1.raiden.config['transport']['matrix'],
-        ),
-        raiden_event_handler=raiden_event_handler,
-        message_handler=message_handler,
-        discovery=app1.raiden.discovery,
-    )
-    app1.stop()
-    del app1  # from here on the app1_restart should be used
+
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
@@ -230,35 +199,37 @@ def test_payment_statuses_are_restored(
     )
     app0.stop()
     del app0  # from here on the app0_restart should be used
-
+    # stop app1 to make sure that we don't complete the transfers before our checks
+    app1.stop()
     app0_restart.start()
+
+    # Check that the payment statuses were restored properly after restart
     for identifier in range(spent_amount):
         identifier = identifier + 1
         mapping = app0_restart.raiden.targets_to_identifiers_to_statuses
-        status = mapping[app1_restart.raiden.address][identifier]
+        status = mapping[app1.raiden.address][identifier]
         assert status.amount == 1
         assert status.payment_identifier == identifier
         assert status.token_network_identifier == token_network_identifier
 
-    # now bring back app1 too so that the transfers can complete
-    app1_restart.start()
-
+    app1.start()  # now that our checks are done start app1 again
     waiting.wait_for_healthy(
         app0_restart.raiden,
-        app1_restart.raiden.address,
+        app1.raiden.address,
         network_wait,
     )
 
     waiting.wait_for_payment_balance(
-        raiden=app1_restart.raiden,
+        raiden=app1.raiden,
         payment_network_id=payment_network_id,
         token_address=token_address,
         partner_address=app0_restart.raiden.address,
-        target_address=app1_restart.raiden.address,
+        target_address=app1.raiden.address,
         target_balance=spent_amount,
         retry_timeout=network_wait,
     )
 
+    # Check that payments are completed after both nodes come online after restart
     for identifier in range(spent_amount):
         assert raiden_events_search_for_item(
             app0_restart.raiden,
