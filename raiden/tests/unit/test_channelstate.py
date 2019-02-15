@@ -40,7 +40,6 @@ from raiden.transfer.merkle_tree import (
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSING,
-    EMPTY_MERKLE_TREE,
     HashTimeLockState,
     MerkleTreeState,
     NettingChannelEndState,
@@ -49,6 +48,7 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
     UnlockPartialProofState,
     balanceproof_from_envelope,
+    make_empty_merkle_tree,
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -1072,7 +1072,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     assert lock.secrethash not in new_channel_state.partner_state.secrethashes_to_lockedlocks
     msg = 'the balance proof must be updated'
     assert new_channel_state.partner_state.balance_proof == lock_expired.balance_proof, msg
-    assert new_channel_state.partner_state.merkletree == EMPTY_MERKLE_TREE
+    assert new_channel_state.partner_state.merkletree == make_empty_merkle_tree()
 
 
 def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain():

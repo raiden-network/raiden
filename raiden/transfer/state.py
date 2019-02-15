@@ -103,6 +103,13 @@ def balanceproof_from_envelope(envelope_message):
     )
 
 
+def make_empty_merkle_tree():
+    return MerkleTreeState([
+        [],                   # the leaves are empty
+        [EMPTY_MERKLE_ROOT],  # the root is the constant 0
+    ])
+
+
 def message_identifier_from_prng(prng):
     return prng.randint(0, UINT64_MAX)
 
@@ -1375,7 +1382,7 @@ class NettingChannelEndState(State):
         #: unlocked off chain yet, and the secret has been registered onchain
         #: before the lock has expired.
         self.secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = dict()
-        self.merkletree = EMPTY_MERKLE_TREE
+        self.merkletree = make_empty_merkle_tree()
         self.balance_proof: OptionalBalanceProofState = None
 
     def __repr__(self):
@@ -1775,9 +1782,3 @@ class TransactionOrder(State):
         )
 
         return restored
-
-
-EMPTY_MERKLE_TREE = MerkleTreeState([
-    [],                   # the leaves are empty
-    [EMPTY_MERKLE_ROOT],  # the root is the constant 0
-])
