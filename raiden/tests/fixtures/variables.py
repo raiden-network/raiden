@@ -2,6 +2,7 @@
 import os
 import random
 from enum import Enum
+from itertools import permutations
 
 import pytest
 from eth_utils import denoms, remove_0x_prefix, to_normalized_address
@@ -367,3 +368,15 @@ def skip_if_not_matrix(request):
     if request.config.option.transport in ('matrix', 'all'):
         return
     pytest.skip('This test works only with Matrix transport')
+
+
+@pytest.fixture
+def roaming_paths(matrix_server_count, number_of_transports):
+    product = []
+    for i in range(number_of_transports):
+        for j in range(matrix_server_count):
+            product.append([i, j])
+    roaming_paths = []
+    for item in permutations(product, number_of_transports):
+        roaming_paths.append(item)
+    return roaming_paths

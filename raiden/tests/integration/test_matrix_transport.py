@@ -510,14 +510,6 @@ def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval
 
     assert all_messages_received
 
-    transport0.stop()
-    transport1.stop()
-    transport2.stop()
-
-    transport0.get()
-    transport1.get()
-    transport2.get()
-
 
 def test_matrix_discovery_room_offline_server(
         local_matrix_servers,
@@ -734,3 +726,83 @@ def test_pfs_global_messages(
     )
     transport.stop()
     transport.get()
+
+
+@pytest.mark.parametrize('matrix_server_count', [2])
+@pytest.mark.parametrize('number_of_transports', [2])
+def test_matrix_both_users_roaming(
+        retry_interval,
+        roaming_paths,
+        matrix_server_count,
+        number_of_transports,
+        local_matrix_servers,
+        retries_before_backoff,
+):
+    clients = {}
+
+    for client_index in range(number_of_transports):
+        received_messages = set()
+        message_handler = MessageHandler(received_messages)
+        raiden_service = MockRaidenService(message_handler)
+        queueid = QueueIdentifier(
+            recipient=MockRaidenService(message_handler).address,
+            channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+        )
+        clients[client_index] = {
+            'raiden_service': raiden_service,
+            'message_handler': message_handler,
+            'received_messages': received_messages,
+            'queueid': queueid,
+        }
+
+    transports = {}
+    online_clients = []
+    message_counter = 0
+    for prev_state, current_state in zip(roaming_paths[:-1], roaming_paths[1:]):
+        for transport in current_state:
+            client_index, server_index = transport
+            client = clients[client_index]
+            transport_name = 'transport_{}_{}'.format(client_index, server_index)
+            if 'transport_{}_{}'.format(client_index, server_index) in transports.keys():
+                if transport in prev_state and transport not in current_state:
+                    transports[transport_name].stop()
+                    online_clients.remove(client)
+                else:
+                    pass
+
+            else:
+                transports[transport_name] = MatrixTransport({
+                    'global_rooms': ['discovery'],
+                    'retries_before_backoff': retries_before_backoff,
+                    'retry_interval': retry_interval,
+                    'server': local_matrix_servers[server_index],
+                    'server_name': local_matrix_servers[server_index].netloc,
+                    'available_servers': local_matrix_servers,
+                    'private_rooms': True,
+                })
+                transport = transports['transport_{}_{}'.format(client_index, server_index)]
+                transport.start(
+                    raiden_service=raiden_service,
+                    message_handler=message_handler,
+                    prev_auth_data='',
+                )
+                online_clients.append(client)
+                for target_client in clients.values():
+                    if target_client != client:
+                        transport.start_health_check(target_client['raiden_service'].address)
+                message_counter += message_counter
+                if len(online_clients) > 1:
+                    message_counter += message_counter
+
+                    for client in online_clients:
+                        if target_client != client:
+                            message = Processed(1)
+                            raiden_service.sign(message)
+                            transport.send_async(client['queueid'], message)
+
+                    with Timeout(retry_interval * 20, exception=False):
+                        all_messages_received = False
+                        while not all_messages_received:
+                            if all([len(client['received_messages']) == message_counter for client in online_clients]):
+                                all_messages_received = True
+                            gevent.sleep(.1)
