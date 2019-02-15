@@ -25,7 +25,6 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
 )
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
-from raiden.transfer.state import lockstate_from_lock
 from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock, ReceiveProcessed
 from raiden.transfer.views import state_from_raiden
 from raiden.waiting import wait_for_block, wait_for_settle
@@ -204,8 +203,8 @@ def test_refund_transfer(
     # Both channels have the amount locked because of the refund message
     assert_synced_channel_state(
         token_network_identifier,
-        app0, deposit - amount_path, [lockstate_from_lock(lock)],
-        app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
+        app0, deposit - amount_path, [lock],
+        app1, deposit + amount_path, [refund_lock],
     )
     assert_synced_channel_state(
         token_network_identifier,
@@ -392,8 +391,8 @@ def test_different_view_of_last_bp_during_unlock(
     # Both channels have the amount locked because of the refund message
     assert_synced_channel_state(
         token_network_identifier,
-        app0, deposit - amount_path, [lockstate_from_lock(lock)],
-        app1, deposit + amount_path, [lockstate_from_lock(refund_lock)],
+        app0, deposit - amount_path, [lock],
+        app1, deposit + amount_path, [refund_lock],
     )
     assert_synced_channel_state(
         token_network_identifier,
@@ -601,13 +600,13 @@ def test_refund_transfer_after_2nd_hop(
     # channels have the amount locked because of the refund message
     assert_synced_channel_state(
         token_network_identifier,
-        app0, deposit - amount_path, [lockstate_from_lock(lock1)],
-        app1, deposit + amount_path, [lockstate_from_lock(refund_lock1)],
+        app0, deposit - amount_path, [lock1],
+        app1, deposit + amount_path, [refund_lock1],
     )
     assert_synced_channel_state(
         token_network_identifier,
-        app1, deposit - amount_path, [lockstate_from_lock(lock2)],
-        app2, deposit + amount_path, [lockstate_from_lock(refund_lock2)],
+        app1, deposit - amount_path, [lock2],
+        app2, deposit + amount_path, [refund_lock2],
     )
     assert_synced_channel_state(
         token_network_identifier,

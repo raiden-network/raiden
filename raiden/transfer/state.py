@@ -103,14 +103,6 @@ def balanceproof_from_envelope(envelope_message):
     )
 
 
-def lockstate_from_lock(lock):
-    return HashTimeLockState(
-        lock.amount,
-        lock.expiration,
-        lock.secrethash,
-    )
-
-
 def message_identifier_from_prng(prng):
     return prng.randint(0, UINT64_MAX)
 
