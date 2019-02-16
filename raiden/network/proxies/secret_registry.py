@@ -10,7 +10,7 @@ from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, safe_gas_limit, sha3
-from raiden.utils.typing import BlockNumber, BlockSpecification, Keccak256, Secret
+from raiden.utils.typing import BlockNumber, BlockSpecification, Secret, SecretHash
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
 from raiden_contracts.contract_manager import ContractManager
 
@@ -130,7 +130,7 @@ class SecretRegistry:
 
     def get_register_block_for_secrethash(
             self,
-            secrethash: Keccak256,
+            secrethash: SecretHash,
             block_identifier: BlockSpecification,
     ) -> BlockNumber:
         return self.proxy.contract.functions.getSecretRevealBlockHeight(
@@ -139,7 +139,7 @@ class SecretRegistry:
 
     def check_registered(
             self,
-            secrethash: Keccak256,
+            secrethash: SecretHash,
             block_identifier: BlockSpecification,
     ) -> bool:
         return self.get_register_block_for_secrethash(secrethash, block_identifier) > 0

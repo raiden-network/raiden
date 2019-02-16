@@ -55,14 +55,15 @@ from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Address,
+    BlockHash,
     BlockNumber,
     InitiatorAddress,
+    Optional,
     PaymentAmount,
     PaymentID,
     Secret,
     SecretHash,
     TargetAddress,
-    TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
 )
@@ -177,16 +178,16 @@ class PaymentStatus(NamedTuple):
     retries as well as the status of a transfer that is retried.
     """
     payment_identifier: PaymentID
-    amount: TokenAmount
+    amount: PaymentAmount
     token_network_identifier: TokenNetworkID
     payment_done: AsyncResult
-    secret: Secret = None
-    secret_hash: SecretHash = None
+    secret: Optional[Secret] = None
+    secret_hash: Optional[SecretHash] = None
 
     def matches(
             self,
             token_network_identifier: TokenNetworkID,
-            amount: TokenAmount,
+            amount: PaymentAmount,
     ):
         return (
             token_network_identifier == self.token_network_identifier and
@@ -195,6 +196,7 @@ class PaymentStatus(NamedTuple):
 
 
 StatusesDict = Dict[TargetAddress, Dict[PaymentID, PaymentStatus]]
+ConnectionManagerDict = Dict[TokenNetworkID, ConnectionManager]
 
 
 class RaidenService(Runnable):
@@ -213,7 +215,7 @@ class RaidenService(Runnable):
             discovery=None,
     ):
         super().__init__()
-        self.tokennetworkids_to_connectionmanagers = dict()
+        self.tokennetworkids_to_connectionmanagers: ConnectionManagerDict = dict()
         self.targets_to_identifiers_to_statuses: StatusesDict = defaultdict(dict)
 
         self.chain: BlockChainService = chain
@@ -235,7 +237,7 @@ class RaidenService(Runnable):
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
 
-        self.wal = None
+        self.wal: Optional[wal.WriteAheadLog] = None
         self.snapshot_group = 0
 
         # This flag will be used to prevent the service from processing
@@ -256,12 +258,11 @@ class RaidenService(Runnable):
             # nodes writes state changes to the same WAL there are no
             # guarantees about recovery, this happens because during recovery
             # the WAL replay can not be deterministic.
-            self.lock_file = os.path.join(self.database_dir, '.lock')
-            self.db_lock = filelock.FileLock(self.lock_file)
+            lock_file = os.path.join(self.database_dir, '.lock')
+            self.db_lock = filelock.FileLock(lock_file)
         else:
             self.database_path = ':memory:'
             self.database_dir = None
-            self.lock_file = None
             self.serialization_file = None
             self.db_lock = None
 
@@ -467,12 +468,15 @@ class RaidenService(Runnable):
                 self.start_health_check_for(neighbour)
 
     def get_block_number(self) -> BlockNumber:
+        assert self.wal
         return views.block_number(self.wal.state_manager.current_state)
 
     def on_message(self, message: Message):
         self.message_handler.on_message(self, message)
 
     def handle_state_change(self, state_change: StateChange):
+        assert self.wal
+
         log.debug(
             'State change',
             node=pex(self.address),
@@ -585,7 +589,7 @@ class RaidenService(Runnable):
             state_change = Block(
                 block_number=confirmed_block_number,
                 gas_limit=confirmed_block['gasLimit'],
-                block_hash=bytes(confirmed_block['hash']),
+                block_hash=BlockHash(bytes(confirmed_block['hash'])),
             )
             self.handle_state_change(state_change)
 
@@ -663,12 +667,10 @@ class RaidenService(Runnable):
 
         for event_queue in events_queues.values():
             for event in event_queue:
-                is_initiator = (
-                    type(event) == SendLockedTransfer and
-                    event.transfer.initiator == self.address
-                )
-                if is_initiator:
-                    self.transport.whitelist(address=event.transfer.target)
+                if isinstance(event, SendLockedTransfer):
+                    transfer = event.transfer
+                    if transfer.initiator == self.address:
+                        self.transport.whitelist(address=transfer.target)
 
     def sign(self, message: Message):
         """ Sign message inplace. """
@@ -737,7 +739,7 @@ class RaidenService(Runnable):
     def mediated_transfer_async(
             self,
             token_network_identifier: TokenNetworkID,
-            amount: TokenAmount,
+            amount: PaymentAmount,
             target: TargetAddress,
             identifier: PaymentID,
             secret: Secret = None,
@@ -770,7 +772,7 @@ class RaidenService(Runnable):
     def start_mediated_transfer_with_secret(
             self,
             token_network_identifier: TokenNetworkID,
-            amount: TokenAmount,
+            amount: PaymentAmount,
             target: TargetAddress,
             identifier: PaymentID,
             secret: Secret,
