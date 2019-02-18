@@ -7,9 +7,51 @@ from click.testing import CliRunner
 from eth_utils import to_checksum_address
 
 from raiden.constants import Environment
-from raiden.ui.cli import run
+from raiden.ui.cli import OPTION_DEPENDENCIES, run
 
 EXPECTED_DEFAULT_ENVIRONMENT_VALUE = Environment.PRODUCTION.value
+
+
+# Values to be used to test the option dependencies, need to be distinct form the default values
+# The tuples define the inverse values for the depended-on options
+_OPTION_DEPENDENCY_TEST_VALUES = {
+    'pathfinding-service-address': 'https://example.com',
+    'enable-monitoring': None,
+    'matrix-server': 'https://example.com',
+    'listen-address': '0.0.0.0:5001',
+    'max-unresponsive-time': 100,
+    'send-ping-time': 100,
+    'nat': 'stun',
+    ('transport', 'matrix'): 'udp',
+    ('transport', 'udp'): 'matrix',
+}
+
+
+def pytest_generate_tests(metafunc):
+    if metafunc.definition.name == 'test_cli_option_dependencies':
+        test_params = []
+        test_ids = []
+        for option_name, dependencies in OPTION_DEPENDENCIES.items():
+            args = [f'--{option_name}']
+            option_test_value = _OPTION_DEPENDENCY_TEST_VALUES.get(option_name)
+            if option_test_value is not None:
+                args.append(option_test_value)
+
+            for dep_name, dep_value in dependencies:
+                args.append(f'--{dep_name}')
+                dep_test_value = _OPTION_DEPENDENCY_TEST_VALUES.get((dep_name, dep_value))
+                args.append(dep_test_value)
+
+                error_message = (
+                    f'This option is only available when option "--{dep_name}" '
+                    f'is set to "{dep_value}". Current value: "{dep_test_value}"'
+                )
+                # Only test first depended-on option for now
+                # TODO: Implement multiple option dependencies test when such an option is added
+                break
+            test_params.append((args, error_message))
+            test_ids.append(option_name)
+        metafunc.parametrize(('args', 'error_message'), test_params, ids=test_ids)
 
 
 def spawn_raiden(args):
@@ -18,22 +60,6 @@ def spawn_raiden(args):
         logfile=sys.stdout,
         encoding='utf-8',
     )
-
-
-def test_cli_version():
-    runner = CliRunner()
-    result = runner.invoke(run, ['version'])
-    assert result.exit_code == 0
-    result_json = json.loads(result.output)
-    result_expected_keys = [
-        'raiden',
-        'python_implementation',
-        'python_version',
-        'system',
-        'distribution',
-    ]
-    for expected_key in result_expected_keys:
-        assert expected_key in result_json
 
 
 def expect_cli_until_acknowledgment(child):
@@ -59,6 +85,30 @@ def expect_cli_normal_startup(child, mode):
     expect_cli_until_acknowledgment(child)
     expect_cli_until_account_selection(child)
     expect_cli_successful_connected(child, mode)
+
+
+def test_cli_version():
+    runner = CliRunner()
+    result = runner.invoke(run, ['version'])
+    assert result.exit_code == 0
+    result_json = json.loads(result.output)
+    result_expected_keys = [
+        'raiden',
+        'python_implementation',
+        'python_version',
+        'system',
+        'distribution',
+    ]
+    for expected_key in result_expected_keys:
+        assert expected_key in result_json
+
+
+# This is parametrized via `pytest_generate_tests` above
+def test_cli_option_dependencies(args, error_message):
+    runner = CliRunner()
+    result = runner.invoke(run, args)
+    assert result.exit_code == 2
+    assert error_message in result.output
 
 
 @pytest.mark.timeout(65)
