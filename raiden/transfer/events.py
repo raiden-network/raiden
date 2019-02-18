@@ -9,10 +9,12 @@ from raiden.transfer.architecture import (
 )
 from raiden.transfer.state import BalanceProofSignedState
 from raiden.utils import pex, serialization, sha3
+from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 from raiden.utils.typing import (
     Address,
     Any,
     BlockExpiration,
+    Blockhash,
     ChannelID,
     Dict,
     InitiatorAddress,
@@ -46,7 +48,9 @@ class ContractSendChannelClose(ContractSendEvent):
             token_address: TokenAddress,
             token_network_identifier: TokenNetworkID,
             balance_proof: Optional[BalanceProofSignedState],
+            triggered_by_block_hash: Blockhash,
     ):
+        super().__init__(triggered_by_block_hash)
         self.channel_identifier = channel_identifier
         self.token_address = token_address
         self.token_network_identifier = token_network_identifier
@@ -54,16 +58,19 @@ class ContractSendChannelClose(ContractSendEvent):
 
     def __repr__(self):
         return (
-            '<ContractSendChannelClose channel:{} token:{} token_network:{} balance_proof:{}>'
+            '<ContractSendChannelClose channel:{} token:{} token_network:{} '
+            'balance_proof:{} triggered_by_block_hash:{}>'
         ).format(
             self.channel_identifier,
             pex(self.token_address),
             pex(self.token_network_identifier),
             self.balance_proof,
+            pex(self.triggered_by_block_hash),
         )
 
     def __eq__(self, other):
         return (
+            super().__eq__(other) and
             isinstance(other, ContractSendChannelClose) and
             self.channel_identifier == other.channel_identifier and
             self.token_address == other.token_address and
@@ -80,6 +87,7 @@ class ContractSendChannelClose(ContractSendEvent):
             'token_address': to_checksum_address(self.token_address),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
+            'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
 
         }
         return result
@@ -91,6 +99,7 @@ class ContractSendChannelClose(ContractSendEvent):
             token_address=to_canonical_address(data['token_address']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
+            triggered_by_block_hash=Blockhash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
 
         return restored
@@ -103,8 +112,9 @@ class ContractSendChannelSettle(ContractSendEvent):
             self,
             channel_identifier: ChannelID,
             token_network_identifier: TokenNetworkAddress,
-
+            triggered_by_block_hash: Blockhash,
     ):
+        super().__init__(triggered_by_block_hash)
         if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be a ChannelID instance')
 
@@ -115,13 +125,18 @@ class ContractSendChannelSettle(ContractSendEvent):
         self.token_network_identifier = token_network_identifier
 
     def __repr__(self):
-        return '<ContractSendChannelSettle channel:{} token_network:{}>'.format(
-            self.channel_identifier,
-            pex(self.token_network_identifier),
+        return (
+            '<ContractSendChannelSettle channel:{} token_network:{} '
+            'triggered_by_block_hash:{}>'.format(
+                self.channel_identifier,
+                pex(self.token_network_identifier),
+                pex(self.triggered_by_block_hash),
+            )
         )
 
     def __eq__(self, other):
         return (
+            super().__eq__(other) and
             isinstance(other, ContractSendChannelSettle) and
             self.channel_identifier == other.channel_identifier and
             self.token_network_identifier == other.token_network_identifier
@@ -134,6 +149,7 @@ class ContractSendChannelSettle(ContractSendEvent):
         result = {
             'channel_identifier': str(self.channel_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
         }
 
         return result
@@ -143,6 +159,7 @@ class ContractSendChannelSettle(ContractSendEvent):
         restored = cls(
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            triggered_by_block_hash=Blockhash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
 
         return restored
@@ -157,8 +174,9 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             channel_identifier: ChannelID,
             token_network_identifier: TokenNetworkID,
             balance_proof: BalanceProofSignedState,
+            triggered_by_block_hash: Blockhash,
     ):
-        super().__init__(expiration)
+        super().__init__(triggered_by_block_hash, expiration)
 
         self.channel_identifier = channel_identifier
         self.token_network_identifier = token_network_identifier
@@ -166,11 +184,13 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
 
     def __repr__(self):
         return (
-            '<ContractSendChannelUpdateTransfer channel:{} token_network:{} balance_proof:{}>'
+            '<ContractSendChannelUpdateTransfer channel:{} token_network:{} '
+            'balance_proof:{} triggered_by_block_hash:{}>'
         ).format(
             self.channel_identifier,
             pex(self.token_network_identifier),
             self.balance_proof,
+            pex(self.triggered_by_block_hash),
         )
 
     def __eq__(self, other):
@@ -191,6 +211,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             'channel_identifier': str(self.channel_identifier),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
+            'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
         }
 
         return result
@@ -202,6 +223,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
+            triggered_by_block_hash=Blockhash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
 
         return restored
@@ -216,7 +238,9 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             token_network_identifier: TokenNetworkID,
             channel_identifier: ChannelID,
             participant: Address,
+            triggered_by_block_hash: Blockhash,
     ):
+        super().__init__(triggered_by_block_hash)
         self.token_address = token_address
         self.token_network_identifier = token_network_identifier
         self.channel_identifier = channel_identifier
@@ -224,18 +248,20 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
     def __repr__(self):
         return (
-            '<ContractSendChannelBatchUnlock '
-            'token_address: {} token_network_id:{} channel:{} participant:{}'
+            '<ContractSendChannelBatchUnlock token_address: {} token_network_id:{} '
+            'channel:{} participant:{} triggered_by_block_hash:{}'
             '>'
         ).format(
             pex(self.token_address),
             pex(self.token_network_identifier),
             self.channel_identifier,
             pex(self.participant),
+            pex(self.triggered_by_block_hash),
         )
 
     def __eq__(self, other):
         return (
+            super().__eq__(other) and
             isinstance(other, ContractSendChannelBatchUnlock) and
             self.token_address == other.token_address and
             self.token_network_identifier == other.token_network_identifier and
@@ -252,6 +278,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': str(self.channel_identifier),
             'participant': to_checksum_address(self.participant),
+            'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
         }
 
         return result
@@ -263,6 +290,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             participant=to_canonical_address(data['participant']),
+            triggered_by_block_hash=Blockhash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
 
         return restored
@@ -271,16 +299,23 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 class ContractSendSecretReveal(ContractSendExpirableEvent):
     """ Event emitted when the lock must be claimed on-chain. """
 
-    def __init__(self, expiration: BlockExpiration, secret: Secret):
+    def __init__(
+            self,
+            expiration: BlockExpiration,
+            secret: Secret,
+            triggered_by_block_hash: Blockhash,
+    ):
         if not isinstance(secret, T_Secret):
             raise ValueError('secret must be a Secret instance')
 
-        super().__init__(expiration)
+        super().__init__(triggered_by_block_hash, expiration)
         self.secret = secret
 
     def __repr__(self):
         secrethash: SecretHash = SecretHash(sha3(self.secret))
-        return '<ContractSendSecretReveal secrethash:{}>'.format(secrethash)
+        return (
+            '<ContractSendSecretReveal secrethash:{} triggered_by_block_hash:{}>'
+        ).format(secrethash, pex(self.triggered_by_block_hash))
 
     def __eq__(self, other):
         return (
@@ -296,6 +331,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
         result = {
             'expiration': str(self.expiration),
             'secret': serialization.serialize_bytes(self.secret),
+            'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
         }
 
         return result
@@ -305,6 +341,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
         restored = cls(
             expiration=BlockExpiration(int(data['expiration'])),
             secret=Secret(serialization.deserialize_bytes(data['secret'])),
+            triggered_by_block_hash=Blockhash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
 
         return restored
