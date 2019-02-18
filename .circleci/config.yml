@@ -431,24 +431,57 @@ jobs:
     parameters:
       py-version:
         <<: *py-version-template
+      resource:
+        description: "resource type for underlying VM"
+        default: "medium"
+        type: enum
+        enum: ["small", "medium", "medium+", "large", "xlarge"]
+      remote-host:
+        description: "name of the arm server"
+        default: ""
+        type: enum
+        enum: ["", "armv7", "armv8"]
+      architecture:
+        description: "defines the architecture for which the binary is built"
+        default: "x86_64"
+        type: enum
+        enum: ["x86_64", "armv7l", "aarch64"]
+
 
     executor:
       name: docker
       py-version: "3.7"
+      resource: << parameters.resource >>
 
     steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "7b:c7:3d:f7:ff:1a:2b:8e:2d:18:93:be:c6:7b:b0:7c"
       - attach-and-link:
           py-version: << parameters.py-version >>
       - conditional-skip
       - config-path
-      - setup_remote_docker:
-          docker_layer_caching: true
+      - when:
+          condition: << parameters.remote-host >>
+          steps:
+            - run:
+                name: "set remote docker host"
+                command: echo 'export DOCKER_HOST=localhost:23760' >> ${BASH_ENV}
+            - run:
+                name: SSH Port Forwarding To ARM Server
+                command: |
+                  ssh -f -N -L 127.0.0.1:23760:localhost:2376 ci@<< parameters.remote-host >>.ci.raiden.network -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no
+      - unless:
+          condition: << parameters.remote-host >>
+          steps:
+            - setup_remote_docker:
+                docker_layer_caching: true
       - run:
           name: Build Linux Binary
           command: |
             source .circleci/get_archive_tag.sh
             make bundle-docker
-            echo raiden-${ARCHIVE_TAG}-linux.tar.gz > dist/archive/_LATEST-linux.txt
+            echo raiden-${ARCHIVE_TAG}-linux-<<parameters.architecture>>.tar.gz > dist/archive/_LATEST-linux-<<parameters.architecture>>.txt
       - persist_to_workspace:
           root: "~"
           paths:
@@ -474,12 +507,13 @@ jobs:
             pip uninstall -y pdbpp
             mkdir -p dist/archive
             source .circleci/get_archive_tag.sh
+            echo $(uname -m)
       - run:
           name: Build macOS Binary
           command: |
             pyinstaller --noconfirm --clean raiden.spec
-            zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip dist/raiden-${ARCHIVE_TAG}-macOS
-            echo raiden-${ARCHIVE_TAG}-macOS.zip > dist/archive/_LATEST-macOS.txt
+            zip -9 --junk-paths dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip dist/raiden-${ARCHIVE_TAG}-macOS-x86_64
+            echo raiden-${ARCHIVE_TAG}-macOS-x86_64.zip > dist/archive/_LATEST-macOS-x86_64.txt
       - persist_to_workspace:
           root: "~"
           paths:
@@ -724,6 +758,27 @@ workflows:
             <<: *only-tagged-version-filter
 
       - build-binary-linux:
+          name: build-binary-linux-x86
+          requires:
+            - prepare-python-linux
+          filters:
+            <<: *only-tagged-version-filter
+
+      - build-binary-linux:
+          name: build-binary-linux-armv7l
+          resource: "small"
+          remote-host: "armv7"
+          architecture: "armv7l"
+          requires:
+            - prepare-python-linux
+          filters:
+            <<: *only-tagged-version-filter
+
+      - build-binary-linux:
+          name: build-binary-linux-aarch64
+          resource: "small"
+          remote-host: "armv8"
+          architecture: "aarch64"
           requires:
             - prepare-python-linux
           filters:
@@ -744,7 +799,9 @@ workflows:
       - deploy-digitalocean:
           context: "Raiden Context"
           requires:
-            - build-binary-linux
+            - build-binary-linux-x86
+            - build-binary-linux-armv7l
+            - build-binary-linux-aarch64
             - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
@@ -752,7 +809,9 @@ workflows:
       - deploy-github-release:
           context: "Raiden Context"
           requires:
-            - build-binary-linux
+            - build-binary-linux-x86
+            - build-binary-linux-armv7l
+            - build-binary-linux-aarch64
             - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
@@ -855,8 +914,25 @@ workflows:
           - test-integration-matrix-3.7
 
       - build-binary-linux:
-            requires:
-              - finalize
+          name: build-binary-linux-x86
+          requires:
+            - finalize
+
+      - build-binary-linux:
+          name: build-binary-linux-armv7l
+          resource: "small"
+          remote-host: "armv7"
+          architecture: "armv7l"
+          requires:
+            - finalize
+
+      - build-binary-linux:
+          name: build-binary-linux-aarch64
+          resource: "small"
+          remote-host: "armv8"
+          architecture: "aarch64"
+          requires:
+            - finalize
 
       - prepare-system-macos:
           requires:
@@ -876,7 +952,9 @@ workflows:
       - deploy-digitalocean:
           context: "Raiden Context"
           requires:
-            - build-binary-linux
+            - build-binary-linux-x86
+            - build-binary-linux-armv7l
+            - build-binary-linux-aarch64
             - build-binary-macos
 
     triggers:
