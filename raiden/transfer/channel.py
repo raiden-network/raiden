@@ -1381,10 +1381,18 @@ def events_for_close(
         assert balance_proof is None or isinstance(balance_proof, BalanceProofSignedState)
 
         close_event = ContractSendChannelClose(
-            channel_state.identifier,
-            channel_state.token_address,
-            channel_state.token_network_identifier,
-            balance_proof,
+            channel_identifier=channel_state.identifier,
+            token_address=channel_state.token_address,
+            token_network_identifier=channel_state.token_network_identifier,
+            balance_proof=balance_proof,
+            # the events_for_close function is always called with the current
+            # block number. So ContractSendChannelClose does not need to check
+            # anything. This is an ugly hack for the moment. Other ugly hack
+            # is to not give a block hash to ContractSendChannelClose
+            # The "right" way would be to add the blockhash along with the block
+            # number in the chain state but would like to avoid unless it
+            # is absolutely needed
+            triggered_by_block_hash=bytes(0),
         )
 
         events.append(close_event)
@@ -1742,9 +1750,11 @@ def handle_block(
                 None,
                 None,
             )
+            token_network_identifier = TokenNetworkAddress(channel_state.token_network_identifier)
             event = ContractSendChannelSettle(
-                channel_state.identifier,
-                TokenNetworkAddress(channel_state.token_network_identifier),
+                channel_identifier=channel_state.identifier,
+                token_network_identifier=token_network_identifier,
+                triggered_by_block_hash=state_change.block_hash,
             )
             events.append(event)
 
@@ -1785,10 +1795,11 @@ def handle_channel_closed(
             # The channel was closed by our partner, if there is a balance
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
-                expiration,
-                channel_state.identifier,
-                channel_state.token_network_identifier,
-                balance_proof,
+                expiration=expiration,
+                channel_identifier=channel_state.identifier,
+                token_network_identifier=channel_state.token_network_identifier,
+                balance_proof=balance_proof,
+                triggered_by_block_hash=state_change.block_hash,
             )
             channel_state.update_transaction = TransactionExecutionStatus(
                 started_block_number=state_change.block_number,
@@ -1833,10 +1844,11 @@ def handle_channel_settled(
 
         if not is_settle_pending and merkle_tree_leaves:
             onchain_unlock = ContractSendChannelBatchUnlock(
-                channel_state.token_address,
-                channel_state.token_network_identifier,
-                channel_state.identifier,
-                channel_state.partner_state.address,
+                token_address=channel_state.token_address,
+                token_network_identifier=channel_state.token_network_identifier,
+                channel_identifier=channel_state.identifier,
+                participant=channel_state.partner_state.address,
+                triggered_by_block_hash=state_change.block_hash,
             )
             events.append(onchain_unlock)
 

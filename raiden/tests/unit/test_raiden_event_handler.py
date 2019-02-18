@@ -1,7 +1,7 @@
 from raiden.constants import EMPTY_HASH
 from raiden.network.proxies.token_network import ParticipantDetails, ParticipantsDetails
 from raiden.raiden_event_handler import RaidenEventHandler
-from raiden.tests.utils.factories import make_32bytes, make_address
+from raiden.tests.utils.factories import make_32bytes, make_address, make_block_hash
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.utils import hash_balance_data
@@ -61,6 +61,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
         token_network_identifier=token_network_identifier,
         channel_identifier=channel_identifier,
         participant=participant,
+        triggered_by_block_hash=make_block_hash(),
     )
     # This should not throw an unrecoverable error
     RaidenEventHandler().on_raiden_event(raiden=raiden, event=event)

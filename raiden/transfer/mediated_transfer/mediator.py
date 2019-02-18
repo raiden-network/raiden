@@ -47,6 +47,7 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
     BlockExpiration,
+    BlockHash,
     BlockNumber,
     BlockTimeout,
     ChannelMap,
@@ -809,6 +810,7 @@ def events_for_onchain_secretreveal_if_dangerzone(
         secrethash: SecretHash,
         transfers_pair: List[MediationPairState],
         block_number: BlockNumber,
+        block_hash: BlockHash,
 ) -> List[Event]:
     """ Reveal the secret on-chain if the lock enters the unsafe region and the
     secret is not yet on-chain.
@@ -864,6 +866,7 @@ def events_for_onchain_secretreveal_if_dangerzone(
                     channel_state=payer_channel,
                     secret=secret,
                     expiration=lock.expiration,
+                    block_hash=block_hash,
                 )
                 events.extend(reveal_events)
 
@@ -918,6 +921,9 @@ def events_for_onchain_secretreveal_if_closed(
                     channel_state=payer_channel,
                     secret=secret,
                     expiration=lock.expiration,
+                    # Same problem as block_hash for ContractSendChannelClose
+                    # Eventually needs chain state to also contain a block hash
+                    block_hash=bytes(0),
                 )
                 events.extend(reveal_events)
                 transaction_sent = True
@@ -1178,10 +1184,11 @@ def handle_block(
     )
 
     secret_reveal_events = events_for_onchain_secretreveal_if_dangerzone(
-        channelidentifiers_to_channels,
-        mediator_state.secrethash,
-        mediator_state.transfers_pair,
-        state_change.block_number,
+        channelmap=channelidentifiers_to_channels,
+        secrethash=mediator_state.secrethash,
+        transfers_pair=mediator_state.transfers_pair,
+        block_number=state_change.block_number,
+        block_hash=state_change.block_hash,
     )
 
     unlock_fail_events = events_for_expired_pairs(
