@@ -666,19 +666,21 @@ def test_events_for_onchain_secretreveal():
 
     # If we are not in the unsafe region, we must NOT emit ContractSendSecretReveal
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        setup.channel_map,
-        UNIT_SECRETHASH,
-        setup.transfers_pair,
-        block_number - 1,
+        channelmap=setup.channel_map,
+        secrethash=UNIT_SECRETHASH,
+        transfers_pair=setup.transfers_pair,
+        block_number=block_number - 1,
+        block_hash=factories.make_block_hash(),
     )
     assert not events
 
     # If we are in the unsafe region, we must emit ContractSendSecretReveal
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        setup.channel_map,
-        UNIT_SECRETHASH,
-        setup.transfers_pair,
-        block_number,
+        channelmap=setup.channel_map,
+        secrethash=UNIT_SECRETHASH,
+        transfers_pair=setup.transfers_pair,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
 
     assert search_for_item(events, ContractSendSecretReveal, {
@@ -700,10 +702,11 @@ def test_events_for_onchain_secretreveal_once():
     )
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        setup.channel_map,
-        UNIT_SECRETHASH,
-        setup.transfers_pair,
-        start_danger_zone_block_number,
+        channelmap=setup.channel_map,
+        secrethash=UNIT_SECRETHASH,
+        transfers_pair=setup.transfers_pair,
+        block_number=start_danger_zone_block_number,
+        block_hash=factories.make_block_hash(),
     )
     assert len(events) == 1
 
@@ -715,10 +718,11 @@ def test_events_for_onchain_secretreveal_once():
     )
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        setup.channel_map,
-        UNIT_SECRETHASH,
-        setup.transfers_pair,
-        end_danger_zone_block_number,
+        channelmap=setup.channel_map,
+        secrethash=UNIT_SECRETHASH,
+        transfers_pair=setup.transfers_pair,
+        block_number=end_danger_zone_block_number,
+        block_hash=factories.make_block_hash(),
     )
     assert not events
 
@@ -726,10 +730,11 @@ def test_events_for_onchain_secretreveal_once():
         assert pair.payer_state == 'payer_waiting_secret_reveal'
 
     events = mediator.events_for_onchain_secretreveal_if_dangerzone(
-        setup.channel_map,
-        UNIT_SECRETHASH,
-        setup.transfers_pair,
-        pair.payer_transfer.lock.expiration,
+        channelmap=setup.channel_map,
+        secrethash=UNIT_SECRETHASH,
+        transfers_pair=setup.transfers_pair,
+        block_number=pair.payer_transfer.lock.expiration,
+        block_hash=factories.make_block_hash(),
     )
     assert not events
 

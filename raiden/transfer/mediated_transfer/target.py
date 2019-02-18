@@ -20,7 +20,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import NettingChannelState, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
-from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockNumber, List, Optional
+from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockHash, BlockNumber, List, Optional
 
 
 def sanity_check(
@@ -51,6 +51,7 @@ def events_for_onchain_secretreveal(
         target_state: TargetTransferState,
         channel_state: NettingChannelState,
         block_number: BlockNumber,
+        block_hash: BlockHash,
 ) -> List[Event]:
     """ Emits the event for revealing the secret on-chain if the transfer
     can not be settled off-chain.
@@ -78,9 +79,10 @@ def events_for_onchain_secretreveal(
             transfer.lock.secrethash,
         )
         return secret_registry.events_for_onchain_secretreveal(
-            channel_state,
-            secret,
-            expiration,
+            channel_state=channel_state,
+            secret=secret,
+            expiration=expiration,
+            block_hash=block_hash,
         )
 
     return list()
@@ -270,6 +272,7 @@ def handle_block(
         target_state: TargetTransferState,
         channel_state: NettingChannelState,
         block_number: BlockNumber,
+        block_hash: BlockHash,
 ) -> TransitionResult[TargetTransferState]:
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
@@ -299,9 +302,10 @@ def handle_block(
         events = [failed]
     elif secret_known:
         events = events_for_onchain_secretreveal(
-            target_state,
-            channel_state,
-            block_number,
+            target_state=target_state,
+            channel_state=channel_state,
+            block_number=block_number,
+            block_hash=block_hash,
         )
 
     return TransitionResult(target_state, events)
@@ -358,9 +362,10 @@ def state_transition(
         assert state_change.block_number == block_number
 
         iteration = handle_block(
-            target_state,
-            channel_state,
-            state_change.block_number,
+            target_state=target_state,
+            channel_state=channel_state,
+            block_number=state_change.block_number,
+            block_hash=state_change.block_hash,
         )
     elif type(state_change) == ReceiveSecretReveal:
         assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
