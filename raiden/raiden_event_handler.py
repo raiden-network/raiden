@@ -557,7 +557,8 @@ class RaidenEventHandler:
             block_identifier='latest',
         )
 
-    def update_pfs(self, raiden: RaidenService, event: Event):
+    @staticmethod
+    def update_pfs(raiden: RaidenService, event: Event):
         channel_state = get_channelstate_by_token_network_and_partner(
             chain_state=state_from_raiden(raiden),
             token_network_id=to_canonical_address(
