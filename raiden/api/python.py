@@ -213,7 +213,6 @@ class RaidenAPI:
 
         try:
             registry = self.raiden.chain.token_network_registry(registry_address)
-            # LEFTODO: Supply a proper block id
             return registry.add_token(
                 token_address=token_address,
                 given_block_identifier='latest',
@@ -376,7 +375,6 @@ class RaidenAPI:
                 ))
 
             try:
-                # LEFTODO: Supply a proper block id
                 token_network.new_netting_channel(
                     partner=partner_address,
                     settle_timeout=settle_timeout,
@@ -500,7 +498,6 @@ class RaidenAPI:
 
         # set_total_deposit calls approve
         # token.approve(netcontract_address, addendum, 'latest')
-        # LEFTODO: Supply a proper block id
         channel_proxy.set_total_deposit(total_deposit, block_identifier='latest')
 
         target_address = self.raiden.address
