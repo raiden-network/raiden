@@ -16,9 +16,11 @@ from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_fro
 from raiden.utils import lpex, pex, serialization, sha3
 from raiden.utils.serialization import map_dict, map_list, serialize_bytes
 from raiden.utils.typing import (
+    AdditionalHash,
     Address,
     Any,
     Balance,
+    BalanceHash,
     BlockExpiration,
     BlockHash,
     BlockNumber,
@@ -30,6 +32,7 @@ from raiden.utils.typing import (
     List,
     LockHash,
     Locksroot,
+    Nonce,
     Optional,
     PaymentNetworkID,
     Secret,
@@ -887,13 +890,13 @@ class BalanceProofSignedState(State):
 
     def __init__(
             self,
-            nonce: int,
+            nonce: Nonce,
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
             token_network_identifier: TokenNetworkID,
             channel_identifier: ChannelID,
-            message_hash: Keccak256,
+            message_hash: AdditionalHash,
             signature: Signature,
             sender: Address,
             chain_id: ChainID,
@@ -1002,7 +1005,7 @@ class BalanceProofSignedState(State):
         return not self.__eq__(other)
 
     @property
-    def balance_hash(self):
+    def balance_hash(self) -> BalanceHash:
         return hash_balance_data(
             transferred_amount=self.transferred_amount,
             locked_amount=self.locked_amount,
@@ -1034,7 +1037,7 @@ class BalanceProofSignedState(State):
             locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
-            message_hash=Keccak256(serialization.deserialize_bytes(data['message_hash'])),
+            message_hash=AdditionalHash(serialization.deserialize_bytes(data['message_hash'])),
             signature=Signature(serialization.deserialize_bytes(data['signature'])),
             sender=to_canonical_address(data['sender']),
             chain_id=data['chain_id'],

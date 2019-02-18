@@ -110,7 +110,7 @@ def hash_balance_data(
         transferred_amount: TokenAmount,
         locked_amount: TokenAmount,
         locksroot: Locksroot,
-) -> bytes:
+) -> BalanceHash:
     assert locksroot != b''
     assert len(locksroot) == 32
     if transferred_amount == 0 and locked_amount == 0 and locksroot == EMPTY_HASH:
