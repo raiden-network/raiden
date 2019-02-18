@@ -127,8 +127,15 @@ def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
 
 
 def _wrap_tracebackexception_format(redact: Callable[[str], str]):
-    """Monkey-patch TracebackException.format to redact printed lines"""
-    original_format = TracebackException.format
+    """Monkey-patch TracebackException.format to redact printed lines.
+
+    Only the last call will be effective. Consecutive calls will overwrite the
+    previous monkey patches.
+    """
+    original_format = getattr(TracebackException, '_original', None)
+    if original_format is None:
+        original_format = TracebackException.format
+        setattr(TracebackException, '_original', original_format)
 
     @wraps(original_format)
     def tracebackexception_format(self, *, chain=True):
