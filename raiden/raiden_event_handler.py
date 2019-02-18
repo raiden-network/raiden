@@ -566,20 +566,22 @@ class RaidenEventHandler:
             ),
             partner_address=to_canonical_address(event.recipient),
         )
-        if channel_state is not None:
-            msg = UpdatePFS.from_balance_proof(
-                balance_proof=event.balance_proof,
-                reveal_timeout=channel_state.reveal_timeout,
-            )
-            msg.sign(raiden.signer)
-            raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, msg)
-            log.debug('sent a PFS Update')
-        else:
-            log.error(
-                'tried to send a balance proof in non-existant channel',
-                token_network_id=event.balance_proof.token_network_identifier,
-                partner_address=pex(event.recipient),
-            )
+        error_msg = 'tried to send a balance proof in non-existant channel '
+        f'token_network_address: {pex(event.balance_proof.token_network_identifier)} '
+        f'recipient: {pex(event.recipient)}'
+        assert channel_state is not None, error_msg
+
+        msg = UpdatePFS.from_balance_proof(
+            balance_proof=event.balance_proof,
+            reveal_timeout=channel_state.reveal_timeout,
+        )
+        msg.sign(raiden.signer)
+        raiden.transport.send_global(PATH_FINDING_BROADCASTING_ROOM, msg)
+        log.debug(
+            'sent a PFS Update',
+            balance_proof=event.balance_proof,
+            recipient=event.recipient,
+        )
 
 
 class RaidenMonitoringEventHandler(RaidenEventHandler):
