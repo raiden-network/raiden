@@ -131,11 +131,6 @@ T_RequestMonitoring = TypeVar(
     bound='raiden.messages.RequestMonitoring',
 )
 
-T_UpdatePFS = TypeVar(
-    'T_UpdatePFS',
-    bound='raiden.messages.UpdatePFS',
-)
-
 T_TransactionHash = bytes
 TransactionHash = NewType('TransactionHash', T_TransactionHash)
 
