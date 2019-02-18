@@ -1,12 +1,13 @@
 import datetime
 import logging
 import logging.config
+import logging.handlers
 import os
 import re
 import sys
 from functools import wraps
 from traceback import TracebackException
-from typing import Any, Callable, Dict, FrozenSet, List, Pattern, Tuple
+from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tuple
 
 import gevent
 import structlog
@@ -36,7 +37,7 @@ def _chain(first_func, *funcs) -> Callable:
 def _match_list(
         module_rule: Tuple[List[str], str],
         logger_name: str,
-) -> Tuple[int, str]:
+) -> Tuple[int, Optional[str]]:
     logger_modules_split = logger_name.split('.') if logger_name else []
 
     modules_split: List[str] = module_rule[0]
@@ -55,14 +56,14 @@ def _match_list(
 class LogFilter:
     """ Utility for filtering log records on module level rules """
 
-    def __init__(self, config: Dict[str, int], default_level: str):
+    def __init__(self, config: Dict[str, str], default_level: str):
         """ Initializes a new `LogFilter`
 
         Args:
             config: Dictionary mapping module names to logging level
             default_level: The default logging level
         """
-        self._should_log = {}
+        self._should_log: Dict[Tuple[str, str], bool] = {}
         # the empty module is not matched, so set it here
         self._default_level = config.get('', default_level)
         self._log_rules = [
@@ -76,7 +77,7 @@ class LogFilter:
         for module in self._log_rules:
             match_length, level = _match_list(module, logger_name)
 
-            if match_length > best_match_length:
+            if match_length > best_match_length and level is not None:
                 best_match_length = match_length
                 best_match_level = level
 
@@ -127,17 +128,14 @@ def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
 
 def _wrap_tracebackexception_format(redact: Callable[[str], str]):
     """Monkey-patch TracebackException.format to redact printed lines"""
-    if hasattr(TracebackException, '_orig_format'):
-        prev_fmt = TracebackException._orig_format
-    else:
-        prev_fmt = TracebackException._orig_format = TracebackException.format
+    original_format = TracebackException.format
 
-    @wraps(TracebackException._orig_format)
+    @wraps(original_format)
     def tracebackexception_format(self, *, chain=True):
-        for line in prev_fmt(self, chain=chain):
+        for line in original_format(self, chain=chain):
             yield redact(line)
 
-    TracebackException.format = tracebackexception_format
+    setattr(TracebackException, 'format', tracebackexception_format)
 
 
 def configure_logging(
@@ -178,7 +176,7 @@ def configure_logging(
     })
     _wrap_tracebackexception_format(redact)
 
-    handlers = dict()
+    handlers: Dict[str, Any] = dict()
     if log_file:
         handlers['file'] = {
             'class': 'logging.handlers.WatchedFileHandler',
