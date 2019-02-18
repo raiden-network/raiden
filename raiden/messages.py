@@ -486,7 +486,7 @@ class SecretRequest(SignedMessage):
             message_identifier: MessageID,
             payment_identifier: PaymentID,
             secrethash: SecretHash,
-            amount: typing.TokenAmount,
+            amount: typing.PaymentAmount,
             expiration: typing.BlockExpiration,
     ):
         super().__init__()

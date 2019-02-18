@@ -24,6 +24,7 @@ from raiden.utils.typing import (
     List,
     MessageID,
     Optional,
+    PaymentAmount,
     PaymentID,
     PaymentNetworkID,
     Secret,
@@ -31,7 +32,6 @@ from raiden.utils.typing import (
     T_Address,
     TargetAddress,
     TokenAddress,
-    TokenAmount,
     TokenNetworkID,
 )
 
@@ -622,7 +622,7 @@ class TransferDescriptionWithSecretState(State):
             self,
             payment_network_identifier: PaymentNetworkID,
             payment_identifier: PaymentID,
-            amount: TokenAmount,
+            amount: PaymentAmount,
             token_network_identifier: TokenNetworkID,
             initiator: InitiatorAddress,
             target: TargetAddress,

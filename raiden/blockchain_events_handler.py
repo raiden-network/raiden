@@ -7,6 +7,7 @@ from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
 from raiden.transfer import views
+from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import TokenNetworkState, TransactionChannelNewBalance
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
@@ -148,10 +149,7 @@ def handle_channel_new_balance(raiden: 'RaidenService', event: Event):
     )
 
     # Channels will only be registered if this node is a participant
-    is_participant = previous_channel_state is not None
-
-    if is_participant:
-        assert previous_channel_state is not None
+    if previous_channel_state is not None:
         previous_balance = previous_channel_state.our_state.contract_balance
         balance_was_zero = previous_balance == 0
 
@@ -200,6 +198,7 @@ def handle_channel_closed(raiden: 'RaidenService', event: Event):
         channel_identifier,
     )
 
+    channel_closed: StateChange
     if channel_state:
         # The from address is included in the ChannelClosed event as the
         # closing_participant field
