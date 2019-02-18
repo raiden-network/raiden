@@ -7,6 +7,7 @@ import traceback
 from copy import deepcopy
 from io import StringIO
 from tempfile import mktemp
+from typing import Any, Dict, List, Tuple
 
 import click
 import structlog
@@ -42,6 +43,7 @@ from raiden.utils.cli import (
     group,
     option,
     option_group,
+    validate_option_dependencies,
 )
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY, CONTRACT_TOKEN_NETWORK_REGISTRY
@@ -50,6 +52,17 @@ from .app import run_app
 from .runners import EchoNodeRunner, MatrixRunner, UDPRunner
 
 log = structlog.get_logger(__name__)
+
+
+OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
+    'pathfinding-service-address': [('transport', 'matrix')],
+    'enable-monitoring': [('transport', 'matrix')],
+    'matrix-server': [('transport', 'matrix')],
+    'listen-address': [('transport', 'udp')],
+    'max-unresponsive-time': [('transport', 'udp')],
+    'send-ping-time': [('transport', 'udp')],
+    'nat': [('transport', 'udp')],
+}
 
 
 def options(func):
@@ -390,12 +403,13 @@ def run(ctx, **kwargs):
     if kwargs['config_file']:
         apply_config_file(run, kwargs, ctx)
 
+    validate_option_dependencies(run, ctx, kwargs, OPTION_DEPENDENCIES)
+
     if ctx.invoked_subcommand is not None:
         # Pass parsed args on to subcommands.
         ctx.obj = kwargs
         return
 
-    runner = None
     if kwargs['transport'] == 'udp':
         runner = UDPRunner(kwargs, ctx)
     elif kwargs['transport'] == 'matrix':
