@@ -1,5 +1,3 @@
-from web3 import Web3
-
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, State
 from raiden.transfer.state import (
@@ -23,7 +21,6 @@ from raiden.transfer.state import (
 )
 from raiden.utils.typing import (
     Address,
-    BlockHash,
     BlockNumber,
     Callable,
     ChannelID,

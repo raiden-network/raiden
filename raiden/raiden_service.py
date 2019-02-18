@@ -311,8 +311,7 @@ class RaidenService(Runnable):
             # network, to reconstruct all token network graphs and find opened
             # channels
             last_log_block_number = self.query_start_block
-            last_log_block_hash = views.blockhash_from_blocknumber(
-                self.chain,
+            last_log_block_hash = self.chain.client.blockhash_from_blocknumber(
                 last_log_block_number,
             )
 
