@@ -1,7 +1,7 @@
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer import node, views
 from raiden.transfer.state import NettingChannelState
-from raiden.utils import pex, typing
+from raiden.utils import typing
 
 from .wal import restore_to_state_change
 
@@ -32,7 +32,7 @@ def channel_state_until_state_change(
 
     if not channel_state:
         raise RaidenUnrecoverableError(
-            f"Channel was not found before state_change {pex(state_change_identifier)}",
+            f"Channel was not found before state_change {state_change_identifier}",
         )
 
     return channel_state
