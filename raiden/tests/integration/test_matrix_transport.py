@@ -666,10 +666,10 @@ def test_pfs_global_messages(
         None,
     )
 
-    ms_room_name = make_room_alias(transport.network_id, PATH_FINDING_BROADCASTING_ROOM)
-    ms_room = transport._global_rooms.get(ms_room_name)
-    assert isinstance(ms_room, Room)
-    ms_room.send_text = MagicMock(spec=ms_room.send_text)
+    pfs_room_name = make_room_alias(transport.network_id, PATH_FINDING_BROADCASTING_ROOM)
+    pfs_room = transport._global_rooms.get(pfs_room_name)
+    assert isinstance(pfs_room, Room)
+    pfs_room.send_text = MagicMock(spec=pfs_room.send_text)
 
     raiden_service.transport = transport
     transport.log = MagicMock()
@@ -678,11 +678,20 @@ def test_pfs_global_messages(
     lock = make_lock()
     hash_time_lock = HashTimeLockState(lock.amount, lock.expiration, lock.secrethash)
 
-    balance_proof = BalanceProofUnsignedState.from_dict(
-        make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1).to_dict(),
+    def make_unsigned_balance_proof(nonce):
+        return BalanceProofUnsignedState.from_dict(
+            make_balance_proof(nonce=nonce, signer=LocalSigner(HOP1_KEY), amount=1).to_dict(),
+        )
+    transfer1 = LockedTransferUnsignedState(
+        balance_proof=make_unsigned_balance_proof(nonce=1),
+        payment_identifier=1,
+        token=b'1',
+        lock=hash_time_lock,
+        target=HOP1,
+        initiator=HOP1,
     )
-    transfer = LockedTransferUnsignedState(
-        balance_proof=balance_proof,
+    transfer2 = LockedTransferUnsignedState(
+        balance_proof=make_unsigned_balance_proof(nonce=2),
         payment_identifier=1,
         token=b'1',
         lock=hash_time_lock,
@@ -691,13 +700,16 @@ def test_pfs_global_messages(
     )
 
     send_balance_proof_events = [
-        SendBalanceProof(HOP1, 1, 1, 1, b'1', b'x' * 32, balance_proof),
-        SendLockedTransfer(HOP1, 1, 1, transfer),
-        SendLockExpired(HOP1, 1, balance_proof, b'x' * 32),
-        SendRefundTransfer(HOP1, 1, 1, transfer),
+        SendLockedTransfer(HOP1, 1, 1, transfer1),
+        SendRefundTransfer(HOP1, 1, 1, transfer2),
+        SendBalanceProof(HOP1, 1, 1, 1, b'1', b'x' * 32, make_unsigned_balance_proof(nonce=3)),
+        SendLockExpired(HOP1, 1, make_unsigned_balance_proof(nonce=4), b'x' * 32),
     ]
+    for num, event in enumerate(send_balance_proof_events):
+        assert event.balance_proof.nonce == num + 1
     # make sure we cover all configured event types
-    assert [type(event) for event in send_balance_proof_events] == list(SEND_BALANCE_PROOF_EVENTS)
+    assert all(event in [type(event) for event in send_balance_proof_events]
+               for event in SEND_BALANCE_PROOF_EVENTS)
 
     event_handler = raiden_event_handler.RaidenEventHandler()
 
@@ -722,7 +734,11 @@ def test_pfs_global_messages(
         )
     gevent.idle()
 
-    # ensure all events triggered a send
-    assert ms_room.send_text.call_count == len(SEND_BALANCE_PROOF_EVENTS)
+    # ensure all events triggered a send for their respective balance_proof
+    assert pfs_room.send_text.call_count == len(SEND_BALANCE_PROOF_EVENTS)
+    assert all(
+        f'"nonce": {i + 1}' in str(pfs_room.send_text.call_args_list[i])
+        for i in range(len(SEND_BALANCE_PROOF_EVENTS))
+    )
     transport.stop()
     transport.get()
