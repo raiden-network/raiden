@@ -210,10 +210,13 @@ def options(func):
                 type=str,
                 show_default=True,
             ),
+        ),
+        option_group(
+            'Raiden Services Options',
             option(
                 '--pathfinding-service-address',
                 help=(
-                    'URL for the raiden pathfinding service to request paths.\n'
+                    'URL to the Raiden path finding service to request paths from.\n'
                     'Example: https://pfs-ropsten.services-dev.raiden.network'
                 ),
                 type=str,
@@ -221,14 +224,14 @@ def options(func):
             ),
             option(
                 '--pathfinding-max-paths',
-                help='Set maximum paths to be requested from the pathfinding service.',
+                help='Set maximum number of paths to be requested from the path finding service.',
                 default=3,
                 type=int,
                 show_default=True,
             ),
             option(
                 '--enable-monitoring',
-                help='Enable the broadcasting of balance proofs to the monitoring services',
+                help='Enable broadcasting of balance proofs to the monitoring services.',
                 is_flag=True,
             ),
         ),
