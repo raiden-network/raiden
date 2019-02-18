@@ -4,12 +4,6 @@ from raiden.settings import RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.smoketest import setup_testchain_and_raiden
 
 
-def append_arg_if_existing(argname, initial_args, new_args):
-    cliname = '--' + argname.replace('_', '-')
-    if argname in initial_args:
-        new_args.extend([cliname, initial_args[argname]])
-
-
 @pytest.fixture(scope='session')
 def blockchain_provider():
     result = setup_testchain_and_raiden(
@@ -59,11 +53,14 @@ def cli_args(blockchain_provider, removed_args, changed_args):
         initial_args['endpoint_registry_contract_address'],
     ]
 
-    append_arg_if_existing('keystore_path', initial_args, args)
-    append_arg_if_existing('password_file', initial_args, args)
-    append_arg_if_existing('datadir', initial_args, args)
-    append_arg_if_existing('network_id', initial_args, args)
-    append_arg_if_existing('eth_rpc_endpoint', initial_args, args)
-    append_arg_if_existing('environment_type', initial_args, args)
+    for arg_name, arg_value in initial_args.items():
+        if arg_name == 'sync_check':
+            # Special case
+            continue
+        arg_name_cli = '--' + arg_name.replace('_', '-')
+        if arg_name_cli not in args:
+            args.append(arg_name_cli)
+            if arg_value is not None:
+                args.append(arg_value)
 
     return args
