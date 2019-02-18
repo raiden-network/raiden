@@ -786,7 +786,6 @@ class RaidenService(Runnable):
         if secret_hash is None:
             secret_hash = sha3(secret)
 
-        # LEFTODO: Supply a proper block id
         secret_registered = self.default_secret_registry.check_registered(
             secrethash=secret_hash,
             block_identifier='latest',

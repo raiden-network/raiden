@@ -87,12 +87,13 @@ def handle_channel_new(raiden: 'RaidenService', event: Event):
         )
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
-            token_address,
-            raiden.default_registry.address,
-            token_network_identifier,
-            raiden.config['reveal_timeout'],
-            channel_proxy,
-            block_number,
+            token_address=token_address,
+            payment_network_identifier=raiden.default_registry.address,
+            token_network_address=token_network_identifier,
+            reveal_timeout=raiden.config['reveal_timeout'],
+            payment_channel_proxy=channel_proxy,
+            opened_block_number=block_number,
+            opened_block_hash=block_hash,
         )
 
         new_channel = ContractReceiveChannelNew(

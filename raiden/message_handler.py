@@ -147,7 +147,6 @@ class MessageHandler:
     @staticmethod
     def handle_message_lockedtransfer(raiden: RaidenService, message: LockedTransfer):
         secret_hash = message.lock.secrethash
-        # LEFTODO: Supply a proper block id
         registered = raiden.default_secret_registry.check_registered(
             secrethash=secret_hash,
             block_identifier='latest',

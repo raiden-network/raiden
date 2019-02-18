@@ -254,10 +254,15 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_reveal_secret_event: ContractSendSecretReveal,
     ):
-        # LEFTODO: Supply a proper block id
+        # LEFTODO: Here we should normally get ContractSendChannelClose.triggered_by_block_hash
+        # but it may not be properly populated yet
+        if channel_reveal_secret_event.triggered_by_block_hash == bytes(0):
+            given_block_identifier = 'latest'
+        else:
+            given_block_identifier = channel_reveal_secret_event.triggered_by_block_hash
         raiden.default_secret_registry.register_secret(
             secret=channel_reveal_secret_event.secret,
-            given_block_identifier='latest',
+            given_block_identifier=given_block_identifier,
         )
 
     @staticmethod
@@ -284,7 +289,8 @@ class RaidenEventHandler:
             channel_id=channel_close_event.channel_identifier,
         )
 
-        # LEFTODO: Supply a proper block id
+        # LEFTODO: Here we should normally get ContractSendChannelClose.triggered_by_block_hash
+        # but it's not populated properly yet.
         channel_proxy.close(
             nonce=nonce,
             balance_hash=balance_hash,
@@ -318,14 +324,13 @@ class RaidenEventHandler:
             our_signature = raiden.signer.sign(data=non_closing_data)
 
             try:
-                # LEFTODO: Supply a proper block id
                 channel.update_transfer(
                     nonce=balance_proof.nonce,
                     balance_hash=balance_proof.balance_hash,
                     additional_hash=balance_proof.message_hash,
                     partner_signature=balance_proof.signature,
                     signature=our_signature,
-                    block_identifier='latest',
+                    block_identifier=channel_update_event.triggered_by_block_hash,
                 )
             except ChannelOutdatedError as e:
                 log.error(
@@ -342,6 +347,7 @@ class RaidenEventHandler:
         channel_identifier = channel_unlock_event.channel_identifier
         participant = channel_unlock_event.participant
         token_address = channel_unlock_event.token_address
+        triggered_by_block_hash = channel_unlock_event.triggered_by_block_hash
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
             token_network_address=token_network_identifier,
@@ -352,7 +358,7 @@ class RaidenEventHandler:
         participants_details = token_network.detail_participants(
             participant1=raiden.address,
             participant2=participant,
-            block_identifier='latest',
+            block_identifier=triggered_by_block_hash,
             channel_identifier=channel_identifier,
         )
 
@@ -434,10 +440,9 @@ class RaidenEventHandler:
             merkle_tree_leaves = get_batch_unlock(our_state)
 
         try:
-            # LEFTODO: Supply a proper block id
             payment_channel.unlock(
                 merkle_tree_leaves=merkle_tree_leaves,
-                block_identifier='latest',
+                block_identifier=triggered_by_block_hash,
             )
         except ChannelOutdatedError as e:
             log.error(
@@ -453,6 +458,7 @@ class RaidenEventHandler:
         chain_id = raiden.chain.network_id
         token_network_identifier = channel_settle_event.token_network_identifier
         channel_identifier = channel_settle_event.channel_identifier
+        triggered_by_block_hash = channel_settle_event.triggered_by_block_hash
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
             token_network_address=channel_settle_event.token_network_identifier,
@@ -463,7 +469,7 @@ class RaidenEventHandler:
         participants_details = token_network_proxy.detail_participants(
             participant1=payment_channel.participant1,
             participant2=payment_channel.participant2,
-            block_identifier='latest',
+            block_identifier=triggered_by_block_hash,
             channel_identifier=channel_settle_event.channel_identifier,
         )
 
@@ -546,7 +552,6 @@ class RaidenEventHandler:
             partner_locked_amount = 0
             partner_locksroot = EMPTY_HASH
 
-        # LEFTODO: Supply a proper block id
         payment_channel.settle(
             transferred_amount=our_transferred_amount,
             locked_amount=our_locked_amount,
@@ -554,7 +559,7 @@ class RaidenEventHandler:
             partner_transferred_amount=partner_transferred_amount,
             partner_locked_amount=partner_locked_amount,
             partner_locksroot=partner_locksroot,
-            block_identifier='latest',
+            block_identifier=triggered_by_block_hash,
         )
 
     @staticmethod

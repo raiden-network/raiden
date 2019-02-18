@@ -3,18 +3,27 @@ from raiden.transfer.state import (
     NettingChannelState,
     TransactionExecutionStatus,
 )
+from raiden.utils.typing import (
+    BlockHash,
+    BlockNumber,
+    BlockTimeout,
+    PaymentNetworkID,
+    TokenAddress,
+    TokenNetworkAddress,
+    TokenNetworkID,
+)
 
 
 def get_channel_state(
-        token_address,
-        payment_network_identifier,
-        token_network_address,
-        reveal_timeout,
+        token_address: TokenAddress,
+        payment_network_identifier: PaymentNetworkID,
+        token_network_address: TokenNetworkAddress,
+        reveal_timeout: BlockTimeout,
         payment_channel_proxy,
-        opened_block_number,
+        opened_block_number: BlockNumber,
+        opened_block_hash: BlockHash,
 ):
-    # LEFTODO: Supply a proper block id
-    channel_details = payment_channel_proxy.detail('latest')
+    channel_details = payment_channel_proxy.detail(opened_block_hash)
 
     our_state = NettingChannelEndState(
         channel_details.participants_data.our_details.address,
@@ -57,7 +66,7 @@ def get_channel_state(
         chain_id=channel_details.chain_id,
         token_address=token_address,
         payment_network_identifier=payment_network_identifier,
-        token_network_identifier=token_network_address,
+        token_network_identifier=TokenNetworkID(token_network_address),
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         our_state=our_state,
