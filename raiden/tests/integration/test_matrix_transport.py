@@ -635,11 +635,11 @@ def test_monitoring_global_messages(
     transport.get()
 
 
+@pytest.mark.parametrize('matrix_server_count', [1])
+@pytest.mark.parametrize('number_of_transports', [1])
+@pytest.mark.parametrize('global_rooms', [['discovery', PATH_FINDING_BROADCASTING_ROOM]])
 def test_pfs_global_messages(
-        local_matrix_servers,
-        private_rooms,
-        retry_interval,
-        retries_before_backoff,
+        matrix_transports,
         monkeypatch,
 ):
     """
@@ -647,15 +647,7 @@ def test_pfs_global_messages(
     PATH_FINDING_BROADCASTING_ROOM room on Send($BalanceProof)* events, i.e. events, that send
     a new balance proof to the channel partner.
     """
-    transport = MatrixTransport({
-        'global_rooms': ['discovery', PATH_FINDING_BROADCASTING_ROOM],
-        'retries_before_backoff': retries_before_backoff,
-        'retry_interval': retry_interval,
-        'server': local_matrix_servers[0],
-        'server_name': local_matrix_servers[0].netloc,
-        'available_servers': [local_matrix_servers[0]],
-        'private_rooms': private_rooms,
-    })
+    transport = matrix_transports[0]
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
