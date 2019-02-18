@@ -16,6 +16,7 @@ def test_is_transaction_effect_satisfied(
         token_network_identifier=token_network_id,
         channel_identifier=netting_channel_state.identifier,
         participant=HOP2,
+        triggered_by_block_hash=make_block_hash(),
     )
     state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=UNIT_SECRETHASH,

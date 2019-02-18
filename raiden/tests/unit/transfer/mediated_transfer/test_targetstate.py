@@ -139,16 +139,31 @@ def test_events_for_onchain_secretreveal():
     unsafe_to_wait = expiration - channels[0].reveal_timeout
 
     state = TargetTransferState(channels.get_route(0), from_transfer)
-    events = target.events_for_onchain_secretreveal(state, channels[0], safe_to_wait)
+    events = target.events_for_onchain_secretreveal(
+        target_state=state,
+        channel_state=channels[0],
+        block_number=safe_to_wait,
+        block_hash=factories.make_block_hash(),
+    )
     assert not events
 
-    events = target.events_for_onchain_secretreveal(state, channels[0], unsafe_to_wait)
+    events = target.events_for_onchain_secretreveal(
+        target_state=state,
+        channel_state=channels[0],
+        block_number=unsafe_to_wait,
+        block_hash=factories.make_block_hash(),
+    )
 
     msg = 'when its not safe to wait, the contract send must be emitted'
     assert search_for_item(events, ContractSendSecretReveal, {'secret': UNIT_SECRET}), msg
 
     msg = 'second call must not emit ContractSendSecretReveal again'
-    assert not target.events_for_onchain_secretreveal(state, channels[0], unsafe_to_wait), msg
+    assert not target.events_for_onchain_secretreveal(
+        target_state=state,
+        channel_state=channels[0],
+        block_number=unsafe_to_wait,
+        block_hash=factories.make_block_hash(),
+    ), msg
 
 
 def test_handle_inittarget():
@@ -358,6 +373,7 @@ def test_handle_onchain_secretreveal():
         target_state=onchain_secret_reveal_iteration.new_state,
         channel_state=setup.channel,
         block_number=block_number_prior_the_expiration + 1,
+        block_hash=factories.make_block_hash(),
     )
     assert len(extra_block_handle_transition.events) == 0
 

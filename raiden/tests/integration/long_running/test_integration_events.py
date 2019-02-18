@@ -18,6 +18,7 @@ from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
+from raiden.tests.utils.factories import make_block_hash
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
@@ -550,6 +551,7 @@ def test_secret_revealed_on_chain(
         token_address=channel_state2_1.token_address,
         token_network_identifier=token_network_identifier,
         balance_proof=channel_state2_1.partner_state.balance_proof,
+        triggered_by_block_hash=make_block_hash(),
     )
     app2.raiden.raiden_event_handler.on_raiden_event(app2.raiden, channel_close_event)
 
