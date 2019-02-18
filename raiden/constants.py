@@ -3,12 +3,14 @@ from enum import Enum
 
 from eth_utils import keccak, to_checksum_address, to_hex
 
+from raiden.utils.typing import RaidenProtocolVersion
+
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
 SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
 
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = RaidenProtocolVersion(1)
 MIN_REQUIRED_SOLC = 'v0.4.23'
 
 INT64_MAX = 2 ** 63 - 1
