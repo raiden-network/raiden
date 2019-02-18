@@ -3,6 +3,10 @@ from enum import Enum
 
 from eth_utils import keccak, to_checksum_address, to_hex
 
+LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
+RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
+SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
+
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 PROTOCOL_VERSION = 1
 MIN_REQUIRED_SOLC = 'v0.4.23'
@@ -60,6 +64,10 @@ class Environment(Enum):
 GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK = 3_234_716
 GAS_REQUIRED_PER_SECRET_IN_BATCH = math.ceil(UNLOCK_TX_GAS_LIMIT / MAXIMUM_PENDING_TRANSFERS)
 GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL = 100_000
+
+CHECK_GAS_RESERVE_INTERVAL = 5 * 60
+CHECK_VERSION_INTERVAL = 3 * 60 * 60
+CHECK_NETWORK_ID_INTERVAL = 5 * 60
 
 DEFAULT_HTTP_REQUEST_TIMEOUT = 1.0  # seconds
 

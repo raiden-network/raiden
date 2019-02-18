@@ -10,16 +10,17 @@ from gevent.event import AsyncResult
 from pkg_resources import parse_version
 from web3 import Web3
 
+from raiden.constants import (
+    CHECK_GAS_RESERVE_INTERVAL,
+    CHECK_NETWORK_ID_INTERVAL,
+    CHECK_VERSION_INTERVAL,
+    LATEST,
+    RELEASE_PAGE,
+    SECURITY_EXPRESSION,
+)
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.utils import gas_reserve, pex
 from raiden.utils.runnable import Runnable
-
-CHECK_VERSION_INTERVAL = 3 * 60 * 60
-CHECK_GAS_RESERVE_INTERVAL = 5 * 60
-CHECK_NETWORK_ID_INTERVAL = 5 * 60
-LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
-RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
-SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
 
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
