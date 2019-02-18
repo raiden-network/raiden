@@ -1705,8 +1705,8 @@ class RequestMonitoring(SignedMessage):
 
 
 class UpdatePFS(SignedMessage):
-    cmdid = messages.UPDATEPFS
     """ Message to inform a pathfinding service about a capacity change. """
+    cmdid = messages.UPDATEPFS
 
     def __init__(
             self,
@@ -1719,14 +1719,14 @@ class UpdatePFS(SignedMessage):
             chain_id: typing.ChainID,
             reveal_timeout: int,
             signature: typing.Optional[typing.Signature] = None,
-    ) -> None:
-        self.chain_id = chain_id
+    ):
         self.nonce = nonce
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
-        self.channel_identifier = channel_identifier
         self.token_network_address = token_network_address
+        self.channel_identifier = channel_identifier
+        self.chain_id = chain_id
         self.reveal_timeout = reveal_timeout
         if signature is None:
             self.signature = b''
@@ -1735,23 +1735,23 @@ class UpdatePFS(SignedMessage):
 
     @classmethod
     def from_balance_proof(
-            cls: typing.Type[typing.T_UpdatePFS],
+            cls,
             balance_proof: BalanceProofUnsignedState,
             reveal_timeout: int,
-    ) -> typing.T_UpdatePFS:
+    ) -> 'UpdatePFS':
         assert isinstance(balance_proof, BalanceProofUnsignedState)
         return cls(
             nonce=balance_proof.nonce,
             transferred_amount=balance_proof.transferred_amount,
             locked_amount=balance_proof.locked_amount,
             locksroot=balance_proof.locksroot,
-            token_network_address=balance_proof.token_network_identifier,
+            token_network_address=TokenNetworkAddress(balance_proof.token_network_identifier),
             channel_identifier=balance_proof.channel_identifier,
             chain_id=balance_proof.chain_id,
             reveal_timeout=reveal_timeout,
         )
 
-    def to_dict(self) -> typing.Dict:
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
             'chain_id': self.chain_id,
@@ -1767,15 +1767,15 @@ class UpdatePFS(SignedMessage):
 
     @classmethod
     def from_dict(
-            cls: typing.Type[typing.T_UpdatePFS],
-            data: typing.Dict,
-    ) -> typing.T_UpdatePFS:
+            cls,
+            data: typing.Dict[str, typing.Any],
+    ) -> 'UpdatePFS':
         return cls(
             nonce=data['nonce'],
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
             locksroot=data['locksroot'],
-            token_network_address=data['token_network_identifier'],
+            token_network_address=data['token_network_address'],
             channel_identifier=data['channel_identifier'],
             chain_id=data['chain_id'],
             reveal_timeout=data['reveal_timeout'],
@@ -1794,9 +1794,9 @@ class UpdatePFS(SignedMessage):
 
     @classmethod
     def unpack(
-            cls: typing.Type[typing.T_UpdatePFS],
+            cls,
             packed: bytes,
-    ) -> typing.T_UpdatePFS:
+    ) -> 'UpdatePFS':
         return cls(
             chain_id=packed.chain_id,
             nonce=packed.nonce,
