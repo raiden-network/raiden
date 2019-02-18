@@ -41,7 +41,7 @@ def handle_tokennetwork_new(raiden: 'RaidenService', event: Event):
     block_number = data['block_number']
     token_network_address = args['token_network_address']
     token_address = typing.TokenAddress(args['token_address'])
-    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
+    block_hash = bytes(data['blockHash'])
 
     token_network_proxy = raiden.chain.token_network(token_network_address)
     raiden.blockchain_events.add_token_network_listener(
@@ -70,7 +70,7 @@ def handle_tokennetwork_new(raiden: 'RaidenService', event: Event):
 def handle_channel_new(raiden: 'RaidenService', event: Event):
     data = event.event_data
     block_number = data['block_number']
-    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
+    block_hash = bytes(data['blockHash'])
     args = data['args']
     token_network_identifier = event.originating_contract
     transaction_hash = event.event_data['transaction_hash']
@@ -133,7 +133,7 @@ def handle_channel_new_balance(raiden: 'RaidenService', event: Event):
     data = event.event_data
     args = data['args']
     block_number = data['block_number']
-    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
+    block_hash = bytes(data['blockHash'])
     channel_identifier = args['channel_identifier']
     token_network_identifier = event.originating_contract
     participant_address = args['participant']
@@ -191,7 +191,7 @@ def handle_channel_closed(raiden: 'RaidenService', event: Event):
     args = data['args']
     channel_identifier = args['channel_identifier']
     transaction_hash = data['transaction_hash']
-    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
+    block_hash = bytes(data['blockHash'])
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -230,7 +230,7 @@ def handle_channel_update_transfer(raiden: 'RaidenService', event: Event):
     channel_identifier = args['channel_identifier']
     transaction_hash = data['transaction_hash']
     block_number = data['block_number']
-    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
+    block_hash = bytes(data['blockHash'])
 
     channel_state = views.get_channelstate_by_token_network_identifier(
         views.state_from_raiden(raiden),
@@ -255,6 +255,7 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     token_network_identifier = event.originating_contract
     channel_identifier = data['args']['channel_identifier']
     block_number = data['block_number']
+    block_hash = bytes(data['blockHash'])
 
     transaction_hash = data['transaction_hash']
 
@@ -270,7 +271,7 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
             block_number=block_number,
-            block_hash=views.blockhash_from_blocknumber(raiden.chain, block_number),
+            block_hash=block_hash,
         )
         raiden.handle_state_change(channel_settled)
 
@@ -280,7 +281,7 @@ def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
     data = event.event_data
     args = data['args']
     block_number = data['block_number']
-    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
+    block_hash = bytes(data['blockHash'])
     transaction_hash = data['transaction_hash']
 
     unlock_state_change = ContractReceiveChannelBatchUnlock(
@@ -303,7 +304,7 @@ def handle_secret_revealed(raiden: 'RaidenService', event: Event):
     data = event.event_data
     args = data['args']
     block_number = data['block_number']
-    block_hash = views.blockhash_from_blocknumber(raiden.chain, block_number)
+    block_hash = bytes(data['blockHash'])
 
     transaction_hash = data['transaction_hash']
     registeredsecret_state_change = ContractReceiveSecretReveal(
