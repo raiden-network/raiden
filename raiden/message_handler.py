@@ -14,6 +14,7 @@ from raiden.messages import (
 from raiden.raiden_service import RaidenService
 from raiden.routing import get_best_routes
 from raiden.transfer import views
+from raiden.transfer.architecture import StateChange
 from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
@@ -129,6 +130,7 @@ class MessageHandler:
             from_transfer.lock.secrethash,
         )
 
+        state_change: StateChange
         if role == 'initiator':
             secret = random_secret()
             state_change = ReceiveTransferRefundCancelRoute(

@@ -21,12 +21,13 @@ from raiden.constants import (
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.utils import gas_reserve, pex
 from raiden.utils.runnable import Runnable
+from raiden.utils.typing import Tuple
 
 REMOVE_CALLBACK = object()
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def _do_check_version(current_version: str):
+def _do_check_version(current_version: Tuple[str, ...]):
     content = requests.get(LATEST).json()
     if 'tag_name' not in content:
         # probably API rate limit exceeded
