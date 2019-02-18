@@ -4,6 +4,7 @@ import structlog
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
+from raiden.raiden_service import RaidenService
 from raiden.transfer import views
 from raiden.transfer.state import TokenNetworkState, TransactionChannelNewBalance
 from raiden.transfer.state_change import (
@@ -28,7 +29,7 @@ from raiden_contracts.constants import (
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def handle_tokennetwork_new(raiden, event: Event):
+def handle_tokennetwork_new(raiden: RaidenService, event: Event):
     """ Handles a `TokenNetworkCreated` event. """
     data = event.event_data
     args = data['args']
@@ -59,7 +60,7 @@ def handle_tokennetwork_new(raiden, event: Event):
     raiden.handle_state_change(new_token_network)
 
 
-def handle_channel_new(raiden, event: Event):
+def handle_channel_new(raiden: RaidenService, event: Event):
     data = event.event_data
     block_number = data['block_number']
     args = data['args']
@@ -118,7 +119,7 @@ def handle_channel_new(raiden, event: Event):
     raiden.add_pending_greenlet(retry_connect)
 
 
-def handle_channel_new_balance(raiden, event: Event):
+def handle_channel_new_balance(raiden: RaidenService, event: Event):
     data = event.event_data
     args = data['args']
     block_number = data['block_number']
@@ -138,6 +139,7 @@ def handle_channel_new_balance(raiden, event: Event):
     is_participant = previous_channel_state is not None
 
     if is_participant:
+        assert previous_channel_state is not None
         previous_balance = previous_channel_state.our_state.contract_balance
         balance_was_zero = previous_balance == 0
 
@@ -170,7 +172,7 @@ def handle_channel_new_balance(raiden, event: Event):
             raiden.add_pending_greenlet(join_channel)
 
 
-def handle_channel_closed(raiden, event: Event):
+def handle_channel_closed(raiden: RaidenService, event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
     block_number = data['block_number']
@@ -197,16 +199,16 @@ def handle_channel_closed(raiden, event: Event):
         raiden.handle_state_change(channel_closed)
     else:
         # This is a channel close event of a channel we're not a participant of
-        channel_closed = ContractReceiveRouteClosed(
+        route_closed = ContractReceiveRouteClosed(
             transaction_hash=transaction_hash,
             token_network_identifier=token_network_identifier,
             channel_identifier=channel_identifier,
             block_number=block_number,
         )
-        raiden.handle_state_change(channel_closed)
+        raiden.handle_state_change(route_closed)
 
 
-def handle_channel_update_transfer(raiden, event: Event):
+def handle_channel_update_transfer(raiden: RaidenService, event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
     args = data['args']
@@ -230,7 +232,7 @@ def handle_channel_update_transfer(raiden, event: Event):
         raiden.handle_state_change(channel_transfer_updated)
 
 
-def handle_channel_settled(raiden, event: Event):
+def handle_channel_settled(raiden: RaidenService, event: Event):
     data = event.event_data
     token_network_identifier = event.originating_contract
     channel_identifier = data['args']['channel_identifier']
@@ -253,7 +255,7 @@ def handle_channel_settled(raiden, event: Event):
         raiden.handle_state_change(channel_settled)
 
 
-def handle_channel_batch_unlock(raiden, event: Event):
+def handle_channel_batch_unlock(raiden: RaidenService, event: Event):
     token_network_identifier = event.originating_contract
     data = event.event_data
     args = data['args']
@@ -274,7 +276,7 @@ def handle_channel_batch_unlock(raiden, event: Event):
     raiden.handle_state_change(unlock_state_change)
 
 
-def handle_secret_revealed(raiden, event: Event):
+def handle_secret_revealed(raiden: RaidenService, event: Event):
     secret_registry_address = event.originating_contract
     data = event.event_data
     args = data['args']
@@ -292,7 +294,7 @@ def handle_secret_revealed(raiden, event: Event):
     raiden.handle_state_change(registeredsecret_state_change)
 
 
-def on_blockchain_event(raiden, event: Event):
+def on_blockchain_event(raiden: RaidenService, event: Event):
     data = event.event_data
     log.debug(
         'Blockchain event',
