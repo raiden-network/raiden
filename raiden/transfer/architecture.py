@@ -175,7 +175,20 @@ class BalanceProofStateChange(AuthenticatedSenderStateChange):
 
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
-    pass
+    def __init__(self, triggered_by_block_hash: BlockHash):
+        if not isinstance(triggered_by_block_hash, T_BlockHash):
+            raise ValueError('triggered_by_block_hash must be of type block_hash')
+        # This is the blockhash for which the event was triggered
+        self.triggered_by_block_hash = triggered_by_block_hash
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ContractSendEvent) and
+            self.triggered_by_block_hash == other.triggered_by_block_hash
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class ContractSendExpirableEvent(ContractSendEvent):
@@ -183,11 +196,13 @@ class ContractSendExpirableEvent(ContractSendEvent):
     time dependent.
     """
 
-    def __init__(self, expiration: BlockExpiration):
+    def __init__(self, triggered_by_block_hash: BlockHash, expiration: BlockExpiration):
+        super().__init__(triggered_by_block_hash)
         self.expiration = expiration
 
     def __eq__(self, other):
         return (
+            super().__eq__(other) and
             isinstance(other, ContractSendExpirableEvent) and
             self.expiration == other.expiration
         )
