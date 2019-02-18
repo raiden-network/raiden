@@ -7,10 +7,11 @@ from ipaddress import AddressValueError, IPv4Address
 from itertools import groupby
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import click
 import requests
+from click import BadParameter
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
@@ -439,6 +440,40 @@ def get_matrix_servers(url: str) -> List[str]:
             line = 'https://' + line  # default schema
         available_servers.append(line)
     return available_servers
+
+
+def validate_option_dependencies(
+        command_function: Union[click.Command, click.Group],
+        ctx,
+        cli_params: Dict[str, Any],
+        option_dependencies: Dict[str, List[Tuple[str, Any]]],
+):
+    paramname_to_param = {param.name: param for param in command_function.params}
+
+    for depending_option_name, requirements in option_dependencies.items():
+        depending_option_name_int = depending_option_name.replace('-', '_')
+        param = paramname_to_param[depending_option_name_int]
+
+        depending_option_value = cli_params[depending_option_name_int]
+        if depending_option_value is None:
+            continue
+
+        depending_option_value_default = param.get_default(ctx)
+        if depending_option_value == depending_option_value_default:
+            # Ignore dependencies for default values
+            continue
+
+        for depended_option_name, depended_option_required_value in requirements:
+            depended_option_name_int = depended_option_name.replace('-', '_')
+            depended_option_actual_value = cli_params[depended_option_name_int]
+            if depended_option_actual_value != depended_option_required_value:
+                raise BadParameter(
+                    f'This option is only available when option "--{depended_option_name}" '
+                    f'is set to "{depended_option_required_value}". '
+                    f'Current value: "{depended_option_actual_value}"',
+                    ctx,
+                    param,
+                )
 
 
 ADDRESS_TYPE = AddressType()
