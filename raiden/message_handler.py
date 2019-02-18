@@ -24,7 +24,8 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
-from raiden.utils import pex, random_secret, typing
+from raiden.utils import pex, random_secret
+from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, TokenNetworkID
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -35,20 +36,35 @@ class MessageHandler:
         # pylint: disable=unidiomatic-typecheck
 
         if type(message) == SecretRequest:
+            assert isinstance(message, SecretRequest), MYPY_ANNOTATION
             self.handle_message_secretrequest(raiden, message)
+
         elif type(message) == RevealSecret:
+            assert isinstance(message, RevealSecret), MYPY_ANNOTATION
             self.handle_message_revealsecret(raiden, message)
+
         elif type(message) == Unlock:
+            assert isinstance(message, Unlock), MYPY_ANNOTATION
             self.handle_message_unlock(raiden, message)
+
         elif type(message) == LockExpired:
+            assert isinstance(message, LockExpired), MYPY_ANNOTATION
             self.handle_message_lockexpired(raiden, message)
+
         elif type(message) == RefundTransfer:
+            assert isinstance(message, RefundTransfer), MYPY_ANNOTATION
             self.handle_message_refundtransfer(raiden, message)
+
         elif type(message) == LockedTransfer:
+            assert isinstance(message, LockedTransfer), MYPY_ANNOTATION
             self.handle_message_lockedtransfer(raiden, message)
+
         elif type(message) == Delivered:
+            assert isinstance(message, Delivered), MYPY_ANNOTATION
             self.handle_message_delivered(raiden, message)
+
         elif type(message) == Processed:
+            assert isinstance(message, Processed), MYPY_ANNOTATION
             self.handle_message_processed(raiden, message)
         else:
             log.error('Unknown message cmdid {}'.format(message.cmdid))
@@ -100,8 +116,8 @@ class MessageHandler:
 
         routes = get_best_routes(
             chain_state=chain_state,
-            token_network_id=typing.TokenNetworkID(token_network_address),
-            from_address=typing.InitiatorAddress(raiden.address),
+            token_network_id=TokenNetworkID(token_network_address),
+            from_address=InitiatorAddress(raiden.address),
             to_address=from_transfer.target,
             amount=from_transfer.lock.amount,
             previous_address=message.sender,
