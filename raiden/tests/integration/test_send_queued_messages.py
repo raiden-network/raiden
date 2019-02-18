@@ -12,7 +12,7 @@ from raiden.tests.utils.protocol import HoldRaidenEvent, dont_handle_node_change
 from raiden.tests.utils.transfer import assert_synced_channel_state
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
-from raiden.transfer.mediated_transfer.events import SendSecretRequest, SendSecretReveal
+from raiden.transfer.mediated_transfer.events import SendSecretReveal
 
 
 @pytest.mark.parametrize('deposit', [10])
