@@ -44,6 +44,8 @@ from raiden.utils.typing import (
     ABI,
     Address,
     AddressHex,
+    BlockHash,
+    BlockNumber,
     BlockSpecification,
     Nonce,
     TransactionHash,
@@ -453,6 +455,10 @@ class JSONRPCClient:
     def block_number(self):
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
+
+    def blockhash_from_blocknumber(self, block_number: BlockNumber) -> BlockHash:
+        """Given a block number, query the chain to get its corresponding block hash"""
+        return bytes(self.web3.eth.getBlock(block_number)['hash'])
 
     def balance(self, account: Address):
         """ Return the balance of the account of the given address. """
