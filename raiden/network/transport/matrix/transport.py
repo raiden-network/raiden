@@ -26,7 +26,7 @@ from raiden.messages import (
     Message,
     Ping,
     Pong,
-    SignedMessage,
+    SignedRetrieableMessage,
     decode as message_from_bytes,
     from_dict as message_from_dict,
 )
@@ -805,7 +805,7 @@ class MatrixTransport(Runnable):
             )
             return False
 
-        messages: List[SignedMessage] = list()
+        messages: List[SignedRetrieableMessage] = list()
 
         if data.startswith('0x'):
             try:
@@ -822,7 +822,7 @@ class MatrixTransport(Runnable):
                 return False
             except InvalidProtocolMessage as ex:
                 self.log.warning(
-                    "Received message binary data is not a valid message",
+                    'Received message binary data is not a valid message',
                     message_data=data,
                     peer_address=pex(peer_address),
                     _exc=ex,
@@ -855,7 +855,7 @@ class MatrixTransport(Runnable):
                         _exc=ex,
                     )
                     continue
-                if not isinstance(message, SignedMessage):
+                if not isinstance(message, SignedRetrieableMessage):
                     self.log.warning(
                         'Received invalid message',
                         message=message,
@@ -899,7 +899,7 @@ class MatrixTransport(Runnable):
 
         self._raiden_service.on_message(delivered)
 
-    def _receive_message(self, message: SignedMessage):
+    def _receive_message(self, message: SignedRetrieableMessage):
         self.log.debug(
             'Message received',
             node=pex(self._raiden_service.address),

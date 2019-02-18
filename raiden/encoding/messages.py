@@ -19,8 +19,6 @@ REFUNDTRANSFER = 8
 REVEALSECRET = 11
 DELIVERED = 12
 LOCKEXPIRED = 13
-REQUESTMONITORING = 20
-UPDATEPFS = 30
 
 
 # pylint: disable=invalid-name
@@ -233,8 +231,6 @@ Lock = namedbuffer(
 RequestMonitoring = namedbuffer(
     'request_monitoring',
     [
-        cmdid(REQUESTMONITORING),
-        pad(3),
         nonce,
         chain_id,
         token_network_address,
@@ -252,8 +248,6 @@ RequestMonitoring = namedbuffer(
 UpdatePFS = namedbuffer(
     'update_pfs',
     [
-        cmdid(UPDATEPFS),
-        pad(3),
         nonce,
         chain_id,
         token_network_address,
@@ -277,8 +271,6 @@ CMDID_MESSAGE = {
     REFUNDTRANSFER: RefundTransfer,
     DELIVERED: Delivered,
     LOCKEXPIRED: LockExpired,
-    REQUESTMONITORING: RequestMonitoring,
-    UPDATEPFS: UpdatePFS,
 }
 
 

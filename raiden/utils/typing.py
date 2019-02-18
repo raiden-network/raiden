@@ -1,5 +1,5 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
-from typing import TYPE_CHECKING, Dict, List, NewType, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Dict, List, NewType, Optional, Tuple, Union
 
 MYPY_ANNOTATION = (
     'This assert is used to tell mypy what is the type of the variable'
@@ -120,16 +120,6 @@ SecretRegistryAddress = NewType('SecretRegistryAddress', T_SecretRegistryAddress
 
 T_Signature = bytes
 Signature = NewType('Signature', T_Signature)
-
-T_SignedBlindedBalanceProof = TypeVar(
-    'T_SignedBlindedBalanceProof',
-    bound='SignedBlindedBalanceProof',
-)
-
-T_RequestMonitoring = TypeVar(
-    'T_RequestMonitoring',
-    bound='RequestMonitoring',
-)
 
 T_TransactionHash = bytes
 TransactionHash = NewType('TransactionHash', T_TransactionHash)
