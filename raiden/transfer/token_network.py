@@ -19,6 +19,7 @@ def subdispatch_to_channel_by_id(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     events = list()
 
@@ -28,10 +29,11 @@ def subdispatch_to_channel_by_id(
 
     if channel_state:
         result = channel.state_transition(
-            channel_state,
-            state_change,
-            pseudo_random_generator,
-            block_number,
+            channel_state=channel_state,
+            state_change=state_change,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+            block_hash=block_hash,
         )
 
         partner_to_channelids = token_network_state.partneraddresses_to_channelidentifiers[
@@ -55,12 +57,14 @@ def handle_channel_close(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     return subdispatch_to_channel_by_id(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        token_network_state=token_network_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=block_hash,
     )
 
 
@@ -97,12 +101,14 @@ def handle_balance(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     return subdispatch_to_channel_by_id(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        token_network_state=token_network_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=block_hash,
     )
 
 
@@ -111,6 +117,7 @@ def handle_closed(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     network_graph_state = token_network_state.network_graph
 
@@ -129,10 +136,11 @@ def handle_closed(
         ]
 
     return subdispatch_to_channel_by_id(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        token_network_state=token_network_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=block_hash,
     )
 
 
@@ -141,12 +149,14 @@ def handle_settled(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     return subdispatch_to_channel_by_id(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        token_network_state=token_network_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=block_hash,
     )
 
 
@@ -155,12 +165,14 @@ def handle_updated_transfer(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     return subdispatch_to_channel_by_id(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        token_network_state=token_network_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=block_hash,
     )
 
 
@@ -169,6 +181,7 @@ def handle_batch_unlock(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     participant1 = state_change.participant
     participant2 = state_change.partner
@@ -191,10 +204,11 @@ def handle_batch_unlock(
 
         if is_valid_channel:
             sub_iteration = channel.state_transition(
-                channel_state,
-                state_change,
-                pseudo_random_generator,
-                block_number,
+                channel_state=channel_state,
+                state_change=state_change,
+                pseudo_random_generator=pseudo_random_generator,
+                block_number=block_number,
+                block_hash=block_hash,
             )
             events.extend(sub_iteration.events)
 
@@ -252,6 +266,7 @@ def handle_receive_transfer_refund(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     events = list()
 
@@ -260,10 +275,11 @@ def handle_receive_transfer_refund(
 
     if channel_state:
         result = channel.state_transition(
-            channel_state,
-            state_change,
-            pseudo_random_generator,
-            block_number,
+            channel_state=channel_state,
+            state_change=state_change,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+            block_hash=block_hash,
         )
         events.extend(result.events)
 
@@ -276,6 +292,7 @@ def state_transition(
         state_change,
         pseudo_random_generator,
         block_number,
+        block_hash,
 ):
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
@@ -286,6 +303,7 @@ def state_transition(
             state_change,
             pseudo_random_generator,
             block_number,
+            block_hash,
         )
     elif type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
@@ -300,6 +318,7 @@ def state_transition(
             state_change,
             pseudo_random_generator,
             block_number,
+            block_hash,
         )
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
@@ -308,6 +327,7 @@ def state_transition(
             state_change,
             pseudo_random_generator,
             block_number,
+            block_hash,
         )
     elif type(state_change) == ContractReceiveChannelSettled:
         assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
@@ -316,6 +336,7 @@ def state_transition(
             state_change,
             pseudo_random_generator,
             block_number,
+            block_hash,
         )
     elif type(state_change) == ContractReceiveUpdateTransfer:
         assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
@@ -324,6 +345,7 @@ def state_transition(
             state_change,
             pseudo_random_generator,
             block_number,
+            block_hash,
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
@@ -332,6 +354,7 @@ def state_transition(
             state_change,
             pseudo_random_generator,
             block_number,
+            block_hash,
         )
     elif type(state_change) == ContractReceiveRouteNew:
         assert isinstance(state_change, ContractReceiveRouteNew), MYPY_ANNOTATION
