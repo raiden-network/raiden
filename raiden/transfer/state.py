@@ -20,6 +20,7 @@ from raiden.utils.typing import (
     Any,
     Balance,
     BlockExpiration,
+    BlockHash,
     BlockNumber,
     BlockTimeout,
     ChainID,
@@ -35,6 +36,7 @@ from raiden.utils.typing import (
     SecretHash,
     Signature,
     T_Address,
+    T_BlockHash,
     T_BlockNumber,
     T_ChainID,
     T_ChannelID,
@@ -271,6 +273,7 @@ class ChainState(State):
 
     __slots__ = (
         'block_number',
+        'block_hash',
         'chain_id',
         'identifiers_to_paymentnetworks',
         'nodeaddresses_to_networkstates',
@@ -286,16 +289,21 @@ class ChainState(State):
             self,
             pseudo_random_generator: random.Random,
             block_number: BlockNumber,
+            block_hash: BlockHash,
             our_address: Address,
             chain_id: ChainID,
     ):
         if not isinstance(block_number, T_BlockNumber):
             raise ValueError('block_number must be of BlockNumber type')
 
+        if not isinstance(block_hash, T_BlockHash):
+            raise ValueError('block_hash must be of BlockHash type')
+
         if not isinstance(chain_id, T_ChainID):
             raise ValueError('chain_id must be of ChainID type')
 
         self.block_number = block_number
+        self.block_hash = block_hash
         self.chain_id = chain_id
         self.identifiers_to_paymentnetworks = dict()
         self.nodeaddresses_to_networkstates = dict()
@@ -307,8 +315,12 @@ class ChainState(State):
         self.last_transport_authdata: Optional[str] = None
 
     def __repr__(self):
-        return '<ChainState block:{} networks:{} qty_transfers:{} chain_id:{}>'.format(
+        return (
+            '<ChainState block_number:{} block_hash:{} networks:{} '
+            'qty_transfers:{} chain_id:{}>'
+        ).format(
             self.block_number,
+            pex(self.block_hash),
             lpex(self.identifiers_to_paymentnetworks.keys()),
             len(self.payment_mapping.secrethashes_to_task),
             self.chain_id,
@@ -318,6 +330,7 @@ class ChainState(State):
         return (
             isinstance(other, ChainState) and
             self.block_number == other.block_number and
+            self.block_hash == other.block_hash and
             self.pseudo_random_generator.getstate() == other.pseudo_random_generator.getstate() and
             self.queueids_to_queues == other.queueids_to_queues and
             self.identifiers_to_paymentnetworks == other.identifiers_to_paymentnetworks and
@@ -333,6 +346,7 @@ class ChainState(State):
     def to_dict(self) -> Dict[str, Any]:
         return {
             'block_number': str(self.block_number),
+            'block_hash': serialize_bytes(self.block_hash),
             'chain_id': self.chain_id,
             'pseudo_random_generator': self.pseudo_random_generator.getstate(),
             'identifiers_to_paymentnetworks': map_dict(
@@ -363,6 +377,7 @@ class ChainState(State):
             block_number=BlockNumber(
                 T_BlockNumber(data['block_number']),
             ),
+            block_hash=serialization.deserialize_bytes(data['block_hash']),
             our_address=to_canonical_address(data['our_address']),
             chain_id=data['chain_id'],
         )
