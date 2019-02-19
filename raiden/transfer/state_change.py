@@ -35,6 +35,7 @@ from raiden.utils.typing import (
     SecretHash,
     SecretRegistryAddress,
     T_Address,
+    T_BlockHash,
     T_BlockNumber,
     T_Secret,
     T_SecretHash,
@@ -369,23 +370,29 @@ class ActionInitChain(StateChange):
             self,
             pseudo_random_generator,
             block_number: BlockNumber,
+            block_hash: BlockHash,
             our_address: Address,
             chain_id: ChainID,
     ):
-        if not isinstance(block_number, int):
-            raise ValueError('block_number must be int')
+        if not isinstance(block_number, T_BlockNumber):
+            raise ValueError('block_number must be of type BlockNumber')
+
+        if not isinstance(block_hash, T_BlockHash):
+            raise ValueError('block_hash must be of type BlockHash')
 
         if not isinstance(chain_id, int):
             raise ValueError('chain_id must be int')
 
         self.block_number = block_number
+        self.block_hash = block_hash
         self.chain_id = chain_id
         self.our_address = our_address
         self.pseudo_random_generator = pseudo_random_generator
 
     def __repr__(self):
-        return '<ActionInitChain block_number:{} chain_id:{}>'.format(
+        return '<ActionInitChain block_number:{} block_hash:{} chain_id:{}>'.format(
             self.block_number,
+            pex(self.block_hash),
             self.chain_id,
         )
 
@@ -394,6 +401,7 @@ class ActionInitChain(StateChange):
             isinstance(other, ActionInitChain) and
             self.pseudo_random_generator.getstate() == other.pseudo_random_generator.getstate() and
             self.block_number == other.block_number and
+            self.block_hash == other.block_hash and
             self.our_address == other.our_address and
             self.chain_id == other.chain_id
         )
@@ -404,6 +412,7 @@ class ActionInitChain(StateChange):
     def to_dict(self) -> Dict[str, Any]:
         return {
             'block_number': str(self.block_number),
+            'block_hash': serialize_bytes(self.block_hash),
             'our_address': to_checksum_address(self.our_address),
             'chain_id': self.chain_id,
             'pseudo_random_generator': self.pseudo_random_generator.getstate(),
@@ -416,6 +425,7 @@ class ActionInitChain(StateChange):
         return cls(
             pseudo_random_generator=pseudo_random_generator,
             block_number=BlockNumber(int(data['block_number'])),
+            block_hash=deserialize_bytes(data['block_hash']),
             our_address=to_canonical_address(data['our_address']),
             chain_id=data['chain_id'],
         )
