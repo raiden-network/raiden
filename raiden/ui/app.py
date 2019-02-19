@@ -40,6 +40,7 @@ from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
     ID_TO_NETWORKNAME,
 )
 from raiden_contracts.contract_manager import (
@@ -180,6 +181,7 @@ def run_app(
         tokennetwork_registry_contract_address,
         secret_registry_contract_address,
         endpoint_registry_contract_address,
+        user_deposit_contract_address,
         listen_address,
         mapped_socket,
         max_unresponsive_time,
@@ -309,6 +311,8 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
+    services_contracts = dict()
+
     if environment_type == Environment.DEVELOPMENT:
         contracts_version = DEVELOPMENT_CONTRACT_VERSION
     else:
@@ -320,6 +324,11 @@ def run_app(
         deployment_data = get_contracts_deployed(
             chain_id=node_network_id,
             version=contracts_version,
+        )
+        services_deployment_data = get_contracts_deployed(
+            chain_id=node_network_id,
+            version=contracts_version,
+            services=True,
         )
         not_allowed = (  # for now we only disallow mainnet with test configuration
             network_id == 1 and
@@ -336,6 +345,7 @@ def run_app(
             sys.exit(1)
 
         contracts = deployment_data['contracts']
+        services_contracts = services_deployment_data['contracts']
         contract_addresses_known = True
 
     rpc_client = JSONRPCClient(
@@ -397,6 +407,19 @@ def run_app(
     except AddressWrongContract:
         handle_contract_wrong_address('secret registry', secret_registry_contract_address)
 
+    try:
+        user_deposit = blockchain_service.user_deposit(
+            user_deposit_contract_address or to_canonical_address(
+                services_contracts[CONTRACT_USER_DEPOSIT]['address'],
+            ),
+        )
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
+    except AddressWithoutCode:
+        handle_contract_no_code('user deposit', user_deposit_contract_address)
+    except AddressWrongContract:
+        handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
+
     database_path = os.path.join(
         datadir,
         f'node_{pex(address)}',
@@ -447,6 +470,7 @@ def run_app(
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
             discovery=discovery,
+            user_deposit=user_deposit,
         )
     except RaidenError as e:
         click.secho(f'FATAL: {e}', fg='red')
