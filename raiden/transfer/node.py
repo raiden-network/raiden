@@ -148,6 +148,7 @@ def subdispatch_to_paymenttask(
         secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
     block_number = chain_state.block_number
+    block_hash = chain_state.block_hash
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
     events: List[Event] = list()
     sub_iteration = None
@@ -179,13 +180,15 @@ def subdispatch_to_paymenttask(
             )
 
             if token_network_state:
+                channelids_to_channels = token_network_state.channelidentifiers_to_channels
                 sub_iteration = mediator.state_transition(
-                    sub_task.mediator_state,
-                    state_change,
-                    token_network_state.channelidentifiers_to_channels,
-                    chain_state.nodeaddresses_to_networkstates,
-                    pseudo_random_generator,
-                    block_number,
+                    mediator_state=sub_task.mediator_state,
+                    state_change=state_change,
+                    channelidentifiers_to_channels=channelids_to_channels,
+                    nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+                    pseudo_random_generator=pseudo_random_generator,
+                    block_number=block_number,
+                    block_hash=block_hash,
                 )
                 events = sub_iteration.events
 
@@ -274,6 +277,7 @@ def subdispatch_mediatortask(
 ) -> TransitionResult[ChainState]:
 
     block_number = chain_state.block_number
+    block_hash = chain_state.block_hash
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
     if not sub_task:
@@ -297,12 +301,13 @@ def subdispatch_mediatortask(
 
         pseudo_random_generator = chain_state.pseudo_random_generator
         iteration = mediator.state_transition(
-            mediator_state,
-            state_change,
-            token_network_state.channelidentifiers_to_channels,
-            chain_state.nodeaddresses_to_networkstates,
-            pseudo_random_generator,
-            block_number,
+            mediator_state=mediator_state,
+            state_change=state_change,
+            channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+            block_hash=block_hash,
         )
         events = iteration.events
 

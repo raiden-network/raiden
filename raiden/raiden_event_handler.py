@@ -254,15 +254,9 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_reveal_secret_event: ContractSendSecretReveal,
     ):
-        # LEFTODO: Here we should normally get ContractSendChannelClose.triggered_by_block_hash
-        # but it may not be properly populated yet
-        if channel_reveal_secret_event.triggered_by_block_hash == bytes(0):
-            given_block_identifier = 'latest'
-        else:
-            given_block_identifier = channel_reveal_secret_event.triggered_by_block_hash
         raiden.default_secret_registry.register_secret(
             secret=channel_reveal_secret_event.secret,
-            given_block_identifier=given_block_identifier,
+            given_block_identifier=channel_reveal_secret_event.triggered_by_block_hash,
         )
 
     @staticmethod

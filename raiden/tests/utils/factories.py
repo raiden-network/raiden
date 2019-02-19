@@ -6,6 +6,7 @@ from typing import NamedTuple
 
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer
+from raiden.tests.utils import factories
 from raiden.transfer import balance_proof, channel
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
@@ -1031,7 +1032,8 @@ class MediatorTransfersPair(NamedTuple):
     channels: ChannelSet
     transfers_pair: typing.List[MediationPairState]
     amount: int
-    block_number: int
+    block_number: typing.BlockNumber
+    block_hash: typing.BlockHash
 
     @property
     def channel_map(self) -> typing.ChannelMap:
@@ -1120,7 +1122,13 @@ def make_transfers_pair(
         )
         transfers_pairs.append(pair)
 
-    return MediatorTransfersPair(channels, transfers_pairs, amount, block_number)
+    return MediatorTransfersPair(
+        channels=channels,
+        transfers_pair=transfers_pairs,
+        amount=amount,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
+    )
 
 
 def make_node_availability_map(nodes):

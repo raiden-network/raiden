@@ -65,6 +65,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
 
     send_transfer = search_for_item(initial_iteration.events, SendLockedTransfer, {})
@@ -101,6 +102,7 @@ def test_payer_enter_danger_zone_with_transfer_payed():
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
     paid_state = paid_iteration.new_state
     assert paid_state.transfers_pair[0].payee_state == 'payee_balance_proof'
@@ -242,6 +244,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
+        block_hash=factories.make_block_hash(),
     )
     assert init_iteration.new_state is not None
     send_transfer = search_for_item(init_iteration.events, SendLockedTransfer, {})
@@ -262,6 +265,7 @@ def test_regression_mediator_send_lock_expired_with_new_block():
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
+        block_hash=factories.make_block_hash(),
     )
 
     msg = (
@@ -322,6 +326,7 @@ def test_regression_mediator_task_no_routes():
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
+        block_hash=factories.make_block_hash(),
     )
 
     msg = 'The task must not be cleared, even if there is no route to forward the transfer'
@@ -353,17 +358,19 @@ def test_regression_mediator_task_no_routes():
     # Regression: The mediator must still be able to process the block which
     # expires the lock
     expired_block_number = channel.get_sender_expiration_threshold(lock)
+    block_hash = factories.make_block_hash()
     expire_block_iteration = mediator.state_transition(
         mediator_state=init_iteration.new_state,
         state_change=Block(
             block_number=expired_block_number,
             gas_limit=0,
-            block_hash=None,
+            block_hash=block_hash,
         ),
         channelidentifiers_to_channels=channels.channel_map,
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
+        block_hash=block_hash,
     )
     assert expire_block_iteration.new_state is not None
 
@@ -378,6 +385,7 @@ def test_regression_mediator_task_no_routes():
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
+        block_hash=block_hash,
     )
 
     msg = 'The only used channel had the lock cleared, the task must be cleared'
@@ -410,6 +418,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=5,
+        block_hash=factories.make_block_hash(),
     )
     assert iteration.new_state is not None
 
@@ -432,6 +441,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
+        block_hash=factories.make_block_hash(),
     )
 
     msg = 'At the expiration block we should get an EventUnlockClaimFailed'
@@ -456,6 +466,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=next_block.block_number,
+        block_hash=next_block.block_hash,
     )
     current_state = iteration.new_state
     lock = payer_transfer.lock
@@ -479,6 +490,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         nodeaddresses_to_networkstates=pair.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
+        block_hash=factories.make_block_hash(),
     )
     msg = 'At the next block we should not get the same event'
     assert not search_for_item(iteration.events, EventUnlockClaimFailed, {}), msg
@@ -511,6 +523,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
+        block_hash=setup.block_hash,
     )
     assert secrethash in payer_channel.partner_state.secrethashes_to_unlockedlocks
 
@@ -524,12 +537,13 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
             secrethash=secrethash,
             secret=secret,
             block_number=setup.block_number,
-            block_hash=factories.make_block_hash(),
+            block_hash=setup.block_hash,
         ),
         channelidentifiers_to_channels=setup.channel_map,
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=setup.block_number,
+        block_hash=setup.block_hash,
     )
     assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
 
@@ -561,5 +575,6 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=expired_block_number,
+        block_hash=factories.make_block_hash(),
     )
     assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
