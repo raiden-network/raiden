@@ -518,7 +518,7 @@ class RaidenService(Runnable):
 
         current_state = views.state_from_raiden(self)
         for balance_proof in views.detect_balance_proof_change(old_state, current_state):
-            raiden_event_list.append(EventNewBalanceProofReceived(balance_proof))
+            raiden_event_list.insert(0, EventNewBalanceProofReceived(balance_proof))
 
         log.debug(
             'Raiden events',
