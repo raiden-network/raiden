@@ -6,25 +6,23 @@ import gevent
 import pytest
 from gevent import Timeout
 
-from raiden import raiden_event_handler, waiting
+from raiden import raiden_event_handler
 from raiden.constants import (
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
     UINT64_MAX,
 )
+from raiden.exceptions import InsufficientFunds
 from raiden.messages import Processed, SecretRequest
 from raiden.network.transport.matrix import MatrixTransport, UserPresence, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
 from raiden.raiden_event_handler import SEND_BALANCE_PROOF_EVENTS, RaidenMonitoringEventHandler
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.events import wait_for_raiden_event
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.messages import make_balance_proof, make_lock
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
-from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventNewBalanceProofReceived,
@@ -35,11 +33,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.queue_identifier import QueueIdentifier
-from raiden.transfer.state import (
-    BalanceProofUnsignedState,
-    HashTimeLockState,
-    TransactionExecutionStatus,
-)
+from raiden.transfer.state import BalanceProofUnsignedState, HashTimeLockState
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils import pex
 from raiden.utils.signer import LocalSigner
@@ -350,62 +344,30 @@ def test_matrix_tx_error_handling(
         raiden_chain,
         token_addresses,
 ):
-    """ Test exception propagation for transactions triggered by the transport greenlet.
-    """
+    """Proxies exceptions must be forwarded by the transport."""
     app0, app1 = raiden_chain
-    token_network = views.get_token_network_by_token_address(
+    token_address = token_addresses[0]
+
+    channel_state = views.get_channelstate_for(
         chain_state=views.state_from_app(app0),
         payment_network_id=app0.raiden.default_registry.address,
-        token_address=token_addresses[0],
-    )
-    channel_identifier = token_network.partneraddresses_to_channelidentifiers[app1.raiden.address]
-    assert len(channel_identifier) == 1
-    channel_identifier = channel_identifier[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_addresses[0],
+        token_address=token_address,
+        partner_address=app1.raiden.address,
     )
     burn_eth(app0.raiden)
 
     def make_tx(*args, **kwargs):
-        """ We forego the transport itself and push right to
-        RaidenService.handle_and_track_state_change. This is meant to be used
-        as a transport callback.
-        """
         close_channel = ActionChannelClose(
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
         )
         app0.raiden.handle_and_track_state_change(close_channel)
 
     app0.raiden.transport._client.add_presence_listener(make_tx)
 
-    wait_for_raiden_event(
-        raiden=app0.raiden,
-        item_type=ContractSendChannelClose,
-        attributes={},
-        retry_timeout=1.0,
-    )
-    # assert the `close` did fail
-    channelstate = views.get_channelstate_by_token_network_and_partner(
-        chain_state=views.state_from_raiden(app0.raiden),
-        token_network_id=token_network_identifier,
-        partner_address=app1.raiden.address,
-    )
-    assert channelstate.close_transaction.started_block_number is not None
-    max_wait = (
-        channelstate.close_transaction.started_block_number +
-        (2 * DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS)
-    )
-    waiting.wait_for_block(
-        raiden=app0.raiden,
-        block_number=max_wait,
-        retry_timeout=.5,
-    )
-    # FIXME: TransactionExecutionStatus is not yet set to FAILURE, so asserting no SUCCESS
-    assert channelstate.close_transaction.result != TransactionExecutionStatus.SUCCESS
-    assert app0.raiden.transport._stop_event.ready()
+    exception = ValueError('exception was not raised from the transport')
+    with pytest.raises(InsufficientFunds), gevent.Timeout(200, exception=exception):
+        app0.raiden.get()
 
 
 def test_matrix_message_retry(
