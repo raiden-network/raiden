@@ -360,15 +360,15 @@ class EnvelopeMessage(SignedRetrieableMessage):
         return balance_proof_packed
 
 
-class Processed(SignedMessage):
+class Processed(SignedRetrieableMessage):
     """ All accepted messages should be confirmed by a `Processed` message which echoes the
     orginals Message hash.
     """
+    # FIXME: Process should _not_ be SignedRetrieableMessage, but only SignedMessage
     cmdid = messages.PROCESSED
 
     def __init__(self, message_identifier: MessageID):
-        super().__init__()
-        self.message_identifier = message_identifier
+        super().__init__(message_identifier)
 
     @classmethod
     def unpack(cls, packed):
