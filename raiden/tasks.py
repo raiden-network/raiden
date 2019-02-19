@@ -13,12 +13,15 @@ from web3 import Web3
 from raiden.constants import (
     CHECK_GAS_RESERVE_INTERVAL,
     CHECK_NETWORK_ID_INTERVAL,
+    CHECK_RDN_MIN_DEPOSIT_INTERVAL,
     CHECK_VERSION_INTERVAL,
     LATEST,
     RELEASE_PAGE,
     SECURITY_EXPRESSION,
 )
 from raiden.exceptions import EthNodeCommunicationError
+from raiden.network.proxies import UserDeposit
+from raiden.settings import MIN_RDN_THRESHOLD
 from raiden.utils import gas_reserve, pex
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import Tuple
@@ -93,6 +96,27 @@ def check_gas_reserve(raiden):
             )
 
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
+
+
+def check_rdn_deposits(user_deposit_proxy: UserDeposit):
+    """ Check periodically for RDN deposits in the user-deposits contract """
+    while True:
+        rdn_balance = user_deposit_proxy.effective_balance()
+
+        if rdn_balance < MIN_RDN_THRESHOLD:
+            click.secho(
+                (
+                    'WARNING\n'
+                    f"Your account's RDN balance of {rdn_balance} is below the "
+                    'minimum threshold. Provided that you have either a monitoring '
+                    'service or a path finding service activated, your node is not going'
+                    'to be able to pay those services which may lead to denial of service or '
+                    'loss of funds'
+                ),
+                fg='red',
+            )
+
+        gevent.sleep(CHECK_RDN_MIN_DEPOSIT_INTERVAL)
 
 
 def check_network_id(network_id, web3: Web3):
