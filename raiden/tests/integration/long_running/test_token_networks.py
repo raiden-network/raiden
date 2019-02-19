@@ -75,10 +75,8 @@ def saturated_count(connection_managers, registry_address, token_address):
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
-def test_participant_selection(raiden_network, token_addresses):
+def test_participant_selection(raiden_network, token_addresses):  # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address
-
-    # pylint: disable=too-many-locals
     token_address = token_addresses[0]
 
     # connect the first node (will register the token if necessary)
@@ -232,8 +230,18 @@ def test_participant_selection(raiden_network, token_addresses):
         connection_manager.raiden.chain.estimate_blocktime() *
         10
     )
-
     assert timeout > 0
+
+    channels = views.list_channelstate_for_tokennetwork(
+        chain_state=views.state_from_raiden(connection_manager.raiden),
+        payment_network_id=registry_address,
+        token_address=token_address,
+    )
+    channel_identifiers = [
+        channel.identifier
+        for channel in channels
+    ]
+
     exception = ValueError('timeout while waiting for leave')
     with gevent.Timeout(timeout, exception=exception):
         # sender leaves the network
@@ -242,19 +250,12 @@ def test_participant_selection(raiden_network, token_addresses):
             token_address,
         )
 
-    before_block = connection_manager.raiden.chain.block_number()
-    wait_blocks = sender_channel.settle_timeout + 10
-    # wait until both chains are synced?
-    connection_manager.raiden.chain.wait_until_block(
-        target_block_number=before_block + wait_blocks,
-    )
-    receiver.chain.wait_until_block(
-        target_block_number=before_block + wait_blocks,
-    )
-    receiver_channel = RaidenAPI(receiver).get_channel_list(
-        registry_address=registry_address,
-        token_address=token_address,
-        partner_address=sender.address,
-    )
-    # because of timing, channel may already have been cleaned
-    assert not receiver_channel or receiver_channel[0].settle_transaction is not None
+    exception = ValueError(f'Channels didnt get settled after {timeout}')
+    with gevent.Timeout(timeout, exception=exception):
+        waiting.wait_for_settle(
+            raiden=connection_manager.raiden,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            channel_ids=channel_identifiers,
+            retry_timeout=0.1,
+        )
