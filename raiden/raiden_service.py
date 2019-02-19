@@ -319,10 +319,11 @@ class RaidenService(Runnable):
             )
 
             state_change = ActionInitChain(
-                random.Random(),
-                last_log_block_number,
-                self.chain.node_address,
-                self.chain.network_id,
+                pseudo_random_generator=random.Random(),
+                block_number=last_log_block_number,
+                block_hash=last_log_block_hash,
+                our_address=self.chain.node_address,
+                chain_id=self.chain.network_id,
             )
             self.handle_and_track_state_change(state_change)
 

@@ -157,10 +157,11 @@ def test_actioninitchain_restore():
     chain_id = 777
 
     original_obj = state_change.ActionInitChain(
-        pseudo_random_generator,
-        block_number,
-        our_address,
-        chain_id,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
+        our_address=our_address,
+        chain_id=chain_id,
     )
 
     decoded_obj = JSONSerializer.deserialize(
@@ -179,6 +180,7 @@ def test_chainstate_restore():
     original_obj = state.ChainState(
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
+        block_hash=factories.make_block_hash(),
         our_address=our_address,
         chain_id=chain_id,
     )

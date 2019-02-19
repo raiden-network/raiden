@@ -17,6 +17,7 @@ def setup_storage(db_path):
         ActionInitChain(
             pseudo_random_generator=random.Random(),
             block_number=1,
+            block_hash=factories.make_block_hash(),
             our_address=factories.make_address(),
             chain_id=1,
         ),

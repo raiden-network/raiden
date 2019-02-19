@@ -451,6 +451,7 @@ def handle_block(
 ) -> TransitionResult[ChainState]:
     block_number = state_change.block_number
     chain_state.block_number = block_number
+    chain_state.block_hash = state_change.block_hash
 
     # Subdispatch Block state change
     channels_result = subdispatch_to_all_channels(
@@ -472,10 +473,11 @@ def handle_chain_init(
 ) -> TransitionResult[ChainState]:
     if chain_state is None:
         chain_state = ChainState(
-            state_change.pseudo_random_generator,
-            state_change.block_number,
-            state_change.our_address,
-            state_change.chain_id,
+            pseudo_random_generator=state_change.pseudo_random_generator,
+            block_number=state_change.block_number,
+            block_hash=state_change.block_hash,
+            our_address=state_change.our_address,
+            chain_id=state_change.chain_id,
         )
     events: List[Event] = list()
     return TransitionResult(chain_state, events)
