@@ -25,10 +25,11 @@ from raiden.exceptions import (
 )
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
-from raiden.tasks import check_gas_reserve, check_network_id, check_version
+from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits, check_version
 from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.runnable import Runnable
+from raiden_contracts.contract_manager import ContractManager
 
 from .app import run_app
 from .config import dump_cmd_options, dump_config, dump_module
@@ -164,6 +165,12 @@ class NodeRunner:
             check_network_id,
             app_.raiden.chain.network_id,
             app_.raiden.chain.client.web3,
+        ))
+
+        # spawn a greenlet to handle RDN deposits check
+        tasks.append(gevent.spawn(
+            check_rdn_deposits,
+            app_.user_deposit,
         ))
 
         # spawn a greenlet to handle the functions
