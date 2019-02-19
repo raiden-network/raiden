@@ -16,7 +16,8 @@ from web3 import Web3
 
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB
-from raiden.utils import privatekey_to_address, privatekey_to_publickey, typing
+from raiden.utils import privatekey_to_address, privatekey_to_publickey
+from raiden.utils.typing import Dict, List
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -47,11 +48,11 @@ def geth_clique_extradata(extra_vanity, extra_seal):
 
 
 def geth_to_cmd(
-        node: typing.Dict,
+        node: Dict,
         datadir: str,
         chain_id: int,
         verbosity: int,
-) -> typing.List[str]:
+) -> List[str]:
     """
     Transform a node configuration into a cmd-args list for `subprocess.Popen`.
 
@@ -131,9 +132,9 @@ def geth_create_account(datadir: str, privkey: bytes):
 
 def geth_generate_poa_genesis(
         genesis_path: str,
-        accounts_addresses: typing.List[str],
+        accounts_addresses: List[str],
         seal_address: str,
-        random_marker,
+        random_marker: str,
 ):
     """Writes a bare genesis to `genesis_path`.
 
@@ -263,7 +264,7 @@ def geth_node_config(miner_pkey, p2p_port, rpc_port):
     return config
 
 
-def geth_node_config_set_bootnodes(nodes_configuration: typing.Dict) -> None:
+def geth_node_config_set_bootnodes(nodes_configuration: Dict) -> None:
     bootnodes = ','.join(node['enode'] for node in nodes_configuration)
 
     for config in nodes_configuration:
@@ -278,6 +279,16 @@ def geth_node_to_datadir(node_config, base_datadir):
     nodekey_part = node_config['nodekeyhex'][:8]
     datadir = os.path.join(base_datadir, nodekey_part)
     return datadir
+
+
+def geth_node_to_logpath(node_config, base_logdir):
+    # HACK: Use only the first 8 characters to avoid golang's issue
+    # https://github.com/golang/go/issues/6895 (IPC bind fails with path
+    # longer than 108 characters).
+    # BSD (and therefore macOS) socket path length limit is 104 chars
+    nodekey_part = node_config['nodekeyhex'][:8]
+    logdir = os.path.join(base_logdir, nodekey_part)
+    return logdir
 
 
 def geth_prepare_datadir(datadir, genesis_file):
@@ -313,13 +324,13 @@ def geth_nodes_to_cmds(
 
 
 def geth_run_nodes(
-        geth_nodes,
-        nodes_configuration,
-        base_datadir,
-        genesis_file,
-        chain_id,
-        verbosity,
-        logdir,
+        geth_nodes: List[GethNodeDescription],
+        nodes_configuration: List[Dict],
+        base_datadir: str,
+        genesis_file: str,
+        chain_id: int,
+        verbosity: str,
+        logdir: str,
 ):
     os.makedirs(logdir, exist_ok=True)
 
@@ -337,8 +348,8 @@ def geth_run_nodes(
     )
 
     processes_list = []
-    for pos, cmd in enumerate(cmds):
-        log_path = os.path.join(logdir, str(pos))
+    for node_config, cmd in zip(nodes_configuration, cmds):
+        log_path = geth_node_to_logpath(node_config, logdir)
         logfile = open(log_path, 'w')
         stdout = logfile
 
@@ -369,9 +380,10 @@ def geth_run_nodes(
 
 def geth_run_private_blockchain(
         web3: Web3,
-        accounts_to_fund: typing.List[bytes],
-        geth_nodes: typing.List[GethNodeDescription],
+        accounts_to_fund: List[bytes],
+        geth_nodes: List[GethNodeDescription],
         base_datadir: str,
+        log_dir: str,
         chain_id: int,
         verbosity: str,
         random_marker: str,
@@ -385,8 +397,8 @@ def geth_run_private_blockchain(
         geth_nodes: A list of geth node
             description, containing the details of each node of the private
             chain.
-        base_datadir: The directory that will be used for the private
-            chain data.
+        base_datadir: Directory used to store the geth databases.
+        log_dir: Directory used to store the geth logs.
         verbosity: Verbosity used by the geth nodes.
         random_marker: A random marked used to identify the private chain.
     """
@@ -417,7 +429,6 @@ def geth_run_private_blockchain(
         seal_account,
         random_marker,
     )
-    logdir = os.path.join(base_datadir, 'logs')
 
     # check that the test is running on non-capture mode, and if it is save
     # current term settings before running geth
@@ -425,13 +436,13 @@ def geth_run_private_blockchain(
         term_settings = termios.tcgetattr(sys.stdin)
 
     processes_list = geth_run_nodes(
-        geth_nodes,
-        nodes_configuration,
-        base_datadir,
-        genesis_path,
-        chain_id,
-        verbosity,
-        logdir,
+        geth_nodes=geth_nodes,
+        nodes_configuration=nodes_configuration,
+        base_datadir=base_datadir,
+        genesis_file=genesis_path,
+        chain_id=chain_id,
+        verbosity=verbosity,
+        logdir=log_dir,
     )
 
     try:
