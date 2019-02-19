@@ -9,6 +9,7 @@ from raiden.network.proxies import (
     Token,
     TokenNetwork,
     TokenNetworkRegistry,
+    UserDeposit,
 )
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import CanonicalIdentifier
@@ -37,6 +38,7 @@ class BlockChainService:
         self.address_to_token = dict()
         self.address_to_token_network = dict()
         self.address_to_token_network_registry = dict()
+        self.address_to_user_deposit = dict()
         self.identifier_to_payment_channel = dict()
 
         self.client = jsonrpc_client
@@ -51,6 +53,7 @@ class BlockChainService:
         self._token_network_registry_creation_lock = Semaphore()
         self._secret_registry_creation_lock = Semaphore()
         self._payment_channel_creation_lock = Semaphore()
+        self._user_deposit_creation_lock = Semaphore()
 
     @property
     def node_address(self) -> Address:
@@ -216,3 +219,17 @@ class BlockChainService:
                 )
 
         return self.identifier_to_payment_channel[dict_key]
+
+    def user_deposit(self, address: Address) -> UserDeposit:
+        if not is_binary_address(address):
+            raise ValueError('address must be a valid address')
+
+        with self._user_deposit_creation_lock:
+            if address not in self.address_to_user_deposit:
+                self.address_to_user_deposit[address] = UserDeposit(
+                    jsonrpc_client=self.client,
+                    user_deposit_address=address,
+                    contract_manager=self.contract_manager,
+                )
+
+        return self.address_to_secret_registry[address]
