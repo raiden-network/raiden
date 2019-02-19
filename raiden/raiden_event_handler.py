@@ -283,14 +283,12 @@ class RaidenEventHandler:
             channel_id=channel_close_event.channel_identifier,
         )
 
-        # LEFTODO: Here we should normally get ContractSendChannelClose.triggered_by_block_hash
-        # but it's not populated properly yet.
         channel_proxy.close(
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=message_hash,
             signature=signature,
-            block_identifier='latest',
+            block_identifier=channel_close_event.triggered_by_block_hash,
         )
 
     @staticmethod

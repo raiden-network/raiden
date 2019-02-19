@@ -79,6 +79,7 @@ def create_square_network_topology(
         state_change=channel_new_state_change1,
         pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
+        block_hash=open_block_hash,
     )
 
     channel_new_iteration2 = token_network.state_transition(
@@ -87,6 +88,7 @@ def create_square_network_topology(
         state_change=channel_new_state_change2,
         pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
+        block_hash=open_block_hash,
     )
 
     graph_state = channel_new_iteration2.new_state.network_graph
@@ -110,6 +112,7 @@ def create_square_network_topology(
         state_change=channel_new_state_change3,
         pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
+        block_hash=factories.make_block_hash(),
     )
 
     graph_state = channel_new_iteration3.new_state.network_graph
@@ -131,6 +134,7 @@ def create_square_network_topology(
         state_change=channel_new_state_change4,
         pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
+        block_hash=factories.make_block_hash(),
     )
 
     graph_state = channel_new_iteration4.new_state.network_graph

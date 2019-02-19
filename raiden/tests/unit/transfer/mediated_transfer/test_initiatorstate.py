@@ -1076,6 +1076,7 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
         state_change=channel_closed,
         pseudo_random_generator=setup.prng,
         block_number=block_number,
+        block_hash=block_hash,
     )
     channel_state = channel_close_transition.new_state
 
@@ -1201,6 +1202,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
     during the settlement window.
     """
     block_number = 10
+    block_hash = factories.make_block_hash()
     setup = setup_initiator_tests(amount=UNIT_TRANSFER_AMOUNT * 2, block_number=block_number)
 
     initiator_task = get_transfer_at_index(setup.current_state, 0)
@@ -1213,7 +1215,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         token_network_identifier=setup.channel.token_network_identifier,
         channel_identifier=setup.channel.identifier,
         block_number=block_number,
-        block_hash=factories.make_block_hash(),
+        block_hash=block_hash,
     )
 
     channel_close_transition = channel.state_transition(
@@ -1221,6 +1223,7 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         state_change=channel_closed,
         pseudo_random_generator=setup.prng,
         block_number=block_number,
+        block_hash=block_hash,
     )
     channel_state = channel_close_transition.new_state
 
