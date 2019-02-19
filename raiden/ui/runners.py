@@ -170,6 +170,7 @@ class NodeRunner:
         # spawn a greenlet to handle RDN deposits check
         tasks.append(gevent.spawn(
             check_rdn_deposits,
+            app_.raiden,
             app_.user_deposit,
         ))
 
