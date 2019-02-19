@@ -24,13 +24,19 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     RaidenUnrecoverableError,
 )
-from raiden.messages import LockedTransfer, Message, SignedMessage, message_from_sendevent
+from raiden.messages import (
+    LockedTransfer,
+    Message,
+    RequestMonitoring,
+    SignedMessage,
+    message_from_sendevent,
+)
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
-from raiden.transfer.architecture import Event as RaidenEvent, StateChange
+from raiden.transfer.architecture import Event as RaidenEvent, State, StateChange
 from raiden.transfer.mediated_transfer.events import (
     EventNewBalanceProofReceived,
     SendLockedTransfer,
@@ -393,6 +399,21 @@ class RaidenService(Runnable):
         # before the messages are queued, actions triggered by it can cause new
         # messages to be enqueued before these older ones
         self._initialize_messages_queues(chain_state)
+
+        # before we start the transport, we need to request monitoring for all current
+        # balance proofs.
+        current_balance_proofs = views.detect_balance_proof_change(
+            State(),
+            chain_state,
+        )
+        for balance_proof in current_balance_proofs:
+            message = RequestMonitoring.from_balance_proof_signed_state(
+                balance_proof=balance_proof,
+                reward_amount=0,
+            )
+            # FIXME: need to introduce a send_global queue, to allow to enqueue before
+            # transport start
+            self.transport.send_global(constants.MONITORING_BROADCASTING_ROOM, message)
 
         # The transport must not ever be started before the alarm task's
         # `first_run()` has been, because it's this method which synchronizes the
