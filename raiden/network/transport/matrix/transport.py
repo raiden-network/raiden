@@ -27,6 +27,7 @@ from raiden.messages import (
     Ping,
     Pong,
     Processed,
+    RetrieableMessage,
     SignedMessage,
     SignedRetrieableMessage,
     decode as message_from_bytes,
@@ -64,6 +65,7 @@ from raiden.utils.typing import (
     AddressHex,
     Any,
     Callable,
+    ChainID,
     Dict,
     Iterable,
     Iterator,
@@ -79,7 +81,7 @@ from raiden.utils.typing import (
 
 log = structlog.get_logger(__name__)
 
-_RoomID = NewType('RoomID', str)
+_RoomID = NewType('_RoomID', str)
 
 
 class UserPresence(Enum):
@@ -217,6 +219,7 @@ class _RetryQueue(Runnable):
 
         def message_is_in_queue(data: _RetryQueue._MessageData) -> bool:
             return any(
+                isinstance(data.message, RetrieableMessage) and
                 send_event.message_identifier == data.message.message_identifier
                 for send_event in self.transport._queueids_to_queues[data.queue_identifier]
             )
@@ -284,7 +287,7 @@ class MatrixTransport(Runnable):
     def __init__(self, config: dict):
         super().__init__()
         self._config = config
-        self._raiden_service: RaidenService = None
+        self._raiden_service: Optional[RaidenService] = None
 
         if config['server'] == 'auto':
             available_servers = config['available_servers']
@@ -310,7 +313,7 @@ class MatrixTransport(Runnable):
         self._server_url = self._client.api.base_url
         self._server_name = config.get('server_name', urlparse(self._server_url).netloc)
 
-        self.greenlets = list()
+        self.greenlets: List[gevent.Greenlet] = list()
 
         # partner need to be in this dict to be listened on
         self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
@@ -353,6 +356,8 @@ class MatrixTransport(Runnable):
         self._raiden_service = raiden_service
         self._message_handler = message_handler
 
+        prev_user_id: Optional[str]
+        prev_access_token: Optional[str]
         if prev_auth_data and prev_auth_data.count('/') == 1:
             prev_user_id, _, prev_access_token = prev_auth_data.partition('/')
         else:
@@ -598,8 +603,9 @@ class MatrixTransport(Runnable):
         return getattr(self, '_client', None) and getattr(self._client, 'user_id', None)
 
     @property
-    def network_id(self) -> str:
-        return self._raiden_service.chain.network_id
+    def network_id(self) -> ChainID:
+        assert self._raiden_service is not None
+        return ChainID(self._raiden_service.chain.network_id)
 
     @property
     def _private_rooms(self) -> bool:
@@ -689,12 +695,12 @@ class MatrixTransport(Runnable):
         private_room: bool = False
         if join_rules_events:
             join_rules_event = join_rules_events[0]
-            private_room: bool = join_rules_event['content'].get('join_rule') == 'invite'
+            private_room = join_rules_event['content'].get('join_rule') == 'invite'
 
         # we join room and _set_room_id_for_address despite room privacy and requirements,
         # _get_room_ids_for_address will take care of returning only matching rooms and
         # _leave_unused_rooms will clear it in the future, if and when needed
-        last_ex = None
+        last_ex: Optional[Exception] = None
         for _ in range(JOIN_RETRIES):
             try:
                 room = self._client.join_room(room_id)
@@ -703,6 +709,7 @@ class MatrixTransport(Runnable):
             else:
                 break
         else:
+            assert last_ex is not None
             raise last_ex  # re-raise if couldn't succeed in retries
 
         if not room.listeners:
@@ -807,7 +814,7 @@ class MatrixTransport(Runnable):
             )
             return False
 
-        messages: List[SignedMessage] = list()
+        messages: List[Message] = list()
 
         if data.startswith('0x'):
             try:
@@ -902,9 +909,11 @@ class MatrixTransport(Runnable):
             message=delivered,
         )
 
+        assert self._raiden_service is not None
         self._raiden_service.on_message(delivered)
 
     def _receive_message(self, message: Union[SignedRetrieableMessage, Processed]):
+        assert self._raiden_service is not None
         self.log.debug(
             'Message received',
             node=pex(self._raiden_service.address),
@@ -971,7 +980,7 @@ class MatrixTransport(Runnable):
             allow_missing_peers=False,
     ) -> Optional[Room]:
         if self._stop_event.ready():
-            return
+            return None
         address_hex = to_normalized_address(address)
         assert address and address in self._address_to_userids,\
             f'address not health checked: me: {self._user_id}, peer: {address_hex}'
@@ -981,6 +990,7 @@ class MatrixTransport(Runnable):
         if room_ids:  # if we know any room for this user, use the first one
             return self._client.rooms[room_ids[0]]
 
+        assert self._raiden_service is not None
         address_pair = sorted([
             to_normalized_address(address)
             for address in [address, self._raiden_service.address]
@@ -1001,7 +1011,7 @@ class MatrixTransport(Runnable):
         ]
         if not peers and not allow_missing_peers:
             self.log.error('No valid peer found', peer_address=address_hex)
-            return
+            return None
 
         self._address_to_userids[address].update({user.user_id for user in peers})
 
@@ -1215,6 +1225,7 @@ class MatrixTransport(Runnable):
 
     def _sign(self, data: bytes) -> bytes:
         """ Use eth_sign compatible hasher to sign matrix data """
+        assert self._raiden_service is not None
         return self._raiden_service.signer.sign(data=data)
 
     def _get_user(self, user: Union[User, str]) -> User:
@@ -1229,6 +1240,7 @@ class MatrixTransport(Runnable):
             duser = discovery_room._members[user_id]
             # if handed a User instance with displayname set, update the discovery room cache
             if getattr(user, 'displayname', None):
+                assert isinstance(user, User)
                 duser.displayname = user.displayname
             user = duser
         elif not isinstance(user, User):

@@ -17,7 +17,7 @@ from raiden.exceptions import InvalidSignature, TransportError
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.utils.signer import Signer, recover
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, ChainID
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -309,7 +309,7 @@ def make_client(servers: Sequence[str], *args, **kwargs) -> GMatrixClient:
     return client
 
 
-def make_room_alias(chain_id: int, *suffixes: str) -> str:
+def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
     """Given a chain_id and any number of suffixes (global room names, pair of addresses),
     compose and return the canonical room name for raiden network
 
