@@ -16,7 +16,7 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
-_GETH_DATADIR = os.environ.get('RAIDEN_TESTS_GETH_DATADIR', False)
+_GETH_LOGDIR = os.environ.get('RAIDEN_TESTS_GETH_LOGSDIR', False)
 
 
 @pytest.fixture
@@ -74,17 +74,19 @@ def web3(
             for key in keys_to_fund
         ]
 
-        if _GETH_DATADIR:
-            base_datadir = _GETH_DATADIR
-            os.makedirs(base_datadir, exist_ok=True)
+        base_datadir = str(tmpdir)
+
+        if _GETH_LOGDIR:
+            base_logdir = os.path.join(_GETH_LOGDIR, request.node.name)
         else:
-            base_datadir = str(tmpdir)
+            base_logdir = os.path.join(base_datadir, 'logs')
 
         geth_processes = geth_run_private_blockchain(
             web3=web3,
             accounts_to_fund=accounts_to_fund,
             geth_nodes=geth_nodes,
             base_datadir=base_datadir,
+            log_dir=base_logdir,
             chain_id=chain_id,
             verbosity=request.config.option.verbose,
             random_marker=random_marker,
