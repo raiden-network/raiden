@@ -232,4 +232,4 @@ class BlockChainService:
                     contract_manager=self.contract_manager,
                 )
 
-        return self.address_to_secret_registry[address]
+        return self.address_to_user_deposit[address]

@@ -4,7 +4,7 @@ from eth_utils import to_checksum_address
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import Discovery, SecretRegistry, TokenNetworkRegistry
+from raiden.network.proxies import Discovery, SecretRegistry, TokenNetworkRegistry, UserDeposit
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NAT_INVITATION_TIMEOUT,
@@ -82,6 +82,7 @@ class App:  # pylint: disable=too-few-public-methods
             raiden_event_handler,
             message_handler,
             discovery: Discovery = None,
+            user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
             chain=chain,
@@ -116,6 +117,7 @@ class App:  # pylint: disable=too-few-public-methods
 
         self.config = config
         self.discovery = discovery
+        self.user_deposit = user_deposit
         self.raiden = raiden
         self.start_console = self.config['console']
 
