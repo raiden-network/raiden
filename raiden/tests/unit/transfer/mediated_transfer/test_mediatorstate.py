@@ -1485,6 +1485,7 @@ def test_mediator_lock_expired_with_new_block():
 
 def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     block_number = 5
+    block_hash = factories.make_block_hash()
     pseudo_random_generator = random.Random()
 
     channels = mediator_make_channel_pair()
@@ -1521,13 +1522,14 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         block_number=block_number,
-        block_hash=factories.make_block_hash(),
+        block_hash=block_hash,
     )
     channel_close_transition = channel.state_transition(
         channel_state=channel_state,
         state_change=channel_closed,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
+        block_hash=block_hash,
     )
     channel_state = channel_close_transition.new_state
 

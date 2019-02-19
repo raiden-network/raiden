@@ -207,10 +207,11 @@ def test_channelstate_update_contract_balance():
 
     pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
-        deepcopy(channel_state),
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        channel_state=deepcopy(channel_state),
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=block_hash,
     )
     new_state = iteration.new_state
 
@@ -256,10 +257,11 @@ def test_channelstate_decreasing_contract_balance():
 
     pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
-        deepcopy(channel_state),
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        channel_state=deepcopy(channel_state),
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
     new_state = iteration.new_state
 
@@ -306,10 +308,11 @@ def test_channelstate_repeated_contract_balance():
 
     for _ in range(10):
         iteration = channel.state_transition(
-            deepcopy(channel_state),
-            state_change,
-            pseudo_random_generator,
-            block_number,
+            channel_state=deepcopy(channel_state),
+            state_change=state_change,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+            block_hash=factories.make_block_hash(),
         )
         new_state = iteration.new_state
 
@@ -353,24 +356,27 @@ def test_deposit_must_wait_for_confirmation():
     )
     pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
-        deepcopy(channel_state),
-        new_balance,
-        pseudo_random_generator,
-        block_number,
+        channel_state=deepcopy(channel_state),
+        state_change=new_balance,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=block_hash,
     )
     unconfirmed_state = iteration.new_state
 
     for block_number in range(block_number, confirmed_deposit_block_number):
+        block_hash = factories.make_transaction_hash()
         unconfirmed_block = Block(
             block_number=block_number,
             gas_limit=1,
-            block_hash=factories.make_transaction_hash(),
+            block_hash=block_hash,
         )
         iteration = channel.state_transition(
-            deepcopy(unconfirmed_state),
-            unconfirmed_block,
-            pseudo_random_generator,
-            block_number,
+            channel_state=deepcopy(unconfirmed_state),
+            state_change=unconfirmed_block,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
+            block_hash=block_hash,
         )
         unconfirmed_state = iteration.new_state
 
@@ -385,16 +391,18 @@ def test_deposit_must_wait_for_confirmation():
             partner_model1,
         )
 
+    confirmed_block_hash = factories.make_transaction_hash()
     confirmed_block = Block(
         block_number=confirmed_deposit_block_number,
         gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
+        block_hash=confirmed_block_hash,
     )
     iteration = channel.state_transition(
-        deepcopy(unconfirmed_state),
-        confirmed_block,
-        pseudo_random_generator,
-        confirmed_deposit_block_number,
+        channel_state=deepcopy(unconfirmed_state),
+        state_change=confirmed_block,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=confirmed_deposit_block_number,
+        block_hash=confirmed_block_hash,
     )
     confirmed_state = iteration.new_state
 
@@ -1591,10 +1599,11 @@ def test_action_close_must_change_the_channel_state():
         channel_state.identifier,
     )
     iteration = channel.state_transition(
-        channel_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        channel_state=channel_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
     assert channel.get_status(iteration.new_state) == CHANNEL_STATE_CLOSING
 
@@ -1640,10 +1649,11 @@ def test_update_must_be_called_if_close_lost_race():
         channel_state.identifier,
     )
     iteration = channel.state_transition(
-        channel_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        channel_state=channel_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
 
     state_change = ContractReceiveChannelClosed(
@@ -1673,10 +1683,11 @@ def test_update_transfer():
         channel_state.identifier,
     )
     iteration = channel.state_transition(
-        channel_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
+        channel_state=channel_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
     )
 
     # update_transaction in channel state should not be set

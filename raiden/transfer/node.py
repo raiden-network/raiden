@@ -60,6 +60,7 @@ from raiden.transfer.state_change import (
 )
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
+    BlockHash,
     BlockNumber,
     ChannelID,
     List,
@@ -112,6 +113,7 @@ def subdispatch_to_all_channels(
         chain_state: ChainState,
         state_change: StateChange,
         block_number: BlockNumber,
+        block_hash: BlockHash,
 ) -> TransitionResult[ChainState]:
     events = list()
 
@@ -119,10 +121,11 @@ def subdispatch_to_all_channels(
         for token_network_state in payment_network.tokenidentifiers_to_tokennetworks.values():
             for channel_state in token_network_state.channelidentifiers_to_channels.values():
                 result = channel.state_transition(
-                    channel_state,
-                    state_change,
-                    chain_state.pseudo_random_generator,
-                    block_number,
+                    channel_state=channel_state,
+                    state_change=state_change,
+                    pseudo_random_generator=chain_state.pseudo_random_generator,
+                    block_number=block_number,
+                    block_hash=block_hash,
                 )
                 events.extend(result.events)
 
@@ -460,9 +463,10 @@ def handle_block(
 
     # Subdispatch Block state change
     channels_result = subdispatch_to_all_channels(
-        chain_state,
-        state_change,
-        block_number,
+        chain_state=chain_state,
+        state_change=state_change,
+        block_number=block_number,
+        block_hash=chain_state.block_hash,
     )
     transfers_result = subdispatch_to_all_lockedtransfers(
         chain_state,
@@ -507,11 +511,12 @@ def handle_token_network_action(
     if token_network_state:
         pseudo_random_generator = chain_state.pseudo_random_generator
         iteration = token_network.state_transition(
-            payment_network_id,
-            token_network_state,
-            state_change,
-            pseudo_random_generator,
-            chain_state.block_number,
+            payment_network_identifier=payment_network_id,
+            token_network_state=token_network_state,
+            state_change=state_change,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=chain_state.block_number,
+            block_hash=chain_state.block_hash,
         )
         assert iteration.new_state, 'No token network state transition leads to None'
 
@@ -1232,7 +1237,8 @@ def _get_channels_close_events(
         )
         for channel_state in filtered_channel_states:
             events.extend(channel.events_for_close(
-                channel_state,
-                chain_state.block_number,
+                channel_state=channel_state,
+                block_number=chain_state.block_number,
+                block_hash=chain_state.block_hash,
             ))
     return events

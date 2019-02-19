@@ -83,6 +83,7 @@ from raiden.utils.typing import (
     Any,
     Balance,
     BlockExpiration,
+    BlockHash,
     BlockNumber,
     ChainID,
     ChannelID,
@@ -1366,6 +1367,7 @@ def send_unlock(
 def events_for_close(
         channel_state: NettingChannelState,
         block_number: BlockNumber,
+        block_hash: BlockHash,
 ) -> List[Event]:
     events = list()
 
@@ -1385,14 +1387,7 @@ def events_for_close(
             token_address=channel_state.token_address,
             token_network_identifier=channel_state.token_network_identifier,
             balance_proof=balance_proof,
-            # the events_for_close function is always called with the current
-            # block number. So ContractSendChannelClose does not need to check
-            # anything. This is an ugly hack for the moment. Other ugly hack
-            # is to not give a block hash to ContractSendChannelClose
-            # The "right" way would be to add the blockhash along with the block
-            # number in the chain state but would like to avoid unless it
-            # is absolutely needed
-            triggered_by_block_hash=bytes(0),
+            triggered_by_block_hash=block_hash,
         )
 
         events.append(close_event)
@@ -1574,11 +1569,16 @@ def handle_action_close(
         channel_state: NettingChannelState,
         close: ActionChannelClose,
         block_number: BlockNumber,
+        block_hash: BlockHash,
 ) -> TransitionResult[NettingChannelState]:
     msg = 'caller must make sure the ids match'
     assert channel_state.identifier == close.channel_identifier, msg
 
-    events = events_for_close(channel_state, block_number)
+    events = events_for_close(
+        channel_state=channel_state,
+        block_number=block_number,
+        block_hash=block_hash,
+    )
     return TransitionResult(channel_state, events)
 
 
@@ -1920,6 +1920,7 @@ def state_transition(
         state_change: StateChange,
         pseudo_random_generator: Any,
         block_number: BlockNumber,
+        block_hash: BlockHash,
 ) -> TransitionResult[Optional[NettingChannelState]]:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
@@ -1936,9 +1937,10 @@ def state_transition(
     elif type(state_change) == ActionChannelClose:
         assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_action_close(
-            channel_state,
-            state_change,
-            block_number,
+            channel_state=channel_state,
+            close=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
         )
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
