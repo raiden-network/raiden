@@ -1,6 +1,7 @@
 import random
 from copy import deepcopy
 
+from raiden.tests.utils import factories
 from raiden.transfer.state import (
     ChainState,
     NettingChannelEndState,
@@ -14,8 +15,21 @@ from raiden.transfer.views import detect_balance_proof_change
 
 def test_detect_balance_proof_change():
     prng = random.Random()
-    old = ChainState(prng, 1, 2, 3)
-    new = ChainState(prng, 1, 2, 3)
+    block_hash = factories.make_block_hash()
+    old = ChainState(
+        pseudo_random_generator=prng,
+        block_number=1,
+        block_hash=block_hash,
+        our_address=2,
+        chain_id=3,
+    )
+    new = ChainState(
+        pseudo_random_generator=prng,
+        block_number=1,
+        block_hash=block_hash,
+        our_address=2,
+        chain_id=3,
+    )
 
     def diff():
         return list(detect_balance_proof_change(old, new))

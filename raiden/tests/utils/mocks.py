@@ -57,10 +57,11 @@ class MockRaidenService:
         self.wal = WriteAheadLog(state_manager, storage)
 
         state_change = ActionInitChain(
-            random.Random(),
-            0,
-            self.chain.node_address,
-            self.chain.network_id,
+            pseudo_random_generator=random.Random(),
+            block_number=0,
+            block_hash=factories.make_block_hash(),
+            our_address=self.chain.node_address,
+            chain_id=self.chain.network_id,
         )
 
         self.wal.log_and_dispatch(state_change)
