@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.state_change import ActionInitChain
 from raiden.utils.upgrades import UpgradeManager
@@ -52,6 +52,6 @@ def test_upgrade_v16_to_v17(tmp_path):
     manager = UpgradeManager(db_filename=str(db_path))
     manager.run()
 
-    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
+    storage = SQLiteStorage(str(db_path))
     snapshot = storage.get_latest_state_snapshot()
     assert snapshot is not None
