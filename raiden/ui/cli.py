@@ -144,6 +144,12 @@ def options(func):
             show_default=True,
         ),
         option(
+            '--user-deposit-contract-address',
+            help='hex encoded address of the User Deposit contract.',
+            type=ADDRESS_TYPE,
+            show_default=True,
+        ),
+        option(
             '--console',
             help='Start the interactive raiden console',
             is_flag=True,
