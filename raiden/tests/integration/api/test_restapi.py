@@ -972,6 +972,65 @@ def test_api_payments(api_server_test_instance, raiden_network, token_addresses)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
+def test_multi_api_payments(
+        api_server_test_instance,
+        raiden_network,
+        token_addresses,
+):
+    _, app1 = raiden_network
+    amount = 200
+    identifier = 42
+    token_address = token_addresses[0]
+    target_address = app1.raiden.address
+
+    our_address = api_server_test_instance.rest_api.raiden_api.address
+
+    payment = {
+        'initiator_address': to_checksum_address(our_address),
+        'target_address': to_checksum_address(target_address),
+        'token_address': to_checksum_address(token_address),
+        'amount': amount,
+        'identifier': identifier,
+    }
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={'amount': amount, 'identifier': identifier},
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    response = response.json()
+    assert_payment_secret_and_hash(response, payment)
+
+    payment = {
+        'initiator_address': to_checksum_address(our_address),
+        'target_address': to_checksum_address(target_address),
+        'token_address': to_checksum_address(token_address),
+        'amount': amount,
+        'identifier': identifier + 1,
+    }
+
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={'amount': amount, 'identifier': identifier + 1},
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    response = response.json()
+    assert_payment_secret_and_hash(response, payment)
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
 def test_api_payments_secret_hash_errors(
         api_server_test_instance,
         raiden_network,
