@@ -98,10 +98,10 @@ def check_gas_reserve(raiden):
         gevent.sleep(CHECK_GAS_RESERVE_INTERVAL)
 
 
-def check_rdn_deposits(user_deposit_proxy: UserDeposit):
+def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):
     """ Check periodically for RDN deposits in the user-deposits contract """
     while True:
-        rdn_balance = user_deposit_proxy.effective_balance()
+        rdn_balance = user_deposit_proxy.effective_balance(raiden.address)
 
         if rdn_balance < MIN_RDN_THRESHOLD:
             click.secho(
@@ -111,7 +111,7 @@ def check_rdn_deposits(user_deposit_proxy: UserDeposit):
                     'minimum threshold. Provided that you have either a monitoring '
                     'service or a path finding service activated, your node is not going'
                     'to be able to pay those services which may lead to denial of service or '
-                    'loss of funds'
+                    'loss of funds.'
                 ),
                 fg='red',
             )
