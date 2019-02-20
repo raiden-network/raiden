@@ -8,6 +8,7 @@ from raiden.tests.utils.network import (
     create_apps,
     create_network_channels,
     create_sequential_channels,
+    parallel_start_apps,
     wait_for_alarm_start,
     wait_for_channels,
     wait_for_token_networks,
@@ -73,8 +74,7 @@ def raiden_chain(
         private_rooms=private_rooms,
     )
 
-    start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
-    gevent.joinall(start_tasks, raise_error=True)
+    parallel_start_apps(raiden_apps)
 
     from_block = GENESIS_BLOCK_NUMBER
     for app in raiden_apps:
@@ -170,8 +170,7 @@ def raiden_network(
         private_rooms=private_rooms,
     )
 
-    start_tasks = [gevent.spawn(app.raiden.start) for app in raiden_apps]
-    gevent.joinall(start_tasks, raise_error=True)
+    parallel_start_apps(raiden_apps)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
     with gevent.Timeout(seconds=30, exception=exception):

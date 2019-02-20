@@ -107,7 +107,10 @@ class _RetryQueue(Runnable):
         self._notify_event = gevent.event.Event()
         self._lock = gevent.lock.Semaphore()
         super().__init__()
-        self.greenlet.name = f'RetryQueue:{pex(receiver)}'
+        self.greenlet.name = (
+            f'RetryQueue '
+            f'recipient:{pex(self.receiver)}'
+        )
 
     @property
     def log(self):
@@ -248,6 +251,11 @@ class _RetryQueue(Runnable):
             self.transport._send_raw(self.receiver, '\n'.join(message_texts))
 
     def _run(self):
+        self.greenlet.name = (
+            f'RetryQueue '
+            f'node:{pex(self.transport._raiden_service.address)} '
+            f'recipient:{pex(self.receiver)}'
+        )
         # run while transport parent is running
         while not self.transport._stop_event.ready():
             # once entered the critical section, block any other enqueue or notify attempt
@@ -319,6 +327,14 @@ class MatrixTransport(Runnable):
         self._getroom_lock = Semaphore()
         self._account_data_lock = Semaphore()
 
+    def __repr__(self):
+        if self._raiden_service is not None:
+            node = f' node:{pex(self._raiden_service.address)}'
+        else:
+            node = f''
+
+        return f'<{self.__class__.__name__}{node}>'
+
     def start(
             self,
             raiden_service: RaidenService,
@@ -384,6 +400,7 @@ class MatrixTransport(Runnable):
         state_change = ActionUpdateTransportAuthData(
             f'{self._user_id}/{self._client.api.token}',
         )
+        self.greenlet.name = f'MatrixTransport._run node:{pex(self._raiden_service.address)}'
         self._raiden_service.handle_state_change(state_change)
         try:
             # children crashes should throw an exception here
@@ -541,7 +558,13 @@ class MatrixTransport(Runnable):
             )
             room.send_text(text)
 
-        self._spawn(_send_global)
+        greenlet = self._spawn(_send_global)
+        greenlet.name = (
+            f'MatrixTransport.send_global '
+            f'node:{pex(self._raiden_service.address)} '
+            f'room:{room} '
+            f'user_id:{self._user_id}'
+        )
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
@@ -1083,7 +1106,8 @@ class MatrixTransport(Runnable):
         self._userid_to_presence[user_id] = new_state
         self._update_address_presence(address)
         # maybe inviting user used to also possibly invite user's from presence changes
-        self._spawn(self._maybe_invite_user, user)
+        greenlet = self._spawn(self._maybe_invite_user, user)
+        greenlet.name = f'invite node:{pex(self._raiden_service.address)} user_id:{user_id}'
 
     def _get_user_presence(self, user_id: str) -> UserPresence:
         if user_id not in self._userid_to_presence:
@@ -1333,4 +1357,9 @@ class MatrixTransport(Runnable):
                 # don't leave global room
                 continue
             if room_id not in keep_rooms:
-                self._spawn(leave, room)
+                greenlet = self._spawn(leave, room)
+                greenlet.name = (
+                    f'MatrixTransport.leave '
+                    f'node:{pex(self._raiden_service.address)} '
+                    f'user_id:{self._user_id}'
+                )
