@@ -12,6 +12,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.network.proxies import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT
+from raiden.transfer import views
 from raiden.utils import typing
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
@@ -233,7 +234,7 @@ class ConsoleTools:
         registry = self._raiden.chain.token_network_registry(registry_address)
         token_network_address = registry.add_token(
             token_address=token_address,
-            given_block_identifier='latest',
+            given_block_identifier=views.state_from_raiden(self._raiden).block_hash,
         )
 
         # Register the channel manager with the raiden registry
