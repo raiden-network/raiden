@@ -161,6 +161,7 @@ def decode_event_to_internal(abi, log_event):
     # translate from web3's to raiden's name convention
     data['block_number'] = log_event.pop('blockNumber')
     data['transaction_hash'] = log_event.pop('transactionHash')
+    data['block_hash'] = bytes(log_event.pop('blockHash'))
 
     assert data['block_number'], 'The event must have the block_number'
     assert data['transaction_hash'], 'The event must have the transaction hash field'
