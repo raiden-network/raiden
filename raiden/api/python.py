@@ -217,7 +217,7 @@ class RaidenAPI:
             registry = self.raiden.chain.token_network_registry(registry_address)
             return registry.add_token(
                 token_address=token_address,
-                given_block_identifier='latest',
+                given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
             )
         except RaidenRecoverableError as e:
             if 'Token already registered' in str(e):
@@ -380,7 +380,7 @@ class RaidenAPI:
                 token_network.new_netting_channel(
                     partner=partner_address,
                     settle_timeout=settle_timeout,
-                    given_block_identifier='latest',
+                    given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
                 )
             except DuplicatedChannelError:
                 log.info('partner opened channel first')
@@ -500,7 +500,10 @@ class RaidenAPI:
 
         # set_total_deposit calls approve
         # token.approve(netcontract_address, addendum, 'latest')
-        channel_proxy.set_total_deposit(total_deposit, block_identifier='latest')
+        channel_proxy.set_total_deposit(
+            total_deposit=total_deposit,
+            block_identifier=views.state_from_raiden(self.raiden).block_hash,
+        )
 
         target_address = self.raiden.address
         waiting.wait_for_participant_newbalance(

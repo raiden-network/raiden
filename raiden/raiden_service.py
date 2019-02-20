@@ -832,7 +832,7 @@ class RaidenService(Runnable):
 
         secret_registered = self.default_secret_registry.check_registered(
             secrethash=secret_hash,
-            block_identifier='latest',
+            block_identifier=views.state_from_raiden(self).block_hash,
         )
         if secret_registered:
             raise RaidenUnrecoverableError(
