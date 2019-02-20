@@ -377,10 +377,13 @@ class MatrixTransport(Runnable):
 
         self._inventory_rooms()
 
+        def on_success(greenlet):
+            if greenlet in self.greenlets:
+                self.greenlets.remove(greenlet)
+
         self._client.start_listener_thread()
         self._client.sync_thread.link_exception(self.on_error)
-        # no need to link_value on long-lived sync_thread, as it shouldn't succeed but on stop
-        # client's sync thread may also crash self/main greenlet
+        self._client.sync_thread.link_value(on_success)
         self.greenlets = [self._client.sync_thread]
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
@@ -908,8 +911,11 @@ class MatrixTransport(Runnable):
         if receiver not in self._address_to_retrier:
             retrier = _RetryQueue(transport=self, receiver=receiver)
             self._address_to_retrier[receiver] = retrier
-            if not self._stop_event.ready():
-                retrier.start()
+            # Always start the _RetryQueue, otherwise `stop` will block forever
+            # waiting for the corresponding gevent.Greenlet to complete. This
+            # has no negative side-effects if the transport has stopped because
+            # the retrier itself checks the transport running state.
+            retrier.start()
         return self._address_to_retrier[receiver]
 
     def _send_with_retry(
