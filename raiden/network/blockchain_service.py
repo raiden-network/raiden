@@ -13,6 +13,8 @@ from raiden.network.proxies import (
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils.typing import (
     Address,
+    BlockHash,
+    BlockNumber,
     ChannelID,
     PaymentNetworkID,
     T_ChannelID,
@@ -54,8 +56,11 @@ class BlockChainService:
     def node_address(self) -> Address:
         return self.client.address
 
-    def block_number(self) -> int:
+    def block_number(self) -> BlockNumber:
         return self.client.block_number()
+
+    def block_hash(self) -> BlockHash:
+        return self.client.blockhash_from_blocknumber(self.block_number())
 
     def get_block(self, block_identifier):
         return self.client.web3.eth.getBlock(block_identifier=block_identifier)
