@@ -262,6 +262,7 @@ class GMatrixClient(MatrixClient):
         assert not self.should_listen and self.sync_thread is None, 'Already running'
         self.should_listen = True
         self.sync_thread = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
+        self.sync_thread.name = f'GMatrixClient.listen_forever user_id:{self.user_id}'
 
     def stop_listener_thread(self):
         """ Kills sync_thread greenlet before joining it """
@@ -397,7 +398,9 @@ class GMatrixClient(MatrixClient):
 
         is_first_sync = (prev_sync_token is None)
         self._handle_thread = gevent.Greenlet(self._handle_response, response, is_first_sync)
-        self._handle_thread.name = f'sync_handle_response-{prev_sync_token}'
+        self._handle_thread.name = (
+            f'GMatrixClient._sync user_id:{self.user_id} sync_token:{prev_sync_token}'
+        )
         self._handle_thread.link_exception(lambda g: self.sync_thread.kill(g.exception))
         self._handle_thread.start()
 
