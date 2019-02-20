@@ -325,11 +325,6 @@ def run_app(
             chain_id=node_network_id,
             version=contracts_version,
         )
-        services_deployment_data = get_contracts_deployed(
-            chain_id=node_network_id,
-            version=contracts_version,
-            services=True,
-        )
         not_allowed = (  # for now we only disallow mainnet with test configuration
             network_id == 1 and
             environment_type == Environment.DEVELOPMENT
@@ -345,7 +340,6 @@ def run_app(
             sys.exit(1)
 
         contracts = deployment_data['contracts']
-        services_contracts = services_deployment_data['contracts']
         contract_addresses_known = True
 
     rpc_client = JSONRPCClient(
@@ -407,18 +401,29 @@ def run_app(
     except AddressWrongContract:
         handle_contract_wrong_address('secret registry', secret_registry_contract_address)
 
-    try:
-        user_deposit = blockchain_service.user_deposit(
-            user_deposit_contract_address or to_canonical_address(
-                services_contracts[CONTRACT_USER_DEPOSIT]['address'],
-            ),
+    user_deposit = None
+    if (
+            environment_type == Environment.DEVELOPMENT and
+            ID_TO_NETWORKNAME[node_network_id] != 'smoketest'
+    ):
+        services_deployment_data = get_contracts_deployed(
+            chain_id=node_network_id,
+            version=contracts_version,
+            services=True,
         )
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
-    except AddressWithoutCode:
-        handle_contract_no_code('user deposit', user_deposit_contract_address)
-    except AddressWrongContract:
-        handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
+        services_contracts = services_deployment_data['contracts']
+        try:
+            user_deposit = blockchain_service.user_deposit(
+                user_deposit_contract_address or to_canonical_address(
+                    services_contracts[CONTRACT_USER_DEPOSIT]['address'],
+                ),
+            )
+        except ContractVersionMismatch as e:
+            handle_contract_version_mismatch(e)
+        except AddressWithoutCode:
+            handle_contract_no_code('user deposit', user_deposit_contract_address)
+        except AddressWrongContract:
+            handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
 
     database_path = os.path.join(
         datadir,
