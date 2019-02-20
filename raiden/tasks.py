@@ -139,6 +139,10 @@ class AlarmTask(Runnable):
         finally:
             self.callbacks = list()
 
+    def is_primed(self):
+        """True if the first_run has been called."""
+        return bool(self.chain_id and self.known_block_number is not None)
+
     def register_callback(self, callback):
         """ Register a new callback.
 
@@ -163,8 +167,8 @@ class AlarmTask(Runnable):
         #
         # This is required because the first run will synchronize the node with
         # the blockchain since the last run.
-        assert self.chain_id, 'chain_id not set'
-        assert self.known_block_number is not None, 'known_block_number not set'
+        msg = 'Only start the AlarmTask after it has been primed with the first_run'
+        assert self.is_primed(), msg
 
         sleep_time = self.sleep_time
         while self._stop_event.wait(sleep_time) is not True:
