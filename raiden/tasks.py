@@ -123,12 +123,16 @@ class AlarmTask(Runnable):
         # probability of a new block increases.
         self.sleep_time = 0.5
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__} node:{pex(self.chain.client.address)}>'
+
     def start(self):
         log.debug('Alarm task started', node=pex(self.chain.node_address))
         self._stop_event = AsyncResult()
         super().start()
 
     def _run(self):  # pylint: disable=method-hidden
+        self.greenlet.name = f'AlarmTask._run node:{pex(self.chain.client.address)}'
         try:
             self.loop_until_stop()
         finally:

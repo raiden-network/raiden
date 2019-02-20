@@ -419,6 +419,7 @@ class RaidenService(Runnable):
 
     def _run(self, *args, **kwargs):  # pylint: disable=method-hidden
         """ Busy-wait on long-lived subtasks/greenlets, re-raise if any error occurs """
+        self.greenlet.name = f'RaidenService._run node:{pex(self.address)}'
         try:
             self.stop_event.wait()
         except gevent.GreenletExit:  # killed without exception
@@ -464,7 +465,7 @@ class RaidenService(Runnable):
         greenlet.link_exception(self.on_error)
 
     def __repr__(self):
-        return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+        return f'<{self.__class__.__name__} node:{pex(self.address)}>'
 
     def start_neighbours_healthcheck(self, chain_state: ChainState):
         for neighbour in views.all_neighbour_nodes(chain_state):

@@ -14,7 +14,7 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils import merge_dict
+from raiden.utils import merge_dict, pex
 from raiden.waiting import wait_for_payment_network
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
@@ -386,6 +386,18 @@ def create_apps(
         apps.append(app)
 
     return apps
+
+
+def parallel_start_apps(raiden_apps):
+    """Start all the raiden apps in parallel."""
+    start_tasks = list()
+
+    for app in raiden_apps:
+        greenlet = gevent.spawn(app.raiden.start)
+        greenlet.name = f'Fixture:raiden_network node:{pex(app.raiden.address)}'
+        start_tasks.append(greenlet)
+
+    gevent.joinall(start_tasks, raise_error=True)
 
 
 def jsonrpc_services(
