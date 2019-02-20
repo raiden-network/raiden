@@ -10,7 +10,6 @@ import structlog
 from eth_utils import is_binary_address
 from gevent import Greenlet
 from gevent.event import AsyncResult, Event
-from gevent.lock import Semaphore
 
 from raiden import constants, routing
 from raiden.blockchain.events import BlockchainEvents
@@ -81,6 +80,8 @@ from raiden.utils.upgrades import UpgradeManager
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+StatusesDict = Dict[TargetAddress, Dict[PaymentID, 'PaymentStatus']]
+ConnectionManagerDict = Dict[TokenNetworkID, ConnectionManager]
 
 
 def _redact_secret(
@@ -116,9 +117,8 @@ def initiator_init(
         token_network_identifier: TokenNetworkID,
         target_address: TargetAddress,
 ):
+    assert transfer_secret != constants.EMPTY_HASH, 'Empty secret node:{self!r}'
 
-    msg = 'Should never end up initiating transfer with Secret 0x0'
-    assert transfer_secret != constants.EMPTY_HASH, msg
     transfer_state = TransferDescriptionWithSecretState(
         raiden.default_registry.address,
         transfer_identifier,
@@ -205,8 +205,27 @@ class PaymentStatus(NamedTuple):
         )
 
 
-StatusesDict = Dict[TargetAddress, Dict[PaymentID, PaymentStatus]]
-ConnectionManagerDict = Dict[TokenNetworkID, ConnectionManager]
+def update_monitoring_service_from_balance_proof(
+        raiden: 'RaidenService',
+        new_balance_proof: BalanceProofSignedState,
+):
+    if raiden.config['services']['monitoring_enabled'] is False:
+        return
+
+    log.info(
+        'Received new balance proof, creating message for Monitoring Service.',
+        balance_proof=new_balance_proof,
+    )
+    reward_amount = 0  # FIXME: default reward is 0, should come from elsewhere
+    monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
+        new_balance_proof,
+        reward_amount,
+    )
+    monitoring_message.sign(raiden.signer)
+    raiden.transport.send_global(
+        constants.MONITORING_BROADCASTING_ROOM,
+        monitoring_message,
+    )
 
 
 class RaidenService(Runnable):
@@ -251,11 +270,6 @@ class RaidenService(Runnable):
         self.wal: Optional[wal.WriteAheadLog] = None
         self.snapshot_group = 0
 
-        # This flag will be used to prevent the service from processing
-        # state changes events until we know that pending transactions
-        # have been dispatched.
-        self.dispatch_events_lock = Semaphore(1)
-
         self.contract_manager = ContractManager(config['contracts_path'])
         self.database_path = config['database_path']
         if self.database_path != ':memory:':
@@ -264,11 +278,17 @@ class RaidenService(Runnable):
 
             self.database_dir = database_dir
 
-            # Two raiden processes must not write to the same database, even
-            # though the database itself may be consistent. If more than one
-            # nodes writes state changes to the same WAL there are no
-            # guarantees about recovery, this happens because during recovery
-            # the WAL replay can not be deterministic.
+            # Two raiden processes must not write to the same database. Even
+            # though it's possible the database itself would not be corrupt,
+            # the node's state would. If a database was shared among multiple
+            # nodes, the database WAL would be the union of multiple node's
+            # WAL. During a restart a single node can't distinguish its state
+            # changes from the others, and it would apply it all, meaning that
+            # a node would execute the actions of itself and the others.
+            #
+            # Additionally the database snapshots would be corrupt, because it
+            # would not represent the effects of applying all the state changes
+            # in order.
             lock_file = os.path.join(self.database_dir, '.lock')
             self.db_lock = filelock.FileLock(lock_file)
         else:
@@ -281,16 +301,34 @@ class RaidenService(Runnable):
         self.gas_reserve_lock = gevent.lock.Semaphore()
         self.payment_identifier_lock = gevent.lock.Semaphore()
 
+        # Flag used to skip the processing of all Raiden events during the
+        # startup.
+        #
+        # Rationale: At the startup, the latest snapshot is restored and all
+        # state changes which are not 'part' of it are applied, the criteria to
+        # re-apply the state changes is their 'absence' in the snapshot, /not/
+        # their completeness. Because these state changes are re-execute
+        # in-order and some of their side-effects will already have been
+        # completed, the events should be delayed until the state is
+        # synchronized (e.g. an open channel state change, which has already
+        # been mined).
+        #
+        # Uncompleted events, i.e. the ones which don't have their side-effects
+        # applied, will be executed once the blockchain state is synchronized
+        # because of the node's queues.
+        self.ready_to_process_events = False
+
     def start(self):
         """ Start the node synchronously. Raises directly if anything went wrong on startup """
-        if not self.stop_event.ready():
-            raise RuntimeError(f'{self!r} already started')
+        assert self.stop_event.ready(), f'Node already started. node:{self!r}'
         self.stop_event.clear()
         self.greenlets = list()
 
+        self.ready_to_process_events = False  # set to False because of restarts
+
         if self.database_dir is not None:
             self.db_lock.acquire(timeout=0)
-            assert self.db_lock.is_locked
+            assert self.db_lock.is_locked, 'Database not locked. node:{self!r}'
 
         # start the registration early to speed up the start
         if self.config['transport_type'] == 'udp':
@@ -316,7 +354,7 @@ class RaidenService(Runnable):
 
         if self.wal.state_manager.current_state is None:
             log.debug(
-                'No recoverable state available, created inital state',
+                'No recoverable state available, creating inital state.',
                 node=pex(self.address),
             )
             # On first run Raiden needs to fetch all events for the payment
@@ -373,8 +411,8 @@ class RaidenService(Runnable):
         state_change_qty = self.wal.storage.count_state_changes()
         self.snapshot_group = state_change_qty // SNAPSHOT_STATE_CHANGES_COUNT
 
-        # Install the filters using the correct from_block value, otherwise
-        # blockchain logs can be lost.
+        # Install the filters using the latest confirmed from_block value,
+        # otherwise blockchain logs can be lost.
         self.install_all_blockchain_filters(
             self.default_registry,
             self.default_secret_registry,
@@ -390,51 +428,26 @@ class RaidenService(Runnable):
         # - The alarm must complete its first run before the transport is started,
         #   to reject messages for closed/settled channels.
         self.alarm.register_callback(self._callback_new_block)
-        with self.dispatch_events_lock:
-            self.alarm.first_run(last_log_block_number)
+        self.alarm.first_run(last_log_block_number)
 
         chain_state = views.state_from_raiden(self)
-        self._initialize_transactions_queues(chain_state)
-        self._initialize_whitelists(chain_state)
         self._initialize_payment_statuses(chain_state)
-        # send messages in queue before starting transport,
-        # this is necessary to avoid a race where, if the transport is started
-        # before the messages are queued, actions triggered by it can cause new
-        # messages to be enqueued before these older ones
-        self._initialize_messages_queues(chain_state)
-
-        # before we start the transport, we need to request monitoring for all current
-        # balance proofs.
-        current_balance_proofs = views.detect_balance_proof_change(
-            State(),
-            chain_state,
-        )
-        for balance_proof in current_balance_proofs:
-            update_monitoring_service_from_balance_proof(self, balance_proof)
-
-        # The transport must not ever be started before the alarm task's
-        # `first_run()` has been, because it's this method which synchronizes the
-        # node with the blockchain, including the channel's state (if the channel
-        # is closed on-chain new messages must be rejected, which will not be the
-        # case if the node is not synchronized)
-        self.transport.start(
-            raiden_service=self,
-            message_handler=self.message_handler,
-            prev_auth_data=chain_state.last_transport_authdata,
-        )
-
-        # First run has been called above!
-        self.alarm.start()
 
         # exceptions on these subtasks should crash the app and bubble up
         self.alarm.link_exception(self.on_error)
         self.transport.link_exception(self.on_error)
 
-        # Health check needs the transport layer
-        self.start_neighbours_healthcheck(chain_state)
-
         if self.config['transport_type'] == 'udp':
             endpoint_registration_greenlet.get()  # re-raise if exception occurred
+
+        # Start the side-effects:
+        # - React to blockchain events
+        # - React to incoming messages
+        # - Send pending transactions
+        # - Send pending message
+        self._initialize_transactions_queues(chain_state)
+        self._initialize_transport(chain_state)
+        self.alarm.start()
 
         log.debug('Raiden Service started', node=pex(self.address))
         super().start()
@@ -500,13 +513,40 @@ class RaidenService(Runnable):
     def __repr__(self):
         return f'<{self.__class__.__name__} node:{pex(self.address)}>'
 
-    def start_neighbours_healthcheck(self, chain_state: ChainState):
+    def _initialize_transport(self, chain_state: ChainState):
+        """ Initialize the transport and related facilities.
+
+        Note:
+            The transport must not be started before the node has caught up
+            with the blockchain through `AlarmTask.first_run()`. This
+            synchronization includes the on-chain channel state and is
+            necessary to reject new messages for closed channels.
+        """
+        assert self.alarm.is_primed(), 'AlarmTask not primed. node:{self!r}'
+        assert not self.ready_to_process_events
+
+        self._initialize_messages_queues(chain_state)
+        self._initialize_whitelists(chain_state)
+        self._initiatize_monitoring_services_queue(chain_state)
+
+        self.ready_to_process_events = True
+
+        self.transport.start(
+            raiden_service=self,
+            message_handler=self.message_handler,
+            prev_auth_data=chain_state.last_transport_authdata,
+        )
+        self._initiatize_start_neighbours_healthcheck(chain_state)
+
+    def _initiatize_start_neighbours_healthcheck(self, chain_state: ChainState):
+        assert self.transport, 'Transport not running. node:{self!r}'
+
         for neighbour in views.all_neighbour_nodes(chain_state):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                 self.start_health_check_for(neighbour)
 
     def get_block_number(self) -> BlockNumber:
-        assert self.wal, 'WAL object not yet initialized.'
+        assert self.wal, f'WAL object not yet initialized. node:{self!r}'
         return views.block_number(self.wal.state_manager.current_state)
 
     def on_message(self, message: Message):
@@ -527,7 +567,7 @@ class RaidenService(Runnable):
         Use this for error reporting, failures in the returned greenlets,
         should be re-raised using `gevent.joinall` with `raise_error=True`.
         """
-        assert self.wal
+        assert self.wal, 'WAL not restored. node:{self!r}'
         log.debug(
             'State change',
             node=pex(self.address),
@@ -552,7 +592,7 @@ class RaidenService(Runnable):
         )
 
         greenlets: List[Greenlet] = list()
-        if not self.dispatch_events_lock.locked():
+        if not self.ready_to_process_events:
             for raiden_event in raiden_event_list:
                 greenlets.append(
                     self.handle_event(raiden_event=raiden_event),
@@ -615,9 +655,13 @@ class RaidenService(Runnable):
         self.handle_and_track_state_change(state_change)
 
     def start_health_check_for(self, node_address: Address):
-        # This function is a noop during initialization. It can be called
-        # through the alarm task while polling for new channel events.  The
-        # healthcheck will be started by self.start_neighbours_healthcheck()
+        """Start health checking `node_address`.
+
+        This function is a noop during initialization, because health checking
+        can be started as a side effect of some events (e.g. new channel). For
+        these cases the healthcheck will be started by
+        `start_neighbours_healthcheck`.
+        """
         if self.transport:
             self.transport.start_health_check(node_address)
 
@@ -642,15 +686,18 @@ class RaidenService(Runnable):
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         with self.event_poll_lock:
             latest_block_number = latest_block['number']
-            confirmed_block_number = latest_block_number - self.confirmation_blocks
+
+            # Handle testing with private chains. The block number can be
+            # smaller then confirmation_blocks
+            confirmed_block_number = max(
+                GENESIS_BLOCK_NUMBER,
+                latest_block_number - self.config['blockchain']['confirmation_blocks'],
+            )
             confirmed_block = self.chain.client.web3.eth.getBlock(confirmed_block_number)
 
-            # handle testing private chains
-            confirmed_block_number = max(GENESIS_BLOCK_NUMBER, confirmed_block_number)
-
+            # These state changes will be procesed with a block_number which is
+            # /larger/ than the ChainState's block_number.
             for event in self.blockchain_events.poll_blockchain_events(confirmed_block_number):
-                # These state changes will be procesed with a block_number
-                # which is /larger/ than the ChainState's block_number.
                 on_blockchain_event(self, event)
 
             # On restart the Raiden node will re-create the filters with the
@@ -675,6 +722,16 @@ class RaidenService(Runnable):
             self.handle_and_track_state_change(state_change)
 
     def _initialize_transactions_queues(self, chain_state: ChainState):
+        """ Send pending transactions from the previous run
+
+        Note:
+            This will only send the transactions wich don't have their
+            side-effects applied. Transactions which another node may have sent
+            already will be detected by the alarm task first run and cleared
+            from the queue (e.g. A monitoring service update transfer).
+        """
+        assert self.alarm.is_primed(), 'AlarmTask not primed. node:{self!r}'
+
         pending_transactions = views.get_pending_transactions(chain_state)
 
         log.debug(
@@ -683,14 +740,30 @@ class RaidenService(Runnable):
             node=pex(self.address),
         )
 
-        with self.dispatch_events_lock:
-            for transaction in pending_transactions:
-                self.add_pending_greenlet(
-                    self.handle_event(raiden_event=transaction),
+        for transaction in pending_transactions:
+            try:
+                self.raiden_event_handler.on_raiden_event(self, transaction)
+            except RaidenRecoverableError as e:
+                log.error(str(e))
+            except InvalidDBData:
+                raise
+            except RaidenUnrecoverableError as e:
+                log_unrecoverable = (
+                    self.config['environment_type'] == Environment.PRODUCTION and
+                    not self.config['unrecoverable_error_should_crash']
                 )
+                if log_unrecoverable:
+                    log.error(str(e))
+                else:
+                    raise
 
     def _initialize_payment_statuses(self, chain_state: ChainState):
-        """ Re-initialize targets_to_identifiers_to_statuses. """
+        """ Re-initialize targets_to_identifiers_to_statuses.
+
+        Restore the PaymentStatus for any pending payment. This is not tied to
+        a specific protocol message but to the lifecycle of a payment, i.e.
+        the status is re-created if payment itself has not completed.
+        """
 
         with self.payment_identifier_lock:
             for task in chain_state.payment_mapping.secrethashes_to_task.values():
@@ -713,7 +786,18 @@ class RaidenService(Runnable):
                 )
 
     def _initialize_messages_queues(self, chain_state: ChainState):
-        """ Push the message queues to the transport. """
+        """ Push the message queues to the transport.
+
+        Note:
+            All messages from the state queues must be pushed to the transport
+            before it's started. This is necessary to avoid a race where the
+            transport process network messages too quickly, queueing new
+            messages before any of the previous messages, resulting in new
+            messages beeing out-of-order.
+        """
+        assert not self.transport, 'Transport is running. node:{self!r}'
+        assert self.alarm.is_primed(), 'AlarmTask not primed. node:{self!r}'
+
         events_queues = views.get_all_messagequeues(chain_state)
 
         for queue_identifier, event_queue in events_queues.items():
@@ -723,6 +807,19 @@ class RaidenService(Runnable):
                 message = message_from_sendevent(event, self.address)
                 self.sign(message)
                 self.transport.send_async(queue_identifier, message)
+
+    def _initiatize_monitoring_services_queue(self, chain_state: ChainState):
+        """Send the monitoring requests for all current balance proofs."""
+
+        assert not self.transport, 'Transport is running. node:{self!r}'
+        assert self.wal, 'The node state must have been restored. node:{self!r}'
+
+        current_balance_proofs = views.detect_balance_proof_change(
+            State(),
+            chain_state,
+        )
+        for balance_proof in current_balance_proofs:
+            update_monitoring_service_from_balance_proof(self, balance_proof)
 
     def _initialize_whitelists(self, chain_state: ChainState):
         """ Whitelist neighbors and mediated transfer targets on transport """
@@ -926,25 +1023,3 @@ class RaidenService(Runnable):
     def maybe_upgrade_db(self):
         manager = UpgradeManager(db_filename=self.database_path)
         manager.run()
-
-
-def update_monitoring_service_from_balance_proof(
-        raiden: RaidenService,
-        new_balance_proof: BalanceProofSignedState,
-):
-    if raiden.config['services']['monitoring_enabled'] is False:
-        return None
-    log.info(
-        'Received new balance proof, creating message for Monitoring Service.',
-        balance_proof=new_balance_proof,
-    )
-    reward_amount = 0  # FIXME: default reward is 0, should come from elsewhere
-    monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
-        new_balance_proof,
-        reward_amount,
-    )
-    monitoring_message.sign(raiden.signer)
-    raiden.transport.send_global(
-        constants.MONITORING_BROADCASTING_ROOM,
-        monitoring_message,
-    )
