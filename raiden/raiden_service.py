@@ -920,8 +920,10 @@ def update_monitoring_service_from_balance_proof(
         raiden: RaidenService,
         new_balance_proof: BalanceProofSignedState,
 ):
+    if raiden.config['services']['monitoring_enabled'] is False:
+        return None
     log.info(
-        'Received new balance proof, creating message for Monitoring Service',
+        'Received new balance proof, creating message for Monitoring Service.',
         balance_proof=new_balance_proof,
     )
     reward_amount = 0  # FIXME: default reward is 0, should come from elsewhere

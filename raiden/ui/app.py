@@ -25,7 +25,7 @@ from raiden.network.pathfinding import get_pfs_info
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
-from raiden.raiden_event_handler import RaidenEventHandler, RaidenMonitoringEventHandler
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import (
     DEFAULT_MATRIX_KNOWN_SERVERS,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
@@ -424,9 +424,6 @@ def run_app(
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     raiden_event_handler = RaidenEventHandler()
-    if config['services']['monitoring_enabled'] is True:
-        log.info('Monitoring support is enabled. Setting up BP broadcasting.')
-        raiden_event_handler = RaidenMonitoringEventHandler()
 
     message_handler = MessageHandler()
 
