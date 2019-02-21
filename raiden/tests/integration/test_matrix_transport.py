@@ -132,25 +132,20 @@ def ping_pong_message_success(transport0, transport1):
     transport0._raiden_service.sign(message)
 
     transport0.send_async(queueid1, message)
-
-    with Timeout(40, exception=False):
+    with Timeout(20, exception=False):
         all_messages_received = False
-
         while not all_messages_received:
             all_messages_received = (
                 len(received_messages0) == number_of_received_messages0 + 1 and
                 len(received_messages1) == number_of_received_messages1 + 1
             )
             gevent.sleep(.1)
-
     message = Processed(number_of_received_messages1)
     transport1._raiden_service.sign(message)
-
     transport1.send_async(queueid0, message)
 
-    with Timeout(40, exception=False):
+    with Timeout(20, exception=False):
         all_messages_received = False
-
         while not all_messages_received:
             all_messages_received = (
                 len(received_messages0) == number_of_received_messages0 + 2 and
@@ -1103,3 +1098,98 @@ def test_matrix_user_roaming(matrix_transports, retry_interval):
     assert transport1._address_to_presence[raiden_service0.address].value == 'online'
 
     assert ping_pong_message_success(transport0, transport1)
+
+
+@pytest.mark.parametrize('matrix_server_count', [3])
+@pytest.mark.parametrize('number_of_transports', [6])
+def test_matrix_multi_user_roaming(matrix_transports, retry_interval):
+
+    # 6 transports on 3 servers, where 0,3, 1,4, etc is one the same server
+    transport0, transport1, transport2, transport3, transport4, transport5 = matrix_transports
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    # Both nodes on the same server
+    transport0.start(raiden_service0, message_handler0, '')
+    transport3.start(raiden_service1, message_handler1, '')
+
+    transport0.start_health_check(raiden_service1.address)
+    transport3.start_health_check(raiden_service0.address)
+
+    assert ping_pong_message_success(transport0, transport3) is True
+
+    # Node two switches to second server
+    transport3.stop()
+
+    transport4.start(raiden_service1, message_handler1, '')
+    transport4.start_health_check(raiden_service0.address)
+    gevent.sleep(.5)
+
+    assert ping_pong_message_success(transport0, transport4) is True
+
+    # Node two switches to third server
+    transport4.stop()
+
+    transport5.start(raiden_service1, message_handler1, '')
+    transport5.start_health_check(raiden_service0.address)
+    gevent.sleep(.5)
+
+    assert ping_pong_message_success(transport0, transport5) is True
+    # Node one switches to second server, Node two back to first
+    transport0.stop()
+    transport5.stop()
+    transport1.start(raiden_service0, message_handler0, '')
+    transport1.start_health_check(raiden_service1.address)
+    transport3.start(raiden_service1, message_handler1, '')
+    gevent.sleep(.5)
+
+    assert ping_pong_message_success(transport1, transport3) is True
+
+    # Node two joins on second server again
+    transport3.stop()
+
+    transport4.start(raiden_service1, message_handler1, '')
+    gevent.sleep(.5)
+
+    assert ping_pong_message_success(transport1, transport4) is True
+
+    # Node two switches to third server
+    transport4.stop()
+
+    transport5.start(raiden_service1, message_handler1, '')
+    gevent.sleep(.5)
+
+    assert ping_pong_message_success(transport1, transport5) is True
+
+    # Node one switches to third server, node two switches to first server
+    transport1.stop()
+    transport5.stop()
+
+    transport2.start(raiden_service0, message_handler0, '')
+    transport2.start_health_check(raiden_service1.address)
+    transport3.start(raiden_service1, message_handler1, '')
+    gevent.sleep(.5)
+
+    assert ping_pong_message_success(transport2, transport3) is True
+
+    # Node two switches to second server
+
+    transport3.stop()
+    transport4.start(raiden_service1, message_handler1, '')
+
+    gevent.sleep(.5)
+    assert ping_pong_message_success(transport2, transport4) is True
+
+    # Node two joins on third server
+
+    transport4.stop()
+    transport5.start(raiden_service1, message_handler1, '')
+
+    gevent.sleep(.5)
+    assert ping_pong_message_success(transport2, transport5) is True
