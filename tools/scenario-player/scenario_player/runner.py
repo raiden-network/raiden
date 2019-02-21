@@ -9,6 +9,7 @@ import gevent
 import structlog
 import yaml
 from eth_utils import to_checksum_address
+from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 from requests import RequestException, Session
 from web3 import HTTPProvider, Web3
 
@@ -142,6 +143,7 @@ class ScenarioRunner(object):
         )
 
         self.chain_id = self.client.web3.net.version
+        self.contract_manager = ContractManager(contracts_precompiled_path())
 
         balance = self.client.balance(account.address)
         if balance < OWN_ACCOUNT_BALANCE_MIN:
