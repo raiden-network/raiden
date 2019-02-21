@@ -38,8 +38,8 @@ log = structlog.get_logger(__name__)
 
 ETHEREUM_NODE_COMMUNICATION_ERROR = (
     '\n'
-    'Could not contact the ethereum node through JSON-RPC.\n'
-    'Please make sure that the ethereum node is running and JSON-RPC is enabled.'
+    'Could not contact the Ethereum node through JSON-RPC.\n'
+    'Please make sure that the Ethereum node is running and JSON-RPC is enabled.'
 )
 
 
@@ -75,7 +75,6 @@ class NodeRunner:
             log.debug('Using config file', config_file=self._options['config_file'])
 
     def _start_services(self):
-        from raiden.ui.console import Console
         from raiden.api.python import RaidenAPI
 
         config = deepcopy(App.DEFAULT_CONFIG)
@@ -148,6 +147,8 @@ class NodeRunner:
             tasks.append(api_server)
 
         if self._options['console']:
+            from raiden.ui.console import Console
+
             console = Console(app_)
             console.start()
             tasks.append(console)
