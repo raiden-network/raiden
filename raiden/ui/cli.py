@@ -74,7 +74,7 @@ def options(func):
         option(
             '--datadir',
             help='Directory for storing raiden data.',
-            default=os.path.join(os.path.expanduser('~'), '.raiden'),
+            default=lambda: os.path.join(os.path.expanduser('~'), '.raiden'),
             type=click.Path(
                 exists=False,
                 dir_okay=True,
