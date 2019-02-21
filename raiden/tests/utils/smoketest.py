@@ -196,6 +196,16 @@ def get_private_key(keystore):
 
 
 def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_version):
+    return setup_raiden(
+        transport,
+        matrix_server,
+        print_step,
+        contracts_version,
+        setup_testchain(print_step),
+    )
+
+
+def setup_testchain(print_step):
     print_step('Starting Ethereum node')
 
     ensure_executable('geth')
@@ -260,9 +270,25 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_v
             process.terminate()
         raise e
 
+    return dict(
+        base_datadir=base_datadir,
+        eth_rpc_endpoint=eth_rpc_endpoint,
+        keystore=keystore,
+        processes_list=processes_list,
+        web3=web3,
+    )
+
+
+def setup_raiden(
+        transport,
+        matrix_server,
+        print_step,
+        contracts_version,
+        testchain_setup,
+):
     print_step('Deploying Raiden contracts')
 
-    client = JSONRPCClient(web3, get_private_key(keystore))
+    client = JSONRPCClient(testchain_setup['web3'], get_private_key(testchain_setup['keystore']))
     contract_manager = ContractManager(
         contracts_precompiled_path(contracts_version),
     )
@@ -304,20 +330,20 @@ def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_v
     return {
         'args': {
             'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
-            'datadir': keystore,
+            'datadir': testchain_setup['keystore'],
             'endpoint_registry_contract_address': endpoint_registry_contract_address,
-            'eth_rpc_endpoint': eth_rpc_endpoint,
+            'eth_rpc_endpoint': testchain_setup['eth_rpc_endpoint'],
             'gas_price': 'fast',
-            'keystore_path': keystore,
+            'keystore_path': testchain_setup['keystore'],
             'matrix_server': matrix_server,
             'network_id': str(NETWORKNAME_TO_ID['smoketest']),
-            'password_file': click.File()(os.path.join(base_datadir, 'pw')),
+            'password_file': click.File()(os.path.join(testchain_setup['base_datadir'], 'pw')),
             'tokennetwork_registry_contract_address': tokennetwork_registry_contract_address,
             'secret_registry_contract_address': secret_registry_contract_address,
             'sync_check': False,
             'transport': transport,
         },
         'contract_addresses': contract_addresses,
-        'ethereum': processes_list,
+        'ethereum': testchain_setup['processes_list'],
         'token': token,
     }
