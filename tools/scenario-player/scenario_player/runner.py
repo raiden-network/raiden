@@ -159,6 +159,7 @@ class ScenarioRunner(object):
 
         self._node_to_address = None
         self.token_address = None
+        self.token_deployment_block = 0
 
         scenario_config = self.scenario.get('scenario')
         if not scenario_config:
@@ -210,8 +211,9 @@ class ScenarioRunner(object):
                     f"Raiden nodes unreachable: {','.join(unreachable_nodes)}",
                 )
 
-        token_ctr = get_or_deploy_token(self)
+        token_ctr, token_block = get_or_deploy_token(self)
         token_address = self.token_address = to_checksum_address(token_ctr.contract_address)
+        self.token_deployment_block = token_block
         first_node = self.get_node_baseurl(0)
 
         token_settings = self.scenario.get('token') or {}
