@@ -89,8 +89,11 @@ ARCHIVE_TAG_ARG=
 ifdef ARCHIVE_TAG
 ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=$(ARCHIVE_TAG)
 else
-ARCHIVE_TAG=v$(shell python setup.py --version)
+ARCHIVE_TAG_ARG=--build-arg ARCHIVE_TAG=v$(shell python setup.py --version)
 endif
+
+# architecture needs to be asked in docker because docker can be run on remote host to create binary for different architectures
+ARCHITECTURE_TAG=$(shell docker run --rm python:3.7 uname -m)
 
 GITHUB_ACCESS_TOKEN_ARG=
 ifdef GITHUB_ACCESS_TOKEN
@@ -99,11 +102,11 @@ endif
 
 
 bundle-docker:
-	@docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) $(ARCHIVE_TAG_ARG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
+	@docker build -t pyinstallerbuilder --build-arg GETH_URL_LINUX=$(GETH_URL_LINUX) --build-arg SOLC_URL_LINUX=$(SOLC_URL_LINUX) --build-arg ARCHITECTURE_TAG=$(ARCHITECTURE_TAG) $(ARCHIVE_TAG_ARG) $(GITHUB_ACCESS_TOKEN_ARG) -f docker/build.Dockerfile .
 	-(docker rm builder)
 	docker create --name builder pyinstallerbuilder
 	mkdir -p dist/archive
-	docker cp builder:/raiden/raiden-$(ARCHIVE_TAG)-linux.tar.gz dist/archive/raiden-$(ARCHIVE_TAG)-linux.tar.gz
+	docker cp builder:/raiden/raiden-$(ARCHIVE_TAG)-linux-$(ARCHITECTURE_TAG).tar.gz dist/archive/raiden-$(ARCHIVE_TAG)-linux-$(ARCHITECTURE_TAG).tar.gz
 	docker rm builder
 
 bundle:

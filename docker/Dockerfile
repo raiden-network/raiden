@@ -1,34 +1,51 @@
+FROM python:3.7
 
-# This will build the latest master
-#
-# we use an intermediate image to build this image. it will make the resulting
-# image a bit smaller.
-#
-# you can build the image with:
-#
-#   docker build . -t raiden
+# these are defined in .travis.yml and passed here in the makefile
+ARG SOLC_URL_LINUX
+ARG GETH_URL_LINUX
 
-FROM python:3 as builder
+# install dependencies
+RUN apt-get update
+RUN apt-get install -y git-core wget xz-utils libgmp-dev
 
-# use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version
-ARG REPO=raiden-network/raiden
-ARG RAIDENVERSION=master
-
-# This is a "hack" to automatically invalidate the cache in case there are new commits
-ADD https://api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
-
-# clone raiden repo + install dependencies
-RUN git clone -b ${RAIDENVERSION} https://github.com/${REPO} /app/raiden
-
-RUN python3 -m venv /opt/venv
-
-RUN /opt/venv/bin/pip3 install -c /app/raiden/constraints.txt -r /app/raiden/requirements.txt /app/raiden
+RUN wget -nv -O /usr/bin/solc ${SOLC_URL_LINUX} && \
+    chmod +x /usr/bin/solc
+RUN wget -nv -O /tmp/geth.tar.gz ${GETH_URL_LINUX} && \
+    cd /tmp && \
+    tar xf geth.tar.gz && \
+    mv geth-linux-amd64-*/geth /usr/bin/geth && \
+    rm geth.tar.gz
 
 
-FROM python:3-slim as runner
+ADD requirements*.txt /tmp/
+ADD constraints.txt /tmp/
+WORKDIR /tmp
 
-COPY --from=builder /opt/venv /opt/venv
+RUN pip install -U 'pip<19.0.0' setuptools setuptools_scm
+RUN pip install -r requirements.txt -c constraints.txt
+RUN pip install pyinstaller
 
-EXPOSE 5001
+ADD . /raiden
 
-ENTRYPOINT ["/opt/venv/bin/python3", "-m", "raiden"]
+WORKDIR /raiden
+RUN git fetch --tags | true
+
+
+# build contracts and web_ui
+RUN python setup.py build
+
+# install raiden
+RUN pip install -c constraints.txt .
+
+
+ARG ARCHIVE_TAG
+ARG ARCHITECTURE_TAG
+
+# build pyinstaller package
+RUN pyinstaller --noconfirm --clean raiden.spec
+
+# pack result to have a unique name to get it out of the container later
+RUN export FILE_TAG=${ARCHIVE_TAG:-v$(python setup.py --version)} && \
+    cd dist && \
+    tar -cvzf ./raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG}.tar.gz raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG} && \
+    mv raiden-${FILE_TAG}-linux-${ARCHITECTURE_TAG}.tar.gz ..

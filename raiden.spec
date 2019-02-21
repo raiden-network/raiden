@@ -1,8 +1,9 @@
 # -*- mode: python -*-
 from __future__ import print_function
-import sys
+
 import pdb
 import platform
+import sys
 
 from raiden.utils import get_system_spec
 
@@ -70,9 +71,10 @@ if hasattr(pdb, 'pdb'):
 # We don't need Tk and friends
 sys.modules['FixTk'] = None
 
-executable_name = 'raiden-{}-{}'.format(
+executable_name = 'raiden-{}-{}-{}'.format(
     os.environ.get('ARCHIVE_TAG', 'v' + get_system_spec()['raiden']),
-    'macOS' if platform.system() == 'Darwin' else platform.system().lower()
+    'macOS' if platform.system() == 'Darwin' else platform.system().lower(),
+    platform.machine()
 )
 
 a = Entrypoint(
