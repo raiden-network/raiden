@@ -7,6 +7,10 @@ Changelog
 * :feature:`3318` allow secret and/or hash with payment request
 * :feature:`3425` Update raiden-contracts package to version 0.9.0
 
+* :release:`0.100.2 <2019-02-21>`
+* :bug:`3528` Do not crash raiden if a LockExpired message with invalid channel identifier is received.
+* :bug:`3529` Do not crash raiden if a SecretRequest message with invalid channel identifier is received.
+
 * :release:`0.100.2-rc4 <2019-02-04>`
 * :feature:`3317` Return the secretHash and the Secret as part of payment response
 * :bug:`3380` Connection manager no longer attempts deposit if per partner funds are zero.
