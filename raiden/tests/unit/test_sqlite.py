@@ -78,7 +78,7 @@ def make_signed_transfer_from_counter(counter):
         secrethash=sha3(factories.make_secret(next(counter))),
     )
 
-    signed_transfer = factories.make_signed_transfer(
+    signed_transfer = factories.make_signed_transfer_state(
         amount=next(counter),
         initiator=factories.make_address(),
         target=factories.make_address(),

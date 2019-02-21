@@ -307,7 +307,7 @@ def make_signed_transfer(
         token: typing.TargetAddress = EMPTY,
         pkey: bytes = EMPTY,
         sender: typing.Address = EMPTY,
-) -> LockedTransferSignedState:
+) -> LockedTransfer:
 
     amount = if_empty(amount, UNIT_TRANSFER_AMOUNT)
     initiator = if_empty(initiator, make_address())
@@ -358,7 +358,48 @@ def make_signed_transfer(
     )
     transfer.sign(signer)
     assert transfer.sender == sender
+    return transfer
 
+
+def make_signed_transfer_state(
+        amount: typing.TokenAmount = EMPTY,
+        initiator: typing.InitiatorAddress = EMPTY,
+        target: typing.TargetAddress = EMPTY,
+        expiration: typing.BlockExpiration = EMPTY,
+        secret: typing.Secret = EMPTY,
+        payment_identifier: typing.PaymentID = EMPTY,
+        message_identifier: typing.MessageID = EMPTY,
+        nonce: typing.Nonce = EMPTY,
+        transferred_amount: typing.TokenAmount = EMPTY,
+        locked_amount: typing.TokenAmount = EMPTY,
+        locksroot: typing.Locksroot = EMPTY,
+        recipient: typing.Address = EMPTY,
+        channel_identifier: typing.ChannelID = EMPTY,
+        token_network_address: typing.TokenNetworkID = EMPTY,
+        token: typing.TargetAddress = EMPTY,
+        pkey: bytes = EMPTY,
+        sender: typing.Address = EMPTY,
+) -> LockedTransferSignedState:
+
+    transfer = make_signed_transfer(
+        amount=amount,
+        initiator=initiator,
+        target=target,
+        expiration=expiration,
+        secret=secret,
+        payment_identifier=payment_identifier,
+        message_identifier=message_identifier,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        locked_amount=locked_amount,
+        locksroot=locksroot,
+        recipient=recipient,
+        channel_identifier=channel_identifier,
+        token_network_address=token_network_address,
+        token=token,
+        pkey=pkey,
+        sender=sender,
+    )
     return lockedtransfersigned_from_message(transfer)
 
 
@@ -1033,7 +1074,7 @@ def make_transfers_pair(
         payee_index = payer_index + 1
 
         receiver_channel = channels[payer_index]
-        received_transfer = make_signed_transfer(
+        received_transfer = make_signed_transfer_state(
             amount=amount,
             initiator=UNIT_TRANSFER_INITIATOR,
             target=UNIT_TRANSFER_TARGET,

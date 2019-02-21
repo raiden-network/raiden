@@ -96,6 +96,7 @@ def test_locked_transfer_secret_registered_onchain(
             transfer_secret,
         )
 
+    # Test that receiving a transfer with a secret already registered on chain fails
     expiration = 9999
     transfer = make_signed_transfer(
         amount,
