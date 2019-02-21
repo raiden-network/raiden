@@ -9,6 +9,7 @@ import gevent
 import structlog
 from eth_utils import decode_hex, is_binary_address, to_checksum_address, to_normalized_address
 from gevent.lock import Semaphore
+from gevent.queue import Queue
 from matrix_client.errors import MatrixRequestError
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
@@ -316,6 +317,7 @@ class MatrixTransport(Runnable):
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
 
         self._global_rooms: Dict[str, Optional[Room]] = dict()
+        self._global_send_queue: Queue[Tuple[str, Message]] = Queue()
 
         self._stop_event = gevent.event.Event()
         self._stop_event.set()
@@ -394,6 +396,7 @@ class MatrixTransport(Runnable):
                 retrier.start()
 
         self.log.debug('Matrix started', config=self._config)
+        self._spawn(self._global_send_worker)
 
         super().start()  # start greenlet
 
@@ -550,24 +553,35 @@ class MatrixTransport(Runnable):
 
         assert self._global_rooms.get(room_name), f'Unknown global room: {room_name!r}'
 
-        def _send_global():
-            text = JSONSerializer.serialize(message)
-            room = self._global_rooms[room_name]
-            self.log.debug(
-                'Send global',
-                room_name=room_name,
-                room=room,
-                data=text.replace('\n', '\\n'),
-            )
-            room.send_text(text)
+        self._global_send_queue.put((room_name, message))
 
-        greenlet = self._spawn(_send_global)
-        greenlet.name = (
-            f'MatrixTransport.send_global '
-            f'node:{pex(self._raiden_service.address)} '
-            f'room:{room} '
-            f'user_id:{self._user_id}'
-        )
+    def _global_send_worker(self):
+        while True:
+            if self._stop_event.is_set():
+                break
+            if self._global_send_queue.qsize() > 0:
+                room_name, message = self._global_send_queue.get()
+
+                def _send_global(room_name, message):
+                    text = JSONSerializer.serialize(message)
+                    room = self._global_rooms[room_name]
+                    self.log.debug(
+                        'Send global',
+                        room_name=room_name,
+                        room=room,
+                        data=text.replace('\n', '\\n'),
+                    )
+                    room.send_text(text)
+
+                greenlet = self._spawn(_send_global, room_name, message)
+                greenlet.name = (
+                    f'MatrixTransport.send_global '
+                    f'node:{pex(self._raiden_service.address)} '
+                    f'room:{room_name} '
+                    f'user_id:{self._user_id}'
+                )
+            else:
+                gevent.sleep(self._config['retry_interval'])
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:
