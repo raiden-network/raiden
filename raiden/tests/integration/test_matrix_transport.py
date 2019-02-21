@@ -112,6 +112,55 @@ def mock_matrix(
     return transport
 
 
+def ping_pong_message_success(transport0, transport1):
+    queueid0 = QueueIdentifier(
+        recipient=transport0._raiden_service.address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+
+    queueid1 = QueueIdentifier(
+        recipient=transport1._raiden_service.address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+
+    received_messages0 = transport0._raiden_service.message_handler.bag
+    received_messages1 = transport1._raiden_service.message_handler.bag
+    number_of_received_messages0 = len(received_messages0)
+    number_of_received_messages1 = len(received_messages1)
+
+    message = Processed(number_of_received_messages0)
+    transport0._raiden_service.sign(message)
+
+    transport0.send_async(queueid1, message)
+
+    with Timeout(40, exception=False):
+        all_messages_received = False
+
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == number_of_received_messages0 + 1 and
+                len(received_messages1) == number_of_received_messages1 + 1
+            )
+            gevent.sleep(.1)
+
+    message = Processed(number_of_received_messages1)
+    transport1._raiden_service.sign(message)
+
+    transport1.send_async(queueid0, message)
+
+    with Timeout(40, exception=False):
+        all_messages_received = False
+
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == number_of_received_messages0 + 2 and
+                len(received_messages1) == number_of_received_messages1 + 2
+            )
+            gevent.sleep(.1)
+
+    return all_messages_received
+
+
 @pytest.fixture()
 def skip_userid_validation(monkeypatch):
     import raiden.network.transport.matrix
@@ -525,32 +574,12 @@ def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval
     transport2.start_health_check(raiden_service0.address)
     transport2.start_health_check(raiden_service1.address)
 
-    queueid1 = QueueIdentifier(
-        recipient=raiden_service1.address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    )
-    queueid2 = QueueIdentifier(
-        recipient=raiden_service2.address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    )
-    message = Processed(message_identifier=0)
-    raiden_service0.sign(message)
-
-    transport0.send_async(queueid1, message)
-    transport0.send_async(queueid2, message)
-
-    with Timeout(retry_interval * 20, exception=False):
-        all_messages_received = False
-
-        while not all_messages_received:
-            all_messages_received = (
-                len(received_messages0) == 2 and
-                len(received_messages1) == 1 and
-                len(received_messages2) == 1
-            )
-            gevent.sleep(.1)
-
-    assert all_messages_received
+    assert ping_pong_message_success(transport0, transport1)
+    assert ping_pong_message_success(transport0, transport2)
+    assert ping_pong_message_success(transport1, transport0)
+    assert ping_pong_message_success(transport1, transport2)
+    assert ping_pong_message_success(transport2, transport0)
+    assert ping_pong_message_success(transport2, transport1)
 
 
 def test_matrix_discovery_room_offline_server(
@@ -1044,27 +1073,7 @@ def test_matrix_user_roaming(matrix_transports, retry_interval):
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
 
-    queueid1 = QueueIdentifier(
-        recipient=raiden_service1.address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-    )
-
-    message = Processed(0)
-    raiden_service0.sign(message)
-
-    transport0.send_async(queueid1, message)
-
-    with Timeout(retry_interval * 20, exception=False):
-        all_messages_received = False
-
-        while not all_messages_received:
-            all_messages_received = (
-                len(received_messages0) == 1 and
-                len(received_messages1) == 1
-            )
-            gevent.sleep(.1)
-
-    assert all_messages_received
+    assert ping_pong_message_success(transport0, transport1)
 
     transport0.stop()
     with Timeout(retry_interval * 20, exception=False):
@@ -1077,22 +1086,7 @@ def test_matrix_user_roaming(matrix_transports, retry_interval):
 
     transport2.start_health_check(raiden_service1.address)
 
-    message = Processed(1)
-    raiden_service0.sign(message)
-
-    transport2.send_async(queueid1, message)
-
-    with Timeout(retry_interval * 20, exception=False):
-        all_messages_received = False
-
-        while not all_messages_received:
-            all_messages_received = (
-                len(received_messages0) == 2 and
-                len(received_messages1) == 2
-            )
-            gevent.sleep(.1)
-
-    assert all_messages_received
+    assert ping_pong_message_success(transport2, transport1)
 
     transport2.stop()
     with Timeout(retry_interval * 20, exception=False):
@@ -1108,19 +1102,4 @@ def test_matrix_user_roaming(matrix_transports, retry_interval):
 
     assert transport1._address_to_presence[raiden_service0.address].value == 'online'
 
-    message = Processed(2)
-    raiden_service0.sign(message)
-
-    transport0.send_async(queueid1, message)
-
-    with Timeout(retry_interval * 20, exception=False):
-        all_messages_received = False
-
-        while not all_messages_received:
-            all_messages_received = (
-                len(received_messages0) == 3 and
-                len(received_messages1) == 3
-            )
-            gevent.sleep(.1)
-
-    assert all_messages_received
+    assert ping_pong_message_success(transport0, transport1)
