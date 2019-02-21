@@ -1464,7 +1464,7 @@ def test_refund_transfer_matches_received():
         UNIT_SECRET,
     )
 
-    refund_lower_expiration = factories.make_signed_transfer(
+    refund_lower_expiration = factories.make_signed_transfer_state(
         amount,
         UNIT_TRANSFER_INITIATOR,
         UNIT_TRANSFER_TARGET,
@@ -1474,7 +1474,7 @@ def test_refund_transfer_matches_received():
 
     assert channel.refund_transfer_matches_received(refund_lower_expiration, transfer) is False
 
-    refund_same_expiration = factories.make_signed_transfer(
+    refund_same_expiration = factories.make_signed_transfer_state(
         amount,
         UNIT_TRANSFER_INITIATOR,
         UNIT_TRANSFER_TARGET,
@@ -1496,7 +1496,7 @@ def test_refund_transfer_does_not_match_received():
         UNIT_SECRET,
     )
 
-    refund_from_target = factories.make_signed_transfer(
+    refund_from_target = factories.make_signed_transfer_state(
         amount,
         UNIT_TRANSFER_INITIATOR,
         UNIT_TRANSFER_TARGET,

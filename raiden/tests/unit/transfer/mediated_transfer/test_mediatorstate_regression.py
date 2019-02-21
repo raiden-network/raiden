@@ -147,7 +147,7 @@ def test_regression_send_refund():
     channel_identifier = last_pair.payee_transfer.balance_proof.channel_identifier
     lock_expiration = last_pair.payee_transfer.lock.expiration
 
-    received_transfer = factories.make_signed_transfer(
+    received_transfer = factories.make_signed_transfer_state(
         amount=UNIT_TRANSFER_AMOUNT,
         initiator=UNIT_TRANSFER_INITIATOR,
         target=UNIT_TRANSFER_TARGET,

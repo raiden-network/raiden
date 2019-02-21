@@ -531,7 +531,7 @@ def test_refund_transfer_next_route():
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
-    refund_transfer = factories.make_signed_transfer(
+    refund_transfer = factories.make_signed_transfer_state(
         amount,
         our_address,
         original_transfer.target,
@@ -583,7 +583,7 @@ def test_refund_transfer_no_more_routes():
 
     initiator_state = get_transfer_at_index(setup.current_state, 0)
     original_transfer = initiator_state.transfer
-    refund_transfer = factories.make_signed_transfer(
+    refund_transfer = factories.make_signed_transfer_state(
         amount,
         original_transfer.initiator,
         original_transfer.target,
@@ -1337,7 +1337,7 @@ def test_secret_reveal_cancel_other_transfers():
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
-    refund_transfer = factories.make_signed_transfer(
+    refund_transfer = factories.make_signed_transfer_state(
         amount,
         our_address,
         original_transfer.target,
@@ -1447,7 +1447,7 @@ def test_refund_after_secret_request():
     current_state = iteration.new_state
     assert current_state is not None
 
-    refund_transfer = factories.make_signed_transfer(
+    refund_transfer = factories.make_signed_transfer_state(
         amount,
         original_transfer.initiator,
         original_transfer.target,
@@ -1531,7 +1531,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
-    refund_transfer = factories.make_signed_transfer(
+    refund_transfer = factories.make_signed_transfer_state(
         amount,
         our_address,
         original_transfer.target,
