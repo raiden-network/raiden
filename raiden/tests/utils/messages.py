@@ -58,9 +58,9 @@ MEDIATED_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
 
 def make_lock(amount=7, expiration=1, secrethash=VALID_SECRETHASHES[0]):
     return Lock(
-        amount,
-        expiration,
-        secrethash,
+        amount=amount,
+        expiration=expiration,
+        secrethash=secrethash,
     )
 
 

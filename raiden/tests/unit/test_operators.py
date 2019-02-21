@@ -90,9 +90,9 @@ def test_message_operators():
     message_identifier = 10
     message_identifier2 = 11
 
-    a = Processed(message_identifier)
-    b = Processed(message_identifier)
-    c = Processed(message_identifier2)
+    a = Processed(message_identifier=message_identifier)
+    b = Processed(message_identifier=message_identifier)
+    c = Processed(message_identifier=message_identifier2)
 
     # pylint: disable=unneeded-not
     assert a == b

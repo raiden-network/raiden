@@ -563,7 +563,7 @@ class UDPTransport(Runnable):
         #   state change
         # - Decode it, save to the WAL, and process it (the current
         #   implementation)
-        delivered_message = Delivered(message.message_identifier)
+        delivered_message = Delivered(delivered_message_identifier=message.message_identifier)
         self.raiden.sign(delivered_message)
 
         self.maybe_send(
@@ -607,7 +607,7 @@ class UDPTransport(Runnable):
             sender=pex(ping.sender),
         )
 
-        pong = Pong(ping.nonce)
+        pong = Pong(nonce=ping.nonce)
         self.raiden.sign(pong)
 
         try:
