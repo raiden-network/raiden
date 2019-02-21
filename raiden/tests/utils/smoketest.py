@@ -1,9 +1,11 @@
+import contextlib
 import os
 import shutil
 import sys
 import tempfile
 import traceback
 from http import HTTPStatus
+from typing import IO
 
 import click
 import requests
@@ -90,6 +92,7 @@ def run_smoketests(
         transport: str,
         token_addresses,
         discovery_address,
+        orig_stdout: IO[str],
         debug: bool = False,
 ):
     """ Test that the assembled raiden_service correctly reflects the configuration from the
@@ -137,8 +140,9 @@ def run_smoketests(
     except:  # NOQA pylint: disable=bare-except
         error = traceback.format_exc()
         if debug:
-            import pdb
-            pdb.post_mortem()  # pylint: disable=no-member
+            with contextlib.redirect_stdout(orig_stdout):
+                import pdb
+                pdb.post_mortem()  # pylint: disable=no-member
         return error
 
     return None

@@ -516,6 +516,8 @@ def smoketest(ctx, debug):
         step_count = 8
     step = 0
 
+    stdout = sys.stdout
+
     def print_step(description, error=False):
         nonlocal step
         step += 1
@@ -524,6 +526,7 @@ def smoketest(ctx, debug):
                 click.style(f'[{step}/{step_count}]', fg='blue'),
                 click.style(description, fg='green' if not error else 'red'),
             ),
+            file=stdout,
         )
 
     print_step('Getting smoketest configuration')
@@ -591,6 +594,7 @@ def smoketest(ctx, debug):
                     token_addresses,
                     contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
                     debug=debug,
+                    orig_stdout=stdout,
                 )
                 if error is not None:
                     append_report('Smoketest assertion error', error)
