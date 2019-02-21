@@ -646,10 +646,7 @@ class JSONRPCClient:
                 ),
             )
 
-        return self.new_contract_proxy(
-            contract_interface,
-            contract_address,
-        )
+        return self.new_contract_proxy(contract_interface, contract_address), receipt
 
     def send_transaction(
             self,

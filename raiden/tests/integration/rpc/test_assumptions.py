@@ -34,7 +34,7 @@ def deploy_rpc_test_contract(deploy_client):
     contract_path = os.path.join(here, 'RpcTest.sol')
     contracts = compile_files_cwd([contract_path])
 
-    contract_proxy = deploy_client.deploy_solidity_contract(
+    contract_proxy, _ = deploy_client.deploy_solidity_contract(
         'RpcTest',
         contracts,
         libraries=dict(),

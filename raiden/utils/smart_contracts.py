@@ -14,7 +14,7 @@ def deploy_contract_web3(
     compiled = {
         contract_name: contract_manager.get_contract(contract_name),
     }
-    contract_proxy = deploy_client.deploy_solidity_contract(
+    contract_proxy, _ = deploy_client.deploy_solidity_contract(
         contract_name=contract_name,
         all_contracts=compiled,
         constructor_parameters=constructor_arguments,
