@@ -306,7 +306,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
             self,
             chain_id: ChainID,
             message_identifier: MessageID,
-            nonce: None,
+            nonce: typing.Nonce,
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
