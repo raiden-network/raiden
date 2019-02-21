@@ -613,6 +613,7 @@ def test_matrix_send_global(
             MONITORING_BROADCASTING_ROOM,
             message,
         )
+    transport._spawn(transport._global_send_worker)
 
     gevent.idle()
 
