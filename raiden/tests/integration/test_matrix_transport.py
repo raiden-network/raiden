@@ -630,8 +630,8 @@ def test_monitoring_global_messages(
         retries_before_backoff,
 ):
     """
-    Test that RaidenMonitoringEventHandler sends RequestMonitoring messages to global
-    MONITORING_BROADCASTING_ROOM room on EventNewBalanceProofReceived.
+    Test that RaidenService sends RequestMonitoring messages to global
+    MONITORING_BROADCASTING_ROOM room on newly received balance proofs.
     """
     transport = MatrixTransport({
         'global_rooms': ['discovery', MONITORING_BROADCASTING_ROOM],
@@ -645,6 +645,7 @@ def test_monitoring_global_messages(
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
+    raiden_service.config = dict(services=dict(monitoring_enabled=True))
 
     transport.start(
         raiden_service,
