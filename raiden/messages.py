@@ -176,6 +176,9 @@ class Message:
     # Needs to be set by a subclass
     cmdid = None
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     @property
     def hash(self):
         packed = self.packed()
@@ -240,8 +243,8 @@ class SignedMessage(AuthenticatedMessage):
     # signing is a bit problematic, we need to pack the data to sign, but the
     # current API assumes that signing is called before, this can be improved
     # by changing the order to packing then signing
-    def __init__(self):
-        AuthenticatedMessage.__init__(self)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.signature = b''
 
     def _data_to_sign(self) -> bytes:
@@ -289,21 +292,21 @@ class SignedMessage(AuthenticatedMessage):
 class RetrieableMessage:
     """ Message, that supports a retry-queue. """
 
-    def __init__(self, message_identifier: typing.MessageID):
+    def __init__(self, *, message_identifier: MessageID, **kwargs):
         self.message_identifier = message_identifier
 
 
 class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
     """ Mixin of SignedMessage and RetrieableMessage. """
 
-    def __init__(self, message_identifier):
-        SignedMessage.__init__(self)
-        RetrieableMessage.__init__(self, message_identifier)
+    def __init__(self, *, message_identifier: MessageID, **kwargs):
+        super().__init__(message_identifier=message_identifier, **kwargs)
 
 
 class EnvelopeMessage(SignedRetrieableMessage):
     def __init__(
             self,
+            *,
             chain_id: ChainID,
             message_identifier: MessageID,
             nonce: typing.Nonce,
@@ -312,8 +315,9 @@ class EnvelopeMessage(SignedRetrieableMessage):
             locksroot: Locksroot,
             channel_identifier: ChannelID,
             token_network_address: TokenNetworkAddress,
+            **kwargs,
     ):
-        SignedRetrieableMessage.__init__(self, message_identifier)
+        super().__init__(message_identifier=message_identifier, **kwargs)
         assert_envelope_values(
             nonce,
             channel_identifier,
@@ -364,11 +368,11 @@ class Processed(SignedRetrieableMessage):
     """ All accepted messages should be confirmed by a `Processed` message which echoes the
     orginals Message hash.
     """
-    # FIXME: Process should _not_ be SignedRetrieableMessage, but only SignedMessage
+    # FIXME: Processed should _not_ be SignedRetrieableMessage, but only SignedMessage
     cmdid = messages.PROCESSED
 
-    def __init__(self, message_identifier: MessageID):
-        super().__init__(message_identifier)
+    def __init__(self, *, message_identifier: MessageID, **kwargs):
+        super().__init__(message_identifier=message_identifier, **kwargs)
 
     @classmethod
     def unpack(cls, packed):
@@ -415,14 +419,14 @@ class Delivered(SignedMessage):
     """
     cmdid = messages.DELIVERED
 
-    def __init__(self, delivered_message_identifier: MessageID):
-        super().__init__()
+    def __init__(self, *, delivered_message_identifier: MessageID, **kwargs):
+        super().__init__(**kwargs)
         self.delivered_message_identifier = delivered_message_identifier
 
     @classmethod
     def unpack(cls, packed):
         delivered = cls(
-            packed.delivered_message_identifier,
+            delivered_message_identifier=packed.delivered_message_identifier,
         )
         delivered.signature = packed.signature
         return delivered
@@ -458,8 +462,8 @@ class Pong(SignedMessage):
     """ Response to a Ping message. """
     cmdid = messages.PONG
 
-    def __init__(self, nonce: int):
-        super().__init__()
+    def __init__(self, *, nonce: int, **kwargs):
+        super().__init__(**kwargs)
         self.nonce = nonce
 
     @staticmethod
@@ -477,8 +481,13 @@ class Ping(SignedMessage):
     """ Healthcheck message. """
     cmdid = messages.PING
 
-    def __init__(self, nonce: int, current_protocol_version: typing.RaidenProtocolVersion):
-        super().__init__()
+    def __init__(
+            self,
+            nonce: typing.Nonce,
+            current_protocol_version: typing.RaidenProtocolVersion,
+            **kwargs,
+    ):
+        super().__init__(**kwargs)
         self.nonce = nonce
         self.current_protocol_version = current_protocol_version
 
@@ -503,13 +512,15 @@ class SecretRequest(SignedRetrieableMessage):
 
     def __init__(
             self,
+            *,
             message_identifier: MessageID,
             payment_identifier: PaymentID,
             secrethash: SecretHash,
             amount: typing.PaymentAmount,
             expiration: typing.BlockExpiration,
+            **kwargs,
     ):
-        super().__init__(message_identifier=message_identifier)
+        super().__init__(message_identifier=message_identifier, **kwargs)
         self.payment_identifier = payment_identifier
         self.secrethash = secrethash
         self.amount = amount
@@ -596,6 +607,7 @@ class Unlock(EnvelopeMessage):
 
     def __init__(
             self,
+            *,
             chain_id: ChainID,
             message_identifier: MessageID,
             payment_identifier: PaymentID,
@@ -606,6 +618,7 @@ class Unlock(EnvelopeMessage):
             locked_amount: TokenAmount,
             locksroot: Locksroot,
             secret: Secret,
+            **kwargs,
     ):
         super().__init__(
             chain_id=chain_id,
@@ -616,6 +629,7 @@ class Unlock(EnvelopeMessage):
             channel_identifier=channel_identifier,
             token_network_address=token_network_address,
             message_identifier=message_identifier,
+            **kwargs,
         )
 
         if payment_identifier < 0:
@@ -749,8 +763,8 @@ class RevealSecret(SignedRetrieableMessage):
     """
     cmdid = messages.REVEALSECRET
 
-    def __init__(self, message_identifier: MessageID, secret: Secret):
-        SignedRetrieableMessage.__init__(self, message_identifier)
+    def __init__(self, *, message_identifier: MessageID, secret: Secret, **kwargs):
+        super().__init__(message_identifier=message_identifier, **kwargs)
         self.secret = secret
 
     def __repr__(self):
@@ -818,7 +832,15 @@ class Lock:
     # Lock is not a message, it is a serializable structure that is reused in
     # some messages
 
-    def __init__(self, amount: TokenAmount, expiration: BlockExpiration, secrethash: SecretHash):
+    def __init__(
+            self,
+            *,
+            amount: TokenAmount,
+            expiration: BlockExpiration,
+            secrethash: SecretHash,
+            **kwargs,
+    ):
+        super().__init__(**kwargs)
         # guarantee that `amount` can be serialized using the available bytes
         # in the fixed length format
         if amount < 0:
@@ -909,6 +931,7 @@ class LockedTransferBase(EnvelopeMessage):
 
     def __init__(
             self,
+            *,
             chain_id: ChainID,
             message_identifier: MessageID,
             payment_identifier: PaymentID,
@@ -921,6 +944,7 @@ class LockedTransferBase(EnvelopeMessage):
             recipient: Address,
             locksroot: Locksroot,
             lock: HashTimeLockState,
+            **kwargs,
     ):
         super().__init__(
             chain_id=chain_id,
@@ -931,6 +955,7 @@ class LockedTransferBase(EnvelopeMessage):
             locksroot=locksroot,
             channel_identifier=channel_identifier,
             token_network_address=token_network_address,
+            **kwargs,
         )
         assert_transfer_values(payment_identifier, token, recipient)
         self.message_identifier = message_identifier
@@ -1009,6 +1034,7 @@ class LockedTransfer(LockedTransferBase):
 
     def __init__(
             self,
+            *,
             chain_id: ChainID,
             message_identifier: MessageID,
             payment_identifier: PaymentID,
@@ -1024,6 +1050,7 @@ class LockedTransfer(LockedTransferBase):
             target: Address,
             initiator: Address,
             fee: int = 0,
+            **kwargs,
     ):
 
         if len(target) != 20:
@@ -1036,18 +1063,19 @@ class LockedTransfer(LockedTransferBase):
             raise ValueError('fee is too large')
 
         super().__init__(
-            chain_id,
-            message_identifier,
-            payment_identifier,
-            nonce,
-            token_network_address,
-            token,
-            channel_identifier,
-            transferred_amount,
-            locked_amount,
-            recipient,
-            locksroot,
-            lock,
+            chain_id=chain_id,
+            message_identifier=message_identifier,
+            payment_identifier=payment_identifier,
+            nonce=nonce,
+            token_network_address=token_network_address,
+            token=token,
+            channel_identifier=channel_identifier,
+            transferred_amount=transferred_amount,
+            locked_amount=locked_amount,
+            recipient=recipient,
+            locksroot=locksroot,
+            lock=lock,
+            **kwargs,
         )
 
         self.target = target
@@ -1212,6 +1240,9 @@ class RefundTransfer(LockedTransfer):
     """
     cmdid = messages.REFUNDTRANSFER
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     @classmethod
     def unpack(cls, packed):
         lock = Lock(
@@ -1321,6 +1352,7 @@ class LockExpired(EnvelopeMessage):
 
     def __init__(
             self,
+            *,
             chain_id: ChainID,
             nonce: int,
             message_identifier: MessageID,
@@ -1331,6 +1363,7 @@ class LockExpired(EnvelopeMessage):
             token_network_address: TokenNetworkAddress,
             recipient: Address,
             secrethash: SecretHash,
+            **kwargs,
     ):
 
         super().__init__(
@@ -1342,6 +1375,7 @@ class LockExpired(EnvelopeMessage):
             channel_identifier=channel_identifier,
             token_network_address=token_network_address,
             message_identifier=message_identifier,
+            **kwargs,
         )
         self.message_identifier = message_identifier
         self.recipient = recipient
@@ -1457,6 +1491,7 @@ class SignedBlindedBalanceProof:
 
     def __init__(
             self,
+            *,
             channel_identifier: typing.ChannelID,
             token_network_address: typing.TokenNetworkID,
             nonce: typing.Nonce,
@@ -1464,9 +1499,10 @@ class SignedBlindedBalanceProof:
             chain_id: typing.ChainID,
             signature: typing.Signature,
             balance_hash: typing.BalanceHash,
+            **kwargs,
     ):
 
-        super().__init__()
+        super().__init__(**kwargs)
         self.channel_identifier = channel_identifier
         self.token_network_address = token_network_address
         self.nonce = nonce
@@ -1556,12 +1592,14 @@ class RequestMonitoring(SignedMessage):
 
     def __init__(
             self,
+            *,
             onchain_balance_proof: SignedBlindedBalanceProof,
             reward_amount: typing.TokenAmount,
             non_closing_signature: typing.Signature = b'',
             reward_proof_signature: typing.Signature = b'',
+            **kwargs,
     ):
-        super().__init__()
+        super().__init__(**kwargs)
         if onchain_balance_proof is None:
             raise ValueError('no balance proof given')
         self.balance_proof = onchain_balance_proof
@@ -1735,6 +1773,7 @@ class UpdatePFS(SignedMessage):
 
     def __init__(
             self,
+            *,
             nonce: typing.Nonce,
             transferred_amount: typing.TokenAmount,
             locked_amount: typing.TokenAmount,
@@ -1744,7 +1783,9 @@ class UpdatePFS(SignedMessage):
             chain_id: typing.ChainID,
             reveal_timeout: int,
             signature: typing.Optional[typing.Signature] = None,
+            **kwargs,
     ):
+        super().__init__(**kwargs)
         self.nonce = nonce
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount

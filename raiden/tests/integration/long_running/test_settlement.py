@@ -524,8 +524,8 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     app0.raiden.transport.stop()
 
     reveal_secret = RevealSecret(
-        random.randint(0, UINT64_MAX),
-        secret,
+        message_identifier=random.randint(0, UINT64_MAX),
+        secret=secret,
     )
     app0.raiden.sign(reveal_secret)
     message_handler.MessageHandler().on_message(app1.raiden, reveal_secret)
