@@ -291,7 +291,7 @@ def test_matrix_message_sync(
     )
 
     for i in range(5):
-        message = Processed(i)
+        message = Processed(message_identifier=i)
         transport0._raiden_service.sign(message)
         transport0.send_async(
             queue_identifier,
@@ -310,7 +310,7 @@ def test_matrix_message_sync(
 
     # Send more messages while the other end is offline
     for i in range(10, 15):
-        message = Processed(i)
+        message = Processed(message_identifier=i)
         transport0._raiden_service.sign(message)
         transport0.send_async(
             queue_identifier,
@@ -418,7 +418,7 @@ def test_matrix_message_retry(
     assert bool(retry_queue), 'retry_queue not running'
 
     # Send the initial message
-    message = Processed(0)
+    message = Processed(message_identifier=0)
     transport._raiden_service.sign(message)
     chain_state.queueids_to_queues[queueid] = [message]
     retry_queue.enqueue_global(message)
@@ -528,7 +528,7 @@ def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval
         recipient=raiden_service2.address,
         channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     )
-    message = Processed(0)
+    message = Processed(message_identifier=0)
     raiden_service0.sign(message)
 
     transport0.send_async(queueid1, message)
@@ -607,7 +607,7 @@ def test_matrix_send_global(
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
 
     for i in range(5):
-        message = Processed(i)
+        message = Processed(message_identifier=i)
         transport._raiden_service.sign(message)
         transport.send_global(
             MONITORING_BROADCASTING_ROOM,

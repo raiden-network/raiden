@@ -580,7 +580,7 @@ class MatrixTransport(Runnable):
 
         while not self._stop_event.ready():
             self._global_send_event.clear()
-            messages: List[str, Message] = list()
+            messages: List[Tuple[str, Message]] = list()
             while self._global_send_queue.qsize() > 0:
                 messages.append(self._global_send_queue.get())
             if messages:
@@ -927,7 +927,7 @@ class MatrixTransport(Runnable):
             #       which means that message order is important which isn't guaranteed between
             #       federated servers.
             #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
-            delivered_message = Delivered(message.message_identifier)
+            delivered_message = Delivered(delivered_message_identifier=message.message_identifier)
             self._raiden_service.sign(delivered_message)
             retrier = self._get_retrier(message.sender)
             retrier.enqueue_global(delivered_message)
