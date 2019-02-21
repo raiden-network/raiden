@@ -1855,7 +1855,7 @@ def test_node_change_network_state_reachable_node():
     ]
 
     lock_expiration = UNIT_REVEAL_TIMEOUT * 2
-    received_transfer = factories.make_signed_transfer(
+    received_transfer = factories.make_signed_transfer_state(
         amount=1,
         initiator=UNIT_TRANSFER_SENDER,
         target=UNIT_TRANSFER_TARGET,
