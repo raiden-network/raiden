@@ -37,10 +37,7 @@ from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
 from raiden.transfer.architecture import Event as RaidenEvent, State, StateChange
-from raiden.transfer.mediated_transfer.events import (
-    EventNewBalanceProofReceived,
-    SendLockedTransfer,
-)
+from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     lockedtransfersigned_from_message,
@@ -50,7 +47,13 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ActionInitTarget,
 )
-from raiden.transfer.state import ChainState, InitiatorTask, PaymentNetworkState, RouteState
+from raiden.transfer.state import (
+    BalanceProofSignedState,
+    ChainState,
+    InitiatorTask,
+    PaymentNetworkState,
+    RouteState,
+)
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionInitChain,
@@ -407,13 +410,7 @@ class RaidenService(Runnable):
             chain_state,
         )
         for balance_proof in current_balance_proofs:
-            message = RequestMonitoring.from_balance_proof_signed_state(
-                balance_proof=balance_proof,
-                reward_amount=0,
-            )
-            # FIXME: need to introduce a send_global queue, to allow to enqueue before
-            # transport start
-            self.transport.send_global(constants.MONITORING_BROADCASTING_ROOM, message)
+            update_monitoring_service_from_balance_proof(self, balance_proof)
 
         # The transport must not ever be started before the alarm task's
         # `first_run()` has been, because it's this method which synchronizes the
@@ -539,7 +536,7 @@ class RaidenService(Runnable):
 
         current_state = views.state_from_raiden(self)
         for balance_proof in views.detect_balance_proof_change(old_state, current_state):
-            raiden_event_list.insert(0, EventNewBalanceProofReceived(balance_proof))
+            update_monitoring_service_from_balance_proof(self, balance_proof)
 
         log.debug(
             'Raiden events',
@@ -917,3 +914,23 @@ class RaidenService(Runnable):
     def maybe_upgrade_db(self):
         manager = UpgradeManager(db_filename=self.database_path)
         manager.run()
+
+
+def update_monitoring_service_from_balance_proof(
+        raiden: RaidenService,
+        new_balance_proof: BalanceProofSignedState,
+):
+    log.info(
+        'Received new balance proof, creating message for Monitoring Service',
+        balance_proof=new_balance_proof,
+    )
+    reward_amount = 0  # FIXME: default reward is 0, should come from elsewhere
+    monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
+        new_balance_proof,
+        reward_amount,
+    )
+    monitoring_message.sign(raiden.signer)
+    raiden.transport.send_global(
+        constants.MONITORING_BROADCASTING_ROOM,
+        monitoring_message,
+    )
