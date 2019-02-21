@@ -22,7 +22,11 @@ from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlre
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, INITIAL_PORT
+from raiden.settings import (
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    DEVELOPMENT_CONTRACT_VERSION,
+    INITIAL_PORT,
+)
 from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
 from raiden.utils import get_system_spec, merge_dict, split_endpoint
 from raiden.utils.cli import (
@@ -39,6 +43,7 @@ from raiden.utils.cli import (
     option,
     option_group,
 )
+from raiden.waiting import wait_for_block
 from raiden_contracts.constants import CONTRACT_ENDPOINT_REGISTRY, CONTRACT_TOKEN_NETWORK_REGISTRY
 
 from .app import run_app
@@ -572,6 +577,16 @@ def smoketest(ctx, debug):
                 (api_host, api_port) = split_endpoint(args['api_address'])
                 api_server = APIServer(rest_api, config={'host': api_host, 'port': api_port})
                 api_server.start()
+
+                block = app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+                # Proxies now use the confirmed block hash to query the chain for
+                # prerequisite checks. Wait a bit here to make sure that the confirmed
+                # block hash contains the deployed token network or else things break
+                wait_for_block(
+                    raiden=app.raiden,
+                    block_number=block,
+                    retry_timeout=1.0,
+                )
 
                 raiden_api.channel_open(
                     registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
