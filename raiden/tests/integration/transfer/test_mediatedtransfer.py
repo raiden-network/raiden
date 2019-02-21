@@ -4,6 +4,7 @@ import pytest
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, RevealSecret
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import UNIT_TRANSFER_INITIATOR, make_secret, make_signed_transfer
 from raiden.tests.utils.network import CHAIN
@@ -12,6 +13,7 @@ from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_tr
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.utils import sha3
+from raiden.waiting import wait_for_block
 
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -65,6 +67,7 @@ def test_locked_transfer_secret_registered_onchain(
         raiden_network,
         token_addresses,
         secret_registry_address,
+        retry_timeout,
 ):
     app0 = raiden_network[0]
     token_address = token_addresses[0]
@@ -85,6 +88,14 @@ def test_locked_transfer_secret_registered_onchain(
         secret_registry_address,
     )
     secret_registry_proxy.register_secret(secret=transfer_secret, given_block_identifier='latest')
+
+    # Wait until our node has processed the block that the secret registration was mined at
+    block_number = app0.raiden.get_block_number()
+    wait_for_block(
+        raiden=app0.raiden,
+        block_number=block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+        retry_timeout=retry_timeout,
+    )
 
     # Test that sending a transfer with a secret already registered on-chain fails
     with pytest.raises(RaidenUnrecoverableError):
