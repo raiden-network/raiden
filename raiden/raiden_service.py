@@ -280,7 +280,7 @@ class RaidenService(Runnable):
 
             # Two raiden processes must not write to the same database. Even
             # though it's possible the database itself would not be corrupt,
-            # the node's state would. If a database was shared among multiple
+            # the node's state could. If a database was shared among multiple
             # nodes, the database WAL would be the union of multiple node's
             # WAL. During a restart a single node can't distinguish its state
             # changes from the others, and it would apply it all, meaning that
@@ -305,15 +305,15 @@ class RaidenService(Runnable):
         # startup.
         #
         # Rationale: At the startup, the latest snapshot is restored and all
-        # state changes which are not 'part' of it are applied, the criteria to
+        # state changes which are not 'part' of it are applied. The criteria to
         # re-apply the state changes is their 'absence' in the snapshot, /not/
-        # their completeness. Because these state changes are re-execute
+        # their completeness. Because these state changes are re-executed
         # in-order and some of their side-effects will already have been
         # completed, the events should be delayed until the state is
         # synchronized (e.g. an open channel state change, which has already
         # been mined).
         #
-        # Uncompleted events, i.e. the ones which don't have their side-effects
+        # Incomplete events, i.e. the ones which don't have their side-effects
         # applied, will be executed once the blockchain state is synchronized
         # because of the node's queues.
         self.ready_to_process_events = False
@@ -688,7 +688,7 @@ class RaidenService(Runnable):
             latest_block_number = latest_block['number']
 
             # Handle testing with private chains. The block number can be
-            # smaller then confirmation_blocks
+            # smaller than confirmation_blocks
             confirmed_block_number = max(
                 GENESIS_BLOCK_NUMBER,
                 latest_block_number - self.config['blockchain']['confirmation_blocks'],
@@ -725,9 +725,9 @@ class RaidenService(Runnable):
         """ Send pending transactions from the previous run
 
         Note:
-            This will only send the transactions wich don't have their
+            This will only send the transactions which don't have their
             side-effects applied. Transactions which another node may have sent
-            already will be detected by the alarm task first run and cleared
+            already will be detected by the alarm task's first run and cleared
             from the queue (e.g. A monitoring service update transfer).
         """
         assert self.alarm.is_primed(), 'AlarmTask not primed. node:{self!r}'
@@ -762,7 +762,7 @@ class RaidenService(Runnable):
 
         Restore the PaymentStatus for any pending payment. This is not tied to
         a specific protocol message but to the lifecycle of a payment, i.e.
-        the status is re-created if payment itself has not completed.
+        the status is re-created if a payment itself has not completed.
         """
 
         with self.payment_identifier_lock:
@@ -791,9 +791,9 @@ class RaidenService(Runnable):
         Note:
             All messages from the state queues must be pushed to the transport
             before it's started. This is necessary to avoid a race where the
-            transport process network messages too quickly, queueing new
+            transport processes network messages too quickly, queueing new
             messages before any of the previous messages, resulting in new
-            messages beeing out-of-order.
+            messages being out-of-order.
         """
         assert not self.transport, 'Transport is running. node:{self!r}'
         assert self.alarm.is_primed(), 'AlarmTask not primed. node:{self!r}'
