@@ -28,14 +28,14 @@ def flamegraph_format(stack_count):
     return '\n'.join('%s %d' % (key, value) for key, value in sorted(stack_count.items()))
 
 
-def sample_stack(stack_count, frame):
+def sample_stack(stack_count, frame, timespent):
     callstack = []
     while frame is not None:
         callstack.append(frame_format(frame))
         frame = frame.f_back
 
     formatted_stack = ';'.join(reversed(callstack))
-    stack_count[formatted_stack] += 1
+    stack_count[formatted_stack] += timespent
 
 
 def process_memory_mb(pid):
@@ -71,8 +71,23 @@ class FlameGraphCollector:
         self.stack_stream = stack_stream
         self.stack_count = collections.defaultdict(int)
 
-    def collect(self, frame, _ts):
-        sample_stack(self.stack_count, frame)
+        # Correct the flamegraph proportionally to the time spent in the
+        # function call. This is important for functions which are considerably
+        # slower then the others.
+        #
+        # Because from whithin the interpreter it's not possible to execute a
+        # function on stable intervals, the count of stacks does not correspond
+        # to actual wall time. This is true even if posix signals are used. For
+        # this reason the code has to account for the time spent between two
+        # samples, otherwise functions which are called more frequently will
+        # appear to take more of the cpu time.
+        self.last_timestamp = None
+
+    def collect(self, frame, timestamp):
+        if self.last_timestamp is not None:
+            sample_stack(self.stack_count, frame, timestamp)
+
+        self.last_timestamp = timestamp
 
     def stop(self):
         stack_data = flamegraph_format(self.stack_count)
@@ -80,6 +95,7 @@ class FlameGraphCollector:
         self.stack_stream.write(stack_data)
         self.stack_stream.close()
         self.stack_stream = None
+        self.last_timestamp = None
 
 
 class MemoryCollector:
@@ -115,6 +131,18 @@ class TraceSampler:
         self.sample_interval = sample_interval
         self.last_timestamp = time.time()
 
+        # Save the old frame to have proper stack reporting. If the following
+        # code is executed:
+        #
+        #   slow() # At this point a new sample is *not* needed
+        #   f2()   # When this calls happens a new sample is needed, *because
+        #          # of the previous function*
+        #
+        # The above gets worse because a context switch can happen after the
+        # call to slow, if this is not taken into account a completely wrong
+        # stack trace will be reported.
+        self.old_frame = None
+
         greenlet.settrace(self._greenlet_profiler)  # pylint: disable=c-extension-no-member
         sys.setprofile(self._thread_profiler)
         # threading.setprofile(self._thread_profiler)
@@ -127,22 +155,25 @@ class TraceSampler:
 
     def _greenlet_profiler(self, _event, _args):
         timestamp = time.time()
-        if self._should_sample(timestamp):
-            try:
-                # we need to account the time for the user function
-                frame = sys._getframe(1)  # pylint:disable=protected-access
-            except ValueError:
-                # the first greenlet.switch() and when the greenlet is being
-                # destroied there is nothing more in the stack, so this function is
-                # the first function called
-                frame = sys._getframe(0)  # pylint:disable=protected-access
+        try:
+            # we need to account the time for the user function
+            frame = sys._getframe(1)  # pylint:disable=protected-access
+        except ValueError:
+            # the first greenlet.switch() and when the greenlet is being
+            # destroied there is nothing more in the stack, so this function is
+            # the first function called
+            frame = sys._getframe(0)  # pylint:disable=protected-access
 
-            self.collector.collect(frame, timestamp)
+        if self._should_sample(timestamp):
+            self.collector.collect(self.old_frame, timestamp)
+
+        self.old_frame = frame
 
     def _thread_profiler(self, frame, _event, _arg):
         timestamp = time.time()
         if self._should_sample(timestamp):
-            self.collector.collect(frame, timestamp)
+            self.collector.collect(self.old_frame, timestamp)
+        self.old_frame = frame
 
     def stop(self):
         # Unregister the profiler in this order, otherwise we will have extra

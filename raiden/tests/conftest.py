@@ -74,7 +74,7 @@ def pytest_addoption(parser):
         help="Base port number to use for tests.",
     )
 
-    parser.addoption("--profiler", default=None, choices=["cpu", "sample"])
+    parser.addoption("--profiler", default=None, choices=["flamegraph-trace"])
 
     # The goal here is to ensure the test runner will print something to the
     # stdout, this should be done frequently enough for the runner to /not/ get
