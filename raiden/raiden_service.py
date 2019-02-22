@@ -117,7 +117,7 @@ def initiator_init(
         token_network_identifier: TokenNetworkID,
         target_address: TargetAddress,
 ):
-    assert transfer_secret != constants.EMPTY_HASH, 'Empty secret node:{self!r}'
+    assert transfer_secret != constants.EMPTY_HASH, f'Empty secret node:{raiden!r}'
 
     transfer_state = TransferDescriptionWithSecretState(
         raiden.default_registry.address,
@@ -328,7 +328,7 @@ class RaidenService(Runnable):
 
         if self.database_dir is not None:
             self.db_lock.acquire(timeout=0)
-            assert self.db_lock.is_locked, 'Database not locked. node:{self!r}'
+            assert self.db_lock.is_locked, f'Database not locked. node:{self!r}'
 
         # start the registration early to speed up the start
         if self.config['transport_type'] == 'udp':
@@ -522,7 +522,7 @@ class RaidenService(Runnable):
             synchronization includes the on-chain channel state and is
             necessary to reject new messages for closed channels.
         """
-        assert self.alarm.is_primed(), 'AlarmTask not primed. node:{self!r}'
+        assert self.alarm.is_primed(), f'AlarmTask not primed. node:{self!r}'
         assert not self.ready_to_process_events
 
         self._initialize_messages_queues(chain_state)
@@ -539,7 +539,7 @@ class RaidenService(Runnable):
         self._initiatize_start_neighbours_healthcheck(chain_state)
 
     def _initiatize_start_neighbours_healthcheck(self, chain_state: ChainState):
-        assert self.transport, 'Transport not running. node:{self!r}'
+        assert self.transport, f'Transport not running. node:{self!r}'
 
         for neighbour in views.all_neighbour_nodes(chain_state):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
@@ -567,7 +567,7 @@ class RaidenService(Runnable):
         Use this for error reporting, failures in the returned greenlets,
         should be re-raised using `gevent.joinall` with `raise_error=True`.
         """
-        assert self.wal, 'WAL not restored. node:{self!r}'
+        assert self.wal, f'WAL not restored. node:{self!r}'
         log.debug(
             'State change',
             node=pex(self.address),
@@ -730,7 +730,7 @@ class RaidenService(Runnable):
             already will be detected by the alarm task's first run and cleared
             from the queue (e.g. A monitoring service update transfer).
         """
-        assert self.alarm.is_primed(), 'AlarmTask not primed. node:{self!r}'
+        assert self.alarm.is_primed(), f'AlarmTask not primed. node:{self!r}'
 
         pending_transactions = views.get_pending_transactions(chain_state)
 
@@ -795,8 +795,8 @@ class RaidenService(Runnable):
             messages before any of the previous messages, resulting in new
             messages being out-of-order.
         """
-        assert not self.transport, 'Transport is running. node:{self!r}'
-        assert self.alarm.is_primed(), 'AlarmTask not primed. node:{self!r}'
+        assert not self.transport, f'Transport is running. node:{self!r}'
+        assert self.alarm.is_primed(), f'AlarmTask not primed. node:{self!r}'
 
         events_queues = views.get_all_messagequeues(chain_state)
 
