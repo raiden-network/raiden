@@ -30,9 +30,9 @@ from raiden.tests.utils.geth import (
     EthNodeDescription,
     eth_node_config,
     eth_node_config_set_bootnodes,
-    geth_node_to_datadir,
     eth_run_nodes,
     eth_wait_and_check,
+    geth_node_to_datadir,
 )
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views

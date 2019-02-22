@@ -664,6 +664,8 @@ class JSONRPCClient:
         if to == to_canonical_address(constants.NULL_ADDRESS):
             warnings.warn('For contract creation the empty string must be used.')
 
+        startgas *= 2  # todo remove tis kludge before merging
+
         with self._nonce_lock:
             nonce = self._available_nonce
             gas_price = self.gas_price()
