@@ -74,6 +74,8 @@ def pytest_addoption(parser):
         help="Base port number to use for tests.",
     )
 
+    parser.addoption("--profiler", default=None, choices=["cpu", "sample"])
+
     # The goal here is to ensure the test runner will print something to the
     # stdout, this should be done frequently enough for the runner to /not/ get
     # killed by the CI. The settings bellow are defined in such a way to
@@ -203,9 +205,28 @@ def enable_greenlet_debugger(request):
         hub.handle_error = debugger
 
 
+@pytest.fixture(autouse=True, scope="session")
+def profiler(request):
+    profiler = None
+
+    if request.config.option.profiler == "flamegraph-trace":
+        from raiden.utils.profiling.sampler import TraceSampler, FlameGraphCollector
+
+        now = datetime.datetime.now()
+        stack_path = os.path.join("/tmp", f"{now:%Y%m%d_%H%M}_stack.data")
+        stack_stream = open(stack_path, "w")
+        flame = FlameGraphCollector(stack_stream)
+        profiler = TraceSampler(flame)
+
+    yield
+
+    if profiler is not None:
+        profiler.stop()
+
+
 @pytest.fixture(autouse=True)
 def logging_level(request, logs_storage):
-    """ Configure the structlog level for each test run.
+    """ Configure the structlog level.
 
     For integration tests this also sets the geth verbosity.
     """
