@@ -261,31 +261,6 @@ def handle_closeroute(token_network_state, state_change):
     return TransitionResult(token_network_state, events)
 
 
-def handle_receive_transfer_refund(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
-):
-    events = list()
-
-    channel_id = state_change.balance_proof.channel_identifier
-    channel_state = token_network_state.channelidentifiers_to_channels.get(channel_id)
-
-    if channel_state:
-        result = channel.state_transition(
-            channel_state=channel_state,
-            state_change=state_change,
-            pseudo_random_generator=pseudo_random_generator,
-            block_number=block_number,
-            block_hash=block_hash,
-        )
-        events.extend(result.events)
-
-    return TransitionResult(token_network_state, events)
-
-
 def state_transition(
         payment_network_identifier,
         token_network_state,
