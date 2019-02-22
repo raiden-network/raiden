@@ -16,6 +16,7 @@ from raiden.tests.utils.network import (
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 
 
+
 @pytest.fixture
 def raiden_chain(
         token_addresses,
@@ -41,6 +42,7 @@ def raiden_chain(
         local_matrix_servers,
         private_rooms,
         retry_timeout,
+        blockchain_type,
 ):
 
     if len(token_addresses) != 1:
@@ -85,7 +87,8 @@ def raiden_chain(
         )
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
-    with gevent.Timeout(seconds=30, exception=exception):
+    timeout = 120 if blockchain_type == 'parity' else 30
+    with gevent.Timeout(seconds=timeout, exception=exception):
         wait_for_token_networks(
             raiden_apps=raiden_apps,
             token_network_registry_address=token_network_registry_address,
@@ -107,7 +110,8 @@ def raiden_chain(
     )
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, nodes are unreachable')
-    with gevent.Timeout(seconds=30, exception=exception):
+    timeout = 120 if blockchain_type == 'parity' else 30
+    with gevent.Timeout(seconds=timeout, exception=exception):
         wait_for_channels(
             app_channels,
             blockchain_services.deploy_registry.address,
@@ -145,8 +149,8 @@ def raiden_network(
         local_matrix_servers,
         private_rooms,
         retry_timeout,
+        blockchain_type,
 ):
-
     raiden_apps = create_apps(
         chain_id=chain_id,
         blockchain_services=blockchain_services.blockchain_services,
@@ -173,7 +177,8 @@ def raiden_network(
     parallel_start_apps(raiden_apps)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
-    with gevent.Timeout(seconds=30, exception=exception):
+    timeout = 120 if blockchain_type == 'parity' else 30
+    with gevent.Timeout(seconds=timeout, exception=exception):
         wait_for_token_networks(
             raiden_apps=raiden_apps,
             token_network_registry_address=token_network_registry_address,
@@ -195,7 +200,8 @@ def raiden_network(
     )
 
     exception = RuntimeError('`raiden_network` fixture setup failed, nodes are unreachable')
-    with gevent.Timeout(seconds=30, exception=exception):
+    timeout = 120 if blockchain_type == 'parity' else 30
+    with gevent.Timeout(seconds=timeout, exception=exception):
         wait_for_channels(
             app_channels,
             blockchain_services.deploy_registry.address,

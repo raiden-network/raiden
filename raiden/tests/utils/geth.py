@@ -17,7 +17,7 @@ from web3 import Web3
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
-from raiden.utils.typing import Any, Dict, List, NamedTuple
+from raiden.utils.typing import Dict, List, NamedTuple
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -117,7 +117,7 @@ def parity_to_cmd(node: Dict, datadir: str, chain_id: int, chain_spec: str) -> L
         '--jsonrpc-interface=0.0.0.0',
         '--no-discovery',
         '--no-ws',
-        '--min-gas-price=1800000000', # todo *180000
+        '--min-gas-price=1800000000',
         f'--base-path={datadir}',
         f'--chain={chain_spec}',
         f'--network-id={str(chain_id)}',
@@ -353,6 +353,7 @@ def eth_wait_and_check(
         accounts_addresses,
         random_marker,
         processes_list,
+        blockchain_type='geth',
 ):
     """ Wait until the geth/parity cluster is ready.
 
@@ -364,6 +365,7 @@ def eth_wait_and_check(
     jsonrpc_running = False
 
     tries = 5
+    retry_interval = 2 if blockchain_type == 'parity' else .5
     while not jsonrpc_running and tries > 0:
         try:
             # don't use web3 here as this will cause problem in the middleware
@@ -372,7 +374,7 @@ def eth_wait_and_check(
                 ['0x0', False],
             )
         except requests.exceptions.ConnectionError:
-            gevent.sleep(.5)
+            gevent.sleep(retry_interval)
             tries -= 1
         else:
             jsonrpc_running = True
@@ -392,7 +394,7 @@ def eth_wait_and_check(
             raise ValueError(f'geth process failed with exit code {process.returncode}')
 
     if jsonrpc_running is False:
-        raise ValueError('geth didnt start the jsonrpc interface')
+        raise ValueError('The jsonrpc interface is not reachable.')
 
     for account in accounts_addresses:
         tries = 10
@@ -641,6 +643,7 @@ def run_private_blockchain(
             accounts_addresses=accounts_to_fund,
             random_marker=random_marker,
             processes_list=processes_list,
+            blockchain_type=blockchain_type,
         )
     except (ValueError, RuntimeError) as e:
         # If geth_wait_and_check or the above loop throw an exception make sure
