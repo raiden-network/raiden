@@ -304,7 +304,8 @@ jobs:
       blockchain-type:
         description: "blockchain type client passed to test run if needed"
         default: "geth"
-        type: string
+        type: enum
+        enum: ["geth", "parity"]
       parallelism:
         description: "number of containers to be used in parallel for this test"
         default: 1
@@ -701,7 +702,7 @@ workflows:
             - prepare-python-linux-3.7
 
       - test:
-          name: test-integration-udp-3.7
+          name: test-integration-udp-geth-3.7
           py-version: "3.7"
           resource: "medium+"
           test-type: "integration"
@@ -714,7 +715,7 @@ workflows:
             - test-fuzz-3.7
 
       - test:
-          name: test-integration-matrix-3.7
+          name: test-integration-matrix-geth-3.7
           py-version: "3.7"
           resource: "medium+"
           test-type: "integration"
@@ -726,12 +727,40 @@ workflows:
             - test-unit-3.7
             - test-fuzz-3.7
 
+      - test:
+          name: test-integration-udp-parity-3.7
+          py-version: "3.7"
+          resource: "medium+"
+          test-type: "integration"
+          blockchain-type: "parity"
+          transport-layer: "udp"
+          parallelism: 25
+          requires:
+            - smoketest-udp-3.7
+            - test-unit-3.7
+            - test-fuzz-3.7
+
+      - test:
+          name: test-integration-matrix-parity-3.7
+          py-version: "3.7"
+          resource: "medium+"
+          test-type: "integration"
+          blockchain-type: "parity"
+          transport-layer: "matrix"
+          parallelism: 25
+          requires:
+            - smoketest-matrix-3.7
+            - test-unit-3.7
+            - test-fuzz-3.7
+
       - finalize:
           requires:
             - lint-3.7
             - mypy-3.7
-            - test-integration-udp-3.7
-            - test-integration-matrix-3.7
+            - test-integration-udp-geth-3.7
+            - test-integration-matrix-geth-3.7
+            - test-integration-udp-parity-3.7
+            - test-integration-matrix-parity-3.7
 
   deploy-release:
     jobs:
@@ -889,7 +918,7 @@ workflows:
           - prepare-python-linux-3.7
 
       - test:
-          name: test-integration-udp-3.7
+          name: test-integration-udp-geth-3.7
           py-version: "3.7"
           resource: "medium+"
           test-type: "integration"
@@ -902,7 +931,7 @@ workflows:
           - test-fuzz-3.7
 
       - test:
-          name: test-integration-matrix-3.7
+          name: test-integration-matrix-geth-3.7
           py-version: "3.7"
           resource: "medium+"
           test-type: "integration"
@@ -914,12 +943,40 @@ workflows:
           - test-unit-3.7
           - test-fuzz-3.7
 
+      - test:
+          name: test-integration-udp-parity-3.7
+          py-version: "3.7"
+          resource: "medium+"
+          test-type: "integration"
+          blockchain-type: "parity"
+          transport-layer: "udp"
+          parallelism: 25
+          requires:
+          - smoketest-udp-3.7
+          - test-unit-3.7
+          - test-fuzz-3.7
+
+      - test:
+          name: test-integration-matrix-parity-3.7
+          py-version: "3.7"
+          resource: "medium+"
+          test-type: "integration"
+          blockchain-type: "parity"
+          transport-layer: "matrix"
+          parallelism: 25
+          requires:
+          - smoketest-matrix-3.7
+          - test-unit-3.7
+          - test-fuzz-3.7
+
       - finalize:
           requires:
           - lint-3.7
           - mypy-3.7
-          - test-integration-udp-3.7
-          - test-integration-matrix-3.7
+          - test-integration-udp-geth-3.7
+          - test-integration-matrix-geth-3.7
+          - test-integration-udp-parity-3.7
+          - test-integration-matrix-parity-3.7
 
       - build-binary-linux:
           name: build-binary-linux-x86
