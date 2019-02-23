@@ -511,7 +511,7 @@ def handle_token_network_action(
     if token_network_state:
         pseudo_random_generator = chain_state.pseudo_random_generator
         iteration = token_network.state_transition(
-            payment_network_identifier=payment_network_id,
+            payment_network_identifier=PaymentNetworkID(payment_network_id),
             token_network_state=token_network_state,
             state_change=state_change,
             pseudo_random_generator=pseudo_random_generator,

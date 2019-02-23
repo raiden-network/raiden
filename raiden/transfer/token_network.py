@@ -1,5 +1,8 @@
+import random
+
 from raiden.transfer import channel
-from raiden.transfer.architecture import TransitionResult
+from raiden.transfer.architecture import StateChange, TransitionResult
+from raiden.transfer.state import TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChannelClose,
     ContractReceiveChannelBatchUnlock,
@@ -11,15 +14,15 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils.typing import MYPY_ANNOTATION
+from raiden.utils.typing import MYPY_ANNOTATION, BlockHash, BlockNumber, PaymentNetworkID
 
 
 def subdispatch_to_channel_by_id(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
+        token_network_state: TokenNetworkState,
+        state_change: StateChange,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
 ):
     events = list()
 
@@ -53,11 +56,11 @@ def subdispatch_to_channel_by_id(
 
 
 def handle_channel_close(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
+        token_network_state: TokenNetworkState,
+        state_change: ActionChannelClose,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -68,7 +71,10 @@ def handle_channel_close(
     )
 
 
-def handle_channelnew(token_network_state, state_change):
+def handle_channelnew(
+        token_network_state: TokenNetworkState,
+        state_change: ContractReceiveChannelNew,
+):
     events = list()
 
     channel_state = state_change.channel_state
@@ -97,11 +103,11 @@ def handle_channelnew(token_network_state, state_change):
 
 
 def handle_balance(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
+        token_network_state: TokenNetworkState,
+        state_change: ContractReceiveChannelNewBalance,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -113,11 +119,11 @@ def handle_balance(
 
 
 def handle_closed(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
+        token_network_state: TokenNetworkState,
+        state_change: ContractReceiveChannelClosed,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
 ):
     network_graph_state = token_network_state.network_graph
 
@@ -145,11 +151,11 @@ def handle_closed(
 
 
 def handle_settled(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
+        token_network_state: TokenNetworkState,
+        state_change: ContractReceiveChannelSettled,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -161,11 +167,11 @@ def handle_settled(
 
 
 def handle_updated_transfer(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
+        token_network_state: TokenNetworkState,
+        state_change: ContractReceiveUpdateTransfer,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -177,11 +183,11 @@ def handle_updated_transfer(
 
 
 def handle_batch_unlock(
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
+        token_network_state: TokenNetworkState,
+        state_change: ContractReceiveChannelBatchUnlock,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
 ):
     participant1 = state_change.participant
     participant2 = state_change.partner
@@ -225,7 +231,10 @@ def handle_batch_unlock(
     return TransitionResult(token_network_state, events)
 
 
-def handle_newroute(token_network_state, state_change):
+def handle_newroute(
+        token_network_state: TokenNetworkState,
+        state_change: ContractReceiveRouteNew,
+):
     events = list()
 
     token_network_state.network_graph.network.add_edge(
@@ -239,7 +248,10 @@ def handle_newroute(token_network_state, state_change):
     return TransitionResult(token_network_state, events)
 
 
-def handle_closeroute(token_network_state, state_change):
+def handle_closeroute(
+        token_network_state: TokenNetworkState,
+        state_change: ContractReceiveRouteClosed,
+):
     events = list()
 
     network_graph_state = token_network_state.network_graph
@@ -262,12 +274,12 @@ def handle_closeroute(token_network_state, state_change):
 
 
 def state_transition(
-        payment_network_identifier,
-        token_network_state,
-        state_change,
-        pseudo_random_generator,
-        block_number,
-        block_hash,
+        payment_network_identifier: PaymentNetworkID,
+        token_network_state: TokenNetworkState,
+        state_change: StateChange,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
 ):
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
