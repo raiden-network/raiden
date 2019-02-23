@@ -27,10 +27,11 @@ from raiden.exceptions import (
     RaidenRecoverableError,
     TokenNotRegistered,
     UnknownTokenAddress,
+    WithdrawMismatch,
 )
 from raiden.messages import RequestMonitoring
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
-from raiden.transfer import architecture, views
+from raiden.transfer import architecture, channel, views
 from raiden.transfer.architecture import TransferTask
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
@@ -418,6 +419,88 @@ class RaidenAPI:  # pragma: no unittest
         assert channel_state, f"channel {channel_state} is gone"
 
         return channel_state.identifier
+
+    def withdraw_from_channel(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+            partner_address: typing.Address,
+            total_withdraw: typing.TokenAmount,
+            retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
+    ):
+        """ Set the `total_deposit` in the channel with the peer at `partner_address` and the
+        given `token_address` in order to be able to do transfers.
+
+        Raises:
+            InvalidAddress: If either token_address or partner_address is not
+                20 bytes long.
+            TransactionThrew: May happen for multiple reasons:
+                - If the token approval fails, e.g. the token may validate if
+                account has enough balance for the allowance.
+                - The deposit failed, e.g. the allowance did not set the token
+                aside for use and the user spent it before deposit was called.
+                - The channel was closed/settled between the allowance call and
+                the deposit call.
+            AddressWithoutCode: The channel was settled during the deposit
+                execution.
+            DepositOverLimit: The total deposit amount is higher than the limit.
+        """
+        chain_state = views.state_from_raiden(self.raiden)
+
+        token_networks = views.get_token_network_addresses_for(
+            chain_state,
+            registry_address,
+        )
+        channel_state = views.get_channelstate_for(
+            chain_state=chain_state,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+        )
+
+        if not is_binary_address(token_address):
+            raise InvalidAddress('Expected binary address format for token in channel deposit')
+
+        if not is_binary_address(partner_address):
+            raise InvalidAddress('Expected binary address format for partner in channel deposit')
+
+        if token_address not in token_networks:
+            raise UnknownTokenAddress('Unknown token address')
+
+        if channel_state is None:
+            raise InvalidAddress('No channel with partner_address for the given token')
+
+        current_balance = channel.get_balance(
+            sender=channel_state.our_state,
+            receiver=channel_state.partner_state,
+        )
+        if total_withdraw > current_balance:
+            raise DepositOverLimit(
+                'The withdraw of {} is bigger than the current balance of {}'.format(
+                    total_withdraw,
+                    current_balance,
+                ),
+            )
+
+        if total_withdraw == 0:
+            raise WithdrawMismatch('Attempted to withdraw 0 amount')
+
+        withdraw_status = self.raiden.withdraw(
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+            total_withdraw=total_withdraw,
+        )
+
+        target_address = self.raiden.address
+        waiting.wait_for_participant_newbalance(
+            raiden=self.raiden,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            partner_address=partner_address,
+            target_address=target_address,
+            target_balance=total_deposit,
+            retry_timeout=retry_timeout,
+        )
 
     def set_total_channel_deposit(
         self,
