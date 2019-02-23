@@ -72,6 +72,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
+    ActionChannelWithdraw,
     ActionInitChain,
     Block,
     ContractReceiveNewPaymentNetwork,
@@ -84,6 +85,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
+    ChannelID,
     FeeAmount,
     InitiatorAddress,
     Optional,
@@ -92,6 +94,7 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     TargetAddress,
+    TokenAmount,
     TokenNetworkAddress,
 )
 from raiden.utils.upgrades import UpgradeManager
@@ -1161,6 +1164,20 @@ class RaidenService(Runnable):
         self.start_health_check_for(Address(transfer.initiator))
         init_target_statechange = target_init(transfer)
         self.handle_and_track_state_change(init_target_statechange)
+
+    def withdraw(
+        self,
+        token_network_identifier: TokenNetworkID,
+        channel_identifier: ChannelID,
+        total_withdraw: TokenAmount,
+    ):
+        init_withdraw = ActionChannelWithdraw(
+            token_network_identifier=token_network_identifier,
+            channel_identifier=channel_identifier,
+            total_withdraw=total_withdraw,
+        )
+
+        self.handle_and_track_state_change(init_withdraw)
 
     def maybe_upgrade_db(self) -> None:
         manager = UpgradeManager(
