@@ -1048,6 +1048,59 @@ class RestAPI:  # pragma: no unittest
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result)
 
+    def _withdraw(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            channel_state: NettingChannelState,
+            total_withdraw: typing.TokenAmount,
+    ):
+        log.debug(
+            'Withdrawing from channel',
+            node=pex(self.raiden_api.address),
+            registry_address=to_checksum_address(registry_address),
+            channel_identifier=channel_state.identifier,
+            total_withdraw=total_withdraw,
+        )
+
+        if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
+            return api_error(
+                errors="Can't withdraw from a closed channel",
+                status_code=HTTPStatus.CONFLICT,
+            )
+
+        try:
+            self.raiden_api.withdraw_from_channel(
+                registry_address,
+                channel_state.token_address,
+                channel_state.partner_state.address,
+                total_withdraw,
+            )
+        except InsufficientFunds as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.PAYMENT_REQUIRED,
+            )
+        except DepositOverLimit as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.CONFLICT,
+            )
+        except DepositMismatch as e:
+            return api_error(
+                errors=str(e),
+                status_code=HTTPStatus.CONFLICT,
+            )
+
+        updated_channel_state = self.raiden_api.get_channel(
+            registry_address,
+            channel_state.token_address,
+            channel_state.partner_state.address,
+        )
+
+        result = self.channel_schema.dump(updated_channel_state)
+        return api_response(result=result.data)
+
+
     def _close(
         self, registry_address: typing.PaymentNetworkAddress, channel_state: NettingChannelState
     ):
@@ -1084,6 +1137,7 @@ class RestAPI:  # pragma: no unittest
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
         total_deposit: typing.TokenAmount = None,
+        total_withdraw: typing.TokenAmount = None,
         state: str = None,
     ):
         log.debug(
@@ -1131,6 +1185,9 @@ class RestAPI:  # pragma: no unittest
 
         if total_deposit is not None:
             result = self._deposit(registry_address, channel_state, total_deposit)
+
+        elif total_withdraw is not None:
+            result = self._withdraw(registry_address, channel_state, total_withdraw)
 
         elif state == CHANNEL_STATE_CLOSED:
             result = self._close(registry_address, channel_state)
