@@ -182,6 +182,7 @@ def handle_offchain_secretreveal(
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
         target_state.state = TargetTransferState.OFFCHAIN_SECRET_REVEAL
         target_state.secret = state_change.secret
+        target_state.secrethash = state_change.secrethash
         recipient = route.node_address
 
         reveal = SendSecretReveal(
@@ -189,6 +190,7 @@ def handle_offchain_secretreveal(
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=message_identifier,
             secret=target_state.secret,
+            secrethash=target_state.secrethash,
         )
 
         iteration = TransitionResult(target_state, [reveal])

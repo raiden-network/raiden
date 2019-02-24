@@ -1,6 +1,6 @@
 import random
 
-from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import EMPTY_SECRET, MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, TransitionResult
@@ -73,6 +73,7 @@ def events_for_unlock_lock(
         identifier=transfer_description.payment_identifier,
         amount=transfer_description.amount,
         target=transfer_description.target,
+        secret=secret,
     )
 
     unlock_success = EventUnlockSuccess(
@@ -338,6 +339,7 @@ def handle_secretrequest(
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=message_identifier,
             secret=transfer_description.secret,
+            secrethash=transfer_description.secrethash,
         )
 
         initiator_state.revealsecret = revealsecret
@@ -376,6 +378,9 @@ def handle_offchain_secretreveal(
     is_channel_open = channel.get_status(channel_state) == CHANNEL_STATE_OPENED
 
     if valid_reveal and is_channel_open and sent_by_partner:
+        if initiator_state.transfer_description.secret == EMPTY_SECRET:
+            initiator_state.transfer_description.secret = state_change.secret
+
         events = events_for_unlock_lock(
             initiator_state=initiator_state,
             channel_state=channel_state,

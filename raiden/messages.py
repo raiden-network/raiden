@@ -612,7 +612,7 @@ class Unlock(EnvelopeMessage):
             '<{} ['
             'chainid:{} msgid:{} paymentid:{} token_network:{} channel_identifier:{} '
             'nonce:{} transferred_amount:{} '
-            'locked_amount:{} locksroot:{} hash:{} secrethash:{}'
+            'locked_amount:{} locksroot:{} hash:{} secrethash:{} secret:{}'
             ']>'
         ).format(
             self.__class__.__name__,
@@ -627,6 +627,7 @@ class Unlock(EnvelopeMessage):
             pex(self.locksroot),
             pex(self.hash),
             pex(self.secrethash),
+            pex(self.secret),
         )
 
     @property
@@ -725,29 +726,40 @@ class RevealSecret(SignedMessage):
     """
     cmdid = messages.REVEALSECRET
 
-    def __init__(self, message_identifier: MessageID, secret: Secret):
+    def __init__(
+            self,
+            message_identifier: MessageID,
+            secret: Secret,
+            secrethash: SecretHash = None,
+    ):
         super().__init__()
         self.message_identifier = message_identifier
         self.secret = secret
+        if secrethash is None:
+            self.secrethash = sha3(secret)
+        else:
+            self.secrethash = secrethash
 
     def __repr__(self):
-        return '<{} [msgid:{} secrethash:{} hash:{}]>'.format(
+        return '<{} [msgid:{} secrethash:{} hash:{} secret:{}]>'.format(
             self.__class__.__name__,
             self.message_identifier,
             pex(self.secrethash),
             pex(self.hash),
+            pex(self.secret),
         )
 
-    @property
-    @cached(_hashes_cache, key=attrgetter('secret'))
-    def secrethash(self):
-        return sha3(self.secret)
+    # @property
+    # @cached(_hashes_cache, key=attrgetter('secret'))
+    # def secrethash(self):
+    #     return sha3(self.secret)
 
     @classmethod
     def unpack(cls, packed):
         reveal_secret = RevealSecret(
             message_identifier=packed.message_identifier,
             secret=packed.secret,
+            secrethash=packed.secrethash,
         )
         reveal_secret.signature = packed.signature
         return reveal_secret
@@ -755,6 +767,7 @@ class RevealSecret(SignedMessage):
     def pack(self, packed):
         packed.message_identifier = self.message_identifier
         packed.secret = self.secret
+        packed.secrethash = self.secrethash
         packed.signature = self.signature
 
     @classmethod
@@ -762,6 +775,7 @@ class RevealSecret(SignedMessage):
         return cls(
             message_identifier=event.message_identifier,
             secret=event.secret,
+            secrethash=event.secrethash,
         )
 
     def to_dict(self):
@@ -769,6 +783,7 @@ class RevealSecret(SignedMessage):
             'type': self.__class__.__name__,
             'message_identifier': self.message_identifier,
             'secret': encode_hex(self.secret),
+            'secrethash': encode_hex(self.secrethash),
             'signature': encode_hex(self.signature),
         }
 
@@ -778,6 +793,7 @@ class RevealSecret(SignedMessage):
         reveal_secret = cls(
             message_identifier=data['message_identifier'],
             secret=decode_hex(data['secret']),
+            secrethash=decode_hex(data['secrethash']),
         )
         reveal_secret.signature = decode_hex(data['signature'])
         return reveal_secret

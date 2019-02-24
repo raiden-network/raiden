@@ -223,6 +223,7 @@ def make_transfer_description(
         initiator=initiator,
         target=target,
         secret=secret,
+        secrethash=sha3(secret),
     )
 
 

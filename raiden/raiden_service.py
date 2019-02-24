@@ -107,12 +107,13 @@ def initiator_init(
         transfer_identifier: PaymentID,
         transfer_amount: PaymentAmount,
         transfer_secret: Secret,
+        transfer_secret_hash: SecretHash,
         token_network_identifier: TokenNetworkID,
         target_address: TargetAddress,
 ):
 
-    msg = 'Should never end up initiating transfer with Secret 0x0'
-    assert transfer_secret != constants.EMPTY_HASH, msg
+    # msg = 'Should never end up initiating transfer with Secret 0x0'
+    # assert transfer_secret != constants.EMPTY_HASH, msg
     transfer_state = TransferDescriptionWithSecretState(
         raiden.default_registry.address,
         transfer_identifier,
@@ -121,6 +122,7 @@ def initiator_init(
         InitiatorAddress(raiden.address),
         target_address,
         transfer_secret,
+        transfer_secret_hash,
     )
     previous_address = None
     routes = routing.get_best_routes(
@@ -832,6 +834,7 @@ class RaidenService(Runnable):
             transfer_identifier=identifier,
             transfer_amount=amount,
             transfer_secret=secret,
+            transfer_secret_hash=secret_hash,
             token_network_identifier=token_network_identifier,
             target_address=target,
         )

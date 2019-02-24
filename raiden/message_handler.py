@@ -68,6 +68,7 @@ class MessageHandler:
         state_change = ReceiveSecretReveal(
             message.secret,
             message.sender,
+            message.secrethash,
         )
         raiden.handle_state_change(state_change)
 

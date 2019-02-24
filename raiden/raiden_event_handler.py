@@ -1,7 +1,12 @@
 import structlog
 from eth_utils import to_checksum_address, to_hex
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, MONITORING_BROADCASTING_ROOM
+from raiden.constants import (
+    EMPTY_HASH,
+    EMPTY_SECRET,
+    EMPTY_SIGNATURE,
+    MONITORING_BROADCASTING_ROOM,
+)
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import RequestMonitoring, message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
@@ -203,7 +208,10 @@ class RaidenEventHandler:
         # With the introduction of the lock we should always get
         # here only once per identifier so payment_status should always exist
         # see: https://github.com/raiden-network/raiden/pull/3191
-        payment_status.payment_done.set(True)
+        if payment_status.secret == EMPTY_SECRET:
+            payment_status.payment_done.set(payment_sent_success_event.secret)
+        else:
+            payment_status.payment_done.set(True)
 
     def handle_paymentsentfailed(
             self,

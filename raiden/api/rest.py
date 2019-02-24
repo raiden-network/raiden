@@ -51,7 +51,7 @@ from raiden.api.v1.resources import (
     TokensResource,
     create_blueprint,
 )
-from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
+from raiden.constants import EMPTY_SECRET, GENESIS_BLOCK_NUMBER, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -1078,6 +1078,9 @@ class RestAPI:
                 "(insufficient funds, no route to target or target offline).",
                 status_code=HTTPStatus.CONFLICT,
             )
+        secret = payment_status.secret
+        if secret == EMPTY_SECRET:
+            secret = payment_status.payment_done.get()
 
         payment = {
             'initiator_address': self.raiden_api.address,
@@ -1086,7 +1089,7 @@ class RestAPI:
             'target_address': target_address,
             'amount': amount,
             'identifier': identifier,
-            'secret': to_hex(payment_status.secret),
+            'secret': to_hex(secret),
             'secret_hash': to_hex(payment_status.secret_hash),
         }
         result = self.payment_schema.dump(payment)

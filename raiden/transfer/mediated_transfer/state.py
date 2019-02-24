@@ -328,6 +328,7 @@ class TargetTransferState(State):
         'route',
         'transfer',
         'secret',
+        'secrethash',
         'state',
     )
 
@@ -350,11 +351,13 @@ class TargetTransferState(State):
             route: RouteState,
             transfer: 'LockedTransferSignedState',
             secret: Secret = None,
+            secrethash: SecretHash = None,
     ):
         self.route = route
         self.transfer = transfer
 
         self.secret = secret
+        self.secrethash = secrethash
         self.state = 'secret_request'
 
     def __repr__(self):
@@ -369,6 +372,7 @@ class TargetTransferState(State):
             self.route == other.route and
             self.transfer == other.transfer and
             self.secret == other.secret and
+            self.secrethash == other.secrethash and
             self.state == other.state
         )
 
@@ -384,6 +388,8 @@ class TargetTransferState(State):
 
         if self.secret is not None:
             result['secret'] = serialization.serialize_bytes(self.secret)
+        if self.secrethash is not None:
+            result['secrethash'] = serialization.serialize_bytes(self.secrethash)
 
         return result
 
@@ -399,6 +405,9 @@ class TargetTransferState(State):
         if secret is not None:
             restored.secret = serialization.deserialize_bytes(secret)
 
+        secrethash = data.get('secrethash')
+        if secrethash is not None:
+            restored.secrethash = serialization.deserialize_bytes(secrethash)
         return restored
 
 
@@ -627,8 +636,9 @@ class TransferDescriptionWithSecretState(State):
             initiator: InitiatorAddress,
             target: TargetAddress,
             secret: Secret,
+            secrethash: SecretHash = None,
     ):
-        secrethash = sha3(secret)
+        # secrethash = sha3(secret)
 
         self.payment_network_identifier = payment_network_identifier
         self.payment_identifier = payment_identifier
@@ -637,7 +647,10 @@ class TransferDescriptionWithSecretState(State):
         self.initiator = initiator
         self.target = target
         self.secret = secret
-        self.secrethash = secrethash
+        if secrethash is None:
+            self.secrethash = sha3(secret)
+        else:
+            self.secrethash = secrethash
 
     def __repr__(self):
         return (
@@ -676,6 +689,7 @@ class TransferDescriptionWithSecretState(State):
             'initiator': to_checksum_address(self.initiator),
             'target': to_checksum_address(self.target),
             'secret': serialization.serialize_bytes(self.secret),
+            'secrethash': serialization.serialize_bytes(self.secrethash),
         }
 
     @classmethod
@@ -688,6 +702,7 @@ class TransferDescriptionWithSecretState(State):
             initiator=to_canonical_address(data['initiator']),
             target=to_canonical_address(data['target']),
             secret=serialization.deserialize_bytes(data['secret']),
+            secrethash=serialization.deserialize_bytes(data['secrethash']),
         )
 
         return restored

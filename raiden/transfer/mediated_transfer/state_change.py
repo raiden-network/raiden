@@ -311,9 +311,11 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
             self,
             secret: Secret,
             sender: Address,
+            secrethash: SecretHash = None,
     ):
         super().__init__(sender)
-        secrethash = sha3(secret)
+        if secrethash is None:
+            secrethash = sha3(secret)
 
         self.secret = secret
         self.secrethash = secrethash

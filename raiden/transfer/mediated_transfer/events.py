@@ -187,8 +187,10 @@ class SendSecretReveal(SendMessageEvent):
             channel_identifier: ChannelID,
             message_identifier: MessageID,
             secret: Secret,
+            secrethash: SecretHash = None,
     ):
-        secrethash = sha3(secret)
+        if secrethash is None:
+            secrethash = sha3(secret)
 
         super().__init__(recipient, channel_identifier, message_identifier)
 

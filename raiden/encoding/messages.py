@@ -142,6 +142,7 @@ RevealSecret = namedbuffer(
         pad(3),
         message_identifier,
         secret,
+        secrethash,
         signature,
     ],
 )

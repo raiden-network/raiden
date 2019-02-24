@@ -4,6 +4,7 @@ from eth_utils import is_binary_address, is_hex, to_bytes, to_checksum_address
 import raiden.blockchain.events as blockchain_events
 from raiden import waiting
 from raiden.constants import (
+    EMPTY_SECRET,
     GENESIS_BLOCK_NUMBER,
     SECRET_HASH_HEXSTRING_LENGTH,
     SECRET_HEXSTRING_LENGTH,
@@ -742,10 +743,13 @@ class RaidenAPI:
             secret_hash = to_bytes(hexstr=secret_hash)
 
         if secret is None and secret_hash is not None:
-            raise InvalidSecretOrSecretHash('secret_hash without a secret is not supported yet.')
+            secret = EMPTY_SECRET
 
-        if secret is not None and secret_hash is not None and secret_hash != sha3(secret):
-            raise InvalidSecretOrSecretHash('provided secret and secret_hash do not match.')
+        if secret is not None and secret != EMPTY_SECRET \
+                and secret_hash is not None and secret_hash != sha3(secret):
+            raise InvalidSecretOrSecretHash(
+                'provided secret and secret_hash do not match.',
+            )
 
         valid_tokens = views.get_token_network_addresses_for(
             views.state_from_raiden(self.raiden),
