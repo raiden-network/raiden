@@ -94,6 +94,7 @@ class App:  # pylint: disable=too-few-public-methods
             message_handler=message_handler,
             config=config,
             discovery=discovery,
+            user_deposit=user_deposit,
         )
 
         # check that the settlement timeout fits the limits of the contract
