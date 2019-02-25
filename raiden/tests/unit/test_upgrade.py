@@ -1,27 +1,24 @@
-import random
+import json
 from contextlib import ExitStack
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import ANY, Mock, patch
 
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage
-from raiden.tests.utils import factories
-from raiden.transfer.state_change import ActionInitChain
+from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
+from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.utils.upgrades import UpgradeManager, get_db_version
 
 
 def setup_storage(db_path):
-    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
+    # For a raw ActionInitChain let's get the v18 one. It should be the same as v16
+    state_changes_file = Path(__file__).parent / 'migrations' / 'data/v18_statechanges.json'
+    state_changes_data = json.loads(state_changes_file.read_text())
+    action_init_chain_data = json.dumps(state_changes_data[0][1])
+    storage = SQLiteStorage(str(db_path))
     storage.write_state_change(
-        ActionInitChain(
-            pseudo_random_generator=random.Random(),
-            block_number=1,
-            block_hash=factories.make_block_hash(),
-            our_address=factories.make_address(),
-            chain_id=1,
-        ),
-        datetime.utcnow().isoformat(timespec='milliseconds'),
+        state_change=action_init_chain_data,
+        log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
     )
     return storage
 
@@ -37,9 +34,10 @@ def test_upgrade_manager_restores_backup(tmp_path):
         storage.update_version()
         storage.conn.close()
 
+    web3, _ = create_fake_web3_for_block_hash(number_of_blocks=1)
     with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
         older_db_file.return_value = str(old_db_filename)
-        UpgradeManager(db_filename=db_path).run()
+        UpgradeManager(db_filename=db_path, web3=web3).run()
 
     # Once restored, the state changes written above should be
     # in the restored database
