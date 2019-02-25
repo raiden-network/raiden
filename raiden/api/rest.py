@@ -826,6 +826,28 @@ class RestAPI:
         result = self.address_list_schema.dump(tokens_list)
         return api_response(result=result.data)
 
+    def get_token_network_for_token(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+    ):
+        log.debug(
+            'Getting token network for token',
+            node=pex(self.raiden_api.address),
+            token_address=to_checksum_address(token_address),
+        )
+        token_network_address = self.raiden_api.get_token_network_address_for_token_address(
+            registry_address=registry_address,
+            token_address=token_address,
+        )
+
+        if token_network_address is not None:
+            return api_response(result=to_checksum_address(token_network_address))
+        else:
+            pretty_address = to_checksum_address(token_address)
+            message = f'No token network registered for token "{pretty_address}"'
+            return api_error(message, status_code=HTTPStatus.NOT_FOUND)
+
     def get_blockchain_events_network(
             self,
             registry_address: typing.PaymentNetworkID,
