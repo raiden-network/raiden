@@ -278,6 +278,29 @@ Querying Information About Channels and Tokens
    :statuscode 200: Successful query
    :statuscode 500: Internal Raiden node error
 
+.. http:get:: /api/(version)/tokens/(token_address)
+
+   Returns the address of the corresponding token network fot the given token, if the token is registered.
+
+   **Example Request**:
+
+   .. http:example:: curl wget httpie python-requests
+
+      GET /api/v1/tokens/0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8 HTTP/1.1
+      Host: localhost:5001
+
+   **Example Response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+
+      "0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6"
+
+   :statuscode 200: Successful query
+   :statuscode 404: No token network found for the provided token
+
 .. http:get:: /api/(version)/tokens/(token_address)/partners
 
    Returns a list of all partners with whom you have non-settled channels for a certain token.
