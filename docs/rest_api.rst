@@ -280,7 +280,7 @@ Querying Information About Channels and Tokens
 
 .. http:get:: /api/(version)/tokens/(token_address)
 
-   Returns the address of the corresponding token network fot the given token, if the token is registered.
+   Returns the address of the corresponding token network for the given token, if the token is registered.
 
    **Example Request**:
 
@@ -299,7 +299,7 @@ Querying Information About Channels and Tokens
       "0x61bB630D3B2e8eda0FC1d50F9f958eC02e3969F6"
 
    :statuscode 200: Successful query
-   :statuscode 404: No token network found for the provided token
+   :statuscode 404: No token network found for the provided token address
 
 .. http:get:: /api/(version)/tokens/(token_address)/partners
 
