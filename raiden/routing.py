@@ -37,6 +37,10 @@ def get_best_routes(
         )
 
         if pfs_answer_ok:
+            log.info(
+                'Received route(s) from PFS',
+                routes=pfs_routes,
+            )
             return pfs_routes
         else:
             log.warning(
