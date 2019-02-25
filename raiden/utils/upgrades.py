@@ -10,15 +10,15 @@ from web3 import Web3
 
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
 from raiden.storage.versions import older_db_file
-from raiden.utils.migrations.v16_to_v17 import upgrade_initiator_manager
-from raiden.utils.migrations.v17_to_v18 import upgrade_mediators_with_waiting_transfer
-from raiden.utils.migrations.v18_to_v19 import upgrade_state_changes_with_blockhash
+from raiden.utils.migrations.v16_to_v17 import upgrade_v16_to_v17
+from raiden.utils.migrations.v17_to_v18 import upgrade_v17_to_v18
+from raiden.utils.migrations.v18_to_v19 import upgrade_v18_to_v19
 from raiden.utils.typing import Callable
 
 UPGRADES_LIST = [
-    upgrade_initiator_manager,
-    upgrade_mediators_with_waiting_transfer,
-    (upgrade_state_changes_with_blockhash, ['web3']),
+    upgrade_v16_to_v17,
+    upgrade_v17_to_v18,
+    upgrade_v18_to_v19,
 ]
 
 
@@ -143,12 +143,10 @@ class UpgradeManager:
             try:
                 with storage.transaction():
                     version_iteration = older_version
-                    for upgrade_func_details in UPGRADES_LIST:
-                        if isinstance(upgrade_func_details, tuple):
-                            upgrade_func = upgrade_func_details[0]
+                    for upgrade_func in UPGRADES_LIST:
+                        if upgrade_func == upgrade_v18_to_v19:
                             extra_args = {'web3': self._web3}
                         else:
-                            upgrade_func = upgrade_func_details
                             extra_args = {}
 
                         version_iteration = _run_upgrade_func(
