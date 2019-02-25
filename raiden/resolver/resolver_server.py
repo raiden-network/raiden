@@ -27,10 +27,22 @@ class HashResolverServicer(resolver_pb2_grpc.HashResolverServicer):
 
 
 def serve():
+    port = '50051'
+
+    with open('server.key', 'rb') as f:
+        private_key = f.read()
+    with open('server.crt', 'rb') as f:
+        certificate_chain = f.read()
+
+    server_credentials = grpc.ssl_server_credentials(
+      ((private_key, certificate_chain,),))
+
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     resolver_pb2_grpc.add_HashResolverServicer_to_server(
         HashResolverServicer(), server)
-    server.add_insecure_port('[::]:50051')
+
+    server.add_secure_port('[::]:' + port, server_credentials)
+    # server.add_insecure_port('[::]:' + port)
     server.start()
     try:
         while True:

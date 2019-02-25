@@ -74,9 +74,23 @@ class MessageHandler:
             message.sender,
             message.secrethash,
         )
+        # TODO (Offer) : move to a seperate function
+        # TODO (Offer) : add config for host/port/crtfile
         if state_change.secret == EMPTY_SECRET:
             try:
-                grpc_channel = grpc.insecure_channel('localhost:50051')
+
+                with open(raiden.config['resolver_crt_file'].name, 'rb') as f:
+                    trusted_certs = f.read()
+
+                credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
+                # with grpc.insecure_channel('localhost:50051') as channel:
+                grpc_channel = grpc.secure_channel(
+                    '{}:{}'.format(
+                        raiden.config['resolver_host'],
+                        raiden.config['resolver_port']
+                    ),
+                    credentials
+                )
                 stub = resolver_pb2_grpc.HashResolverStub(grpc_channel)
                 hash_string = to_hex(message.secrethash)[2:]
                 response = stub.ResolveHash(resolver_pb2.ResolveRequest(hash=hash_string))
