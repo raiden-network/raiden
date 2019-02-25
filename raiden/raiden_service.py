@@ -848,9 +848,18 @@ class RaidenService(Runnable):
         if secret_hash is None:
             secret_hash = sha3(secret)
 
+        # We must check if the secret was registered against the latest block,
+        # even if the block is forked away and the transaction that registers
+        # the secret is removed from the blockchain. The rationale here is that
+        # someone else does know the secret, regardless of the chain state, so
+        # the node must not use it to start a payment.
+        #
+        # For this particular case, it's preferable to use `latest` instead of
+        # having a specific block_hash, because it's preferable to know if the secret
+        # was ever known, rather than having a consistent view of the blockchain.
         secret_registered = self.default_secret_registry.check_registered(
             secrethash=secret_hash,
-            block_identifier=views.state_from_raiden(self).block_hash,
+            block_identifier='latest',
         )
         if secret_registered:
             raise RaidenUnrecoverableError(
