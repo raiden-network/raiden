@@ -1,43 +1,39 @@
 import json
-import random
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
-from raiden.tests.utils import factories
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
-from raiden.transfer.state_change import ActionInitChain
 from raiden.utils.upgrades import UpgradeManager
 
 
 def setup_storage(db_path):
-    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
+    # For a raw ActionInitChain let's get the v18 one. It should be the same as v16
+    state_changes_file = Path(__file__).parent / 'data/v18_statechanges.json'
+    state_changes_data = json.loads(state_changes_file.read_text())
+    action_init_chain_data = json.dumps(state_changes_data[0][1])
+    storage = SQLiteStorage(str(db_path))
+    storage.write_state_change(
+        state_change=action_init_chain_data,
+        log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
+    )
+    del storage
 
+    # Also add the v16 chainstate directly to the DB
     chain_state_data = Path(__file__).parent / 'data/v17_chainstate.json'
     chain_state = chain_state_data.read_text()
-
-    storage.write_state_change(
-        ActionInitChain(
-            pseudo_random_generator=random.Random(),
-            block_number=1,
-            block_hash=factories.make_block_hash(),
-            our_address=factories.make_address(),
-            chain_id=1,
-        ),
-        datetime.utcnow().isoformat(timespec='milliseconds'),
-    )
-
-    cursor = storage.conn.cursor()
+    serialized_storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
+    cursor = serialized_storage.conn.cursor()
     cursor.execute(
         '''
         INSERT INTO state_snapshot(identifier, statechange_id, data)
         VALUES(1, 1, ?)
         ''', (chain_state,),
     )
-    storage.conn.commit()
-    return storage
+    serialized_storage.conn.commit()
+    return serialized_storage
 
 
 def test_upgrade_v17_to_v18(tmp_path):
@@ -51,7 +47,7 @@ def test_upgrade_v17_to_v18(tmp_path):
             storage.update_version()
         storage.conn.close()
 
-    web3, _ = create_fake_web3_for_block_hash()
+    web3, _ = create_fake_web3_for_block_hash(number_of_blocks=1)
     manager = UpgradeManager(db_filename=str(db_path), web3=web3)
     manager.run()
 
