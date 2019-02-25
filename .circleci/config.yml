@@ -601,6 +601,7 @@ jobs:
             - run:
                 name: "Publish Release on GitHub"
                 command: |
+                  rm dist/archive/*.txt
                   echo "TAG: ${CIRCLE_TAG}"
                   RAIDEN_VERSION=${CIRCLE_TAG}
                   ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -replace ${RAIDEN_VERSION} dist/archive/
