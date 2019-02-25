@@ -166,6 +166,12 @@ class RaidenInternalEventsResource(BaseResource):
 
 class RegisterTokenResource(BaseResource):
 
+    def get(self, token_address):
+        return self.rest_api.get_token_network_for_token(
+            self.rest_api.raiden_api.raiden.default_registry.address,
+            token_address,
+        )
+
     def put(self, token_address):
         return self.rest_api.register_token(
             self.rest_api.raiden_api.raiden.default_registry.address,

@@ -168,7 +168,7 @@ def get_token_network_identifier_by_token_address(
         chain_state: ChainState,
         payment_network_id: PaymentNetworkID,
         token_address: TokenAddress,
-) -> TokenNetworkID:
+) -> Optional[TokenNetworkID]:
     token_network = get_token_network_by_token_address(
         chain_state,
         payment_network_id,
@@ -207,22 +207,6 @@ def get_token_identifiers(
         return [
             token_address
             for token_address in payment_network.tokenaddresses_to_tokenidentifiers.keys()
-        ]
-
-    return list()
-
-
-def get_token_network_addresses_for(
-        chain_state: ChainState,
-        payment_network_id: PaymentNetworkID,
-) -> List[Address]:
-    """ Return the list of tokens registered with the given payment network. """
-    payment_network = chain_state.identifiers_to_paymentnetworks.get(payment_network_id)
-
-    if payment_network is not None:
-        return [
-            token_network.token_address
-            for token_network in payment_network.tokenidentifiers_to_tokennetworks.values()
         ]
 
     return list()

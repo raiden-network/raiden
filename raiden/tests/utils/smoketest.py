@@ -114,7 +114,7 @@ def run_smoketests(
             discovery = chain.address_to_discovery[discovery_addresses[0]]
             assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
-        token_networks = views.get_token_network_addresses_for(
+        token_networks = views.get_token_identifiers(
             views.state_from_raiden(raiden_service),
             raiden_service.default_registry.address,
         )

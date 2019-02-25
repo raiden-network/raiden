@@ -429,7 +429,7 @@ class RaidenAPI:
         """
         chain_state = views.state_from_raiden(self.raiden)
 
-        token_networks = views.get_token_network_addresses_for(
+        token_addresses = views.get_token_identifiers(
             chain_state,
             registry_address,
         )
@@ -446,7 +446,7 @@ class RaidenAPI:
         if not is_binary_address(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel deposit')
 
-        if token_address not in token_networks:
+        if token_address not in token_addresses:
             raise UnknownTokenAddress('Unknown token address')
 
         if channel_state is None:
@@ -554,7 +554,7 @@ class RaidenAPI:
         if not all(map(is_binary_address, partner_addresses)):
             raise InvalidAddress('Expected binary address format for partner in channel close')
 
-        valid_tokens = views.get_token_network_addresses_for(
+        valid_tokens = views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=registry_address,
         )
@@ -671,11 +671,22 @@ class RaidenAPI:
 
     def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
         """Returns a list of tokens the node knows about"""
-        tokens_list = views.get_token_network_addresses_for(
+        tokens_list = views.get_token_identifiers(
             chain_state=views.state_from_raiden(self.raiden),
             payment_network_id=registry_address,
         )
         return tokens_list
+
+    def get_token_network_address_for_token_address(
+            self,
+            registry_address: typing.PaymentNetworkID,
+            token_address: typing.TokenAddress,
+    ) -> typing.Optional[typing.TokenNetworkID]:
+        return views.get_token_network_identifier_by_token_address(
+            chain_state=views.state_from_raiden(self.raiden),
+            payment_network_id=registry_address,
+            token_address=token_address,
+        )
 
     def transfer_and_wait(
             self,
@@ -754,7 +765,7 @@ class RaidenAPI:
         if secret is not None and secret_hash is not None and secret_hash != sha3(secret):
             raise InvalidSecretOrSecretHash('provided secret and secret_hash do not match.')
 
-        valid_tokens = views.get_token_network_addresses_for(
+        valid_tokens = views.get_token_identifiers(
             views.state_from_raiden(self.raiden),
             registry_address,
         )
