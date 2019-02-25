@@ -87,9 +87,9 @@ class MessageHandler:
                 grpc_channel = grpc.secure_channel(
                     '{}:{}'.format(
                         raiden.config['resolver_host'],
-                        raiden.config['resolver_port']
+                        raiden.config['resolver_port'],
                     ),
-                    credentials
+                    credentials,
                 )
                 stub = resolver_pb2_grpc.HashResolverStub(grpc_channel)
                 hash_string = to_hex(message.secrethash)[2:]
