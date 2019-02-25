@@ -467,7 +467,7 @@ class JSONRPCClient:
 
     def parity_get_pending_transaction_hash_by_nonce(
             self,
-            checksummed_address: AddressHex,
+            address: AddressHex,
             nonce: Nonce,
     ) -> Optional[TransactionHash]:
         """Queries the local parity transaction pool and searches for a transaction.
@@ -480,7 +480,7 @@ class JSONRPCClient:
         transactions = self.web3.manager.request_blocking('parity_allTransactions', [])
         log.debug('RETURNED TRANSACTIONS', transactions=transactions)
         for tx in transactions:
-            address_match = to_checksum_address(tx['from']) == checksummed_address
+            address_match = to_checksum_address(tx['from']) == address
             if address_match and int(tx['nonce'], 16) == nonce:
                 return tx['hash']
         return None
