@@ -197,7 +197,7 @@ def get_or_deploy_token(runner) -> Tuple[ContractProxy, int]:
     block = token_config.get('block', 0)
     reuse = token_config.get('reuse', False)
 
-    token_address_file = runner.data_path.joinpath('token.addr')
+    token_address_file = runner.data_path.joinpath('token.address')
     if reuse:
         if address:
             raise ScenarioError('Token settings "address" and "reuse" are mutually exclusive.')
