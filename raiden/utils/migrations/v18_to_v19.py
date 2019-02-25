@@ -8,7 +8,8 @@ SOURCE_VERSION = 18
 TARGET_VERSION = 19
 
 
-def _add_blockhash_to_contract_receive_state_changes(storage: SQLiteStorage, web3: Web3) -> None:
+def _add_blockhash_to_state_changes(storage: SQLiteStorage, web3: Web3) -> None:
+    """Adds blockhash to ContractReceiveXXX and ActionInitChain state changes"""
     state_changes = storage.get_all_state_changes()
     updated_state_changes = []
     for state_change in state_changes:
@@ -32,13 +33,13 @@ def _add_blockhash_to_contract_receive_state_changes(storage: SQLiteStorage, web
     storage.update_state_changes(updated_state_changes)
 
 
-def upgrade_state_changes_with_blockhash(
+def upgrade_v18_to_v19(
         storage: SQLiteStorage,
         old_version: int,
         current_version: int,
         web3: Web3,
 ) -> int:
     if old_version == SOURCE_VERSION:
-        _add_blockhash_to_contract_receive_state_changes(storage, web3)
+        _add_blockhash_to_state_changes(storage, web3)
 
     return TARGET_VERSION

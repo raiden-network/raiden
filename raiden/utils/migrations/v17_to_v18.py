@@ -79,7 +79,7 @@ def _add_routes_to_mediator(storage: SQLiteStorage):
         storage.update_snapshot(snapshot.identifier, new_snapshot)
 
 
-def upgrade_mediators_with_waiting_transfer(
+def upgrade_v17_to_v18(
         storage: SQLiteStorage,
         old_version: int,
         current_version: int,
