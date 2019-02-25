@@ -75,7 +75,11 @@ def saturated_count(connection_managers, registry_address, token_address):
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
-def test_participant_selection(raiden_network, token_addresses):  # pylint: disable=too-many-locals
+def test_participant_selection(  # pylint: disable=too-many-locals
+        raiden_network,
+        token_addresses,
+        skip_if_parity,
+):
     registry_address = raiden_network[0].raiden.default_registry.address
     token_address = token_addresses[0]
 

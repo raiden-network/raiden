@@ -91,7 +91,12 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_register_token_insufficient_eth(raiden_network, token_amount, contract_manager):
+def test_register_token_insufficient_eth(
+        raiden_network,
+        token_amount,
+        contract_manager,
+        skip_if_parity,
+):
     app1 = raiden_network[0]
 
     registry_address = app1.raiden.default_registry.address
