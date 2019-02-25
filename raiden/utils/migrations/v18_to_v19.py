@@ -2,7 +2,7 @@ import json
 
 from web3 import Web3
 
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage.sqlite import SQLiteStorage, StateChangeRecord
 
 SOURCE_VERSION = 18
 TARGET_VERSION = 19
@@ -16,11 +16,14 @@ def _add_blockhash_to_contract_receive_state_changes(storage: SQLiteStorage, web
         if 'raiden.transfer.state_change.ContractReceive' in data['_type']:
             assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
             block_number = int(data['block_number'])
-            block_hash = bytes(web3.eth.getBlock(block_number)['hash'])
-            data['block_hash'] = block_hash
-            state_change.data = json.dumps(data)
+            block_hash = web3.eth.getBlock(block_number)['hash']
+            # use the string representation of hex bytes for the in-db string
+            data['block_hash'] = block_hash.hex()
 
-            updated_state_changes.append(state_change)
+            updated_state_changes.append(StateChangeRecord(
+                state_change_identifier=state_change.state_change_identifier,
+                data=json.dumps(data),
+            ))
 
     storage.update_state_changes(updated_state_changes)
 
