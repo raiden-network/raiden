@@ -205,11 +205,9 @@ def test_channelstate_update_contract_balance():
         block_hash=block_hash,
     )
 
-    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         channel_state=deepcopy(channel_state),
         state_change=state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=block_hash,
     )
@@ -255,11 +253,9 @@ def test_channelstate_decreasing_contract_balance():
         block_hash=deposit_block_hash,
     )
 
-    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         channel_state=deepcopy(channel_state),
         state_change=state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=factories.make_block_hash(),
     )
@@ -304,13 +300,11 @@ def test_channelstate_repeated_contract_balance():
         contract_balance=balance1_new,
     )
     partner_model2 = partner_model1
-    pseudo_random_generator = random.Random()
 
     for _ in range(10):
         iteration = channel.state_transition(
             channel_state=deepcopy(channel_state),
             state_change=state_change,
-            pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
             block_hash=factories.make_block_hash(),
         )
@@ -354,11 +348,9 @@ def test_deposit_must_wait_for_confirmation():
         block_number=block_number,
         block_hash=block_hash,
     )
-    pseudo_random_generator = random.Random()
     iteration = channel.state_transition(
         channel_state=deepcopy(channel_state),
         state_change=new_balance,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=block_hash,
     )
@@ -374,7 +366,6 @@ def test_deposit_must_wait_for_confirmation():
         iteration = channel.state_transition(
             channel_state=deepcopy(unconfirmed_state),
             state_change=unconfirmed_block,
-            pseudo_random_generator=pseudo_random_generator,
             block_number=block_number,
             block_hash=block_hash,
         )
@@ -400,7 +391,6 @@ def test_deposit_must_wait_for_confirmation():
     iteration = channel.state_transition(
         channel_state=deepcopy(unconfirmed_state),
         state_change=confirmed_block,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=confirmed_deposit_block_number,
         block_hash=confirmed_block_hash,
     )
@@ -1592,7 +1582,6 @@ def test_action_close_must_change_the_channel_state():
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
 
-    pseudo_random_generator = random.Random()
     block_number = 10
     state_change = ActionChannelClose(
         channel_state.token_network_identifier,
@@ -1601,7 +1590,6 @@ def test_action_close_must_change_the_channel_state():
     iteration = channel.state_transition(
         channel_state=channel_state,
         state_change=state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=factories.make_block_hash(),
     )
@@ -1642,7 +1630,6 @@ def test_update_must_be_called_if_close_lost_race():
     )
     assert is_valid, msg
 
-    pseudo_random_generator = random.Random()
     block_number = 10
     state_change = ActionChannelClose(
         channel_state.token_network_identifier,
@@ -1651,7 +1638,6 @@ def test_update_must_be_called_if_close_lost_race():
     iteration = channel.state_transition(
         channel_state=channel_state,
         state_change=state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=factories.make_block_hash(),
     )
@@ -1676,7 +1662,6 @@ def test_update_transfer():
     partner_model1, _ = create_model(100)
     channel_state = create_channel_from_models(our_model1, partner_model1)
 
-    pseudo_random_generator = random.Random()
     block_number = 10
     state_change = ActionChannelClose(
         channel_state.token_network_identifier,
@@ -1685,7 +1670,6 @@ def test_update_transfer():
     iteration = channel.state_transition(
         channel_state=channel_state,
         state_change=state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=factories.make_block_hash(),
     )
