@@ -617,7 +617,11 @@ def test_matrix_send_global(
 
     gevent.idle()
 
-    assert ms_room.send_text.call_count == 5
+    assert ms_room.send_text.call_count >= 1
+    # messages could have been bundled
+    call_args_str = ' '.join(str(arg) for arg in ms_room.send_text.call_args_list)
+    for i in range(5):
+        assert f'"message_identifier": {i}' in call_args_str
 
     transport.stop()
     transport.get()
@@ -764,9 +768,11 @@ def test_pfs_global_messages(
     gevent.idle()
 
     # ensure all events triggered a send for their respective balance_proof
-    assert pfs_room.send_text.call_count == len(SEND_BALANCE_PROOF_EVENTS)
+    # matrix transport may concatenate multiple messages send in one interval
+    assert pfs_room.send_text.call_count >= 1
+    concatenated_call_args = ' '.join(str(arg) for arg in pfs_room.send_text.call_args_list)
     assert all(
-        f'"nonce": {i + 1}' in str(pfs_room.send_text.call_args_list[i])
+        f'"nonce": {i + 1}' in concatenated_call_args
         for i in range(len(SEND_BALANCE_PROOF_EVENTS))
     )
     transport.stop()
