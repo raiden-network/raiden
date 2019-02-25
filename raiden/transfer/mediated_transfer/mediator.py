@@ -637,7 +637,7 @@ def events_for_expired_pairs(
         if not payer_channel:
             continue
 
-        has_payer_transfer_expired = channel.transfer_expired(
+        has_payer_transfer_expired = channel.is_transfer_expired(
             transfer=pair.payer_transfer,
             affected_channel=payer_channel,
             block_number=block_number,
@@ -1294,7 +1294,7 @@ def handle_offchain_secretreveal(
     if not payer_channel:
         return TransitionResult(mediator_state, list())
 
-    has_payer_transfer_expired = channel.transfer_expired(
+    has_payer_transfer_expired = channel.is_transfer_expired(
         transfer=transfer_pair.payer_transfer,
         affected_channel=payer_channel,
         block_number=block_number,

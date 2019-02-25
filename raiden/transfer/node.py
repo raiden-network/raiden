@@ -123,7 +123,6 @@ def subdispatch_to_all_channels(
                 result = channel.state_transition(
                     channel_state=channel_state,
                     state_change=state_change,
-                    pseudo_random_generator=chain_state.pseudo_random_generator,
                     block_number=block_number,
                     block_hash=block_hash,
                 )

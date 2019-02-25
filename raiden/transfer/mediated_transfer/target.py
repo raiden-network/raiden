@@ -167,7 +167,7 @@ def handle_offchain_secretreveal(
         transfer_secrethash=target_state.transfer.lock.secrethash,
         secret=state_change.secret,
     )
-    has_transfer_expired = channel.transfer_expired(
+    has_transfer_expired = channel.is_transfer_expired(
         transfer=target_state.transfer,
         affected_channel=channel_state,
         block_number=block_number,
