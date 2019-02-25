@@ -42,7 +42,11 @@ def test_upgrade_v18_to_v19(tmp_path):
     state_change_records = storage.get_all_state_changes()
     for state_change_record in state_change_records:
         data = json.loads(state_change_record.data)
-        if 'raiden.transfer.state_change.ContractReceive' in data['_type']:
+        affected_state_change = (
+            'raiden.transfer.state_change.ContractReceive' in data['_type'] or
+            'raiden.transfer.state_change.ActionInitChain' in data['_type']
+        )
+        if affected_state_change:
             assert 'block_hash' in data
             block_number = int(data['block_number'])
             assert block_to_blockhash[block_number].hex() == data['block_hash']
