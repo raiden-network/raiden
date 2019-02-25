@@ -323,8 +323,8 @@ class SQLiteStorage(SerializationBase):
         cursor = self.conn.cursor()
         for state_change in state_changes:
             cursor.execute(
-                'UPDATE state_snapshot SET data=? WHERE identifier=?',
-                (state_change.data, state_change.identifier),
+                'UPDATE state_changes SET data=? WHERE identifier=?',
+                (state_change.data, state_change.state_change_identifier),
             )
             self.maybe_commit()
 
