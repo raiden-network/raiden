@@ -1,4 +1,3 @@
-from eth_utils import to_bytes
 from raiden.transfer import channel, token_network, views
 from raiden.transfer.architecture import (
     ContractReceiveStateChange,
@@ -59,7 +58,6 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
     ReceiveUnlock,
 )
-from raiden.utils import sha3
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     BlockNumber,
@@ -71,8 +69,6 @@ from raiden.utils.typing import (
     TokenNetworkID,
     Tuple,
 )
-# from raiden.proto import resolver_pb2_grpc,resolver_pb2
-# import grpc
 
 
 def get_networks(
@@ -194,16 +190,6 @@ def subdispatch_to_paymenttask(
                 events = sub_iteration.events
 
         elif isinstance(sub_task, TargetTask):
-            if hasattr(state_change, 'secret') and secrethash != sha3(state_change.secret):
-                # try:
-                #     grpc_channel = grpc.insecure_channel('localhost:50051')
-                #     stub = resolver_pb2_grpc.HashResolverStub(grpc_channel)
-                #     resp = stub.ResolveHash(resolver_pb2.ResolveRequest())
-                # except Exception as e:
-                #     pass
-                state_change.secret = to_bytes(
-                    hexstr='0x7d99ad63945f9f1da98c5ad82ff8a46f7716f1385bf9944776c456c69a231d03',
-                )
             token_network_identifier = sub_task.token_network_identifier
             channel_identifier = sub_task.channel_identifier
 

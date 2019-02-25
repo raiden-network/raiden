@@ -1,5 +1,9 @@
+import grpc
 import structlog
-
+from eth_utils import to_bytes, to_hex
+import raiden.resolver.resolver_pb2 as resolver_pb2
+import raiden.resolver.resolver_pb2_grpc as resolver_pb2_grpc
+from raiden.constants import EMPTY_SECRET
 from raiden.messages import (
     Delivered,
     LockedTransfer,
@@ -70,6 +74,21 @@ class MessageHandler:
             message.sender,
             message.secrethash,
         )
+        if state_change.secret == EMPTY_SECRET:
+            try:
+                grpc_channel = grpc.insecure_channel('localhost:50051')
+                stub = resolver_pb2_grpc.HashResolverStub(grpc_channel)
+                hash_string = to_hex(message.secrethash)[2:]
+                response = stub.ResolveHash(resolver_pb2.ResolveRequest(hash=hash_string))
+                assert response is not None
+                assert response.preimage is not None
+                print(response)
+
+            except Exception:
+                pass
+
+            state_change.secret = to_bytes(hexstr=response.preimage)
+
         raiden.handle_state_change(state_change)
 
     def handle_message_unlock(self, raiden: RaidenService, message: Unlock):
