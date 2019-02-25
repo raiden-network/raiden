@@ -6,6 +6,7 @@ from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK
 from raiden_contracts.contract_manager import ContractManager
 
 from scenario_player.runner import ScenarioRunner
+from scenario_player.exceptions import ScenarioError, ScenarioAssertionError
 from web3 import Web3
 from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
@@ -93,9 +94,14 @@ class BlockchainEventFilter(Task):
     ) -> None:
         super().__init__(runner, config, parent, abort_on_fail)
 
-        assert 'contract_name' in config.keys(), '"contract_name" is a required parameter'
-        assert 'event_name' in config.keys(), '"event_name" is a required parameter'
-        assert 'num_events' in config.keys(), '"num_events" is a required parameter'
+        required_keys = ['contract_name', 'event_name', 'num_events']
+        all_required_options_provided = all(
+            key in config.keys() for key in required_keys
+        )
+        if not all_required_options_provided:
+            raise ScenarioError(
+                'Not all required keys provided. Required: ' + ', '.join(required_keys),
+            )
 
         self.contract_name = config.get('contract_name', None)
         self.event_name = config.get('event_name', None)
@@ -118,4 +124,8 @@ class BlockchainEventFilter(Task):
         events = [e for e in events if e['event'] == self.event_name]
 
         # Raise exception when events do not match
-        assert self.num_events == len(events)
+        if not self.num_events == len(events):
+            raise ScenarioAssertionError(
+                f'Expected number of events ({self.num_events}) did not match the number '
+                f'of events found ({len(events)})',
+            )
