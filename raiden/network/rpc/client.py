@@ -378,6 +378,7 @@ class JSONRPCClient:
             web3: Web3,
             privkey: bytes,
             gas_price_strategy: Callable = rpc_gas_price_strategy,
+            gas_estimate_correction: Callable = lambda gas: gas,
             block_num_confirmations: int = 0,
             uses_infura=False,
     ):
@@ -440,6 +441,7 @@ class JSONRPCClient:
 
         self._available_nonce = available_nonce
         self._nonce_lock = Semaphore()
+        self._gas_estimate_correction = gas_estimate_correction
 
         log.debug(
             'JSONRPCClient created',
@@ -630,7 +632,7 @@ class JSONRPCClient:
         transaction_hash = self.send_transaction(
             to=Address(b''),
             data=contract_transaction['data'],
-            startgas=contract_transaction['gas'],
+            startgas=self._gas_estimate_correction(contract_transaction['gas']),
         )
 
         self.poll(transaction_hash)
@@ -663,8 +665,6 @@ class JSONRPCClient:
         """
         if to == to_canonical_address(constants.NULL_ADDRESS):
             warnings.warn('For contract creation the empty string must be used.')
-
-        startgas *= 2  # todo remove tis kludge before merging
 
         with self._nonce_lock:
             nonce = self._available_nonce
