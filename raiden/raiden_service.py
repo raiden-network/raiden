@@ -242,6 +242,7 @@ class RaidenService(Runnable):
             message_handler,
             config,
             discovery=None,
+            user_deposit=None,
     ):
         super().__init__()
         self.tokennetworkids_to_connectionmanagers: ConnectionManagerDict = dict()
@@ -257,6 +258,8 @@ class RaidenService(Runnable):
         self.address = self.signer.address
         self.discovery = discovery
         self.transport = transport
+
+        self.user_deposit = user_deposit
 
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)
