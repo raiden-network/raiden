@@ -1,0 +1,1575 @@
+[
+    [
+        1,
+        {
+            "block_number": "0",
+            "our_address": "0x3503221a95028173969fc1f36b2E4F0705a3cc8b",
+            "chain_id": 337,
+            "pseudo_random_generator": [
+                3,
+                [
+                    2147483648,
+                    1950816950,
+                    3976577717,
+                    3656922556,
+                    1875519763,
+                    2860383553,
+                    1823875643,
+                    2336032515,
+                    1996316588,
+                    3056902535,
+                    2709989093,
+                    1091789277,
+                    3876656884,
+                    940077924,
+                    4132796696,
+                    614452770,
+                    1971601179,
+                    441971619,
+                    2847615445,
+                    1914284639,
+                    3943930483,
+                    3793293045,
+                    4240603766,
+                    792960768,
+                    844926655,
+                    2942901019,
+                    224017793,
+                    745991592,
+                    415227106,
+                    3412888774,
+                    3812287329,
+                    4199435777,
+                    629612219,
+                    1622407873,
+                    559378723,
+                    264829179,
+                    2032222003,
+                    148443440,
+                    2793527436,
+                    2445195373,
+                    3671007981,
+                    196319608,
+                    1491097628,
+                    3276753448,
+                    2907843322,
+                    808095877,
+                    3014703096,
+                    2318413923,
+                    814376536,
+                    3202306697,
+                    3822321096,
+                    3161064260,
+                    682854045,
+                    1062688796,
+                    1069047541,
+                    2909340378,
+                    1462419734,
+                    313951315,
+                    2718593302,
+                    591602508,
+                    2814573852,
+                    4091944103,
+                    1792723775,
+                    1233562604,
+                    1328604161,
+                    2373599244,
+                    1262776954,
+                    735497875,
+                    3594422343,
+                    2969887885,
+                    3350534224,
+                    990073606,
+                    2472178647,
+                    670664798,
+                    433670437,
+                    1101046226,
+                    154995469,
+                    3574718582,
+                    3413448814,
+                    3946307623,
+                    525078475,
+                    2965728626,
+                    808202555,
+                    2491706933,
+                    326481630,
+                    1060443907,
+                    3491211710,
+                    3306869776,
+                    3439050272,
+                    1449038948,
+                    1947567149,
+                    2509333909,
+                    853423649,
+                    1861610278,
+                    3229759467,
+                    1452744513,
+                    3327990216,
+                    3347006854,
+                    2890596786,
+                    2002664975,
+                    1526661414,
+                    2756761893,
+                    1054766431,
+                    3429379452,
+                    1013818749,
+                    4281329755,
+                    2134197721,
+                    2787392938,
+                    2598080393,
+                    4169025506,
+                    1948527653,
+                    496126395,
+                    962050537,
+                    3601141360,
+                    448370411,
+                    482939481,
+                    389936425,
+                    3320418042,
+                    271606075,
+                    1459409317,
+                    440174843,
+                    4242712209,
+                    451901442,
+                    3565332676,
+                    4040678167,
+                    3413839455,
+                    3403228588,
+                    1708631488,
+                    2912217782,
+                    2531674188,
+                    434889187,
+                    904841202,
+                    2480642674,
+                    705751740,
+                    2218602402,
+                    1755388907,
+                    3645571676,
+                    1406397285,
+                    1031432995,
+                    1858195654,
+                    1297928441,
+                    3987829009,
+                    3008622763,
+                    3803981912,
+                    2198580046,
+                    413474024,
+                    1501511183,
+                    3426443839,
+                    800809296,
+                    589368922,
+                    159917423,
+                    2135905312,
+                    3447925887,
+                    3852623780,
+                    257648877,
+                    1242742617,
+                    4286600945,
+                    3927404744,
+                    4078011556,
+                    3636205539,
+                    664837349,
+                    1887878440,
+                    2765685377,
+                    1953153344,
+                    744854426,
+                    3549485297,
+                    3796851099,
+                    2191248660,
+                    4019487741,
+                    2714942883,
+                    3240286361,
+                    3001195194,
+                    3753904540,
+                    75464512,
+                    1152703610,
+                    3552543272,
+                    3571277225,
+                    1628749643,
+                    3081180801,
+                    4266739255,
+                    3321787782,
+                    4193802433,
+                    2421816940,
+                    920764756,
+                    3316159393,
+                    3096154503,
+                    2013184854,
+                    701988715,
+                    564828209,
+                    346369197,
+                    2724715330,
+                    2611306724,
+                    2046282285,
+                    493745787,
+                    3652492564,
+                    2006523531,
+                    3179501338,
+                    1748638376,
+                    3492896384,
+                    1685045968,
+                    403508297,
+                    3690645298,
+                    1953029358,
+                    2742334380,
+                    1198930848,
+                    3670821920,
+                    2353255938,
+                    1512058136,
+                    4081174328,
+                    2359186334,
+                    2194059221,
+                    1135506886,
+                    1919971192,
+                    3178784016,
+                    1316212152,
+                    2043973129,
+                    3994652821,
+                    3830814567,
+                    2932631227,
+                    1170348058,
+                    654399949,
+                    1991532127,
+                    1478822099,
+                    2276724157,
+                    908030364,
+                    1629233845,
+                    143961647,
+                    2131713968,
+                    2409387727,
+                    3941194462,
+                    2231994858,
+                    3370772726,
+                    3190482986,
+                    1542066538,
+                    2460701326,
+                    1704257519,
+                    18486259,
+                    1990783166,
+                    3781619771,
+                    1521614395,
+                    334928532,
+                    1666843010,
+                    1284113132,
+                    618022704,
+                    2052929172,
+                    1663351879,
+                    2183035522,
+                    4042712540,
+                    4257016930,
+                    3697995336,
+                    1038635912,
+                    1439858293,
+                    507908494,
+                    2968462819,
+                    2528345965,
+                    1897077158,
+                    3121785477,
+                    2325725821,
+                    4215288391,
+                    1966399159,
+                    4124985444,
+                    1617043435,
+                    1098571346,
+                    300359134,
+                    3367859452,
+                    3727208493,
+                    2852788562,
+                    3552529006,
+                    2010754760,
+                    4152944330,
+                    651989153,
+                    4246468097,
+                    2659601008,
+                    2830891459,
+                    1940245869,
+                    966627971,
+                    3107590385,
+                    4171561128,
+                    940704031,
+                    847862047,
+                    404282994,
+                    1756617698,
+                    3856584431,
+                    2860049548,
+                    2419738761,
+                    1900757878,
+                    750097541,
+                    1546891879,
+                    22992257,
+                    2213626487,
+                    632501326,
+                    3557852252,
+                    1020518343,
+                    1910431337,
+                    3899047726,
+                    2742876526,
+                    1473302793,
+                    2628210513,
+                    2620386315,
+                    3865017818,
+                    1552519145,
+                    2611876337,
+                    4256461351,
+                    896327980,
+                    1172973926,
+                    4046670528,
+                    4193742146,
+                    2088381826,
+                    2929969075,
+                    2620309716,
+                    227403150,
+                    2200978181,
+                    3983589612,
+                    3357075106,
+                    456103843,
+                    2449241044,
+                    116644186,
+                    1713990770,
+                    441688866,
+                    4054286988,
+                    3987005359,
+                    3516842968,
+                    3220509339,
+                    3362092632,
+                    1853446281,
+                    2119659226,
+                    327727134,
+                    499619882,
+                    2107982188,
+                    594150570,
+                    3382491766,
+                    2215526438,
+                    138640748,
+                    3264716696,
+                    929240785,
+                    3988145163,
+                    1024783609,
+                    1108296144,
+                    3560717967,
+                    1662014298,
+                    1720904747,
+                    50949672,
+                    3638457113,
+                    468282409,
+                    2631608741,
+                    1287188289,
+                    29974602,
+                    835528183,
+                    793806193,
+                    2020168830,
+                    3089217742,
+                    2759719749,
+                    1876667304,
+                    1836331377,
+                    2093912481,
+                    1131866006,
+                    4277009921,
+                    2592619586,
+                    3562606539,
+                    1028737023,
+                    2162164094,
+                    609831573,
+                    4151692580,
+                    4025508199,
+                    2929573302,
+                    121683161,
+                    2491784110,
+                    4141160433,
+                    2969938653,
+                    2109533838,
+                    1683425648,
+                    2033492532,
+                    2873512057,
+                    1737544323,
+                    947011564,
+                    3073534854,
+                    636243501,
+                    2703682404,
+                    1743711595,
+                    2799838450,
+                    4088433625,
+                    258562249,
+                    1115079875,
+                    2761394256,
+                    2591787818,
+                    158969493,
+                    2615275016,
+                    1685219750,
+                    2334154257,
+                    2398041928,
+                    205697146,
+                    2172917279,
+                    902867642,
+                    3585569263,
+                    517066868,
+                    2096501326,
+                    2587535488,
+                    3058042885,
+                    2697108488,
+                    1373953822,
+                    916765839,
+                    3038124495,
+                    1970755876,
+                    579183962,
+                    809772060,
+                    2379481617,
+                    1986771121,
+                    3919079826,
+                    4101697717,
+                    2775354533,
+                    3319794842,
+                    1243314855,
+                    3232890584,
+                    3990326045,
+                    1417909832,
+                    1033731849,
+                    993363637,
+                    259617883,
+                    213748569,
+                    3927449010,
+                    114328413,
+                    2913758985,
+                    7112307,
+                    1547774762,
+                    1625756598,
+                    2318127317,
+                    2004912873,
+                    2361413278,
+                    4135544973,
+                    3685484894,
+                    3241966271,
+                    1576439729,
+                    3639518883,
+                    1510519484,
+                    441973252,
+                    3223880583,
+                    714959721,
+                    1278290091,
+                    847161051,
+                    2163603644,
+                    2445785312,
+                    3172615540,
+                    2614079117,
+                    912610330,
+                    4136899728,
+                    1660797,
+                    705389293,
+                    4138836781,
+                    1916623029,
+                    4064042334,
+                    1941063500,
+                    2195494296,
+                    2128173798,
+                    1970335271,
+                    4143369828,
+                    3414528729,
+                    753444606,
+                    3837584560,
+                    1574162114,
+                    2083969870,
+                    312778847,
+                    2893892351,
+                    2538615567,
+                    2202077752,
+                    2252878877,
+                    1638590172,
+                    1533221365,
+                    1752665376,
+                    2312736566,
+                    1355799804,
+                    3715424350,
+                    3656905968,
+                    2727937745,
+                    1091570049,
+                    1642112930,
+                    2457677597,
+                    1841977168,
+                    3358238605,
+                    2035903142,
+                    2456817508,
+                    313466115,
+                    2809641347,
+                    273520809,
+                    170923835,
+                    2988630527,
+                    1364075319,
+                    2066099041,
+                    844074960,
+                    3131443260,
+                    3014912269,
+                    51105864,
+                    2937870546,
+                    624674691,
+                    2706555945,
+                    357204634,
+                    2717058616,
+                    2207394988,
+                    3135512785,
+                    365787837,
+                    79442610,
+                    3340646549,
+                    2064564742,
+                    3506248062,
+                    3152958385,
+                    4174936499,
+                    1659155389,
+                    69770289,
+                    4110367442,
+                    312567960,
+                    912215744,
+                    4141676675,
+                    3678361927,
+                    1212211547,
+                    3551577081,
+                    2708977297,
+                    294047308,
+                    1347878138,
+                    1711990211,
+                    648088121,
+                    3520901340,
+                    1328320660,
+                    1435061130,
+                    1229288054,
+                    1170888443,
+                    2479588049,
+                    2463285302,
+                    4010652791,
+                    2932561636,
+                    423454822,
+                    2138414426,
+                    1623385468,
+                    2802181258,
+                    2900556837,
+                    3608785782,
+                    2639221382,
+                    1162207005,
+                    2851352376,
+                    2655304390,
+                    2771301239,
+                    2482717864,
+                    1134795833,
+                    1828300668,
+                    1586650823,
+                    1512858834,
+                    2195346124,
+                    1788934292,
+                    3679998126,
+                    401478173,
+                    3896696057,
+                    3799608432,
+                    2893161946,
+                    1063270263,
+                    1158281103,
+                    892731030,
+                    3072268724,
+                    3323941803,
+                    2468468663,
+                    1273941127,
+                    3114767958,
+                    641079915,
+                    3045079255,
+                    3927760054,
+                    1732463083,
+                    2822309072,
+                    2741890758,
+                    1168648221,
+                    1469558671,
+                    544580636,
+                    4078055611,
+                    2391907739,
+                    8402636,
+                    3886515535,
+                    2090185606,
+                    2650422595,
+                    1406904889,
+                    1550198503,
+                    3251069706,
+                    4272228111,
+                    3457694995,
+                    2910443915,
+                    4276013298,
+                    661421171,
+                    2372546963,
+                    4167314882,
+                    3287617063,
+                    2431390157,
+                    1648697731,
+                    597949529,
+                    2328156421,
+                    1142952260,
+                    1258043541,
+                    231697134,
+                    4044791724,
+                    2977485208,
+                    724847108,
+                    769158372,
+                    1605862842,
+                    1009634,
+                    1822795858,
+                    3820896575,
+                    370179708,
+                    135787596,
+                    1569942923,
+                    4092237385,
+                    1930466451,
+                    2776368703,
+                    2575643619,
+                    573279360,
+                    1462104327,
+                    3314139514,
+                    1161041188,
+                    3317509330,
+                    2864644772,
+                    4152990878,
+                    984927809,
+                    781974796,
+                    1199362787,
+                    4050249268,
+                    3873836820,
+                    1562282866,
+                    717119971,
+                    3964608138,
+                    3492191784,
+                    94064059,
+                    624
+                ],
+                null
+            ],
+            "_type": "raiden.transfer.state_change.ActionInitChain",
+            "_version": 0
+        }
+    ],
+    [
+        2,
+        {
+            "transaction_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "payment_network": {
+                "address": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
+                "tokennetworks": [],
+                "_type": "raiden.transfer.state.PaymentNetworkState",
+                "_version": 0
+            },
+            "block_number": "0",
+            "_type": "raiden.transfer.state_change.ContractReceiveNewPaymentNetwork",
+            "_version": 0
+        }
+    ],
+    [
+        3,
+        {
+            "transaction_hash": "0x7b671bf88558f7da9c76c5b89b2551b59d95f4f23ea50bad641931968aa82f84",
+            "payment_network_identifier": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
+            "token_network": {
+                "address": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+                "token_address": "0x89d06DB00Ba9A523A92fF9e1a13A8b4Fb788BA1b",
+                "network_graph": {
+                    "token_network_id": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+                    "network": "[]",
+                    "channel_identifier_to_participants": {},
+                    "_type": "raiden.transfer.state.TokenNetworkGraphState",
+                    "_version": 0
+                },
+                "channelidentifiers_to_channels": {},
+                "partneraddresses_to_channelidentifiers": {},
+                "_type": "raiden.transfer.state.TokenNetworkState",
+                "_version": 0
+            },
+            "block_number": "16",
+            "_type": "raiden.transfer.state_change.ContractReceiveNewTokenNetwork",
+            "_version": 0
+        }
+    ],
+    [
+        4,
+        {
+            "block_number": "16",
+            "gas_limit": 9844912,
+            "block_hash": "0x3f9d09f138bbb9e6798f64a64ecafd0ebc62810d20184d01ce82d1fa4e5547e9",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        5,
+        {
+            "auth_data": "@0x3503221a95028173969fc1f36b2e4f0705a3cc8b:localhost:8500/MDAxY2xvY2F0aW9uIGxvY2FsaG9zdDo4NTAwCjAwMTNpZGVudGlmaWVyIGtleQowMDEwY2lkIGdlbiA9IDEKMDA0ZGNpZCB1c2VyX2lkID0gQDB4MzUwMzIyMWE5NTAyODE3Mzk2OWZjMWYzNmIyZTRmMDcwNWEzY2M4Yjpsb2NhbGhvc3Q6ODUwMAowMDE2Y2lkIHR5cGUgPSBhY2Nlc3MKMDAyMWNpZCBub25jZSA9IE1AQGd1LU5DRUBnQTVrQDIKMDAyZnNpZ25hdHVyZSCpAR2eTCn-IvV94wagUp6dY8k78wdzKadUqCSXd5Bmbwo",
+            "_type": "raiden.transfer.state_change.ActionUpdateTransportAuthData",
+            "_version": 0
+        }
+    ],
+    [
+        6,
+        {
+            "block_number": "17",
+            "gas_limit": 9835299,
+            "block_hash": "0xedf9a403a69ce78b0ed7813be5cc41d91e6e5ca819d3e2ee7512a30154c0693e",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        7,
+        {
+            "block_number": "18",
+            "gas_limit": 9825696,
+            "block_hash": "0x45217f8faefb7893acc51f0670229a0104d42cf0355f459be105f5565f214b6b",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        8,
+        {
+            "block_number": "19",
+            "gas_limit": 9816102,
+            "block_hash": "0x4058790888a4645206a4f2e7dcfd3b0bfac743968831f9e351a70fdec62672e1",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        9,
+        {
+            "block_number": "20",
+            "gas_limit": 9806517,
+            "block_hash": "0x7d61c4ecabac42f569f26f81ed2d62ee430ae81e8f87ea9771699242c7037747",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        10,
+        {
+            "block_number": "21",
+            "gas_limit": 9796942,
+            "block_hash": "0x92f789ea93f7527fecc3aabbed6a4afc137b635cfa3da71998bd0ded3c25bcb1",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        11,
+        {
+            "block_number": "22",
+            "gas_limit": 9787376,
+            "block_hash": "0x06d27210b4162df2651967cb2102cbf11faf760412e0ce750ecbee55e8c28204",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        12,
+        {
+            "block_number": "23",
+            "gas_limit": 9777820,
+            "block_hash": "0x6e8986e92aeee48f22e619268012972fa7fceb6c48aba3467a1e0230c8163872",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        13,
+        {
+            "transaction_hash": "0x0a6ffa9820a3f3d74d92cde71b95e4d61ab6a5e69b5974c073357203fa29c7de",
+            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "channel_state": {
+                "identifier": "1",
+                "chain_id": 337,
+                "token_address": "0x89d06DB00Ba9A523A92fF9e1a13A8b4Fb788BA1b",
+                "payment_network_identifier": "0xba0D506eBbda9b6C8875bCF7b61aC3366f5cbD0A",
+                "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+                "reveal_timeout": "13",
+                "settle_timeout": "39",
+                "our_state": {
+                    "address": "0x3503221a95028173969fc1f36b2E4F0705a3cc8b",
+                    "contract_balance": "200",
+                    "secrethashes_to_lockedlocks": {},
+                    "secrethashes_to_unlockedlocks": {},
+                    "secrethashes_to_onchain_unlockedlocks": {},
+                    "merkletree": {
+                        "layers": [],
+                        "_type": "raiden.transfer.state.MerkleTreeState",
+                        "_version": 0
+                    },
+                    "_type": "raiden.transfer.state.NettingChannelEndState",
+                    "_version": 0
+                },
+                "partner_state": {
+                    "address": "0xE9DD7660D8f328Cc45B8F01e5C4fA45A1ADe4747",
+                    "contract_balance": "0",
+                    "secrethashes_to_lockedlocks": {},
+                    "secrethashes_to_unlockedlocks": {},
+                    "secrethashes_to_onchain_unlockedlocks": {},
+                    "merkletree": {
+                        "layers": [],
+                        "_type": "raiden.transfer.state.MerkleTreeState",
+                        "_version": 0
+                    },
+                    "_type": "raiden.transfer.state.NettingChannelEndState",
+                    "_version": 0
+                },
+                "open_transaction": {
+                    "finished_block_number": "24",
+                    "result": "success",
+                    "_type": "raiden.transfer.state.TransactionExecutionStatus",
+                    "_version": 0
+                },
+                "deposit_transaction_queue": [],
+                "_type": "raiden.transfer.state.NettingChannelState",
+                "_version": 0
+            },
+            "block_number": "24",
+            "_type": "raiden.transfer.state_change.ContractReceiveChannelNew",
+            "_version": 0
+        }
+    ],
+    [
+        14,
+        {
+            "node_address": "0xE9DD7660D8f328Cc45B8F01e5C4fA45A1ADe4747",
+            "network_state": "reachable",
+            "_type": "raiden.transfer.state_change.ActionChangeNodeNetworkState",
+            "_version": 0
+        }
+    ],
+    [
+        15,
+        {
+            "block_number": "24",
+            "gas_limit": 9768273,
+            "block_hash": "0xad789f235512f5a28d55a52bd3ebd21431ce69d2467e024a74bb33a53be24aff",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        16,
+        {
+            "block_number": "25",
+            "gas_limit": 9758735,
+            "block_hash": "0x0036eae9d14705ce3fabb0ec1d97809481c7ec6538624c9101a495fe8e1a2b08",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        17,
+        {
+            "block_number": "26",
+            "gas_limit": 9749206,
+            "block_hash": "0x64520226285cf03c2d4e029b2bcf245f33022dcbb7d92a8509659fb86f7ef9d6",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        18,
+        {
+            "block_number": "27",
+            "gas_limit": 9739687,
+            "block_hash": "0xc181ae51deed75f678690d461dd5b80857a53f23a0fdc90877a4ca665e550a3b",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        19,
+        {
+            "transaction_hash": "0x77a59fe504621284745afb2049caef57c1b8beb9d10734d905a897122d4c6b5e",
+            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "channel_identifier": "1",
+            "deposit_transaction": {
+                "participant_address": "0x3503221a95028173969fc1f36b2E4F0705a3cc8b",
+                "contract_balance": "200",
+                "deposit_block_number": "28",
+                "_type": "raiden.transfer.state.TransactionChannelNewBalance",
+                "_version": 0
+            },
+            "block_number": "28",
+            "_type": "raiden.transfer.state_change.ContractReceiveChannelNewBalance",
+            "_version": 0
+        }
+    ],
+    [
+        20,
+        {
+            "block_number": "28",
+            "gas_limit": 9730177,
+            "block_hash": "0xd2588392ac1d3cb4ab22fbbdb5a49c7736e091ca7ee625ddbd62194bd94c07f2",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        21,
+        {
+            "block_number": "29",
+            "gas_limit": 9720676,
+            "block_hash": "0x12fb9208bd98ca65a2683339e8b60384ad92cf1b4936e3c609002beac26ec60a",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        22,
+        {
+            "block_number": "30",
+            "gas_limit": 9711185,
+            "block_hash": "0x27e4bea55ee66959dc190a9ef3a6ba935527b377cec8ea1ba9c7b34fd4b768c7",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        23,
+        {
+            "block_number": "31",
+            "gas_limit": 9701703,
+            "block_hash": "0x6ba4b843a9852ff844e04df37d755698d846b8a85c7657ad462ebbd4110342ed",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        24,
+        {
+            "transaction_hash": "0xb1d9aae3bf678007e63fb78f2f582558751c09ef7411da17902bb80c6106e853",
+            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "channel_identifier": "1",
+            "deposit_transaction": {
+                "participant_address": "0xE9DD7660D8f328Cc45B8F01e5C4fA45A1ADe4747",
+                "contract_balance": "200",
+                "deposit_block_number": "32",
+                "_type": "raiden.transfer.state.TransactionChannelNewBalance",
+                "_version": 0
+            },
+            "block_number": "32",
+            "_type": "raiden.transfer.state_change.ContractReceiveChannelNewBalance",
+            "_version": 0
+        }
+    ],
+    [
+        25,
+        {
+            "block_number": "32",
+            "gas_limit": 9692230,
+            "block_hash": "0xf16e6ac2b2ef6a090a9afadafb797eae6fc09087785db4c63cb2205dbb34870d",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        26,
+        {
+            "block_number": "33",
+            "gas_limit": 9682766,
+            "block_hash": "0x5dde128941693d11739300d3a47d69db76572c056569f7a53ba2fb3de85c86fb",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        27,
+        {
+            "block_number": "34",
+            "gas_limit": 9673312,
+            "block_hash": "0x252f42698e89c2ca69571b5bd82b8a66e1348826e72346919b4e19b2fd414f33",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        28,
+        {
+            "block_number": "35",
+            "gas_limit": 9663867,
+            "block_hash": "0xee5a5a4aa9215d6a13919c784faf6853dc978eafcd6097eb32307b4f506a5534",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        29,
+        {
+            "block_number": "36",
+            "gas_limit": 9654431,
+            "block_hash": "0x3279859594eb4862b87115d51f70348d5a2303c71e0fba29091915e0c79954b1",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        30,
+        {
+            "block_number": "37",
+            "gas_limit": 9645004,
+            "block_hash": "0xe7f8cd11e057e47391214770b48b1c078260cdd86aace3fa522a3c3f325e1dc1",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        31,
+        {
+            "block_number": "38",
+            "gas_limit": 9635587,
+            "block_hash": "0x4009d3f636d19475f427e1f2882cd326f6bc583f0803ab637bba9cc2b2aa33af",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        32,
+        {
+            "block_number": "39",
+            "gas_limit": 9626179,
+            "block_hash": "0x131ef408da0c452a90179f5605c44edff7cf03622ee736c34a669def9009b740",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        33,
+        {
+            "block_number": "40",
+            "gas_limit": 9616780,
+            "block_hash": "0xea77226e203cd6afdd92ccc0b30a45e4d8b2e62159f5ece8f352faa627b0952e",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        34,
+        {
+            "block_number": "41",
+            "gas_limit": 9607390,
+            "block_hash": "0x63dfb1429471148038a3fde6ed08ee03ecd6a1c0250802ea2c7600a38cabcf29",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        35,
+        {
+            "block_number": "42",
+            "gas_limit": 9598009,
+            "block_hash": "0x1ee59e13fb513f14f8d89a1362a864c2f32417d66a53c84c41003f3e1fd222ec",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        36,
+        {
+            "block_number": "43",
+            "gas_limit": 9588637,
+            "block_hash": "0xafb941910bf8f654248b07dd990b196bdfd7ee333abf33ca35d564813916f5e6",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        37,
+        {
+            "block_number": "44",
+            "gas_limit": 9579275,
+            "block_hash": "0x6667146b6dbc80339f6fb20d895fb184b3e6f6d1b2db2a286be993973f08b468",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        38,
+        {
+            "transaction_hash": "0xda8d79065dedaf731ca532248092a1e47c23c115f0a5e95402f7ca063c375015",
+            "transaction_from": "0xE9DD7660D8f328Cc45B8F01e5C4fA45A1ADe4747",
+            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "channel_identifier": "1",
+            "block_number": "45",
+            "_type": "raiden.transfer.state_change.ContractReceiveChannelClosed",
+            "_version": 0
+        }
+    ],
+    [
+        39,
+        {
+            "block_number": "45",
+            "gas_limit": 9569922,
+            "block_hash": "0x3e71a6c8cc5eff04fa47c0c649a5bbcf2ee0fa60a28acb7e7932d54b9c71e5d4",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        40,
+        {
+            "block_number": "46",
+            "gas_limit": 9560578,
+            "block_hash": "0x440a5e2fe292536d2b2e16f664b71fc833091dc2437be67d56ec20adfcdc207d",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        41,
+        {
+            "block_number": "47",
+            "gas_limit": 9551243,
+            "block_hash": "0xc16b5dcd3d6ef8df00cc91dfb7b4afdbfb905fd4ae0d6994e7c12624eec417ac",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        42,
+        {
+            "block_number": "48",
+            "gas_limit": 9541917,
+            "block_hash": "0xb16aea635d70bad1fc07ceadf4e958c1855a98ba43a9efd688710a9fda6bdbbe",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        43,
+        {
+            "block_number": "49",
+            "gas_limit": 9532600,
+            "block_hash": "0x18b40336660541d5e5c9bc82656b2a0bcd3535a3e4ade6850286f1fce4e59f8c",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        44,
+        {
+            "block_number": "50",
+            "gas_limit": 9523292,
+            "block_hash": "0x468c27c59ba909efb70954db664d02535c725d639de073617eb0aa917dce1b87",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        45,
+        {
+            "block_number": "51",
+            "gas_limit": 9513993,
+            "block_hash": "0xf37e8cb53d18c70a21863053623b26ac743db6203f0b4cadcfc9defbc9f27218",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        46,
+        {
+            "block_number": "52",
+            "gas_limit": 9504703,
+            "block_hash": "0x65246db12b366bf0f6a4942ba7d5854e21f6077cfc544a92f74302ce4829b3b3",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        47,
+        {
+            "block_number": "53",
+            "gas_limit": 9495423,
+            "block_hash": "0xdfb2aa8137e84ec40f8e2f2b03ea891611a6b4d7b0f739c02011f5fca2fec127",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        48,
+        {
+            "block_number": "54",
+            "gas_limit": 9486152,
+            "block_hash": "0x4a7ac1506b853292b33c310768443e96085ee97be7fd7ab8d4fa8c7270f87b49",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        49,
+        {
+            "block_number": "55",
+            "gas_limit": 9476890,
+            "block_hash": "0x00402feb28903ac0c9a0ea10dd6661600a2ef5bcfa0d10d24410b0f551a2137e",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        50,
+        {
+            "block_number": "56",
+            "gas_limit": 9467637,
+            "block_hash": "0x0066e6ec7995d28a58c8a69fb614d3c54b90b95a7a668788ff146e6f26a2599c",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        51,
+        {
+            "block_number": "57",
+            "gas_limit": 9458393,
+            "block_hash": "0x0fe757994c220c14f36fdc8400565a5a93092c777689718b9912aa90812abcfa",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        52,
+        {
+            "block_number": "58",
+            "gas_limit": 9449158,
+            "block_hash": "0xfa238fd54c7b07d4d2642566d975555214f9b00cc49163fd2cac2da653e211d7",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        53,
+        {
+            "block_number": "59",
+            "gas_limit": 9439932,
+            "block_hash": "0xece3ee17a614dbfd0ad1a84bca4b91451adc69978aa24810a3bbfd4e09a3649b",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        54,
+        {
+            "block_number": "60",
+            "gas_limit": 9430715,
+            "block_hash": "0xe15512822336dc84e6a5df55edd0af1d192bf9d41dad93b73cbfc42ad6950340",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        55,
+        {
+            "block_number": "61",
+            "gas_limit": 9421507,
+            "block_hash": "0x972045ac6203bddc8fdebd6c7edd8c029d291c3df48be47ccd41c23b571d8f14",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        56,
+        {
+            "block_number": "62",
+            "gas_limit": 9412308,
+            "block_hash": "0x7b25dd535ac98e1bd13e11f1fc14246b696dae55c48949797d5b04f9fc7a3128",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        57,
+        {
+            "block_number": "63",
+            "gas_limit": 9403118,
+            "block_hash": "0xab8924141ee25614d635d0d3a0c1f4f267dd65b86b7fed82362e7af7fffabc1b",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        58,
+        {
+            "block_number": "64",
+            "gas_limit": 9393937,
+            "block_hash": "0x48bab4d3fbb572f13195b1a2b22b6a116b38bcbb767aa2f459d1ae7db5e2852f",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        59,
+        {
+            "block_number": "65",
+            "gas_limit": 9384765,
+            "block_hash": "0x364cd42ed97a3fcf47ff59fb07a85fa9d23b4a0ad62ad8c204579342b6186ef5",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        60,
+        {
+            "block_number": "66",
+            "gas_limit": 9375602,
+            "block_hash": "0x4b722e968fe536fb9f455161c4aaa09fd43a0c93b5baa34b7e3df31c307090ed",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        61,
+        {
+            "block_number": "67",
+            "gas_limit": 9366448,
+            "block_hash": "0x2934c3fdeb3d04319ab4c5c6d7d70e3445d7e608b4ff2ec5fb640400b0fcb5b3",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        62,
+        {
+            "block_number": "68",
+            "gas_limit": 9357303,
+            "block_hash": "0xaa6778fb47b10f18f112b1bdc60a5ec227cfab84c3270deba5c73d92ac84667c",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        63,
+        {
+            "block_number": "69",
+            "gas_limit": 9348167,
+            "block_hash": "0x97b0a33a830cdc609d613202ececc16c33a039687b2f5861b1a8970b4aaaefd6",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        64,
+        {
+            "block_number": "70",
+            "gas_limit": 9339039,
+            "block_hash": "0xe73b0b21c189ebbc1890af37f428f990a2a7598fcff23015e5409b21baf6e894",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        65,
+        {
+            "block_number": "71",
+            "gas_limit": 9329920,
+            "block_hash": "0x36f6da546afb24d3fd29bee9b0418a8534874ca13568cce27ff91efa939607e4",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        66,
+        {
+            "block_number": "72",
+            "gas_limit": 9320810,
+            "block_hash": "0xc81a9bfd10130091449c2e250b163c05f7cf5a4fed500bad53b60d5eeaef988c",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        67,
+        {
+            "block_number": "73",
+            "gas_limit": 9311709,
+            "block_hash": "0xb66eff72855afe14cae3cc890b5721a0736e3b6dd63dbcdc65f7737ad350b307",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        68,
+        {
+            "block_number": "74",
+            "gas_limit": 9302617,
+            "block_hash": "0xbff53eb8b575eff25780dc03f3beff8c0f388f05c078a4ef1c951032989bcbed",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        69,
+        {
+            "block_number": "75",
+            "gas_limit": 9293534,
+            "block_hash": "0x64fa4418bd312a109f9253d5403d03fb657ba33cf58bc9122aa7adcd98e48184",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        70,
+        {
+            "block_number": "76",
+            "gas_limit": 9284460,
+            "block_hash": "0x720cdcbb6f52eba81e9660feae6b7dcae13015244a7ecb71b1271793cf551e45",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        71,
+        {
+            "block_number": "77",
+            "gas_limit": 9275395,
+            "block_hash": "0xede4bb7bf0073554de1f1726866cb87a3825fda7c2d8d053f9c6c7d66ddea332",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        72,
+        {
+            "block_number": "78",
+            "gas_limit": 9266338,
+            "block_hash": "0xd3e05b6ee8bf775c26951b027e33b7f5d780c5ecec0aaa21408b8bf65067780f",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        73,
+        {
+            "block_number": "79",
+            "gas_limit": 9257290,
+            "block_hash": "0x9a4aeb959e30298b9a9597f664e38b778871a3b1817d3285ab6f8246de6019d8",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        74,
+        {
+            "block_number": "80",
+            "gas_limit": 9248251,
+            "block_hash": "0x78189560a2e873c53477d51acfcda3f3f0a5d553ad0994adcc70c1916bdc6b93",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        75,
+        {
+            "block_number": "81",
+            "gas_limit": 9239221,
+            "block_hash": "0xbd1c03eabe99417c800d4cccc4af895f506c067fa3beffd63f573b2e4bf9ab2d",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        76,
+        {
+            "block_number": "82",
+            "gas_limit": 9230200,
+            "block_hash": "0xd8451b96c76ee4b8d533f6f93ae585bdc74b489ba8924a88f525c471880d3712",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        77,
+        {
+            "block_number": "83",
+            "gas_limit": 9221188,
+            "block_hash": "0xea474675f75e6eaf848a73fc4ed03a8ce5220c9ca64a87160dbddabe5400e126",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        78,
+        {
+            "block_number": "84",
+            "gas_limit": 9212184,
+            "block_hash": "0xc42c1dce93cb6c8f9cd2e0cfbb17f99fd77680583a3fd01c18387f611e591bf8",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        79,
+        {
+            "block_number": "85",
+            "gas_limit": 9203189,
+            "block_hash": "0x0e2908a199f4b9832ff48db811f0bab8abece9beda4269601abe8870b5374b40",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        80,
+        {
+            "block_number": "87",
+            "gas_limit": 9185226,
+            "block_hash": "0xed03ff57e014a6db977dfeeb926f0d19544b78da593b7818a95845212ec332dd",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        81,
+        {
+            "block_number": "88",
+            "gas_limit": 9176258,
+            "block_hash": "0x8e93298a636dd6aacdec71bf46068f1aed717374e0f4c8b1826cb7ba9652e399",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        82,
+        {
+            "block_number": "89",
+            "gas_limit": 9167298,
+            "block_hash": "0x1883c68ad353875d6bf2cf76736acd60bd85ed0954976ca48de25fd8fcebc05f",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        83,
+        {
+            "block_number": "90",
+            "gas_limit": 9158347,
+            "block_hash": "0x6b5efe598b524a7750794528681fdaf9b550e9dfa397ec53307f25643e8ae82b",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        84,
+        {
+            "block_number": "91",
+            "gas_limit": 9149405,
+            "block_hash": "0x264b642b3eb9bc433a88fc92426446dfe8b2fa2b8d5398b069aa06ea65ef0f5e",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ],
+    [
+        85,
+        {
+            "transaction_hash": "0xa0d708763999365a7ab10c09c153ad816dda9d51ac0b1857b63fc2cd8eb5b353",
+            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "channel_identifier": "1",
+            "block_number": "92",
+            "_type": "raiden.transfer.state_change.ContractReceiveChannelSettled",
+            "_version": 0
+        }
+    ],
+    [
+        86,
+        {
+            "block_number": "92",
+            "gas_limit": 9140472,
+            "block_hash": "0x3570033c98becb79dce62539cbff97d090303fc4d35e0bdd266900d780fdb6b5",
+            "_type": "raiden.transfer.state_change.Block",
+            "_version": 0
+        }
+    ]
+]
