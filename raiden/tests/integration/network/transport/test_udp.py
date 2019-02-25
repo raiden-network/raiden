@@ -69,7 +69,7 @@ def test_udp_unreachable_node(raiden_network, skip_if_not_udp):
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_suite_survives_unhandled_exception(raiden_network):
+def test_suite_survives_unhandled_exception(raiden_network, skip_if_parity):
     """ Commit 56a617085e59fc88517e7043b629ffc9dcc0b8c4 removed code that changed
     gevent's SYSTEM_ERROR for tests. This test aims to show that there is no regression. """
     class UnhandledTestException(Exception):

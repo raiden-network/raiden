@@ -302,6 +302,7 @@ def test_query_events(
         settle_timeout,
         retry_timeout,
         contract_manager,
+        blockchain_type,
 ):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     registry_address = app0.raiden.default_registry.address
@@ -339,15 +340,17 @@ def test_query_events(
         },
     )
 
-    events = get_token_network_registry_events(
-        chain=app0.raiden.chain,
-        token_network_registry_address=app0.raiden.default_registry.address,
-        contract_manager=contract_manager,
-        events=ALL_EVENTS,
-        from_block=999999998,
-        to_block=999999999,
-    )
-    assert not events
+    if blockchain_type == 'geth':
+        # TODO why do we query events in nonexisting blocks here?
+        events = get_token_network_registry_events(
+            chain=app0.raiden.chain,
+            token_network_registry_address=app0.raiden.default_registry.address,
+            contract_manager=contract_manager,
+            events=ALL_EVENTS,
+            from_block=999999998,
+            to_block=999999999,
+        )
+        assert not events
 
     RaidenAPI(app0.raiden).channel_open(
         registry_address,
@@ -378,15 +381,17 @@ def test_query_events(
     assert _event
     channel_id = _event['args']['channel_identifier']
 
-    events = get_token_network_events(
-        chain=app0.raiden.chain,
-        token_network_address=manager0.address,
-        contract_manager=contract_manager,
-        events=ALL_EVENTS,
-        from_block=999999998,
-        to_block=999999999,
-    )
-    assert not events
+    if blockchain_type == 'geth':
+        # see above
+        events = get_token_network_events(
+            chain=app0.raiden.chain,
+            token_network_address=manager0.address,
+            contract_manager=contract_manager,
+            events=ALL_EVENTS,
+            from_block=999999998,
+            to_block=999999999,
+        )
+        assert not events
 
     # channel is created but not opened and without funds
     channelcount1 = views.total_token_network_channels(

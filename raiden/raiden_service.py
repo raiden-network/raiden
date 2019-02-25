@@ -483,6 +483,10 @@ class RaidenService(Runnable):
 
         log.debug('Raiden Service stopped', node=pex(self.address))
 
+    @property
+    def confirmation_blocks(self):
+        return self.config['blockchain']['confirmation_blocks']
+
     def add_pending_greenlet(self, greenlet: Greenlet):
         """ Ensures an error on the passed greenlet crashes self/main greenlet. """
 
@@ -638,8 +642,7 @@ class RaidenService(Runnable):
         # 3686b3275ff7c0b669a6d5e2b34109c3bdf1921d)
         with self.event_poll_lock:
             latest_block_number = latest_block['number']
-            confirmation_blocks = self.config['blockchain']['confirmation_blocks']
-            confirmed_block_number = latest_block_number - confirmation_blocks
+            confirmed_block_number = latest_block_number - self.confirmation_blocks
             confirmed_block = self.chain.client.web3.eth.getBlock(confirmed_block_number)
 
             # handle testing private chains

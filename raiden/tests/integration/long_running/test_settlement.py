@@ -246,7 +246,13 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, deposit):
+def test_batch_unlock(
+        raiden_network,
+        token_addresses,
+        secret_registry_address,
+        deposit,
+        blockchain_type,
+):
     """Batch unlock can be called after the channel is settled."""
     alice_app, bob_app = raiden_network
     registry_address = alice_app.raiden.default_registry.address
@@ -366,7 +372,8 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
     ]
 
     # wait for the node to call batch unlock
-    with gevent.Timeout(10):
+    timeout = 30 if blockchain_type == 'parity' else 10
+    with gevent.Timeout(timeout):
         wait_for_batch_unlock(
             bob_app,
             token_network_identifier,
@@ -392,7 +399,7 @@ def test_batch_unlock(raiden_network, token_addresses, secret_registry_address, 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_settled_lock(token_addresses, raiden_network, deposit):
+def test_settled_lock(token_addresses, raiden_network, deposit, skip_if_parity):
     """ Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """

@@ -297,6 +297,7 @@ def test_different_view_of_last_bp_during_unlock(
         # UDP does not seem to retry messages until processed
         # https://github.com/raiden-network/raiden/issues/3185
         skip_if_not_matrix,
+        blockchain_type,
 ):
     """Test for https://github.com/raiden-network/raiden/issues/3196#issuecomment-449163888"""
     # Topology:
@@ -457,7 +458,8 @@ def test_different_view_of_last_bp_during_unlock(
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
 
-    with gevent.Timeout(10):
+    timeout = 30 if blockchain_type == 'parity' else 10
+    with gevent.Timeout(timeout):
         unlock_app0 = wait_for_state_change(
             app0.raiden,
             ContractReceiveChannelBatchUnlock,
@@ -465,7 +467,7 @@ def test_different_view_of_last_bp_during_unlock(
             retry_timeout,
         )
     assert unlock_app0.returned_tokens == 50
-    with gevent.Timeout(10):
+    with gevent.Timeout(timeout):
         unlock_app1 = wait_for_state_change(
             app1.raiden,
             ContractReceiveChannelBatchUnlock,

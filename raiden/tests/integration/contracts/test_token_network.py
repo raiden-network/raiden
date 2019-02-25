@@ -71,6 +71,7 @@ def test_token_network_proxy_basics(
         chain_id,
         web3,
         contract_manager,
+        skip_if_parity,
 ):
     # check settlement timeouts
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
@@ -368,6 +369,7 @@ def test_token_network_proxy_update_transfer(
         chain_id,
         web3,
         contract_manager,
+        skip_if_parity,
 ):
     """Tests channel lifecycle, with `update_transfer` before settling"""
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)

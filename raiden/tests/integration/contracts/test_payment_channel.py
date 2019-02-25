@@ -19,6 +19,7 @@ def test_payment_channel_proxy_basics(
         chain_id,
         web3,
         contract_manager,
+        skip_if_parity,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
@@ -157,6 +158,7 @@ def test_payment_channel_outdated_channel_close(
         chain_id,
         web3,
         contract_manager,
+        skip_if_parity,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 

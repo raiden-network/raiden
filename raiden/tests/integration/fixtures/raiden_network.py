@@ -16,6 +16,14 @@ from raiden.tests.utils.network import (
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
 
 
+def wait_for_min_blocks(raiden, web3):
+    """Wait until the block height exceeds confirmation_blocks, so the
+    computation of the last confirmed block in tests will not yield a
+    negative block number.
+    """
+    while web3.eth.blockNumber <= raiden.confirmation_blocks:
+        gevent.sleep(.5)
+
 
 @pytest.fixture
 def raiden_chain(
@@ -76,6 +84,7 @@ def raiden_chain(
         private_rooms=private_rooms,
     )
 
+    wait_for_min_blocks(raiden_apps[0].raiden, blockchain_services[2].client.web3)
     parallel_start_apps(raiden_apps)
 
     from_block = GENESIS_BLOCK_NUMBER
@@ -174,6 +183,7 @@ def raiden_network(
         private_rooms=private_rooms,
     )
 
+    wait_for_min_blocks(raiden_apps[0].raiden, blockchain_services[2].client.web3)
     parallel_start_apps(raiden_apps)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
