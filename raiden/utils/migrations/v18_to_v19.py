@@ -13,7 +13,11 @@ def _add_blockhash_to_contract_receive_state_changes(storage: SQLiteStorage, web
     updated_state_changes = []
     for state_change in state_changes:
         data = json.loads(state_change.data)
-        if 'raiden.transfer.state_change.ContractReceive' in data['_type']:
+        affected_state_change = (
+            'raiden.transfer.state_change.ContractReceive' in data['_type'] or
+            'raiden.transfer.state_change.ActionInitChain' in data['_type']
+        )
+        if affected_state_change:
             assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
             block_number = int(data['block_number'])
             block_hash = web3.eth.getBlock(block_number)['hash']
