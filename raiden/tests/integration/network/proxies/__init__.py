@@ -16,6 +16,7 @@ class BalanceProof:
     Serialization will also add these items only if each of transferred_amount, locked_amount
     and locksroot is set.
     """
+
     def __init__(
             self,
             channel_identifier: ChannelID,
