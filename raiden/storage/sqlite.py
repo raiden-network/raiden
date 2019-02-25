@@ -6,7 +6,7 @@ from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec
-from raiden.utils.typing import Any, Dict, NamedTuple, Optional, Tuple
+from raiden.utils.typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 from .serialize import SerializationBase
 
@@ -291,6 +291,42 @@ class SQLiteStorage(SerializationBase):
             )
 
         return result
+
+    def get_all_state_changes(self) -> List[StateChangeRecord]:
+        """ Return all state change records (identifier and data)"""
+        cursor = self.conn.cursor()
+
+        sql = (
+            f'SELECT identifier, data '
+            f'FROM state_changes '
+            f'ORDER BY identifier '
+        )
+        cursor.execute(sql)
+
+        result = []
+        try:
+            rows = cursor.fetchall()
+            for row in rows:
+                result.append(StateChangeRecord(
+                    state_change_identifier=row[0],
+                    data=row[1],
+                ))
+        except AttributeError:
+            raise InvalidDBData(
+                'Your local database is corrupt. Bailing ...',
+            )
+
+        return result
+
+    def update_state_changes(self, state_changes: List[StateChangeRecord]) -> None:
+        """Given a list of identifier/data state change records update them in the DB"""
+        cursor = self.conn.cursor()
+        for state_change in state_changes:
+            cursor.execute(
+                'UPDATE state_snapshot SET data=? WHERE identifier=?',
+                (state_change.data, state_change.identifier),
+            )
+            self.maybe_commit()
 
     def get_statechanges_by_identifier(self, from_identifier, to_identifier):
         if not (from_identifier == 'latest' or isinstance(from_identifier, int)):
