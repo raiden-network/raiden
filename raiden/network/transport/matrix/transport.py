@@ -44,7 +44,6 @@ from raiden.network.transport.matrix.utils import (
 )
 from raiden.network.transport.udp import udp_utils
 from raiden.raiden_service import RaidenService
-from raiden.storage.serialize import JSONSerializer
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
@@ -165,7 +164,7 @@ class _RetryQueue(Runnable):
             self._message_queue.append(_RetryQueue._MessageData(
                 queue_identifier=queue_identifier,
                 message=message,
-                text=JSONSerializer.serialize(message),
+                text=json.dumps(message.to_dict()),
                 expiration_generator=expiration_generator,
             ))
         self.notify()
@@ -586,7 +585,7 @@ class MatrixTransport(Runnable):
             if messages:
                 for room_name in set(room_name for room_name, _ in messages):
                     message_text = '\n'.join(
-                        JSONSerializer.serialize(message)
+                        json.dumps(message.to_dict())
                         for target_room, message in messages
                         if target_room == room_name
                     )
