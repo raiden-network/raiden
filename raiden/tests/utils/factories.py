@@ -6,7 +6,6 @@ from typing import NamedTuple
 
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer
-from raiden.tests.utils import factories
 from raiden.transfer import balance_proof, channel
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
@@ -1127,7 +1126,7 @@ def make_transfers_pair(
         transfers_pair=transfers_pairs,
         amount=amount,
         block_number=block_number,
-        block_hash=factories.make_block_hash(),
+        block_hash=make_block_hash(),
     )
 
 
