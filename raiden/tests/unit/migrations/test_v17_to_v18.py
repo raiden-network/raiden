@@ -7,6 +7,7 @@ from unittest.mock import patch
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils import factories
+from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.transfer.state_change import ActionInitChain
 from raiden.utils.upgrades import UpgradeManager
 
@@ -50,7 +51,8 @@ def test_upgrade_v17_to_v18(tmp_path):
             storage.update_version()
         storage.conn.close()
 
-    manager = UpgradeManager(db_filename=str(db_path))
+    web3, _ = create_fake_web3_for_block_hash()
+    manager = UpgradeManager(db_filename=str(db_path), web3=web3)
     manager.run()
 
     storage = SQLiteStorage(str(db_path))

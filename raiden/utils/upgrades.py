@@ -6,6 +6,7 @@ from pathlib import Path
 
 import filelock
 import structlog
+from web3 import Web3
 
 from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
 from raiden.storage.versions import older_db_file
@@ -57,9 +58,9 @@ def get_db_version(db_filename: Path):
         return 0
 
 
-def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, **args) -> int:
+def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, *args) -> int:
     """ Run the migration function, store the version and advance the version. """
-    new_version = func(cursor, version, RAIDEN_DB_VERSION, **args)
+    new_version = func(cursor, version, RAIDEN_DB_VERSION, *args)
     update_version(cursor, new_version)
     return new_version
 
@@ -101,7 +102,7 @@ class UpgradeManager:
     - If every migration succeeds: Rename the old DB.
     """
 
-    def __init__(self, db_filename: str, web3):
+    def __init__(self, db_filename: str, web3: Web3 = None):
         self._current_db_filename = Path(db_filename)
         self._web3 = web3
 
@@ -145,7 +146,7 @@ class UpgradeManager:
                     for upgrade_func_details in UPGRADES_LIST:
                         if isinstance(upgrade_func_details, tuple):
                             upgrade_func = upgrade_func_details[0]
-                            extra_args = self.web3
+                            extra_args = [self._web3]
                         else:
                             upgrade_func = upgrade_func_details
                             extra_args = []
