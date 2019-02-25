@@ -35,6 +35,7 @@ NODE_ACCOUNT_BALANCE_FUND = 3 * 10 ** 17  # := 0.3 Eth
 TIMEOUT = 200
 API_URL_ADDRESS = "{protocol}://{target_host}/api/v1/address"
 API_URL_TOKENS = "{protocol}://{target_host}/api/v1/tokens"
+API_URL_TOKEN_NETWORK_ADDRESS = "{protocol}://{target_host}/api/v1/tokens/{token_address}"
 SUPPORTED_SCENARIO_VERSIONS = {1, 2}
 
 
@@ -259,6 +260,17 @@ class ScenarioRunner(object):
             if not 199 < code < 300:
                 log.error("Couldn't register token with network", code=code, message=msg)
                 raise TokenRegistrationError(msg)
+
+        # The nodes need some time to find the token, see
+        # https://github.com/raiden-network/raiden/issues/3544
+        log.info('Waiting till new network in found by nodes')
+        gevent.sleep(10)
+
+        self.token_network_address = self.session.get(API_URL_TOKEN_NETWORK_ADDRESS.format(
+            protocol=self.protocol,
+            target_host=first_node,
+            token_address=self.token_address,
+        )).json()
 
         # Start root task
         root_task_greenlet = gevent.spawn(self.root_task)
