@@ -322,6 +322,8 @@ class MatrixTransport(Runnable):
         self._stop_event = gevent.event.Event()
         self._stop_event.set()
 
+        self._global_send_event = gevent.event.Event()
+
         self._client.add_invite_listener(self._handle_invite)
         self._client.add_presence_listener(self._handle_presence_change)
 
@@ -396,7 +398,6 @@ class MatrixTransport(Runnable):
                 retrier.start()
 
         self.log.debug('Matrix started', config=self._config)
-        self._spawn(self._global_send_worker)
 
         super().start()  # start greenlet
 
@@ -409,8 +410,9 @@ class MatrixTransport(Runnable):
         self.greenlet.name = f'MatrixTransport._run node:{pex(self._raiden_service.address)}'
         self._raiden_service.handle_and_track_state_change(state_change)
         try:
+            # waits on _stop_event.ready()
+            self._global_send_worker()
             # children crashes should throw an exception here
-            self._stop_event.wait()
         except gevent.GreenletExit:  # killed without exception
             self._stop_event.set()
             gevent.killall(self.greenlets)  # kill children
@@ -428,6 +430,7 @@ class MatrixTransport(Runnable):
         if self._stop_event.ready():
             return
         self._stop_event.set()
+        self._global_send_event.set()
 
         for retrier in self._address_to_retrier.values():
             if retrier:
@@ -554,34 +557,34 @@ class MatrixTransport(Runnable):
         assert self._global_rooms.get(room_name), f'Unknown global room: {room_name!r}'
 
         self._global_send_queue.put((room_name, message))
+        self._global_send_event.set()
 
     def _global_send_worker(self):
-        while True:
-            if self._stop_event.is_set():
-                break
-            if self._global_send_queue.qsize() > 0:
-                room_name, message = self._global_send_queue.get()
 
-                def _send_global(room_name, message):
-                    text = JSONSerializer.serialize(message)
-                    room = self._global_rooms[room_name]
-                    self.log.debug(
-                        'Send global',
-                        room_name=room_name,
-                        room=room,
-                        data=text.replace('\n', '\\n'),
+        def _send_global(room_name, serialized_message):
+            room = self._global_rooms[room_name]
+            self.log.debug(
+                'Send global',
+                room_name=room_name,
+                room=room,
+                data=serialized_message.replace('\n', '\\n'),
+            )
+            room.send_text(serialized_message)
+
+        while not self._stop_event.ready():
+            self._global_send_event.clear()
+            messages: List[str, Message] = list()
+            while self._global_send_queue.qsize() > 0:
+                messages.append(self._global_send_queue.get())
+            if messages:
+                for room_name in set(room_name for room_name, _ in messages):
+                    message_text = '\n'.join(
+                        JSONSerializer.serialize(message)
+                        for target_room, message in messages
+                        if target_room == room_name
                     )
-                    room.send_text(text)
-
-                greenlet = self._spawn(_send_global, room_name, message)
-                greenlet.name = (
-                    f'MatrixTransport.send_global '
-                    f'node:{pex(self._raiden_service.address)} '
-                    f'room:{room_name} '
-                    f'user_id:{self._user_id}'
-                )
-            else:
-                gevent.sleep(self._config['retry_interval'])
+                    _send_global(room_name, message_text)
+            self._global_send_event.wait(self._config['retry_interval'])
 
     @property
     def _queueids_to_queues(self) -> QueueIdsToQueues:

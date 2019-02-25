@@ -17,9 +17,9 @@ from raiden.messages import Processed, SecretRequest
 from raiden.network.transport.matrix import MatrixTransport, UserPresence, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
-from raiden.tests.utils.client import burn_eth
 from raiden.raiden_event_handler import SEND_BALANCE_PROOF_EVENTS
 from raiden.raiden_service import update_monitoring_service_from_balance_proof
+from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.messages import make_balance_proof, make_lock
 from raiden.tests.utils.mocks import MockRaidenService
