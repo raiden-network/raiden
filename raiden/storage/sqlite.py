@@ -11,7 +11,7 @@ from raiden.utils.typing import Any, Dict, List, NamedTuple, Optional, Tuple
 from .serialize import SerializationBase
 
 # The latest DB version
-RAIDEN_DB_VERSION = 18
+RAIDEN_DB_VERSION = 19
 
 
 class EventRecord(NamedTuple):

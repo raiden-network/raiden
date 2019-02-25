@@ -11,11 +11,13 @@ from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
 from raiden.storage.versions import older_db_file
 from raiden.utils.migrations.v16_to_v17 import upgrade_initiator_manager
 from raiden.utils.migrations.v17_to_v18 import upgrade_mediators_with_waiting_transfer
+from raiden.utils.migrations.v18_to_v19 import upgrade_state_changes_with_blockhash
 from raiden.utils.typing import Callable
 
 UPGRADES_LIST = [
     upgrade_initiator_manager,
     upgrade_mediators_with_waiting_transfer,
+    (upgrade_state_changes_with_blockhash, ['web3']),
 ]
 
 
@@ -55,9 +57,9 @@ def get_db_version(db_filename: Path):
         return 0
 
 
-def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int) -> int:
+def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, **args) -> int:
     """ Run the migration function, store the version and advance the version. """
-    new_version = func(cursor, version, RAIDEN_DB_VERSION)
+    new_version = func(cursor, version, RAIDEN_DB_VERSION, **args)
     update_version(cursor, new_version)
     return new_version
 
@@ -99,8 +101,9 @@ class UpgradeManager:
     - If every migration succeeds: Rename the old DB.
     """
 
-    def __init__(self, db_filename: str):
+    def __init__(self, db_filename: str, web3):
         self._current_db_filename = Path(db_filename)
+        self._web3 = web3
 
     def run(self):
         """
@@ -139,11 +142,19 @@ class UpgradeManager:
             try:
                 with storage.transaction():
                     version_iteration = older_version
-                    for upgrade_func in UPGRADES_LIST:
+                    for upgrade_func_details in UPGRADES_LIST:
+                        if isinstance(upgrade_func_details, tuple):
+                            upgrade_func = upgrade_func_details[0]
+                            extra_args = self.web3
+                        else:
+                            upgrade_func = upgrade_func_details
+                            extra_args = []
+
                         version_iteration = _run_upgrade_func(
                             storage,
                             upgrade_func,
                             version_iteration,
+                            *extra_args,
                         )
 
                     update_version(storage, RAIDEN_DB_VERSION)

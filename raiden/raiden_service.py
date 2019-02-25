@@ -339,7 +339,7 @@ class RaidenService(Runnable):
                 self.config['transport']['udp']['external_port'],
             )
 
-        self.maybe_upgrade_db()
+        self.maybe_upgrade_db(web3=self.chain.client.web3)
 
         storage = sqlite.SerializedSQLiteStorage(
             database_path=self.database_path,
@@ -1044,6 +1044,6 @@ class RaidenService(Runnable):
         init_target_statechange = target_init(transfer)
         self.handle_and_track_state_change(init_target_statechange)
 
-    def maybe_upgrade_db(self):
-        manager = UpgradeManager(db_filename=self.database_path)
+    def maybe_upgrade_db(self, web3):
+        manager = UpgradeManager(db_filename=self.database_path, web3=web3)
         manager.run()
