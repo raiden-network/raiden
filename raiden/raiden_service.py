@@ -32,9 +32,10 @@ from raiden.messages import (
 )
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, ServiceRegistry, TokenNetworkRegistry
+from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
-from raiden.transfer import node, views
+from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event as RaidenEvent, State, StateChange
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
@@ -59,7 +60,14 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.utils import create_default_identifier, lpex, pex, random_secret, sha3
+from raiden.utils import (
+    CanonicalIdentifier,
+    create_default_identifier,
+    lpex,
+    pex,
+    random_secret,
+    sha3,
+)
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -212,14 +220,41 @@ def update_monitoring_service_from_balance_proof(
     if raiden.config['services']['monitoring_enabled'] is False:
         return
 
+    channel_state = views.get_channelstate_by_canonical_identifier(
+        chain_state=views.state_from_raiden(raiden),
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=raiden.chain.network_id,
+            token_network_address=new_balance_proof.token_network_identifier,
+            channel_identifier=new_balance_proof.channel_identifier,
+        ),
+    )
+
+    msg = (
+        f'Failed update monitoring service due to failing to find '
+        f'channel: {new_balance_proof.channel_identifier} '
+        f'token_network_address: {pex(new_balance_proof.token_network_identifier)}.'
+    )
+    assert channel_state, msg
+
+    balance = channel.get_balance(
+        sender=channel_state.our_state,
+        receiver=channel_state.partner_state,
+    )
+
+    if balance < MONITORING_MIN_CAPACITY:
+        return
+
+    if raiden.user_deposit.effective_balance < MONITORING_REWARD:
+        return
+
     log.info(
         'Received new balance proof, creating message for Monitoring Service.',
         balance_proof=new_balance_proof,
     )
-    reward_amount = 0  # FIXME: default reward is 0, should come from elsewhere
+
     monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
         new_balance_proof,
-        reward_amount,
+        MONITORING_REWARD,
     )
     monitoring_message.sign(raiden.signer)
     raiden.transport.send_global(
