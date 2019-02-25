@@ -216,7 +216,7 @@ def test_routing_mocked_pfs_happy_path(
     response.configure_mock(status_code=200)
     response.json = Mock(return_value=json_data)
 
-    with patch.object(requests, 'get', return_value=response):
+    with patch.object(requests, 'post', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
@@ -258,7 +258,7 @@ def test_routing_mocked_pfs_request_error(
         address3: NODE_NETWORK_REACHABLE,
     }
 
-    with patch.object(requests, 'get', side_effect=requests.RequestException()):
+    with patch.object(requests, 'post', side_effect=requests.RequestException()):
         routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
@@ -318,7 +318,7 @@ def test_routing_mocked_pfs_bad_http_code(
     response.configure_mock(status_code=400)
     response.json = Mock(return_value=json_data)
 
-    with patch.object(requests, 'get', return_value=response):
+    with patch.object(requests, 'post', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
@@ -364,7 +364,7 @@ def test_routing_mocked_pfs_invalid_json(
     response.configure_mock(status_code=400)
     response.json = Mock(side_effect=ValueError())
 
-    with patch.object(requests, 'get', return_value=response):
+    with patch.object(requests, 'post', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
@@ -410,7 +410,7 @@ def test_routing_mocked_pfs_invalid_json_structure(
     response.configure_mock(status_code=400)
     response.json = Mock(return_value={})
 
-    with patch.object(requests, 'get', return_value=response):
+    with patch.object(requests, 'post', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
@@ -477,7 +477,7 @@ def test_routing_mocked_pfs_unavailabe_peer(
     response.configure_mock(status_code=200)
     response.json = Mock(return_value=json_data)
 
-    with patch.object(requests, 'get', return_value=response):
+    with patch.object(requests, 'post', return_value=response):
         routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
