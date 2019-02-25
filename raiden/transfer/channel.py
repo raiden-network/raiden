@@ -160,6 +160,9 @@ def is_deposit_confirmed(
         channel_state: NettingChannelState,
         block_number: BlockNumber,
 ) -> bool:
+    """True if the block which mined the deposit transaction has been
+    confirmed.
+    """
     if not channel_state.deposit_transaction_queue:
         return False
 
@@ -205,7 +208,7 @@ def is_lock_expired(
     return (True, None)
 
 
-def transfer_expired(
+def is_transfer_expired(
         transfer: LockedTransferSignedState,
         affected_channel: NettingChannelState,
         block_number: BlockNumber,
@@ -1154,9 +1157,9 @@ def create_sendlockedtransfer(
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
 
     lock = HashTimeLockState(
-        amount,
-        expiration,
-        secrethash,
+        amount=amount,
+        expiration=expiration,
+        secrethash=secrethash,
     )
 
     merkletree = compute_merkletree_with(
@@ -1918,7 +1921,6 @@ def handle_channel_batch_unlock(
 def state_transition(
         channel_state: NettingChannelState,
         state_change: StateChange,
-        pseudo_random_generator: Any,
         block_number: BlockNumber,
         block_hash: BlockHash,
 ) -> TransitionResult[Optional[NettingChannelState]]:

@@ -1074,7 +1074,6 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
     channel_close_transition = channel.state_transition(
         channel_state=setup.channel,
         state_change=channel_closed,
-        pseudo_random_generator=setup.prng,
         block_number=block_number,
         block_hash=block_hash,
     )
@@ -1221,7 +1220,6 @@ def test_initiator_handle_contract_receive_after_channel_closed():
     channel_close_transition = channel.state_transition(
         channel_state=setup.channel,
         state_change=channel_closed,
-        pseudo_random_generator=setup.prng,
         block_number=block_number,
         block_hash=block_hash,
     )
