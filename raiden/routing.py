@@ -165,7 +165,7 @@ def get_best_routes_pfs(
 
     # check that the response is successful
     try:
-        response = requests.get(pfs_path, params=payload, timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
+        response = requests.post(pfs_path, data=payload, timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
     except requests.RequestException:
         log.warning(
             'Could not connect to Pathfinding Service',
