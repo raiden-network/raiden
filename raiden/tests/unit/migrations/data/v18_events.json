@@ -1,0 +1,12 @@
+[
+    [
+        1,
+        80,
+        {
+            "channel_identifier": "1",
+            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "_type": "raiden.transfer.events.ContractSendChannelSettle",
+            "_version": 0
+        }
+    ]
+]

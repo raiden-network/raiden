@@ -39,13 +39,33 @@ def _add_blockhash_to_events(storage: SQLiteStorage, web3: Web3) -> None:
     updated_events = []
     for event in events:
         data = json.loads(event.data)
-        if 'ContractSend' in data['_type']:
+        if 'raiden.transfer.events.ContractSend' in data['_type']:
             assert 'triggered_by_block_hash' not in data, 'v18 events cant contain blockhash'
             # TODO: Get the state_change that triggered the event and if it has
             # a block number get its hash. If not fall back to latest.
-            block_hash = web3.eth.getBlock('latest')['hash']
-            # use the string representation of hex bytes for the in-db string
-            data['triggered_by_block_hash'] = block_hash.hex()
+            matched_state_changes = storage.get_statechanges_by_identifier(
+                from_identifier=event.state_change_identifier,
+                to_identifier=event.state_change_identifier,
+            )
+            result_length = len(matched_state_changes)
+            msg = 'multiple state changes should not exist for the same identifier'
+            assert result_length == 0 or result_length == 1, msg
+            block_hash = None
+            if result_length == 1:
+                statechange_data = json.loads(matched_state_changes[0])
+                if 'block_hash' in statechange_data:
+                    block_hash = statechange_data['block_hash']
+                elif 'block_number' in statechange_data:
+                    block_number = int(statechange_data['block_number'])
+                    block_hash = web3.eth.getBlock(block_number)['hash']
+                    block_hash = block_hash.hex()
+
+            # else fallback to just using the latest blockhash
+            if not block_hash:
+                block_hash = web3.eth.getBlock('latest')['hash']
+                block_hash = block_hash.hex()
+
+            data['triggered_by_block_hash'] = block_hash
 
             updated_events.append(EventRecord(
                 event_identifier=event.event_identifier,
