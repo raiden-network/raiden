@@ -385,8 +385,15 @@ def options(func):
                     'root certificate that is used to authenticate the '
                     'resolver se``rver'
                 ),
-                default='/Users/admin/raiden/raiden/resolver/server.crt',
-                type=click.File(lazy=True),
+                default=None,
+                type=click.Path(
+                    exists=True,
+                    dir_okay=False,
+                    file_okay=True,
+                    writable=False,
+                    resolve_path=True,
+                    allow_dash=True,
+                ),
                 show_default=True,
             ),
         ),

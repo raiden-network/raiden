@@ -76,10 +76,16 @@ class MessageHandler:
         )
         # TODO (Offer) : move to a seperate function
         # TODO (Offer) : add config for host/port/crtfile
+        # TODO(offer) : handle the case of no resolver or fail to resolve
+        # TODO (offer): add virification that hash == sha3(secret)
         if state_change.secret == EMPTY_SECRET:
+
+            if raiden.config['resolver_crt_file'] is None:
+                return
+
             try:
 
-                with open(raiden.config['resolver_crt_file'].name, 'rb') as f:
+                with open(raiden.config['resolver_crt_file'], 'rb') as f:
                     trusted_certs = f.read()
 
                 credentials = grpc.ssl_channel_credentials(root_certificates=trusted_certs)
@@ -99,7 +105,7 @@ class MessageHandler:
                 print(response)
 
             except Exception:
-                pass
+                return
 
             state_change.secret = to_bytes(hexstr=response.preimage)
 
