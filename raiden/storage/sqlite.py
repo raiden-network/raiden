@@ -387,6 +387,43 @@ class SQLiteStorage(SerializationBase):
 
         return cursor.fetchall()
 
+    def get_all_event_records(self) -> List[EventRecord]:
+        """Queries the DB for all state events and returns them in a list"""
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT identifier, source_statechange_id, data FROM state_events
+                ORDER BY identifier
+            ''',
+        )
+
+        result = []
+        try:
+            rows = cursor.fetchall()
+            for row in rows:
+                result.append(EventRecord(
+                    event_identifier=row[0],
+                    state_change_identifier=row[1],
+                    data=row[2],
+                ))
+        except AttributeError:
+            raise InvalidDBData(
+                'Your local database is corrupt. Bailing ...',
+            )
+
+        return result
+
+    def update_events(self, event_records: List[EventRecord]) -> None:
+        """Given a list of identifier/data event records update them in the DB"""
+        cursor = self.conn.cursor()
+        for event in event_records:
+            cursor.execute(
+                'UPDATE state_events SET data=? WHERE identifier=?',
+                (event.data, event.event_identifier),
+            )
+            self.maybe_commit()
+
     def get_events_with_timestamps(self, limit: int = None, offset: int = None):
         entries = self._query_events(limit, offset)
         return [
