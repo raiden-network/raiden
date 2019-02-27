@@ -73,6 +73,7 @@ def events_for_unlock_lock(
         identifier=transfer_description.payment_identifier,
         amount=transfer_description.amount,
         target=transfer_description.target,
+        secret=secret,
     )
 
     unlock_success = EventUnlockSuccess(
