@@ -1,5 +1,6 @@
 from typing import List
 
+import gevent
 import structlog
 from eth_utils import encode_hex, event_abi_to_log_topic, is_binary_address, to_normalized_address
 from gevent.event import AsyncResult
@@ -71,6 +72,7 @@ class SecretRegistry:
         secrethashes_to_register = list()
         secrethashes_not_sent = list()
         transaction_result = AsyncResult()
+        wait_for = list()
 
         with self._open_secret_transactions_lock:
             for secret in secrets:
@@ -93,17 +95,15 @@ class SecretRegistry:
                 # meaning that if this proxy method is called with a really old
                 # blockhash an unecessary transaction will be sent, and the
                 # error will be treated as a race-condition.
-                is_register_needed = (
-                    secret not in self.open_secret_transactions and
-                    not self.is_secret_registered(secrethash, given_block_identifier)
-                )
+                other_result = self.open_secret_transactions.get(secret)
 
-                if is_register_needed:
+                if other_result is not None:
+                    wait_for.append(other_result)
+                    secrethashes_not_sent.append(secrethash_hex)
+                elif not self.is_secret_registered(secrethash, given_block_identifier):
                     secrets_to_register.append(secret)
                     secrethashes_to_register.append(secrethash_hex)
                     self.open_secret_transactions[secret] = transaction_result
-                else:
-                    secrethashes_not_sent.append(secrethash_hex)
 
         # From here on the lock is not required. Context-switches will happen
         # for the gas estimation and the transaction, however the
@@ -116,7 +116,11 @@ class SecretRegistry:
         }
 
         if not secrets_to_register:
-            log.debug('registerSecretBatch skipped', **log_details)
+            log.debug(
+                'registerSecretBatch skipped, waiting for transactions',
+                **log_details,
+            )
+            gevent.joinall(wait_for, raise_error=True)
             return
 
         checking_block = self.client.get_checking_block()
@@ -253,6 +257,10 @@ class SecretRegistry:
             exception = RaidenRecoverableError(error)
             transaction_result.set_exception(exception)
             raise exception
+
+        if wait_for:
+            log.info('registerSecretBatch waiting for pending', **log_details)
+            gevent.joinall(wait_for, raise_error=True)
 
         log.info('registerSecretBatch successful', **log_details)
 
