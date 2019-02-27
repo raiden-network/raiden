@@ -242,16 +242,19 @@ def geth_init_datadir(datadir: str, genesis_path: str):
         raise ValueError(msg)
 
 
-def parity_write_key_file(key, keyhex, password, base_path):
+def parity_write_key_file(key, keyhex, password_path, base_path):
 
     path = f'{base_path}/{(keyhex[:8]).lower()}'
-    try:
-        os.makedirs(f'{path}')
-    except os.error:  # Directory already exists
-        pass
+    os.makedirs(f'{path}')
 
     password = DEFAULT_PASSPHRASE
+    with open(password_path, 'w') as password_file:
+        password_file.write(password)
+
     keyfile_json = create_keyfile_json(key, bytes(password, 'utf-8'))
+    iv = keyfile_json['crypto']['cipherparams']['iv']
+    keyfile_json['crypto']['cipherparams']['iv'] = f'{iv:0>32}'
+    # Parity expects a string of length 32 here, but eth_keyfile does not pad
     with open(f'{path}/keyfile', 'w') as keyfile:
         json.dump(keyfile_json, keyfile)
 
