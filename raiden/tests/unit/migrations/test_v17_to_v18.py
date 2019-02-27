@@ -21,7 +21,7 @@ def setup_storage(db_path):
     )
     del storage
 
-    # Also add the v16 chainstate directly to the DB
+    # Also add the v17 chainstate directly to the DB
     chain_state_data = Path(__file__).parent / 'data/v17_chainstate.json'
     chain_state = chain_state_data.read_text()
     serialized_storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
