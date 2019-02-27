@@ -542,6 +542,9 @@ jobs:
             git config --global user.email "contact@raiden.network"
             git config --global user.name "Raiden Network"
       - run:
+          name: Configure SSH
+          command: .circleci/fetch_ssh_hostkey.sh github.com "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"
+      - run:
           name: Checkout homebrew-raiden
           command: |
             git clone git@github.com:raiden-network/homebrew-raiden
@@ -549,18 +552,19 @@ jobs:
           name: Update Formula
           command: |
             source .circleci/get_archive_tag.sh
-            UPDATED_SHA256=$(openssl dgst -sha256 dist/archive/raiden-${ARCHIVE_TAG}-macOS.zip)
-            FORMULA_FILE="homebrew-raiden/raiden.rb"
-            sed -i .bak -E "s/[0-9]+\.[0-9]+\.[0-9]+/${ARCHIVE_TAG/v/}/g" ${FORMULA_FILE}
-            sed -i .bak -E "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"${UPDATED_SHA256: -64}\"/g" ${FORMULA_FILE}
-            rm $FORMULA_FILE.bak
+            export UPDATED_SHA256=$(openssl dgst -sha256 dist/archive/raiden-${ARCHIVE_TAG}-macOS-x86_64.zip)
+            export FORMULA_FILE="homebrew-raiden/raiden.rb"
+            sed -i.bak -r "s/[0-9]+\.[0-9]+\.[0-9]+(-?rc.)?/${ARCHIVE_TAG/v/}/g" ${FORMULA_FILE}
+            sed -i.bak -r "s/sha256 \"[a-f0-9]\{64\}\"/sha256 \"${UPDATED_SHA256: -64}\"/g" ${FORMULA_FILE}
+            rm ${FORMULA_FILE}.bak
       - run:
           name: Commit and Push Updated Formula
           command: |
+            source .circleci/get_archive_tag.sh
             pushd homebrew-raiden
             git add raiden.rb
-            git commit -m "Update formula to ${TRAVIS_TAG}"
-            git tag -a "${TRAVIS_TAG}" -m "${TRAVIS_TAG}"
+            git commit -m "Update formula to ${ARCHIVE_TAG}"
+            git tag -a "${ARCHIVE_TAG}" -m "${ARCHIVE_TAG}"
             git push --follow-tags
             popd
 
