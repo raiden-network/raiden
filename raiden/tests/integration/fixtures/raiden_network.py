@@ -14,15 +14,21 @@ from raiden.tests.utils.network import (
     wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
+from raiden.waiting import wait_for_block_using_web3
 
 
-def wait_for_min_blocks(raiden, web3):
-    """Wait until the block height exceeds confirmation_blocks, so the
-    computation of the last confirmed block in tests will not yield a
-    negative block number.
-    """
-    while web3.eth.blockNumber <= raiden.confirmation_blocks:
-        gevent.sleep(.5)
+def wait_for_confirmed_block(blockchain_services, raiden_apps):
+    wait_for_block_using_web3(
+        web3=blockchain_services.deploy_service.client.web3,
+        block_number=raiden_apps[0].raiden.confirmation_blocks + 1,
+        retry_timout=0.5,
+    )
+
+
+def timeout(blockchain_type: str):
+    """As parity nodes are slower, we need to set a longer timeout when
+    waiting for onchain events to complete."""
+    return 120 if blockchain_type == 'parity' else 30
 
 
 @pytest.fixture
@@ -84,7 +90,7 @@ def raiden_chain(
         private_rooms=private_rooms,
     )
 
-    wait_for_min_blocks(raiden_apps[0].raiden, blockchain_services[2].client.web3)
+    wait_for_confirmed_block(blockchain_services, raiden_apps)
     parallel_start_apps(raiden_apps)
 
     from_block = GENESIS_BLOCK_NUMBER
@@ -96,8 +102,7 @@ def raiden_chain(
         )
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
-    timeout = 120 if blockchain_type == 'parity' else 30
-    with gevent.Timeout(seconds=timeout, exception=exception):
+    with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
         wait_for_token_networks(
             raiden_apps=raiden_apps,
             token_network_registry_address=token_network_registry_address,
@@ -119,8 +124,7 @@ def raiden_chain(
     )
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, nodes are unreachable')
-    timeout = 120 if blockchain_type == 'parity' else 30
-    with gevent.Timeout(seconds=timeout, exception=exception):
+    with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
         wait_for_channels(
             app_channels,
             blockchain_services.deploy_registry.address,
@@ -183,12 +187,11 @@ def raiden_network(
         private_rooms=private_rooms,
     )
 
-    wait_for_min_blocks(raiden_apps[0].raiden, blockchain_services[2].client.web3)
+    wait_for_confirmed_block(blockchain_services, raiden_apps)
     parallel_start_apps(raiden_apps)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
-    timeout = 120 if blockchain_type == 'parity' else 30
-    with gevent.Timeout(seconds=timeout, exception=exception):
+    with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
         wait_for_token_networks(
             raiden_apps=raiden_apps,
             token_network_registry_address=token_network_registry_address,
@@ -210,8 +213,7 @@ def raiden_network(
     )
 
     exception = RuntimeError('`raiden_network` fixture setup failed, nodes are unreachable')
-    timeout = 120 if blockchain_type == 'parity' else 30
-    with gevent.Timeout(seconds=timeout, exception=exception):
+    with gevent.Timeout(seconds=timeout(blockchain_type), exception=exception):
         wait_for_channels(
             app_channels,
             blockchain_services.deploy_registry.address,

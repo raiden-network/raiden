@@ -15,7 +15,7 @@ from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_norm
 from web3 import Web3
 
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
-from raiden.tests.utils.genesis import GENESIS_STUB
+from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.typing import Dict, List, NamedTuple
 
@@ -164,76 +164,6 @@ def geth_create_account(datadir: str, privkey: bytes):
     assert create.returncode == 0
 
 
-PARITY_CHAIN_SPEC_STUB = {
-    "name": "RaidenTestChain",
-    "engine": {
-        "authorityRound": {
-            "params": {
-                "stepDuration": 3,
-            },
-        },
-    },
-    "params": {
-        "gasLimitBoundDivisor": "0x0400",
-        "maximumExtraDataSize": "0x20",
-        "minGasLimit": "0x1388",
-        "networkID": 337,
-        "eip155Transition": "0x0",
-        "eip98Transition": "0x7fffffffffffff",
-        "eip140Transition": "0x0",
-        "eip211Transition": "0x0",
-        "eip214Transition": "0x0",
-        "eip658Transition": "0x0",
-    },
-    "genesis": {
-        "seal": {
-            "authorityRound": {
-                "step": "0x0",
-                "signature": (
-                    "0x00000000000000000000000000000000000000000000000000000000000000000"
-                    "00000000000000000000000000000000000000000000000000000000000000000"
-                ),
-            },
-        },
-        "difficulty": "0x20000",
-        "author": "0x0000000000000000000000000000000000000000",
-        "timestamp": "0x00",
-        "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "gasLimit": "0x2540BE400",
-    },
-    "accounts": {
-        "0x0000000000000000000000000000000000000001": {
-            "balance": "1",
-            "builtin": {
-                "name": "ecrecover",
-                "pricing": {"linear": {"base": 3000, "word": 0}},
-            },
-        },
-        "0x0000000000000000000000000000000000000002": {
-            "balance": "1",
-            "builtin": {
-                "name": "sha256",
-                "pricing": {"linear": {"base": 60, "word": 12}},
-            },
-        },
-        "0x0000000000000000000000000000000000000003": {
-            "balance": "1",
-            "builtin": {
-                "name": "ripemd160",
-                "pricing": {"linear": {"base": 600, "word": 120}},
-            },
-        },
-        "0x0000000000000000000000000000000000000004": {
-            "balance": "1",
-            "builtin": {
-                "name": "identity",
-                "pricing": {"linear": {"base": 15, "word": 3}},
-            },
-        },
-    },
-}
-
-
 def parity_generate_chain_spec(
         spec_path: str,
         accounts_addresses: List[bytes],
@@ -328,9 +258,14 @@ def parity_write_key_file(key, keyhex, password, base_path):
     return path
 
 
-def parity_create_account(key, keyhex, password, base_path, chain_spec):
+def parity_create_account(node_configuration, base_path, chain_spec):
+
+    key = node_configuration['nodekey']
+    keyhex = node_configuration['nodekeyhex']
+    password = node_configuration['password']
 
     path = parity_write_key_file(key, keyhex, password, base_path)
+
     process = subprocess.Popen((
         'parity',
         'account',
@@ -391,7 +326,7 @@ def eth_wait_and_check(
         process.poll()
 
         if process.returncode is not None:
-            raise ValueError(f'geth process failed with exit code {process.returncode}')
+            raise ValueError(f'geth/parity process failed with exit code {process.returncode}')
 
     if jsonrpc_running is False:
         raise ValueError('The jsonrpc interface is not reachable.')
@@ -432,7 +367,7 @@ def eth_node_config_set_bootnodes(nodes_configuration: Dict) -> None:
         config['bootnodes'] = bootnodes
 
 
-def geth_node_to_datadir(node_config, base_datadir):
+def eth_node_to_datadir(node_config, base_datadir):
     # HACK: Use only the first 8 characters to avoid golang's issue
     # https://github.com/golang/go/issues/6895 (IPC bind fails with path
     # longer than 108 characters).
@@ -472,18 +407,15 @@ def eth_nodes_to_cmds(
 ):
     cmds = []
     for config, node in zip(nodes_configuration, eth_nodes):
-        if node.blockchain_type == 'geth':
-            datadir = geth_node_to_datadir(config, base_datadir)
-            geth_prepare_datadir(datadir, genesis_file)
+        datadir = eth_node_to_datadir(config, base_datadir)
 
+        if node.blockchain_type == 'geth':
+            geth_prepare_datadir(datadir, genesis_file)
             if node.miner:
                 geth_create_account(datadir, node.private_key)
-
             commandline = geth_to_cmd(config, datadir, chain_id, verbosity)
 
         elif node.blockchain_type == 'parity':
-            datadir = geth_node_to_datadir(config, base_datadir)  # todo changes for parity needed?
-
             chain_spec = f'{base_datadir}/chainspec.json'
             commandline = parity_to_cmd(config, datadir, chain_id, chain_spec)
 
@@ -614,13 +546,7 @@ def run_private_blockchain(
             seal_account,
             random_marker,
         )
-        parity_create_account(
-            nodes_configuration[0]['nodekey'],
-            nodes_configuration[0]['nodekeyhex'],
-            nodes_configuration[0]['password'],
-            base_datadir,
-            chainspec_path,
-        )
+        parity_create_account(nodes_configuration[0], base_datadir, chainspec_path)
 
     # check that the test is running on non-capture mode, and if it is save
     # current term settings before running geth

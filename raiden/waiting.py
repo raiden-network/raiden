@@ -1,6 +1,8 @@
 import gevent
 import structlog
 
+from web3 import Web3
+
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
 from raiden.transfer.state import (
@@ -29,6 +31,15 @@ def wait_for_block(
         current_block_number = views.block_number(
             views.state_from_raiden(raiden),
         )
+
+
+def wait_for_block_using_web3(
+        web3: Web3,
+        block_number: typing.BlockNumber,
+        retry_timout: float,
+) -> None:
+    while web3.eth.blockNumber < block_number:
+        gevent.sleep(retry_timout)
 
 
 def wait_for_newchannel(
