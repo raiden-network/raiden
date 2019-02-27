@@ -83,7 +83,7 @@ def query_blockchain_events(
 
 
 class BlockchainEventFilter(Task):
-    _name = 'check_events'
+    _name = 'assert_events'
 
     def __init__(
         self,
