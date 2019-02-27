@@ -67,34 +67,19 @@ docs/_build/
 # PyBuilder
 target/
 
-# truffle related
-truffle/.babel.json
-truffle/environments/development/contracts/
-truffle/.bash_history
-
 # never check in .static-abi.json files
 *.static-abi.json
-
-# ignore node_modules
-raiden/raidenwebui/node_modules/
-
-raiden/ui/web/node_modules/
 
 # editors
 .idea
 .vscode
-.synapse
-raiden/smart_contracts/contracts.json
 
 # Our logs
-raiden-debug.log*
+raiden-debug_*.log
 
 # direnv virtual envs
 .direnv
 .envrc
-
-# tools
-tools/circleci/
 
 # venvs
 venv/

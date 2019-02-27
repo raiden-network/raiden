@@ -1,2 +1,2 @@
 dist/
-tools/testnet/.terraform
+tools/testnet/.terraform/plugins
