@@ -1,5 +1,5 @@
 {
-  "block_number": "6914755",
+  "block_number": "84",
   "chain_id": 1,
   "pseudo_random_generator": [
     3,
@@ -718,7 +718,7 @@
                 "secrethashes_to_lockedlocks": {
                   "0x59d8dd1e6b553e3923e51c2f1c3efb1f9c832cffcc98a5b4710da7343babc6c4": {
                     "amount": 5,
-                    "expiration": 6914855,
+                    "expiration": 99,
                     "secrethash": "0x59d8dd1e6b553e3923e51c2f1c3efb1f9c832cffcc98a5b4710da7343babc6c4",
                     "_type": "raiden.transfer.state.HashTimeLockState",
                     "_version": 0
@@ -778,7 +778,7 @@
                 "_version": 0
               },
               "open_transaction": {
-                "finished_block_number": "6914547",
+                "finished_block_number": "3",
                 "result": "success",
                 "_type": "raiden.transfer.state.TransactionExecutionStatus",
                 "_version": 0
@@ -839,7 +839,7 @@
                 "_version": 0
               },
               "open_transaction": {
-                "finished_block_number": "6914597",
+                "finished_block_number": "21",
                 "result": "success",
                 "_type": "raiden.transfer.state.TransactionExecutionStatus",
                 "_version": 0
@@ -885,7 +885,7 @@
                 "_version": 0
               },
               "open_transaction": {
-                "finished_block_number": "6914661",
+                "finished_block_number": "47",
                 "result": "success",
                 "_type": "raiden.transfer.state.TransactionExecutionStatus",
                 "_version": 0
@@ -961,7 +961,7 @@
               },
               "lock": {
                 "amount": 5,
-                "expiration": 6914855,
+                "expiration": 99,
                 "secrethash": "0x59d8dd1e6b553e3923e51c2f1c3efb1f9c832cffcc98a5b4710da7343babc6c4",
                 "_type": "raiden.transfer.state.HashTimeLockState",
                 "_version": 0
