@@ -47,7 +47,7 @@ def test_upgrade_v16_to_v17(tmp_path):
             storage.update_version()
         storage.conn.close()
 
-    web3, _ = create_fake_web3_for_block_hash(number_of_blocks=1)
+    web3, _ = create_fake_web3_for_block_hash(number_of_blocks=100)
     manager = UpgradeManager(db_filename=str(db_path), web3=web3)
     manager.run()
 
