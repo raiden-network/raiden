@@ -759,13 +759,13 @@ class RaidenAPI:
                 raise InvalidSecretOrSecretHash('secret_hash is not an hexadecimal string.')
             secret_hash = to_bytes(hexstr=secret_hash)
 
-        if secret is None and secret_hash is not None:
-            raise InvalidSecretOrSecretHash('secret_hash without a secret is not supported yet.')
-
         if secret is not None and secret_hash is not None and secret_hash != sha3(secret):
             raise InvalidSecretOrSecretHash('provided secret and secret_hash do not match.')
 
-        valid_tokens = views.get_token_identifiers(
+        if secret is None and secret_hash is not None:
+            pass
+
+        valid_tokens = views.get_token_network_addresses_for(
             views.state_from_raiden(self.raiden),
             registry_address,
         )
