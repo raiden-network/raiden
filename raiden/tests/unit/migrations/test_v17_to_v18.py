@@ -3,8 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
+from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.utils.upgrades import UpgradeManager
 
@@ -19,21 +18,19 @@ def setup_storage(db_path):
         state_change=action_init_chain_data,
         log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
     )
-    del storage
 
     # Also add the v17 chainstate directly to the DB
     chain_state_data = Path(__file__).parent / 'data/v17_chainstate.json'
     chain_state = chain_state_data.read_text()
-    serialized_storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
-    cursor = serialized_storage.conn.cursor()
+    cursor = storage.conn.cursor()
     cursor.execute(
         '''
         INSERT INTO state_snapshot(identifier, statechange_id, data)
         VALUES(1, 1, ?)
         ''', (chain_state,),
     )
-    serialized_storage.conn.commit()
-    return serialized_storage
+    storage.conn.commit()
+    return storage
 
 
 def test_upgrade_v17_to_v18(tmp_path):
