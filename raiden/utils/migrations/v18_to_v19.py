@@ -3,13 +3,36 @@ import json
 from web3 import Web3
 
 from raiden.storage.sqlite import EventRecord, SQLiteStorage, StateChangeRecord
-from raiden.utils.typing import Any, Dict
+from raiden.utils.typing import Any, BlockNumber, Dict
 
 SOURCE_VERSION = 18
 TARGET_VERSION = 19
 
 
-def _add_blockhash_to_state_changes(storage: SQLiteStorage, web3: Web3) -> None:
+class BlockHashCache(object):
+    """A small cache for blocknumber to blockhashes to optimize this migration a bit
+
+    This cache lives only during the v18->v19 migration where numerous RPC calls are
+    expected to be made, many of them probably querying the same block_number -> block_hash.
+    To save RPC calls and make it a bit faster we keep this short-lived cache for the duration
+    of the migration
+    """
+    def __init__(self, web3: Web3):
+        self.web3 = web3
+        self.mapping = {}
+
+    def get(self, block_number: BlockNumber) -> str:
+        """Given a block number returns the hex representation of the blockhash"""
+        if block_number in self.mapping:
+            return self.mapping[block_number]
+
+        block_hash = self.web3.eth.getBlock(block_number)['hash']
+        block_hash = block_hash.hex()
+        self.mapping[block_number] = block_hash
+        return block_hash
+
+
+def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Adds blockhash to ContractReceiveXXX and ActionInitChain state changes"""
     state_changes = storage.get_all_state_changes()
     updated_state_changes = []
@@ -22,9 +45,7 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, web3: Web3) -> None:
         if affected_state_change:
             assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
             block_number = int(data['block_number'])
-            block_hash = web3.eth.getBlock(block_number)['hash']
-            # use the string representation of hex bytes for the in-db string
-            data['block_hash'] = block_hash.hex()
+            data['block_hash'] = cache.get(block_number)
 
             updated_state_changes.append(StateChangeRecord(
                 state_change_identifier=state_change.state_change_identifier,
@@ -34,7 +55,7 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, web3: Web3) -> None:
     storage.update_state_changes(updated_state_changes)
 
 
-def _add_blockhash_to_events(storage: SQLiteStorage, web3: Web3) -> None:
+def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Adds blockhash to all ContractSendXXX events"""
     events = storage.get_all_event_records()
     updated_events = []
@@ -58,12 +79,11 @@ def _add_blockhash_to_events(storage: SQLiteStorage, web3: Web3) -> None:
                     block_hash = statechange_data['block_hash']
                 elif 'block_number' in statechange_data:
                     block_number = int(statechange_data['block_number'])
-                    block_hash = web3.eth.getBlock(block_number)['hash']
-                    block_hash = block_hash.hex()
+                    block_hash = cache.get(block_number)
 
             # else fallback to just using the latest blockhash
             if not block_hash:
-                block_hash = web3.eth.getBlock('latest')['hash']
+                block_hash = cache.web3.eth.getBlock('latest')['hash']
                 block_hash = block_hash.hex()
 
             data['triggered_by_block_hash'] = block_hash
@@ -77,13 +97,15 @@ def _add_blockhash_to_events(storage: SQLiteStorage, web3: Web3) -> None:
     storage.update_events(updated_events)
 
 
-def _transform_snapshot(raw_snapshot: Dict[Any, Any], storage: SQLiteStorage, web3: Web3) -> str:
+def _transform_snapshot(
+        raw_snapshot: Dict[Any, Any],
+        storage: SQLiteStorage,
+        cache: BlockHashCache,
+) -> str:
     """Upgrades a single snapshot by adding the blockhash to it and to any pending transactions"""
     snapshot = json.loads(raw_snapshot)
     block_number = int(snapshot['block_number'])
-    block_hash = web3.eth.getBlock(block_number)['hash']
-    # use the string representation of hex bytes for the in-db string
-    snapshot['block_hash'] = block_hash.hex()
+    snapshot['block_hash'] = cache.get(block_number)
 
     all_events = storage.get_all_event_records()
     pending_transactions = snapshot['pending_transactions']
@@ -113,7 +135,7 @@ def _transform_snapshot(raw_snapshot: Dict[Any, Any], storage: SQLiteStorage, we
 
         if not found_blockhash:
             # If for some reason we could not find the event, fallback to latest blockhash
-            block_hash = web3.eth.getBlock('latest')['hash']
+            block_hash = cache.web3.eth.getBlock('latest')['hash']
             block_hash = block_hash.hex()
 
         transaction_data['triggered_by_block_hash'] = block_hash
@@ -123,10 +145,14 @@ def _transform_snapshot(raw_snapshot: Dict[Any, Any], storage: SQLiteStorage, we
     return json.dumps(snapshot)
 
 
-def _transform_snapshots_for_blockhash(storage: SQLiteStorage, web3: Web3) -> None:
+def _transform_snapshots_for_blockhash(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Upgrades the snapshots by adding the blockhash to it and to any pending transactions"""
     for snapshot in storage.get_snapshots():
-        new_snapshot = _transform_snapshot(raw_snapshot=snapshot.data, storage=storage, web3=web3)
+        new_snapshot = _transform_snapshot(
+            raw_snapshot=snapshot.data,
+            storage=storage,
+            cache=cache,
+        )
         storage.update_snapshot(snapshot.identifier, new_snapshot)
 
 
@@ -137,9 +163,10 @@ def upgrade_v18_to_v19(
         web3: Web3,
 ) -> int:
     if old_version == SOURCE_VERSION:
-        _add_blockhash_to_state_changes(storage, web3)
-        _add_blockhash_to_events(storage, web3)
+        cache = BlockHashCache(web3)
+        _add_blockhash_to_state_changes(storage, cache)
+        _add_blockhash_to_events(storage, cache)
         # The snapshot transformation should come last
-        _transform_snapshots_for_blockhash(storage, web3)
+        _transform_snapshots_for_blockhash(storage, cache)
 
     return TARGET_VERSION
