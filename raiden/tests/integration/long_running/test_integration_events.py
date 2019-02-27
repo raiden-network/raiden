@@ -341,7 +341,8 @@ def test_query_events(
     )
 
     if blockchain_type == 'geth':
-        # TODO why do we query events in nonexisting blocks here?
+        # FIXME: This is apparently meant to verify that querying nonexisting blocks
+        # returns an empty list, which is not true for parity.
         events = get_token_network_registry_events(
             chain=app0.raiden.chain,
             token_network_registry_address=app0.raiden.default_registry.address,

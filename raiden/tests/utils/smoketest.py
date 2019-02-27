@@ -26,13 +26,13 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
 from raiden.tests.fixtures.variables import DEFAULT_PASSPHRASE
-from raiden.tests.utils.geth import (
+from raiden.tests.utils.eth_node import (
     EthNodeDescription,
     eth_node_config,
     eth_node_config_set_bootnodes,
+    eth_node_to_datadir,
     eth_run_nodes,
     eth_wait_and_check,
-    geth_node_to_datadir,
 )
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
@@ -240,7 +240,7 @@ def setup_testchain(print_step):
 
     nodes_configuration = [config]
     eth_node_config_set_bootnodes(nodes_configuration)
-    keystore = os.path.join(geth_node_to_datadir(config, base_datadir), 'keystore')
+    keystore = os.path.join(eth_node_to_datadir(config, base_datadir), 'keystore')
 
     logdir = os.path.join(base_datadir, 'logs')
 

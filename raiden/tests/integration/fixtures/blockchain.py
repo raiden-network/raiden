@@ -7,8 +7,12 @@ from raiden.constants import Environment
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
-from raiden.tests.utils.geth import EthNodeDescription, run_private_blockchain
+from raiden.settings import (
+    DEVELOPMENT_CONTRACT_VERSION,
+    RED_EYES_CONTRACT_VERSION,
+    SUPPORTED_ETH_CLIENTS,
+)
+from raiden.tests.utils.eth_node import EthNodeDescription, run_private_blockchain
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils import privatekey_to_address
@@ -16,9 +20,7 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
-_GETH_LOGDIR = os.environ.get('RAIDEN_TESTS_GETH_LOGSDIR', False)
-_GETH_DATADIR = os.environ.get('RAIDEN_TESTS_GETH_DATADIR', False)
-_PARITY_DATADIR = os.environ.get('RAIDEN_TESTS_PARITY_DATADIR')
+_GETH_LOGDIR = os.environ.get('RAIDEN_TESTS_GETH_LOGSDIR')
 
 
 @pytest.fixture
@@ -48,7 +50,7 @@ def web3(
     keys_to_fund.add(deploy_key)
     keys_to_fund = sorted(keys_to_fund)
 
-    if blockchain_type not in ('geth', 'parity'):
+    if blockchain_type not in SUPPORTED_ETH_CLIENTS:
         raise ValueError(f'unknown blockchain_type {blockchain_type}')
 
     host = '0.0.0.0'
