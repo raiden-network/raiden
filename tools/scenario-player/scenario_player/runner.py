@@ -263,7 +263,7 @@ class ScenarioRunner(object):
 
         # The nodes need some time to find the token, see
         # https://github.com/raiden-network/raiden/issues/3544
-        log.info('Waiting till new network in found by nodes')
+        log.info('Waiting till new network is found by nodes')
         gevent.sleep(10)
 
         self.token_network_address = self.session.get(API_URL_TOKEN_NETWORK_ADDRESS.format(

@@ -48,6 +48,7 @@ nodes:
   ## Option names correspond to Raiden cli options without the leading double dash (`--`)
   default_options:
     gas-price: fast
+    # environment-type: development
     #registry-contract-address: "0xbfa863Ac58a3E0A82B58a8e958F2752Bfb573388"
     #discovery-contract-address: "0xb2646EB8270a4de7451f6F7b259FdE17DBCeedc9"
     #secret-registry-contract-address: "0xA5c882f09c3DE551d76dcDE08890fAa0dD1F29E3"
@@ -167,7 +168,7 @@ scenario:
 #          tasks:
 #            - close_channel: {from: 0, to: 1}
 #            - close_channel: {from: 1, to: 2}
-#      - check_events {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 2}
+#      - check_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 2}
 #      - assert: {from: 0, to: 1, total_deposit: 100, balance: 5, state: "closed"}
 
 # Status code matching (int or regex):
