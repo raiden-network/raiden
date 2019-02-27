@@ -55,9 +55,9 @@ def _transform_snapshot(raw_snapshot: Dict[Any, Any]) -> str:
         channel = token_network.get('channelidentifiers_to_channels').get(channel_identifier)
         if not channel:
             raise ChannelNotFound(
-                'Upgrading to v18 failed. '
+                f'Upgrading to v18 failed. '
                 f'Could not find channel with identifier {channel_identifier} '
-                'in the current chain state.',
+                f'in the current chain state.',
             )
 
         # Only add the route for which the waiting transfer was intended.
