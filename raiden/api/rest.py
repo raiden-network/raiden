@@ -85,10 +85,10 @@ from raiden.utils import (
     create_default_identifier,
     optional_address_to_string,
     pex,
+    sha3,
     split_endpoint,
     typing,
 )
-from raiden.utils import sha3
 from raiden.utils.runnable import Runnable
 
 log = structlog.get_logger(__name__)
