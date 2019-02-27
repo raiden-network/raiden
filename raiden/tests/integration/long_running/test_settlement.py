@@ -544,7 +544,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     lock_expiration = target_task.target_state.transfer.lock.expiration
     app1.raiden.chain.wait_until_block(target_block_number=lock_expiration)
 
-    assert app1.raiden.default_secret_registry.check_registered(
+    assert app1.raiden.default_secret_registry.is_secret_registered(
         secrethash=secrethash,
         block_identifier='latest',
     )
