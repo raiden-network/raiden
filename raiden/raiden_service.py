@@ -981,7 +981,7 @@ class RaidenService(Runnable):
         # For this particular case, it's preferable to use `latest` instead of
         # having a specific block_hash, because it's preferable to know if the secret
         # was ever known, rather than having a consistent view of the blockchain.
-        secret_registered = self.default_secret_registry.check_registered(
+        secret_registered = self.default_secret_registry.is_secret_registered(
             secrethash=secret_hash,
             block_identifier='latest',
         )

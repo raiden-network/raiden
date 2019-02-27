@@ -158,7 +158,7 @@ class MessageHandler:
         # For this particular case, it's preferable to use `latest` instead of
         # having a specific block_hash, because it's preferable to know if the secret
         # was ever known, rather than having a consistent view of the blockchain.
-        registered = raiden.default_secret_registry.check_registered(
+        registered = raiden.default_secret_registry.is_secret_registered(
             secrethash=secret_hash,
             block_identifier='latest',
         )
