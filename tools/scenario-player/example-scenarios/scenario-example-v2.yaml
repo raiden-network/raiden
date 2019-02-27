@@ -168,7 +168,7 @@ scenario:
 #          tasks:
 #            - close_channel: {from: 0, to: 1}
 #            - close_channel: {from: 1, to: 2}
-#      - check_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 2}
+#      - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 2}
 #      - assert: {from: 0, to: 1, total_deposit: 100, balance: 5, state: "closed"}
 
 # Status code matching (int or regex):
