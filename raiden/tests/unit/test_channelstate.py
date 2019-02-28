@@ -1386,7 +1386,7 @@ def test_channelstate_get_unlock_proof():
     assert merkleroot(end_state.merkletree) == computed_merkleroot
 
 
-def test_channelstate_unlock():
+def test_channelstate_unlock_unlocked_onchain():
     """The node must call unlock after the channel is settled"""
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
@@ -1418,7 +1418,12 @@ def test_channelstate_unlock():
     )
     assert is_valid, msg
 
-    channel.register_offchain_secret(channel_state, lock_secret, lock_secrethash)
+    channel.register_onchain_secret(
+        channel_state=channel_state,
+        secret=lock_secret,
+        secrethash=lock_secrethash,
+        secret_reveal_block_number=lock_expiration - 1,
+    )
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     closed_block_hash = factories.make_block_hash()
@@ -1442,6 +1447,7 @@ def test_channelstate_unlock():
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
     )
+
     iteration = channel.handle_channel_settled(
         channel_state,
         settle_state_change,
@@ -1536,7 +1542,12 @@ def test_settle_transaction_must_be_sent_only_once():
     )
     assert is_valid, msg
 
-    channel.register_offchain_secret(channel_state, lock_secret, lock_secrethash)
+    channel.register_onchain_secret(
+        channel_state=channel_state,
+        secret=lock_secret,
+        secrethash=lock_secrethash,
+        secret_reveal_block_number=lock_expiration - 1,
+    )
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
     closed_block_hash = factories.make_block_hash()
