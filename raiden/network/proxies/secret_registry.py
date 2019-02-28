@@ -44,7 +44,7 @@ class SecretRegistry:
         # conditions for on-chain unlocks.
         compare_contract_versions(
             proxy=proxy,
-            expected_version='0.4.0',
+            expected_version=contract_manager.contracts_version,
             contract_name=CONTRACT_SECRET_REGISTRY,
             address=secret_registry_address,
         )
@@ -80,7 +80,7 @@ class SecretRegistry:
                 secrethash_hex = encode_hex(secrethash)
 
                 # Do the local test on `open_secret_transactions` first, then
-                # if necessary do a RPC call.
+                # if necessary do an RPC call.
                 #
                 # The call to `is_secret_registered` has two conflicting
                 # requirements:
@@ -124,7 +124,11 @@ class SecretRegistry:
             return
 
         checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(checking_block, 'registerSecretBatch', secrets)
+        gas_limit = self.proxy.estimate_gas(
+            checking_block,
+            'registerSecretBatch',
+            secrets_to_register,
+        )
         receipt = None
         transaction_hash = None
         msg = None
@@ -132,7 +136,7 @@ class SecretRegistry:
         if gas_limit:
             gas_limit = safe_gas_limit(
                 gas_limit,
-                len(secrets) * GAS_REQUIRED_PER_SECRET_IN_BATCH,
+                len(secrets_to_register) * GAS_REQUIRED_PER_SECRET_IN_BATCH,
             )
 
             log.debug('registerSecretBatch called', **log_details)
@@ -146,10 +150,7 @@ class SecretRegistry:
                 self.client.poll(transaction_hash)
                 receipt = self.client.get_transaction_receipt(transaction_hash)
             except Exception as e:  # pylint: disable=broad-except
-                transaction_result.set_exception(e)
                 msg = f'Unexpected exception {e} at sending registerSecretBatch transaction.'
-            else:
-                transaction_result.set(transaction_hash)
 
         # Clear `open_secret_transactions` regardless of the transaction being
         # successfully executed or not.
@@ -222,7 +223,7 @@ class SecretRegistry:
             # takes into account the current transactions in the pool.
             if gas_limit:
                 assert msg, (
-                    'Unexpected control flow, an exception should habe been raised.'
+                    'Unexpected control flow, an exception should have been raised.'
                 )
                 error = (
                     f"Sending the the transaction for registerSecretBatch failed with: `{msg}`. "
@@ -243,8 +244,6 @@ class SecretRegistry:
             #
             # Either of these is a bug. The contract does not use
             # assert/revert, and the account should always be funded
-
-            # For the
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name='registerSecretBatch',
                 transaction_executed=True,
@@ -262,6 +261,7 @@ class SecretRegistry:
             log.info('registerSecretBatch waiting for pending', **log_details)
             gevent.joinall(wait_for, raise_error=True)
 
+        transaction_result.set(transaction_hash)
         log.info('registerSecretBatch successful', **log_details)
 
     def get_secret_registration_block_by_secrethash(
@@ -278,8 +278,8 @@ class SecretRegistry:
 
         # Block 0 either represents the genesis block or an empty entry in the
         # secret mapping. This is important for custom genesis files used while
-        # testing, to avoid problems the smart contract can be added as part of
-        # the genesis file, however it's important for it's storage to be
+        # testing. To avoid problems the smart contract can be added as part of
+        # the genesis file, however it's important for its storage to be
         # empty.
         if result == 0:
             return None
