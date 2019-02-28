@@ -965,7 +965,10 @@ class ChannelSet:
 
     @property
     def nodeaddresses_to_networkstates(self) -> typing.NodeNetworkStateMap:
-        return {address: NODE_NETWORK_REACHABLE for address in self.ADDRESSES}
+        return {
+            channel.partner_state.address: NODE_NETWORK_REACHABLE
+            for channel in self.channels
+        }
 
     def our_address(self, index: int) -> typing.Address:
         return self.channels[index].our_state.address
