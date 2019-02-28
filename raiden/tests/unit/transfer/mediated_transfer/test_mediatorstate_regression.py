@@ -34,7 +34,11 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
-from raiden.transfer.state import balanceproof_from_envelope, message_identifier_from_prng
+from raiden.transfer.state import (
+    NODE_NETWORK_UNREACHABLE,
+    balanceproof_from_envelope,
+    message_identifier_from_prng,
+)
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils.signer import LocalSigner
 
@@ -578,3 +582,38 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         block_hash=factories.make_block_hash(),
     )
     assert secrethash in payer_channel.partner_state.secrethashes_to_onchain_unlockedlocks
+
+
+def test_regression_unavailable_nodes_must_be_properly_filtered():
+    """The list of available routes provided must be filtered based on the
+    network status of the partner node.
+
+    Regression test for: https://github.com/raiden-network/raiden/issues/3567
+    """
+    block_number = 5
+    pseudo_random_generator = random.Random()
+
+    channels = factories.mediator_make_channel_pair()
+    payer_transfer = factories.make_signed_transfer_for(channels[0], LONG_EXPIRATION)
+
+    all_nodes_offline = {
+        channel.partner_state.address: NODE_NETWORK_UNREACHABLE
+        for channel in channels.channels
+    }
+
+    initial_iteration = mediator.state_transition(
+        mediator_state=None,
+        state_change=factories.mediator_make_init_action(channels, payer_transfer),
+        channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=all_nodes_offline,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+        block_hash=factories.make_block_hash(),
+    )
+
+    send_transfer = search_for_item(initial_iteration.events, SendLockedTransfer, {})
+    msg = (
+        'All available routes are with unavailable nodes, therefore no send '
+        'should be produced'
+    )
+    assert send_transfer is None, msg
