@@ -106,7 +106,7 @@ def test_register_secret_batch_happy_path(secret_registry_proxy):
         assert block == secret_registered['args']['blockNumber'], msg
 
 
-def test_concurrent_secret_registartion(secret_registry_proxy, monkeypatch):
+def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
     """Only one transaction must be sent if multiple greenlets are used to
     register the same secret.
 
