@@ -1062,13 +1062,13 @@ def mediate_transfer(
     send a refund back to the payer, allowing the payer to try a different
     route.
     """
-    available_routes = filter_reachable_routes(
+    reachable_routes = filter_reachable_routes(
         possible_routes,
         nodeaddresses_to_networkstates,
     )
     available_routes = filter_used_routes(
         state.transfers_pair,
-        possible_routes,
+        reachable_routes,
     )
 
     assert payer_channel.partner_state.address == payer_transfer.balance_proof.sender
