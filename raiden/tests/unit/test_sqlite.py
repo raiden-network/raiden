@@ -1,10 +1,12 @@
 import itertools
+import json
 from datetime import datetime, timedelta
+from pathlib import Path
 from unittest.mock import patch
 
 from raiden.messages import Lock
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -296,3 +298,29 @@ def test_log_run():
     now = datetime.utcnow()
     assert now - timedelta(seconds=2) <= run[0] <= now, f'{run[0]} not right before {now}'
     assert run[1] == '1.2.3'
+
+
+def test_batch_query_state_changes():
+    storage = SQLiteStorage(':memory:')
+    # Add the v18 state changes to the DB
+    state_changes_file = Path(__file__).parent / 'migrations/data/v18_statechanges.json'
+    state_changes_data = json.loads(state_changes_file.read_text())
+    for state_change_record in state_changes_data:
+        storage.write_state_change(
+            state_change=json.dumps(state_change_record[1]),
+            log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
+        )
+
+    # Test that querying the state changes in batches of 10 works
+    state_changes_num = 87
+    state_changes = storage.batch_query_state_changes(batch_size=10)
+    assert len(state_changes) == state_changes_num
+    for i in range(1, 87):
+        assert state_changes[i - 1].state_change_identifier == i
+
+    # Test that we can also add a filter
+    state_changes = storage.batch_query_state_changes(
+        batch_size=10,
+        filters={'_type': 'raiden.transfer.state_change.Block'},
+    )
+    assert len(state_changes) == 77
