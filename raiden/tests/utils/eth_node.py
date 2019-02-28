@@ -17,7 +17,7 @@ from web3 import Web3
 from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
-from raiden.utils.typing import Dict, List, NamedTuple
+from raiden.utils.typing import Any, Dict, List, NamedTuple
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -169,7 +169,7 @@ def parity_generate_chain_spec(
         accounts_addresses: List[bytes],
         seal_account: str,
         random_marker: str,
-):
+) -> Dict[str, Any]:
     chain_spec = PARITY_CHAIN_SPEC_STUB.copy()
     chain_spec['accounts'].update({
         to_checksum_address(address): {'balance': 1000000000000000000}
@@ -242,7 +242,7 @@ def geth_init_datadir(datadir: str, genesis_path: str):
         raise ValueError(msg)
 
 
-def parity_write_key_file(key, keyhex, password_path, base_path):
+def parity_write_key_file(key: bytes, keyhex: str, password_path: str, base_path: str) -> str:
 
     path = f'{base_path}/{(keyhex[:8]).lower()}'
     os.makedirs(f'{path}')
@@ -261,8 +261,11 @@ def parity_write_key_file(key, keyhex, password_path, base_path):
     return path
 
 
-def parity_create_account(node_configuration, base_path, chain_spec):
-
+def parity_create_account(
+        node_configuration: Dict[str, Any],
+        base_path: str,
+        chain_spec: str,
+) -> None:
     key = node_configuration['nodekey']
     keyhex = node_configuration['nodekeyhex']
     password = node_configuration['password']
@@ -287,12 +290,12 @@ def parity_create_account(node_configuration, base_path, chain_spec):
 
 
 def eth_wait_and_check(
-        web3,
-        accounts_addresses,
-        random_marker,
-        processes_list,
-        blockchain_type='geth',
-):
+        web3: Web3,
+        accounts_addresses: List[bytes],
+        random_marker: str,
+        processes_list: List[subprocess.Popen],
+        blockchain_type: str = 'geth',
+) -> None:
     """ Wait until the geth/parity cluster is ready.
 
     This will raise an exception if either:
@@ -346,7 +349,7 @@ def eth_wait_and_check(
             raise ValueError('account is with a balance of 0')
 
 
-def eth_node_config(miner_pkey, p2p_port, rpc_port):
+def eth_node_config(miner_pkey: bytes, p2p_port: int, rpc_port: int) -> Dict[str, Any]:
     address = privatekey_to_address(miner_pkey)
     pub = privatekey_to_publickey(miner_pkey).hex()
 
@@ -438,7 +441,7 @@ def eth_run_nodes(
         chain_id: int,
         verbosity: int,
         logdir: str,
-):
+) -> List[subprocess.Popen]:
     os.makedirs(logdir, exist_ok=True)
 
     password_path = os.path.join(base_datadir, 'pw')
@@ -535,19 +538,19 @@ def run_private_blockchain(
 
         genesis_path = os.path.join(base_datadir, 'custom_genesis.json')
         geth_generate_poa_genesis(
-            genesis_path,
-            accounts_to_fund,
-            seal_account,
-            random_marker,
+            genesis_path=genesis_path,
+            accounts_addresses=accounts_to_fund,
+            seal_address=seal_account,
+            random_marker=random_marker,
         )
 
     elif blockchain_type == 'parity':
         chainspec_path = f'{base_datadir}/chainspec.json'
         parity_generate_chain_spec(
-            chainspec_path,
-            accounts_to_fund,
-            seal_account,
-            random_marker,
+            spec_path=chainspec_path,
+            accounts_addresses=accounts_to_fund,
+            seal_account=seal_account,
+            random_marker=random_marker,
         )
         parity_create_account(nodes_configuration[0], base_datadir, chainspec_path)
 

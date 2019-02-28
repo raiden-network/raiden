@@ -63,9 +63,9 @@ def web3(
 
     eth_nodes = [
         EthNodeDescription(
-            key,
-            rpc,
-            p2p,
+            private_key=key,
+            rpc_port=rpc,
+            p2p_port=p2p,
             miner=(pos == 0),
             blockchain_type=blockchain_type,
         )

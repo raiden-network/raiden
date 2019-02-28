@@ -41,10 +41,10 @@ def main():
         rpc_port = START_RPCPORT + i
 
         description = EthNodeDescription(
-            node_key,
-            rpc_port,
-            p2p_port,
-            is_miner,
+            private_key=node_key,
+            rpc_port=rpc_port,
+            p2p_port=p2p_port,
+            miner=is_miner,
         )
 
         geth_nodes.append(description)
@@ -55,13 +55,14 @@ def main():
     verbosity = 0
     random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
     geth_processes = run_private_blockchain(  # NOQA
-        web3,
-        DEFAULT_ACCOUNTS,
-        geth_nodes,
-        tmpdir,
-        NETWORKNAME_TO_ID['smoketest'],
-        verbosity,
-        random_marker,
+        web3=web3,
+        accounts_to_fund=DEFAULT_ACCOUNTS,
+        eth_nodes=geth_nodes,
+        base_datadir=tmpdir,
+        log_dir=tmpdir,
+        chain_id=NETWORKNAME_TO_ID['smoketest'],
+        verbosity=verbosity,
+        random_marker=random_marker,
     )
 
     from IPython import embed
