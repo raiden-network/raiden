@@ -1525,6 +1525,7 @@ class NettingChannelState(State):
         'settle_transaction',
         'update_transaction',
         'our_unlock_transaction',
+        'partner_unlock_transaction',
     )
 
     def __init__(
@@ -1599,6 +1600,7 @@ class NettingChannelState(State):
         self.settle_transaction = settle_transaction
         self.update_transaction = update_transaction
         self.our_unlock_transaction: TransactionExecutionStatus = None
+        self.partner_unlock_transaction: TransactionExecutionStatus = None
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{} updated:{}>'.format(
