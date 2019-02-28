@@ -37,6 +37,21 @@ def assert_sqlite_version() -> bool:
     return True
 
 
+def _sanitize_limit_and_offset(
+        limit: int = None,
+        offset: int = None,
+) -> Tuple[int, int]:
+    if limit is not None and (not isinstance(limit, int) or limit < 0):
+        raise InvalidNumberInput('limit must be a positive integer')
+
+    if offset is not None and (not isinstance(offset, int) or offset < 0):
+        raise InvalidNumberInput('offset must be a positive integer')
+
+    limit = -1 if limit is None else limit
+    offset = 0 if offset is None else offset
+    return limit, offset
+
+
 class SQLiteStorage(SerializationBase):
     def __init__(self, database_path):
         conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -292,17 +307,41 @@ class SQLiteStorage(SerializationBase):
 
         return result
 
-    def get_all_state_changes(self) -> List[StateChangeRecord]:
-        """ Return all state change records (identifier and data)"""
+    def _get_state_changes(
+            self,
+            limit: int = None,
+            offset: int = None,
+            filters: Dict[str, Any] = None,
+    ) -> List[StateChangeRecord]:
+        """ Return a batch of state change records (identifier and data)
+
+        The batch size can be tweaked with the `limit` and `offset` arguments.
+
+        Additionally the returned state changes can be optionally filtered with
+        the `filters` parameter to search for specific data in the state change data.
+        """
+        limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
 
-        sql = (
-            f'SELECT identifier, data '
-            f'FROM state_changes '
-            f'ORDER BY identifier '
-        )
-        cursor.execute(sql)
+        query = 'SELECT identifier, data FROM state_changes '
 
+        where_clauses = []
+        args = []
+        if filters:
+            for field, value in filters.items():
+                where_clauses.append('json_extract(data, ?)=?')
+                args.append(f'$.{field}')
+                args.append(value)
+
+            query += (
+                f"WHERE {' AND '.join(where_clauses)}"
+            )
+
+        query += 'ORDER BY identifier ASC LIMIT ? OFFSET ?'
+        args.append(limit)
+        args.append(offset)
+
+        cursor.execute(query, args)
         result = []
         try:
             rows = cursor.fetchall()
@@ -317,6 +356,28 @@ class SQLiteStorage(SerializationBase):
             )
 
         return result
+
+    def batch_query_state_changes(
+            self,
+            batch_size: int,
+            filters: Dict[str, Any] = None,
+    ) -> List[StateChangeRecord]:
+        """Batch query state change records with a given batch size and an optional filter"""
+        limit = batch_size
+        offset = 0
+        result_length = 1
+        state_changes = []
+        while result_length != 0:
+            result = self._get_state_changes(
+                limit=limit,
+                offset=offset,
+                filters=filters,
+            )
+            result_length = len(result)
+            offset += result_length
+            state_changes.extend(result)
+
+        return state_changes
 
     def update_state_changes(self, state_changes: List[StateChangeRecord]) -> None:
         """Given a list of identifier/data state change records update them in the DB"""
@@ -366,15 +427,7 @@ class SQLiteStorage(SerializationBase):
         return result
 
     def _query_events(self, limit: int = None, offset: int = None):
-        if limit is not None and (not isinstance(limit, int) or limit < 0):
-            raise InvalidNumberInput('limit must be a positive integer')
-
-        if offset is not None and (not isinstance(offset, int) or offset < 0):
-            raise InvalidNumberInput('offset must be a positive integer')
-
-        limit = -1 if limit is None else limit
-        offset = 0 if offset is None else offset
-
+        limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
 
         cursor.execute(

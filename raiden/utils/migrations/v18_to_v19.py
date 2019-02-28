@@ -35,7 +35,7 @@ class BlockHashCache(object):
 
 def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Adds blockhash to ContractReceiveXXX and ActionInitChain state changes"""
-    state_changes = storage.get_all_state_changes()
+    state_changes = storage.batch_query_state_changes(batch_size=500)
     updated_state_changes = []
     for state_change in state_changes:
         data = json.loads(state_change.data)
