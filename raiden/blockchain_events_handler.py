@@ -98,7 +98,6 @@ def handle_channel_new(raiden: 'RaidenService', event: Event):
             reveal_timeout=raiden.config['reveal_timeout'],
             payment_channel_proxy=channel_proxy,
             opened_block_number=block_number,
-            opened_block_hash=block_hash,
         )
 
         new_channel = ContractReceiveChannelNew(

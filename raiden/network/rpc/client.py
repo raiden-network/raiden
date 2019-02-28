@@ -471,6 +471,19 @@ class JSONRPCClient:
         """Given a block number, query the chain to get its corresponding block hash"""
         return bytes(self.web3.eth.getBlock(block_number)['hash'])
 
+    def can_query_state_for_block(self, block_identifier: BlockSpecification) -> bool:
+        """
+        Returns if the provided block identifier is safe enough to query chain
+        state for. If it's close to the state pruning blocks then state should
+        not be queried.
+        More info: https://github.com/raiden-network/raiden/issues/3566.
+        """
+        latest_block_number = self.block_number()
+        preconditions_block = self.web3.eth.getBlock(block_identifier)
+        preconditions_block_number = int(preconditions_block['number'])
+        difference = latest_block_number - preconditions_block_number
+        return difference < constants.NO_STATE_QUERY_AFTER_BLOCKS
+
     def balance(self, account: Address):
         """ Return the balance of the account of the given address. """
         return self.web3.eth.getBalance(to_checksum_address(account), 'pending')

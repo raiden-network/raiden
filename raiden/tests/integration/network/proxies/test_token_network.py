@@ -105,7 +105,7 @@ def test_token_network_proxy_basics(
     assert initial_balance_c2 == initial_token_balance
 
     # instantiating a new channel - test basic assumptions
-    assert c1_token_network_proxy.channel_exists_and_not_settled(
+    assert c1_token_network_proxy._channel_exists_and_not_settled(
         participant1=c1_client.address,
         participant2=c2_client.address,
         block_identifier='latest',
@@ -189,7 +189,7 @@ def test_token_network_proxy_basics(
             settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
             given_block_identifier='latest',
         )
-    assert c1_token_network_proxy.channel_exists_and_not_settled(
+    assert c1_token_network_proxy._channel_exists_and_not_settled(
         participant1=c1_client.address,
         participant2=c2_client.address,
         channel_identifier=channel_identifier,
@@ -270,7 +270,7 @@ def test_token_network_proxy_basics(
         block_identifier='latest',
         channel_identifier=channel_identifier,
     ) is True
-    assert c1_token_network_proxy.channel_exists_and_not_settled(
+    assert c1_token_network_proxy._channel_exists_and_not_settled(
         participant1=c1_client.address,
         participant2=c2_client.address,
         channel_identifier=channel_identifier,
@@ -342,7 +342,7 @@ def test_token_network_proxy_basics(
         partner_locksroot=EMPTY_HASH,
         given_block_identifier='latest',
     )
-    assert c1_token_network_proxy.channel_exists_and_not_settled(
+    assert c1_token_network_proxy._channel_exists_and_not_settled(
         participant1=c1_client.address,
         participant2=c2_client.address,
         channel_identifier=channel_identifier,

@@ -301,6 +301,9 @@ class SecretRegistry:
             block_identifier: BlockSpecification,
     ) -> bool:
         """True if the secret for `secrethash` is registered at `block_identifier`."""
+        if not self.client.can_query_state_for_block(block_identifier):
+            block_identifier = 'latest'
+
         block = self.get_secret_registration_block_by_secrethash(
             secrethash=secrethash,
             block_identifier=block_identifier,
