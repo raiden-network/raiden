@@ -191,6 +191,7 @@ def make_channel_state(
         payment_network_identifier=payment_network_identifier,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
+        mediation_fee=0,
         our_state=our_state,
         partner_state=partner_state,
         open_transaction=open_transaction,
@@ -223,6 +224,7 @@ def make_transfer_description(
         payment_network_identifier=payment_network_identifier,
         payment_identifier=payment_identifier,
         amount=amount,
+        allocated_fee=0,
         token_network_identifier=token_network,
         initiator=initiator,
         target=target,
@@ -629,6 +631,7 @@ class NettingChannelStateProperties(NamedTuple):
 
     reveal_timeout: typing.BlockTimeout = EMPTY
     settle_timeout: typing.BlockTimeout = EMPTY
+    mediation_fee: typing.FeeAmount = EMPTY
 
     our_state: NettingChannelEndStateProperties = EMPTY
     partner_state: NettingChannelEndStateProperties = EMPTY
@@ -644,6 +647,7 @@ NETTING_CHANNEL_STATE_DEFAULTS = NettingChannelStateProperties(
     payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
+    mediation_fee=0,
     our_state=NETTING_CHANNEL_END_STATE_DEFAULTS,
     partner_state=NETTING_CHANNEL_END_STATE_DEFAULTS,
     open_transaction=TRANSACTION_EXECUTION_STATUS_DEFAULTS,

@@ -56,9 +56,13 @@ def test_detect_balance_proof_change():
         payment_network_identifier=1,
         reveal_timeout=1,
         settle_timeout=2,
+        mediation_fee=0,
         our_state=None,
         partner_state=None,
         open_transaction=TransactionExecutionStatus(result='success'),
+        settle_transaction=None,
+        update_transaction=None,
+        close_transaction=None,
     )
     channel_copy = deepcopy(channel)
     token_network.channelidentifiers_to_channels['a'] = channel

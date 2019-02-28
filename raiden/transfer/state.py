@@ -30,6 +30,7 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
+    FeeAmount,
     Keccak256,
     List,
     LockHash,
@@ -38,6 +39,7 @@ from raiden.utils.typing import (
     Nonce,
     Optional,
     PaymentNetworkID,
+    PaymentWithFeeAmount,
     Secret,
     SecretHash,
     Signature,
@@ -47,6 +49,7 @@ from raiden.utils.typing import (
     T_ChainID,
     T_ChannelID,
     T_Keccak256,
+    T_PaymentWithFeeAmount,
     T_Secret,
     T_Signature,
     T_TokenAmount,
@@ -1079,18 +1082,18 @@ class HashTimeLockState(State):
 
     def __init__(
             self,
-            amount: TokenAmount,
+            amount: PaymentWithFeeAmount,
             expiration: BlockExpiration,
             secrethash: SecretHash,
     ) -> None:
-        if not isinstance(amount, T_TokenAmount):
-            raise ValueError('amount must be a token_amount instance')
+        if not isinstance(amount, T_PaymentWithFeeAmount):
+            raise ValueError('amount must be a PaymentWithFeeAmount instance')
 
         if not isinstance(expiration, T_BlockNumber):
-            raise ValueError('expiration must be a block_number instance')
+            raise ValueError('expiration must be a BlockNumber instance')
 
         if not isinstance(secrethash, T_Keccak256):
-            raise ValueError('secrethash must be a keccak256 instance')
+            raise ValueError('secrethash must be a Keccak256 instance')
 
         packed = messages.Lock(buffer_for(messages.Lock))
         # pylint: disable=assigning-non-slot
@@ -1523,6 +1526,7 @@ class NettingChannelState(State):
         'token_network_identifier',
         'reveal_timeout',
         'settle_timeout',
+        'mediation_fee',
         'our_state',
         'partner_state',
         'deposit_transaction_queue',
@@ -1539,6 +1543,7 @@ class NettingChannelState(State):
             payment_network_identifier: PaymentNetworkID,
             reveal_timeout: BlockTimeout,
             settle_timeout: BlockTimeout,
+            mediation_fee: FeeAmount,
             our_state: NettingChannelEndState,
             partner_state: NettingChannelEndState,
             open_transaction: TransactionExecutionStatus,
@@ -1603,6 +1608,7 @@ class NettingChannelState(State):
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
         self.update_transaction = update_transaction
+        self.mediation_fee = mediation_fee
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{} updated:{}>'.format(
@@ -1624,6 +1630,7 @@ class NettingChannelState(State):
             self.token_network_identifier == other.token_network_identifier and
             self.reveal_timeout == other.reveal_timeout and
             self.settle_timeout == other.settle_timeout and
+            self.mediation_fee == other.mediation_fee and
             self.deposit_transaction_queue == other.deposit_transaction_queue and
             self.open_transaction == other.open_transaction and
             self.close_transaction == other.close_transaction and
@@ -1660,6 +1667,7 @@ class NettingChannelState(State):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'reveal_timeout': str(self.reveal_timeout),
             'settle_timeout': str(self.settle_timeout),
+            'mediation_fee': str(self.mediation_fee),
             'our_state': self.our_state,
             'partner_state': self.partner_state,
             'open_transaction': self.open_transaction,
@@ -1687,6 +1695,7 @@ class NettingChannelState(State):
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             reveal_timeout=int(data['reveal_timeout']),
             settle_timeout=int(data['settle_timeout']),
+            mediation_fee=int(data['mediation_fee']),
             our_state=data['our_state'],
             partner_state=data['partner_state'],
             open_transaction=data['open_transaction'],

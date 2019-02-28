@@ -13,10 +13,10 @@ from raiden.utils.typing import (
     Dict,
     MessageID,
     PaymentID,
+    PaymentWithFeeAmount,
     Secret,
     SecretHash,
     TokenAddress,
-    TokenAmount,
 )
 
 # According to the smart contracts as of 07/08:
@@ -341,7 +341,7 @@ class SendSecretRequest(SendMessageEvent):
             channel_identifier: ChannelID,
             message_identifier: MessageID,
             payment_identifier: PaymentID,
-            amount: TokenAmount,
+            amount: PaymentWithFeeAmount,
             expiration: BlockExpiration,
             secrethash: SecretHash,
     ) -> None:
@@ -401,7 +401,7 @@ class SendSecretRequest(SendMessageEvent):
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             message_identifier=MessageID(int(data['message_identifier'])),
             payment_identifier=PaymentID(int(data['payment_identifier'])),
-            amount=TokenAmount(int(data['amount'])),
+            amount=PaymentWithFeeAmount(int(data['amount'])),
             expiration=BlockExpiration(int(data['expiration'])),
             secrethash=SecretHash(serialization.deserialize_bytes(data['secrethash'])),
         )

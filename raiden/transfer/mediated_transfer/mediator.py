@@ -15,6 +15,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.state import (
+    HashTimeLockState,
     LockedTransferSignedState,
     LockedTransferUnsignedState,
     MediationPairState,
@@ -56,6 +57,7 @@ from raiden.utils.typing import (
     NodeNetworkStateMap,
     Optional,
     PaymentAmount,
+    PaymentWithFeeAmount,
     Secret,
     SecretHash,
     Sequence,
@@ -274,6 +276,16 @@ def get_pending_transfer_pairs(
     return pending_pairs
 
 
+def get_lock_amount_after_fees(
+        lock: HashTimeLockState,
+        payee_channel: NettingChannelState,
+) -> PaymentWithFeeAmount:
+    """Return the lock.amount after fees are taken."""
+    # fees are taken only for the outgoing channel, which are the ones with
+    # collateral locked from this node.
+    return lock.amount - payee_channel.mediation_fee
+
+
 def sanity_check(state: MediatorTransferState) -> None:
     """ Check invariants that must hold. """
 
@@ -413,15 +425,16 @@ def forward_transfer_pair(
         assert payee_channel.token_address == payer_transfer.token
 
         message_identifier = message_identifier_from_prng(pseudo_random_generator)
+        lock = payer_transfer.lock
         lockedtransfer_event = channel.send_lockedtransfer(
             channel_state=payee_channel,
             initiator=payer_transfer.initiator,
             target=payer_transfer.target,
-            amount=payer_transfer.lock.amount,
+            amount=get_lock_amount_after_fees(lock, payee_channel),
             message_identifier=message_identifier,
             payment_identifier=payer_transfer.payment_identifier,
-            expiration=payer_transfer.lock.expiration,
-            secrethash=payer_transfer.lock.secrethash,
+            expiration=lock.expiration,
+            secrethash=lock.secrethash,
         )
         assert lockedtransfer_event
 
@@ -476,7 +489,7 @@ def backward_transfer_pair(
             channel_state=backward_channel,
             initiator=payer_transfer.initiator,
             target=payer_transfer.target,
-            amount=lock.amount,
+            amount=get_lock_amount_after_fees(lock, backward_channel),
             message_identifier=message_identifier,
             payment_identifier=payer_transfer.payment_identifier,
             expiration=lock.expiration,
