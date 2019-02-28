@@ -39,10 +39,7 @@ def setup_storage(db_path):
             log_time=log_time,
         )
 
-    # Finally add a chain state. Using the v17 already existing chainstate here out of laziness
-    # and since for the purpose of the attributes of the chain state we migrate in v18->v19 it
-    # should not mattter
-    chain_state_data = Path(__file__).parent / 'data/v17_chainstate.json'
+    chain_state_data = Path(__file__).parent / 'data/v18_chainstate.json'
     chain_state = chain_state_data.read_text()
     cursor = storage.conn.cursor()
     cursor.execute(
@@ -97,6 +94,5 @@ def test_upgrade_v18_to_v19(tmp_path):
     _, snapshot = storage.get_latest_state_snapshot()
     snapshot_data = json.loads(snapshot)
     assert 'block_hash' in snapshot_data
-    for transaction in snapshot_data['pending_transactions']:
-        transaction_data = json.loads(transaction)
-        assert 'triggered_by_blockhash' in transaction_data
+    for transaction_data in snapshot_data['pending_transactions']:
+        assert 'triggered_by_block_hash' in transaction_data
