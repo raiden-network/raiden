@@ -124,13 +124,14 @@ def initiator_init(
     assert transfer_secret != constants.EMPTY_HASH, f'Empty secret node:{raiden!r}'
 
     transfer_state = TransferDescriptionWithSecretState(
-        raiden.default_registry.address,
-        transfer_identifier,
-        transfer_amount,
-        token_network_identifier,
-        InitiatorAddress(raiden.address),
-        target_address,
-        transfer_secret,
+        payment_network_identifier=raiden.default_registry.address,
+        payment_identifier=transfer_identifier,
+        amount=transfer_amount,
+        allocated_fee=0,
+        token_network_identifier=token_network_identifier,
+        initiator=InitiatorAddress(raiden.address),
+        target=target_address,
+        secret=transfer_secret,
     )
     previous_address = None
     routes = routing.get_best_routes(

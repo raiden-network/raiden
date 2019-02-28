@@ -37,13 +37,14 @@ def test_initiator_task_view():
     transfer = factories.create(factories.LockedTransferProperties(secret=secret))
     secrethash = transfer.lock.secrethash
     transfer_description = TransferDescriptionWithSecretState(
-        secret=secret,
-        amount=transfer.balance_proof.locked_amount,
+        payment_network_identifier=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
         payment_identifier=transfer.payment_identifier,
+        amount=transfer.balance_proof.locked_amount,
+        allocated_fee=0,
+        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
         initiator=transfer.initiator,
         target=transfer.target,
-        payment_network_identifier=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
+        secret=secret,
     )
     transfer_state = InitiatorTransferState(
         transfer_description=transfer_description,

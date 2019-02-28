@@ -38,12 +38,11 @@ from raiden.utils.typing import (
     List,
     MessageID,
     Optional,
-    PaymentAmount,
+    PaymentWithFeeAmount,
     Secret,
     SecretHash,
     TokenAmount,
     TokenNetworkID,
-    cast,
 )
 
 
@@ -278,18 +277,22 @@ def send_lockedtransfer(
         channel_state.reveal_timeout,
     )
 
+    # The payment amount and the fee amount must be included in the locked
+    # amount, as a guarantee to the mediator that the fee will be claimable
+    # on-chain.
+    total_amount = PaymentWithFeeAmount(
+        transfer_description.amount + transfer_description.allocated_fee,
+    )
+
     lockedtransfer_event = channel.send_lockedtransfer(
-        channel_state,
-        transfer_description.initiator,
-        transfer_description.target,
-        cast(
-            PaymentAmount,
-            transfer_description.amount,
-        ),
-        message_identifier,
-        transfer_description.payment_identifier,
-        lock_expiration,
-        transfer_description.secrethash,
+        channel_state=channel_state,
+        initiator=transfer_description.initiator,
+        target=transfer_description.target,
+        amount=total_amount,
+        message_identifier=message_identifier,
+        payment_identifier=transfer_description.payment_identifier,
+        expiration=lock_expiration,
+        secrethash=transfer_description.secrethash,
     )
     return lockedtransfer_event
 
@@ -314,8 +317,12 @@ def handle_secretrequest(
 
     already_received_secret_request = initiator_state.received_secret_request
 
+    # lock.amount includes the fees, transfer_description.amount is the actual
+    # payment amount, for the transfer to be valid and the unlock allowed the
+    # target must receive an amount between these values.
     is_valid_secretrequest = (
-        state_change.amount == initiator_state.transfer_description.amount and
+        state_change.amount <= lock.amount and
+        state_change.amount >= initiator_state.transfer_description.amount and
         state_change.expiration == lock.expiration
     )
 
