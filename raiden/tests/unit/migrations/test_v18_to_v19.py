@@ -75,17 +75,17 @@ def test_upgrade_v18_to_v19(tmp_path):
 
     storage = SQLiteStorage(str(db_path))
     # Check that all the relevant state changes now have the blockhash attribute
-    state_change_records = storage.batch_query_state_changes(batch_size=500)
-    for state_change_record in state_change_records:
-        data = json.loads(state_change_record.data)
-        affected_state_change = (
-            'raiden.transfer.state_change.ContractReceive' in data['_type'] or
-            'raiden.transfer.state_change.ActionInitChain' in data['_type']
-        )
-        if affected_state_change:
-            assert 'block_hash' in data
-            block_number = int(data['block_number'])
-            assert block_to_blockhash[block_number].hex() == data['block_hash']
+    for state_changes_batch in storage.batch_query_state_changes(batch_size=500):
+        for state_change_record in state_changes_batch:
+            data = json.loads(state_change_record.data)
+            affected_state_change = (
+                'raiden.transfer.state_change.ContractReceive' in data['_type'] or
+                'raiden.transfer.state_change.ActionInitChain' in data['_type']
+            )
+            if affected_state_change:
+                assert 'block_hash' in data
+                block_number = int(data['block_number'])
+                assert block_to_blockhash[block_number].hex() == data['block_hash']
 
     # Check that all the relevant events now have the triggered_by_blockhash attribute
     event_records = storage.get_all_event_records()

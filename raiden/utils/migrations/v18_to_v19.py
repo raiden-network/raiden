@@ -35,27 +35,29 @@ class BlockHashCache(object):
 
 def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Adds blockhash to ContractReceiveXXX and ActionInitChain state changes"""
-    state_changes = storage.batch_query_state_changes(batch_size=500)
-    updated_state_changes = []
-    for state_change in state_changes:
-        data = json.loads(state_change.data)
-        affected_state_change = (
-            'raiden.transfer.state_change.ContractReceive' in data['_type'] or
-            'raiden.transfer.state_change.ActionInitChain' in data['_type']
-        )
-        if not affected_state_change:
-            continue
 
-        assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
-        block_number = int(data['block_number'])
-        data['block_hash'] = cache.get(block_number)
+    for state_changes_batch in storage.batch_query_state_changes(batch_size=500):
 
-        updated_state_changes.append(StateChangeRecord(
-            state_change_identifier=state_change.state_change_identifier,
-            data=json.dumps(data),
-        ))
+        updated_state_changes = []
+        for state_change in state_changes_batch:
+            data = json.loads(state_change.data)
+            affected_state_change = (
+                'raiden.transfer.state_change.ContractReceive' in data['_type'] or
+                'raiden.transfer.state_change.ActionInitChain' in data['_type']
+            )
+            if not affected_state_change:
+                continue
 
-    storage.update_state_changes(updated_state_changes)
+            assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
+            block_number = int(data['block_number'])
+            data['block_hash'] = cache.get(block_number)
+
+            updated_state_changes.append(StateChangeRecord(
+                state_change_identifier=state_change.state_change_identifier,
+                data=json.dumps(data),
+            ))
+
+        storage.update_state_changes(updated_state_changes)
 
 
 def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> None:
