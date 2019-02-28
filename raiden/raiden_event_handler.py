@@ -43,7 +43,7 @@ from raiden.transfer.utils import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
-from raiden.utils import pex
+from raiden.utils import CanonicalIdentifier, pex
 
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
@@ -301,9 +301,11 @@ class RaidenEventHandler:
                 nonce=balance_proof.nonce,
                 balance_hash=balance_proof.balance_hash,
                 additional_hash=balance_proof.message_hash,
-                channel_identifier=balance_proof.channel_identifier,
-                token_network_identifier=balance_proof.token_network_identifier,
-                chain_id=balance_proof.chain_id,
+                canonical_identifier=CanonicalIdentifier(
+                    chain_identifier=balance_proof.chain_id,
+                    token_network_address=balance_proof.token_network_identifier,
+                    channel_identifier=balance_proof.channel_identifier,
+                ),
                 partner_signature=balance_proof.signature,
             )
             our_signature = raiden.signer.sign(data=non_closing_data)

@@ -28,7 +28,7 @@ from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
-from raiden.utils import pex, safe_gas_limit
+from raiden.utils import CanonicalIdentifier, pex, safe_gas_limit
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     AdditionalHash,
@@ -46,7 +46,6 @@ from raiden.utils.typing import (
     T_ChannelState,
     TokenAmount,
     TokenNetworkAddress,
-    TokenNetworkID,
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -1018,9 +1017,11 @@ class TokenNetwork:
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
-            channel_identifier=channel_identifier,
-            token_network_identifier=TokenNetworkID(self.address),
-            chain_id=self.proxy.contract.functions.chain_id().call(),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=self.proxy.contract.functions.chain_id().call(),
+                token_network_address=self.address,
+                channel_identifier=channel_identifier,
+            ),
         )
 
         try:

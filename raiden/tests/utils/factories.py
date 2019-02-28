@@ -30,7 +30,7 @@ from raiden.transfer.state import (
     message_identifier_from_prng,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import privatekey_to_address, random_secret, sha3, typing
+from raiden.utils import CanonicalIdentifier, privatekey_to_address, random_secret, sha3, typing
 from raiden.utils.signer import LocalSigner, Signer
 
 EMPTY = object()
@@ -435,9 +435,11 @@ def make_signed_balance_proof(
         nonce=nonce,
         balance_hash=balance_hash,
         additional_hash=extra_hash,
-        channel_identifier=channel_identifier,
-        token_network_identifier=token_network_address,
-        chain_id=UNIT_CHAIN_ID,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=UNIT_CHAIN_ID,
+            token_network_address=token_network_address,
+            channel_identifier=channel_identifier,
+        ),
     )
 
     signature = signer.sign(data=data_to_sign)
@@ -447,12 +449,14 @@ def make_signed_balance_proof(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        token_network_identifier=token_network_address,
-        channel_identifier=channel_identifier,
         message_hash=extra_hash,
         signature=signature,
         sender=sender_address,
-        chain_id=UNIT_CHAIN_ID,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=UNIT_CHAIN_ID,
+            token_network_address=token_network_address,
+            channel_identifier=channel_identifier,
+        ),
     )
 
 
@@ -703,12 +707,18 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
         keys = ('transferred_amount', 'locked_amount', 'locksroot')
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
-        keys = ('nonce', 'channel_identifier', 'token_network_identifier')
+        canonical_identifier = CanonicalIdentifier(
+            chain_identifier=params.pop('chain_id'),
+            token_network_address=params.pop('token_network_identifier'),
+            channel_identifier=params.pop('channel_identifier'),
+        )
+        params['canonical_identifier'] = canonical_identifier
+
         data_to_sign = balance_proof.pack_balance_proof(
             balance_hash=balance_hash,
             additional_hash=params['message_hash'],
-            chain_id=UNIT_CHAIN_ID,
-            **_partial_dict(params, *keys),
+            canonical_identifier=canonical_identifier,
+            nonce=params.get('nonce'),
         )
 
         params['signature'] = signer.sign(data=data_to_sign)

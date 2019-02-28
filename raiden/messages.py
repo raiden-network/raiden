@@ -34,7 +34,7 @@ from raiden.transfer.state import (
     HashTimeLockState,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import ishash, pex, sha3, typing
+from raiden.utils import CanonicalIdentifier, ishash, pex, sha3, typing
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import (
     Address,
@@ -357,9 +357,11 @@ class EnvelopeMessage(SignedRetrieableMessage):
             nonce=self.nonce,
             balance_hash=balance_hash,
             additional_hash=self.message_hash,
-            channel_identifier=self.channel_identifier,
-            token_network_identifier=typing.TokenNetworkID(self.token_network_address),
-            chain_id=self.chain_id,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=self.chain_id,
+                token_network_address=self.token_network_address,
+                channel_identifier=self.channel_identifier,
+            ),
         )
         return balance_proof_packed
 
@@ -1522,7 +1524,7 @@ class SignedBlindedBalanceProof:
         assert isinstance(balance_proof, BalanceProofSignedState)
         return cls(
             channel_identifier=balance_proof.channel_identifier,
-            token_network_address=balance_proof.token_network_identifier,
+            token_network_address=typing.TokenNetworkID(balance_proof.token_network_identifier),
             nonce=balance_proof.nonce,
             additional_hash=balance_proof.message_hash,
             chain_id=balance_proof.chain_id,
@@ -1539,9 +1541,11 @@ class SignedBlindedBalanceProof:
             nonce=self.nonce,
             balance_hash=self.balance_hash,
             additional_hash=self.additional_hash,
-            channel_identifier=self.channel_identifier,
-            token_network_identifier=self.token_network_address,
-            chain_id=self.chain_id,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=self.chain_id,
+                token_network_address=self.token_network_address,
+                channel_identifier=self.channel_identifier,
+            ),
             partner_signature=self.signature,
         )
         return packed
@@ -1741,17 +1745,21 @@ class RequestMonitoring(SignedMessage):
             nonce=self.balance_proof.nonce,
             balance_hash=self.balance_proof.balance_hash,
             additional_hash=self.balance_proof.additional_hash,
-            channel_identifier=self.balance_proof.channel_identifier,
-            token_network_identifier=self.balance_proof.token_network_address,
-            chain_id=self.balance_proof.chain_id,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=self.balance_proof.chain_id,
+                token_network_address=self.balance_proof.token_network_address,
+                channel_identifier=self.balance_proof.channel_identifier,
+            ),
         )
         blinded_data = pack_balance_proof_update(
             nonce=self.balance_proof.nonce,
             balance_hash=self.balance_proof.balance_hash,
             additional_hash=self.balance_proof.additional_hash,
-            channel_identifier=self.balance_proof.channel_identifier,
-            token_network_identifier=self.balance_proof.token_network_address,
-            chain_id=self.balance_proof.chain_id,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=self.balance_proof.chain_id,
+                token_network_address=self.balance_proof.token_network_address,
+                channel_identifier=self.balance_proof.channel_identifier,
+            ),
             partner_signature=self.balance_proof.signature,
         )
         reward_proof_data = pack_reward_proof(

@@ -75,7 +75,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import pex
+from raiden.utils import CanonicalIdentifier, pex
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
@@ -323,9 +323,11 @@ def is_valid_signature(
         nonce=balance_proof.nonce,
         balance_hash=balance_hash,
         additional_hash=balance_proof.message_hash,
-        channel_identifier=balance_proof.channel_identifier,
-        token_network_identifier=balance_proof.token_network_identifier,
-        chain_id=balance_proof.chain_id,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=balance_proof.chain_id,
+            token_network_address=balance_proof.token_network_identifier,
+            channel_identifier=balance_proof.channel_identifier,
+        ),
     )
 
     try:
