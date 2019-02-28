@@ -313,14 +313,20 @@ def test_batch_query_state_changes():
 
     # Test that querying the state changes in batches of 10 works
     state_changes_num = 87
-    state_changes = storage.batch_query_state_changes(batch_size=10)
+    state_changes = []
+    for state_changes_batch in storage.batch_query_state_changes(batch_size=10):
+        state_changes.extend(state_changes_batch)
+
     assert len(state_changes) == state_changes_num
     for i in range(1, 87):
         assert state_changes[i - 1].state_change_identifier == i
 
     # Test that we can also add a filter
-    state_changes = storage.batch_query_state_changes(
+    state_changes = []
+    state_changes_batch_query = storage.batch_query_state_changes(
         batch_size=10,
         filters={'_type': 'raiden.transfer.state_change.Block'},
     )
+    for state_changes_batch in state_changes_batch_query:
+        state_changes.extend(state_changes_batch)
     assert len(state_changes) == 77

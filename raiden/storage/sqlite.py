@@ -362,11 +362,14 @@ class SQLiteStorage(SerializationBase):
             batch_size: int,
             filters: Dict[str, Any] = None,
     ) -> List[StateChangeRecord]:
-        """Batch query state change records with a given batch size and an optional filter"""
+        """Batch query state change records with a given batch size and an optional filter
+
+        This is a generator function returning each batch to the caller to work with.
+        """
         limit = batch_size
         offset = 0
         result_length = 1
-        state_changes = []
+
         while result_length != 0:
             result = self._get_state_changes(
                 limit=limit,
@@ -375,9 +378,7 @@ class SQLiteStorage(SerializationBase):
             )
             result_length = len(result)
             offset += result_length
-            state_changes.extend(result)
-
-        return state_changes
+            yield result
 
     def update_state_changes(self, state_changes: List[StateChangeRecord]) -> None:
         """Given a list of identifier/data state change records update them in the DB"""
