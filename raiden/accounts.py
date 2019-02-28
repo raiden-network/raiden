@@ -99,10 +99,7 @@ class AccountManager:
                             data = json.load(data_file)
                             address = add_0x_prefix(str(data['address']).lower())
                             self.accounts[address] = str(fullpath)
-                    except (
-                            IOError,
-                            OSError,
-                    ) as ex:
+                    except OSError as ex:
                         msg = 'Can not read account file (errno=%s)' % ex.errno
                         log.warning(msg, path=fullpath, ex=ex)
                     except(
