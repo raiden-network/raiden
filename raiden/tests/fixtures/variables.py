@@ -320,11 +320,6 @@ def database_paths(tmpdir, private_keys):
 
 
 @pytest.fixture
-def private_rooms():
-    return False
-
-
-@pytest.fixture
 def environment_type():
     """Specifies the environment type"""
     return Environment.DEVELOPMENT
