@@ -765,7 +765,7 @@ class RaidenAPI:
         if secret is None and secret_hash is not None:
             pass
 
-        valid_tokens = views.get_token_network_addresses_for(
+        valid_tokens = views.get_token_identifiers(
             views.state_from_raiden(self.raiden),
             registry_address,
         )
