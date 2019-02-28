@@ -757,10 +757,11 @@ class BalanceProofUnsignedState(State):
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
-            token_network_identifier: TokenNetworkID,
-            channel_identifier: ChannelID,
-            chain_id: ChainID,
+            canonical_identifier: CanonicalIdentifier,
     ):
+        chain_id = canonical_identifier.chain_identifier
+        token_network_identifier = canonical_identifier.token_network_address
+        channel_identifier = canonical_identifier.channel_identifier
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
@@ -864,9 +865,11 @@ class BalanceProofUnsignedState(State):
             transferred_amount=TokenAmount(int(data['transferred_amount'])),
             locked_amount=TokenAmount(int(data['locked_amount'])),
             locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
-            chain_id=data['chain_id'],
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=data['chain_id'],
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['channel_identifier'])),
+            ),
         )
 
         return restored
