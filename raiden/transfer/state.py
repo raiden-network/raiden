@@ -13,7 +13,7 @@ from raiden.transfer.architecture import SendMessageEvent, State
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_from_json
-from raiden.utils import lpex, pex, serialization, sha3
+from raiden.utils import CanonicalIdentifier, lpex, pex, serialization, sha3
 from raiden.utils.serialization import map_dict, map_list, serialize_bytes
 from raiden.utils.typing import (
     AdditionalHash,
@@ -95,16 +95,18 @@ NODE_NETWORK_REACHABLE = 'reachable'
 
 def balanceproof_from_envelope(envelope_message):
     return BalanceProofSignedState(
-        envelope_message.nonce,
-        envelope_message.transferred_amount,
-        envelope_message.locked_amount,
-        envelope_message.locksroot,
-        envelope_message.token_network_address,
-        envelope_message.channel_identifier,
-        envelope_message.message_hash,
-        envelope_message.signature,
-        envelope_message.sender,
-        envelope_message.chain_id,
+        nonce=envelope_message.nonce,
+        transferred_amount=envelope_message.transferred_amount,
+        locked_amount=envelope_message.locked_amount,
+        locksroot=envelope_message.locksroot,
+        message_hash=envelope_message.message_hash,
+        signature=envelope_message.signature,
+        sender=envelope_message.sender,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=envelope_message.chain_id,
+            token_network_address=envelope_message.token_network_address,
+            channel_identifier=envelope_message.channel_identifier,
+        ),
     )
 
 
@@ -886,6 +888,7 @@ class BalanceProofSignedState(State):
         'signature',
         'sender',
         'chain_id',
+        'canonical_identifier',
     )
 
     def __init__(
@@ -894,13 +897,15 @@ class BalanceProofSignedState(State):
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
-            token_network_identifier: TokenNetworkID,
-            channel_identifier: ChannelID,
             message_hash: AdditionalHash,
             signature: Signature,
             sender: Address,
-            chain_id: ChainID,
+            canonical_identifier: CanonicalIdentifier,
     ):
+        chain_id = canonical_identifier.chain_identifier
+        token_network_identifier = canonical_identifier.token_network_address
+        channel_identifier = canonical_identifier.channel_identifier
+
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
@@ -1035,12 +1040,14 @@ class BalanceProofSignedState(State):
             transferred_amount=TokenAmount(int(data['transferred_amount'])),
             locked_amount=TokenAmount(int(data['locked_amount'])),
             locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
             message_hash=AdditionalHash(serialization.deserialize_bytes(data['message_hash'])),
             signature=Signature(serialization.deserialize_bytes(data['signature'])),
             sender=to_canonical_address(data['sender']),
-            chain_id=data['chain_id'],
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=data['chain_id'],
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['channel_identifier'])),
+            ),
         )
 
         return restored

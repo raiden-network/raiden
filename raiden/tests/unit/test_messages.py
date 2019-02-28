@@ -18,6 +18,7 @@ from raiden.transfer.balance_proof import (
     pack_reward_proof,
 )
 from raiden.transfer.state import BalanceProofUnsignedState
+from raiden.utils import CanonicalIdentifier
 from raiden.utils.signer import LocalSigner, recover
 
 PRIVKEY, ADDRESS = make_privkey_address()
@@ -109,9 +110,11 @@ def test_request_monitoring():
         nonce=request_monitoring.balance_proof.nonce,
         balance_hash=request_monitoring.balance_proof.balance_hash,
         additional_hash=request_monitoring.balance_proof.additional_hash,
-        channel_identifier=request_monitoring.balance_proof.channel_identifier,
-        token_network_identifier=request_monitoring.balance_proof.token_network_address,
-        chain_id=request_monitoring.balance_proof.chain_id,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=request_monitoring.balance_proof.chain_id,
+            token_network_address=request_monitoring.balance_proof.token_network_address,
+            channel_identifier=request_monitoring.balance_proof.channel_identifier,
+        ),
         partner_signature=request_monitoring.balance_proof.signature,
     )
     assert recover(blinded_data, request_monitoring.non_closing_signature) == ADDRESS
@@ -120,9 +123,11 @@ def test_request_monitoring():
         nonce=request_monitoring.balance_proof.nonce,
         balance_hash=request_monitoring.balance_proof.balance_hash,
         additional_hash=request_monitoring.balance_proof.additional_hash,
-        channel_identifier=request_monitoring.balance_proof.channel_identifier,
-        token_network_identifier=request_monitoring.balance_proof.token_network_address,
-        chain_id=request_monitoring.balance_proof.chain_id,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=request_monitoring.balance_proof.chain_id,
+            token_network_address=request_monitoring.balance_proof.token_network_address,
+            channel_identifier=request_monitoring.balance_proof.channel_identifier,
+        ),
     )
     assert recover(
         balance_proof_data,

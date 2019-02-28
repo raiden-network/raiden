@@ -681,7 +681,7 @@ def handle_init_mediator(
     return subdispatch_mediatortask(
         chain_state,
         state_change,
-        token_network_identifier,
+        TokenNetworkID(token_network_identifier),
         secrethash,
     )
 
@@ -698,7 +698,7 @@ def handle_init_target(
     return subdispatch_targettask(
         chain_state,
         state_change,
-        token_network_identifier,
+        TokenNetworkID(token_network_identifier),
         channel_identifier,
         secrethash,
     )

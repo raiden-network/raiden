@@ -5,7 +5,7 @@ import re
 import sys
 import time
 from itertools import zip_longest
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union, NamedTuple
 
 import gevent
 from eth_keys import keys
@@ -24,6 +24,13 @@ from raiden import constants
 from raiden.exceptions import InvalidAddress
 from raiden.utils import typing
 from raiden.utils.signing import sha3  # noqa
+
+
+class CanonicalIdentifier(NamedTuple):
+    chain_identifier: typing.ChainID
+    # introducing the type as Union, to avoid casting for now. Should be only `..Address` later
+    token_network_address: Union[typing.TokenNetworkAddress, typing.TokenNetworkID]
+    channel_identifier: typing.ChannelID
 
 
 def random_secret():
