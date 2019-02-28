@@ -128,7 +128,7 @@ def ping_pong_message_success(transport0, transport1):
     number_of_received_messages0 = len(received_messages0)
     number_of_received_messages1 = len(received_messages1)
 
-    message = Processed(number_of_received_messages0)
+    message = Processed(message_identifier=number_of_received_messages0)
     transport0._raiden_service.sign(message)
 
     transport0.send_async(queueid1, message)
@@ -140,7 +140,7 @@ def ping_pong_message_success(transport0, transport1):
                 len(received_messages1) == number_of_received_messages1 + 1
             )
             gevent.sleep(.1)
-    message = Processed(number_of_received_messages1)
+    message = Processed(message_identifier=number_of_received_messages1)
     transport1._raiden_service.sign(message)
     transport1.send_async(queueid0, message)
 
@@ -389,7 +389,6 @@ def test_matrix_message_sync(
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
 def test_matrix_tx_error_handling(
-        skip_if_not_matrix,
         skip_if_parity,
         raiden_chain,
         token_addresses,
