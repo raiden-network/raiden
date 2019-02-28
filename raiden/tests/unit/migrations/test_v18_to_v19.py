@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
+from raiden.utils.migrations.v18_to_v19 import upgrade_v18_to_v19
 from raiden.utils.upgrades import UpgradeManager
 
 
@@ -66,7 +67,11 @@ def test_upgrade_v18_to_v19(tmp_path):
 
     web3, block_to_blockhash = create_fake_web3_for_block_hash(number_of_blocks=100)
     manager = UpgradeManager(db_filename=str(db_path), web3=web3)
-    manager.run()
+    with patch(
+            'raiden.utils.upgrades.UPGRADES_LIST',
+            new=[upgrade_v18_to_v19],
+    ):
+        manager.run()
 
     storage = SQLiteStorage(str(db_path))
     # Check that all the relevant state changes now have the blockhash attribute
