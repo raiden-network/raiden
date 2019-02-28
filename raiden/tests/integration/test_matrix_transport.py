@@ -62,7 +62,7 @@ def mock_matrix(
         retry_interval,
         retries_before_backoff,
         local_matrix_servers,
-        privacy_settings,
+        private_rooms,
 ):
 
     from raiden.network.transport.matrix.client import User
@@ -92,7 +92,7 @@ def mock_matrix(
         server_name=local_matrix_servers[0].netloc,
         available_servers=[],
         global_rooms=['discovery'],
-        private_rooms=privacy_settings,
+        private_rooms=private_rooms,
     )
 
     transport = MatrixTransport(config)
@@ -278,7 +278,7 @@ def test_processing_invalid_message_cmdid_hex(mock_matrix, skip_userid_validatio
 
 def test_matrix_message_sync(
         local_matrix_servers,
-        privacy_settings,
+        private_rooms,
         retry_interval,
         retries_before_backoff,
 ):
@@ -289,7 +289,7 @@ def test_matrix_message_sync(
         'server': local_matrix_servers[0],
         'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
-        'private_rooms': privacy_settings,
+        'private_rooms': private_rooms,
     })
     transport1 = MatrixTransport({
         'global_rooms': ['discovery'],
@@ -298,7 +298,7 @@ def test_matrix_message_sync(
         'server': local_matrix_servers[0],
         'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
-        'private_rooms': privacy_settings,
+        'private_rooms': private_rooms,
     })
 
     latest_auth_data = None
@@ -421,7 +421,7 @@ def test_matrix_tx_error_handling(
 
 def test_matrix_message_retry(
         local_matrix_servers,
-        privacy_settings,
+        private_rooms,
         retry_interval,
         retries_before_backoff,
 ):
@@ -442,7 +442,7 @@ def test_matrix_message_retry(
         'server': local_matrix_servers[0],
         'server_name': local_matrix_servers[0].netloc,
         'available_servers': [],
-        'private_rooms': privacy_settings,
+        'private_rooms': private_rooms,
     })
     transport._send_raw = MagicMock()
     raiden_service = MockRaidenService(None)
@@ -504,7 +504,7 @@ def test_matrix_message_retry(
 
 def test_join_invalid_discovery(
         local_matrix_servers,
-        privacy_settings,
+        private_rooms,
         retry_interval,
         retries_before_backoff,
 ):
@@ -521,7 +521,7 @@ def test_join_invalid_discovery(
         'server': local_matrix_servers[0],
         'server_name': local_matrix_servers[0].netloc,
         'available_servers': ['http://invalid.server'],
-        'private_rooms': privacy_settings,
+        'private_rooms': private_rooms,
     })
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
@@ -542,7 +542,7 @@ def test_join_invalid_discovery(
 
 @pytest.mark.parametrize('matrix_server_count', [2])
 @pytest.mark.parametrize('number_of_transports', [3])
-def test_matrix_cross_server_with_load_balance(matrix_transports, retry_interval):
+def test_matrix_cross_server_with_load_balance(matrix_transports):
     transport0, transport1, transport2 = matrix_transports
     received_messages0 = set()
     received_messages1 = set()
@@ -581,7 +581,7 @@ def test_matrix_discovery_room_offline_server(
         local_matrix_servers,
         retries_before_backoff,
         retry_interval,
-        privacy_settings,
+        private_rooms,
 ):
 
     transport = MatrixTransport({
@@ -591,7 +591,7 @@ def test_matrix_discovery_room_offline_server(
         'server': local_matrix_servers[0],
         'server_name': local_matrix_servers[0].netloc,
         'available_servers': [local_matrix_servers[0], 'https://localhost:1'],
-        'private_rooms': privacy_settings,
+        'private_rooms': private_rooms,
     })
     transport.start(MockRaidenService(None), MessageHandler(set()), '')
     gevent.sleep(.2)
@@ -604,7 +604,7 @@ def test_matrix_send_global(
         local_matrix_servers,
         retries_before_backoff,
         retry_interval,
-        privacy_settings,
+        private_rooms,
 ):
     transport = MatrixTransport({
         'global_rooms': ['discovery', MONITORING_BROADCASTING_ROOM],
@@ -613,7 +613,7 @@ def test_matrix_send_global(
         'server': local_matrix_servers[0],
         'server_name': local_matrix_servers[0].netloc,
         'available_servers': [local_matrix_servers[0]],
-        'private_rooms': privacy_settings,
+        'private_rooms': private_rooms,
     })
     transport.start(MockRaidenService(None), MessageHandler(set()), '')
     gevent.idle()
@@ -795,26 +795,23 @@ def test_pfs_global_messages(
     transport.get()
 
 
-@pytest.mark.parametrize('privacy_settings', [
-    [True, True, 'invite'],
-    [True, False, 'invite'],
-    [False, True, 'public'],
-    [False, False, 'public'],
+@pytest.mark.parametrize('private_rooms, expected_join_rule', [
+    [[True, True], 'invite'],
+    [[True, False], 'invite'],
+    [[False, True], 'public'],
+    [[False, False], 'public'],
 ])
 @pytest.mark.parametrize('number_of_transports', [2])
 @pytest.mark.parametrize('matrix_server_count', [2])
 def test_matrix_invite_private_room_happy_case(
-        local_matrix_servers,
-        retry_interval,
-        retries_before_backoff,
         matrix_transports,
-        privacy_settings,
+        private_rooms,
+        expected_join_rule,
 ):
     raiden_service0 = MockRaidenService(None)
     raiden_service1 = MockRaidenService(None)
 
     transport0, transport1 = matrix_transports
-    expected_join_rule = privacy_settings[-1]
 
     transport0.start(raiden_service0, raiden_service0.message_handler, None)
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
@@ -823,7 +820,7 @@ def test_matrix_invite_private_room_happy_case(
     transport1.start_health_check(transport0._raiden_service.address)
 
     room_id = transport0._get_room_for_address(raiden_service1.address).room_id
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while True:
             try:
                 room_state0 = transport0._client.api.get_room_state(room_id)
@@ -839,7 +836,7 @@ def test_matrix_invite_private_room_happy_case(
 
     assert join_rule0 == expected_join_rule
 
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while True:
             try:
                 room_state1 = transport1._client.api.get_room_state(room_id)
@@ -856,26 +853,24 @@ def test_matrix_invite_private_room_happy_case(
     assert join_rule1 == expected_join_rule
 
 
-@pytest.mark.parametrize('privacy_settings', [
-    [True, True, 'invite', 'invite'],
-    [True, False, 'invite', 'invite'],
-    [False, True, 'public', 'public'],
-    [False, False, 'public', 'public'],
+@pytest.mark.parametrize('private_rooms, expected_join_rule0, expected_join_rule1', [
+    [[True, True], 'invite', 'invite'],
+    [[True, False], 'invite', 'invite'],
+    [[False, True], 'public', 'public'],
+    [[False, False], 'public', 'public'],
 ])
 @pytest.mark.parametrize('matrix_server_count', [2])
 @pytest.mark.parametrize('number_of_transports', [2])
 def test_matrix_invite_private_room_unhappy_case1(
-        local_matrix_servers,
-        retry_interval,
-        retries_before_backoff,
         matrix_transports,
-        privacy_settings,
+        private_rooms,
+        expected_join_rule0,
+        expected_join_rule1,
 ):
     raiden_service0 = MockRaidenService(None)
     raiden_service1 = MockRaidenService(None)
 
     transport0, transport1 = matrix_transports
-    expected_join_rule0, expected_join_rule1 = privacy_settings[-2:]
 
     transport0.start(raiden_service0, raiden_service0.message_handler, None)
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
@@ -884,7 +879,7 @@ def test_matrix_invite_private_room_unhappy_case1(
     transport1.start_health_check(raiden_service0.address)
 
     room_id = transport0._get_room_for_address(raiden_service1.address).room_id
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while True:
             try:
                 room_state0 = transport0._client.api.get_room_state(room_id)
@@ -900,7 +895,7 @@ def test_matrix_invite_private_room_unhappy_case1(
 
     assert join_rule0 == expected_join_rule0
 
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while True:
             try:
                 room_state1 = transport1._client.api.get_room_state(room_id)
@@ -917,26 +912,24 @@ def test_matrix_invite_private_room_unhappy_case1(
     assert join_rule1 == expected_join_rule1
 
 
-@pytest.mark.parametrize('privacy_settings', [
-    [True, True, 'invite', 'invite'],
-    [True, False, 'invite', 'invite'],
-    [False, True, 'public', 'public'],
-    [False, False, 'public', 'public'],
+@pytest.mark.parametrize('private_rooms, expected_join_rule0, expected_join_rule1', [
+    [[True, True], 'invite', 'invite'],
+    [[True, False], 'invite', 'invite'],
+    [[False, True], 'public', 'public'],
+    [[False, False], 'public', 'public'],
 ])
 @pytest.mark.parametrize('matrix_server_count', [2])
 @pytest.mark.parametrize('number_of_transports', [2])
 def test_matrix_invite_private_room_unhappy_case_2(
-        local_matrix_servers,
-        retry_interval,
-        retries_before_backoff,
         matrix_transports,
-        privacy_settings,
+        private_rooms,
+        expected_join_rule0,
+        expected_join_rule1,
 ):
     raiden_service0 = MockRaidenService(None)
     raiden_service1 = MockRaidenService(None)
 
     transport0, transport1 = matrix_transports
-    expected_join_rule0, expected_join_rule1 = privacy_settings[-2:]
 
     transport0.start(raiden_service0, raiden_service0.message_handler, None)
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
@@ -948,7 +941,7 @@ def test_matrix_invite_private_room_unhappy_case_2(
     assert transport0._address_to_presence[raiden_service1.address].value == 'online'
 
     transport1.stop()
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while not transport0._address_to_presence[raiden_service1.address].value == 'offline':
             gevent.sleep(.1)
 
@@ -958,7 +951,7 @@ def test_matrix_invite_private_room_unhappy_case_2(
 
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
 
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while True:
             try:
                 room_state0 = transport0._client.api.get_room_state(room_id)
@@ -974,7 +967,7 @@ def test_matrix_invite_private_room_unhappy_case_2(
 
     assert join_rule0 == expected_join_rule0
 
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while True:
             try:
                 room_state1 = transport1._client.api.get_room_state(room_id)
@@ -991,20 +984,18 @@ def test_matrix_invite_private_room_unhappy_case_2(
     assert join_rule1 == expected_join_rule1
 
 
-@pytest.mark.parametrize('privacy_settings', [
-    [True, True, 'invite'],
-    [True, False, 'invite'],
-    [False, True, 'public'],
-    [False, False, 'public'],
+@pytest.mark.parametrize('private_rooms, expected_join_rule', [
+    [[True, True], 'invite'],
+    [[True, False], 'invite'],
+    [[False, True], 'public'],
+    [[False, False], 'public'],
 ])
-@pytest.mark.parametrize('matrix_server_count', [2])
 @pytest.mark.parametrize('number_of_transports', [2])
+@pytest.mark.parametrize('matrix_server_count', [2])
 def test_matrix_invite_private_room_unhappy_case_3(
-        local_matrix_servers,
-        retry_interval,
-        retries_before_backoff,
         matrix_transports,
-        privacy_settings,
+        private_rooms,
+        expected_join_rule,
 ):
     raiden_service0 = MockRaidenService(None)
     raiden_service1 = MockRaidenService(None)
@@ -1013,7 +1004,6 @@ def test_matrix_invite_private_room_unhappy_case_3(
 
     transport0.start(raiden_service0, raiden_service0.message_handler, None)
     transport1.start(raiden_service1, raiden_service1.message_handler, None)
-    expected_join_rule1 = privacy_settings[-1]
 
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
@@ -1021,7 +1011,7 @@ def test_matrix_invite_private_room_unhappy_case_3(
     assert transport1._address_to_presence[raiden_service0.address].value == 'online'
     assert transport0._address_to_presence[raiden_service1.address].value == 'online'
     transport1.stop()
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while not transport0._address_to_presence[raiden_service1.address].value == 'offline':
             gevent.sleep(.1)
 
@@ -1032,7 +1022,7 @@ def test_matrix_invite_private_room_unhappy_case_3(
 
     transport0.stop()
 
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while True:
             try:
                 room_state1 = transport1._client.api.get_room_state(room_id)
@@ -1046,12 +1036,12 @@ def test_matrix_invite_private_room_unhappy_case_3(
         if event['type'] == 'm.room.join_rules'
     ][0]
 
-    assert join_rule1 == expected_join_rule1
+    assert join_rule1 == expected_join_rule
 
 
 @pytest.mark.parametrize('matrix_server_count', [3])
 @pytest.mark.parametrize('number_of_transports', [3])
-def test_matrix_user_roaming(matrix_transports, retry_interval):
+def test_matrix_user_roaming(matrix_transports):
     transport0, transport1, transport2 = matrix_transports
     received_messages0 = set()
     received_messages1 = set()
@@ -1071,7 +1061,7 @@ def test_matrix_user_roaming(matrix_transports, retry_interval):
     assert ping_pong_message_success(transport0, transport1)
 
     transport0.stop()
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while not transport1._address_to_presence[raiden_service0.address].value == 'offline':
             gevent.sleep(.1)
 
@@ -1084,14 +1074,14 @@ def test_matrix_user_roaming(matrix_transports, retry_interval):
     assert ping_pong_message_success(transport2, transport1)
 
     transport2.stop()
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while not transport1._address_to_presence[raiden_service0.address].value == 'offline':
             gevent.sleep(.1)
 
     assert transport1._address_to_presence[raiden_service0.address].value == 'offline'
 
     transport0.start(raiden_service0, message_handler0, '')
-    with Timeout(retry_interval * 20, exception=False):
+    with Timeout(40, exception=True):
         while not transport1._address_to_presence[raiden_service0.address].value == 'online':
             gevent.sleep(.1)
 
@@ -1102,7 +1092,7 @@ def test_matrix_user_roaming(matrix_transports, retry_interval):
 
 @pytest.mark.parametrize('matrix_server_count', [3])
 @pytest.mark.parametrize('number_of_transports', [6])
-def test_matrix_multi_user_roaming(matrix_transports, retry_interval):
+def test_matrix_multi_user_roaming(matrix_transports):
 
     # 6 transports on 3 servers, where 0,3, 1,4, etc is one the same server
     transport0, transport1, transport2, transport3, transport4, transport5 = matrix_transports
