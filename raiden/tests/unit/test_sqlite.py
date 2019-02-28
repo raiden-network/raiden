@@ -25,7 +25,7 @@ from raiden.transfer.utils import (
     get_event_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_balance_hash,
 )
-from raiden.utils import sha3
+from raiden.utils import CanonicalIdentifier, sha3
 
 
 def make_signed_balance_proof_from_counter(counter):
@@ -55,9 +55,11 @@ def make_balance_proof_from_counter(counter) -> BalanceProofUnsignedState:
         transferred_amount=next(counter),
         locked_amount=next(counter),
         locksroot=sha3(next(counter).to_bytes(1, 'big')),
-        token_network_identifier=factories.make_address(),
-        channel_identifier=next(counter),
-        chain_id=next(counter),
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=next(counter),
+            token_network_address=factories.make_address(),
+            channel_identifier=next(counter),
+        ),
     )
 
 

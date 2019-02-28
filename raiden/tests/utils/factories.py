@@ -274,9 +274,11 @@ def make_transfer(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        token_network_identifier=token_network_identifier,
-        channel_identifier=channel_identifier,
-        chain_id=UNIT_CHAIN_ID,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=UNIT_CHAIN_ID,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
+        ),
     )
 
     return LockedTransferUnsignedState(
@@ -763,6 +765,11 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
     balance_proof_parameters = _properties_to_dict(
         parameters.pop('balance_proof'),
         defaults.balance_proof,
+    )
+    balance_proof_parameters['canonical_identifier'] = CanonicalIdentifier(
+        chain_identifier=balance_proof_parameters.pop('chain_id'),
+        token_network_address=balance_proof_parameters.pop('token_network_identifier'),
+        channel_identifier=balance_proof_parameters.pop('channel_identifier'),
     )
     if balance_proof_parameters['locksroot'] == EMPTY_MERKLE_ROOT:
         balance_proof_parameters['locksroot'] = lock.lockhash

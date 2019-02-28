@@ -1192,9 +1192,11 @@ def create_sendlockedtransfer(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
-        chain_id=channel_state.chain_id,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
     )
 
     locked_transfer = LockedTransferUnsignedState(
@@ -1257,9 +1259,11 @@ def create_unlock(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
-        chain_id=channel_state.chain_id,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
     )
 
     unlock_lock = SendBalanceProof(
@@ -1429,9 +1433,11 @@ def create_sendexpiredlock(
         transferred_amount=transferred_amount,
         locked_amount=updated_locked_amount,
         locksroot=locksroot,
-        token_network_identifier=token_network_identifier,
-        channel_identifier=channel_identifier,
-        chain_id=chain_id,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_id,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
+        ),
     )
 
     send_lock_expired = SendLockExpired(
