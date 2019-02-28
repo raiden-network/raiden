@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3567` Properly check handling offline partners
 * :feature:`2436` Add an API endpoint to list pending transfers
 * :bug:`3475` Properly check async_result in rest api payments
 * :feature:`3318` allow secret and/or hash with payment request
