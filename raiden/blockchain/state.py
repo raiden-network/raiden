@@ -5,7 +5,6 @@ from raiden.transfer.state import (
 )
 from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (
-    BlockHash,
     BlockNumber,
     BlockTimeout,
     PaymentNetworkID,
@@ -21,9 +20,11 @@ def get_channel_state(
         reveal_timeout: BlockTimeout,
         payment_channel_proxy,
         opened_block_number: BlockNumber,
-        opened_block_hash: BlockHash,
 ):
-    channel_details = payment_channel_proxy.detail(opened_block_hash)
+    # Here we have to query the latest state as during restart a lot of things
+    # can have happened, such as the channel having been closed. To get this
+    # information we should use 'latest'.
+    channel_details = payment_channel_proxy.detail('latest')
 
     our_state = NettingChannelEndState(
         channel_details.participants_data.our_details.address,
