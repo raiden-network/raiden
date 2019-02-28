@@ -23,14 +23,8 @@ def wait_for_block(
         block_number: typing.BlockNumber,
         retry_timeout: float,
 ) -> None:
-    current_block_number = views.block_number(
-        views.state_from_raiden(raiden),
-    )
-    while current_block_number < block_number:
+    while raiden.get_block_number() < block_number:
         gevent.sleep(retry_timeout)
-        current_block_number = views.block_number(
-            views.state_from_raiden(raiden),
-        )
 
 
 def wait_for_block_using_web3(
