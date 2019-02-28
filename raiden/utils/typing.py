@@ -79,6 +79,12 @@ PaymentID = NewType('PaymentID', T_PaymentID)
 T_PaymentAmount = int
 PaymentAmount = NewType('PaymentAmount', T_PaymentAmount)
 
+T_FeeAmount = int
+FeeAmount = NewType('FeeAmount', T_FeeAmount)
+
+T_PaymentWithFeeAmount = int
+PaymentWithFeeAmount = NewType('PaymentWithFeeAmount', T_FeeAmount)
+
 T_PaymentNetworkID = bytes
 PaymentNetworkID = NewType('PaymentNetworkID', T_PaymentNetworkID)
 

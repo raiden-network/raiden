@@ -18,6 +18,7 @@ from raiden.utils.typing import (
     Any,
     ChannelID,
     Dict,
+    FeeAmount,
     InitiatorAddress,
     InitiatorTransfersMap,
     List,
@@ -612,6 +613,7 @@ class TransferDescriptionWithSecretState(State):
         'payment_network_identifier',
         'payment_identifier',
         'amount',
+        'allocated_fee',
         'token_network_identifier',
         'initiator',
         'target',
@@ -624,6 +626,7 @@ class TransferDescriptionWithSecretState(State):
             payment_network_identifier: PaymentNetworkID,
             payment_identifier: PaymentID,
             amount: PaymentAmount,
+            allocated_fee: FeeAmount,
             token_network_identifier: TokenNetworkID,
             initiator: InitiatorAddress,
             target: TargetAddress,
@@ -634,6 +637,7 @@ class TransferDescriptionWithSecretState(State):
         self.payment_network_identifier = payment_network_identifier
         self.payment_identifier = payment_identifier
         self.amount = amount
+        self.allocated_fee = allocated_fee
         self.token_network_identifier = token_network_identifier
         self.initiator = initiator
         self.target = target
@@ -642,14 +646,14 @@ class TransferDescriptionWithSecretState(State):
 
     def __repr__(self):
         return (
-            '<'
-            'TransferDescriptionWithSecretState token_network:{} amount:{} target:{} secrethash:{}'
-            '>'
-        ).format(
-            pex(self.token_network_identifier),
-            self.amount,
-            pex(self.target),
-            pex(self.secrethash),
+            f'<'
+            f'TransferDescriptionWithSecretState '
+            f'token_network:{pex(self.token_network_identifier)} '
+            f'amount:{self.amount} '
+            f'allocated_fee:{self.allocated_fee} '
+            f'target:{pex(self.target)} '
+            f'secrethash:{pex(self.secrethash)}'
+            f'>'
         )
 
     def __eq__(self, other: Any) -> bool:
@@ -658,6 +662,7 @@ class TransferDescriptionWithSecretState(State):
             self.payment_network_identifier == other.payment_network_identifier and
             self.payment_identifier == other.payment_identifier and
             self.amount == other.amount and
+            self.allocated_fee == other.allocated_fee and
             self.token_network_identifier == other.token_network_identifier and
             self.initiator == other.initiator and
             self.target == other.target and
@@ -673,6 +678,7 @@ class TransferDescriptionWithSecretState(State):
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
             'payment_identifier': str(self.payment_identifier),
             'amount': str(self.amount),
+            'allocated_fee': str(self.allocated_fee),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'initiator': to_checksum_address(self.initiator),
             'target': to_checksum_address(self.target),
@@ -685,6 +691,7 @@ class TransferDescriptionWithSecretState(State):
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             payment_identifier=int(data['payment_identifier']),
             amount=int(data['amount']),
+            allocated_fee=int(data['allocated_fee']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             initiator=to_canonical_address(data['initiator']),
             target=to_canonical_address(data['target']),

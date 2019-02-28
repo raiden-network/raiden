@@ -309,13 +309,14 @@ def handle_transferrefundcancelroute(
 
     old_description = initiator_state.transfer_description
     transfer_description = TransferDescriptionWithSecretState(
-        old_description.payment_network_identifier,
-        old_description.payment_identifier,
-        old_description.amount,
-        old_description.token_network_identifier,
-        old_description.initiator,
-        old_description.target,
-        state_change.secret,
+        payment_network_identifier=old_description.payment_network_identifier,
+        payment_identifier=old_description.payment_identifier,
+        amount=old_description.amount,
+        token_network_identifier=old_description.token_network_identifier,
+        allocated_fee=old_description.allocated_fee,
+        initiator=old_description.initiator,
+        target=old_description.target,
+        secret=state_change.secret,
     )
 
     sub_iteration = maybe_try_new_route(
