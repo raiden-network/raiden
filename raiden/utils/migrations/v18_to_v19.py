@@ -42,15 +42,17 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
             'raiden.transfer.state_change.ContractReceive' in data['_type'] or
             'raiden.transfer.state_change.ActionInitChain' in data['_type']
         )
-        if affected_state_change:
-            assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
-            block_number = int(data['block_number'])
-            data['block_hash'] = cache.get(block_number)
+        if not affected_state_change:
+            continue
 
-            updated_state_changes.append(StateChangeRecord(
-                state_change_identifier=state_change.state_change_identifier,
-                data=json.dumps(data),
-            ))
+        assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
+        block_number = int(data['block_number'])
+        data['block_hash'] = cache.get(block_number)
+
+        updated_state_changes.append(StateChangeRecord(
+            state_change_identifier=state_change.state_change_identifier,
+            data=json.dumps(data),
+        ))
 
     storage.update_state_changes(updated_state_changes)
 
@@ -61,38 +63,33 @@ def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> N
     updated_events = []
     for event in events:
         data = json.loads(event.data)
-        if 'raiden.transfer.events.ContractSend' in data['_type']:
-            assert 'triggered_by_block_hash' not in data, 'v18 events cant contain blockhash'
-            # Get the state_change that triggered the event and if it has
-            # a block number get its hash. If not fall back to latest.
-            matched_state_changes = storage.get_statechanges_by_identifier(
-                from_identifier=event.state_change_identifier,
-                to_identifier=event.state_change_identifier,
-            )
-            result_length = len(matched_state_changes)
-            msg = 'multiple state changes should not exist for the same identifier'
-            assert result_length == 0 or result_length == 1, msg
-            block_hash = None
-            if result_length == 1:
-                statechange_data = json.loads(matched_state_changes[0])
-                if 'block_hash' in statechange_data:
-                    block_hash = statechange_data['block_hash']
-                elif 'block_number' in statechange_data:
-                    block_number = int(statechange_data['block_number'])
-                    block_hash = cache.get(block_number)
+        if 'raiden.transfer.events.ContractSend' not in data['_type']:
+            continue
 
-            # else fallback to just using the latest blockhash
-            if not block_hash:
-                block_hash = cache.web3.eth.getBlock('latest')['hash']
-                block_hash = block_hash.hex()
+        assert 'triggered_by_block_hash' not in data, 'v18 events cant contain blockhash'
+        # Get the state_change that triggered the event and if it has
+        # a block number get its hash. If not fall back to latest.
+        matched_state_changes = storage.get_statechanges_by_identifier(
+            from_identifier=event.state_change_identifier,
+            to_identifier=event.state_change_identifier,
+        )
+        result_length = len(matched_state_changes)
+        msg = 'multiple state changes should not exist for the same identifier'
+        assert result_length == 1, msg
 
-            data['triggered_by_block_hash'] = block_hash
+        statechange_data = json.loads(matched_state_changes[0])
+        if 'block_hash' in statechange_data:
+            block_hash = statechange_data['block_hash']
+        elif 'block_number' in statechange_data:
+            block_number = int(statechange_data['block_number'])
+            block_hash = cache.get(block_number)
+        data['triggered_by_block_hash'] = block_hash
 
-            updated_events.append(EventRecord(
-                event_identifier=event.event_identifier,
-                state_change_identifier=event.state_change_identifier,
-                data=json.dumps(data),
-            ))
+        updated_events.append(EventRecord(
+            event_identifier=event.event_identifier,
+            state_change_identifier=event.state_change_identifier,
+            data=json.dumps(data),
+        ))
 
     storage.update_events(updated_events)
 

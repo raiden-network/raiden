@@ -326,7 +326,7 @@ class SQLiteStorage(SerializationBase):
                 'UPDATE state_changes SET data=? WHERE identifier=?',
                 (state_change.data, state_change.state_change_identifier),
             )
-            self.maybe_commit()
+        self.maybe_commit()
 
     def get_statechanges_by_identifier(self, from_identifier, to_identifier):
         if not (from_identifier == 'latest' or isinstance(from_identifier, int)):
@@ -422,7 +422,7 @@ class SQLiteStorage(SerializationBase):
                 'UPDATE state_events SET data=? WHERE identifier=?',
                 (event.data, event.event_identifier),
             )
-            self.maybe_commit()
+        self.maybe_commit()
 
     def get_events_with_timestamps(self, limit: int = None, offset: int = None):
         entries = self._query_events(limit, offset)

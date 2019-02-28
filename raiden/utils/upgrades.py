@@ -58,9 +58,9 @@ def get_db_version(db_filename: Path):
         return 0
 
 
-def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, **args) -> int:
+def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, **kwargs) -> int:
     """ Run the migration function, store the version and advance the version. """
-    new_version = func(cursor, version, RAIDEN_DB_VERSION, **args)
+    new_version = func(cursor, version, RAIDEN_DB_VERSION, **kwargs)
     update_version(cursor, new_version)
     return new_version
 
