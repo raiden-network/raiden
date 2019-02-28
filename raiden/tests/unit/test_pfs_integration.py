@@ -185,7 +185,7 @@ def test_get_pfs_info_request_error():
     with patch.object(requests, 'get', side_effect=requests.RequestException()):
         pathfinding_service_info = get_pfs_info("url")
 
-    assert pathfinding_service_info is False
+    assert pathfinding_service_info is None
 
 
 def test_routing_mocked_pfs_happy_path(
@@ -442,7 +442,7 @@ def test_routing_mocked_pfs_invalid_json_structure(
         assert routes[1].channel_identifier == channel_state2.identifier
 
 
-def test_routing_mocked_pfs_unavailabe_peer(
+def test_routing_mocked_pfs_unavailable_peer(
         chain_state,
         payment_network_state,
         token_network_state,
