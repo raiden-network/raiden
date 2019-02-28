@@ -2,6 +2,7 @@ import json
 
 from web3 import Web3
 
+from raiden.exceptions import InvalidDBData
 from raiden.storage.sqlite import EventRecord, SQLiteStorage, StateChangeRecord
 from raiden.utils.typing import Any, BlockNumber, Dict
 
@@ -106,37 +107,34 @@ def _transform_snapshot(
 
     all_events = storage.get_all_event_records()
     pending_transactions = snapshot['pending_transactions']
-
     new_pending_transactions = []
-    for transaction in pending_transactions:
+    for transaction_data in pending_transactions:
         found_blockhash = None
-        transaction_data = json.loads(transaction)
-
         if 'raiden.transfer.events.ContractSend' not in transaction_data['_type']:
-            new_pending_transactions.append(transaction)
+            new_pending_transactions.append(transaction_data)
             continue
 
         # For each pending transaction find the corresponding DB event record.
         # Unfortunately can't do a DB query since the pending transaction only has
         # raw data and no event identifier so the only thing I can think of is to
         # iterate all the known events.
-        # Alternate approach: Completely ignore the actual block number that generated
-        # the event and instead just use the blockhash of latest
         for event in all_events:
             event_record_data = json.loads(event.data)
+            block_hash = event_record_data.pop('triggered_by_block_hash')
             if event_record_data == transaction_data:
                 # found the event record in the DB. The snapshot transformation comes after
                 # the events table upgrade so the event should already contain the blockhash
-                found_blockhash = event_record_data['block_hash']
+                found_blockhash = block_hash
                 break
 
         if not found_blockhash:
-            # If for some reason we could not find the event, fallback to latest blockhash
-            block_hash = cache.web3.eth.getBlock('latest')['hash']
-            block_hash = block_hash.hex()
+            raise InvalidDBData(
+                'Error during v18 -> v19 upgrade. Could not find a database event '
+                'table entry for a pending transaction.',
+            )
 
         transaction_data['triggered_by_block_hash'] = block_hash
-        new_pending_transactions.append(json.dumps(transaction_data))
+        new_pending_transactions.append(transaction_data)
 
     snapshot['pending_transactions'] = new_pending_transactions
     return json.dumps(snapshot)
