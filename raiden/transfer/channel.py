@@ -844,27 +844,27 @@ def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
     return total_pending + total_unclaimed + total_unclaimed_onchain
 
 
-def get_batch_unlock_values(
+def get_batch_unlock_gain(
         channel_state: NettingChannelState,
 ) -> Tuple[TokenAmount, TokenAmount]:
     """Collect amounts for unlocked/unclaimed locks and onchain unlocked locks.
     Note: this function does not check expiry, so the values make only sense during settlement.
 
     Returns:
-        receiving_unlock_value: TokenAmount sent to us and revealed on-chain
-        pending_unlock_value: TokenAmount sent from us and expired
+        gain_from_partner_locks: locks amount received and unlocked on-chain
+        from_from_our_locks: locks amount which are unlocked or unclaimed
     """
-    receiving_unlock_value = sum(
+    gain_from_partner_locks = sum(
         unlock.lock.amount
         for unlock in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks.values()
     )
-    pending_unlock_value = sum(
+    gain_from_our_locks = sum(
         lock.amount
         for lock in channel_state.our_state.secrethashes_to_lockedlocks.values()
     ) + sum(
         lock.amount for lock in channel_state.our_state.secrethashes_to_unlockedlocks
     )
-    return (receiving_unlock_value, pending_unlock_value)
+    return (gain_from_partner_locks, gain_from_our_locks)
 
 
 def get_balance(
@@ -1869,10 +1869,22 @@ def handle_channel_settled(
         # Decide which sides of the channel to unlock. Depending on the
         # the expired sent, and the on-chain revealed token amounts,
         # we decide for both sides, if it is in our favor to unlock.
-        receiving_side, sending_side = get_batch_unlock_values(channel_state)
+        gain_from_partner_locks, gain_from_our_locks = get_batch_unlock_gain(channel_state)
 
         is_settle_pending = channel_state.our_unlock_transaction is not None
-        if sending_side > 0:
+        our_merkle_tree_leaves = get_batch_unlock(channel_state.our_state)
+        partner_merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
+
+        should_clear_channel = (
+            not is_settle_pending and
+            not our_merkle_tree_leaves and
+            not partner_merkle_tree_leaves
+        )
+
+        if should_clear_channel:
+            return TransitionResult(None, events)
+
+        if gain_from_our_locks > 0:
             # We will gain from unlock, because there are on-chain unlocks in our favor
             merkle_tree_leaves = get_batch_unlock(channel_state.our_state)
 
@@ -1880,7 +1892,8 @@ def handle_channel_settled(
                 onchain_unlock = ContractSendChannelBatchUnlock(
                     token_address=channel_state.token_address,
                     canonical_identifier=channel_state.canonical_identifier,
-                    participant=channel_state.partner_state.address,
+                    participant=channel_state.our_state.address,
+                    partner=channel_state.partner_state.address,
                     triggered_by_block_hash=state_change.block_hash,
                 )
                 events.append(onchain_unlock)
@@ -1891,17 +1904,18 @@ def handle_channel_settled(
                     None,
                 )
 
-        if receiving_side > 0:
+        if gain_from_partner_locks > 0:
             # We will gain from unlock, because there are expired locks in our favor
             is_settle_pending = channel_state.partner_unlock_transaction is not None
             merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
 
             if not is_settle_pending and merkle_tree_leaves:
                 onchain_unlock = ContractSendChannelBatchUnlock(
-                    channel_state.token_address,
-                    channel_state.token_network_identifier,
-                    channel_state.identifier,
-                    channel_state.our_state.address,
+                    token_address=channel_state.token_address,
+                    token_network_identifier=channel_state.token_network_identifier,
+                    channel_identifier=channel_state.identifier,
+                    participant=channel_state.partner_state.address,
+                    partner=channel_state.our_state.address,
                     triggered_by_block_hash=state_change.block_hash,
                 )
                 events.append(onchain_unlock)
