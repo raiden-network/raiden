@@ -506,7 +506,7 @@ class RaidenService(Runnable):
                 self.start_health_check_for(neighbour)
 
     def get_block_number(self) -> BlockNumber:
-        assert self.wal
+        assert self.wal, 'WAL object not yet initialized.'
         return views.block_number(self.wal.state_manager.current_state)
 
     def on_message(self, message: Message):
