@@ -1,7 +1,7 @@
 import pytest
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address
 
-from raiden.constants import EMPTY_HASH
+from raiden.constants import EMPTY_HASH, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import (
     DepositMismatch,
     DuplicatedChannelError,
@@ -584,3 +584,62 @@ def test_token_network_proxy_update_transfer(
         )
 
         assert 'getChannelIdentifier returned 0' in str(exc)
+
+
+def test_query_pruned_state(
+        token_network_proxy,
+        private_keys,
+        token_proxy,
+        chain_id,
+        web3,
+        contract_manager,
+):
+    """A test for https://github.com/raiden-network/raiden/issues/3566
+
+    If 128 blocks pass make sure that can_query_state_for_block returns False.
+    """
+
+    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+    c1_client = JSONRPCClient(web3, private_keys[1])
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+    )
+    c2_client = JSONRPCClient(web3, private_keys[2])
+    c1_token_network_proxy = TokenNetwork(
+        jsonrpc_client=c1_client,
+        token_network_address=token_network_address,
+        contract_manager=contract_manager,
+    )
+    # create a channel and query the state at the current block hash
+    channel_identifier = c1_token_network_proxy.new_netting_channel(
+        partner=c2_client.address,
+        settle_timeout=10,
+        given_block_identifier='latest',
+    )
+    block = c1_client.web3.eth.getBlock('latest')
+    block_number = int(block['number'])
+    block_hash = bytes(block['hash'])
+    channel_id = c1_token_network_proxy._inspect_channel_identifier(
+        participant1=c1_client.address,
+        participant2=c2_client.address,
+        called_by_fn='test',
+        block_identifier=block_hash,
+    )
+    assert channel_id == channel_identifier
+    assert c1_client.can_query_state_for_block(block_hash)
+
+    # wait until state pruning kicks in
+    target_block = block_number + STATE_PRUNING_AFTER_BLOCKS + 1
+    c1_chain.wait_until_block(target_block_number=target_block)
+
+    # and now query again for the same old blockhash and see that we can't query
+    assert not c1_client.can_query_state_for_block(block_hash)
+    # The problem here is the following. This function below should now throw
+    channel_id = c1_token_network_proxy._inspect_channel_identifier(
+        participant1=c1_client.address,
+        participant2=c2_client.address,
+        called_by_fn='test',
+        block_identifier=block_hash,
+    )
+    assert channel_id == channel_identifier
