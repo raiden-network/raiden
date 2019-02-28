@@ -175,7 +175,10 @@ class TokenNetwork:
         if self.node_address == partner:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
 
-        channel_exists = self.channel_exists_and_not_settled(
+        if not self.client.can_query_state_for_block(block_identifier):
+            return
+
+        channel_exists = self._channel_exists_and_not_settled(
             participant1=self.node_address,
             participant2=partner,
             block_identifier=block_identifier,
@@ -188,7 +191,7 @@ class TokenNetwork:
             partner: Address,
             block: BlockSpecification,
     ):
-        channel_created = self.channel_exists_and_not_settled(
+        channel_created = self._channel_exists_and_not_settled(
             participant1=self.node_address,
             participant2=partner,
             block_identifier=block,
@@ -214,7 +217,11 @@ class TokenNetwork:
             The ChannelID of the new netting channel.
         """
         checking_block = self.client.get_checking_block()
-        self._new_channel_preconditions(partner, settle_timeout, given_block_identifier)
+        self._new_channel_preconditions(
+            partner=partner,
+            settle_timeout=settle_timeout,
+            block_identifier=given_block_identifier,
+        )
         log_details = {
             'peer1': pex(self.node_address),
             'peer2': pex(partner),
@@ -278,7 +285,7 @@ class TokenNetwork:
             # All other concurrent threads should block on the result of opening this channel
             self.open_channel_transactions[partner].get()
 
-        channel_identifier: ChannelID = self.detail_channel(
+        channel_identifier: ChannelID = self._detail_channel(
             participant1=self.node_address,
             participant2=partner,
             block_identifier='latest',
@@ -315,7 +322,7 @@ class TokenNetwork:
 
         return channel_identifier
 
-    def channel_exists_and_not_settled(
+    def _channel_exists_and_not_settled(
             self,
             participant1: Address,
             participant2: Address,
@@ -338,7 +345,7 @@ class TokenNetwork:
         )
         return exists_and_not_settled
 
-    def detail_participant(
+    def _detail_participant(
             self,
             channel_identifier: ChannelID,
             participant: Address,
@@ -365,7 +372,7 @@ class TokenNetwork:
             locked_amount=data[ParticipantInfoIndex.LOCKED_AMOUNT],
         )
 
-    def detail_channel(
+    def _detail_channel(
             self,
             participant1: Address,
             participant2: Address,
@@ -381,7 +388,7 @@ class TokenNetwork:
         channel_identifier = self._inspect_channel_identifier(
             participant1=participant1,
             participant2=participant2,
-            called_by_fn='detail_channel',
+            called_by_fn='_detail_channel(',
             block_identifier=block_identifier,
             channel_identifier=channel_identifier,
         )
@@ -427,13 +434,13 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
         )
 
-        our_data = self.detail_participant(
+        our_data = self._detail_participant(
             channel_identifier=channel_identifier,
             participant=participant1,
             partner=participant2,
             block_identifier=block_identifier,
         )
-        partner_data = self.detail_participant(
+        partner_data = self._detail_participant(
             channel_identifier=channel_identifier,
             participant=participant2,
             partner=participant1,
@@ -460,7 +467,7 @@ class TokenNetwork:
         if self.node_address == participant2:
             participant1, participant2 = participant2, participant1
 
-        channel_data = self.detail_channel(
+        channel_data = self._detail_channel(
             participant1=participant1,
             participant2=participant2,
             block_identifier=block_identifier,
@@ -556,7 +563,7 @@ class TokenNetwork:
         otherwise. """
 
         try:
-            channel_data = self.detail_channel(
+            channel_data = self._detail_channel(
                 participant1=participant1,
                 participant2=participant2,
                 block_identifier=block_identifier,
@@ -604,7 +611,7 @@ class TokenNetwork:
         if opened is False:
             return False
 
-        deposit = self.detail_participant(
+        deposit = self._detail_participant(
             channel_identifier=channel_identifier,
             participant=participant1,
             partner=participant2,
@@ -622,6 +629,13 @@ class TokenNetwork:
     ) -> Tuple[TokenAmount, Dict]:
         if not isinstance(total_deposit, int):
             raise ValueError('total_deposit needs to be an integral number.')
+
+        if not self.client.can_query_state_for_block(block_identifier):
+            # This can happen if we shutdown with a deposit transaction saved
+            # in our pending transactions and restart after 128 blocks. Then
+            # we have no choice but to query the latest state to calculate the
+            # deposit amounts
+            block_identifier = 'latest'
 
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -642,7 +656,7 @@ class TokenNetwork:
         # This check is serialized with the channel_operations_lock to avoid
         # sending invalid transactions on-chain (decreasing total deposit).
         #
-        previous_total_deposit = self.detail_participant(
+        previous_total_deposit = self._detail_participant(
             channel_identifier=channel_identifier,
             participant=self.node_address,
             partner=partner,
@@ -827,7 +841,7 @@ class TokenNetwork:
     ]:
         error_type = RaidenUnrecoverableError
         msg = ''
-        latest_deposit = self.detail_participant(
+        latest_deposit = self._detail_participant(
             channel_identifier=channel_identifier,
             participant=self.node_address,
             partner=partner,
@@ -885,6 +899,10 @@ class TokenNetwork:
             partner: Address,
             block_identifier: BlockSpecification,
     ):
+        if not self.client.can_query_state_for_block(block_identifier):
+            # At this point in time we can't check the preconditions due to pruned blocks
+            return
+
         self._check_for_outdated_channel(
             participant1=self.node_address,
             participant2=partner,
@@ -1042,6 +1060,10 @@ class TokenNetwork:
         if signer_address != partner:
             raise RaidenUnrecoverableError('Invalid balance proof signature')
 
+        if not self.client.can_query_state_for_block(block_identifier):
+            # At this point in time we can't check the preconditions due to pruned blocks
+            return
+
         self._check_for_outdated_channel(
             participant1=self.node_address,
             participant2=partner,
@@ -1049,7 +1071,7 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
         )
 
-        detail = self.detail_channel(
+        detail = self._detail_channel(
             participant1=self.node_address,
             participant2=partner,
             block_identifier=block_identifier,
@@ -1153,7 +1175,7 @@ class TokenNetwork:
                 required_gas=GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF,
                 block_identifier=block,
             )
-            detail = self.detail_channel(
+            detail = self._detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
                 block_identifier=block,
@@ -1289,6 +1311,10 @@ class TokenNetwork:
             partner_locksroot: Locksroot,
             block_identifier: BlockSpecification,
     ):
+        if not self.client.can_query_state_for_block(block_identifier):
+            # At this point in time we can't check the preconditions due to pruned blocks
+            return
+
         self._check_for_outdated_channel(
             participant1=self.node_address,
             participant2=partner,
@@ -1463,7 +1489,7 @@ class TokenNetwork:
         between two participants using an old channel identifier
         """
         try:
-            onchain_channel_details = self.detail_channel(
+            onchain_channel_details = self._detail_channel(
                 participant1=participant1,
                 participant2=participant2,
                 block_identifier=block_identifier,
@@ -1487,7 +1513,7 @@ class TokenNetwork:
             block_identifier: BlockSpecification,
             channel_identifier: ChannelID = None,
     ) -> ChannelState:
-        channel_data = self.detail_channel(
+        channel_data = self._detail_channel(
             participant1=participant1,
             participant2=participant2,
             block_identifier=block_identifier,
@@ -1541,7 +1567,7 @@ class TokenNetwork:
             channel_identifier: ChannelID,
     ) -> ChannelData:
 
-        channel_data = self.detail_channel(
+        channel_data = self._detail_channel(
             participant1=participant1,
             participant2=participant2,
             block_identifier=block_identifier,
@@ -1602,7 +1628,7 @@ class TokenNetwork:
         RaidenRecoverableError"""
         error_type = None
         msg = ''
-        closer_details = self.detail_participant(
+        closer_details = self._detail_participant(
             channel_identifier=channel_identifier,
             participant=closer,
             partner=self.node_address,
