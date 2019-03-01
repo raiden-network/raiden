@@ -553,6 +553,19 @@ class SQLiteStorage(SerializationBase):
         )
         self.maybe_commit()
 
+    def update_snapshots(self, snapshots_data: List[Tuple[str, int]]):
+        """Given a list of snapshot data, update them in the DB
+
+        The snapshots_data should be a list of tuples of snapshots data
+        and identifiers in that order.
+        """
+        cursor = self.conn.cursor()
+        cursor.executemany(
+            'UPDATE state_snapshot SET data=? WHERE identifier=?',
+            (snapshots_data),
+        )
+        self.maybe_commit()
+
     def maybe_commit(self):
         if not self.in_transaction:
             self.conn.commit()

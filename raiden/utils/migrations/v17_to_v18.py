@@ -74,9 +74,12 @@ def _transform_snapshot(raw_snapshot: Dict[Any, Any]) -> str:
 
 
 def _add_routes_to_mediator(storage: SQLiteStorage):
+    updated_snapshots_data = []
     for snapshot in storage.get_snapshots():
         new_snapshot = _transform_snapshot(snapshot.data)
-        storage.update_snapshot(snapshot.identifier, new_snapshot)
+        updated_snapshots_data.append((new_snapshot, snapshot.identifier))
+
+    storage.update_snapshots(updated_snapshots_data)
 
 
 def upgrade_v17_to_v18(
