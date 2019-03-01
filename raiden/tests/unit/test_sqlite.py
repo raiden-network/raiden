@@ -330,3 +330,52 @@ def test_batch_query_state_changes():
     for state_changes_batch in state_changes_batch_query:
         state_changes.extend(state_changes_batch)
     assert len(state_changes) == 77
+
+
+def test_batch_query_event_records():
+    storage = SQLiteStorage(':memory:')
+    # Add the v18 state changes to the DB (need them to satisfy foreign key constraints)
+    state_changes_file = Path(__file__).parent / 'migrations/data/v18_statechanges.json'
+    state_changes_data = json.loads(state_changes_file.read_text())
+    for state_change_record in state_changes_data:
+        storage.write_state_change(
+            state_change=json.dumps(state_change_record[1]),
+            log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
+        )
+
+    # Add the v18 events to the DB
+    events_file = Path(__file__).parent / 'migrations/data/v18_events.json'
+    events_data = json.loads(events_file.read_text())
+    for event in events_data:
+        state_change_identifier = event[1]
+        event_data = json.dumps(event[2])
+        log_time = datetime.utcnow().isoformat(timespec='milliseconds')
+        event_tuple = (
+            None,
+            state_change_identifier,
+            log_time,
+            event_data,
+        )
+        storage.write_events(
+            state_change_identifier=state_change_identifier,
+            events=[event_tuple],
+            log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
+        )
+
+    # Test that querying the events in batches of 1 works
+    events = []
+    for events_batch in storage.batch_query_event_records(batch_size=1):
+        events.extend(events_batch)
+    assert len(events) == 2
+
+    # Test that we can also add a filter
+    events = []
+    events_batch_query = storage.batch_query_event_records(
+        batch_size=1,
+        filters={'_type': 'raiden.transfer.events.EventPaymentReceivedSuccess'},
+    )
+    for events_batch in events_batch_query:
+        events.extend(events_batch)
+    assert len(events) == 1
+    event_type = json.loads(events[0].data)['_type']
+    assert event_type == 'raiden.transfer.events.EventPaymentReceivedSuccess'
