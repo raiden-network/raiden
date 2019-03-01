@@ -41,9 +41,12 @@ def _transform_snapshot(raw_snapshot):
 
 
 def _transform_snapshots(storage: SQLiteStorage):
+    updated_snapshots_data = []
     for snapshot in storage.get_snapshots():
         new_snapshot = _transform_snapshot(snapshot.data)
-        storage.update_snapshot(snapshot.identifier, new_snapshot)
+        updated_snapshots_data.append((new_snapshot, snapshot.identifier))
+
+    storage.update_snapshots(updated_snapshots_data)
 
 
 def upgrade_v16_to_v17(storage: SQLiteStorage, old_version: int, current_version: int):

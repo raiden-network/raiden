@@ -134,13 +134,16 @@ def _transform_snapshot(
 
 def _transform_snapshots_for_blockhash(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Upgrades the snapshots by adding the blockhash to it and to any pending transactions"""
+    updated_snapshots_data = []
     for snapshot in storage.get_snapshots():
         new_snapshot = _transform_snapshot(
             raw_snapshot=snapshot.data,
             storage=storage,
             cache=cache,
         )
-        storage.update_snapshot(snapshot.identifier, new_snapshot)
+        updated_snapshots_data.append((new_snapshot, snapshot.identifier))
+
+    storage.update_snapshots(updated_snapshots_data)
 
 
 def upgrade_v18_to_v19(
