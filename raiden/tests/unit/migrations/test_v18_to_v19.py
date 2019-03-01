@@ -88,7 +88,10 @@ def test_upgrade_v18_to_v19(tmp_path):
                 assert block_to_blockhash[block_number].hex() == data['block_hash']
 
     # Check that all the relevant events now have the triggered_by_blockhash attribute
-    event_records = storage.get_all_event_records()
+    event_records = []
+    for events_batch in storage.batch_query_event_records(batch_size=500):
+        event_records.extend(events_batch)
+
     for event_record in event_records:
         data = json.loads(event_record.data)
         if 'events.ContractSend' in data['_type']:

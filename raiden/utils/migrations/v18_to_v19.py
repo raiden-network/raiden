@@ -62,39 +62,39 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
 
 def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Adds blockhash to all ContractSendXXX events"""
-    events = storage.get_all_event_records()
-    updated_events = []
-    for event in events:
-        data = json.loads(event.data)
-        if 'raiden.transfer.events.ContractSend' not in data['_type']:
-            continue
+    for events_batch in storage.batch_query_event_records(batch_size=500):
+        updated_events = []
+        for event in events_batch:
+            data = json.loads(event.data)
+            if 'raiden.transfer.events.ContractSend' not in data['_type']:
+                continue
 
-        assert 'triggered_by_block_hash' not in data, 'v18 events cant contain blockhash'
-        # Get the state_change that triggered the event and if it has
-        # a block number get its hash. If not fall back to latest.
-        matched_state_changes = storage.get_statechanges_by_identifier(
-            from_identifier=event.state_change_identifier,
-            to_identifier=event.state_change_identifier,
-        )
-        result_length = len(matched_state_changes)
-        msg = 'multiple state changes should not exist for the same identifier'
-        assert result_length == 1, msg
+            assert 'triggered_by_block_hash' not in data, 'v18 events cant contain blockhash'
+            # Get the state_change that triggered the event and if it has
+            # a block number get its hash. If not fall back to latest.
+            matched_state_changes = storage.get_statechanges_by_identifier(
+                from_identifier=event.state_change_identifier,
+                to_identifier=event.state_change_identifier,
+            )
+            result_length = len(matched_state_changes)
+            msg = 'multiple state changes should not exist for the same identifier'
+            assert result_length == 1, msg
 
-        statechange_data = json.loads(matched_state_changes[0])
-        if 'block_hash' in statechange_data:
-            block_hash = statechange_data['block_hash']
-        elif 'block_number' in statechange_data:
-            block_number = int(statechange_data['block_number'])
-            block_hash = cache.get(block_number)
-        data['triggered_by_block_hash'] = block_hash
+            statechange_data = json.loads(matched_state_changes[0])
+            if 'block_hash' in statechange_data:
+                block_hash = statechange_data['block_hash']
+            elif 'block_number' in statechange_data:
+                block_number = int(statechange_data['block_number'])
+                block_hash = cache.get(block_number)
+            data['triggered_by_block_hash'] = block_hash
 
-        updated_events.append(EventRecord(
-            event_identifier=event.event_identifier,
-            state_change_identifier=event.state_change_identifier,
-            data=json.dumps(data),
-        ))
+            updated_events.append(EventRecord(
+                event_identifier=event.event_identifier,
+                state_change_identifier=event.state_change_identifier,
+                data=json.dumps(data),
+            ))
 
-    storage.update_events(updated_events)
+        storage.update_events(updated_events)
 
 
 def _transform_snapshot(
@@ -107,35 +107,25 @@ def _transform_snapshot(
     block_number = int(snapshot['block_number'])
     snapshot['block_hash'] = cache.get(block_number)
 
-    all_events = storage.get_all_event_records()
     pending_transactions = snapshot['pending_transactions']
     new_pending_transactions = []
     for transaction_data in pending_transactions:
-        found_blockhash = None
         if 'raiden.transfer.events.ContractSend' not in transaction_data['_type']:
             new_pending_transactions.append(transaction_data)
             continue
 
         # For each pending transaction find the corresponding DB event record.
-        # Unfortunately can't do a DB query since the pending transaction only has
-        # raw data and no event identifier so the only thing I can think of is to
-        # iterate all the known events.
-        for event in all_events:
-            event_record_data = json.loads(event.data)
-            block_hash = event_record_data.pop('triggered_by_block_hash')
-            if event_record_data == transaction_data:
-                # found the event record in the DB. The snapshot transformation comes after
-                # the events table upgrade so the event should already contain the blockhash
-                found_blockhash = block_hash
-                break
-
-        if not found_blockhash:
+        event_record = storage.get_latest_event_by_data_field(
+            filters={'_type': transaction_data['_type']},
+        )
+        if not event_record.data:
             raise InvalidDBData(
                 'Error during v18 -> v19 upgrade. Could not find a database event '
                 'table entry for a pending transaction.',
             )
 
-        transaction_data['triggered_by_block_hash'] = block_hash
+        event_record_data = json.loads(event_record.data)
+        transaction_data['triggered_by_block_hash'] = event_record_data['triggered_by_block_hash']
         new_pending_transactions.append(transaction_data)
 
     snapshot['pending_transactions'] = new_pending_transactions
