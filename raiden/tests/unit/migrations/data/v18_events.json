@@ -8,5 +8,18 @@
             "_type": "raiden.transfer.events.ContractSendChannelSettle",
             "_version": 0
         }
+    ],
+    [
+        2,
+        16,
+        {
+            "payment_network_identifier": "0x8c4c928Af4153cA3bF36985e84736Fff65a8971b",
+            "token_network_identifier": "0x6F4C596f2F848dE7298DcDc218974D6b81889270",
+            "identifier": 1,
+            "amount": "55",
+            "initiator": "0x26fb86579e371c7AEdc461b2DdEF0A8628c93d3B",
+            "_type": "raiden.transfer.events.EventPaymentReceivedSuccess",
+            "_version": 0
+        }
     ]
 ]

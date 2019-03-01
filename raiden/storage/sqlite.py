@@ -441,17 +441,40 @@ class SQLiteStorage(SerializationBase):
 
         return cursor.fetchall()
 
-    def get_all_event_records(self) -> List[EventRecord]:
-        """Queries the DB for all state events and returns them in a list"""
+    def _get_event_records(
+            self,
+            limit: int = None,
+            offset: int = None,
+            filters: Dict[str, Any] = None,
+    ) -> List[EventRecord]:
+        """ Return a batch of event records
+
+        The batch size can be tweaked with the `limit` and `offset` arguments.
+
+        Additionally the returned events can be optionally filtered with
+        the `filters` parameter to search for specific data in the event data.
+        """
+        limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
 
-        cursor.execute(
-            '''
-            SELECT identifier, source_statechange_id, data FROM state_events
-                ORDER BY identifier
-            ''',
-        )
+        query = 'SELECT identifier, source_statechange_id, data FROM state_events '
+        where_clauses = []
+        args = []
+        if filters:
+            for field, value in filters.items():
+                where_clauses.append('json_extract(data, ?)=?')
+                args.append(f'$.{field}')
+                args.append(value)
 
+            query += (
+                f"WHERE {' AND '.join(where_clauses)}"
+            )
+
+        query += 'ORDER BY identifier ASC LIMIT ? OFFSET ?'
+        args.append(limit)
+        args.append(offset)
+
+        cursor.execute(query, args)
         result = []
         try:
             rows = cursor.fetchall()
@@ -467,6 +490,29 @@ class SQLiteStorage(SerializationBase):
             )
 
         return result
+
+    def batch_query_event_records(
+            self,
+            batch_size: int,
+            filters: Dict[str, Any] = None,
+    ) -> List[EventRecord]:
+        """Batch query event records with a given batch size and an optional filter
+
+        This is a generator function returning each batch to the caller to work with.
+        """
+        limit = batch_size
+        offset = 0
+        result_length = 1
+
+        while result_length != 0:
+            result = self._get_event_records(
+                limit=limit,
+                offset=offset,
+                filters=filters,
+            )
+            result_length = len(result)
+            offset += result_length
+            yield result
 
     def update_events(self, event_records: List[EventRecord]) -> None:
         """Given a list of identifier/data event records update them in the DB"""
