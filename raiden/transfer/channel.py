@@ -1885,7 +1885,13 @@ def handle_channel_settled(
             return TransitionResult(None, events)
 
         if gain_from_our_locks > 0:
-            # We will gain from unlock, because there are on-chain unlocks in our favor
+            # There are locks which were sent to partner that were
+            # neither unlocked off-chain or on-chain
+            # i.e the locks are still in either:
+            # - lockhashes_to_lockedlocks
+            # - lockhashes_to_unlockedlocks
+            # Therefore, we try to unlock those locks to get back
+            # our tokens.
             if not is_settle_pending and our_merkle_tree_leaves:
                 onchain_unlock = ContractSendChannelBatchUnlock(
                     token_address=channel_state.token_address,
@@ -1903,7 +1909,11 @@ def handle_channel_settled(
                 )
 
         if gain_from_partner_locks > 0:
-            # We will gain from unlock, because there are expired locks in our favor
+            # We received locked transfer from partner, and before
+            # the channel was closed, we received the secret to unlock
+            # those transfers and registered this secret on-chain
+            # before the locks expired. Which means in this case that
+            # we can also unlock our partner's side to get the transfer's amount.
             is_settle_pending = channel_state.partner_unlock_transaction is not None
 
             if not is_settle_pending and partner_merkle_tree_leaves:
