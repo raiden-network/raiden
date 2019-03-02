@@ -31,6 +31,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
+    ReceiveWithdrawRequest,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
@@ -684,6 +685,21 @@ def handle_init_target(
     )
 
 
+def handle_receive_withdraw_request(
+        chain_state: ChainState,
+        state_change: ReceiveWithdrawRequest,
+) -> TransitionResult[ChainState]:
+    channel_state = views.get_channelstate_by_token_network_identifier(
+        chain_state=chain_state,
+        token_network_identifier=state_change.token_network_identifier,
+        channel_identifier=state_change.channel_identifier,
+    )
+    return channel.state_transition(
+        channel_state=channel_state,
+        state_change=state_change,
+    )
+
+
 def handle_receive_lock_expired(
     chain_state: ChainState, state_change: ReceiveLockExpired
 ) -> TransitionResult[ChainState]:
@@ -844,6 +860,9 @@ def handle_state_change(
     elif type(state_change) == ReceiveLockExpired:
         assert isinstance(state_change, ReceiveLockExpired), MYPY_ANNOTATION
         iteration = handle_receive_lock_expired(chain_state, state_change)
+    elif type(state_change) == ReceiveWithdrawRequest:
+        assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
+        iteration = handle_receive_withdraw_request(chain_state, state_change)
 
     assert chain_state is not None, "chain_state must be set"
     return iteration

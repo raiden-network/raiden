@@ -22,6 +22,7 @@ from raiden.utils.typing import (
     PaymentID,
     Secret,
     SecretHash,
+    Signature,
     TokenNetworkID,
     typecheck,
 )
@@ -145,4 +146,4 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     amount: PaymentAmount
     token_network_identifier: TokenNetworkID
     channel_identifier: ChannelID
-    sender: Address
+    signature: Signature
