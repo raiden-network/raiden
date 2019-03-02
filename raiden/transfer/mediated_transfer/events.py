@@ -152,14 +152,14 @@ class SendRefundTransfer(SendMessageEvent):
 class SendWithdrawRequest(SendMessageEvent):
     """ Event used by node to request a withdraw from channel partner."""
 
-    amount: TokenAmount
+    total_withdraw: TokenAmount
 
 
 @dataclass
 class SendWithdraw(SendMessageEvent):
     """ Event used by node to confirm a withdraw for a channel's partner."""
 
-    amount: TokenAmount
+    total_withdraw: TokenAmount
 
 
 @dataclass
