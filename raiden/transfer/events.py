@@ -244,6 +244,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             token_address: TokenAddress,
             canonical_identifier: CanonicalIdentifier,
             participant: Address,
+            partner: Address,
             triggered_by_block_hash: BlockHash,
     ) -> None:
         super().__init__(triggered_by_block_hash)
@@ -251,17 +252,19 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         self.token_network_identifier = canonical_identifier.token_network_address
         self.channel_identifier = canonical_identifier.channel_identifier
         self.participant = participant
+        self.partner = partner
 
     def __repr__(self):
         return (
             '<ContractSendChannelBatchUnlock token_address: {} token_network_id:{} '
-            'channel:{} participant:{} triggered_by_block_hash:{}'
+            'channel:{} participant:{} partner:{} triggered_by_block_hash:{}'
             '>'
         ).format(
             pex(self.token_address),
             pex(self.token_network_identifier),
             self.channel_identifier,
             pex(self.participant),
+            pex(self.partner),
             pex(self.triggered_by_block_hash),
         )
 
@@ -272,7 +275,8 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             self.token_address == other.token_address and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
-            self.participant == other.participant
+            self.participant == other.participant and
+            self.partner == other.partner
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -284,6 +288,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': str(self.channel_identifier),
             'participant': to_checksum_address(self.participant),
+            'partner': to_checksum_address(self.partner),
             'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
         }
 
@@ -299,6 +304,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
                 channel_identifier=ChannelID(int(data['channel_identifier'])),
             ),
             participant=to_canonical_address(data['participant']),
+            partner=to_canonical_address(data['partner']),
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
 
