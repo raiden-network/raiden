@@ -86,7 +86,7 @@ class MessageHandler:
         withdraw_request = ReceiveWithdrawRequest(
             token_network_identifier=message.token_network_identifier,
             channel_identifier=message.channel_identifier,
-            amount=message.amount,
+            total_withdraw=message.total_withdraw,
             sender=message.sender,
             signature=message.signature,
         )
@@ -96,7 +96,7 @@ class MessageHandler:
         secret_request = ReceiveWithdraw(
             token_network_identifier=message.token_network_identifier,
             channel_identifier=message.channel_identifier,
-            amount=message.amount,
+            total_withdraw=message.total_withdraw,
             sender=message.sender,
             signature=message.signature,
         )

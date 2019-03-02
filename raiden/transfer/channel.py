@@ -43,6 +43,7 @@ from raiden.transfer.mediated_transfer.state import (
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
+    ReceiveWithdraw,
     ReceiveWithdrawRequest,
 )
 from raiden.transfer.merkle_tree import LEAVES, compute_layers, merkleroot
@@ -1423,7 +1424,7 @@ def events_for_close(
 
 def events_for_withdraw(
         channel_state: NettingChannelState,
-        amount: TokenAmount,
+        total_withdraw: TokenAmount,
         block_number: BlockNumber,
         block_hash: BlockHash,
         pseudo_random_generator: random.Random,
@@ -1438,7 +1439,7 @@ def events_for_withdraw(
         token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
-        amount=amount,
+        total_withdraw=total_withdraw,
     )
 
     events.append(withdraw_event)
@@ -1644,6 +1645,7 @@ def handle_action_withdraw(
     if get_balance(channel_state.our_state) >= withdraw.total_withdraw:
         events = events_for_withdraw(
             channel_state=channel_state,
+            total_withdraw=withdraw.total_withdraw,
             block_number=block_number,
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
@@ -1658,8 +1660,31 @@ def handle_receive_withdraw_request(
 ) -> TransitionResult:
     events = list()
     if is_valid_withdraw_request(withdraw_request, channel_state):
+        channel_state.partner_state.total_withdraw += withdraw_request.amount
+
         events.append(
             SendWithdraw(
+                recipient=channel_state.partner_state.address,
+                token_network_identifier=channel_state.token_network_identifier,
+                channel_identifier=channel_state.identifier,
+                message_identifier=message_identifier_from_prng(pseudo_random_generator),
+                total_withdraw=withdraw_request.total_withdraw,
+            ),
+        )
+    return TransitionResult(channel_state, events)
+
+
+def handle_receive_withdraw(
+        channel_state: NettingChannelState,
+        withdraw: ReceiveWithdraw,
+        pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    events = list()
+    if is_valid_withdraw_confirmation(withdraw_request, channel_state):
+        channel_state.our_state.total_withdraw += withdraw.amount
+
+        events.append(
+            ContractSendChannelWithdraw(
                 recipient=channel_state.partner_state.address,
                 token_network_identifier=channel_state.token_network_identifier,
                 channel_identifier=channel_state.identifier,

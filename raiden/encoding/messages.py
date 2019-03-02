@@ -58,6 +58,7 @@ locked_amount = make_field("locked_amount", 32, "32s", integer(0, UINT256_MAX))
 amount = make_field("amount", 32, "32s", integer(0, UINT256_MAX))
 reward_amount = make_field("reward_amount", 32, "32s", integer(0, UINT256_MAX))
 fee = make_field("fee", 32, "32s", integer(0, UINT256_MAX))
+total_withdraw = make_field('total_withdraw', 32, '32s', integer(0, UINT256_MAX))
 reveal_timeout = make_field("reveal_timeout", 32, "32s", integer(0, UINT256_MAX))
 updating_capacity = make_field("updating_capacity", 32, "32s", integer(0, UINT256_MAX))
 other_capacity = make_field("other_capacity", 32, "32s", integer(0, UINT256_MAX))
@@ -231,19 +232,19 @@ WithdrawRequest = namedbuffer(
         message_identifier,
         token_network_address,
         channel_identifier,
-        amount,
+        total_withdraw,
         signature,
     ],
 )
 
 
 Withdraw = namedbuffer(
-    'withdraw_request',
+    'withdraw',
     [
         message_identifier,
         token_network_address,
         channel_identifier,
-        amount,
+        total_withdraw,
         signature,
     ],
 )

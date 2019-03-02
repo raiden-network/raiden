@@ -23,6 +23,8 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     Signature,
+    TokenAmount,
+    TokenNetworkAddress,
     TokenNetworkID,
     typecheck,
 )
@@ -143,8 +145,8 @@ class ReceiveTransferRefund(BalanceProofStateChange):
 class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     """ A WithdrawRequest message received. """
 
-    amount: PaymentAmount
-    token_network_identifier: TokenNetworkID
+    total_withdraw: PaymentAmount
+    token_network_identifier: TokenNetworkAddress
     channel_identifier: ChannelID
     signature: Signature
 
@@ -153,7 +155,7 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
 class ReceiveWithdraw(AuthenticatedSenderStateChange):
     """ A Withdraw message received. """
 
-    token_network_identifier: TokenNetworkID
+    token_network_address: TokenNetworkAddress
     channel_identifier: ChannelID
-    amount: PaymentAmount
+    total_withdraw: PaymentAmount
     signature: Signature
