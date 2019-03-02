@@ -26,6 +26,7 @@ from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
+    ContractSendChannelWithdraw,
     ContractSendSecretReveal,
     EventInvalidReceivedLockedTransfer,
     EventInvalidReceivedLockExpired,
@@ -146,6 +147,8 @@ class RaidenEventHandler(EventHandler):
         elif type(event) == ContractSendChannelSettle:
             assert isinstance(event, ContractSendChannelSettle), MYPY_ANNOTATION
             self.handle_contract_send_channelsettle(raiden, event)
+        elif type(event) == ContractSendChannelWithdraw:
+            self.handle_contract_send_channelwithdraw(raiden, event)
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
@@ -259,6 +262,23 @@ class RaidenEventHandler(EventHandler):
         raiden: "RaidenService", channel_reveal_secret_event: ContractSendSecretReveal
     ):  # pragma: no unittest
         raiden.default_secret_registry.register_secret(secret=channel_reveal_secret_event.secret)
+
+    @staticmethod
+    def handle_contract_send_channelwithdraw(
+            raiden: RaidenService,
+            channel_withdraw_event: ContractSendChannelWithdraw,
+    ):
+        channel_proxy = raiden.chain.payment_channel(
+            token_network_address=channel_withdraw_event.token_network_identifier,
+            channel_id=channel_withdraw_event.channel_identifier,
+        )
+
+        channel_proxy.withdraw(
+            total_deposit=channel_withdraw_event.total_withdraw,
+            participant_signature=channel_withdraw_event.participant_signature,
+            partner_signature=channel_withdraw_event.partner_signature,
+            block_identifier=channel_withdraw_event.triggered_by_block_hash,
+        )
 
     @staticmethod
     def handle_contract_send_channelclose(
