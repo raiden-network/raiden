@@ -514,8 +514,8 @@ class WithdrawRequest(SignedMessage):
     """ Requests a signed on-chain withdraw confirmation from partner. """
     cmdid: ClassVar[int] = messages.WITHDRAW_REQUEST
 
+    chain_id: ChainID
     token_network_identifier: TokenNetworkAddress
-    chain_id: ChainID,
     channel_identifier: ChannelID
     participant: Address
     total_withdraw: typing.PaymentAmount

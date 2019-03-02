@@ -50,6 +50,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
+    SendWithdraw,
+    SendWithdrawRequest,
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
@@ -120,6 +122,10 @@ class RaidenEventHandler(EventHandler):
         elif type(event) == SendRefundTransfer:
             assert isinstance(event, SendRefundTransfer), MYPY_ANNOTATION
             self.handle_send_refundtransfer(raiden, event)
+        elif type(event) == SendWithdrawRequest:
+            self.handle_send_withdrawrequest(raiden, event)
+        elif type(event) == SendWithdraw:
+            self.handle_send_withdraw(raiden, event)
         elif type(event) == SendProcessed:
             assert isinstance(event, SendProcessed), MYPY_ANNOTATION
             self.handle_send_processed(raiden, event)
@@ -207,6 +213,27 @@ class RaidenEventHandler(EventHandler):
         raiden.sign(refund_transfer_message)
         raiden.transport.send_async(
             refund_transfer_event.queue_identifier, refund_transfer_message
+        )
+
+    def handle_send_withdrawrequest(
+        raiden: "RaidenService", withdraw_request_event: SendWithdrawRequest
+    ):
+        withdraw_request_message = message_from_sendevent(withdraw_request_event, raiden.address)
+        raiden.sign(withdraw_request_message)
+        raiden.transport.send_async(
+            withdraw_request_event.queue_identifier,
+            withdraw_request_message,
+        )
+
+    @staticmethod
+    def handle_send_withdraw(
+        raiden: "RaidenService", withdraw_event: SendRefundTransfer
+    ):
+        withdraw_message = message_from_sendevent(withdraw_event, raiden.address)
+        raiden.sign(withdraw_message)
+        raiden.transport.send_async(
+            withdraw_event.queue_identifier,
+            withdraw_message,
         )
 
     @staticmethod
