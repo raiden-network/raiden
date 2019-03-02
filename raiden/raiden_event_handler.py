@@ -44,7 +44,7 @@ from raiden.transfer.utils import (
     get_state_change_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
 )
-from raiden.transfer.views import state_from_raiden
+from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils import CanonicalIdentifier, pex
 
 if TYPE_CHECKING:
@@ -328,6 +328,7 @@ class RaidenEventHandler:
             channel_identifier=channel_unlock_event.channel_identifier,
         )
         participant = channel_unlock_event.participant
+        partner = channel_unlock_event.partner
         token_address = channel_unlock_event.token_address
         triggered_by_block_hash = channel_unlock_event.triggered_by_block_hash
 
@@ -337,8 +338,8 @@ class RaidenEventHandler:
         token_network: TokenNetwork = payment_channel.token_network
 
         participants_details = token_network.detail_participants(
-            participant1=raiden.address,
-            participant2=participant,
+            participant1=participant,
+            participant2=partner,
             block_identifier=triggered_by_block_hash,
             channel_identifier=canonical_identifier.channel_identifier,
         )
@@ -352,12 +353,12 @@ class RaidenEventHandler:
         partner_locksroot = partner_details.locksroot
 
         # we want to unlock because there are on-chain unlocked locks
-        search_state_changes = (
+        search_events = (
             our_address == participant and
             our_locksroot != EMPTY_HASH
         )
         # we want to unlock, because there are unlocked/unclaimed locks
-        search_events = (
+        search_state_changes = (
             partner_address == participant and
             partner_locksroot != EMPTY_HASH
         )

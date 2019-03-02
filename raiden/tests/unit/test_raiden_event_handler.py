@@ -72,6 +72,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
             channel_identifier=channel_identifier,
         ),
         participant=participant,
+        partner=raiden.address,
         triggered_by_block_hash=make_block_hash(),
     )
     # This should not throw an unrecoverable error

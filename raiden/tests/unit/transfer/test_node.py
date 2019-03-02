@@ -17,6 +17,7 @@ def test_is_transaction_effect_satisfied(
         token_address=token_network_state.token_address,
         canonical_identifier=canonical_identifier,
         participant=netting_channel_state.partner_state.address,
+        partner=netting_channel_state.our_state.address,
         triggered_by_block_hash=make_block_hash(),
     )
     state_change = ContractReceiveChannelBatchUnlock(

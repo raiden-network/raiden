@@ -492,7 +492,12 @@ def test_settled_lock(
     # The transfer locksroot must not contain the unlocked lock, the
     # unlock must fail.
     with pytest.raises(RaidenUnrecoverableError):
-        netting_channel.unlock(merkle_tree_leaves=batch_unlock)
+        netting_channel.unlock(
+            merkle_tree_leaves=batch_unlock,
+            block_identifier='latest',
+            participant=channelstate_0_1.our_state.address,
+            partner=channelstate_0_1.partner_state.address,
+        )
 
     expected_balance0 = initial_balance0 + deposit0 - amount * 2
     expected_balance1 = initial_balance1 + deposit1 + amount * 2
