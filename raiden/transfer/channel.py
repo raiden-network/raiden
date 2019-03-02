@@ -1886,9 +1886,7 @@ def handle_channel_settled(
 
         if gain_from_our_locks > 0:
             # We will gain from unlock, because there are on-chain unlocks in our favor
-            merkle_tree_leaves = get_batch_unlock(channel_state.our_state)
-
-            if not is_settle_pending and merkle_tree_leaves:
+            if not is_settle_pending and our_merkle_tree_leaves:
                 onchain_unlock = ContractSendChannelBatchUnlock(
                     token_address=channel_state.token_address,
                     canonical_identifier=channel_state.canonical_identifier,
@@ -1907,9 +1905,8 @@ def handle_channel_settled(
         if gain_from_partner_locks > 0:
             # We will gain from unlock, because there are expired locks in our favor
             is_settle_pending = channel_state.partner_unlock_transaction is not None
-            merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
 
-            if not is_settle_pending and merkle_tree_leaves:
+            if not is_settle_pending and partner_merkle_tree_leaves:
                 onchain_unlock = ContractSendChannelBatchUnlock(
                     token_address=channel_state.token_address,
                     token_network_identifier=channel_state.token_network_identifier,
@@ -1925,10 +1922,6 @@ def handle_channel_settled(
                     None,
                     None,
                 )
-        if receiving_side <= 0 and sending_side <= 0:
-            # we don't need to wait for the unlock to be successful, the
-            # channel can be cleaned now
-            channel_state = None
 
     return TransitionResult(channel_state, events)
 
