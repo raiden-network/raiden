@@ -20,6 +20,7 @@ from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
+    ContractSendChannelWithdraw,
     EventInvalidReceivedLockedTransfer,
     EventInvalidReceivedLockExpired,
     EventInvalidReceivedTransferRefund,
@@ -851,7 +852,7 @@ def is_valid_withdraw_request(
         message_identifier=withdraw_request.message_identifier,
         token_network_identifier=withdraw_request.token_network_identifier,
         channel_identifier=withdraw_request.channel_identifier,
-        amount=withdraw_request.amount,
+        total_withdraw=withdraw_request.total_withdraw,
     )
 
     valid_signature, signature_msg = is_valid_signature(
@@ -860,10 +861,53 @@ def is_valid_withdraw_request(
         sender_address=channel_state.partner_state.address,
     )
 
-    if balance < withdraw_request.amount:
+    withdraw_amount = withdraw_request.total_withdraw - channel_state.partner_state.total_withdraw
+
+    if balance < withdraw_amount:
         msg = 'Insufficient balance for withdraw. Has {} requested'.format(
             balance,
             withdraw_request.amount,
+        )
+        result = (False, msg)
+
+    elif not valid_signature:
+        result = (False, signature_msg)
+
+    else:
+        result = (True, None)
+
+    return result
+
+
+def is_valid_withdraw_confirmation(
+        withdraw: ReceiveWithdraw,
+        channel_state: NettingChannelState,
+) -> SuccessOrError:
+
+    balance = get_balance(
+        sender=channel_state.our_state,
+        receiver=channel_state.partner_state,
+    )
+
+    withdraw_request_message = WithdrawRequest(
+        message_identifier=withdraw.message_identifier,
+        token_network_identifier=withdraw.token_network_identifier,
+        channel_identifier=withdraw.channel_identifier,
+        total_withdraw=withdraw.total_withdraw,
+    )
+
+    valid_signature, signature_msg = is_valid_signature(
+        data=withdraw_request_message.packed(),
+        signature=withdraw.signature,
+        sender_address=channel_state.partner_state.address,
+    )
+
+    withdraw_amount = withdraw.total_withdraw - channel_state.partner_state.total_withdraw
+
+    if balance < withdraw_amount:
+        msg = 'Insufficient balance for withdraw. Has {} requested'.format(
+            balance,
+            withdraw.amount,
         )
         result = (False, msg)
 
@@ -1680,16 +1724,17 @@ def handle_receive_withdraw(
         pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     events = list()
-    if is_valid_withdraw_confirmation(withdraw_request, channel_state):
+    if is_valid_withdraw_confirmation(withdraw, channel_state):
         channel_state.our_state.total_withdraw += withdraw.amount
 
         events.append(
             ContractSendChannelWithdraw(
-                recipient=channel_state.partner_state.address,
                 token_network_identifier=channel_state.token_network_identifier,
                 channel_identifier=channel_state.identifier,
-                message_identifier=message_identifier_from_prng(pseudo_random_generator),
-                amount=withdraw_request.amount,
+                total_withdraw=withdraw.total_withdraw,
+                participant_signature=participant_signature,
+                partner_signature=withdraw.signature,
+                triggered_by_block_hash=withdraw.blockhash,
             ),
         )
     return TransitionResult(channel_state, events)
