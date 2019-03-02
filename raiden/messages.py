@@ -72,28 +72,31 @@ from raiden.utils.typing import (
     Type,
     typecheck,
 )
+from raiden_contracts.constants import MessageTypeId
 
 __all__ = (
-    "Delivered",
-    "EnvelopeMessage",
-    "Lock",
-    "LockedTransfer",
-    "LockedTransferBase",
-    "LockExpired",
-    "Message",
-    "Ping",
-    "Pong",
-    "Processed",
-    "RefundTransfer",
-    "RequestMonitoring",
-    "RevealSecret",
-    "SecretRequest",
-    "SignedBlindedBalanceProof",
-    "SignedMessage",
+    'Delivered',
+    'EnvelopeMessage',
+    'Lock',
+    'LockedTransfer',
+    'LockedTransferBase',
+    'LockExpired',
+    'Message',
+    'Ping',
+    'Pong',
+    'Processed',
+    'RefundTransfer',
+    'RequestMonitoring',
+    'RevealSecret',
+    'SecretRequest',
+    'SignedBlindedBalanceProof',
+    'SignedMessage',
+    'Unlock',
     "ToDevice",
-    "Unlock",
     "UpdatePFS",
-    "from_dict",
+    'Withdraw',
+    'WithdrawRequest',
+    'from_dict',
     "message_from_sendevent",
 )
 
@@ -559,78 +562,88 @@ class RevealSecret(SignedRetrieableMessage):
 
 
 @dataclass(repr=False, eq=False)
-class WithdrawRequest(SignedRetrieableMessage):
+class WithdrawRequest(SignedMessage):
     """ Requests a signed on-chain withdraw confirmation from partner. """
     cmdid: ClassVar[int] = messages.WITHDRAW_REQUEST
 
-    message_identifier: MessageID
     token_network_identifier: TokenNetworkAddress
+    chain_id: ChainID,
     channel_identifier: ChannelID
-    amount: typing.PaymentAmount
+    participant: Address
+    total_withdraw: typing.PaymentAmount
 
     @classmethod
     def unpack(cls, packed):
         withdraw_request = cls(
-            message_identifier=packed.message_identifier,
+            chain_id=packed.chain_id,
             token_network_identifier=packed.token_network_identifier,
             channel_identifier=packed.channel_identifier,
-            amount=packed.amount,
+            total_withdraw=packed.total_withdraw,
+            participant=packed.participant,
         )
         withdraw_request.signature = packed.signature
         return withdraw_request
 
     def pack(self, packed):
-        packed.message_identifier = self.message_identifier
+        packed.chain_id = self.chain_id
         packed.token_network_identifier = self.token_network_identifier
         packed.channel_identifier = self.channel_identifier
-        packed.amount = self.amount
+        packed.total_withdraw = self.total_withdraw
+        packed.participant = self.participant
+        packed.message_type = MessageTypeId.WITHDRAW
         packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
         return cls(
-            message_identifier=event.message_identifier,
+            chain_id=event.chain_id,
             token_network_identifier=event.token_network_identifier,
             channel_identifier=event.channel_identifier,
-            amount=event.amount,
+            total_withdraw=event.total_withdraw,
+            participant=event.participant,
         )
 
 
-@dataclass
-class Withdraw(SignedRetrieableMessage):
+@dataclass(repr=False, eq=False)
+class Withdraw(SignedMessage):
     """ Confirms withdraw to partner with a signature """
     cmdid: ClassVar[int] = messages.WITHDRAW
 
-    message_identifier: MessageID
+    chain_id: ChainID
     token_network_identifier: TokenNetworkAddress
     channel_identifier: ChannelID
-    amount: typing.PaymentAmount
+    participant: Address
+    total_withdraw: typing.PaymentAmount
 
     @classmethod
     def unpack(cls, packed):
         withdraw_request = cls(
-            message_identifier=packed.message_identifier,
+            chain_id=packed.chain_id,
             token_network_identifier=packed.token_network_identifier,
             channel_identifier=packed.channel_identifier,
-            amount=packed.amount,
+            total_withdraw=packed.total_withdraw,
+            participant=packed.participant,
         )
         withdraw_request.signature = packed.signature
         return withdraw_request
 
     def pack(self, packed):
-        packed.message_identifier = self.message_identifier
+        packed.chain_id = self.chain_id
         packed.token_network_identifier = self.token_network_identifier
         packed.channel_identifier = self.channel_identifier
-        packed.amount = self.amount
+        packed.total_withdraw = self.total_withdraw
+        packed.participant = self.participant
+        packed.message_type = MessageTypeId.WITHDRAW
         packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
         return cls(
-            message_identifier=event.message_identifier,
+            chain_id=event.chain_id,
             token_network_identifier=event.token_network_identifier,
             channel_identifier=event.channel_identifier,
-            amount=event.amount,
+            total_withdraw=event.total_withdraw,
+            participant=event.participant,
         )
 
 

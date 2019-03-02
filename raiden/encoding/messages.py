@@ -229,9 +229,11 @@ ToDevice = namedbuffer("to_device", [cmdid(TODEVICE), pad(3), message_identifier
 WithdrawRequest = namedbuffer(
     'withdraw_request',
     [
-        message_identifier,
         token_network_address,
+        chain_id,
+        message_type,
         channel_identifier,
+        participant,
         total_withdraw,
         signature,
     ],
@@ -241,9 +243,11 @@ WithdrawRequest = namedbuffer(
 Withdraw = namedbuffer(
     'withdraw',
     [
-        message_identifier,
         token_network_address,
+        chain_id,
+        message_type,
         channel_identifier,
+        participant,
         total_withdraw,
         signature,
     ],
