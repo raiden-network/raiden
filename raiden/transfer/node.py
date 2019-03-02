@@ -1094,15 +1094,11 @@ def is_transaction_effect_satisfied(
             )
 
             if channel_state:
-                is_our_batch_unlock = (
-                    state_change.participant == our_address and
+                already_batch_unlocked = (
+                    state_change.participant == transaction.participant and
                     state_change.token_network_identifier == transaction.token_network_identifier
                 )
-                is_partner_batch_unlock = (
-                    state_change.partner == our_address and
-                    state_change.token_network_identifier == transaction.token_network_identifier
-                )
-                if is_our_batch_unlock or is_partner_batch_unlock:
+                if already_batch_unlocked:
                     return True
 
     return False
