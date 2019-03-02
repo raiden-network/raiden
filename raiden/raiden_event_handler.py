@@ -352,17 +352,17 @@ class RaidenEventHandler:
         partner_locksroot = partner_details.locksroot
 
         # we want to unlock because there are on-chain unlocked locks
-        is_unlock_receiving = (
+        search_state_changes = (
             our_address == participant and
-            partner_locksroot != EMPTY_HASH
-        )
-        # we want to unlock, because there are unlocked/unclaimed locks
-        is_unlock_sending = (
-            partner_address == participant and
             our_locksroot != EMPTY_HASH
         )
+        # we want to unlock, because there are unlocked/unclaimed locks
+        search_events = (
+            partner_address == participant and
+            partner_locksroot != EMPTY_HASH
+        )
 
-        if is_unlock_receiving:
+        if search_state_changes:
             state_change_record = get_state_change_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
@@ -372,7 +372,7 @@ class RaidenEventHandler:
             participant = our_address
             partner = partner_address
             state_change_identifier = state_change_record.state_change_identifier
-        elif is_unlock_sending:
+        elif search_events:
             event_record = get_event_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
