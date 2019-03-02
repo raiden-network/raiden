@@ -31,6 +31,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
+    SendWithdrawRequest,
     refund_from_sendmediated,
 )
 from raiden.transfer.mediated_transfer.state import (
@@ -66,6 +67,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     ActionChannelClose,
     ActionChannelSetFee,
+    ActionChannelWithdraw,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -880,7 +882,7 @@ def get_balance(sender: NettingChannelEndState, receiver: NettingChannelEndState
         receiver_transferred_amount = receiver.balance_proof.transferred_amount
 
     return Balance(
-        sender.contract_balance - sender_transferred_amount + receiver_transferred_amount
+        sender.contract_balance sender.total_withdraw - sender_transferred_amount + receiver_transferred_amount
     )
 
 
@@ -1360,6 +1362,30 @@ def events_for_close(
     return events
 
 
+def events_for_withdraw(
+        channel_state: NettingChannelState,
+        amount: TokenAmount,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
+        pseudo_random_generator: random.Random,
+) -> List[Event]:
+    events = list()
+
+    if get_status(channel_state) not in CHANNEL_STATES_PRIOR_TO_CLOSED:
+        return []
+
+    withdraw_event = SendWithdrawRequest(
+        recipient=channel_state.partner_state.address,
+        channel_identifier=channel_state.identifier,
+        message_identifier=message_identifier_from_prng(pseudo_random_generator),
+        amount=amount,
+    )
+
+    events.append(withdraw_event)
+
+    return events
+
+
 def create_sendexpiredlock(
     sender_end_state: NettingChannelEndState,
     locked_lock: LockType,
@@ -1542,6 +1568,27 @@ def handle_action_set_fee(
     assert channel_state.identifier == set_fee.channel_identifier, msg
     channel_state.mediation_fee = set_fee.mediation_fee
     return TransitionResult(channel_state, list())
+
+
+def handle_action_withdraw(
+        channel_state: NettingChannelState,
+        withdraw: ActionChannelWithdraw,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
+        pseudo_random_generator: random.Random,
+) -> TransitionResult[NettingChannelState]:
+    msg = 'caller must make sure the ids match'
+    assert channel_state.identifier == withdraw.channel_identifier, msg
+
+    events = list()
+    if get_balance(channel_state.our_state) >= withdraw.total_withdraw:
+        events = events_for_withdraw(
+            channel_state=channel_state,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
+    return TransitionResult(channel_state, events)
 
 
 def handle_refundtransfer(
@@ -1872,6 +1919,7 @@ def state_transition(
     state_change: StateChange,
     block_number: BlockNumber,
     block_hash: BlockHash,
+    pseudo_random_generator: random.Random,
 ) -> TransitionResult[NettingChannelState]:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
@@ -1892,6 +1940,15 @@ def state_transition(
     elif type(state_change) == ActionChannelSetFee:
         assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
         iteration = handle_action_set_fee(channel_state=channel_state, set_fee=state_change)
+    elif type(state_change) == ActionChannelWithdraw:
+        assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
+        iteration = handle_action_withdraw(
+            channel_state=channel_state,
+            close=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
+        )
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
         iteration = handle_channel_closed(channel_state, state_change)

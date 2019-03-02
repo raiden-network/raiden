@@ -20,6 +20,7 @@ REVEALSECRET = 11
 DELIVERED = 12
 LOCKEXPIRED = 13
 TODEVICE = 14
+WITHDRAW_REQUEST = 15
 
 
 log = structlog.get_logger(__name__)

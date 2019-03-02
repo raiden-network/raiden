@@ -15,6 +15,7 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
     TokenAddress,
+    TokenAmount,
     TokenNetworkAddress,
     typecheck,
 )
@@ -145,6 +146,13 @@ class SendRefundTransfer(SendMessageEvent):
     @property
     def balance_proof(self) -> BalanceProofUnsignedState:
         return self.transfer.balance_proof
+
+
+@dataclass
+class SendWithdrawRequest(SendMessageEvent):
+    """ Event used by node to request a withdraw from channel partner."""
+
+    amount: TokenAmount
 
 
 @dataclass
