@@ -26,6 +26,11 @@ from raiden.utils.typing import (
     Union,
 )
 
+from .serialize import SerializationBase
+
+# The latest DB version
+RAIDEN_DB_VERSION = 19
+
 
 class EventRecord(NamedTuple):
     event_identifier: EventID
