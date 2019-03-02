@@ -4,6 +4,7 @@ from raiden.transfer.state import TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChannelClose,
     ActionChannelSetFee,
+    ActionChannelWithdraw,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
@@ -45,6 +46,7 @@ def subdispatch_to_channel_by_id(
             state_change=state_change,
             block_number=block_number,
             block_hash=block_hash,
+            pseudo_random_generator=pseudo_random_generator,
         )
 
         partner_to_channelids = token_network_state.partneraddresses_to_channelidentifiers[
@@ -72,6 +74,22 @@ def handle_channel_close(
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
+        block_number=block_number,
+        block_hash=block_hash,
+    )
+
+
+def handle_channel_withdraw(
+        token_network_state: TokenNetworkState,
+        state_change: ActionChannelWithdraw,
+        pseudo_random_generator: random.Random,
+        block_number: BlockNumber,
+        block_hash: BlockHash,
+):
+    return subdispatch_to_channel_by_id(
+        token_network_state=token_network_state,
+        state_change=state_change,
+        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=block_hash,
     )
@@ -259,6 +277,15 @@ def state_transition(
             state_change=state_change,
             block_number=block_number,
             block_hash=block_hash,
+        )
+    if type(state_change) == ActionChannelWithdraw:
+        assert isinstance(state_change, ActionChannelWithdraw), MYPY_ANNOTATION
+        iteration = handle_channel_withdraw(
+            token_network_state,
+            state_change,
+            pseudo_random_generator,
+            block_number,
+            block_hash,
         )
     elif type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION

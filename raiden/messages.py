@@ -26,6 +26,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretRequest,
     SendSecretReveal,
+    SendWithdrawRequest,
 )
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.state import (
@@ -181,6 +182,8 @@ def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
     elif type(send_event) == SendLockExpired:
         assert isinstance(send_event, SendLockExpired), MYPY_ANNOTATION
         message = LockExpired.from_event(send_event)
+    elif type(send_event) == SendWithdrawRequest:
+        message = WithdrawRequest.from_event(send_event)
     elif type(send_event) == SendProcessed:
         assert isinstance(send_event, SendProcessed), MYPY_ANNOTATION
         message = Processed.from_event(send_event)
@@ -497,6 +500,44 @@ class RevealSecret(SignedRetrieableMessage):
             message_identifier=event.message_identifier,
             secret=event.secret,
             signature=EMPTY_SIGNATURE,
+        )
+
+
+@dataclass(repr=False, eq=False)
+class WithdrawRequest(SignedRetrieableMessage):
+    """ Requests the secret which unlocks a secrethash. """
+    cmdid: ClassVar[int] = messages.WITHDRAW_REQUEST
+
+    message_identifier: MessageID
+    token_network_identifier: TokenNetworkAddress
+    channel_identifier: ChannelID
+    amount: typing.PaymentAmount
+
+    @classmethod
+    def unpack(cls, packed):
+        withdraw_request = cls(
+            message_identifier=packed.message_identifier,
+            token_network_identifier=packed.token_network_identifier,
+            channel_identifier=packed.channel_identifier,
+            amount=packed.amount,
+        )
+        withdraw_request.signature = packed.signature
+        return withdraw_request
+
+    def pack(self, packed):
+        packed.message_identifier = self.message_identifier
+        packed.token_network_identifier = self.token_network_identifier
+        packed.channel_identifier = self.channel_identifier
+        packed.amount = self.amount
+        packed.signature = self.signature
+
+    @classmethod
+    def from_event(cls, event):
+        return cls(
+            message_identifier=event.message_identifier,
+            token_network_identifier=event.token_network_identifier,
+            channel_identifier=event.channel_identifier,
+            amount=event.amount,
         )
 
 
