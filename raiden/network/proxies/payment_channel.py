@@ -174,6 +174,22 @@ class PaymentChannel:
             partner=self.participant2,
         )
 
+    def set_total_withdraw(
+            self,
+            total_deposit: TokenAmount,
+            participant_signature: Signature,
+            partner_signature: Signature,
+            block_identifier: BlockSpecification,
+    ):
+        self.token_network.set_total_deposit(
+            given_block_identifier=block_identifier,
+            channel_identifier=self.channel_identifier,
+            total_withdraw=total_deposit,
+            participant_signature=participant_signature,
+            partner_signature=partner_signature,
+            partner=self.participant2,
+        )
+
     def close(
         self,
         nonce: Nonce,
