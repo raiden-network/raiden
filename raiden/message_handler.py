@@ -11,6 +11,7 @@ from raiden.messages import (
     RevealSecret,
     SecretRequest,
     Unlock,
+    WithdrawRequest,
     lockedtransfersigned_from_message,
 )
 from raiden.raiden_service import RaidenService
@@ -23,6 +24,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
+    ReceiveWithdrawRequest,
 )
 from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
@@ -60,6 +62,10 @@ class MessageHandler:
             assert isinstance(message, LockedTransfer), MYPY_ANNOTATION
             self.handle_message_lockedtransfer(raiden, message)
 
+        elif type(message) == WithdrawRequest:
+            assert isinstance(message, WithdrawRequest), MYPY_ANNOTATION
+            self.handle_message_withdrawrequest(raiden, message)
+
         elif type(message) == Delivered:
             assert isinstance(message, Delivered), MYPY_ANNOTATION
             self.handle_message_delivered(raiden, message)
@@ -69,6 +75,15 @@ class MessageHandler:
             self.handle_message_processed(raiden, message)
         else:
             log.error("Unknown message cmdid {}".format(message.cmdid))
+
+    def handle_message_withdrawrequest(raiden: RaidenService, message: SecretRequest):
+        secret_request = ReceiveWithdrawRequest(
+            token_network_identifier=message.token_network_identifier,
+            channel_identifier=message.channel_identifier,
+            amount=message.amount,
+            sender=message.sender,
+        )
+        raiden.handle_and_track_state_change(secret_request)
 
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
