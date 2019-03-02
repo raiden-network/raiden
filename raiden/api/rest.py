@@ -1099,7 +1099,6 @@ class RestAPI:  # pragma: no unittest
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result.data)
 
-
     def _close(
         self, registry_address: typing.PaymentNetworkAddress, channel_state: NettingChannelState
     ):

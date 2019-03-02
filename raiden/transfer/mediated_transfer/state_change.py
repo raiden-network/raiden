@@ -147,3 +147,13 @@ class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
     token_network_identifier: TokenNetworkID
     channel_identifier: ChannelID
     signature: Signature
+
+
+@dataclass
+class ReceiveWithdraw(AuthenticatedSenderStateChange):
+    """ A Withdraw message received. """
+
+    token_network_identifier: TokenNetworkID
+    channel_identifier: ChannelID
+    amount: PaymentAmount
+    signature: Signature

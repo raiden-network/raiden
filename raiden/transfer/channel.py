@@ -109,6 +109,7 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
+    Signature,
     SuccessOrError,
     TargetAddress,
     TokenAmount,

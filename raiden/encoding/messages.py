@@ -21,6 +21,7 @@ DELIVERED = 12
 LOCKEXPIRED = 13
 TODEVICE = 14
 WITHDRAW_REQUEST = 15
+WITHDRAW = 16
 
 
 log = structlog.get_logger(__name__)
@@ -224,6 +225,30 @@ UpdatePFS = namedbuffer(
 
 ToDevice = namedbuffer("to_device", [cmdid(TODEVICE), pad(3), message_identifier, signature])
 
+WithdrawRequest = namedbuffer(
+    'withdraw_request',
+    [
+        message_identifier,
+        token_network_address,
+        channel_identifier,
+        amount,
+        signature,
+    ],
+)
+
+
+Withdraw = namedbuffer(
+    'withdraw_request',
+    [
+        message_identifier,
+        token_network_address,
+        channel_identifier,
+        amount,
+        signature,
+    ],
+)
+
+
 CMDID_MESSAGE = {
     PROCESSED: Processed,
     PING: Ping,
@@ -236,6 +261,8 @@ CMDID_MESSAGE = {
     DELIVERED: Delivered,
     LOCKEXPIRED: LockExpired,
     TODEVICE: ToDevice,
+    WITHDRAW_REQUEST: WithdrawRequest,
+    WITHDRAW: Withdraw,
 }
 
 
