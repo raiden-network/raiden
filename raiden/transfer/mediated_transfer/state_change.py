@@ -13,6 +13,8 @@ from raiden.transfer.state import HopState, RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils.typing import (
     BlockExpiration,
+    ChannelID,
+    Dict,
     List,
     MessageID,
     Optional,
@@ -20,6 +22,7 @@ from raiden.utils.typing import (
     PaymentID,
     Secret,
     SecretHash,
+    TokenNetworkID,
     typecheck,
 )
 
@@ -133,3 +136,13 @@ class ReceiveTransferRefund(BalanceProofStateChange):
     def __post_init__(self) -> None:
         super().__post_init__()
         typecheck(self.transfer, LockedTransferSignedState)
+
+
+@dataclass
+class ReceiveWithdrawRequest(AuthenticatedSenderStateChange):
+    """ A WithdrawRequest message received. """
+
+    amount: PaymentAmount
+    token_network_identifier: TokenNetworkID
+    channel_identifier: ChannelID
+    sender: Address
