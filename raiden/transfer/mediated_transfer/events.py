@@ -9,6 +9,8 @@ from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils.typing import (
     Address,
     BlockExpiration,
+    ChainID,
+    ChannelID,
     List,
     PaymentID,
     PaymentWithFeeAmount,
@@ -152,14 +154,20 @@ class SendRefundTransfer(SendMessageEvent):
 class SendWithdrawRequest(SendMessageEvent):
     """ Event used by node to request a withdraw from channel partner."""
 
+    chain_id: ChainID
+    token_network_identifier: TokenNetworkID
     total_withdraw: TokenAmount
+    participant: Address
 
 
 @dataclass
 class SendWithdraw(SendMessageEvent):
     """ Event used by node to confirm a withdraw for a channel's partner."""
 
+    chain_id: ChainID
+    token_network_identifier: TokenNetworkID
     total_withdraw: TokenAmount
+    participant: Address
 
 
 @dataclass

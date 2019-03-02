@@ -11,7 +11,7 @@ from raiden.constants import (
     MAXIMUM_PENDING_TRANSFERS,
     UINT256_MAX,
 )
-from raiden.messages import WithdrawRequest
+from raiden.messages import Withdraw, WithdrawRequest
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.balance_proof import pack_balance_proof
@@ -849,10 +849,11 @@ def is_valid_withdraw_request(
     )
 
     withdraw_request_message = WithdrawRequest(
-        message_identifier=withdraw_request.message_identifier,
+        chain_id=channel_state.chain_id,
         token_network_identifier=withdraw_request.token_network_identifier,
         channel_identifier=withdraw_request.channel_identifier,
         total_withdraw=withdraw_request.total_withdraw,
+        participant=channel_state.partner_state.address,
     )
 
     valid_signature, signature_msg = is_valid_signature(
@@ -889,20 +890,21 @@ def is_valid_withdraw_confirmation(
         receiver=channel_state.partner_state,
     )
 
-    withdraw_request_message = WithdrawRequest(
-        message_identifier=withdraw.message_identifier,
+    withdraw_message = Withdraw(
+        chain_id=channel_state.chain_id,
         token_network_identifier=withdraw.token_network_identifier,
         channel_identifier=withdraw.channel_identifier,
         total_withdraw=withdraw.total_withdraw,
+        participant=channel_state.our_state.address,
     )
 
     valid_signature, signature_msg = is_valid_signature(
-        data=withdraw_request_message.packed(),
+        data=withdraw_message.packed(),
         signature=withdraw.signature,
         sender_address=channel_state.partner_state.address,
     )
 
-    withdraw_amount = withdraw.total_withdraw - channel_state.partner_state.total_withdraw
+    withdraw_amount = withdraw.total_withdraw - channel_state.our_state.total_withdraw
 
     if balance < withdraw_amount:
         msg = 'Insufficient balance for withdraw. Has {} requested'.format(
@@ -1480,10 +1482,12 @@ def events_for_withdraw(
 
     withdraw_event = SendWithdrawRequest(
         recipient=channel_state.partner_state.address,
+        chain_id=channel_state.chain_id,
         token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         total_withdraw=total_withdraw,
+        participant=channel_state.our_state.address,
     )
 
     events.append(withdraw_event)
@@ -1700,7 +1704,6 @@ def handle_action_withdraw(
 def handle_receive_withdraw_request(
         channel_state: NettingChannelState,
         withdraw_request: ReceiveWithdrawRequest,
-        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     events = list()
     if is_valid_withdraw_request(withdraw_request, channel_state):
@@ -1709,10 +1712,11 @@ def handle_receive_withdraw_request(
         events.append(
             SendWithdraw(
                 recipient=channel_state.partner_state.address,
+                chain_id=channel_state.chain_id,
                 token_network_identifier=channel_state.token_network_identifier,
                 channel_identifier=channel_state.identifier,
-                message_identifier=message_identifier_from_prng(pseudo_random_generator),
                 total_withdraw=withdraw_request.total_withdraw,
+                participant=channel_state.partner_state.address,
             ),
         )
     return TransitionResult(channel_state, events)
@@ -1721,11 +1725,19 @@ def handle_receive_withdraw_request(
 def handle_receive_withdraw(
         channel_state: NettingChannelState,
         withdraw: ReceiveWithdraw,
-        pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     events = list()
     if is_valid_withdraw_confirmation(withdraw, channel_state):
         channel_state.our_state.total_withdraw += withdraw.amount
+
+        withdraw_request_message = WithdrawRequest(
+            chain_id=channel_state.chain_id,
+            token_network_identifier=withdraw.token_network_identifier,
+            channel_identifier=withdraw.channel_identifier,
+            total_withdraw=withdraw.total_withdraw,
+            participant=channel_state.partner_state.address,
+        )
+        participant_signature = withdraw_request_message.sign()
 
         events.append(
             ContractSendChannelWithdraw(
@@ -2116,5 +2128,8 @@ def state_transition(
     elif type(state_change) == ReceiveWithdrawRequest:
         assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
         iteration = handle_receive_withdraw_request(channel_state, state_change)
+    elif type(state_change) == ReceiveWithdraw:
+        assert isinstance(state_change, ReceiveWithdraw), MYPY_ANNOTATION
+        iteration = handle_receive_withdraw(channel_state, state_change)
 
     return iteration
