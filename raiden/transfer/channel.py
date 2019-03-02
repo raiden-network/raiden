@@ -11,6 +11,7 @@ from raiden.constants import (
     MAXIMUM_PENDING_TRANSFERS,
     UINT256_MAX,
 )
+from raiden.messages import WithdrawRequest
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.balance_proof import pack_balance_proof
@@ -31,6 +32,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendLockedTransfer,
     SendLockExpired,
     SendRefundTransfer,
+    SendWithdraw,
     SendWithdrawRequest,
     refund_from_sendmediated,
 )
@@ -41,6 +43,7 @@ from raiden.transfer.mediated_transfer.state import (
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
+    ReceiveWithdrawRequest,
 )
 from raiden.transfer.merkle_tree import LEAVES, compute_layers, merkleroot
 from raiden.transfer.state import (
@@ -339,7 +342,37 @@ def is_valid_amount(
 
 
 def is_valid_signature(
-    balance_proof: BalanceProofSignedState, sender_address: Address
+        data: bytes,
+        signature: Signature,
+        sender_address: Address,
+) -> SuccessOrError:
+    try:
+        signer_address = recover(
+            data=data,
+            signature=signature,
+        )
+        # InvalidSignature is raised by raiden.utils.signer.recover if signature
+        # is not bytes or has the incorrect length
+        #
+        # ValueError is raised if the PublicKey instantiation failed, let it
+        # propagate because it's a memory pressure problem.
+        #
+        # Exception is raised if the public key recovery failed.
+    except Exception:  # pylint: disable=broad-except
+        msg = 'Signature invalid, could not be recovered.'
+        return (False, msg)
+
+    is_correct_sender = sender_address == signer_address
+    if is_correct_sender:
+        return (True, None)
+
+    msg = 'Signature was valid but the expected address does not match.'
+    return (False, msg)
+
+
+def is_valid_balanceproof_signature(
+        balance_proof: BalanceProofSignedState,
+        sender_address: Address,
 ) -> SuccessOrError:
     balance_hash = hash_balance_data(
         balance_proof.transferred_amount, balance_proof.locked_amount, balance_proof.locksroot
@@ -363,25 +396,11 @@ def is_valid_signature(
         ),
     )
 
-    try:
-        signer_address = recover(data=data_that_was_signed, signature=balance_proof.signature)
-        # InvalidSignature is raised by raiden.utils.signer.recover if signature
-        # is not bytes or has the incorrect length
-        #
-        # ValueError is raised if the PublicKey instantiation failed, let it
-        # propagate because it's a memory pressure problem.
-        #
-        # Exception is raised if the public key recovery failed.
-    except Exception:  # pylint: disable=broad-except
-        msg = "Signature invalid, could not be recovered."
-        return (False, msg)
-
-    is_correct_sender = sender_address == signer_address
-    if is_correct_sender:
-        return (True, None)
-
-    msg = "Signature was valid but the expected address does not match."
-    return (False, msg)
+    return is_valid_signature(
+        data=data_that_was_signed,
+        signature=balance_proof.signature,
+        sender_address=sender_address,
+    )
 
 
 def is_balance_proof_usable_onchain(
@@ -402,7 +421,7 @@ def is_balance_proof_usable_onchain(
     """
     expected_nonce = get_next_nonce(sender_state)
 
-    is_valid_signature_, signature_msg = is_valid_signature(
+    is_valid_balanceproof_signature_, signature_msg = is_valid_balanceproof_signature(
         received_balance_proof, sender_state.address
     )
 
@@ -468,7 +487,7 @@ def is_balance_proof_usable_onchain(
 
         result = (False, msg)
 
-    elif not is_valid_signature_:
+    elif not is_valid_balanceproof_signature_:
         # The signature must be valid, otherwise the balance proof cannot be
         # used onchain.
         result = (False, signature_msg)
@@ -812,6 +831,45 @@ def is_valid_unlock(
 
     else:
         result = (True, None, merkletree)
+
+    return result
+
+
+def is_valid_withdraw_request(
+        withdraw_request: ReceiveWithdrawRequest,
+        channel_state: NettingChannelState,
+) -> SuccessOrError:
+
+    balance = get_balance(
+        sender=channel_state.partner_state,
+        receiver=channel_state.our_state,
+    )
+
+    withdraw_request_message = WithdrawRequest(
+        message_identifier=withdraw_request.message_identifier,
+        token_network_identifier=withdraw_request.token_network_identifier,
+        channel_identifier=withdraw_request.channel_identifier,
+        amount=withdraw_request.amount,
+    )
+
+    valid_signature, signature_msg = is_valid_signature(
+        data=withdraw_request_message.packed(),
+        signature=withdraw_request.signature,
+        sender_address=channel_state.partner_state.address,
+    )
+
+    if balance < withdraw_request.amount:
+        msg = 'Insufficient balance for withdraw. Has {} requested'.format(
+            balance,
+            withdraw_request.amount,
+        )
+        result = (False, msg)
+
+    elif not valid_signature:
+        result = (False, signature_msg)
+
+    else:
+        result = (True, None)
 
     return result
 
@@ -1376,6 +1434,7 @@ def events_for_withdraw(
 
     withdraw_event = SendWithdrawRequest(
         recipient=channel_state.partner_state.address,
+        token_network_identifier=channel_state.token_network_identifier,
         channel_identifier=channel_state.identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         amount=amount,
@@ -1587,6 +1646,25 @@ def handle_action_withdraw(
             block_number=block_number,
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
+        )
+    return TransitionResult(channel_state, events)
+
+
+def handle_receive_withdraw_request(
+        channel_state: NettingChannelState,
+        withdraw_request: ReceiveWithdrawRequest,
+        pseudo_random_generator: random.Random,
+) -> TransitionResult:
+    events = list()
+    if is_valid_withdraw_request(withdraw_request, channel_state):
+        events.append(
+            SendWithdraw(
+                recipient=channel_state.partner_state.address,
+                token_network_identifier=channel_state.token_network_identifier,
+                channel_identifier=channel_state.identifier,
+                message_identifier=message_identifier_from_prng(pseudo_random_generator),
+                amount=withdraw_request.amount,
+            ),
         )
     return TransitionResult(channel_state, events)
 
@@ -1964,5 +2042,8 @@ def state_transition(
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_channel_batch_unlock(channel_state, state_change)
+    elif type(state_change) == ReceiveWithdrawRequest:
+        assert isinstance(state_change, ReceiveWithdrawRequest), MYPY_ANNOTATION
+        iteration = handle_receive_withdraw_request(channel_state, state_change)
 
     return iteration

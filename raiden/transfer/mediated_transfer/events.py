@@ -156,6 +156,13 @@ class SendWithdrawRequest(SendMessageEvent):
 
 
 @dataclass
+class SendWithdraw(SendMessageEvent):
+    """ Event used by node to confirm a withdraw for a channel's partner."""
+
+    amount: TokenAmount,
+
+
+@dataclass
 class EventUnlockSuccess(Event):
     """ Event emitted when a lock unlock succeded. """
 
