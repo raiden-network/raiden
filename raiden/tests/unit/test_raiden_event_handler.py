@@ -49,7 +49,6 @@ def test_handle_contract_send_channelunlock_already_unlocked():
         transferred_amount = 1
         locked_amount = 1
         # Let's mock here that partner locksroot is 0x0
-        locksroot = EMPTY_HASH
         balance_hash = hash_balance_data(transferred_amount, locked_amount, locksroot)
         partner_details = ParticipantDetails(
             address=participant,
@@ -58,7 +57,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
             is_closer=True,
             balance_hash=balance_hash,
             nonce=1,
-            locksroot=locksroot,
+            locksroot=EMPTY_HASH,
             locked_amount=locked_amount,
         )
         return ParticipantsDetails(our_details, partner_details)
