@@ -11,6 +11,7 @@ from raiden.messages import (
     RevealSecret,
     SecretRequest,
     Unlock,
+    Withdraw,
     WithdrawRequest,
     lockedtransfersigned_from_message,
 )
@@ -24,6 +25,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
+    ReceiveWithdraw,
     ReceiveWithdrawRequest,
 )
 from raiden.transfer.state import balanceproof_from_envelope
@@ -66,6 +68,10 @@ class MessageHandler:
             assert isinstance(message, WithdrawRequest), MYPY_ANNOTATION
             self.handle_message_withdrawrequest(raiden, message)
 
+        elif type(message) == Withdraw:
+            assert isinstance(message, Withdraw), MYPY_ANNOTATION
+            self.handle_message_withdrawrequest(raiden, message)
+
         elif type(message) == Delivered:
             assert isinstance(message, Delivered), MYPY_ANNOTATION
             self.handle_message_delivered(raiden, message)
@@ -76,12 +82,23 @@ class MessageHandler:
         else:
             log.error("Unknown message cmdid {}".format(message.cmdid))
 
-    def handle_message_withdrawrequest(raiden: RaidenService, message: SecretRequest):
-        secret_request = ReceiveWithdrawRequest(
+    def handle_message_withdrawrequest(raiden: RaidenService, message: WithdrawRequest):
+        withdraw_request = ReceiveWithdrawRequest(
             token_network_identifier=message.token_network_identifier,
             channel_identifier=message.channel_identifier,
             amount=message.amount,
             sender=message.sender,
+            signature=message.signature,
+        )
+        raiden.handle_and_track_state_change(withdraw_request)
+
+    def handle_message_withdraw(raiden: RaidenService, message: Withdraw):
+        secret_request = ReceiveWithdraw(
+            token_network_identifier=message.token_network_identifier,
+            channel_identifier=message.channel_identifier,
+            amount=message.amount,
+            sender=message.sender,
+            signature=message.signature,
         )
         raiden.handle_and_track_state_change(secret_request)
 
@@ -94,7 +111,7 @@ class MessageHandler:
             secrethash=message.secrethash,
             sender=message.sender,
         )
-        raiden.handle_and_track_state_change(secret_request)
+        raiden.handle_and_track_state_change(withdraw)
 
     @staticmethod
     def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret) -> None:

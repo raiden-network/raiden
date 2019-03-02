@@ -159,7 +159,7 @@ class SendWithdrawRequest(SendMessageEvent):
 class SendWithdraw(SendMessageEvent):
     """ Event used by node to confirm a withdraw for a channel's partner."""
 
-    amount: TokenAmount,
+    amount: TokenAmount
 
 
 @dataclass
