@@ -1,11 +1,11 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
 from collections import defaultdict
-from dataclasses import dataclass, field
 from random import Random
 from typing import TYPE_CHECKING, Tuple
 
 import networkx
+from dataclasses import dataclass, field
 
 from raiden.constants import (
     EMPTY_LOCK_HASH,
@@ -300,7 +300,7 @@ class NettingChannelEndState(State):
 
     address: Address
     contract_balance: Balance
-
+    total_withdraw: TokenAmount
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
     secrethashes_to_lockedlocks: Dict[SecretHash, HashTimeLockState] = field(
