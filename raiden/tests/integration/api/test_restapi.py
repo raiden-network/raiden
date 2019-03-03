@@ -1128,7 +1128,7 @@ def test_api_payments_with_hash_no_secret(
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = '0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f3349b6e50fc9ca44f1'
+    secret = '0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e'
     secret_hash = to_hex(sha3(to_bytes(hexstr=secret)))
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
@@ -1158,7 +1158,7 @@ def test_api_payments_with_hash_no_secret(
     assert_proper_response(response)
     response = response.json()
     assert_payment_secret_and_hash(response, payment)
-    assert secret != response['secret']
+    assert secret == response['secret']
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])

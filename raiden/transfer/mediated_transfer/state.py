@@ -629,6 +629,9 @@ class TransferDescriptionWithSecretState(State):
             secret: Secret,
             secret_hash: SecretHash = None,
     ):
+        if secret is None:
+            secret = b''
+
         if secret_hash is None:
             secret_hash = sha3(secret)
 

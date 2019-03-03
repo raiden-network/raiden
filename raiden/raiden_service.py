@@ -897,11 +897,6 @@ class RaidenService(Runnable):
             )
             self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
-        # until we have full support create the secret here and ignore the provided hash
-        if secret is None:
-            secret = random_secret()
-            secret_hash = sha3(secret)
-
         init_initiator_statechange = initiator_init(
             raiden=self,
             transfer_identifier=identifier,
