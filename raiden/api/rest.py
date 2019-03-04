@@ -53,8 +53,6 @@ from raiden.api.v1.resources import (
 )
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
-    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
     UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
     Environment,
