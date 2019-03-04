@@ -6,7 +6,7 @@ from enum import Enum
 import pytest
 from eth_utils import remove_0x_prefix, to_normalized_address
 
-from raiden.constants import Environment
+from raiden.constants import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT, Environment
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,

@@ -1,12 +1,12 @@
 import pytest
 from eth_utils import is_same_address, to_canonical_address
 
-from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError
-from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
-from raiden.tests.fixtures.variables import (
+from raiden.constants import (
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
 )
+from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN

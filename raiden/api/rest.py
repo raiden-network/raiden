@@ -51,7 +51,12 @@ from raiden.api.v1.resources import (
     TokensResource,
     create_blueprint,
 )
-from raiden.constants import GENESIS_BLOCK_NUMBER, Environment
+from raiden.constants import (
+    GENESIS_BLOCK_NUMBER,
+    UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
+    UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+    Environment,
+)
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -573,6 +578,7 @@ class RestAPI:
                 errors='Registering a new token is currently disabled in the Ethereum mainnet',
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
+
         log.debug(
             'Registering token',
             node=pex(self.raiden_api.address),
@@ -581,8 +587,10 @@ class RestAPI:
         )
         try:
             token_network_address = self.raiden_api.token_network_register(
-                registry_address,
-                token_address,
+                registry_address=registry_address,
+                token_address=token_address,
+                channel_participant_deposit_limit=UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
+                token_network_deposit_limit=UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
             )
         except (InvalidAddress, AlreadyRegisteredTokenAddress, TransactionThrew) as e:
             return api_error(

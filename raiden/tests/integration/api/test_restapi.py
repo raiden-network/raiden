@@ -16,12 +16,12 @@ from flask import url_for
 from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
+    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     SECRET_HASH_HEXSTRING_LENGTH,
     SECRET_HEXSTRING_LENGTH,
     Environment,
 )
 from raiden.messages import LockedTransfer, Unlock
-from raiden.tests.fixtures.variables import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
