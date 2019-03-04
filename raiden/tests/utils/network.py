@@ -268,6 +268,7 @@ def create_sequential_channels(raiden_apps, channels_per_node):
 
 def create_apps(
         chain_id,
+        contracts_path,
         blockchain_services,
         endpoint_discovery_services,
         token_network_registry_address,
@@ -304,6 +305,7 @@ def create_apps(
             'unrecoverable_error_should_crash': unrecoverable_error_should_crash,
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
+            'contracts_path': contracts_path,
             'database_path': database_paths[idx],
             'blockchain': {
                 'confirmation_blocks': DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
