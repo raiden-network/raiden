@@ -7,8 +7,10 @@ import raiden.blockchain.events as blockchain_events
 from raiden import waiting
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
+    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     SECRET_HASH_HEXSTRING_LENGTH,
     SECRET_HEXSTRING_LENGTH,
+    UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
     Environment,
 )
 from raiden.exceptions import (
@@ -456,6 +458,11 @@ class RaidenAPI:
         if channel_state is None:
             raise InvalidAddress('No channel with partner_address for the given token')
 
+        if self.raiden.config['environment_type'] == Environment.PRODUCTION:
+            per_token_network_deposit_limit = RED_EYES_PER_TOKEN_NETWORK_LIMIT
+        else:
+            per_token_network_deposit_limit = UNLIMITED_PER_TOKEN_NETWORK_LIMIT
+
         token = self.raiden.chain.token(token_address)
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
         token_network_address = token_network_registry.get_token_network(token_address)
@@ -465,22 +472,27 @@ class RaidenAPI:
             channel_id=channel_state.identifier,
         )
 
+        token_network_balance = token.balance_of(registry_address)
+
+        if token_network_balance + total_deposit > per_token_network_deposit_limit:
+            raise DepositOverLimit(
+                'The deposit of {} exceeds token network limit of {}'.format(
+                    total_deposit,
+                    per_token_network_deposit_limit,
+                ),
+            )
+
         balance = token.balance_of(self.raiden.address)
 
-        if self.raiden.config['environment_type'] == Environment.PRODUCTION:
-            deposit_limit = (
-                token_network_proxy.proxy.contract.functions.
-                channel_participant_deposit_limit().call()
-            )
-        elif self.raiden.config['environment_type'] == Environment.DEVELOPMENT:
-            deposit_limit = (
-                token_network_proxy.proxy.contract.functions.
-                deposit_limit().call()
-            )
+        deposit_limit = (
+            token_network_proxy.proxy.contract.functions.
+            channel_participant_deposit_limit().call()
+        )
 
         if total_deposit > deposit_limit:
             raise DepositOverLimit(
-                'The deposit of {} is bigger than the current limit of {}'.format(
+                'The deposit of {} is bigger than the current '
+                'channel participant limit of {}'.format(
                     total_deposit,
                     deposit_limit,
                 ),
