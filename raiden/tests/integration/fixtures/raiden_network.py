@@ -57,6 +57,7 @@ def raiden_chain(
         private_rooms,
         retry_timeout,
         blockchain_type,
+        contracts_path,
 ):
 
     if len(token_addresses) != 1:
@@ -88,6 +89,7 @@ def raiden_chain(
         unrecoverable_error_should_crash=unrecoverable_error_should_crash,
         local_matrix_url=local_matrix_servers[0],
         private_rooms=private_rooms,
+        contracts_path=contracts_path,
     )
 
     wait_for_confirmed_block(blockchain_services, raiden_apps)
@@ -163,9 +165,11 @@ def raiden_network(
         private_rooms,
         retry_timeout,
         blockchain_type,
+        contracts_path,
 ):
     raiden_apps = create_apps(
         chain_id=chain_id,
+        contracts_path=contracts_path,
         blockchain_services=blockchain_services.blockchain_services,
         endpoint_discovery_services=endpoint_discovery_services,
         token_network_registry_address=token_network_registry_address,

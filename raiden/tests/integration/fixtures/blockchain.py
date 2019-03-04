@@ -115,12 +115,17 @@ def deploy_client(blockchain_rpc_ports, deploy_key, web3, blockchain_type):
 
 
 @pytest.fixture
-def contract_manager(environment_type):
+def contracts_path(environment_type):
     version = RED_EYES_CONTRACT_VERSION
     if environment_type == Environment.DEVELOPMENT:
         version = DEVELOPMENT_CONTRACT_VERSION
 
-    return ContractManager(contracts_precompiled_path(version))
+    return contracts_precompiled_path(version)
+
+
+@pytest.fixture
+def contract_manager(contracts_path):
+    return ContractManager(contracts_path)
 
 
 @pytest.fixture
