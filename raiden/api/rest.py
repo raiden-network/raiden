@@ -53,6 +53,8 @@ from raiden.api.v1.resources import (
 )
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
+    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
     UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
     Environment,
@@ -624,6 +626,7 @@ class RestAPI:
             token_address=to_checksum_address(token_address),
             settle_timeout=settle_timeout,
         )
+
         try:
             token = self.raiden_api.raiden.chain.token(token_address)
         except AddressWithoutCode as e:
@@ -631,6 +634,7 @@ class RestAPI:
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,
             )
+
         balance = token.balance_of(self.raiden_api.raiden.address)
 
         if total_deposit is not None and total_deposit > balance:
