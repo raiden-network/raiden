@@ -22,6 +22,7 @@ from web3.middleware import geth_poa_middleware
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
+    RED_EYES_MAX_TOKEN_NETWORKS,
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
 )
@@ -60,8 +61,6 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 TEST_ENDPOINT = '9.9.9.9:9999'
 TEST_PARTNER_ADDRESS = '2' * 40
 TEST_DEPOSIT_AMOUNT = 5
-
-TEST_MAX_TOKEN_NETWORKS = 1
 
 TEST_PRIVKEY = (
     b'\xad\xd4\xd3\x10\xba\x04$hy\x1d\xd7\xbf\x7fn\xae\x85\xac'
@@ -185,7 +184,7 @@ def deploy_smoketest_contracts(client, chain_id, contract_manager):
             chain_id,
             TEST_SETTLE_TIMEOUT_MIN,
             TEST_SETTLE_TIMEOUT_MAX,
-            1,
+            RED_EYES_MAX_TOKEN_NETWORKS,
         ),
     )
 
