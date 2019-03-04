@@ -387,6 +387,37 @@ def options(func):
                 default=False,
             ),
         ),
+        option_group(
+            'Hash Resolver options',
+            option(
+                '--resolver-address',
+                help=(
+                    '"host:port" of the resolver server that is used to resolve '
+                    'a payment hash to a secret'
+                ),
+                default='localhost:50051',
+                type=str,
+                show_default=True,
+            ),
+            option(
+                '--resolver-crt-file',
+                help=(
+                    'Text file containing the The crt file includes the '
+                    'root certificate that is used to authenticate the '
+                    'resolver server'
+                ),
+                default=None,
+                type=click.Path(
+                    exists=True,
+                    dir_okay=False,
+                    file_okay=True,
+                    writable=False,
+                    resolve_path=True,
+                    allow_dash=True,
+                ),
+                show_default=True,
+            ),
+        ),
     ]
 
     for option_ in reversed(options_):

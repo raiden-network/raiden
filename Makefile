@@ -39,10 +39,10 @@ clean-test:
 	rm -f .coverage
 	rm -fr htmlcov/
 
-ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive raiden/ -sg */node_modules/*
+ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive raiden/ -sg */node_modules/* -sg *resolver*
 
 lint:
-	flake8 raiden/ tools/
+	flake8 --exclude raiden/resolver/ raiden/ tools/
 	isort $(ISORT_PARAMS) --diff --check-only
 	pylint --rcfile .pylint.rc raiden/
 	python setup.py check --restructuredtext --strict

@@ -198,6 +198,8 @@ def run_app(
         pathfinding_service_address,
         pathfinding_max_paths,
         enable_monitoring,
+        resolver_address,
+        resolver_crt_file,
         config=None,
         extra_config=None,
         **kwargs,
@@ -220,6 +222,7 @@ def run_app(
 
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
+    (resolver_host, resolver_port) = split_endpoint(resolver_address)
 
     config['transport']['udp']['host'] = listen_host
     config['transport']['udp']['port'] = listen_port
@@ -228,6 +231,9 @@ def run_app(
     config['web_ui'] = rpc and web_ui
     config['api_host'] = api_host
     config['api_port'] = api_port
+    config['resolver_host'] = resolver_host
+    config['resolver_port'] = resolver_port
+    config['resolver_crt_file'] = resolver_crt_file
     if mapped_socket:
         config['socket'] = mapped_socket.socket
         config['transport']['udp']['external_ip'] = mapped_socket.external_ip

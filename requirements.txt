@@ -9,6 +9,7 @@ Flask
 Flask-Cors
 Flask-Restful
 gevent
+grpcio
 ipython<5.0.0
 marshmallow
 marshmallow_polyfield

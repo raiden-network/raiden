@@ -1,10 +1,12 @@
+# import grpc
 import structlog
-from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
 
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, PATH_FINDING_BROADCASTING_ROOM
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import UpdatePFS, message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
+from raiden.resolver.resolver_server import reveal_secret_with_resolver
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
@@ -36,7 +38,6 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.utils import (
     get_event_with_balance_proof_by_balance_hash,
     get_event_with_balance_proof_by_locksroot,
@@ -44,7 +45,7 @@ from raiden.transfer.utils import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
-from raiden.utils import CanonicalIdentifier, pex, sha3
+from raiden.utils import CanonicalIdentifier, pex
 
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
@@ -168,17 +169,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             secret_request_event: SendSecretRequest,
     ):
-        x_secret = to_bytes(
-            hexstr='0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e',
-        )
-        x_secret_hash = sha3(x_secret)
-
-        if secret_request_event.secrethash == x_secret_hash:
-            state_change = ReceiveSecretReveal(
-                x_secret,
-                secret_request_event.recipient,
-            )
-            raiden.handle_and_track_state_change(state_change)
+        if reveal_secret_with_resolver(raiden, secret_request_event):
             return
 
         secret_request_message = message_from_sendevent(secret_request_event, raiden.address)
