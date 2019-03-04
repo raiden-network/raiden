@@ -3,6 +3,10 @@ from eth_utils import is_same_address, to_canonical_address
 
 from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
+from raiden.tests.fixtures.variables import (
+    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+)
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
@@ -28,7 +32,12 @@ def test_token_network_registry(
     bad_token_address = make_address()
     # try to register non-existing token network
     with pytest.raises(RaidenUnrecoverableError):
-        token_network_registry_proxy.add_token(bad_token_address, 'latest')
+        token_network_registry_proxy.add_token(
+            token_address=bad_token_address,
+            channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+            token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+            given_block_identifier='latest',
+        )
     # create token network & register it
     test_token = deploy_token(
         deploy_client=deploy_client,
@@ -42,12 +51,16 @@ def test_token_network_registry(
     event_filter = token_network_registry_proxy.tokenadded_filter()
     token_network_address = token_network_registry_proxy.add_token(
         token_address=test_token_address,
+        channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+        token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
         given_block_identifier='latest',
     )
 
     with pytest.raises(RaidenRecoverableError) as exc:
         token_network_address = token_network_registry_proxy.add_token(
             token_address=test_token_address,
+            channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+            token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
             given_block_identifier='latest',
         )
 

@@ -27,6 +27,7 @@ from raiden.utils.typing import (
     PaymentNetworkID,
     T_TargetAddress,
     TokenAddress,
+    TokenAmount,
 )
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK_REGISTRY, EVENT_TOKEN_NETWORK_CREATED
 from raiden_contracts.contract_manager import ContractManager
@@ -89,7 +90,13 @@ class TokenNetworkRegistry:
 
         return address
 
-    def add_token(self, token_address: TokenAddress, given_block_identifier: BlockSpecification):
+    def add_token(
+            self,
+            token_address: TokenAddress,
+            channel_participant_deposit_limit: TokenAmount,
+            token_network_deposit_limit: TokenAmount,
+            given_block_identifier: BlockSpecification,
+    ):
         # given_block_identifier is not really used in this function yet as there
         # are no preconditions to check with the given block
         if not is_binary_address(token_address):
@@ -108,6 +115,8 @@ class TokenNetworkRegistry:
             checking_block,
             'createERC20TokenNetwork',
             token_address,
+            channel_participant_deposit_limit,
+            token_network_deposit_limit,
         )
 
         if gas_limit:
@@ -116,6 +125,8 @@ class TokenNetworkRegistry:
                 'createERC20TokenNetwork',
                 safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK),
                 token_address,
+                channel_participant_deposit_limit,
+                token_network_deposit_limit,
             )
 
             self.client.poll(transaction_hash)
