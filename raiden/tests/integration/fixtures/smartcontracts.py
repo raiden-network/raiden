@@ -5,6 +5,7 @@ from raiden.constants import (
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     UNLIMITED_TOKEN_NETWORKS,
+    Environment,
 )
 from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
 from raiden.tests.utils.smartcontracts import (
@@ -108,18 +109,22 @@ def deploy_token_network_registry_and_return_address(
         settle_timeout_min,
         settle_timeout_max,
         contract_manager,
+        environment_type,
 ) -> typing.Address:
+    constructor_arguments = [
+        to_checksum_address(secret_registry_address),
+        chain_id,
+        settle_timeout_min,
+        settle_timeout_max,
+    ]
+    if environment_type == Environment.DEVELOPMENT:
+        constructor_arguments.append(UNLIMITED_TOKEN_NETWORKS)
+
     address = deploy_contract_web3(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
         deploy_client=deploy_client,
         contract_manager=contract_manager,
-        constructor_arguments=(
-            to_checksum_address(secret_registry_address),
-            chain_id,
-            settle_timeout_min,
-            settle_timeout_max,
-            UNLIMITED_TOKEN_NETWORKS,
-        ),
+        constructor_arguments=constructor_arguments,
     )
     return address
 
