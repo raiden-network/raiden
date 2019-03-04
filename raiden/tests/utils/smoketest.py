@@ -21,6 +21,10 @@ from web3.middleware import geth_poa_middleware
 
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
+from raiden.constants import (
+    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+)
 from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port

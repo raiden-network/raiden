@@ -190,6 +190,8 @@ class RaidenAPI:
             self,
             registry_address: typing.PaymentNetworkID,
             token_address: typing.TokenAddress,
+            channel_participant_deposit_limit: typing.TokenAmount,
+            token_network_deposit_limit: typing.TokenAmount,
             retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> typing.TokenNetworkAddress:
         """Register the `token_address` in the blockchain. If the address is already
@@ -217,6 +219,8 @@ class RaidenAPI:
             registry = self.raiden.chain.token_network_registry(registry_address)
             return registry.add_token(
                 token_address=token_address,
+                channel_participant_deposit_limit=channel_participant_deposit_limit,
+                token_network_deposit_limit=token_network_deposit_limit,
                 given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
             )
         except RaidenRecoverableError as e:
