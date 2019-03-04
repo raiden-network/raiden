@@ -313,10 +313,14 @@ def run_app(
         contracts_version = DEVELOPMENT_CONTRACT_VERSION
     else:
         contracts_version = RED_EYES_CONTRACT_VERSION
+
     config['contracts_path'] = contracts_precompiled_path(contracts_version)
 
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
-        deployment_data = get_contracts_deployed(node_network_id, contracts_version)
+        deployment_data = get_contracts_deployed(
+            chain_id=node_network_id,
+            version=contracts_version,
+        )
         not_allowed = (  # for now we only disallow mainnet with test configuration
             network_id == 1 and
             environment_type == Environment.DEVELOPMENT

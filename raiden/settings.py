@@ -46,6 +46,6 @@ ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = 3
 ETHERSCAN_API = 'https://{network}.etherscan.io/api?module=proxy&action={action}'
 
 RED_EYES_CONTRACT_VERSION = '0.4.0'
-DEVELOPMENT_CONTRACT_VERSION = '0.3._'
+DEVELOPMENT_CONTRACT_VERSION = None
 
 SUPPORTED_ETH_CLIENTS = ('geth', 'parity')
