@@ -2,6 +2,11 @@ import pytest
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
+from raiden.tests.fixtures.variables import (
+    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+    TEST_MAX_TOKEN_NETWORKS,
+)
 from raiden.tests.utils.smartcontracts import (
     deploy_contract_web3,
     deploy_token,
@@ -48,7 +53,12 @@ def deploy_all_tokens_register_and_return_their_addresses(
     if register_tokens:
         for token in token_addresses:
             registry = deploy_service.token_network_registry(token_network_registry_address)
-            registry.add_token(token_address=token, given_block_identifier='latest')
+            registry.add_token(
+                token_address=token,
+                channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+                token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+                given_block_identifier='latest',
+            )
 
     return token_addresses
 
@@ -108,6 +118,7 @@ def deploy_token_network_registry_and_return_address(
             chain_id,
             settle_timeout_min,
             settle_timeout_max,
+            TEST_MAX_TOKEN_NETWORKS,
         ),
     )
     return address
@@ -129,6 +140,8 @@ def register_token_and_return_the_network_proxy(
     )
     token_network_address = token_network_registry_proxy.add_token(
         token_address=token_proxy.address,
+        channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+        token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
         given_block_identifier='latest',
     )
 

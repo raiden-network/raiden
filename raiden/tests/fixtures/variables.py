@@ -21,7 +21,10 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
 
+TEST_MAX_TOKEN_NETWORKS = 100000  # unlimited
+RED_EYES_MAX_TOKEN_NETWORKS = 1
 RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
+RED_EYES_PER_TOKEN_NETWORK_LIMIT = int(250 * 10 ** 18)
 
 DUPLICATED_BRACKETS = str.maketrans({'{': '{{', '}': '}}'})
 
@@ -329,7 +332,7 @@ def private_rooms():
 @pytest.fixture
 def environment_type():
     """Specifies the environment type"""
-    return Environment.PRODUCTION
+    return Environment.DEVELOPMENT
 
 
 @pytest.fixture
