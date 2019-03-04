@@ -1,12 +1,12 @@
 import pytest
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
-from raiden.tests.fixtures.variables import (
+from raiden.constants import (
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-    TEST_MAX_TOKEN_NETWORKS,
+    UNLIMITED_TOKEN_NETWORKS,
 )
+from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
 from raiden.tests.utils.smartcontracts import (
     deploy_contract_web3,
     deploy_token,
@@ -118,7 +118,7 @@ def deploy_token_network_registry_and_return_address(
             chain_id,
             settle_timeout_min,
             settle_timeout_max,
-            TEST_MAX_TOKEN_NETWORKS,
+            UNLIMITED_TOKEN_NETWORKS,
         ),
     )
     return address

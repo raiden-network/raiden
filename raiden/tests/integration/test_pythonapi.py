@@ -5,7 +5,11 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.constants import Environment
+from raiden.constants import (
+    UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
+    UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+    Environment,
+)
 from raiden.exceptions import (
     AlreadyRegisteredTokenAddress,
     DepositOverLimit,
@@ -67,7 +71,12 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
     api1 = RaidenAPI(app1.raiden)
     assert token_address not in api1.get_tokens_list(registry_address)
 
-    api1.token_network_register(registry_address, token_address)
+    api1.token_network_register(
+        registry_address=registry_address,
+        token_address=token_address,
+        channel_participant_deposit_limit=UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
+        token_network_deposit_limit=UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+    )
     exception = RuntimeError('Did not see the token registration within 30 seconds')
     with gevent.Timeout(seconds=30, exception=exception):
         wait_for_state_change(
@@ -84,7 +93,12 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
 
     # Exception if we try to reregister
     with pytest.raises(AlreadyRegisteredTokenAddress):
-        api1.token_network_register(registry_address, token_address)
+        api1.token_network_register(
+            registry_address=registry_address,
+            token_address=token_address,
+            channel_participant_deposit_limit=UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
+            token_network_deposit_limit=UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+        )
 
 
 @pytest.mark.parametrize('privatekey_seed', ['test_token_registration:{}'])
@@ -121,7 +135,12 @@ def test_register_token_insufficient_eth(
 
     # At this point we should get an UnrecoverableError due to InsufficientFunds
     with pytest.raises(InsufficientFunds):
-        api1.token_network_register(registry_address, token_address)
+        api1.token_network_register(
+            registry_address=registry_address,
+            token_address=token_address,
+            channel_participant_deposit_limit=UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
+            token_network_deposit_limit=UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+        )
 
 
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -163,7 +182,12 @@ def test_token_registered_race(raiden_chain, token_amount, retry_timeout, contra
     assert token_address not in api0.get_tokens_list(registry_address)
     assert token_address not in api1.get_tokens_list(registry_address)
 
-    api0.token_network_register(registry_address, token_address)
+    api0.token_network_register(
+        registry_address=registry_address,
+        token_address=token_address,
+        channel_participant_deposit_limit=UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
+        token_network_deposit_limit=UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+    )
     exception = RuntimeError('Did not see the token registration within 30 seconds')
     with gevent.Timeout(seconds=30, exception=exception):
         wait_for_state_change(
@@ -448,7 +472,12 @@ def test_set_deposit_limit_crash(raiden_network, token_amount, contract_manager,
     api1 = RaidenAPI(app1.raiden)
     assert token_address not in api1.get_tokens_list(registry_address)
 
-    api1.token_network_register(registry_address, token_address)
+    api1.token_network_register(
+        registry_address=registry_address,
+        token_address=token_address,
+        channel_participant_deposit_limit=UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
+        token_network_deposit_limit=UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+    )
     exception = RuntimeError('Did not see the token registration within 30 seconds')
     with gevent.Timeout(seconds=30, exception=exception):
         wait_for_state_change(
