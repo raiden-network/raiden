@@ -91,6 +91,7 @@ def main(
         {'': 'INFO', 'raiden': 'DEBUG', 'scenario_player': 'DEBUG'},
         debug_log_file_name=log_file_name,
         _first_party_packages=_FIRST_PARTY_PACKAGES | frozenset(['scenario_player']),
+        _debug_log_file_additional_level_filters={'scenario_player': 'DEBUG'},
     )
 
     log_buffer = None
