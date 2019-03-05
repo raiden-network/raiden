@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import platform
 import random
 import shutil
 import socket
@@ -12,6 +13,7 @@ from enum import Enum
 from pathlib import Path
 from tarfile import TarFile
 from typing import Any, Dict
+from urllib.parse import urljoin
 from zipfile import ZipFile
 
 import gevent
@@ -33,12 +35,8 @@ log = structlog.get_logger(__name__)
 
 
 RAIDEN_RELEASES_URL = 'https://raiden-nightlies.ams3.digitaloceanspaces.com/'
-if sys.platform == 'darwin':
-    RAIDEN_RELEASES_LATEST_FILE = '_LATEST-macOS.txt'
-    RAIDEN_RELEASE_VERSIONED_NAME_TEMPLATE = 'raiden-v{version}-macOS.zip'
-else:
-    RAIDEN_RELEASES_LATEST_FILE = '_LATEST-linux.txt'
-    RAIDEN_RELEASE_VERSIONED_NAME_TEMPLATE = 'raiden-v{version}-linux.tar.gz'
+RAIDEN_RELEASES_LATEST_FILE_TEMPLATE = '_LATEST-{platform}-{arch}.txt'
+RAIDEN_RELEASES_VERSIONED_NAME_TEMPLATE = 'raiden-v{version}-{platform}-{arch}.zip'
 
 
 MANAGED_CONFIG_OPTIONS = {
@@ -97,7 +95,10 @@ class RaidenReleaseKeeper:
         else:
             if version.startswith('v'):
                 version = version.lstrip('v')
-            release_file_name = RAIDEN_RELEASE_VERSIONED_NAME_TEMPLATE.format(version=version)
+            release_file_name = self._expand_release_template(
+                RAIDEN_RELEASES_VERSIONED_NAME_TEMPLATE,
+                version=version,
+            )
 
         release_file_path = self._get_release_file(release_file_name)
         return self._get_bin_for_release(release_file_path)
@@ -151,9 +152,20 @@ class RaidenReleaseKeeper:
     @property
     @ttl_cache(maxsize=1, ttl=600)
     def _latest_release_name(self):
-        url = RAIDEN_RELEASES_URL + RAIDEN_RELEASES_LATEST_FILE
-        log.debug('Fetching latest Raiden release')
+        latest_release_file_name = self._expand_release_template(
+            RAIDEN_RELEASES_LATEST_FILE_TEMPLATE,
+        )
+        url = urljoin(RAIDEN_RELEASES_URL, latest_release_file_name)
+        log.debug('Fetching latest Raiden release', lookup_url=url)
         return requests.get(url).text.strip()
+
+    @staticmethod
+    def _expand_release_template(template, **kwargs):
+        return template.format(
+            platform='macOS' if sys.platform == 'darwin' else sys.platform,
+            arch=platform.machine(),
+            **kwargs,
+        )
 
 
 class NodeRunner:

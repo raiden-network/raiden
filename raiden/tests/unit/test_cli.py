@@ -67,15 +67,15 @@ def test_cli_option_dependencies(cli_runner, args, error_message):
 def test_cli_version(cli_runner):
     result = cli_runner(run, ['version'])
     result_json = json.loads(result.output)
-    result_expected_keys = [
+    result_expected_keys = {
         'raiden',
         'python_implementation',
         'python_version',
         'system',
+        'architecture',
         'distribution',
-    ]
-    for expected_key in result_expected_keys:
-        assert expected_key in result_json
+    }
+    assert result_expected_keys == result_json.keys()
     assert result.exit_code == 0
 
 
