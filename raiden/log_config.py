@@ -152,8 +152,9 @@ def configure_logging(
         log_file: str = None,
         disable_debug_logfile: bool = False,
         debug_log_file_name: str = None,
-        _first_party_packages: FrozenSet[str] = _FIRST_PARTY_PACKAGES,
         cache_logger_on_first_use: bool = True,
+        _first_party_packages: FrozenSet[str] = _FIRST_PARTY_PACKAGES,
+        _debug_log_file_additional_level_filters: Dict[str, str] = None,
 ):
     structlog.reset_defaults()
 
@@ -228,6 +229,7 @@ def configure_logging(
                     'log_level_config': {
                         '': DEFAULT_LOG_LEVEL,
                         'raiden': 'DEBUG',
+                        **(_debug_log_file_additional_level_filters or {}),
                     },
                 },
             },

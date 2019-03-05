@@ -167,11 +167,10 @@ def get_system_spec() -> typing.Dict[str, str]:
             platform.architecture()[0],
         )
     else:
-        system_info = '{} {} {} {}'.format(
+        system_info = '{} {} {}'.format(
             platform.system(),
-            '_'.join(platform.architecture()),
+            '_'.join(part for part in platform.architecture() if part),
             platform.release(),
-            platform.machine(),
         )
 
     try:
@@ -188,6 +187,7 @@ def get_system_spec() -> typing.Dict[str, str]:
         'python_implementation': platform.python_implementation(),
         'python_version': platform.python_version(),
         'system': system_info,
+        'architecture': platform.machine(),
         'distribution': 'bundled' if getattr(sys, 'frozen', False) else 'source',
     }
     return system_spec
