@@ -103,7 +103,7 @@ def test_register_secret_batch_happy_path(secret_registry_proxy):
             block_identifier='latest',
         )
         msg = 'Block number reported by the proxy and the event must match'
-        assert block == secret_registered['args']['blockNumber'], msg
+        assert block == secret_registered['blockNumber'], msg
 
 
 def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
