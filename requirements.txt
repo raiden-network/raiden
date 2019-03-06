@@ -22,7 +22,6 @@ py-geth
 pysha3
 py-solc
 pystun-patched-for-raiden
-pytest
 pytoml
 raiden-contracts
 raiden-webui
