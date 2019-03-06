@@ -431,11 +431,13 @@ class RaidenService(Runnable):
         self.alarm.first_run(last_log_block_number)
 
         chain_state = views.state_from_raiden(self)
-        self._initialize_payment_statuses(chain_state)
 
-        # exceptions on these subtasks should crash the app and bubble up
-        self.alarm.link_exception(self.on_error)
-        self.transport.link_exception(self.on_error)
+        self._initialize_payment_statuses(chain_state)
+        self._initialize_transactions_queues(chain_state)
+        self._initialize_messages_queues(chain_state)
+        self._initialize_whitelists(chain_state)
+        self._initialize_monitoring_services_queue(chain_state)
+        self._initialize_ready_to_processed_events()
 
         if self.config['transport_type'] == 'udp':
             endpoint_registration_greenlet.get()  # re-raise if exception occurred
@@ -445,9 +447,10 @@ class RaidenService(Runnable):
         # - React to incoming messages
         # - Send pending transactions
         # - Send pending message
-        self._initialize_transactions_queues(chain_state)
-        self._initialize_transport(chain_state)
-        self.alarm.start()
+        self.alarm.link_exception(self.on_error)
+        self.transport.link_exception(self.on_error)
+        self._start_transport(chain_state)
+        self._start_alarm_task()
 
         log.debug('Raiden Service started', node=pex(self.address))
         super().start()
@@ -513,7 +516,7 @@ class RaidenService(Runnable):
     def __repr__(self):
         return f'<{self.__class__.__name__} node:{pex(self.address)}>'
 
-    def _initialize_transport(self, chain_state: ChainState):
+    def _start_transport(self, chain_state: ChainState):
         """ Initialize the transport and related facilities.
 
         Note:
@@ -523,27 +526,35 @@ class RaidenService(Runnable):
             necessary to reject new messages for closed channels.
         """
         assert self.alarm.is_primed(), f'AlarmTask not primed. node:{self!r}'
-        assert not self.ready_to_process_events
-
-        self._initialize_messages_queues(chain_state)
-        self._initialize_whitelists(chain_state)
-        self._initiatize_monitoring_services_queue(chain_state)
-
-        self.ready_to_process_events = True
+        assert self.ready_to_process_events, f'Event procossing disable. node:{self!r}'
 
         self.transport.start(
             raiden_service=self,
             message_handler=self.message_handler,
             prev_auth_data=chain_state.last_transport_authdata,
         )
-        self._initiatize_start_neighbours_healthcheck(chain_state)
-
-    def _initiatize_start_neighbours_healthcheck(self, chain_state: ChainState):
-        assert self.transport, f'Transport not running. node:{self!r}'
 
         for neighbour in views.all_neighbour_nodes(chain_state):
             if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                 self.start_health_check_for(neighbour)
+
+    def _start_alarm_task(self):
+        """Start the alarm task.
+
+        Note:
+            The alarm task must be started only when processing events is
+            allowed, otherwise side-effects of blockchain events will be
+            ignored.
+        """
+        assert self.ready_to_process_events, f'Event procossing disable. node:{self!r}'
+        self.alarm.start()
+
+    def _initialize_ready_to_processed_events(self):
+        assert not self.transport
+        assert not self.alarm
+
+        # This flag /must/ be set to true before the transport or the alarm task is started
+        self.ready_to_process_events = True
 
     def get_block_number(self) -> BlockNumber:
         assert self.wal, f'WAL object not yet initialized. node:{self!r}'
@@ -722,7 +733,7 @@ class RaidenService(Runnable):
             self.handle_and_track_state_change(state_change)
 
     def _initialize_transactions_queues(self, chain_state: ChainState):
-        """ Send pending transactions from the previous run
+        """Initialize the pending transaction queue from the previous run.
 
         Note:
             This will only send the transactions which don't have their
@@ -786,7 +797,7 @@ class RaidenService(Runnable):
                 )
 
     def _initialize_messages_queues(self, chain_state: ChainState):
-        """ Push the message queues to the transport.
+        """Initialize all the message queues with the transport.
 
         Note:
             All messages from the state queues must be pushed to the transport
@@ -794,6 +805,10 @@ class RaidenService(Runnable):
             transport processes network messages too quickly, queueing new
             messages before any of the previous messages, resulting in new
             messages being out-of-order.
+
+            The Alarm task must be started before this method is called,
+            otherwise queues for channel closed while the node was offline
+            won't be properly cleared. It is not bad but it is suboptimal.
         """
         assert not self.transport, f'Transport is running. node:{self!r}'
         assert self.alarm.is_primed(), f'AlarmTask not primed. node:{self!r}'
@@ -808,8 +823,17 @@ class RaidenService(Runnable):
                 self.sign(message)
                 self.transport.send_async(queue_identifier, message)
 
-    def _initiatize_monitoring_services_queue(self, chain_state: ChainState):
-        """Send the monitoring requests for all current balance proofs."""
+    def _initialize_monitoring_services_queue(self, chain_state: ChainState):
+        """Send the monitoring requests for all current balance proofs.
+
+        Note:
+            The transport must be started before
+            `_initialize_monitoring_services_queue` is called, otherwise the
+            node will process off-chain messages, which may include new
+            transfers, without having the guarantee of the monitoring service
+            being up-to-date, which must never be the case for a node mediating
+            a transfer.
+        """
 
         assert not self.transport, 'Transport is running. node:{self!r}'
         assert self.wal, 'The node state must have been restored. node:{self!r}'
