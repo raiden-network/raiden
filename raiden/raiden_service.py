@@ -592,7 +592,7 @@ class RaidenService(Runnable):
         )
 
         greenlets: List[Greenlet] = list()
-        if not self.ready_to_process_events:
+        if self.ready_to_process_events:
             for raiden_event in raiden_event_list:
                 greenlets.append(
                     self.handle_event(raiden_event=raiden_event),
