@@ -47,10 +47,8 @@ def test_detect_balance_proof_change():
     assert len(diff()) == 0
 
     channel = NettingChannelState(
-        1,
-        0,
+        factories.make_canonical_identifier(),
         b'a',
-        1,
         1,
         1,
         2,

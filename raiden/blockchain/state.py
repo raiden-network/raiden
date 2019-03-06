@@ -3,6 +3,7 @@ from raiden.transfer.state import (
     NettingChannelState,
     TransactionExecutionStatus,
 )
+from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
@@ -10,7 +11,6 @@ from raiden.utils.typing import (
     PaymentNetworkID,
     TokenAddress,
     TokenNetworkAddress,
-    TokenNetworkID,
 )
 
 
@@ -62,11 +62,13 @@ def get_channel_state(
     settle_transaction = None
 
     channel = NettingChannelState(
-        identifier=identifier,
-        chain_id=channel_details.chain_id,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=channel_details.chain_id,
+            token_network_address=token_network_address,
+            channel_identifier=identifier,
+        ),
         token_address=token_address,
         payment_network_identifier=payment_network_identifier,
-        token_network_identifier=TokenNetworkID(token_network_address),
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         our_state=our_state,

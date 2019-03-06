@@ -1517,11 +1517,9 @@ class NettingChannelState(State):
 
     def __init__(
             self,
-            identifier: ChannelID,
-            chain_id: ChainID,
+            canonical_identifier: CanonicalIdentifier,
             token_address: TokenAddress,
             payment_network_identifier: PaymentNetworkID,
-            token_network_identifier: TokenNetworkID,
             reveal_timeout: BlockTimeout,
             settle_timeout: BlockTimeout,
             our_state: NettingChannelEndState,
@@ -1531,6 +1529,9 @@ class NettingChannelState(State):
             settle_transaction: TransactionExecutionStatus = None,
             update_transaction: TransactionExecutionStatus = None,
     ):
+        chain_id = canonical_identifier.chain_identifier
+        identifier = canonical_identifier.channel_identifier
+        token_network_identifier = canonical_identifier.token_network_address
 
         if reveal_timeout >= settle_timeout:
             raise ValueError('reveal_timeout must be smaller than settle_timeout')
@@ -1656,11 +1657,13 @@ class NettingChannelState(State):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'NettingChannelState':
         restored = cls(
-            identifier=ChannelID(int(data['identifier'])),
-            chain_id=data['chain_id'],
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=data['chain_id'],
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['identifier'])),
+            ),
             token_address=to_canonical_address(data['token_address']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
             reveal_timeout=int(data['reveal_timeout']),
             settle_timeout=int(data['settle_timeout']),
             our_state=data['our_state'],

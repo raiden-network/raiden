@@ -183,11 +183,12 @@ def make_channel_state(
     )
 
     return NettingChannelState(
-        identifier=channel_identifier,
-        chain_id=UNIT_CHAIN_ID,
+        canonical_identifier=make_canonical_identifier(
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
+        ),
         token_address=token_address,
         payment_network_identifier=payment_network_identifier,
-        token_network_identifier=token_network_identifier,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
         our_state=our_state,
@@ -622,11 +623,9 @@ def _(properties, defaults=None) -> NettingChannelEndState:
 
 
 class NettingChannelStateProperties(NamedTuple):
-    identifier: typing.ChannelID = EMPTY
-    chain_id: typing.ChainID = EMPTY
+    canonical_identifier: CanonicalIdentifier = EMPTY
     token_address: typing.TokenAddress = EMPTY
     payment_network_identifier: typing.PaymentNetworkID = EMPTY
-    token_network_identifier: typing.TokenNetworkID = EMPTY
 
     reveal_timeout: typing.BlockTimeout = EMPTY
     settle_timeout: typing.BlockTimeout = EMPTY
@@ -640,11 +639,9 @@ class NettingChannelStateProperties(NamedTuple):
 
 
 NETTING_CHANNEL_STATE_DEFAULTS = NettingChannelStateProperties(
-    identifier=UNIT_CHANNEL_ID,
-    chain_id=UNIT_CHAIN_ID,
+    canonical_identifier=make_canonical_identifier(),
     token_address=UNIT_TOKEN_ADDRESS,
     payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
-    token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     our_state=NETTING_CHANNEL_END_STATE_DEFAULTS,
@@ -1033,14 +1030,14 @@ def mediator_make_channel_pair(
 ) -> ChannelSet:
     properties_list = [
         NettingChannelStateProperties(
-            identifier=1,
+            canonical_identifier=make_canonical_identifier(channel_identifier=1),
             partner_state=NettingChannelEndStateProperties(
                 address=UNIT_TRANSFER_SENDER,
                 balance=amount,
             ),
         ),
         NettingChannelStateProperties(
-            identifier=2,
+            canonical_identifier=make_canonical_identifier(channel_identifier=2),
             our_state=NettingChannelEndStateProperties(balance=amount),
             partner_state=NettingChannelEndStateProperties(address=UNIT_TRANSFER_TARGET),
         ),
@@ -1082,7 +1079,7 @@ def make_transfers_pair(
     ))
     properties_list = [
         NettingChannelStateProperties(
-            identifier=i,
+            canonical_identifier=make_canonical_identifier(channel_identifier=i),
             our_state=NettingChannelEndStateProperties(
                 address=ChannelSet.ADDRESSES[0],
                 privatekey=ChannelSet.PKEYS[0],
