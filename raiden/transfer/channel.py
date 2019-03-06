@@ -1394,7 +1394,7 @@ def events_for_close(
         close_event = ContractSendChannelClose(
             channel_identifier=channel_state.identifier,
             token_address=channel_state.token_address,
-            token_network_identifier=channel_state.token_network_identifier,
+            token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
             balance_proof=balance_proof,
             triggered_by_block_hash=block_hash,
         )
@@ -1463,7 +1463,7 @@ def events_for_expired_lock(
         locked_lock=locked_lock,
         pseudo_random_generator=pseudo_random_generator,
         chain_id=channel_state.chain_id,
-        token_network_identifier=channel_state.token_network_identifier,
+        token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
         channel_identifier=channel_state.identifier,
         recipient=channel_state.partner_state.address,
     )
@@ -1808,7 +1808,7 @@ def handle_channel_closed(
             update = ContractSendChannelUpdateTransfer(
                 expiration=expiration,
                 channel_identifier=channel_state.identifier,
-                token_network_identifier=channel_state.token_network_identifier,
+                token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
                 balance_proof=balance_proof,
                 triggered_by_block_hash=state_change.block_hash,
             )
@@ -1856,7 +1856,7 @@ def handle_channel_settled(
         if not is_settle_pending and merkle_tree_leaves:
             onchain_unlock = ContractSendChannelBatchUnlock(
                 token_address=channel_state.token_address,
-                token_network_identifier=channel_state.token_network_identifier,
+                token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
                 channel_identifier=channel_state.identifier,
                 participant=channel_state.partner_state.address,
                 triggered_by_block_hash=state_change.block_hash,
