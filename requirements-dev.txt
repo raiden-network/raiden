@@ -8,6 +8,7 @@
 -r requirements-docs.txt
 
 # Testing
+pytest==4.1.1
 pytest-cov==2.5.1
 pytest-random==0.02
 pytest-timeout==1.3.3
