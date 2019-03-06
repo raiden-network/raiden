@@ -22,6 +22,7 @@ from raiden.tests.utils.factories import (
     NettingChannelStateProperties,
     TransactionExecutionStatusProperties,
     create,
+    make_canonical_identifier,
     make_secret,
 )
 from raiden.tests.utils.transfer import make_receive_expired_lock, make_receive_transfer_mediated

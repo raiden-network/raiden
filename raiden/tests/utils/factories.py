@@ -274,8 +274,7 @@ def make_transfer(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=UNIT_CHAIN_ID,
+        canonical_identifier=make_canonical_identifier(
             token_network_address=token_network_identifier,
             channel_identifier=channel_identifier,
         ),
@@ -437,8 +436,7 @@ def make_signed_balance_proof(
         nonce=nonce,
         balance_hash=balance_hash,
         additional_hash=extra_hash,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=UNIT_CHAIN_ID,
+        canonical_identifier=make_canonical_identifier(
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
@@ -454,8 +452,7 @@ def make_signed_balance_proof(
         message_hash=extra_hash,
         signature=signature,
         sender=sender_address,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=UNIT_CHAIN_ID,
+        canonical_identifier=make_canonical_identifier(
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),
@@ -721,7 +718,7 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
         keys = ('transferred_amount', 'locked_amount', 'locksroot')
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
-        canonical_identifier = CanonicalIdentifier(
+        canonical_identifier = make_canonical_identifier(
             chain_identifier=params.pop('chain_id'),
             token_network_address=params.pop('token_network_identifier'),
             channel_identifier=params.pop('channel_identifier'),
@@ -778,7 +775,7 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
         parameters.pop('balance_proof'),
         defaults.balance_proof,
     )
-    balance_proof_parameters['canonical_identifier'] = CanonicalIdentifier(
+    balance_proof_parameters['canonical_identifier'] = make_canonical_identifier(
         chain_identifier=balance_proof_parameters.pop('chain_id'),
         token_network_address=balance_proof_parameters.pop('token_network_identifier'),
         channel_identifier=balance_proof_parameters.pop('channel_identifier'),
