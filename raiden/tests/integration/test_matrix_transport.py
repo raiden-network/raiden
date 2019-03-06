@@ -1111,7 +1111,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport0.start_health_check(raiden_service1.address)
     transport3.start_health_check(raiden_service0.address)
 
-    assert ping_pong_message_success(transport0, transport3) is True
+    assert ping_pong_message_success(transport0, transport3)
 
     # Node two switches to second server
     transport3.stop()
@@ -1120,7 +1120,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport4.start_health_check(raiden_service0.address)
     gevent.sleep(.5)
 
-    assert ping_pong_message_success(transport0, transport4) is True
+    assert ping_pong_message_success(transport0, transport4)
 
     # Node two switches to third server
     transport4.stop()
@@ -1129,7 +1129,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport5.start_health_check(raiden_service0.address)
     gevent.sleep(.5)
 
-    assert ping_pong_message_success(transport0, transport5) is True
+    assert ping_pong_message_success(transport0, transport5)
     # Node one switches to second server, Node two back to first
     transport0.stop()
     transport5.stop()
@@ -1138,7 +1138,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport3.start(raiden_service1, message_handler1, '')
     gevent.sleep(.5)
 
-    assert ping_pong_message_success(transport1, transport3) is True
+    assert ping_pong_message_success(transport1, transport3)
 
     # Node two joins on second server again
     transport3.stop()
@@ -1146,7 +1146,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport4.start(raiden_service1, message_handler1, '')
     gevent.sleep(.5)
 
-    assert ping_pong_message_success(transport1, transport4) is True
+    assert ping_pong_message_success(transport1, transport4)
 
     # Node two switches to third server
     transport4.stop()
@@ -1154,7 +1154,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport5.start(raiden_service1, message_handler1, '')
     gevent.sleep(.5)
 
-    assert ping_pong_message_success(transport1, transport5) is True
+    assert ping_pong_message_success(transport1, transport5)
 
     # Node one switches to third server, node two switches to first server
     transport1.stop()
@@ -1165,7 +1165,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport3.start(raiden_service1, message_handler1, '')
     gevent.sleep(.5)
 
-    assert ping_pong_message_success(transport2, transport3) is True
+    assert ping_pong_message_success(transport2, transport3)
 
     # Node two switches to second server
 
@@ -1173,7 +1173,7 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport4.start(raiden_service1, message_handler1, '')
 
     gevent.sleep(.5)
-    assert ping_pong_message_success(transport2, transport4) is True
+    assert ping_pong_message_success(transport2, transport4)
 
     # Node two joins on third server
 
@@ -1181,4 +1181,27 @@ def test_matrix_multi_user_roaming(matrix_transports):
     transport5.start(raiden_service1, message_handler1, '')
 
     gevent.sleep(.5)
-    assert ping_pong_message_success(transport2, transport5) is True
+    assert ping_pong_message_success(transport2, transport5)
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize('private_rooms', [[True, True]])
+@pytest.mark.parametrize('matrix_server_count', [2])
+@pytest.mark.parametrize('number_of_transports', [2])
+def test_reproduce_handle_invite_send_race(matrix_transports):
+    transport0, transport1 = matrix_transports
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
+
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
+    assert ping_pong_message_success(transport0, transport1)
