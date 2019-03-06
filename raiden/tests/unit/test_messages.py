@@ -1,7 +1,7 @@
 import pytest
 
 from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof, UpdatePFS
-from raiden.tests.utils.factories import make_privkey_address
+from raiden.tests.utils.factories import make_canonical_identifier, make_privkey_address
 from raiden.tests.utils.messages import (
     ADDRESS as PARTNER_ADDRESS,
     MEDIATED_TRANSFER_INVALID_VALUES,
@@ -18,7 +18,6 @@ from raiden.transfer.balance_proof import (
     pack_reward_proof,
 )
 from raiden.transfer.state import BalanceProofUnsignedState
-from raiden.utils import CanonicalIdentifier
 from raiden.utils.signer import LocalSigner, recover
 
 PRIVKEY, ADDRESS = make_privkey_address()
@@ -110,7 +109,7 @@ def test_request_monitoring():
         nonce=request_monitoring.balance_proof.nonce,
         balance_hash=request_monitoring.balance_proof.balance_hash,
         additional_hash=request_monitoring.balance_proof.additional_hash,
-        canonical_identifier=CanonicalIdentifier(
+        canonical_identifier=make_canonical_identifier(
             chain_identifier=request_monitoring.balance_proof.chain_id,
             token_network_address=request_monitoring.balance_proof.token_network_address,
             channel_identifier=request_monitoring.balance_proof.channel_identifier,
@@ -123,7 +122,7 @@ def test_request_monitoring():
         nonce=request_monitoring.balance_proof.nonce,
         balance_hash=request_monitoring.balance_proof.balance_hash,
         additional_hash=request_monitoring.balance_proof.additional_hash,
-        canonical_identifier=CanonicalIdentifier(
+        canonical_identifier=make_canonical_identifier(
             chain_identifier=request_monitoring.balance_proof.chain_id,
             token_network_address=request_monitoring.balance_proof.token_network_address,
             channel_identifier=request_monitoring.balance_proof.channel_identifier,
