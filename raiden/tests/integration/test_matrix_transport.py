@@ -824,3 +824,25 @@ def test_pfs_global_messages(
     )
     transport.stop()
     transport.get()
+
+
+@pytest.mark.parametrize('private_rooms', [[True, True]])
+@pytest.mark.parametrize('matrix_server_count', [2])
+@pytest.mark.parametrize('number_of_transports', [2])
+def test_reproduce_handle_invite_send_race(matrix_transports):
+    transport0, transport1 = matrix_transports
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
+
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
+    assert ping_pong_message_success(transport0, transport1)
