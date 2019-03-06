@@ -771,11 +771,12 @@ def test_invalid_timeouts():
         small_settle_timeout = 49
 
         NettingChannelState(
-            identifier=identifier,
-            chain_id=UNIT_CHAIN_ID,
+            canonical_identifier=make_canonical_identifier(
+                token_network_address=token_network_identifier,
+                channel_identifier=identifier,
+            ),
             token_address=token_address,
             payment_network_identifier=payment_network_identifier,
-            token_network_identifier=token_network_identifier,
             reveal_timeout=large_reveal_timeout,
             settle_timeout=small_settle_timeout,
             our_state=our_state,
@@ -789,11 +790,12 @@ def test_invalid_timeouts():
     for invalid_value in (-1, 0, 1.1, 1.0):
         with pytest.raises(ValueError):
             NettingChannelState(
-                identifier=identifier,
-                chain_id=UNIT_CHAIN_ID,
+                canonical_identifier=make_canonical_identifier(
+                    token_network_address=token_network_identifier,
+                    channel_identifier=identifier,
+                ),
                 token_address=token_address,
                 payment_network_identifier=payment_network_identifier,
-                token_network_identifier=token_network_identifier,
                 reveal_timeout=invalid_value,
                 settle_timeout=settle_timeout,
                 our_state=our_state,
@@ -805,11 +807,12 @@ def test_invalid_timeouts():
 
         with pytest.raises(ValueError):
             NettingChannelState(
-                identifier=identifier,
-                chain_id=UNIT_CHAIN_ID,
+                canonical_identifier=make_canonical_identifier(
+                    token_network_address=token_network_identifier,
+                    channel_identifier=identifier,
+                ),
                 token_address=token_address,
                 payment_network_identifier=payment_network_identifier,
-                token_network_identifier=token_network_identifier,
                 reveal_timeout=reveal_timeout,
                 settle_timeout=invalid_value,
                 our_state=our_state,

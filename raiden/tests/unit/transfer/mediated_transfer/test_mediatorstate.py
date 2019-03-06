@@ -33,6 +33,7 @@ from raiden.tests.utils.factories import (
     NettingChannelStateProperties,
     create,
     create_properties,
+    make_canonical_identifier,
     make_channel_set,
     mediator_make_channel_pair,
     mediator_make_init_action,
@@ -188,12 +189,25 @@ def test_next_route_amount():
 def test_next_route_reveal_timeout():
     """ Routes with a larger reveal timeout than timeout_blocks must be ignored. """
     timeout_blocks = 10
+    identifiers = [make_canonical_identifier(channel_identifier=i) for i in range(1, 5)]
 
     channels = make_channel_set([
-        NettingChannelStateProperties(identifier=1, reveal_timeout=timeout_blocks * 2),
-        NettingChannelStateProperties(identifier=2, reveal_timeout=timeout_blocks + 1),
-        NettingChannelStateProperties(identifier=3, reveal_timeout=timeout_blocks // 2),
-        NettingChannelStateProperties(identifier=4, reveal_timeout=timeout_blocks),
+        NettingChannelStateProperties(
+            canonical_identifier=identifiers[0],
+            reveal_timeout=timeout_blocks * 2,
+        ),
+        NettingChannelStateProperties(
+            canonical_identifier=identifiers[1],
+            reveal_timeout=timeout_blocks + 1,
+        ),
+        NettingChannelStateProperties(
+            canonical_identifier=identifiers[2],
+            reveal_timeout=timeout_blocks // 2,
+        ),
+        NettingChannelStateProperties(
+            canonical_identifier=identifiers[3],
+            reveal_timeout=timeout_blocks,
+        ),
     ])
 
     chosen_channel = mediator.next_channel_from_routes(
@@ -979,18 +993,18 @@ def test_mediator_secret_reveal_empty_hash():
 def test_no_valid_routes():
     channels = make_channel_set([
         NettingChannelStateProperties(
-            identifier=1,
+            canonical_identifier=make_canonical_identifier(channel_identifier=1),
             partner_state=NettingChannelEndStateProperties(
                 balance=UNIT_TRANSFER_AMOUNT,
                 address=UNIT_TRANSFER_SENDER,
             ),
         ),
         NettingChannelStateProperties(
-            identifier=2,
+            make_canonical_identifier(channel_identifier=2),
             our_state=NettingChannelEndStateProperties(balance=UNIT_TRANSFER_AMOUNT - 1),
         ),
         NettingChannelStateProperties(
-            identifier=3,
+            make_canonical_identifier(channel_identifier=3),
             our_state=NettingChannelEndStateProperties(balance=0),
         ),
     ])
@@ -1362,14 +1376,14 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
     balance = 2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT
     channels = make_channel_set([
         NettingChannelStateProperties(
-            identifier=1,
+            make_canonical_identifier(channel_identifier=1),
             partner_state=NettingChannelEndStateProperties(
                 balance=balance,
                 address=UNIT_TRANSFER_SENDER,
             ),
         ),
         NettingChannelStateProperties(
-            identifier=2,
+            make_canonical_identifier(channel_identifier=2),
             our_state=NettingChannelEndStateProperties(balance=balance),
         ),
     ])

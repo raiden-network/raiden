@@ -20,7 +20,15 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import NettingChannelState, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal, ReceiveUnlock
 from raiden.transfer.utils import is_valid_secret_reveal
-from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockHash, BlockNumber, List, Optional
+from raiden.utils.typing import (
+    MYPY_ANNOTATION,
+    Address,
+    BlockHash,
+    BlockNumber,
+    List,
+    Optional,
+    TokenNetworkID,
+)
 
 
 def sanity_check(
@@ -245,7 +253,7 @@ def handle_unlock(
         transfer = target_state.transfer
         payment_received_success = EventPaymentReceivedSuccess(
             payment_network_identifier=channel_state.payment_network_identifier,
-            token_network_identifier=channel_state.token_network_identifier,
+            token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
             identifier=transfer.payment_identifier,
             amount=transfer.lock.amount,
             initiator=transfer.initiator,
