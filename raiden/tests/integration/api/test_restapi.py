@@ -582,13 +582,16 @@ def test_api_open_close_and_settle_channel(
     assert check_dict_nested_attrs(response.json(), expected_response)
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_api_close_insufficient_eth(
         api_server_test_instance,
         token_addresses,
         reveal_timeout,
-        skip_if_parity,
 ):
     # FIXME parity version of this test fails:
     # parity reports 'insufficient funds' correctly but raiden does not recognize it.
@@ -1265,6 +1268,10 @@ def test_register_token_mainnet(
     )
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -1275,7 +1282,6 @@ def test_register_token(
         token_addresses,
         raiden_network,
         contract_manager,
-        skip_if_parity,
 ):
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
@@ -1332,6 +1338,10 @@ def test_register_token(
     assert_response_with_error(poor_response, HTTPStatus.PAYMENT_REQUIRED)
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 @pytest.mark.parametrize('number_of_tokens', [0])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -1342,7 +1352,6 @@ def test_get_token_network_for_token(
         token_addresses,
         raiden_network,
         contract_manager,
-        skip_if_parity,
 ):
     app0 = raiden_network[0]
 

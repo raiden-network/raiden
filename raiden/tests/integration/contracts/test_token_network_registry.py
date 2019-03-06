@@ -8,11 +8,14 @@ from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 def test_token_network_registry(
         deploy_client,
         contract_manager,
         token_network_registry_address,
-        skip_if_parity,
 ):
     registry_address = to_canonical_address(token_network_registry_address)
 

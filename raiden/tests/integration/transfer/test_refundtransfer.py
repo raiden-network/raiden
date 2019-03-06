@@ -94,6 +94,10 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
     )
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') == 'udp',
+    reason='UDP does not seem to retry messages until processed #3185',
+)
 @pytest.mark.parametrize('privatekey_seed', ['test_refund_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -104,9 +108,6 @@ def test_refund_transfer(
         deposit,
         network_wait,
         retry_timeout,
-        # UDP does not seem to retry messages until processed
-        # https://github.com/raiden-network/raiden/issues/3185
-        skip_if_not_matrix,
 ):
     """A failed transfer must send a refund back.
 
@@ -284,6 +285,10 @@ def test_refund_transfer(
     assert secrethash not in state_from_raiden(app1.raiden).payment_mapping.secrethashes_to_task
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') == 'udp',
+    reason='UDP does not seem to retry messages until processed #3185',
+)
 @pytest.mark.parametrize('privatekey_seed', ['test_different_view_of_last_bp_during_unlock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -294,9 +299,6 @@ def test_different_view_of_last_bp_during_unlock(
         deposit,
         network_wait,
         retry_timeout,
-        # UDP does not seem to retry messages until processed
-        # https://github.com/raiden-network/raiden/issues/3185
-        skip_if_not_matrix,
         blockchain_type,
 ):
     """Test for https://github.com/raiden-network/raiden/issues/3196#issuecomment-449163888"""

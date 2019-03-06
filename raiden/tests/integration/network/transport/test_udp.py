@@ -5,8 +5,12 @@ from raiden.messages import Ping
 from raiden.transfer import state, views
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') not in ('udp', 'all'),
+    reason='UDP specific test',
+)
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_udp_reachable_node(raiden_network, skip_if_not_udp):
+def test_udp_reachable_node(raiden_network):
     """A node that answers the ping message must have its state set to
     reachable.
     """
@@ -31,8 +35,12 @@ def test_udp_reachable_node(raiden_network, skip_if_not_udp):
     assert network_state is state.NODE_NETWORK_REACHABLE
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') not in ('udp', 'all'),
+    reason='UDP specific test',
+)
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_udp_unreachable_node(raiden_network, skip_if_not_udp):
+def test_udp_unreachable_node(raiden_network):
     """A node that does *not* answer the ping message must have its state set to
     reachable.
     """
@@ -66,10 +74,14 @@ def test_udp_unreachable_node(raiden_network, skip_if_not_udp):
     assert network_state is state.NODE_NETWORK_UNREACHABLE
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Parity not supported',
+)
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_suite_survives_unhandled_exception(raiden_network, skip_if_parity):
+def test_suite_survives_unhandled_exception(raiden_network):
     """ Commit 56a617085e59fc88517e7043b629ffc9dcc0b8c4 removed code that changed
     gevent's SYSTEM_ERROR for tests. This test aims to show that there is no regression. """
     class UnhandledTestException(Exception):

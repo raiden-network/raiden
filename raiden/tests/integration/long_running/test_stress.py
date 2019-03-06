@@ -347,6 +347,10 @@ def assert_channels(raiden_network, token_network_identifier, deposit):
         )
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') not in ('udp', 'all'),
+    reason='UDP specific test',
+)
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [2])
@@ -360,7 +364,6 @@ def test_stress(
         retry_timeout,
         token_addresses,
         port_generator,
-        skip_if_not_udp,  # pylint: disable=unused-argument
 ):
 
     config_converter = LogLevelConfigType()

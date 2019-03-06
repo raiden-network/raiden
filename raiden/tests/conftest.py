@@ -180,11 +180,10 @@ def pytest_generate_tests(metafunc):
         transport = metafunc.config.getoption('transport')
         transport_and_privacy = list()
 
-        # avoid collecting test if 'skip_if_not_*'
-        if transport in ('udp', 'all') and 'skip_if_not_matrix' not in metafunc.fixturenames:
+        if transport in ('udp', 'all'):
             transport_and_privacy.append(('udp', None))
 
-        if transport in ('matrix', 'all') and 'skip_if_not_udp' not in metafunc.fixturenames:
+        if transport in ('matrix', 'all'):
             if 'public_and_private_rooms' in metafunc.fixturenames:
                 transport_and_privacy.extend([('matrix', False), ('matrix', True)])
             else:

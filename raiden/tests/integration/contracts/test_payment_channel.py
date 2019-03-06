@@ -12,6 +12,10 @@ from raiden.utils.signer import LocalSigner
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 def test_payment_channel_proxy_basics(
         token_network_proxy,
         private_keys,
@@ -19,7 +23,6 @@ def test_payment_channel_proxy_basics(
         chain_id,
         web3,
         contract_manager,
-        skip_if_parity,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
@@ -152,13 +155,16 @@ def test_payment_channel_proxy_basics(
     assert len(events) == 4  # ChannelOpened, ChannelNewDeposit, ChannelClosed, ChannelSettled
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 def test_payment_channel_outdated_channel_close(
         token_network_proxy,
         private_keys,
         chain_id,
         web3,
         contract_manager,
-        skip_if_parity,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 

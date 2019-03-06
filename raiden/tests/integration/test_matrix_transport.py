@@ -43,7 +43,10 @@ USERID1 = '@Alice:Wonderland'
 
 
 # All tests in this module require matrix
-pytestmark = pytest.mark.usefixtures('skip_if_not_matrix')
+pytestmark = pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') == 'udp',
+    reason='Test does not work with UDP',
+)
 
 
 class MessageHandler:
@@ -336,13 +339,22 @@ def test_matrix_message_sync(
     transport1.get()
 
 
-@pytest.mark.skipif(getattr(pytest, 'config').getvalue('usepdb'), reason='test fails with pdb')
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('usepdb'),
+    reason='test fails with pdb',
+)
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') != 'matrix',
+    reason='Test does not work with parity',
+)
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
 def test_matrix_tx_error_handling(
-        skip_if_not_matrix,
-        skip_if_parity,
         raiden_chain,
         token_addresses,
 ):

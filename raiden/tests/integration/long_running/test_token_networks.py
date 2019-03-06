@@ -71,6 +71,10 @@ def saturated_count(connection_managers, registry_address, token_address):
 # - Check if this test needs to be adapted for the matrix transport
 #   layer when activating it again. It might as it depends on the
 #   raiden_network fixture.
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 @pytest.mark.parametrize('number_of_nodes', [6])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [6])
@@ -78,7 +82,6 @@ def saturated_count(connection_managers, registry_address, token_address):
 def test_participant_selection(  # pylint: disable=too-many-locals
         raiden_network,
         token_addresses,
-        skip_if_parity,
 ):
     registry_address = raiden_network[0].raiden.default_registry.address
     token_address = token_addresses[0]

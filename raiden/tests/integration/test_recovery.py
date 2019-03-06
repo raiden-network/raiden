@@ -20,6 +20,10 @@ from raiden.transfer.state_change import (
 from raiden.utils import create_default_identifier
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') not in ('udp', 'all'),
+    reason='UDP specific test',
+)
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -29,7 +33,6 @@ def test_recovery_happy_case(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -148,6 +151,10 @@ def test_recovery_happy_case(
     )
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') not in ('udp', 'all'),
+    reason='UDP specific test',
+)
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -157,7 +164,6 @@ def test_recovery_unhappy_case(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
         retry_timeout,
 ):
     app0, app1, app2 = raiden_network
@@ -248,6 +254,10 @@ def test_recovery_unhappy_case(
     })
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') not in ('udp', 'all'),
+    reason='UDP specific test',
+)
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -257,7 +267,6 @@ def test_recovery_blockchain_events(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
 ):
     """ Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted

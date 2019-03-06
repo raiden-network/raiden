@@ -1,4 +1,5 @@
 import os
+
 import pytest
 from eth_utils import decode_hex, to_checksum_address
 
@@ -56,7 +57,11 @@ def get_list_of_block_numbers(item):
     return list()
 
 
-def test_call_invalid_selector(deploy_client, skip_if_parity):
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
+def test_call_invalid_selector(deploy_client):
     """ A JSON RPC call to a valid address but with an invalid selector returns
     the empty string.
     """
@@ -91,7 +96,11 @@ def test_call_inexisting_address(deploy_client):
     assert deploy_client.web3.eth.call(transaction) == b''
 
 
-def test_call_throws(deploy_client, skip_if_parity):
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
+def test_call_throws(deploy_client):
     """ A JSON RPC call to a function that throws returns the empty string. """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
@@ -101,7 +110,11 @@ def test_call_throws(deploy_client, skip_if_parity):
     assert call() == []
 
 
-def test_estimate_gas_fail(deploy_client, skip_if_parity):
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
+def test_estimate_gas_fail(deploy_client):
     """ A JSON RPC estimate gas call for a throwing transaction returns None"""
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
@@ -112,7 +125,11 @@ def test_estimate_gas_fail(deploy_client, skip_if_parity):
     assert not contract_proxy.estimate_gas(check_block, 'fail')
 
 
-def test_duplicated_transaction_same_gas_price_raises(deploy_client, skip_if_parity):
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
+def test_duplicated_transaction_same_gas_price_raises(deploy_client):
     """ If the same transaction is sent twice a JSON RPC error is raised. """
     gas_price = 2000000000
     gas_price_strategy = make_fixed_gas_price_strategy(gas_price)

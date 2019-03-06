@@ -351,26 +351,3 @@ def transport(request):
 @pytest.fixture
 def transport_protocol(transport):
     return TransportProtocol(transport)
-
-
-@pytest.fixture
-def skip_if_not_udp(request):
-    """Skip the test if not run with UDP transport"""
-    if request.config.option.transport in ('udp', 'all'):
-        return
-    pytest.skip('This test works only with UDP transport')
-
-
-@pytest.fixture
-def skip_if_not_matrix(request):
-    """Skip the test if not run with Matrix transport"""
-    if request.config.option.transport in ('matrix', 'all'):
-        return
-    pytest.skip('This test works only with Matrix transport')
-
-
-@pytest.fixture
-def skip_if_parity(blockchain_type):
-    """Skip the test if it is run with a Parity node"""
-    if blockchain_type == 'parity':
-        pytest.skip('This test does not work with parity.')

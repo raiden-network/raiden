@@ -87,6 +87,10 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
         api1.token_network_register(registry_address, token_address)
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 @pytest.mark.parametrize('privatekey_seed', ['test_token_registration:{}'])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -95,7 +99,6 @@ def test_register_token_insufficient_eth(
         raiden_network,
         token_amount,
         contract_manager,
-        skip_if_parity,
 ):
     app1 = raiden_network[0]
 
@@ -378,6 +381,10 @@ def test_funds_check_for_openchannel(raiden_network, token_addresses):
         gevent.joinall(greenlets, raise_error=True)
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') == 'udp',
+    reason='Test does not work with UDP',
+)
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('reveal_timeout', [8])
@@ -386,7 +393,6 @@ def test_payment_timing_out_if_partner_does_not_respond(
         raiden_network,
         token_addresses,
         reveal_timeout,
-        skip_if_not_matrix,
         retry_timeout,
 ):
     """ Test to make sure that when our target does not respond payment times out

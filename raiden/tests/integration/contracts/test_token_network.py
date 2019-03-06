@@ -64,6 +64,10 @@ def test_token_network_deposit_race(
         )
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 def test_token_network_proxy_basics(
         token_network_proxy,
         private_keys,
@@ -71,7 +75,6 @@ def test_token_network_proxy_basics(
         chain_id,
         web3,
         contract_manager,
-        skip_if_parity,
 ):
     # check settlement timeouts
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
@@ -362,6 +365,10 @@ def test_token_network_proxy_basics(
         assert 'getChannelIdentifier returned 0' in str(exc)
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 def test_token_network_proxy_update_transfer(
         token_network_proxy,
         private_keys,
@@ -369,7 +376,6 @@ def test_token_network_proxy_update_transfer(
         chain_id,
         web3,
         contract_manager,
-        skip_if_parity,
 ):
     """Tests channel lifecycle, with `update_transfer` before settling"""
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)

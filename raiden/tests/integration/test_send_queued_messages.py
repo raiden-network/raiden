@@ -15,6 +15,10 @@ from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') == 'udp',
+    reason='Test does not work with UDP',
+)
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -24,7 +28,6 @@ def test_send_queued_messages(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_matrix,
 ):
     """Test re-sending of undelivered messages on node restart"""
     app0, app1 = raiden_network
@@ -131,6 +134,10 @@ def test_send_queued_messages(
     )
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') == 'udp',
+    reason='Test does not work with UDP',
+)
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
@@ -139,7 +146,6 @@ def test_payment_statuses_are_restored(
         number_of_nodes,
         token_addresses,
         network_wait,
-        skip_if_not_matrix,
 ):
     """ Test that when the Raiden is restarted, the dictionary of
     `targets_to_identifiers_to_statuses` is populated before the transport

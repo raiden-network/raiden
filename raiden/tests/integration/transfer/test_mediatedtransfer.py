@@ -182,6 +182,10 @@ def test_mediated_transfer_with_entire_deposit(
         )
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('transport') == 'udp',
+    reason='Test does not work with UDP',
+)
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_mediated_transfer_messages_out_of_order(
@@ -189,7 +193,6 @@ def test_mediated_transfer_messages_out_of_order(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_matrix,
 ):
     """Raiden must properly handle repeated locked transfer messages."""
     app0, app1, app2 = raiden_network

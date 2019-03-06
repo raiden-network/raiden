@@ -397,9 +397,13 @@ def test_batch_unlock(
     assert token_proxy.balance_of(bob_app.raiden.address) == bob_new_balance
 
 
+@pytest.mark.skipif(
+    getattr(pytest, 'config').getvalue('blockchain_type') == 'parity',
+    reason='Test does not work with parity',
+)
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_settled_lock(token_addresses, raiden_network, deposit, skip_if_parity):
+def test_settled_lock(token_addresses, raiden_network, deposit):
     """ Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
