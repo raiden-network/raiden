@@ -197,8 +197,19 @@ class ActionChannelClose(StateChange):
             self,
             canonical_identifier: CanonicalIdentifier,
     ) -> None:
-        self.token_network_identifier = TokenNetworkID(canonical_identifier.token_network_address)
-        self.channel_identifier = canonical_identifier.channel_identifier
+        self.canonical_identifier = canonical_identifier
+
+    @property
+    def chain_identifier(self) -> ChainID:
+        return self.canonical_identifier.chain_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkID:
+        return TokenNetworkID(self.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
 
     def __repr__(self):
         return '<ActionChannelClose channel_identifier:{}>'.format(
@@ -208,8 +219,7 @@ class ActionChannelClose(StateChange):
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ActionChannelClose) and
-            self.token_network_identifier == other.token_network_identifier and
-            self.channel_identifier == other.channel_identifier
+            self.canonical_identifier == other.canonical_identifier
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -217,18 +227,13 @@ class ActionChannelClose(StateChange):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': str(self.channel_identifier),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
         }
 
     @classmethod
     def from_dict(cls, data):
         return cls(
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=int(data['channel_identifier']),
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
         )
 
 
