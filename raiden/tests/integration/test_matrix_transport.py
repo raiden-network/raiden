@@ -336,7 +336,7 @@ def test_matrix_message_sync(
     transport1.get()
 
 
-@pytest.mark.skipif(pytest.config.getvalue('usepdb'), reason='test fails with pdb')
+@pytest.mark.skipif(getattr(pytest, 'config').getvalue('usepdb'), reason='test fails with pdb')
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
