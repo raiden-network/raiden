@@ -75,6 +75,7 @@ def cli_args(raiden_testchain, removed_args, changed_args):
         initial_args['secret_registry_contract_address'],
         '--endpoint-registry-contract-address',
         initial_args['endpoint_registry_contract_address'],
+        '--disable-debug-logfile',
     ]
 
     for arg_name, arg_value in initial_args.items():
