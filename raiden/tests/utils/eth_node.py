@@ -14,7 +14,7 @@ from eth_keyfile import create_keyfile_json
 from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
 from web3 import Web3
 
-from raiden.tests.fixtures.variables import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
+from raiden.tests.fixtures.constants import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.typing import Any, Dict, List, NamedTuple

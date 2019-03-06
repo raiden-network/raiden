@@ -4,7 +4,7 @@ import random
 from enum import Enum
 
 import pytest
-from eth_utils import denoms, remove_0x_prefix, to_normalized_address
+from eth_utils import remove_0x_prefix, to_normalized_address
 
 from raiden.constants import Environment
 from raiden.network.utils import get_free_port
@@ -20,10 +20,6 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
-
-DEFAULT_BALANCE = denoms.ether * 10  # pylint: disable=no-member
-DEFAULT_BALANCE_BIN = str(DEFAULT_BALANCE)
-DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
 

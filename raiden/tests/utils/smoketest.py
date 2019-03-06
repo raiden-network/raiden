@@ -25,7 +25,7 @@ from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
-from raiden.tests.fixtures.variables import DEFAULT_PASSPHRASE
+from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
     EthNodeDescription,
     eth_node_config,
