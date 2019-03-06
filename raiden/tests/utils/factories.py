@@ -518,6 +518,18 @@ RANDOM_FACTORIES = {
 }
 
 
+def make_canonical_identifier(
+        chain_identifier=UNIT_CHAIN_ID,
+        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
+        channel_identifier=UNIT_CHANNEL_ID,
+) -> CanonicalIdentifier:
+    return CanonicalIdentifier(
+        chain_identifier=chain_identifier,
+        token_network_address=token_network_address,
+        channel_identifier=channel_identifier,
+    )
+
+
 def make_merkletree_leaves(width: int) -> typing.List[typing.Secret]:
     return [make_secret() for _ in range(width)]
 
