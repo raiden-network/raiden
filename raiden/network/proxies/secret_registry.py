@@ -257,11 +257,14 @@ class SecretRegistry:
             transaction_result.set_exception(exception)
             raise exception
 
+        # The local **MUST** transaction_result be set before waiting for the
+        # other results, otherwise we have a dead-lock
+        transaction_result.set(transaction_hash)
+
         if wait_for:
             log.info('registerSecretBatch waiting for pending', **log_details)
             gevent.joinall(wait_for, raise_error=True)
 
-        transaction_result.set(transaction_hash)
         log.info('registerSecretBatch successful', **log_details)
 
     def get_secret_registration_block_by_secrethash(
