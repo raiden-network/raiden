@@ -32,6 +32,23 @@ class CanonicalIdentifier(NamedTuple):
     token_network_address: Union[typing.TokenNetworkAddress, typing.TokenNetworkID]
     channel_identifier: typing.ChannelID
 
+    def to_dict(self) -> typing.Dict[str, typing.Any]:
+        return dict(
+            chain_identifier=str(self.chain_identifier),
+            token_network_address=encode_hex(self.token_network_address),
+            channel_identifier=str(self.channel_identifier),
+        )
+
+    @classmethod
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'CanonicalIdentifier':
+        return cls(
+            chain_identifier=typing.ChainID(int(data['chain_identifier'])),
+            token_network_address=typing.TokenNetworkAddress(
+                decode_hex(data['token_network_address']),
+            ),
+            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+        )
+
 
 def random_secret():
     """ Return a random 32 byte secret except the 0 secret since it's not accepted in the contracts
