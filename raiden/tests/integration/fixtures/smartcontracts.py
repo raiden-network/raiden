@@ -8,6 +8,7 @@ from raiden.constants import (
     Environment,
 )
 from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
 from raiden.tests.utils.smartcontracts import (
     deploy_contract_web3,
     deploy_token,
@@ -54,12 +55,18 @@ def deploy_all_tokens_register_and_return_their_addresses(
     if register_tokens:
         for token in token_addresses:
             registry = deploy_service.token_network_registry(token_network_registry_address)
-            registry.add_token(
-                token_address=token,
-                channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-                token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-                given_block_identifier='latest',
-            )
+            if contract_manager.contracts_version == DEVELOPMENT_CONTRACT_VERSION:
+                registry.add_token_with_limits(
+                    token_address=token,
+                    channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+                    token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+                    given_block_identifier='latest',
+                )
+            else:
+                registry.add_token_without_limits(
+                    token_address=token,
+                    given_block_identifier='latest',
+                )
 
     return token_addresses
 
@@ -143,7 +150,7 @@ def register_token_and_return_the_network_proxy(
         registry_address=registry_address,
         contract_manager=contract_manager,
     )
-    token_network_address = token_network_registry_proxy.add_token(
+    token_network_address = token_network_registry_proxy.add_token_with_limits(
         token_address=token_proxy.address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
