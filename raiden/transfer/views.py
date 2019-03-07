@@ -24,7 +24,6 @@ from raiden.utils.typing import (
     Address,
     BlockNumber,
     Callable,
-    ChannelID,
     Dict,
     Iterator,
     List,
@@ -338,25 +337,6 @@ def get_channelstate_by_canonical_identifier(
         channel_state = token_network.channelidentifiers_to_channels.get(
             canonical_identifier.channel_identifier,
         )
-
-    return channel_state
-
-
-def get_channelstate_by_id(
-        chain_state: ChainState,
-        payment_network_id: PaymentNetworkID,
-        token_address: TokenAddress,
-        channel_id: ChannelID,
-) -> Optional[NettingChannelState]:
-    token_network = get_token_network_by_token_address(
-        chain_state=chain_state,
-        payment_network_id=payment_network_id,
-        token_address=token_address,
-    )
-
-    channel_state = None
-    if token_network:
-        channel_state = token_network.channelidentifiers_to_channels.get(channel_id)
 
     return channel_state
 
