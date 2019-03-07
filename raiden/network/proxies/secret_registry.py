@@ -98,7 +98,11 @@ class SecretRegistry:
                 other_result = self.open_secret_transactions.get(secret)
 
                 if other_result is not None:
-                    wait_for.append(other_result)
+                    # IMPORTANT: The same AsyncResult **must not** be added twice
+                    # in the list, otherwise `gevent.joinall` will deadlock.
+                    if other_result not in wait_for:
+                        wait_for.append(other_result)
+
                     secrethashes_not_sent.append(secrethash_hex)
                 elif not self.is_secret_registered(secrethash, given_block_identifier):
                     secrets_to_register.append(secret)
@@ -120,7 +124,13 @@ class SecretRegistry:
                 'registerSecretBatch skipped, waiting for transactions',
                 **log_details,
             )
+
             gevent.joinall(wait_for, raise_error=True)
+
+            log.info(
+                'registerSecretBatch successful',
+                **log_details,
+            )
             return
 
         checking_block = self.client.get_checking_block()
