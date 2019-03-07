@@ -47,7 +47,7 @@ class UnknownTaskTypeError(ScenarioError):
 
 
 class MissingNodesConfiguration(ScenarioError, KeyError):
-    """Could not find 'nodes' key in the scenario."""
+    """Could not find a key in the scenario file's 'nodes' section."""
 
 
 class ScenarioAssertionError(ScenarioError):
