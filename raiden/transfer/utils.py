@@ -1,4 +1,6 @@
 import random
+from random import Random
+from typing import TYPE_CHECKING
 
 from eth_utils import to_checksum_address
 from web3 import Web3
@@ -7,7 +9,21 @@ from raiden.constants import EMPTY_HASH
 from raiden.storage import sqlite
 from raiden.utils import CanonicalIdentifier
 from raiden.utils.serialization import serialize_bytes
-from raiden.utils.typing import Address, BalanceHash, Locksroot, TokenAmount
+from raiden.utils.typing import (
+    Address,
+    Any,
+    BalanceHash,
+    Locksroot,
+    Secret,
+    SecretHash,
+    TokenAmount,
+    Union,
+)
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal  # noqa: F401
+    from raiden.transfer.state_change import ContractReceiveSecretReveal  # noqa: F401
 
 
 def get_state_change_with_balance_proof_by_balance_hash(
@@ -115,7 +131,7 @@ def hash_balance_data(
     )
 
 
-def pseudo_random_generator_from_json(data):
+def pseudo_random_generator_from_json(data: Any) -> Random:
     # JSON serializes a tuple as a list
     pseudo_random_generator = random.Random()
     state = list(data['pseudo_random_generator'])  # copy
@@ -125,5 +141,9 @@ def pseudo_random_generator_from_json(data):
     return pseudo_random_generator
 
 
-def is_valid_secret_reveal(state_change, transfer_secrethash, secret):
+def is_valid_secret_reveal(
+        state_change: Union['ContractReceiveSecretReveal', 'ReceiveSecretReveal'],
+        transfer_secrethash: SecretHash,
+        secret: Secret,
+) -> bool:
     return secret != EMPTY_HASH and state_change.secrethash == transfer_secrethash

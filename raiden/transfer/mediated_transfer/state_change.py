@@ -44,7 +44,7 @@ class ActionInitInitiator(StateChange):
             self,
             transfer_description: TransferDescriptionWithSecretState,
             routes: List[RouteState],
-    ):
+    ) -> None:
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
             raise ValueError('transfer must be an TransferDescriptionWithSecretState instance.')
 
@@ -56,14 +56,14 @@ class ActionInitInitiator(StateChange):
             self.transfer,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ActionInitInitiator) and
             self.transfer == other.transfer and
             self.routes == other.routes
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -94,7 +94,7 @@ class ActionInitMediator(BalanceProofStateChange):
             routes: List[RouteState],
             from_route: RouteState,
             from_transfer: LockedTransferSignedState,
-    ):
+    ) -> None:
 
         if not isinstance(from_route, RouteState):
             raise ValueError('from_route must be a RouteState instance')
@@ -113,7 +113,7 @@ class ActionInitMediator(BalanceProofStateChange):
             self.from_transfer,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ActionInitMediator) and
             self.routes == other.routes and
@@ -121,7 +121,7 @@ class ActionInitMediator(BalanceProofStateChange):
             self.from_transfer == other.from_transfer
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -133,7 +133,7 @@ class ActionInitMediator(BalanceProofStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data) -> 'ActionInitMediator':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ActionInitMediator':
         return cls(
             routes=data['routes'],
             from_route=data['from_route'],
@@ -153,7 +153,7 @@ class ActionInitTarget(BalanceProofStateChange):
             self,
             route: RouteState,
             transfer: LockedTransferSignedState,
-    ):
+    ) -> None:
         if not isinstance(route, RouteState):
             raise ValueError('route must be a RouteState instance')
 
@@ -170,14 +170,14 @@ class ActionInitTarget(BalanceProofStateChange):
             self.transfer,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ActionInitTarget) and
             self.route == other.route and
             self.transfer == other.transfer
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -188,7 +188,7 @@ class ActionInitTarget(BalanceProofStateChange):
         }
 
     @classmethod
-    def from_dict(cls, data) -> 'ActionInitTarget':
+    def from_dict(cls, data: Dict[str, Any]) -> 'ActionInitTarget':
         return cls(
             route=data['route'],
             transfer=data['transfer'],
@@ -203,7 +203,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
             balance_proof: BalanceProofSignedState,
             secrethash: SecretHash,
             message_identifier: MessageID,
-    ):
+    ) -> None:
         super().__init__(balance_proof)
         self.secrethash = secrethash
         self.message_identifier = message_identifier
@@ -214,7 +214,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
             self.balance_proof,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ReceiveLockExpired) and
             self.secrethash == other.secrethash and
@@ -222,7 +222,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
             super().__eq__(other)
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -251,7 +251,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
             expiration: BlockExpiration,
             secrethash: SecretHash,
             sender: Address,
-    ):
+    ) -> None:
         super().__init__(sender)
         self.payment_identifier = payment_identifier
         self.amount = amount
@@ -267,7 +267,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
             pex(self.sender),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ReceiveSecretRequest) and
             self.payment_identifier == other.payment_identifier and
@@ -278,7 +278,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
             super().__eq__(other)
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -311,7 +311,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
             self,
             secret: Secret,
             sender: Address,
-    ):
+    ) -> None:
         super().__init__(sender)
         secrethash = sha3(secret)
 
@@ -324,7 +324,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
             pex(self.sender),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ReceiveSecretReveal) and
             self.secret == other.secret and
@@ -332,7 +332,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
             super().__eq__(other)
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -362,7 +362,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
             routes: List[RouteState],
             transfer: LockedTransferSignedState,
             secret: Secret,
-    ):
+    ) -> None:
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
@@ -380,7 +380,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
             self.transfer,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ReceiveTransferRefundCancelRoute) and
             self.sender == other.sender and
@@ -391,7 +391,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
             super().__eq__(other)
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -419,7 +419,7 @@ class ReceiveTransferRefund(BalanceProofStateChange):
             self,
             transfer: LockedTransferSignedState,
             routes: List[RouteState],
-    ):
+    ) -> None:
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError('transfer must be an instance of LockedTransferSignedState')
 
@@ -433,7 +433,7 @@ class ReceiveTransferRefund(BalanceProofStateChange):
             self.transfer,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ReceiveTransferRefund) and
             self.transfer == other.transfer and
@@ -441,7 +441,7 @@ class ReceiveTransferRefund(BalanceProofStateChange):
             super().__eq__(other)
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:

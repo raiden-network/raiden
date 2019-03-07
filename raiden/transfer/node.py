@@ -420,7 +420,7 @@ def maybe_add_tokennetwork(
         addresses_to_ids[token_address] = token_network_identifier
 
 
-def sanity_check(iteration: TransitionResult[ChainState]):
+def sanity_check(iteration: TransitionResult[ChainState]) -> None:
     assert isinstance(iteration.new_state, ChainState)
 
 
@@ -428,7 +428,7 @@ def inplace_delete_message_queue(
         chain_state: ChainState,
         state_change: StateChange,
         queueid: QueueIdentifier,
-):
+) -> None:
     """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
     queue = chain_state.queueids_to_queues.get(queueid)
     if not queue:
@@ -448,7 +448,7 @@ def inplace_delete_message_queue(
 def inplace_delete_message(
         message_queue: List[SendMessageEvent],
         state_change: StateChange,
-):
+) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
         message_found = (
