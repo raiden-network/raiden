@@ -574,14 +574,14 @@ class RaidenAPI:
             token_address=token_address,
         )
 
-        greenlets: typing.List[Greenlet] = list()
+        greenlets: typing.Set[Greenlet] = set()
         for channel_state in channels_to_close:
             channel_close = ActionChannelClose(
                 token_network_identifier=token_network_identifier,
                 channel_identifier=channel_state.identifier,
             )
 
-            greenlets.extend(
+            greenlets.update(
                 self.raiden.handle_state_change(channel_close),
             )
 

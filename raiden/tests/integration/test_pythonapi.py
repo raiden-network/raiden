@@ -361,7 +361,7 @@ def test_funds_check_for_openchannel(raiden_network, token_addresses):
 
     partners = [app1.raiden.address, app2.raiden.address]
 
-    greenlets = [
+    greenlets = set(
         gevent.spawn(
             api0.channel_open,
             app0.raiden.default_registry.address,
@@ -369,7 +369,7 @@ def test_funds_check_for_openchannel(raiden_network, token_addresses):
             partner,
         )
         for partner in partners
-    ]
+    )
 
     # Opening two channels needs to fail, because the gas reserve is not big enough
     # This didn't fail prior to #2977, which serializes calls to channel open,

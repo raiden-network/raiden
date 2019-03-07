@@ -95,12 +95,12 @@ def test_concurrent_access(
     # Spawn multiple greenlets registrering a single secret
     # Patched secret registry asserts that the on-chain registry call
     # is only called once.
-    events = [
+    events = set(
         gevent.spawn(
             secret_registry_proxy_patched.register_secret,
             secret,
             'latest',
         )
         for _ in range(0, 40)
-    ]
+    )
     gevent.joinall(events)

@@ -44,7 +44,7 @@ ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive raiden/ -sg */
 lint:
 	flake8 raiden/ tools/
 	isort $(ISORT_PARAMS) --diff --check-only
-	pylint --rcfile .pylint.rc raiden/
+	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc raiden/
 	python setup.py check --restructuredtext --strict
 
 mypy:

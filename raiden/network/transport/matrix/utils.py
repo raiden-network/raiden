@@ -253,11 +253,11 @@ def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
     if not {urlparse(url).scheme for url in servers}.issubset({'http', 'https'}):
         raise TransportError('Invalid server urls')
 
-    get_rtt_jobs = [
+    get_rtt_jobs = set(
         gevent.spawn(lambda url: (url, get_http_rtt(url)), server_url)
         for server_url
         in servers
-    ]
+    )
     # these tasks should never raise, returns None on errors
     gevent.joinall(get_rtt_jobs, raise_error=False)  # block and wait tasks
     sorted_servers: List[Tuple[str, float]] = sorted(
