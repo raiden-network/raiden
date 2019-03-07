@@ -1,6 +1,5 @@
 import gevent
 import structlog
-
 from web3 import Web3
 
 from raiden.transfer import channel, views
@@ -10,7 +9,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
 )
-from raiden.utils import typing
+from raiden.utils import CanonicalIdentifier, typing
 
 # type alias to avoid both circular dependencies and flake8 errors
 RaidenService = 'RaidenService'
@@ -148,6 +147,50 @@ def wait_for_payment_balance(
         )
 
 
+def wait_for_channel_in_states(
+        raiden: RaidenService,
+        payment_network_id: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        channel_ids: typing.List[typing.ChannelID],
+        retry_timeout: float,
+        target_states: typing.Tuple[str],
+) -> None:
+    """Wait until all channels are in `target_states`.
+
+    Note:
+        This does not time out, use gevent.Timeout.
+    """
+    channel_ids = list(channel_ids)
+
+    while channel_ids:
+        last_id = channel_ids[-1]
+        chain_state = views.state_from_raiden(raiden)
+        token_network_address = views.get_token_network_by_token_address(
+            chain_state=chain_state,
+            payment_network_id=payment_network_id,
+            token_address=token_address,
+        ).address
+        assert token_network_address
+        channel_state = views.get_channelstate_by_canonical_identifier(
+            chain_state=chain_state,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=chain_state.chain_id,
+                token_network_address=token_network_address,
+                channel_identifier=last_id,
+            ),
+        )
+
+        channel_is_settled = (
+            channel_state is None or
+            channel.get_status(channel_state) in target_states
+        )
+
+        if channel_is_settled:
+            channel_ids.pop()
+        else:
+            gevent.sleep(retry_timeout)
+
+
 def wait_for_close(
         raiden: RaidenService,
         payment_network_id: typing.PaymentNetworkID,
@@ -160,26 +203,14 @@ def wait_for_close(
     Note:
         This does not time out, use gevent.Timeout.
     """
-    channel_ids = list(channel_ids)
-
-    while channel_ids:
-        last_id = channel_ids[-1]
-        channel_state = views.get_channelstate_by_id(
-            views.state_from_raiden(raiden),
-            payment_network_id,
-            token_address,
-            last_id,
-        )
-
-        channel_is_settled = (
-            channel_state is None or
-            channel.get_status(channel_state) in CHANNEL_AFTER_CLOSE_STATES
-        )
-
-        if channel_is_settled:
-            channel_ids.pop()
-        else:
-            gevent.sleep(retry_timeout)
+    return wait_for_channel_in_states(
+        raiden=raiden,
+        payment_network_id=payment_network_id,
+        token_address=token_address,
+        channel_ids=channel_ids,
+        retry_timeout=retry_timeout,
+        target_states=CHANNEL_AFTER_CLOSE_STATES,
+    )
 
 
 def wait_for_payment_network(
@@ -214,29 +245,14 @@ def wait_for_settle(
     Note:
         This does not time out, use gevent.Timeout.
     """
-    if not isinstance(channel_ids, list):
-        raise ValueError('channel_ids must be a list')
-
-    channel_ids = list(channel_ids)
-
-    while channel_ids:
-        last_id = channel_ids[-1]
-        channel_state = views.get_channelstate_by_id(
-            views.state_from_raiden(raiden),
-            payment_network_id,
-            token_address,
-            last_id,
-        )
-
-        channel_is_settled = (
-            channel_state is None or
-            channel.get_status(channel_state) == CHANNEL_STATE_SETTLED
-        )
-
-        if channel_is_settled:
-            channel_ids.pop()
-        else:
-            gevent.sleep(retry_timeout)
+    return wait_for_channel_in_states(
+        raiden=raiden,
+        payment_network_id=payment_network_id,
+        token_address=token_address,
+        channel_ids=channel_ids,
+        retry_timeout=retry_timeout,
+        target_states=(CHANNEL_STATE_SETTLED,),
+    )
 
 
 def wait_for_settle_all_channels(
