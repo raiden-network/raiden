@@ -30,8 +30,24 @@ class RESTAPIStatusMismatchError(ScenarioError):
     pass
 
 
+class MultipleTaskDefinitions(ScenarioError):
+    """Several tasks were defined in the scenario configuration."""
+
+
+class InvalidScenarioVersion(ScenarioError):
+    pass
+
+
+class UnexpectedScenarioVersion(ScenarioError):
+    pass
+
+
 class UnknownTaskTypeError(ScenarioError):
     pass
+
+
+class MissingNodesConfiguration(ScenarioError, KeyError):
+    """Could not find 'nodes' key in the scenario."""
 
 
 class ScenarioAssertionError(ScenarioError):

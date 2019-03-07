@@ -1,9 +1,10 @@
-import os
+import pathlib
 import random
 from collections import defaultdict
 from enum import Enum
+from typing import Dict, List, Tuple, Any, Union
 from pathlib import Path
-from typing import Dict, List
+from collections.abc import Mapping
 
 import gevent
 import structlog
@@ -16,7 +17,14 @@ from web3 import HTTPProvider, Web3
 from raiden.accounts import Account
 from raiden.constants import GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
 from raiden.network.rpc.client import JSONRPCClient
-from scenario_player.exceptions import NodesUnreachableError, ScenarioError, TokenRegistrationError
+from scenario_player.exceptions import (
+    NodesUnreachableError,
+    ScenarioError,
+    TokenRegistrationError,
+    MissingNodesConfiguration,
+    MultipleTaskDefinitions,
+    InvalidScenarioVersion,
+)
 from scenario_player.utils import (
     TimeOutHTTPAdapter,
     get_gas_price_strategy,
@@ -44,6 +52,290 @@ class NodeMode(Enum):
     MANAGED = 2
 
 
+class NodesConfig(Mapping):
+    """Thin wrapper around a Node configuration dictionary.
+
+    Handles exceptions handling for missing values. Additionally, enables users
+    to iter directly over the internal .nodes property, while also allowing
+    key-based access to the original configuration dictionary.
+
+    :type nodes_config: Dict
+    :type scenario_version: int
+    """
+    def __init__(self, nodes_config: Dict, scenario_version: int = 1):
+        self._config = nodes_config
+        self._scenario_version = scenario_version
+
+    def __getitem__(self, item):
+        return self._config.__getitem__(item)
+
+    def __iter__(self):
+        return iter(self.nodes)
+
+    def __len__(self):
+        return len(self.nodes)
+
+    @property
+    def mode(self):
+        if self._scenario_version == 2:
+            try:
+                mode = self._config['mode'].upper()
+            except KeyError:
+                raise MissingNodesConfiguration(
+                    'Version 2 scenarios require a "mode" in the "nodes" section.'
+                )
+            try:
+                return NodeMode[mode]
+            except KeyError:
+                known_modes = ', '.join(mode.name.lower() for mode in NodeMode)
+                raise ScenarioError(
+                    f'Unknown node mode "{mode}". Expected one of {known_modes}',
+                ) from None
+        return NodeMode.EXTERNAL
+
+    @property
+    def raiden_version(self):
+        return self._config.get('raiden_version', 'LATEST')
+
+    @property
+    def count(self):
+        try:
+            return self._config['count']
+        except KeyError:
+            raise MissingNodesConfiguration('Must specify a "count" setting!')
+
+    @property
+    def default_options(self):
+        return self._config.get('default_options', {})
+
+    @property
+    def node_options(self):
+        return self._config.get('node_options', {})
+
+    @property
+    def nodes(self) -> List[str]:
+        """Return the list of nodes configured in the scenario's yaml.
+
+        Should the scenario use version 1, we check if there is a 'setting'.
+        If so, we derive the list of nodes from this dictionary, using its
+        'first', 'last' and 'template' keys. Should any of these keys be
+        missing, we throw an appropriate exception.
+
+        If the scenario version is not 1, or no 'range' setting exists, we use
+        the 'list' settings key and return the value. Again, should the key be
+        absent, we throw an appropriate error.
+
+        :raises MissingNodesConfiguration:
+            if the scenario version is 1 and a 'range' key was detected, but any
+            one of the keys 'first', 'last', 'template' are missing; *or* the
+            scenario version is not 1 or the 'range' key and the 'list' are absent.
+        :rtype: List
+        """
+        if self._scenario_version == 1 and 'range' in self._config:
+            range_config = self._config['range']
+
+            try:
+                start, stop = range_config['first'], range_config['last'] + 1
+            except KeyError:
+                raise MissingNodesConfiguration(
+                    'Setting "range" must be a dict containing keys "first" and "last",'
+                    ' whose values are integers!'
+                )
+
+            try:
+                template = range_config['template']
+            except KeyError:
+                raise MissingNodesConfiguration(
+                    'Must specify "template" setting when giving "range" setting.'
+                )
+
+            return [template.format(i) for i in range(start, stop)]
+        try:
+            return self._config['list']
+        except KeyError:
+            raise MissingNodesConfiguration('Must specify nodes under "list" setting!')
+
+    @property
+    def commands(self) -> Dict:
+        """Return the commands configured for the nodes.
+
+        :rtype: Dict
+        """
+        return self._config.get('commands', {})
+
+
+class Scenario(Mapping):
+    """Thin wrapper class around a scenario .yaml file.
+
+    Handles default values as well as exception handling on missing settings.
+
+    :param pathlib.Path yaml_path: Path to the scenario's yaml file.
+    """
+    def __init__(self, yaml_path: pathlib.Path) -> None:
+        self._yaml_path = yaml_path
+        self._config = yaml.load(yaml_path.open())
+        try:
+            self._nodes = NodesConfig(self._config['nodes'], self.version)
+        except KeyError:
+            raise MissingNodesConfiguration('Must supply a "nodes" setting!')
+
+    def __getitem__(self, item):
+        return self._config.__getitem__(item)
+
+    def __iter__(self):
+        return iter(self._config)
+
+    def __len__(self):
+        return len(self._config)
+
+    @property
+    def version(self) -> int:
+        """Return the scenario's version.
+
+        If this is not present, we default to version 1.
+
+        :raises InvalidScenarioVersion:
+            if the supplied version is not present in :var:`SUPPORTED_SCENARIO_VERSIONS`.
+        :rtype: int
+        """
+        version = self._config.get('version', 1)
+
+        if version not in SUPPORTED_SCENARIO_VERSIONS:
+            raise InvalidScenarioVersion(f'Unexpected scenario version {version}')
+        return version
+
+    @property
+    def name(self) -> str:
+        """Return the name of the scenario file, sans extension.
+
+        :rtype: str
+        """
+        return self._yaml_path.stem
+
+    @property
+    def settings(self):
+        """Return the 'settings' dictionary for the scenario.
+
+        :rtype: Dict
+        """
+        return self._config.get('settings', {})
+
+    @property
+    def protocol(self) -> str:
+        """Return the designated protocol of the scenario.
+
+        If the node's mode is :attr:`NodeMode.MANAGED`, we always choose `http` and
+        display a warning if there was a 'protocol' set explicitly in the
+        scenario's yaml.
+
+        Otherwise we simply access the 'protocol' key of the yaml, defaulting to
+        'http' if it does not exist.
+
+        :rtype: str
+        """
+        if self.nodes.mode is NodeMode.MANAGED:
+            if 'protocol' in self._config:
+                log.warning('The "protocol" setting is not supported in "managed" node mode.')
+            return 'http'
+        return self._config.get('protocol', 'http')
+
+    @property
+    def timeout(self) -> int:
+        """Returns the scenario's set timeout in seconds.
+
+        :rtype: int
+        """
+        return self.settings.get('timeout', TIMEOUT)
+
+    @property
+    def notification_email(self) -> Union[str, None]:
+        """Return the email address to which notifications are to be sent.
+
+        If this isn't set, we return None.
+
+        :rtype: Union[str, None]
+        """
+        return self.settings.get('notify')
+
+    @property
+    def chain_name(self) -> str:
+        """Return the name of the chain to be used for this scenario.
+
+        :rtype: str
+        """
+        return self.settings.get('chain', 'any')
+
+    @property
+    def gas_price(self) -> str:
+        """Return the configured gas price for this scenario.
+
+        This defaults to 'fast'.
+
+        :rtype: str
+        """
+        return self._config.get('gas_price', 'fast')
+
+    @property
+    def nodes(self) -> NodesConfig:
+        """Return the configuration of nodes used in this scenario.
+
+        :rtype: NodesConfig
+        """
+        return self._nodes
+
+    @property
+    def configuration(self):
+        """Return the scenario's configuration.
+
+        :raises ScenarioError: if no 'scenario' key is present in the yaml file.
+        :rtype: Dict[str, Any]
+        """
+        try:
+            return self._config['scenario']
+        except KeyError:
+            raise ScenarioError(
+                "Invalid scenario definition. Missing 'scenario' key."
+            )
+
+    @property
+    def task(self) -> Tuple[str, Any]:
+        """Return the scenario's task configuration as a tuple.
+
+        :raises MultipleTaskDefinitions:
+            if there is more than one task config under the 'scenario' key.
+        :rtype: Tuple[str, Any]
+        """
+        try:
+            items, = self.configuration.items()
+        except ValueError:
+            raise MultipleTaskDefinitions(
+                'Multiple tasks defined in scenario configuration!'
+            )
+        return items
+
+    @property
+    def task_config(self) -> Dict:
+        """Return the task config for this scenario.
+
+        TODO: Check this is the correct type
+        :rtype: Dict
+        """
+        return self.task[1]
+
+    @property
+    def task_class(self):
+        """Return the Task class type configured for the scenario.
+
+        :rtype: Type[]
+        """
+        from scenario_player.tasks.base import get_task_class_for_type
+
+        root_task_type, root_task_config = self.task
+
+        task_class = get_task_class_for_type(root_task_type)
+        return task_class
+
+
 class ScenarioRunner(object):
     def __init__(
         self,
@@ -53,7 +345,6 @@ class ScenarioRunner(object):
         data_path: Path,
         scenario_file: Path,
     ):
-        from scenario_player.tasks.base import get_task_class_for_type
         from scenario_player.node_support import RaidenReleaseKeeper, NodeController
 
         self.task_count = 0
@@ -63,84 +354,41 @@ class ScenarioRunner(object):
         self.task_cache = {}
         self.task_storage = defaultdict(dict)
 
-        self.scenario_name = os.path.basename(scenario_file.name).partition('.')[0]
-        self.scenario = yaml.load(scenario_file)
-        self.scenario_version = self.scenario.get('version', 1)
-        if self.scenario_version not in SUPPORTED_SCENARIO_VERSIONS:
-            raise ScenarioError(f'Unexpected scenario version {self.scenario_version}')
+        self.scenario = Scenario(pathlib.Path(scenario_file.name))
+        self.scenario_name = self.scenario.name
 
-        self.data_path = data_path.joinpath('scenarios', self.scenario_name)
+        self.data_path = data_path.joinpath('scenarios', self.scenario.name)
         self.data_path.mkdir(exist_ok=True, parents=True)
         log.debug('Data path', path=self.data_path)
 
-        self.run_number = 0
-        run_number_file = self.data_path.joinpath('run_number.txt')
-        if run_number_file.exists():
-            self.run_number = int(run_number_file.read_text()) + 1
-        run_number_file.write_text(str(self.run_number))
-        log.info('Run number', run_number=self.run_number)
+        self.run_number = self.determine_run_number()
 
-        nodes = self.scenario['nodes']
-
-        node_mode = NodeMode.EXTERNAL.name
-        if self.is_v2:
-            node_mode = nodes.get('mode', '').upper()
-            if not node_mode:
-                raise ScenarioError('Version 2 scenarios require a "mode" in the "nodes" section.')
-        try:
-            self.node_mode = NodeMode[node_mode]
-        except KeyError:
-            known_modes = ', '.join(mode.name.lower() for mode in NodeMode)
-            raise ScenarioError(
-                f'Unknown node mode "{node_mode}". Expected one of {known_modes}',
-            ) from None
+        self.node_mode = self.scenario.nodes.mode
 
         if self.is_managed:
             self.node_controller = NodeController(
                 self,
-                nodes.get('raiden_version', 'LATEST'),
-                nodes['count'],
-                nodes.get('default_options', {}),
-                nodes.get('node_options', {}),
+                self.scenario.nodes.raiden_version,
+                self.scenario.nodes.count,
+                self.scenario.nodes.default_options,
+                self.scenario.nodes.node_options,
             )
         else:
-            if 'range' in nodes:
-                range_config = nodes['range']
-                template = range_config['template']
-                self.raiden_nodes = [
-                    template.format(i)
-                    for i in range(range_config['first'], range_config['last'] + 1)
-                ]
-            else:
-                self.raiden_nodes = nodes['list']
-            self.node_commands = nodes.get('commands', {})
+            self.raiden_nodes = self.scenario.nodes
+            self.node_commands = self.scenario.nodes.commands
 
-        settings = self.scenario.get('settings')
-        if settings is None:
-            settings = {}
-        self.timeout = settings.get('timeout', TIMEOUT)
-        if self.is_managed:
-            self.protocol = 'http'
-            if 'protocol' in settings:
-                log.warning('The "protocol" setting is not supported in "managed" node mode.')
-        else:
-            self.protocol = settings.get('protocol', 'http')
-        self.notification_email = settings.get('notify')
-        self.chain_name = settings.get('chain', 'any')
+        self.timeout = self.scenario.timeout
+        self.protocol = self.scenario.protocol
 
-        if self.chain_name == 'any':
-            self.chain_name = random.choice(list(chain_urls.keys()))
-        elif self.chain_name not in chain_urls:
-            raise ScenarioError(
-                f'The scenario requested chain "{self.chain_name}" for which no RPC-URL is known.',
-            )
-        log.info('Using chain', chain=self.chain_name)
-        self.eth_rpc_urls = chain_urls[self.chain_name]
+        self.notification_email = self.scenario.notification_email
+
+        self.chain_name, chain_url = self.select_chain(chain_urls)
+        self.eth_rpc_urls = chain_url
 
         self.client = JSONRPCClient(
-            Web3(HTTPProvider(chain_urls[self.chain_name][0])),
+            Web3(HTTPProvider(chain_url[0])),
             privkey=account.privkey,
-            gas_price_strategy=get_gas_price_strategy(settings.get('gas_price', 'fast')),
+            gas_price_strategy=get_gas_price_strategy(self.scenario.gas_price),
         )
 
         self.chain_id = int(self.client.web3.net.version)
@@ -154,7 +402,6 @@ class ScenarioRunner(object):
             )
 
         self.session = Session()
-        # WTF? https://github.com/requests/requests/issues/2605
         if auth:
             self.session.auth = tuple(auth.split(":"))
         self.session.mount('http', TimeOutHTTPAdapter(timeout=self.timeout))
@@ -164,21 +411,47 @@ class ScenarioRunner(object):
         self.token_address = None
         self.token_deployment_block = 0
 
-        scenario_config = self.scenario.get('scenario')
-        if not scenario_config:
-            raise ScenarioError("Invalid scenario definition. Missing 'scenario' key.")
+        task_config = self.scenario.task_config
+        task_class = self.scenario.task_class
+        self.root_task = task_class(runner=self, config=task_config)
 
+    def determine_run_number(self):
+        """Determine the current run number.
+
+        We check for a run number file, and use any number that is logged
+        there after incrementing it.
+        """
+        run_number = 0
+        run_number_file = self.data_path.joinpath('run_number.txt')
+        if run_number_file.exists():
+            run_number = int(run_number_file.read_text()) + 1
+        run_number_file.write_text(str(run_number))
+        log.info('Run number', run_number=run_number)
+        return run_number
+
+    def select_chain(self, chain_urls: Dict[str, List[str]]) -> Tuple[str, List[str]]:
+        """Select a chain and return its name and RPC URL.
+
+        If the currently loaded scenario's designated chain is set to 'any',
+        we randomly select a chain from the given `chain_urls`.
+        Otherwise, we will return `ScenarioRunner.scenario.chain_name` and whatever value
+        may be associated with this key in `chain_urls`.
+
+        :raises ScenarioError:
+            if ScenarioRunner.scenario.chain_name is not one of `('any', 'Any', 'ANY')`
+            and it is not a key in `chain_urls`.
+        """
+        chain_name = self.scenario.chain_name
+        if chain_name in ('any', 'Any', 'ANY'):
+            chain_name = random.choice(list(chain_urls.keys()))
+
+        log.info('Using chain', chain=chain_name)
         try:
-            (root_task_type, root_task_config), = scenario_config.items()
-        except ValueError:
-            # will be thrown if it's not a 1-element dict
+            return chain_name, chain_urls[chain_name]
+        except KeyError:
             raise ScenarioError(
-                "Invalid scenario definition. "
-                "Exactly one root task is required below the 'scenario' key.",
-            ) from None
-
-        task_class = get_task_class_for_type(root_task_type)
-        self.root_task = task_class(runner=self, config=root_task_config)
+                f'The scenario requested chain "{chain_name}" for which no RPC-URL is known.',
+            )
 
     def run_scenario(self):
         fund_tx = []
