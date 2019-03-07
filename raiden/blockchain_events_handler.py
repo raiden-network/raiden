@@ -21,7 +21,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import pex, typing
+from raiden.utils import CanonicalIdentifier, pex, typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -142,10 +142,14 @@ def handle_channel_new_balance(raiden: 'RaidenService', event: Event):
     total_deposit = args['total_deposit']
     transaction_hash = data['transaction_hash']
 
-    previous_channel_state = views.get_channelstate_by_token_network_identifier(
-        views.state_from_raiden(raiden),
-        token_network_identifier,
-        channel_identifier,
+    chain_state = views.state_from_raiden(raiden)
+    previous_channel_state = views.get_channelstate_by_canonical_identifier(
+        chain_state=chain_state,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
+        ),
     )
 
     # Channels will only be registered if this node is a participant
@@ -192,10 +196,14 @@ def handle_channel_closed(raiden: 'RaidenService', event: Event):
     transaction_hash = data['transaction_hash']
     block_hash = data['block_hash']
 
-    channel_state = views.get_channelstate_by_token_network_identifier(
-        views.state_from_raiden(raiden),
-        token_network_identifier,
-        channel_identifier,
+    chain_state = views.state_from_raiden(raiden)
+    channel_state = views.get_channelstate_by_canonical_identifier(
+        chain_state=chain_state,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
+        ),
     )
 
     channel_closed: StateChange
@@ -232,10 +240,14 @@ def handle_channel_update_transfer(raiden: 'RaidenService', event: Event):
     block_number = data['block_number']
     block_hash = data['block_hash']
 
-    channel_state = views.get_channelstate_by_token_network_identifier(
-        views.state_from_raiden(raiden),
-        token_network_identifier,
-        channel_identifier,
+    chain_state = views.state_from_raiden(raiden)
+    channel_state = views.get_channelstate_by_canonical_identifier(
+        chain_state=chain_state,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
+        ),
     )
 
     if channel_state:
@@ -258,10 +270,14 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     block_hash = data['block_hash']
     transaction_hash = data['transaction_hash']
 
-    channel_state = views.get_channelstate_by_token_network_identifier(
-        views.state_from_raiden(raiden),
-        token_network_identifier,
-        channel_identifier,
+    chain_state = views.state_from_raiden(raiden)
+    channel_state = views.get_channelstate_by_canonical_identifier(
+        chain_state=chain_state,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
+        ),
     )
 
     if channel_state:
