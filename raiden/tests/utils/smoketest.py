@@ -22,19 +22,16 @@ from web3.middleware import geth_poa_middleware
 from raiden.accounts import AccountManager
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
-    RED_EYES_MAX_TOKEN_NETWORKS,
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+    UINT256_MAX,
 )
 from raiden.network.proxies import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
-from raiden.tests.fixtures.variables import (
-    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-)
 from raiden.tests.utils.eth_node import (
     EthNodeDescription,
     eth_node_config,
@@ -174,18 +171,21 @@ def deploy_smoketest_contracts(client, chain_id, contract_manager):
         deploy_client=client,
         contract_manager=contract_manager,
     )
+    constructor_arguments = [
+        to_checksum_address(secret_registry_address),
+        chain_id,
+        TEST_SETTLE_TIMEOUT_MIN,
+        TEST_SETTLE_TIMEOUT_MAX,
+    ]
+
+    if contract_manager.contracts_version == DEVELOPMENT_CONTRACT_VERSION:
+        constructor_arguments.append(UINT256_MAX)
 
     token_network_registry_address = deploy_contract_web3(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
         deploy_client=client,
         contract_manager=contract_manager,
-        constructor_arguments=(
-            to_checksum_address(secret_registry_address),
-            chain_id,
-            TEST_SETTLE_TIMEOUT_MIN,
-            TEST_SETTLE_TIMEOUT_MAX,
-            RED_EYES_MAX_TOKEN_NETWORKS,
-        ),
+        constructor_arguments=constructor_arguments,
     )
 
     addresses = {
@@ -321,12 +321,19 @@ def setup_raiden(
         registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
         contract_manager=contract_manager,
     )
-    registry.add_token(
-        token_address=to_canonical_address(token.contract.address),
-        channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-        token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-        given_block_identifier='latest',
-    )
+
+    if contracts_version == DEVELOPMENT_CONTRACT_VERSION:
+        registry.add_token_with_limits(
+            token_address=to_canonical_address(token.contract.address),
+            channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+            token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+            given_block_identifier='latest',
+        )
+    else:
+        registry.add_token_without_limits(
+            token_address=to_canonical_address(token.contract.address),
+            given_block_identifier='latest',
+        )
 
     print_step('Setting up Raiden')
 

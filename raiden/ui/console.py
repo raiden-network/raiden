@@ -10,8 +10,9 @@ from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.constants import UINT256_MAX
 from raiden.network.proxies import TokenNetwork
-from raiden.settings import DEFAULT_RETRY_TIMEOUT
+from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
 from raiden.transfer import views
 from raiden.utils import typing
 from raiden.utils.smart_contracts import deploy_contract_web3
@@ -232,10 +233,20 @@ class ConsoleTools:
         token_address = decode_hex(token_address_hex)
 
         registry = self._raiden.chain.token_network_registry(registry_address)
-        token_network_address = registry.add_token(
-            token_address=token_address,
-            given_block_identifier=views.state_from_raiden(self._raiden).block_hash,
-        )
+        contracts_version = self._raiden.contract_manager.contracts_version
+
+        if contracts_version == DEVELOPMENT_CONTRACT_VERSION:
+            token_network_address = registry.add_token_with_limits(
+                token_address=token_address,
+                channel_participant_deposit_limit=UINT256_MAX,
+                token_network_deposit_limit=UINT256_MAX,
+                given_block_identifier=views.state_from_raiden(self._raiden).block_hash,
+            )
+        else:
+            token_network_address = registry.add_token_without_limits(
+                token_address=token_address,
+                given_block_identifier=views.state_from_raiden(self._raiden).block_hash,
+            )
 
         # Register the channel manager with the raiden registry
         waiting.wait_for_payment_network(
