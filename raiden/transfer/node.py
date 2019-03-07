@@ -58,6 +58,7 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
     ReceiveUnlock,
 )
+from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     BlockHash,
@@ -198,10 +199,13 @@ def subdispatch_to_paymenttask(
             token_network_identifier = sub_task.token_network_identifier
             channel_identifier = sub_task.channel_identifier
 
-            channel_state = views.get_channelstate_by_token_network_identifier(
-                chain_state,
-                token_network_identifier,
-                channel_identifier,
+            channel_state = views.get_channelstate_by_canonical_identifier(
+                chain_state=chain_state,
+                canonical_identifier=CanonicalIdentifier(
+                    chain_identifier=chain_state.chain_id,
+                    token_network_address=token_network_identifier,
+                    channel_identifier=channel_identifier,
+                ),
             )
 
             if channel_state:
@@ -351,10 +355,13 @@ def subdispatch_targettask(
     events = list()
     channel_state = None
     if is_valid_subtask:
-        channel_state = views.get_channelstate_by_token_network_identifier(
-            chain_state,
-            token_network_identifier,
-            channel_identifier,
+        channel_state = views.get_channelstate_by_canonical_identifier(
+            chain_state=chain_state,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=chain_state.chain_id,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
         )
 
     if channel_state:
@@ -529,10 +536,13 @@ def handle_contract_receive_channel_closed(
         state_change: ContractReceiveChannelClosed,
 ) -> TransitionResult[ChainState]:
     # cleanup queue for channel
-    channel_state = views.get_channelstate_by_token_network_identifier(
+    channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
-        token_network_id=state_change.token_network_identifier,
-        channel_id=state_change.channel_identifier,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=state_change.token_network_identifier,
+            channel_identifier=state_change.channel_identifier,
+        ),
     )
     if channel_state:
         queue_id = QueueIdentifier(

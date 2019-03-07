@@ -19,6 +19,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
     TransferTask,
 )
+from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
     BlockNumber,
@@ -322,20 +323,21 @@ def get_channelstate_by_token_network_and_partner(
     return channel_state
 
 
-def get_channelstate_by_token_network_identifier(
+def get_channelstate_by_canonical_identifier(
         chain_state: ChainState,
-        token_network_id: TokenNetworkID,
-        channel_id: ChannelID,
+        canonical_identifier: CanonicalIdentifier,
 ) -> Optional[NettingChannelState]:
     """ Return the NettingChannelState if it exists, None otherwise. """
     token_network = get_token_network_by_identifier(
         chain_state,
-        token_network_id,
+        TokenNetworkID(canonical_identifier.token_network_address),
     )
 
     channel_state = None
     if token_network:
-        channel_state = token_network.channelidentifiers_to_channels.get(channel_id)
+        channel_state = token_network.channelidentifiers_to_channels.get(
+            canonical_identifier.channel_identifier,
+        )
 
     return channel_state
 
