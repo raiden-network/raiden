@@ -431,13 +431,16 @@ def get_channelstate_settled(
     )
 
 
-def role_from_transfer_task(transfer_task: TransferTask) -> str:
+def role_from_transfer_task(transfer_task: TransferTask) -> Optional[str]:
+    """Return the role fo the transfer, None on error."""
     if isinstance(transfer_task, InitiatorTask):
         return 'initiator'
-    elif isinstance(transfer_task, MediatorTask):
+    if isinstance(transfer_task, MediatorTask):
         return 'mediator'
-    elif isinstance(transfer_task, TargetTask):
+    if isinstance(transfer_task, TargetTask):
         return 'target'
+
+    return None
 
 
 def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> str:
@@ -516,7 +519,7 @@ def filter_channels_by_partneraddress(
 
 def filter_channels_by_status(
         channel_states: List[NettingChannelState],
-        exclude_states=None,
+        exclude_states: Optional[List[str]] = None,
 ) -> List[NettingChannelState]:
     """ Filter the list of channels by excluding ones
     for which the state exists in `exclude_states`. """

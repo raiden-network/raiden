@@ -1,22 +1,30 @@
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.utils.typing import (
     Address,
+    Any,
     BlockExpiration,
     BlockHash,
     BlockNumber,
+    Callable,
     ChannelID,
     Generic,
     List,
     MessageID,
+    Optional,
     T_BlockHash,
     T_BlockNumber,
     T_ChannelID,
     TransactionHash,
     TypeVar,
 )
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.transfer.state import BalanceProofSignedState
 
 # Quick overview
 # --------------
@@ -114,7 +122,7 @@ class SendMessageEvent(Event):
             recipient: Address,
             channel_identifier: ChannelID,
             message_identifier: MessageID,
-    ):
+    ) -> None:
         # Note that here and only here channel identifier can also be 0 which stands
         # for the identifier of no channel (i.e. the global queue)
         if not isinstance(channel_identifier, T_ChannelID):
@@ -127,7 +135,7 @@ class SendMessageEvent(Event):
         )
         self.message_identifier = message_identifier
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, SendMessageEvent) and
             self.recipient == other.recipient and
@@ -135,59 +143,60 @@ class SendMessageEvent(Event):
             self.message_identifier == other.message_identifier
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
 
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
 
-    def __init__(self, sender):
+    def __init__(self, sender: Address) -> None:
         self.sender = sender
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, AuthenticatedSenderStateChange) and
             self.sender == other.sender
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
 
 class BalanceProofStateChange(AuthenticatedSenderStateChange):
     """ Marker used for state changes which contain a balance proof. """
 
-    def __init__(self, balance_proof):
+    def __init__(self, balance_proof: 'BalanceProofSignedState') -> None:
         super().__init__(sender=balance_proof.sender)
         self.balance_proof = balance_proof
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, BalanceProofStateChange) and
             super().__eq__(other) and
             self.balance_proof == other.balance_proof
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
 
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
-    def __init__(self, triggered_by_block_hash: BlockHash):
+
+    def __init__(self, triggered_by_block_hash: BlockHash) -> None:
         if not isinstance(triggered_by_block_hash, T_BlockHash):
             raise ValueError('triggered_by_block_hash must be of type block_hash')
         # This is the blockhash for which the event was triggered
         self.triggered_by_block_hash = triggered_by_block_hash
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractSendEvent) and
             self.triggered_by_block_hash == other.triggered_by_block_hash
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
 
@@ -196,18 +205,18 @@ class ContractSendExpirableEvent(ContractSendEvent):
     time dependent.
     """
 
-    def __init__(self, triggered_by_block_hash: BlockHash, expiration: BlockExpiration):
+    def __init__(self, triggered_by_block_hash: BlockHash, expiration: BlockExpiration) -> None:
         super().__init__(triggered_by_block_hash)
         self.expiration = expiration
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             super().__eq__(other) and
             isinstance(other, ContractSendExpirableEvent) and
             self.expiration == other.expiration
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
 
@@ -219,7 +228,7 @@ class ContractReceiveStateChange(StateChange):
             transaction_hash: TransactionHash,
             block_number: BlockNumber,
             block_hash: BlockHash,
-    ):
+    ) -> None:
         if not isinstance(block_number, T_BlockNumber):
             raise ValueError('block_number must be of type block_number')
         if not isinstance(block_hash, T_BlockHash):
@@ -229,7 +238,7 @@ class ContractReceiveStateChange(StateChange):
         self.block_number = block_number
         self.block_hash = block_hash
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractReceiveStateChange) and
             self.transaction_hash == other.transaction_hash and
@@ -237,7 +246,7 @@ class ContractReceiveStateChange(StateChange):
             self.block_hash == other.block_hash
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
 
@@ -250,7 +259,7 @@ class StateManager:
         'current_state',
     )
 
-    def __init__(self, state_transition, current_state):
+    def __init__(self, state_transition: Callable, current_state: Optional[State]) -> None:
         """ Initialize the state manager.
 
         Args:
@@ -298,14 +307,14 @@ class StateManager:
 
         return events
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, StateManager) and
             self.state_transition == other.state_transition and
             self.current_state == other.current_state
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
 
@@ -324,16 +333,16 @@ class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
         'events',
     )
 
-    def __init__(self, new_state: ST, events: List[Event]):
+    def __init__(self, new_state: ST, events: List[Event]) -> None:
         self.new_state = new_state
         self.events = events
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TransitionResult) and
             self.new_state == other.new_state and
             self.events == other.events
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)

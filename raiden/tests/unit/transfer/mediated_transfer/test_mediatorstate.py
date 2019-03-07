@@ -56,11 +56,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.mediator import set_offchain_secret
-from raiden.transfer.mediated_transfer.state import (
-    MediatorTransferState,
-    RouteState,
-    WaitingTransferState,
-)
+from raiden.transfer.mediated_transfer.state import MediatorTransferState, WaitingTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ReceiveLockExpired,
@@ -71,6 +67,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
+    RouteState,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (

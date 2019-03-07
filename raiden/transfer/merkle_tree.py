@@ -1,12 +1,19 @@
+# the layers grow from the leaves to the root
+from typing import TYPE_CHECKING
+
 from raiden.exceptions import HashLengthNot32
 from raiden.utils import sha3, split_in_pairs
+from raiden.utils.typing import Keccak256, List, Optional
 
-# the layers grow from the leaves to the root
 LEAVES = 0
 MERKLEROOT = -1
 
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.transfer.state import MerkleTreeState
 
-def hash_pair(first, second):
+
+def hash_pair(first: Optional[Keccak256], second: Optional[Keccak256]) -> Optional[Keccak256]:
     """ Computes the keccak hash of the elements ordered topologically.
 
     Since a merkle proof will not include all the elements, but only the path
@@ -28,7 +35,7 @@ def hash_pair(first, second):
     return sha3(first + second)
 
 
-def compute_layers(elements):
+def compute_layers(elements: List[Keccak256]) -> List[List[Keccak256]]:
     """ Computes the layers of the merkletree.
 
     First layer is the list of elements and the last layer is a list with a
@@ -59,7 +66,7 @@ def compute_layers(elements):
     return tree
 
 
-def compute_merkleproof_for(merkletree, element):
+def compute_merkleproof_for(merkletree: 'MerkleTreeState', element: Keccak256) -> List[Keccak256]:
     """ Containment proof for element.
 
     The proof contains only the entries that are sufficient to recompute the
@@ -87,7 +94,7 @@ def compute_merkleproof_for(merkletree, element):
     return proof
 
 
-def validate_proof(proof, root, leaf_element):
+def validate_proof(proof: List[Keccak256], root: Keccak256, leaf_element: Keccak256) -> bool:
     """ Checks that `leaf_element` was contained in the tree represented by
     `merkleroot`.
     """
@@ -99,7 +106,7 @@ def validate_proof(proof, root, leaf_element):
     return hash_ == root
 
 
-def merkleroot(merkletree):
+def merkleroot(merkletree: 'MerkleTreeState') -> Keccak256:
     """ Return the root element of the merkle tree. """
     assert merkletree.layers, 'the merkle tree layers are empty'
     assert merkletree.layers[MERKLEROOT], 'the root layer is empty'
@@ -107,7 +114,7 @@ def merkleroot(merkletree):
     return merkletree.layers[MERKLEROOT][0]
 
 
-def merkle_leaves_from_packed_data(packed_data):
+def merkle_leaves_from_packed_data(packed_data: bytes) -> List[Keccak256]:
     number_of_bytes = len(packed_data)
     leaves = []
     for i in range(0, number_of_bytes, 96):

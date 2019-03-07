@@ -9,7 +9,6 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
-    RouteState,
     balanceproof_from_envelope,
 )
 from raiden.utils import pex, serialization, sha3
@@ -35,12 +34,14 @@ from raiden.utils.typing import (
     TokenNetworkID,
 )
 
-# Upgrade pyflakes to 2.0.0 and remove the 'if' and '# noqa'.
 if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.messages import LockedTransfer
     from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa: F401
+    from raiden.transfer.state import RouteState
 
 
-def lockedtransfersigned_from_message(message):
+def lockedtransfersigned_from_message(message: 'LockedTransfer') -> 'LockedTransferSignedState':
     """ Create LockedTransferSignedState from a LockedTransfer message. """
     balance_proof = balanceproof_from_envelope(message)
 
@@ -74,7 +75,7 @@ class InitiatorPaymentState(State):
         'initiator_transfers',
     )
 
-    def __init__(self, initiator_transfers: InitiatorTransfersMap):
+    def __init__(self, initiator_transfers: InitiatorTransfersMap) -> None:
         self.initiator_transfers = initiator_transfers
         self.cancelled_channels = list()
 
@@ -83,14 +84,14 @@ class InitiatorPaymentState(State):
             self.initiator_transfers,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, InitiatorPaymentState) and
             self.initiator_transfers == other.initiator_transfers and
             self.cancelled_channels == other.cancelled_channels
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -141,7 +142,7 @@ class InitiatorTransferState(State):
             transfer: 'LockedTransferUnsignedState',
             revealsecret: Optional['SendSecretReveal'],
             received_secret_request: bool = False,
-    ):
+    ) -> None:
 
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
             raise ValueError(
@@ -166,7 +167,7 @@ class InitiatorTransferState(State):
             self.transfer_state,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, InitiatorTransferState) and
             self.transfer_description == other.transfer_description and
@@ -177,7 +178,7 @@ class InitiatorTransferState(State):
             self.transfer_state == other.transfer_state
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -211,21 +212,21 @@ class WaitingTransferState(State):
             self,
             transfer: 'LockedTransferSignedState',
             state: str = 'waiting',
-    ):
+    ) -> None:
         self.transfer = transfer
         self.state = state
 
     def __repr__(self):
         return f'<WaitingTransferState state:{self.state} transfer:{self.transfer}>'
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, WaitingTransferState) and
             self.transfer == other.transfer and
             self.state == other.state
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -265,8 +266,8 @@ class MediatorTransferState(State):
     def __init__(
             self,
             secrethash: SecretHash,
-            routes: List[RouteState],
-    ):
+            routes: List['RouteState'],
+    ) -> None:
         self.secrethash = secrethash
         self.secret: Secret = None
         self.transfers_pair: List[MediationPairState] = list()
@@ -279,7 +280,7 @@ class MediatorTransferState(State):
             len(self.transfers_pair),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, MediatorTransferState) and
             self.secrethash == other.secrethash and
@@ -289,7 +290,7 @@ class MediatorTransferState(State):
             self.routes == other.routes
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -347,10 +348,10 @@ class TargetTransferState(State):
 
     def __init__(
             self,
-            route: RouteState,
+            route: 'RouteState',
             transfer: 'LockedTransferSignedState',
             secret: Secret = None,
-    ):
+    ) -> None:
         self.route = route
         self.transfer = transfer
 
@@ -363,7 +364,7 @@ class TargetTransferState(State):
             self.state,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TargetTransferState) and
             self.route == other.route and
@@ -372,7 +373,7 @@ class TargetTransferState(State):
             self.state == other.state
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -428,7 +429,7 @@ class LockedTransferUnsignedState(LockedTransferState):
             lock: HashTimeLockState,
             initiator: Address,
             target: Address,
-    ):
+    ) -> None:
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
@@ -461,7 +462,7 @@ class LockedTransferUnsignedState(LockedTransferState):
             encode_hex(self.target),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, LockedTransferUnsignedState) and
             self.payment_identifier == other.payment_identifier and
@@ -472,7 +473,7 @@ class LockedTransferUnsignedState(LockedTransferState):
             self.target == other.target
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -518,12 +519,12 @@ class LockedTransferSignedState(LockedTransferState):
             self,
             message_identifier: MessageID,
             payment_identifier: PaymentID,
-            token: Address,
+            token: TokenAddress,
             balance_proof: BalanceProofSignedState,
             lock: HashTimeLockState,
             initiator: InitiatorAddress,
             target: TargetAddress,
-    ):
+    ) -> None:
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
@@ -558,10 +559,10 @@ class LockedTransferSignedState(LockedTransferState):
         )
 
     @property
-    def payer_address(self):
+    def payer_address(self) -> Address:
         return self.balance_proof.sender
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, LockedTransferSignedState) and
             self.message_identifier == other.message_identifier and
@@ -573,7 +574,7 @@ class LockedTransferSignedState(LockedTransferState):
             self.target == other.target
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -627,7 +628,7 @@ class TransferDescriptionWithSecretState(State):
             initiator: InitiatorAddress,
             target: TargetAddress,
             secret: Secret,
-    ):
+    ) -> None:
         secrethash = sha3(secret)
 
         self.payment_network_identifier = payment_network_identifier
@@ -651,7 +652,7 @@ class TransferDescriptionWithSecretState(State):
             pex(self.secrethash),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TransferDescriptionWithSecretState) and
             self.payment_network_identifier == other.payment_network_identifier and
@@ -664,7 +665,7 @@ class TransferDescriptionWithSecretState(State):
             self.secrethash == other.secrethash
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -746,7 +747,7 @@ class MediationPairState(State):
             payer_transfer: LockedTransferSignedState,
             payee_address: Address,
             payee_transfer: LockedTransferUnsignedState,
-    ):
+    ) -> None:
         if not isinstance(payer_transfer, LockedTransferSignedState):
             raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
 
@@ -773,10 +774,10 @@ class MediationPairState(State):
         )
 
     @property
-    def payer_address(self):
+    def payer_address(self) -> bytes:
         return self.payer_transfer.payer_address
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, MediationPairState) and
             self.payee_address == other.payee_address and
@@ -786,7 +787,7 @@ class MediationPairState(State):
             self.payer_state == other.payer_state
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:

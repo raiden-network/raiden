@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.constants import UINT256_MAX
@@ -7,7 +9,6 @@ from raiden.transfer.architecture import (
     Event,
     SendMessageEvent,
 )
-from raiden.transfer.state import BalanceProofSignedState
 from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier, pex, serialization, sha3
 from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 from raiden.utils.typing import (
@@ -32,6 +33,10 @@ from raiden.utils.typing import (
     TokenNetworkID,
 )
 
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.transfer.state import BalanceProofSignedState
+
 # pylint: disable=too-many-arguments,too-few-public-methods
 
 
@@ -45,9 +50,9 @@ class ContractSendChannelClose(ContractSendEvent):
             self,
             canonical_identifier: CanonicalIdentifier,
             token_address: TokenAddress,
-            balance_proof: Optional[BalanceProofSignedState],
+            balance_proof: Optional['BalanceProofSignedState'],
             triggered_by_block_hash: BlockHash,
-    ):
+    ) -> None:
         super().__init__(triggered_by_block_hash)
         self.channel_identifier = canonical_identifier.channel_identifier
         self.token_address = token_address
@@ -66,7 +71,7 @@ class ContractSendChannelClose(ContractSendEvent):
             pex(self.triggered_by_block_hash),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             super().__eq__(other) and
             isinstance(other, ContractSendChannelClose) and
@@ -76,7 +81,7 @@ class ContractSendChannelClose(ContractSendEvent):
             self.balance_proof == other.balance_proof
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -136,7 +141,7 @@ class ContractSendChannelSettle(ContractSendEvent):
             )
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             super().__eq__(other) and
             isinstance(other, ContractSendChannelSettle) and
@@ -144,7 +149,7 @@ class ContractSendChannelSettle(ContractSendEvent):
             self.token_network_identifier == other.token_network_identifier
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -176,9 +181,9 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def __init__(
             self,
             expiration: BlockExpiration,
-            balance_proof: BalanceProofSignedState,
+            balance_proof: 'BalanceProofSignedState',
             triggered_by_block_hash: BlockHash,
-    ):
+    ) -> None:
         super().__init__(triggered_by_block_hash, expiration)
 
         canonical_identifier = balance_proof.canonical_identifier
@@ -197,7 +202,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             pex(self.triggered_by_block_hash),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractSendChannelUpdateTransfer) and
             self.channel_identifier == other.channel_identifier and
@@ -206,7 +211,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             super().__eq__(other)
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -224,11 +229,6 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelUpdateTransfer':
         restored = cls(
             expiration=int(data['expiration']),
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=ChannelID(int(data['channel_identifier'])),
-            ),
             balance_proof=data['balance_proof'],
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
@@ -245,7 +245,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             canonical_identifier: CanonicalIdentifier,
             participant: Address,
             triggered_by_block_hash: BlockHash,
-    ):
+    ) -> None:
         super().__init__(triggered_by_block_hash)
         self.token_address = token_address
         self.token_network_identifier = canonical_identifier.token_network_address
@@ -265,7 +265,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             pex(self.triggered_by_block_hash),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             super().__eq__(other) and
             isinstance(other, ContractSendChannelBatchUnlock) and
@@ -275,7 +275,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
             self.participant == other.participant
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -313,7 +313,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
             expiration: BlockExpiration,
             secret: Secret,
             triggered_by_block_hash: BlockHash,
-    ):
+    ) -> None:
         if not isinstance(secret, T_Secret):
             raise ValueError('secret must be a Secret instance')
 
@@ -326,14 +326,14 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
             '<ContractSendSecretReveal secrethash:{} triggered_by_block_hash:{}>'
         ).format(secrethash, pex(self.triggered_by_block_hash))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractSendSecretReveal) and
             self.secret == other.secret and
             super().__eq__(other)
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -386,7 +386,7 @@ class EventPaymentSentSuccess(Event):
             identifier: PaymentID,
             amount: TokenAmount,
             target: TargetAddress,
-    ):
+    ) -> None:
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
         self.identifier = identifier
@@ -409,7 +409,7 @@ class EventPaymentSentSuccess(Event):
             pex(self.target),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, EventPaymentSentSuccess) and
             self.identifier == other.identifier and
@@ -419,7 +419,7 @@ class EventPaymentSentSuccess(Event):
             self.token_network_identifier == other.token_network_identifier
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -461,7 +461,7 @@ class EventPaymentSentFailed(Event):
             identifier: PaymentID,
             target: TargetAddress,
             reason: str,
-    ):
+    ) -> None:
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
         self.identifier = identifier
@@ -483,7 +483,7 @@ class EventPaymentSentFailed(Event):
             self.reason,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, EventPaymentSentFailed) and
             self.payment_network_identifier == other.payment_network_identifier and
@@ -493,7 +493,7 @@ class EventPaymentSentFailed(Event):
             self.reason == other.reason
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -537,7 +537,7 @@ class EventPaymentReceivedSuccess(Event):
             identifier: PaymentID,
             amount: TokenAmount,
             initiator: InitiatorAddress,
-    ):
+    ) -> None:
         if amount < 0:
             raise ValueError('transferred_amount cannot be negative')
 
@@ -565,7 +565,7 @@ class EventPaymentReceivedSuccess(Event):
             pex(self.initiator),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, EventPaymentReceivedSuccess) and
             self.identifier == other.identifier and
@@ -575,7 +575,7 @@ class EventPaymentReceivedSuccess(Event):
             self.token_network_identifier == other.token_network_identifier
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -605,7 +605,7 @@ class EventPaymentReceivedSuccess(Event):
 class EventInvalidReceivedTransferRefund(Event):
     """ Event emitted when an invalid refund transfer is received. """
 
-    def __init__(self, payment_identifier: PaymentID, reason: str):
+    def __init__(self, payment_identifier: PaymentID, reason: str) -> None:
         self.payment_identifier = payment_identifier
         self.reason = reason
 
@@ -618,14 +618,14 @@ class EventInvalidReceivedTransferRefund(Event):
             f'>'
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, EventInvalidReceivedTransferRefund) and
             self.payment_identifier == other.payment_identifier and
             self.reason == other.reason
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -652,7 +652,7 @@ class EventInvalidReceivedTransferRefund(Event):
 class EventInvalidReceivedLockExpired(Event):
     """ Event emitted when an invalid lock expired message is received. """
 
-    def __init__(self, secrethash: SecretHash, reason: str):
+    def __init__(self, secrethash: SecretHash, reason: str) -> None:
         self.secrethash = secrethash
         self.reason = reason
 
@@ -665,14 +665,14 @@ class EventInvalidReceivedLockExpired(Event):
             f'>'
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, EventInvalidReceivedLockExpired) and
             self.secrethash == other.secrethash and
             self.reason == other.reason
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -699,7 +699,7 @@ class EventInvalidReceivedLockExpired(Event):
 class EventInvalidReceivedLockedTransfer(Event):
     """ Event emitted when an invalid locked transfer is received. """
 
-    def __init__(self, payment_identifier: PaymentID, reason: str):
+    def __init__(self, payment_identifier: PaymentID, reason: str) -> None:
         self.payment_identifier = payment_identifier
         self.reason = reason
 
@@ -712,14 +712,14 @@ class EventInvalidReceivedLockedTransfer(Event):
             f'>'
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, EventInvalidReceivedLockedTransfer) and
             self.payment_identifier == other.payment_identifier and
             self.reason == other.reason
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -746,7 +746,7 @@ class EventInvalidReceivedLockedTransfer(Event):
 class EventInvalidReceivedUnlock(Event):
     """ Event emitted when an invalid unlock message is received. """
 
-    def __init__(self, secrethash: SecretHash, reason: str):
+    def __init__(self, secrethash: SecretHash, reason: str) -> None:
         self.secrethash = secrethash
         self.reason = reason
 
@@ -759,14 +759,14 @@ class EventInvalidReceivedUnlock(Event):
             f'>'
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, EventInvalidReceivedUnlock) and
             self.secrethash == other.secrethash and
             self.reason == other.reason
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -799,13 +799,13 @@ class SendProcessed(SendMessageEvent):
             pex(self.recipient),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, SendProcessed) and
             super().__eq__(other)
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:

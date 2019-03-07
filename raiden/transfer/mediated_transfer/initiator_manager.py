@@ -69,7 +69,9 @@ def can_cancel(initiator: InitiatorTransferState) -> bool:
     )
 
 
-def events_for_cancel_current_route(transfer_description) -> List[Event]:
+def events_for_cancel_current_route(
+        transfer_description: TransferDescriptionWithSecretState,
+) -> List[Event]:
     unlock_failed = EventUnlockFailed(
         identifier=transfer_description.payment_identifier,
         secrethash=transfer_description.secrethash,

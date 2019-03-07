@@ -987,7 +987,7 @@ def get_number_of_pending_transfers(channel_end_state: NettingChannelEndState) -
     return _merkletree_width(channel_end_state.merkletree)
 
 
-def get_status(channel_state):
+def get_status(channel_state: NettingChannelState) -> str:
     if channel_state.settle_transaction:
         finished_successfully = (
             channel_state.settle_transaction.result == TransactionExecutionStatus.SUCCESS
