@@ -829,7 +829,7 @@ def test_pfs_global_messages(
 @pytest.mark.parametrize('private_rooms', [[True, True]])
 @pytest.mark.parametrize('matrix_server_count', [2])
 @pytest.mark.parametrize('number_of_transports', [2])
-def test_reproduce_handle_invite_send_race(matrix_transports):
+def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
     transport0, transport1 = matrix_transports
     received_messages0 = set()
     received_messages1 = set()

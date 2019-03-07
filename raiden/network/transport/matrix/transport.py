@@ -1015,12 +1015,48 @@ class MatrixTransport(Runnable):
             self.log.error('No valid peer found', peer_address=address_hex)
             return None
 
-        self._address_to_userids[address].update({user.user_id for user in peers})
-
         if self._private_rooms:
             room = self._get_private_room(invitees=peers)
         else:
             room = self._get_public_room(room_name, invitees=peers)
+
+        peer_ids = self._address_to_userids[address]
+        member_ids = {member.user_id for member in room.get_joined_members()}
+        room_is_empty = not bool(peer_ids & member_ids)
+        if room_is_empty:
+            last_ex: Optional[Exception] = False
+            retry_interval = 0.1
+            self.log.debug(
+                'Waiting for peer to join from invite.',
+                peer_address=address_hex,
+            )
+            for _ in range(JOIN_RETRIES):
+                try:
+                    member_ids = {member.user_id for member in room.get_joined_members()}
+                except MatrixRequestError as e:
+                    last_ex = e
+                room_is_empty = not bool(peer_ids & member_ids)
+                if room_is_empty or last_ex:
+                    if last_ex:
+                        raise last_ex
+                    gevent.sleep(retry_interval)
+                    retry_interval = retry_interval * 2
+                else:
+                    break
+
+            if room_is_empty or last_ex:
+                if last_ex:
+                    raise last_ex  # re-raise if couldn't succeed in retries
+                else:
+                    # leave room, if no one listens:
+                    room.leave()
+                    self.log.error(
+                        'Peer has not joined from invite - Leaving empty room.',
+                        peer_address=address_hex,
+                    )
+                return None
+
+        self._address_to_userids[address].update({user.user_id for user in peers})
         self._set_room_id_for_address(address, room.room_id)
 
         if not room.listeners:
