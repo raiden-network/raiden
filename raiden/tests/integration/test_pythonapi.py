@@ -6,6 +6,8 @@ import pytest
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import (
+    RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+    RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
     UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
     Environment,
@@ -475,8 +477,8 @@ def test_set_deposit_limit_crash(raiden_network, token_amount, contract_manager,
     api1.token_network_register(
         registry_address=registry_address,
         token_address=token_address,
-        channel_participant_deposit_limit=UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
-        token_network_deposit_limit=UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+        channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+        token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     )
     exception = RuntimeError('Did not see the token registration within 30 seconds')
     with gevent.Timeout(seconds=30, exception=exception):

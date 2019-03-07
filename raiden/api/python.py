@@ -30,7 +30,7 @@ from raiden.exceptions import (
     UnknownTokenAddress,
 )
 from raiden.messages import RequestMonitoring
-from raiden.settings import DEFAULT_RETRY_TIMEOUT
+from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
 from raiden.transfer import architecture, views
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
@@ -217,14 +217,23 @@ class RaidenAPI:
         if token_address in self.get_tokens_list(registry_address):
             raise AlreadyRegisteredTokenAddress('Token already registered')
 
+        contracts_version = self.raiden.contract_manager.contracts_version
+
+        registry = self.raiden.chain.token_network_registry(registry_address)
+
         try:
-            registry = self.raiden.chain.token_network_registry(registry_address)
-            return registry.add_token(
-                token_address=token_address,
-                channel_participant_deposit_limit=channel_participant_deposit_limit,
-                token_network_deposit_limit=token_network_deposit_limit,
-                given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
-            )
+            if contracts_version == DEVELOPMENT_CONTRACT_VERSION:
+                return registry.add_token_with_limits(
+                    token_address=token_address,
+                    channel_participant_deposit_limit=channel_participant_deposit_limit,
+                    token_network_deposit_limit=token_network_deposit_limit,
+                    given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
+                )
+            else:
+                return registry.add_token_without_limits(
+                    token_address=token_address,
+                    given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
+                )
         except RaidenRecoverableError as e:
             if 'Token already registered' in str(e):
                 raise AlreadyRegisteredTokenAddress('Token already registered')

@@ -32,7 +32,7 @@ def test_token_network_registry(
     bad_token_address = make_address()
     # try to register non-existing token network
     with pytest.raises(RaidenUnrecoverableError):
-        token_network_registry_proxy.add_token(
+        token_network_registry_proxy.add_token_with_limits(
             token_address=bad_token_address,
             channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
             token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
@@ -49,7 +49,7 @@ def test_token_network_registry(
     )
     test_token_address = to_canonical_address(test_token.contract.address)
     event_filter = token_network_registry_proxy.tokenadded_filter()
-    token_network_address = token_network_registry_proxy.add_token(
+    token_network_address = token_network_registry_proxy.add_token_with_limits(
         token_address=test_token_address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
@@ -57,7 +57,7 @@ def test_token_network_registry(
     )
 
     with pytest.raises(RaidenRecoverableError) as exc:
-        token_network_address = token_network_registry_proxy.add_token(
+        token_network_address = token_network_registry_proxy.add_token_with_limits(
             token_address=test_token_address,
             channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
             token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
