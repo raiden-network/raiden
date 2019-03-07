@@ -9,7 +9,7 @@ class QueueIdentifier:
             self,
             recipient: Address,
             channel_identifier: ChannelID,
-    ):
+    ) -> None:
         self.recipient = recipient
         self.channel_identifier = channel_identifier
 
@@ -19,17 +19,17 @@ class QueueIdentifier:
             self.channel_identifier,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, QueueIdentifier) and
             self.recipient == other.recipient and
             self.channel_identifier == other.channel_identifier
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.recipient, self.channel_identifier))
 
     def to_dict(self) -> Dict[str, Any]:

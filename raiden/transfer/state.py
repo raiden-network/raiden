@@ -2,6 +2,8 @@
 import random
 from collections import defaultdict
 from functools import total_ordering
+from random import Random
+from typing import TYPE_CHECKING
 
 import networkx
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
@@ -53,6 +55,11 @@ from raiden.utils.typing import (
     Union,
 )
 
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from messages import EnvelopeMessage
+    from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
+
 SecretHashToLock = Dict[SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = Dict[SecretHash, 'UnlockPartialProofState']
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
@@ -93,7 +100,9 @@ NODE_NETWORK_UNREACHABLE = 'unreachable'
 NODE_NETWORK_REACHABLE = 'reachable'
 
 
-def balanceproof_from_envelope(envelope_message):
+def balanceproof_from_envelope(
+        envelope_message: 'EnvelopeMessage',
+) -> 'BalanceProofSignedState':
     return BalanceProofSignedState(
         nonce=envelope_message.nonce,
         transferred_amount=envelope_message.transferred_amount,
@@ -110,14 +119,14 @@ def balanceproof_from_envelope(envelope_message):
     )
 
 
-def make_empty_merkle_tree():
+def make_empty_merkle_tree() -> 'MerkleTreeState':
     return MerkleTreeState([
         [],                   # the leaves are empty
         [EMPTY_MERKLE_ROOT],  # the root is the constant 0
     ])
 
 
-def message_identifier_from_prng(prng):
+def message_identifier_from_prng(prng: Random) -> int:
     return prng.randint(0, UINT64_MAX)
 
 
@@ -139,7 +148,7 @@ class InitiatorTask(TransferTask):
             self,
             token_network_identifier: TokenNetworkID,
             manager_state: State,
-    ):
+    ) -> None:
         self.token_network_identifier = token_network_identifier
         self.manager_state = manager_state
 
@@ -149,14 +158,14 @@ class InitiatorTask(TransferTask):
             self.manager_state,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, InitiatorTask) and
             self.token_network_identifier == other.token_network_identifier and
             self.manager_state == other.manager_state
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -182,8 +191,8 @@ class MediatorTask(TransferTask):
     def __init__(
             self,
             token_network_identifier: TokenNetworkID,
-            mediator_state,
-    ):
+            mediator_state: 'MediatorTransferState',
+    ) -> None:
         self.token_network_identifier = token_network_identifier
         self.mediator_state = mediator_state
 
@@ -193,14 +202,14 @@ class MediatorTask(TransferTask):
             self.mediator_state,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, MediatorTask) and
             self.token_network_identifier == other.token_network_identifier and
             self.mediator_state == other.mediator_state
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -230,8 +239,8 @@ class TargetTask(TransferTask):
             self,
             token_network_identifier: TokenNetworkID,
             channel_identifier: ChannelID,
-            target_state,
-    ):
+            target_state: 'TargetTransferState',
+    ) -> None:
         self.token_network_identifier = token_network_identifier
         self.target_state = target_state
         self.channel_identifier = channel_identifier
@@ -243,7 +252,7 @@ class TargetTask(TransferTask):
             self.target_state,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TargetTask) and
             self.token_network_identifier == other.token_network_identifier and
@@ -251,7 +260,7 @@ class TargetTask(TransferTask):
             self.channel_identifier == other.channel_identifier
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -287,7 +296,7 @@ class ChainState(State):
             block_hash: BlockHash,
             our_address: Address,
             chain_id: ChainID,
-    ):
+    ) -> None:
         if not isinstance(block_number, T_BlockNumber):
             raise ValueError('block_number must be of BlockNumber type')
 
@@ -321,7 +330,7 @@ class ChainState(State):
             self.chain_id,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ChainState) and
             self.block_number == other.block_number and
@@ -335,7 +344,7 @@ class ChainState(State):
             self.last_transport_authdata == other.last_transport_authdata
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -410,7 +419,7 @@ class PaymentNetworkState(State):
             self,
             address: Address,
             token_network_list: List['TokenNetworkState'],
-    ):
+    ) -> None:
         if not isinstance(address, T_Address):
             raise ValueError('address must be an address instance')
 
@@ -427,7 +436,7 @@ class PaymentNetworkState(State):
     def __repr__(self):
         return '<PaymentNetworkState id:{}>'.format(pex(self.address))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, PaymentNetworkState) and
             self.address == other.address and
@@ -435,7 +444,7 @@ class PaymentNetworkState(State):
             self.tokenidentifiers_to_tokennetworks == other.tokenidentifiers_to_tokennetworks
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -469,7 +478,7 @@ class TokenNetworkState(State):
         'partneraddresses_to_channelidentifiers',
     )
 
-    def __init__(self, address: TokenNetworkID, token_address: TokenAddress):
+    def __init__(self, address: TokenNetworkID, token_address: TokenAddress) -> None:
 
         if not isinstance(address, T_Address):
             raise ValueError('address must be an address instance')
@@ -492,7 +501,7 @@ class TokenNetworkState(State):
             pex(self.token_address),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TokenNetworkState) and
             self.address == other.address and
@@ -505,7 +514,7 @@ class TokenNetworkState(State):
             )
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -564,7 +573,7 @@ class TokenNetworkGraphState(State):
         'channel_identifier_to_participants',
     )
 
-    def __init__(self, token_network_address: TokenNetworkID):
+    def __init__(self, token_network_address: TokenNetworkID) -> None:
         self.token_network_id = token_network_address
         self.network = networkx.Graph()
         self.channel_identifier_to_participants = {}
@@ -572,7 +581,7 @@ class TokenNetworkGraphState(State):
     def __repr__(self):
         return '<TokenNetworkGraphState num_edges:{}>'.format(len(self.network.edges))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TokenNetworkGraphState) and
             self.token_network_id == other.token_network_id and
@@ -580,7 +589,7 @@ class TokenNetworkGraphState(State):
             self.channel_identifier_to_participants == other.channel_identifier_to_participants
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -629,7 +638,7 @@ class PaymentMappingState(State):
         'secrethashes_to_task',
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.secrethashes_to_task = dict()
 
     def __repr__(self):
@@ -637,13 +646,13 @@ class PaymentMappingState(State):
             len(self.secrethashes_to_task),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, PaymentMappingState) and
             self.secrethashes_to_task == other.secrethashes_to_task
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -684,27 +693,27 @@ class RouteState(State):
             self,
             node_address: Address,
             channel_identifier: ChannelID,
-    ):
+    ) -> None:
         if not isinstance(node_address, T_Address):
             raise ValueError('node_address must be an address instance')
 
         self.node_address = node_address
         self.channel_identifier = channel_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<RouteState hop:{node} channel_identifier:{channel_identifier}>'.format(
             node=pex(self.node_address),
             channel_identifier=self.channel_identifier,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, RouteState) and
             self.node_address == other.node_address and
             self.channel_identifier == other.channel_identifier
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -743,7 +752,7 @@ class BalanceProofUnsignedState(State):
             locked_amount: TokenAmount,
             locksroot: Locksroot,
             canonical_identifier: CanonicalIdentifier,
-    ):
+    ) -> None:
         chain_id = canonical_identifier.chain_identifier
         token_network_identifier = canonical_identifier.token_network_address
         channel_identifier = canonical_identifier.channel_identifier
@@ -807,7 +816,7 @@ class BalanceProofUnsignedState(State):
             self.chain_id,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, BalanceProofUnsignedState) and
             self.nonce == other.nonce and
@@ -819,11 +828,11 @@ class BalanceProofUnsignedState(State):
             self.chain_id == other.chain_id
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     @property
-    def balance_hash(self):
+    def balance_hash(self) -> BalanceHash:
         return hash_balance_data(
             transferred_amount=self.transferred_amount,
             locked_amount=self.locked_amount,
@@ -896,7 +905,7 @@ class BalanceProofSignedState(State):
             signature: Signature,
             sender: Address,
             canonical_identifier: CanonicalIdentifier,
-    ):
+    ) -> None:
         chain_id = canonical_identifier.chain_identifier
         token_network_identifier = canonical_identifier.token_network_address
         channel_identifier = canonical_identifier.channel_identifier
@@ -986,7 +995,7 @@ class BalanceProofSignedState(State):
             self.chain_id,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, BalanceProofSignedState) and
             self.nonce == other.nonce and
@@ -1001,7 +1010,7 @@ class BalanceProofSignedState(State):
             self.chain_id == other.chain_id
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     @property
@@ -1072,7 +1081,7 @@ class HashTimeLockState(State):
             amount: TokenAmount,
             expiration: BlockExpiration,
             secrethash: SecretHash,
-    ):
+    ) -> None:
         if not isinstance(amount, T_TokenAmount):
             raise ValueError('amount must be a token_amount instance')
 
@@ -1103,7 +1112,7 @@ class HashTimeLockState(State):
             pex(self.secrethash),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, HashTimeLockState) and
             self.amount == other.amount and
@@ -1111,7 +1120,7 @@ class HashTimeLockState(State):
             self.secrethash == other.secrethash
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def __hash__(self):
@@ -1148,7 +1157,7 @@ class UnlockPartialProofState(State):
         'lockhash',
     )
 
-    def __init__(self, lock: HashTimeLockState, secret: Secret):
+    def __init__(self, lock: HashTimeLockState, secret: Secret) -> None:
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')
 
@@ -1168,14 +1177,14 @@ class UnlockPartialProofState(State):
             self.lock,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, UnlockPartialProofState) and
             self.lock == other.lock and
             self.secret == other.secret
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1221,7 +1230,7 @@ class UnlockProofState(State):
         full_proof = [encode_hex(entry) for entry in self.merkle_proof]
         return f'<UnlockProofState proof:{full_proof} lock:{encode_hex(self.lock_encoded)}>'
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, UnlockProofState) and
             self.merkle_proof == other.merkle_proof and
@@ -1229,7 +1238,7 @@ class UnlockProofState(State):
             self.secret == other.secret
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1264,7 +1273,7 @@ class TransactionExecutionStatus(State):
             started_block_number: Optional[BlockNumber] = None,
             finished_block_number: Optional[BlockNumber] = None,
             result: str = None,
-    ):
+    ) -> None:
 
         is_valid_start = (
             started_block_number is None or
@@ -1299,7 +1308,7 @@ class TransactionExecutionStatus(State):
             self.result,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TransactionExecutionStatus) and
             self.started_block_number == other.started_block_number and
@@ -1307,7 +1316,7 @@ class TransactionExecutionStatus(State):
             self.result == other.result
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1348,7 +1357,7 @@ class MerkleTreeState(State):
         'layers',
     )
 
-    def __init__(self, layers: List[List[Keccak256]]):
+    def __init__(self, layers: List[List[Keccak256]]) -> None:
         self.layers = layers
 
     def __repr__(self):
@@ -1356,13 +1365,13 @@ class MerkleTreeState(State):
             pex(merkleroot(self)),
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, MerkleTreeState) and
             self.layers == other.layers
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1392,7 +1401,7 @@ class NettingChannelEndState(State):
         'balance_proof',
     )
 
-    def __init__(self, address: Address, balance: Balance):
+    def __init__(self, address: Address, balance: Balance) -> None:
         if not isinstance(address, T_Address):
             raise ValueError('address must be an address instance')
 
@@ -1422,7 +1431,7 @@ class NettingChannelEndState(State):
             self.merkletree,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, NettingChannelEndState) and
             self.address == other.address and
@@ -1437,7 +1446,7 @@ class NettingChannelEndState(State):
             self.balance_proof == other.balance_proof
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1530,7 +1539,7 @@ class NettingChannelState(State):
             close_transaction: TransactionExecutionStatus = None,
             settle_transaction: TransactionExecutionStatus = None,
             update_transaction: TransactionExecutionStatus = None,
-    ):
+    ) -> None:
         chain_id = canonical_identifier.chain_identifier
         identifier = canonical_identifier.channel_identifier
         token_network_identifier = canonical_identifier.token_network_address
@@ -1599,7 +1608,7 @@ class NettingChannelState(State):
             self.update_transaction,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, NettingChannelState) and
             self.identifier == other.identifier and
@@ -1620,11 +1629,11 @@ class NettingChannelState(State):
         )
 
     @property
-    def our_total_deposit(self):
+    def our_total_deposit(self) -> Balance:
         return self.our_state.contract_balance
 
     @property
-    def partner_total_deposit(self):
+    def partner_total_deposit(self) -> Balance:
         return self.partner_state.contract_balance
 
     @property
@@ -1635,7 +1644,7 @@ class NettingChannelState(State):
             channel_identifier=self.identifier,
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -1712,7 +1721,7 @@ class TransactionChannelNewBalance(State):
             participant_address: Address,
             contract_balance: TokenAmount,
             deposit_block_number: BlockNumber,
-    ):
+    ) -> None:
         if not isinstance(participant_address, T_Address):
             raise ValueError('participant_address must be of type address')
 
@@ -1733,7 +1742,7 @@ class TransactionChannelNewBalance(State):
             self.deposit_block_number,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, TransactionChannelNewBalance):
             return NotImplemented
         return (
@@ -1742,7 +1751,7 @@ class TransactionChannelNewBalance(State):
             self.deposit_block_number == other.deposit_block_number
         )
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         if not isinstance(other, TransactionChannelNewBalance):
             return NotImplemented
         return (
@@ -1781,7 +1790,7 @@ class TransactionOrder(State):
             self,
             block_number: BlockNumber,
             transaction: TransactionChannelNewBalance,
-    ):
+    ) -> None:
         self.block_number = block_number
         self.transaction = transaction
 
@@ -1791,17 +1800,17 @@ class TransactionOrder(State):
             self.transaction,
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, TransactionOrder) and
             self.block_number == other.block_number and
             self.transaction == other.transaction
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: Any) -> bool:
         if not isinstance(other, TransactionOrder):
             return NotImplemented
         return (

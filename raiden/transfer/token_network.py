@@ -23,7 +23,7 @@ def subdispatch_to_channel_by_id(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
         block_hash: BlockHash,
-):
+) -> TransitionResult:
     events = list()
 
     ids_to_channels = token_network_state.channelidentifiers_to_channels
@@ -73,7 +73,7 @@ def handle_channel_close(
 def handle_channelnew(
         token_network_state: TokenNetworkState,
         state_change: ContractReceiveChannelNew,
-):
+) -> TransitionResult:
     events = list()
 
     channel_state = state_change.channel_state
@@ -123,7 +123,7 @@ def handle_closed(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
         block_hash: BlockHash,
-):
+) -> TransitionResult:
     network_graph_state = token_network_state.network_graph
 
     # it might happen that both partners close at the same time, so the channel might
@@ -155,7 +155,7 @@ def handle_settled(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
         block_hash: BlockHash,
-):
+) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
@@ -187,7 +187,7 @@ def handle_batch_unlock(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
         block_hash: BlockHash,
-):
+) -> TransitionResult:
     participant1 = state_change.participant
     participant2 = state_change.partner
 
@@ -232,7 +232,7 @@ def handle_batch_unlock(
 def handle_newroute(
         token_network_state: TokenNetworkState,
         state_change: ContractReceiveRouteNew,
-):
+) -> TransitionResult:
     events = list()
 
     token_network_state.network_graph.network.add_edge(
@@ -249,7 +249,7 @@ def handle_newroute(
 def handle_closeroute(
         token_network_state: TokenNetworkState,
         state_change: ContractReceiveRouteClosed,
-):
+) -> TransitionResult:
     events = list()
 
     network_graph_state = token_network_state.network_graph
@@ -278,7 +278,7 @@ def state_transition(
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
         block_hash: BlockHash,
-):
+) -> TransitionResult:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     if type(state_change) == ActionChannelClose:
