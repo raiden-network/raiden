@@ -152,11 +152,11 @@ def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
             make_secret()
             for _ in range(7)
         ]
-        greenlets = list()
+        greenlets = set()
 
         # `register_secret` called twice
         for _ in range(2):
-            greenlets.append(gevent.spawn(
+            greenlets.add(gevent.spawn(
                 secret_registry_proxy.register_secret,
                 secrets[0],
                 'latest',
@@ -164,7 +164,7 @@ def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
 
         # `register_secret_batch` called twice
         for _ in range(2):
-            greenlets.append(gevent.spawn(
+            greenlets.add(gevent.spawn(
                 secret_registry_proxy.register_secret_batch,
                 secrets[1:3],
                 'latest',
@@ -173,17 +173,17 @@ def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
         # Calling `register_secret` then `register_secret_batch`
         # Calling `register_secret_batch` then `register_secret`
         for _ in range(2):
-            greenlets.append(gevent.spawn(
+            greenlets.add(gevent.spawn(
                 secret_registry_proxy.register_secret,
                 secrets[3],
                 'latest',
             ))
-            greenlets.append(gevent.spawn(
+            greenlets.add(gevent.spawn(
                 secret_registry_proxy.register_secret_batch,
                 secrets[3:5],
                 'latest',
             ))
-            greenlets.append(gevent.spawn(
+            greenlets.add(gevent.spawn(
                 secret_registry_proxy.register_secret,
                 secrets[4],
                 'latest',
@@ -192,12 +192,12 @@ def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
         # `register_secret_batch` called twice, with different order of the
         # secret
         for _ in range(2):
-            greenlets.append(gevent.spawn(
+            greenlets.add(gevent.spawn(
                 secret_registry_proxy.register_secret_batch,
                 secrets[5:7],
                 'latest',
             ))
-            greenlets.append(gevent.spawn(
+            greenlets.add(gevent.spawn(
                 secret_registry_proxy.register_secret_batch,
                 secrets[6:4:-1],  # this range matches [5:7]
                 'latest',

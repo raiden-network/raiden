@@ -72,7 +72,7 @@ class SecretRegistry:
         secrethashes_to_register = list()
         secrethashes_not_sent = list()
         transaction_result = AsyncResult()
-        wait_for = list()
+        wait_for = set()
 
         with self._open_secret_transactions_lock:
             for secret in secrets:
@@ -98,11 +98,7 @@ class SecretRegistry:
                 other_result = self.open_secret_transactions.get(secret)
 
                 if other_result is not None:
-                    # IMPORTANT: The same AsyncResult **must not** be added twice
-                    # in the list, otherwise `gevent.joinall` will deadlock.
-                    if other_result not in wait_for:
-                        wait_for.append(other_result)
-
+                    wait_for.add(other_result)
                     secrethashes_not_sent.append(secrethash_hex)
                 elif not self.is_secret_registered(secrethash, given_block_identifier):
                     secrets_to_register.append(secret)
