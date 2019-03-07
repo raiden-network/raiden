@@ -34,6 +34,7 @@ from raiden.utils.typing import (
     List,
     LockHash,
     Locksroot,
+    MessageID,
     Nonce,
     Optional,
     PaymentNetworkID,
@@ -126,7 +127,7 @@ def make_empty_merkle_tree() -> 'MerkleTreeState':
     ])
 
 
-def message_identifier_from_prng(prng: Random) -> int:
+def message_identifier_from_prng(prng: Random) -> MessageID:
     return prng.randint(0, UINT64_MAX)
 
 

@@ -427,8 +427,8 @@ class LockedTransferUnsignedState(LockedTransferState):
             token: TokenAddress,
             balance_proof: BalanceProofUnsignedState,
             lock: HashTimeLockState,
-            initiator: Address,
-            target: Address,
+            initiator: InitiatorAddress,
+            target: TargetAddress,
     ) -> None:
         if not isinstance(lock, HashTimeLockState):
             raise ValueError('lock must be a HashTimeLockState instance')

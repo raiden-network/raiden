@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from raiden.exceptions import HashLengthNot32
 from raiden.utils import sha3, split_in_pairs
-from raiden.utils.typing import Keccak256, List, Optional
+from raiden.utils.typing import Keccak256, List, Locksroot, Optional
 
 LEAVES = 0
 MERKLEROOT = -1
@@ -106,12 +106,12 @@ def validate_proof(proof: List[Keccak256], root: Keccak256, leaf_element: Keccak
     return hash_ == root
 
 
-def merkleroot(merkletree: 'MerkleTreeState') -> Keccak256:
+def merkleroot(merkletree: 'MerkleTreeState') -> Locksroot:
     """ Return the root element of the merkle tree. """
     assert merkletree.layers, 'the merkle tree layers are empty'
     assert merkletree.layers[MERKLEROOT], 'the root layer is empty'
 
-    return merkletree.layers[MERKLEROOT][0]
+    return Locksroot(merkletree.layers[MERKLEROOT][0])
 
 
 def merkle_leaves_from_packed_data(packed_data: bytes) -> List[Keccak256]:

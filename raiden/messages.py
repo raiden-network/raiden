@@ -1165,7 +1165,7 @@ class LockedTransfer(LockedTransferBase):
         packed.signature = self.signature
 
     @classmethod
-    def from_event(cls, event: 'SendLockedTransfer') -> 'LockedTransfer':
+    def from_event(cls, event: SendLockedTransfer) -> 'LockedTransfer':
         transfer = event.transfer
         lock = transfer.lock
         balance_proof = transfer.balance_proof
