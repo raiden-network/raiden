@@ -1452,7 +1452,6 @@ def events_for_close(
 
         close_event = ContractSendChannelClose(
             canonical_identifier=channel_state.canonical_identifier,
-            token_address=channel_state.token_address,
             balance_proof=balance_proof,
             triggered_by_block_hash=block_hash,
         )
