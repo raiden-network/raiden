@@ -1553,11 +1553,9 @@ class NettingChannelState(State):
     """ The state of a netting channel. """
 
     __slots__ = (
-        'identifier',
-        'chain_id',
+        'canonical_identifier',
         'token_address',
         'payment_network_identifier',
-        'token_network_identifier',
         'reveal_timeout',
         'settle_timeout',
         'mediation_fee',
@@ -1585,10 +1583,6 @@ class NettingChannelState(State):
             settle_transaction: TransactionExecutionStatus = None,
             update_transaction: TransactionExecutionStatus = None,
     ) -> None:
-        chain_id = canonical_identifier.chain_identifier
-        identifier = canonical_identifier.channel_identifier
-        token_network_identifier = canonical_identifier.token_network_address
-
         if reveal_timeout >= settle_timeout:
             raise ValueError('reveal_timeout must be smaller than settle_timeout')
 
@@ -1606,10 +1600,13 @@ class NettingChannelState(State):
                 'Cannot create a NettingChannelState with a non successfull open_transaction',
             )
 
-        if not isinstance(identifier, T_ChannelID):
+        if not isinstance(canonical_identifier.channel_identifier, T_ChannelID):
             raise ValueError('channel identifier must be of type T_ChannelID')
 
-        if identifier < 0 or identifier > UINT256_MAX:
+        if (
+                canonical_identifier.channel_identifier < 0 or
+                canonical_identifier.channel_identifier > UINT256_MAX
+        ):
             raise ValueError('channel identifier should be a uint256')
 
         valid_close_transaction = (
@@ -1628,11 +1625,9 @@ class NettingChannelState(State):
                 'settle_transaction must be a TransactionExecutionStatus instance or None',
             )
 
-        self.identifier = identifier
-        self.chain_id = chain_id
+        self.canonical_identifier = canonical_identifier
         self.token_address = token_address
         self.payment_network_identifier = payment_network_identifier
-        self.token_network_identifier = token_network_identifier
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
         self.our_state = our_state
@@ -1646,22 +1641,33 @@ class NettingChannelState(State):
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{} updated:{}>'.format(
-            self.identifier,
+            self.canonical_identifier.channel_identifier,
             self.open_transaction,
             self.close_transaction,
             self.settle_transaction,
             self.update_transaction,
         )
 
+    @property
+    def identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkID:
+        return TokenNetworkID(self.canonical_identifier.token_network_address)
+
+    @property
+    def chain_id(self) -> ChainID:
+        return self.canonical_identifier.chain_identifier
+
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, NettingChannelState) and
-            self.identifier == other.identifier and
+            self.canonical_identifier == other.canonical_identifier and
             self.payment_network_identifier == other.payment_network_identifier and
             self.our_state == other.our_state and
             self.partner_state == other.partner_state and
             self.token_address == other.token_address and
-            self.token_network_identifier == other.token_network_identifier and
             self.reveal_timeout == other.reveal_timeout and
             self.settle_timeout == other.settle_timeout and
             self.mediation_fee == other.mediation_fee and
@@ -1669,8 +1675,7 @@ class NettingChannelState(State):
             self.open_transaction == other.open_transaction and
             self.close_transaction == other.close_transaction and
             self.settle_transaction == other.settle_transaction and
-            self.update_transaction == other.update_transaction and
-            self.chain_id == other.chain_id
+            self.update_transaction == other.update_transaction
         )
 
     @property
@@ -1681,24 +1686,15 @@ class NettingChannelState(State):
     def partner_total_deposit(self) -> Balance:
         return self.partner_state.contract_balance
 
-    @property
-    def canonical_identifier(self) -> CanonicalIdentifier:
-        return CanonicalIdentifier(
-            chain_identifier=self.chain_id,
-            token_network_address=self.token_network_identifier,
-            channel_identifier=self.identifier,
-        )
-
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
+    # FIXME: changed serialization will need a migration
     def to_dict(self) -> Dict[str, Any]:
         result = {
-            'identifier': str(self.identifier),
-            'chain_id': self.chain_id,
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             'token_address': to_checksum_address(self.token_address),
             'payment_network_identifier': to_checksum_address(self.payment_network_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'reveal_timeout': str(self.reveal_timeout),
             'settle_timeout': str(self.settle_timeout),
             'mediation_fee': str(self.mediation_fee),
@@ -1720,11 +1716,7 @@ class NettingChannelState(State):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'NettingChannelState':
         restored = cls(
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=data['chain_id'],
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=ChannelID(int(data['identifier'])),
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             token_address=to_canonical_address(data['token_address']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             reveal_timeout=BlockTimeout(int(data['reveal_timeout'])),
