@@ -1199,8 +1199,8 @@ def create_sendlockedtransfer(
         token,
         balance_proof,
         lock,
-        Address(initiator),
-        Address(target),
+        initiator,
+        target,
     )
 
     lockedtransfer = SendLockedTransfer(
