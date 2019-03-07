@@ -60,7 +60,7 @@ class EchoNode:
         self.last_poll_offset = 0
         self.received_transfers = Queue()
         self.stop_signal = None  # used to signal REMOVE_CALLBACK and stop echo_workers
-        self.greenlets = list()
+        self.greenlets = set()
         self.lock = BoundedSemaphore()
         self.seen_transfers = deque(list(), TRANSFER_MEMORY)
         self.num_handled_transfers = 0
@@ -81,7 +81,7 @@ class EchoNode:
         if self.stop_signal is not None:
             return REMOVE_CALLBACK
         else:
-            self.greenlets.append(gevent.spawn(self.poll_all_received_events))
+            self.greenlets.add(gevent.spawn(self.poll_all_received_events))
             return True
 
     def poll_all_received_events(self):
@@ -147,7 +147,7 @@ class EchoNode:
                     )
                 else:
                     self.seen_transfers.append(transfer)
-                    self.greenlets.append(gevent.spawn(self.on_transfer, transfer))
+                    self.greenlets.add(gevent.spawn(self.on_transfer, transfer))
             else:
                 gevent.sleep(.5)
 
@@ -246,5 +246,5 @@ class EchoNode:
 
     def stop(self):
         self.stop_signal = True
-        self.greenlets.append(self.echo_worker_greenlet)
+        self.greenlets.add(self.echo_worker_greenlet)
         gevent.joinall(self.greenlets, raise_error=True)

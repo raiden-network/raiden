@@ -427,10 +427,10 @@ class ConnectionManager:
             num_greenlets=len(join_partners),
         )
 
-        greenlets = [
+        greenlets = set(
             gevent.spawn(self._join_partner, partner)
             for partner in join_partners
-        ]
+        )
         gevent.joinall(greenlets, raise_error=True)
         return True
 

@@ -138,10 +138,10 @@ def create_all_channels_for_network(
         token_network_registry_address,
         retry_timeout,
 ):
-    greenlets = []
+    greenlets = set()
     for token_address in token_addresses:
         for app_pair in app_channels:
-            greenlets.append(gevent.spawn(
+            greenlets.add(gevent.spawn(
                 payment_channel_open_and_deposit,
                 app_pair[0],
                 app_pair[1],
@@ -390,12 +390,12 @@ def create_apps(
 
 def parallel_start_apps(raiden_apps):
     """Start all the raiden apps in parallel."""
-    start_tasks = list()
+    start_tasks = set()
 
     for app in raiden_apps:
         greenlet = gevent.spawn(app.raiden.start)
         greenlet.name = f'Fixture:raiden_network node:{pex(app.raiden.address)}'
-        start_tasks.append(greenlet)
+        start_tasks.add(greenlet)
 
     gevent.joinall(start_tasks, raise_error=True)
 
