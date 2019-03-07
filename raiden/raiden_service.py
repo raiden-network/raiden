@@ -149,7 +149,7 @@ def mediator_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
     routes = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
-        token_network_id=from_transfer.balance_proof.token_network_identifier,
+        token_network_id=TokenNetworkID(from_transfer.balance_proof.token_network_identifier),
         from_address=raiden.address,
         to_address=from_transfer.target,
         amount=from_transfer.lock.amount,
@@ -1043,7 +1043,7 @@ class RaidenService(Runnable):
         self.handle_and_track_state_change(init_mediator_statechange)
 
     def target_mediated_transfer(self, transfer: LockedTransfer):
-        self.start_health_check_for(transfer.initiator)
+        self.start_health_check_for(Address(transfer.initiator))
         init_target_statechange = target_init(transfer)
         self.handle_and_track_state_change(init_target_statechange)
 
