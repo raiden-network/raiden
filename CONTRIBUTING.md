@@ -450,7 +450,7 @@ Minimal Example:
 
 ```python
 
-class Diary(object):
+class Diary:
 
     def __init__(self, entries):
         self._entries = entries
