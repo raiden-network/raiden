@@ -51,14 +51,11 @@ class ContractSendChannelClose(ContractSendEvent):
     def __init__(
             self,
             canonical_identifier: CanonicalIdentifier,
-            token_address: TokenAddress,
             balance_proof: Optional['BalanceProofSignedState'],
             triggered_by_block_hash: BlockHash,
     ) -> None:
         super().__init__(triggered_by_block_hash)
-        self.channel_identifier = canonical_identifier.channel_identifier
-        self.token_address = token_address
-        self.token_network_identifier = canonical_identifier.token_network_address
+        self.canonical_identifier = canonical_identifier
         self.balance_proof = balance_proof
 
     def __repr__(self):
@@ -66,9 +63,8 @@ class ContractSendChannelClose(ContractSendEvent):
             '<ContractSendChannelClose channel:{} token:{} token_network:{} '
             'balance_proof:{} triggered_by_block_hash:{}>'
         ).format(
-            self.channel_identifier,
-            pex(self.token_address),
-            pex(self.token_network_identifier),
+            self.canonical_identifier.channel_identifier,
+            pex(self.canonical_identifier.token_network_address),
             self.balance_proof,
             pex(self.triggered_by_block_hash),
         )
@@ -77,20 +73,24 @@ class ContractSendChannelClose(ContractSendEvent):
         return (
             super().__eq__(other) and
             isinstance(other, ContractSendChannelClose) and
-            self.channel_identifier == other.channel_identifier and
-            self.token_address == other.token_address and
-            self.token_network_identifier == other.token_network_identifier and
+            self.canonical_identifier == other.canonical_identifier and
             self.balance_proof == other.balance_proof
         )
 
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
+    @property
+    def token_network_identifier(self) -> TokenNetworkID:
+        return TokenNetworkID(self.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
     def to_dict(self) -> Dict[str, Any]:
         result = {
-            'channel_identifier': str(self.channel_identifier),
-            'token_address': to_checksum_address(self.token_address),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             'balance_proof': self.balance_proof,
             'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
 
@@ -100,12 +100,7 @@ class ContractSendChannelClose(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelClose':
         restored = cls(
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=ChannelID(int(data['channel_identifier'])),
-            ),
-            token_address=to_canonical_address(data['token_address']),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             balance_proof=data['balance_proof'],
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
