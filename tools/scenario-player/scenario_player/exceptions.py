@@ -22,6 +22,10 @@ class NodesUnreachableError(ScenarioError):
     pass
 
 
+class NoNodeAddressesAvailable(ScenarioError):
+    pass
+
+
 class RESTAPIError(ScenarioError):
     pass
 
@@ -39,6 +43,10 @@ class MultipleTaskDefinitions(ScenarioError):
 
 
 class InvalidScenarioVersion(ScenarioError):
+    pass
+
+
+class UnexpectedScenarioVersion(ScenarioError):
     pass
 
 

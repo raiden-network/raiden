@@ -10,6 +10,7 @@ API_URL_ADDRESS = "{protocol}://{target_host}/api/v1/address"
 API_URL_TOKENS = "{protocol}://{target_host}/api/v1/tokens"
 API_URL_TOKEN_NETWORK_ADDRESS = "{protocol}://{target_host}/api/v1/tokens/{token_address}"
 SUPPORTED_SCENARIO_VERSIONS = {1, 2}
+START_GAS = 21000
 
 
 class NodeMode(enum.Enum):

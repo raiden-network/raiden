@@ -4,14 +4,23 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 
 import structlog
 import yaml
-from scenario_player.constants import SUPPORTED_SCENARIO_VERSIONS, TIMEOUT, NodeMode
+from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
+
+from scenario_player.constants import (
+    DEFAULT_TOKEN_BALANCE_FUND,
+    DEFAULT_TOKEN_BALANCE_MIN,
+    SUPPORTED_SCENARIO_VERSIONS,
+    TIMEOUT,
+    NodeMode,
+)
 from scenario_player.exceptions import (
     InvalidScenarioVersion,
     MissingNodesConfiguration,
     MultipleTaskDefinitions,
     ScenarioError,
 )
-from scenario_player.utils import get_gas_prize_strategy
+from scenario_player.tasks.base import get_task_class_for_type
+
 
 log = structlog.get_logger(__name__)
 
@@ -171,7 +180,7 @@ class Scenario(Mapping):
         return self._yaml_path.stem
 
     @property
-    def settings(self):
+    def settings(self) -> Dict:
         """Return the 'settings' dictionary for the scenario."""
         return self._config.get('settings', {})
 
@@ -212,7 +221,6 @@ class Scenario(Mapping):
 
     @property
     def services(self):
-        """ Return the """
         return self.settings.get('services', {})
 
     @property
@@ -225,7 +233,19 @@ class Scenario(Mapping):
 
     @property
     def gas_price_strategy(self) -> Callable:
-        return get_gas_prize_strategy(self.gas_price)
+        """Return a gas price strategy as a callable."""
+        gas_price = self.gas_price
+        if isinstance(self.gas_price, int):
+            def fixed_gas_price(_web3, _tx):
+                return self.gas_price
+
+            return fixed_gas_price
+        elif gas_price == 'fast':
+            return fast_gas_price_strategy
+        elif gas_price == 'medium':
+            return medium_gas_price_strategy
+        else:
+            raise ValueError(f'Invalid gas_price value: "{self.gas_price}"')
 
     @property
     def nodes(self) -> NodesConfig:
@@ -269,9 +289,18 @@ class Scenario(Mapping):
     @property
     def task_class(self):
         """Return the Task class type configured for the scenario."""
-        from scenario_player.tasks.base import get_task_class_for_type
-
         root_task_type, _ = self.task
-
         task_class = get_task_class_for_type(root_task_type)
         return task_class
+
+    @property
+    def token_settings(self):
+        return self._config.get('token', {})
+
+    @property
+    def token_balance_min(self):
+        return self.token_settings.get('balance_min', DEFAULT_TOKEN_BALANCE_MIN)
+
+    @property
+    def token_balance_fund(self):
+        return self.token_settings.get('balance_fund', DEFAULT_TOKEN_BALANCE_FUND)
