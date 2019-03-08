@@ -706,7 +706,8 @@ class MatrixTransport(Runnable):
                 room = self._client.join_room(room_id)
             except MatrixRequestError as e:
                 last_ex = e
-                gevent.sleep(retry_interval)
+                if self._stop_event.wait(retry_interval):
+                    break
                 retry_interval = retry_interval * 2
             else:
                 break
@@ -1021,13 +1022,13 @@ class MatrixTransport(Runnable):
             room = self._get_public_room(room_name, invitees=peers)
 
         peer_ids = self._address_to_userids[address]
-        member_ids = {member.user_id for member in room.get_joined_members()}
+        member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
         room_is_empty = not bool(peer_ids & member_ids)
         if room_is_empty:
             last_ex: Optional[Exception] = False
             retry_interval = 0.1
             self.log.debug(
-                'Waiting for peer to join from invite.',
+                'Waiting for peer to join from invite',
                 peer_address=address_hex,
             )
             for _ in range(JOIN_RETRIES):
@@ -1037,9 +1038,8 @@ class MatrixTransport(Runnable):
                     last_ex = e
                 room_is_empty = not bool(peer_ids & member_ids)
                 if room_is_empty or last_ex:
-                    if last_ex:
-                        raise last_ex
-                    gevent.sleep(retry_interval)
+                    if self._stop_event.wait(retry_interval):
+                        break
                     retry_interval = retry_interval * 2
                 else:
                     break
@@ -1048,13 +1048,11 @@ class MatrixTransport(Runnable):
                 if last_ex:
                     raise last_ex  # re-raise if couldn't succeed in retries
                 else:
-                    # leave room, if no one listens:
-                    room.leave()
+                    # Inform the client, that currently no one listens:
                     self.log.error(
-                        'Peer has not joined from invite - Leaving empty room.',
+                        'Peer has not joined from invite yet, should join eventually',
                         peer_address=address_hex,
                     )
-                return None
 
         self._address_to_userids[address].update({user.user_id for user in peers})
         self._set_room_id_for_address(address, room.room_id)
@@ -1102,7 +1100,7 @@ class MatrixTransport(Runnable):
                     )
             else:
                 # Invite users to existing room
-                member_ids = {user.user_id for user in room.get_joined_members()}
+                member_ids = {user.user_id for user in room.get_joined_members(force_resync=True)}
                 users_to_invite = set(invitees_uids) - member_ids
                 self.log.debug('Inviting users', room=room, invitee_ids=users_to_invite)
                 for invitee_id in users_to_invite:
@@ -1248,7 +1246,7 @@ class MatrixTransport(Runnable):
 
         room = self._client.rooms[room_ids[0]]
         if not room._members:
-            room.get_joined_members()
+            room.get_joined_members(force_resync=True)
         if user.user_id not in room._members:
             self.log.debug('Inviting', user=user, room=room)
             try:
