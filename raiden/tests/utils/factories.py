@@ -8,7 +8,7 @@ from eth_utils import to_checksum_address
 
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer
-from raiden.transfer import balance_proof, channel
+from raiden.transfer import balance_proof, channel, token_network
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
@@ -27,10 +27,13 @@ from raiden.transfer.state import (
     MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
+    PaymentNetworkState,
     RouteState,
+    TokenNetworkState,
     TransactionExecutionStatus,
     message_identifier_from_prng,
 )
+from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveRouteNew
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import CanonicalIdentifier, privatekey_to_address, random_secret, sha3, typing
 from raiden.utils.signer import LocalSigner, Signer
@@ -530,12 +533,12 @@ RANDOM_FACTORIES = {
 def make_canonical_identifier(
         chain_identifier=UNIT_CHAIN_ID,
         token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
-        channel_identifier=UNIT_CHANNEL_ID,
+        channel_identifier=None,
 ) -> CanonicalIdentifier:
     return CanonicalIdentifier(
         chain_identifier=chain_identifier,
         token_network_address=token_network_address,
-        channel_identifier=channel_identifier,
+        channel_identifier=channel_identifier or make_channel_identifier(),
     )
 
 
@@ -1174,3 +1177,76 @@ def make_node_availability_map(nodes):
         node: NODE_NETWORK_REACHABLE
         for node in nodes
     }
+
+
+class RouteProperties(NamedTuple):
+    address1: typing.Address
+    address2: typing.Address
+    capacity1to2: typing.TokenAmount
+    capacity2to1: typing.TokenAmount = 0
+
+
+def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
+    channel = create(NettingChannelStateProperties(
+        canonical_identifier=make_canonical_identifier(),
+        our_state=NettingChannelEndStateProperties(
+            address=route.address1,
+            balance=route.capacity1to2,
+        ),
+        partner_state=NettingChannelEndStateProperties(
+            address=route.address2,
+            balance=route.capacity2to1,
+        ),
+    ))
+    return channel  # type: ignore
+
+
+def create_network(
+        token_network_state: TokenNetworkState,
+        our_address: typing.Address,
+        routes: typing.List[RouteProperties],
+        block_number: 1,
+        block_hash: typing.BlockHash = None,
+) -> typing.Tuple[typing.Any, typing.List[NettingChannelState]]:
+    """Creates a network from route properties.
+
+    If the address in the route is our_address, create a channel also.
+    Returns a list of created cannels and the new state.
+    """
+
+    block_hash = block_hash or make_block_hash()
+    state = token_network_state
+    channels = list()
+
+    for count, route in enumerate(routes, 1):
+        if route.address1 == our_address:
+            channel = route_properties_to_channel(route)
+            state_change = ContractReceiveChannelNew(
+                transaction_hash=make_transaction_hash(),
+                channel_state=channel,
+                block_number=block_number,
+                block_hash=block_hash,
+            )
+            channels.append(channel)
+        else:
+            state_change = ContractReceiveRouteNew(
+                transaction_hash=make_transaction_hash(),
+                canonical_identifier=make_canonical_identifier(),
+                participant1=route.address1,
+                participant2=route.address2,
+                block_number=block_number,
+                block_hash=block_hash,
+            )
+
+        iteration = token_network.state_transition(
+            token_network_state=state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
+        )
+        state = iteration.new_state
+
+        assert len(state.network_graph.channel_identifier_to_participants) == count
+        assert len(state.network_graph.network.edges()) == count
+
+    return state, channels
