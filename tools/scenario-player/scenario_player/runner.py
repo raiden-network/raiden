@@ -120,6 +120,7 @@ class ScenarioRunner(object):
         self._node_to_address = None
         self.token_address = None
         self.token_deployment_block = 0
+        self.token_network_address = None
 
         task_config = self.scenario.task_config
         task_class = self.scenario.task_class
