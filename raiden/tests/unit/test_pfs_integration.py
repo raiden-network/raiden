@@ -25,14 +25,12 @@ from raiden.network.pathfinding import (
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import patched_get_for_succesful_pfs_info
-from raiden.transfer import token_network
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
     NettingChannelState,
     TokenNetworkState,
 )
-from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveRouteNew
 from raiden.utils import privatekey_to_address, typing
 from raiden.utils.typing import Address, TokenNetworkAddress
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
@@ -51,8 +49,6 @@ def create_square_network_topology(
     typing.List[typing.Address],
     typing.List[NettingChannelState],
 ]:
-    open_block_number = 10
-    open_block_hash = factories.make_block_hash()
     address1 = factories.make_address()
     address2 = factories.make_address()
     address3 = factories.make_address()
@@ -67,102 +63,21 @@ def create_square_network_topology(
     #  v                    |
     # (2)  ----- 100 --->  (3)
 
-    channel_state1 = factories.make_channel(
-        our_balance=50,
-        our_address=our_address,
-        partner_balance=0,
-        partner_address=address1,
-    )
-    channel_state2 = factories.make_channel(
-        our_balance=100,
-        our_address=our_address,
-        partner_balance=0,
-        partner_address=address2,
-    )
+    routes = [
+        factories.RouteProperties(address1=our_address, address2=address1, capacity1to2=50),
+        factories.RouteProperties(address1=our_address, address2=address2, capacity1to2=100),
+        factories.RouteProperties(address1=address2, address2=address3, capacity1to2=100),
+        factories.RouteProperties(address1=address3, address2=address1, capacity1to2=100),
+    ]
 
-    # create new channels as participant
-    channel_new_state_change1 = ContractReceiveChannelNew(
-        transaction_hash=factories.make_transaction_hash(),
-        channel_state=channel_state1,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
-    )
-    channel_new_state_change2 = ContractReceiveChannelNew(
-        transaction_hash=factories.make_transaction_hash(),
-        channel_state=channel_state2,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
-    )
-
-    channel_new_iteration1 = token_network.state_transition(
+    new_state, channels = factories.create_network(
         token_network_state=token_network_state,
-        state_change=channel_new_state_change1,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
+        our_address=our_address,
+        routes=routes,
+        block_number=10,
     )
 
-    channel_new_iteration2 = token_network.state_transition(
-        token_network_state=channel_new_iteration1.new_state,
-        state_change=channel_new_state_change2,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
-    )
-
-    graph_state = channel_new_iteration2.new_state.network_graph
-    assert len(graph_state.channel_identifier_to_participants) == 2
-    assert len(graph_state.network.edges()) == 2
-
-    # create new channels without being participant
-    channel_new_state_change3 = ContractReceiveRouteNew(
-        transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-            channel_identifier=3,
-        ),
-        participant1=address2,
-        participant2=address3,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
-    )
-
-    channel_new_iteration3 = token_network.state_transition(
-        token_network_state=channel_new_iteration2.new_state,
-        state_change=channel_new_state_change3,
-        block_number=open_block_number + 10,
-        block_hash=factories.make_block_hash(),
-    )
-
-    graph_state = channel_new_iteration3.new_state.network_graph
-    assert len(graph_state.channel_identifier_to_participants) == 3
-    assert len(graph_state.network.edges()) == 3
-
-    channel_new_state_change4 = ContractReceiveRouteNew(
-        transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-            channel_identifier=4,
-        ),
-        participant1=address3,
-        participant2=address1,
-        block_number=open_block_number,
-        block_hash=open_block_hash,
-    )
-    channel_new_iteration4 = token_network.state_transition(
-        token_network_state=channel_new_iteration3.new_state,
-        state_change=channel_new_state_change4,
-        block_number=open_block_number + 10,
-        block_hash=factories.make_block_hash(),
-    )
-
-    graph_state = channel_new_iteration4.new_state.network_graph
-    assert len(graph_state.channel_identifier_to_participants) == 4
-    assert len(graph_state.network.edges()) == 4
-
-    return (
-        channel_new_iteration4.new_state,
-        [address1, address2, address3],
-        (channel_state1, channel_state2),
-    )
+    return (new_state, [address1, address2, address3], channels)
 
 
 CONFIG = {
