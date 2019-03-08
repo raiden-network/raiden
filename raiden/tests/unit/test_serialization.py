@@ -12,7 +12,7 @@ from raiden.transfer.state import make_empty_merkle_tree
 from raiden.utils import serialization
 
 
-class MockObject(object):
+class MockObject:
     """ Used for testing JSON encoding/decoding """
 
     def __init__(self, **kwargs):
