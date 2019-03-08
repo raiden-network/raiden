@@ -126,7 +126,7 @@ class ScenarioRunner(object):
         task_class = self.scenario.task_class
         self.root_task = task_class(runner=self, config=task_config)
 
-    def determine_run_number(self):
+    def determine_run_number(self) -> int:
         """Determine the current run number.
 
         We check for a run number file, and use any number that is logged
