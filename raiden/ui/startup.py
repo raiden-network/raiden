@@ -8,7 +8,6 @@ from web3 import Web3
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.discovery import ContractDiscovery
 from raiden.network.pathfinding import configure_pfs
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
@@ -16,6 +15,7 @@ from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import UDPTransport
+from raiden.network.transport.udp.discovery import ContractDiscovery
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
 from raiden.utils.typing import Address
 from raiden_contracts.constants import (

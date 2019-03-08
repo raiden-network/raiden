@@ -5,7 +5,7 @@ from web3 import HTTPProvider, Web3
 
 from raiden.constants import Environment, EthClient
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.discovery import ContractDiscovery
+from raiden.network.transport.udp.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.eth_node import (

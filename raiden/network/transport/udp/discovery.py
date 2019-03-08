@@ -1,3 +1,4 @@
+"""Implements the discovery mechanism available to find the partern's endpoint"""
 import socket
 
 import structlog
