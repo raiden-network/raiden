@@ -2,11 +2,11 @@ from heapq import heappop, heappush
 from typing import Any, Dict, List, Tuple
 
 import networkx
-import requests
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT
+from raiden.exceptions import ServiceRequestFailed
+from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
 from raiden.utils import pex, typing
@@ -22,6 +22,7 @@ def get_best_routes(
         amount: int,
         previous_address: typing.Optional[typing.Address],
         config: Dict[str, Any],
+        privkey: bytes = None,
 ) -> List[RouteState]:
     services_config = config.get('services', None)
 
@@ -34,6 +35,7 @@ def get_best_routes(
             amount=amount,
             previous_address=previous_address,
             config=services_config,
+            privkey=privkey,
         )
 
         if pfs_answer_ok:
@@ -151,65 +153,28 @@ def get_best_routes_pfs(
         amount: int,
         previous_address: typing.Optional[typing.Address],
         config: Dict[str, Any],
+        privkey: bytes,
 ) -> Tuple[bool, List[RouteState]]:
-    pfs_path = '{}/api/v1/{}/paths'.format(
-        config['pathfinding_service_address'],
-        to_checksum_address(token_network_id),
-    )
-    payload = {
-        'from': to_checksum_address(from_address),
-        'to': to_checksum_address(to_address),
-        'value': amount,
-        'max_paths': config['pathfinding_max_paths'],
-    }
 
-    # check that the response is successful
     try:
-        response = requests.post(pfs_path, data=payload, timeout=DEFAULT_HTTP_REQUEST_TIMEOUT)
-    except requests.RequestException:
-        log.warning(
-            'Could not connect to Pathfinding Service',
-            request=pfs_path,
-            parameters=payload,
-            exc_info=True,
+        result = query_paths(
+            service_config=config,
+            our_address=to_checksum_address(chain_state.our_address),
+            privkey=privkey,
+            current_block_number=chain_state.block_number,
+            token_network_address=token_network_id,
+            route_from=from_address,
+            route_to=to_address,
+            value=amount,
         )
-        return False, []
-
-    # check that the response contains valid json
-    try:
-        response_json = response.json()
-    except ValueError:
-        log.warning(
-            'Pathfinding Service returned invalid JSON',
-            response_text=response.text,
-            exc_info=True,
-        )
-        return False, []
-
-    if response.status_code != 200:
-        log_info = {
-            'error_code': response.status_code,
-        }
-
-        error = response_json.get('errors')
-        if error is not None:
-            log_info['pfs_error'] = error
-
-        log.info(
-            'Pathfinding Service returned error code',
-            **log_info,
-        )
-        return False, []
-
-    if response_json.get('result') is None:
-        log.info(
-            'Pathfinding Service returned unexpected result',
-            result=response_json,
-        )
+    except ServiceRequestFailed as e:
+        log_message = e.args[0]
+        log_info = e.args[1] if len(e.args) > 1 else {}
+        log.warning(log_message, **log_info)
         return False, []
 
     paths = []
-    for path_object in response_json['result']:
+    for path_object in result:
         path = path_object['path']
 
         # get the second entry, as the first one is the node itself
