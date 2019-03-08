@@ -3,7 +3,7 @@ import socket
 import structlog
 from eth_utils import is_binary_address
 
-from raiden.exceptions import InvalidAddress, UnknownAddress
+from raiden.exceptions import UnknownAddress
 from raiden.network.proxies.discovery import Discovery as DiscoveryProxy
 from raiden.utils import host_port_to_endpoint, pex, split_endpoint
 from raiden.utils.typing import HostPort
@@ -11,34 +11,7 @@ from raiden.utils.typing import HostPort
 log = structlog.get_logger(__name__)
 
 
-class Discovery:
-    """ Mock mapping address: host, port """
-
-    def __init__(self):
-        self.nodeid_to_hostport = dict()
-
-    def register(self, node_address: bytes, host: str, port: int):
-        if not is_binary_address(node_address):
-            raise ValueError('node_address must be a valid address')
-
-        try:
-            socket.inet_pton(socket.AF_INET, host)
-        except OSError:
-            raise ValueError('invalid ip address provided: {}'.format(host))
-
-        if not isinstance(port, int):
-            raise ValueError('port must be a valid number')
-
-        self.nodeid_to_hostport[node_address] = (host, port)
-
-    def get(self, node_address: bytes):
-        try:
-            return self.nodeid_to_hostport[node_address]
-        except KeyError:
-            raise InvalidAddress('Unknown address {}'.format(pex(node_address)))
-
-
-class ContractDiscovery(Discovery):
+class ContractDiscovery:
     """ Raiden node discovery.
 
     Allows registering and looking up by endpoint (host, port) for node_address.
@@ -49,9 +22,6 @@ class ContractDiscovery(Discovery):
             node_address: bytes,
             discovery_proxy: DiscoveryProxy,
     ):
-
-        super().__init__()
-
         self.node_address = node_address
         self.discovery_proxy = discovery_proxy
 
