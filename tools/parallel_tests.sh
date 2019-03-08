@@ -2,6 +2,14 @@
 
 set -e
 trap 'kill $(jobs -p)' EXIT
+split_command=split
+if [[ $(uname -s) == Darwin ]]; then
+    if ! (type gsplit &> /dev/null); then
+        echo -e "GNU split is required. Install with:\n    brew install coreutils"
+        exit 1
+    fi
+    split_command=gsplit
+fi
 
 tmpdir=$(mktemp -d)
 alltest=${tmpdir}/all_test
@@ -15,8 +23,8 @@ echo ${tmpdir}
 
 mkdir -p ${output} ${logs}
 
-pytest --quiet --collect-only $@ | grep :: > ${alltest}
-split --number "l/${parallelism}" --numeric-suffixes ${alltest} ${session_prefixes}
+pytest --quiet --collect-only "$@" | grep :: > ${alltest}
+${split_command} --number "l/${parallelism}" --numeric-suffixes ${alltest} ${session_prefixes}
 
 for f in ${session_prefixes}*; do
     logfile=$(basename ${f})
