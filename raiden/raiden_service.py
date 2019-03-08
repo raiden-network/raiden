@@ -2,7 +2,6 @@
 import os
 import random
 from collections import defaultdict
-from typing import Dict, List, NamedTuple, Union
 
 import filelock
 import gevent
@@ -71,8 +70,12 @@ from raiden.utils.typing import (
     Address,
     BlockHash,
     BlockNumber,
+    Callable,
+    Dict,
     FeeAmount,
     InitiatorAddress,
+    List,
+    NamedTuple,
     Optional,
     PaymentAmount,
     PaymentID,
@@ -81,6 +84,7 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenNetworkAddress,
     TokenNetworkID,
+    Union,
 )
 from raiden.utils.upgrades import UpgradeManager
 from raiden_contracts.contract_manager import ContractManager
@@ -333,11 +337,10 @@ class RaidenService(Runnable):
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
             default_service_registry: Optional[ServiceRegistry],
-            transport,
+            transport_setup: Callable,
             raiden_event_handler,
             message_handler,
             config,
-            discovery=None,
             user_deposit=None,
     ):
         super().__init__()
@@ -350,11 +353,10 @@ class RaidenService(Runnable):
         self.default_secret_registry = default_secret_registry
         self.default_service_registry = default_service_registry
         self.config = config
+        self.transport_setup = transport_setup
 
         self.signer: Signer = LocalSigner(self.chain.client.privkey)
         self.address = self.signer.address
-        self.discovery = discovery
-        self.transport = transport
 
         self.user_deposit = user_deposit
 
@@ -362,6 +364,7 @@ class RaidenService(Runnable):
         self.alarm = AlarmTask(chain)
         self.raiden_event_handler = raiden_event_handler
         self.message_handler = message_handler
+        self.transport = None
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
@@ -430,15 +433,7 @@ class RaidenService(Runnable):
             self.db_lock.acquire(timeout=0)
             assert self.db_lock.is_locked, f'Database not locked. node:{self!r}'
 
-        # start the registration early to speed up the start
-        if self.config['transport_type'] == 'udp':
-            endpoint_registration_greenlet = gevent.spawn(
-                self.discovery.register,
-                self.address,
-                self.config['transport']['udp']['external_ip'],
-                self.config['transport']['udp']['external_port'],
-            )
-
+        transport_ready = self.transport_setup()
         self.maybe_upgrade_db()
 
         storage = sqlite.SerializedSQLiteStorage(
@@ -540,8 +535,8 @@ class RaidenService(Runnable):
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_processed_events()
 
-        if self.config['transport_type'] == 'udp':
-            endpoint_registration_greenlet.get()  # re-raise if exception occurred
+        # Wait for all parallel setups to finish
+        self.transport = transport_ready.get()
 
         # Start the side-effects:
         # - React to blockchain events

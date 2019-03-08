@@ -4,7 +4,6 @@ from eth_utils import to_checksum_address
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies.discovery import Discovery
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -29,7 +28,8 @@ from raiden.settings import (
     INITIAL_PORT,
     RED_EYES_CONTRACT_VERSION,
 )
-from raiden.utils import pex, typing
+from raiden.utils import pex
+from raiden.utils.typing import BlockNumber, Callable, Dict, Optional
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -83,16 +83,15 @@ class App:  # pylint: disable=too-few-public-methods
 
     def __init__(
             self,
-            config: typing.Dict,
+            config: Dict,
             chain: BlockChainService,
-            query_start_block: typing.BlockNumber,
+            query_start_block: BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
-            default_service_registry: typing.Optional[ServiceRegistry],
-            transport,
+            default_service_registry: Optional[ServiceRegistry],
+            transport_setup: Callable,
             raiden_event_handler,
             message_handler,
-            discovery: Discovery = None,
             user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
@@ -101,11 +100,10 @@ class App:  # pylint: disable=too-few-public-methods
             default_registry=default_registry,
             default_secret_registry=default_secret_registry,
             default_service_registry=default_service_registry,
-            transport=transport,
+            transport_setup=transport_setup,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
             config=config,
-            discovery=discovery,
             user_deposit=user_deposit,
         )
 
@@ -129,7 +127,6 @@ class App:  # pylint: disable=too-few-public-methods
             )
 
         self.config = config
-        self.discovery = discovery
         self.user_deposit = user_deposit
         self.raiden = raiden
         self.start_console = self.config['console']

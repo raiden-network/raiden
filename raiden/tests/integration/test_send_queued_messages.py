@@ -1,5 +1,6 @@
 import gevent
 import pytest
+from gevent.event import AsyncResult
 
 from raiden import waiting
 from raiden.app import App
@@ -76,6 +77,8 @@ def run_test_send_queued_messages(
     new_transport = MatrixTransport(
         app0.raiden.config['transport']['matrix'],
     )
+    transport_result = AsyncResult()
+    transport_result.set(new_transport)
 
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
@@ -87,10 +90,9 @@ def run_test_send_queued_messages(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
-        transport=new_transport,
+        transport_setup=lambda: transport_result,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
 
     app0.stop()
@@ -214,6 +216,11 @@ def run_test_payment_statuses_are_restored(
     raiden_event_handler = RaidenEventHandler()
     message_handler = MessageHandler()
 
+    transport = MatrixTransport(
+        app0.raiden.config['transport']['matrix'],
+    )
+    transport_result = AsyncResult()
+    transport_result.set(transport)
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
@@ -221,12 +228,9 @@ def run_test_payment_statuses_are_restored(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
-        transport=MatrixTransport(
-            app0.raiden.config['transport']['matrix'],
-        ),
+        transport_setup=lambda: transport_result,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
     app0.stop()
     del app0  # from here on the app0_restart should be used

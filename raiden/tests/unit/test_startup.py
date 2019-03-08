@@ -1,5 +1,6 @@
 from copy import deepcopy
 from typing import Any, Dict
+from unittest.mock import Mock
 
 import pytest
 from gevent import server
@@ -10,11 +11,11 @@ from raiden.network.transport import UDPTransport
 from raiden.tests.utils.factories import make_address, make_checksum_address
 from raiden.tests.utils.mocks import MockChain, patched_get_for_succesful_pfs_info
 from raiden.ui.startup import (
+    UDPSetup,
     setup_contracts_or_exit,
     setup_environment,
     setup_network_id_or_exit,
     setup_proxies_or_exit,
-    setup_udp_or_exit,
 )
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -363,26 +364,36 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
 
 def test_setup_udp_or_exit(raiden_udp_ports):
     network_id = 42
+    host = '127.0.0.1'
+    port = raiden_udp_ports[0]
+    endpoint = f'{host}:{port}'
+    contracts = {}
+    our_address = make_address()
+
     config = deepcopy(App.DEFAULT_CONFIG)
     config['network_id'] = network_id
     config['environment_type'] = Environment.DEVELOPMENT
-    host = '127.0.0.1'
-    port = raiden_udp_ports[0]
     config['socket'] = server._udp_socket((host, port))  # pylint: disable=protected-access
-    contracts = {}
-    our_address = make_address()
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
-    # set a big fake balance for us, to pass the test of sufficient gas for discovery transaction
-    blockchain_service.client.balances_mapping[our_address] = 99999999999999999
-    transport, discovery = setup_udp_or_exit(
+    config['transport']['udp']['external_ip'] = host
+    config['transport']['udp']['external_port'] = port
+
+    blockchain_service = Mock(network_id=network_id, node_address=our_address)
+    blockchain_service.client.gas_price.side_effect = [1000000000]
+    blockchain_service.client.balance.side_effect = [99999999999999999]
+
+    discovery = Mock()
+    discovery.endpoint_by_address.side_effect = [endpoint]
+    blockchain_service.discovery.side_effect = [discovery]
+
+    udp_setup = UDPSetup(
         config=config,
         blockchain_service=blockchain_service,
         address=our_address,
         contracts=contracts,
         endpoint_registry_contract_address=make_address(),
     )
-    assert isinstance(transport, UDPTransport)
-    assert discovery
+    transport_result = udp_setup()
+    assert isinstance(transport_result.get(), UDPTransport)
 
 
 def test_setup_udp_or_exit_insufficient_balance():
@@ -396,7 +407,7 @@ def test_setup_udp_or_exit_insufficient_balance():
     # we don't have sufficient balance, so client should exit with a message
     blockchain_service.client.balances_mapping[our_address] = 1
     with pytest.raises(SystemExit):
-        setup_udp_or_exit(
+        UDPSetup(
             config=config,
             blockchain_service=blockchain_service,
             address=our_address,

@@ -2,7 +2,9 @@ import sys
 from typing import Any, Dict, NamedTuple, Optional, Tuple
 
 import click
+import gevent
 from eth_utils import to_canonical_address, to_checksum_address
+from gevent.event import AsyncResult
 from web3 import Web3
 
 from raiden.constants import Environment, RoutingMode
@@ -325,30 +327,12 @@ def setup_proxies_or_exit(
     return proxies
 
 
-def setup_udp_or_exit(
-        config,
-        blockchain_service,
+def setup_udp(config, address, discovery):
+    discovery.register(
         address,
-        contracts,
-        endpoint_registry_contract_address,
-):
-    check_discovery_registration_gas(blockchain_service, address)
-    try:
-        dicovery_proxy = blockchain_service.discovery(
-            endpoint_registry_contract_address or to_canonical_address(
-                contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
-            ),
-        )
-        discovery = ContractDiscovery(
-            blockchain_service.node_address,
-            dicovery_proxy,
-        )
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
-    except AddressWithoutCode:
-        handle_contract_no_code('Endpoint Registry', endpoint_registry_contract_address)
-    except AddressWrongContract:
-        handle_contract_wrong_address('Endpoint Registry', endpoint_registry_contract_address)
+        config['transport']['udp']['external_ip'],
+        config['transport']['udp']['external_port'],
+    )
 
     throttle_policy = TokenBucket(
         config['transport']['udp']['throttle_capacity'],
@@ -363,4 +347,44 @@ def setup_udp_or_exit(
         config['transport']['udp'],
     )
 
-    return transport, discovery
+    return transport
+
+
+class UDPSetup:
+    def __init__(
+            self,
+            config,
+            blockchain_service,
+            address,
+            contracts,
+            endpoint_registry_contract_address,
+    ):
+        check_discovery_registration_gas(blockchain_service, address)
+        try:
+            discovery_proxy = blockchain_service.discovery(
+                endpoint_registry_contract_address or to_canonical_address(
+                    contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
+                ),
+            )
+            discovery = ContractDiscovery(
+                blockchain_service.node_address,
+                discovery_proxy,
+            )
+        except ContractVersionMismatch as e:
+            handle_contract_version_mismatch(e)
+        except AddressWithoutCode:
+            handle_contract_no_code('Endpoint Registry', endpoint_registry_contract_address)
+        except AddressWrongContract:
+            handle_contract_wrong_address(
+                'Endpoint Registry',
+                endpoint_registry_contract_address,
+            )
+
+        self.config = config
+        self.address = address
+        self.discovery = discovery
+
+    def __call__(self):
+        result = AsyncResult()
+        gevent.spawn(setup_udp, self.config, self.address, self.discovery).link(result)
+        return result

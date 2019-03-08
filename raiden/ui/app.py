@@ -4,8 +4,10 @@ from urllib.parse import urlparse
 
 import click
 import filelock
+import gevent
 import structlog
 from eth_utils import to_canonical_address, to_normalized_address
+from gevent.event import AsyncResult
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
@@ -38,7 +40,7 @@ from raiden.ui.startup import (
     setup_environment,
     setup_network_id_or_exit,
     setup_proxies_or_exit,
-    setup_udp_or_exit,
+    UDPSetup,
 )
 from raiden.ui.sync import check_synced
 from raiden.utils import pex, split_endpoint
@@ -82,7 +84,7 @@ def _setup_web3(eth_rpc_endpoint):
     return web3
 
 
-def _setup_matrix(config):
+def setup_matrix(config):
     if config['transport']['matrix'].get('available_servers') is None:
         # fetch list of known servers from raiden-network/raiden-tranport repo
         available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
@@ -101,6 +103,16 @@ def _setup_matrix(config):
         sys.exit(1)
 
     return transport
+
+
+class MatrixSetup:
+    def __init__(self, config):
+        self.config = config
+
+    def __call__(self):
+        result = AsyncResult()
+        gevent.spawn(setup_matrix, self.config).link(result)
+        return result
 
 
 def run_app(
@@ -252,9 +264,8 @@ def run_app(
         ),
     )
 
-    discovery = None
     if transport == 'udp':
-        transport, discovery = setup_udp_or_exit(
+        transport_setup = UDPSetup(
             config,
             blockchain_service,
             address,
@@ -262,12 +273,11 @@ def run_app(
             endpoint_registry_contract_address,
         )
     elif transport == 'matrix':
-        transport = _setup_matrix(config)
+        transport_setup = MatrixSetup(config)
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
     raiden_event_handler = RaidenEventHandler()
-
     message_handler = MessageHandler()
 
     try:
@@ -282,10 +292,9 @@ def run_app(
             default_registry=proxies.token_network_registry,
             default_secret_registry=proxies.secret_registry,
             default_service_registry=proxies.service_registry,
-            transport=transport,
+            transport_setup=transport_setup,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
-            discovery=discovery,
             user_deposit=proxies.user_deposit,
         )
     except RaidenError as e:

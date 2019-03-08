@@ -3,6 +3,7 @@ from collections import namedtuple
 
 import gevent
 from gevent import server
+from gevent.event import AsyncResult
 
 from raiden import waiting
 from raiden.app import App
@@ -393,6 +394,11 @@ def create_apps(
         raiden_event_handler = RaidenEventHandler()
         message_handler = WaitForMessage()
 
+        def transport_setup(transport=transport):
+            result = AsyncResult()
+            result.set(transport)
+            return result
+
         app = App(
             config=config_copy,
             chain=blockchain,
@@ -400,10 +406,9 @@ def create_apps(
             default_registry=registry,
             default_secret_registry=secret_registry,
             default_service_registry=service_registry,
-            transport=transport,
+            transport_setup=transport_setup,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
-            discovery=discovery,
             user_deposit=user_deposit,
         )
         apps.append(app)

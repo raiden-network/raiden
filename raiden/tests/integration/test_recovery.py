@@ -1,6 +1,7 @@
 import gevent
 import pytest
 from gevent import server
+from gevent.event import AsyncResult
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -73,6 +74,8 @@ def test_recovery_happy_case(
         app0.raiden.transport.throttle_policy,
         app0.raiden.config['transport']['udp'],
     )
+    transport_result = AsyncResult()
+    transport_result.set(new_transport)
 
     raiden_event_handler = RaidenEventHandler()
     message_handler = WaitForMessage()
@@ -84,10 +87,9 @@ def test_recovery_happy_case(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
-        transport=new_transport,
+        transport_setup=lambda: transport_result,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
 
     app0.stop()
@@ -198,6 +200,9 @@ def test_recovery_unhappy_case(
         app0.raiden.config['transport']['udp'],
     )
 
+    transport_result = AsyncResult()
+    transport_result.set(new_transport)
+
     app0.stop()
 
     RaidenAPI(app1.raiden).channel_close(
@@ -231,10 +236,9 @@ def test_recovery_unhappy_case(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
-        transport=new_transport,
+        transport_setup=lambda: transport_result,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
     del app0  # from here on the app0_restart should be used
     app0_restart.start()
@@ -245,7 +249,9 @@ def test_recovery_unhappy_case(
     )
 
     assert search_for_item(
-        state_changes, ContractReceiveChannelSettled, {
+        state_changes,
+        ContractReceiveChannelSettled,
+        {
             'token_network_identifier': token_network_identifier,
             'channel_identifier': channel01.identifier,
         },
@@ -282,6 +288,8 @@ def test_recovery_blockchain_events(
         app0.raiden.transport.throttle_policy,
         app0.raiden.config['transport']['udp'],
     )
+    transport_result = AsyncResult()
+    transport_result.set(new_transport)
 
     app1_api = RaidenAPI(app1.raiden)
     app1_api.channel_close(
@@ -304,10 +312,9 @@ def test_recovery_blockchain_events(
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
-        transport=new_transport,
+        transport_setup=lambda: transport_result,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
-        discovery=app0.raiden.discovery,
     )
 
     del app0  # from here on the app0_restart should be used

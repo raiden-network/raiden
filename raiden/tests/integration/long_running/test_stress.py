@@ -9,6 +9,7 @@ import structlog
 from eth_utils import to_canonical_address, to_checksum_address
 from flask import url_for
 from gevent import server
+from gevent.event import AsyncResult
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
@@ -119,6 +120,8 @@ def restart_app(app):
         app.raiden.transport.throttle_policy,
         app.raiden.config['transport']['udp'],
     )
+    transport_result = AsyncResult()
+    transport_result.set(new_transport)
     app = App(
         config=app.config,
         chain=app.raiden.chain,
@@ -126,10 +129,9 @@ def restart_app(app):
         default_registry=app.raiden.default_registry,
         default_secret_registry=app.raiden.default_secret_registry,
         default_service_registry=app.raiden.default_service_registry,
-        transport=new_transport,
+        transport_setup=lambda: transport_result,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
-        discovery=app.raiden.discovery,
     )
 
     app.start()
