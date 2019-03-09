@@ -393,14 +393,13 @@ class SQLiteStorage(SerializationBase):
             offset += result_length
             yield result
 
-    def update_state_changes(self, state_changes: List[StateChangeRecord]) -> None:
-        """Given a list of identifier/data state change records update them in the DB"""
+    def update_state_changes(self, state_changes_data: List[Tuple[str, int]]) -> None:
+        """Given a list of identifier/data state tuples update them in the DB"""
         cursor = self.conn.cursor()
-        for state_change in state_changes:
-            cursor.execute(
-                'UPDATE state_changes SET data=? WHERE identifier=?',
-                (state_change.data, state_change.state_change_identifier),
-            )
+        cursor.executemany(
+            'UPDATE state_changes SET data=? WHERE identifier=?',
+            (state_changes_data),
+        )
         self.maybe_commit()
 
     def get_statechanges_by_identifier(self, from_identifier, to_identifier):
@@ -512,14 +511,13 @@ class SQLiteStorage(SerializationBase):
             offset += result_length
             yield result
 
-    def update_events(self, event_records: List[EventRecord]) -> None:
-        """Given a list of identifier/data event records update them in the DB"""
+    def update_events(self, events_data: List[Tuple[str, int]]) -> None:
+        """Given a list of identifier/data event tuples update them in the DB"""
         cursor = self.conn.cursor()
-        for event in event_records:
-            cursor.execute(
-                'UPDATE state_events SET data=? WHERE identifier=?',
-                (event.data, event.event_identifier),
-            )
+        cursor.executemany(
+            'UPDATE state_events SET data=? WHERE identifier=?',
+            (events_data),
+        )
         self.maybe_commit()
 
     def get_events_with_timestamps(self, limit: int = None, offset: int = None):
