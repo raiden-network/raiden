@@ -266,6 +266,34 @@ class SQLiteStorage(SerializationBase):
 
         return result
 
+    def _form_and_execute_json_query(
+            self,
+            query: str,
+            limit: int = None,
+            offset: int = None,
+            filters: Dict[str, Any] = None,
+    ):
+        limit, offset = _sanitize_limit_and_offset(limit, offset)
+        cursor = self.conn.cursor()
+        where_clauses = []
+        args = []
+        if filters:
+            for field, value in filters.items():
+                where_clauses.append('json_extract(data, ?)=?')
+                args.append(f'$.{field}')
+                args.append(value)
+
+            query += (
+                f"WHERE {' AND '.join(where_clauses)}"
+            )
+
+        query += 'ORDER BY identifier ASC LIMIT ? OFFSET ?'
+        args.append(limit)
+        args.append(offset)
+
+        cursor.execute(query, args)
+        return cursor
+
     def get_latest_state_change_by_data_field(
             self,
             filters: Dict[str, str],
@@ -320,28 +348,12 @@ class SQLiteStorage(SerializationBase):
         Additionally the returned state changes can be optionally filtered with
         the `filters` parameter to search for specific data in the state change data.
         """
-        limit, offset = _sanitize_limit_and_offset(limit, offset)
-        cursor = self.conn.cursor()
-
-        query = 'SELECT identifier, data FROM state_changes '
-
-        where_clauses = []
-        args = []
-        if filters:
-            for field, value in filters.items():
-                where_clauses.append('json_extract(data, ?)=?')
-                args.append(f'$.{field}')
-                args.append(value)
-
-            query += (
-                f"WHERE {' AND '.join(where_clauses)}"
-            )
-
-        query += 'ORDER BY identifier ASC LIMIT ? OFFSET ?'
-        args.append(limit)
-        args.append(offset)
-
-        cursor.execute(query, args)
+        cursor = self._form_and_execute_json_query(
+            query='SELECT identifier, data FROM state_changes ',
+            limit=limit,
+            offset=offset,
+            filters=filters,
+        )
         result = []
         try:
             result = [
@@ -455,27 +467,12 @@ class SQLiteStorage(SerializationBase):
         Additionally the returned events can be optionally filtered with
         the `filters` parameter to search for specific data in the event data.
         """
-        limit, offset = _sanitize_limit_and_offset(limit, offset)
-        cursor = self.conn.cursor()
-
-        query = 'SELECT identifier, source_statechange_id, data FROM state_events '
-        where_clauses = []
-        args = []
-        if filters:
-            for field, value in filters.items():
-                where_clauses.append('json_extract(data, ?)=?')
-                args.append(f'$.{field}')
-                args.append(value)
-
-            query += (
-                f"WHERE {' AND '.join(where_clauses)}"
-            )
-
-        query += 'ORDER BY identifier ASC LIMIT ? OFFSET ?'
-        args.append(limit)
-        args.append(offset)
-
-        cursor.execute(query, args)
+        cursor = self._form_and_execute_json_query(
+            query='SELECT identifier, source_statechange_id, data FROM state_events ',
+            limit=limit,
+            offset=offset,
+            filters=filters,
+        )
         result = []
         try:
             result = [
