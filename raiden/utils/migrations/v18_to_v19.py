@@ -1,10 +1,11 @@
 import json
 
+from gevent.pool import Pool
 from web3 import Web3
 
 from raiden.exceptions import InvalidDBData
-from raiden.storage.sqlite import EventRecord, SQLiteStorage, StateChangeRecord
-from raiden.utils.typing import Any, BlockNumber, Dict
+from raiden.storage.sqlite import SQLiteStorage
+from raiden.utils.typing import Any, BlockNumber, Dict, NamedTuple, Tuple
 
 SOURCE_VERSION = 18
 TARGET_VERSION = 19
@@ -33,12 +34,29 @@ class BlockHashCache(object):
         return block_hash
 
 
+class BlockQueryAndUpdateRecord(NamedTuple):
+    block_number: BlockNumber
+    data: Dict[str, Any]
+    state_change_identifier: int
+    cache: BlockHashCache
+
+
+def _query_blocknumber_and_update_statechange_data(
+        record: BlockQueryAndUpdateRecord,
+) -> Tuple[str, int]:
+    data = record.data
+    data['block_hash'] = record.cache.get(record.block_number)
+    return (json.dumps(data), record.state_change_identifier)
+
+
 def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Adds blockhash to ContractReceiveXXX and ActionInitChain state changes"""
 
-    for state_changes_batch in storage.batch_query_state_changes(batch_size=500):
+    batch_size = 50
+    for state_changes_batch in storage.batch_query_state_changes(batch_size=batch_size):
 
-        updated_state_changes = []
+        # Gather query records to pass to gevent pool imap to have concurrent RPC calls
+        query_records = []
         for state_change in state_changes_batch:
             data = json.loads(state_change.data)
             affected_state_change = (
@@ -49,14 +67,25 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
                 continue
 
             assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
-            block_number = int(data['block_number'])
-            data['block_hash'] = cache.get(block_number)
+            record = BlockQueryAndUpdateRecord(
+                block_number=int(data['block_number']),
+                data=data,
+                state_change_identifier=state_change.state_change_identifier,
+                cache=cache,
+            )
+            query_records.append(record)
 
-            updated_state_changes.append((
-                json.dumps(data),
-                state_change.state_change_identifier,
-            ))
+        # Now perform the queries in parallel with gevent.Pool.imap and gather the
+        # updated tuple entries that will update the DB
+        updated_state_changes = []
+        pool_generator = Pool(batch_size).imap(
+            _query_blocknumber_and_update_statechange_data,
+            query_records,
+        )
+        for entry in pool_generator:
+            updated_state_changes.append(entry)
 
+        # Finally update the DB with a batched executemany()
         storage.update_state_changes(updated_state_changes)
 
 
