@@ -154,7 +154,8 @@ def upgrade_v18_to_v19(
         cache = BlockHashCache(web3)
         _add_blockhash_to_state_changes(storage, cache)
         _add_blockhash_to_events(storage, cache)
-        # The snapshot transformation should come last
+        # The snapshot transformation should come last because the update of the
+        # transaction queue of the chain state relies on the events having been updated
         _transform_snapshots_for_blockhash(storage, cache)
 
     return TARGET_VERSION
