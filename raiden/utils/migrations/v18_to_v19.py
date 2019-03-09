@@ -52,9 +52,9 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
             block_number = int(data['block_number'])
             data['block_hash'] = cache.get(block_number)
 
-            updated_state_changes.append(StateChangeRecord(
-                state_change_identifier=state_change.state_change_identifier,
-                data=json.dumps(data),
+            updated_state_changes.append((
+                json.dumps(data),
+                state_change.state_change_identifier,
             ))
 
         storage.update_state_changes(updated_state_changes)
@@ -87,11 +87,9 @@ def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> N
                 block_number = int(statechange_data['block_number'])
                 block_hash = cache.get(block_number)
             data['triggered_by_block_hash'] = block_hash
-
-            updated_events.append(EventRecord(
-                event_identifier=event.event_identifier,
-                state_change_identifier=event.state_change_identifier,
-                data=json.dumps(data),
+            updated_events.append((
+                json.dumps(data),
+                event.event_identifier,
             ))
 
         storage.update_events(updated_events)
