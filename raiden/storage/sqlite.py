@@ -344,12 +344,13 @@ class SQLiteStorage(SerializationBase):
         cursor.execute(query, args)
         result = []
         try:
-            rows = cursor.fetchall()
-            for row in rows:
-                result.append(StateChangeRecord(
+            result = [
+                StateChangeRecord(
                     state_change_identifier=row[0],
                     data=row[1],
-                ))
+                )
+                for row in cursor
+            ]
         except AttributeError:
             raise InvalidDBData(
                 'Your local database is corrupt. Bailing ...',
@@ -419,7 +420,7 @@ class SQLiteStorage(SerializationBase):
             )
 
         try:
-            result = [entry[0] for entry in cursor.fetchall()]
+            result = [entry[0] for entry in cursor]
         except AttributeError:
             raise InvalidDBData(
                 'Your local database is corrupt. Bailing ...',
@@ -477,13 +478,13 @@ class SQLiteStorage(SerializationBase):
         cursor.execute(query, args)
         result = []
         try:
-            rows = cursor.fetchall()
-            for row in rows:
-                result.append(EventRecord(
+            result = [
+                EventRecord(
                     event_identifier=row[0],
                     state_change_identifier=row[1],
                     data=row[2],
-                ))
+                ) for row in cursor
+            ]
         except AttributeError:
             raise InvalidDBData(
                 'Your local database is corrupt. Bailing ...',
