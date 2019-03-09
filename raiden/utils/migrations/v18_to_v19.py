@@ -116,7 +116,7 @@ def _transform_snapshot(
 
         # For each pending transaction find the corresponding DB event record.
         event_record = storage.get_latest_event_by_data_field(
-            filters={'_type': transaction_data['_type']},
+            filters=transaction_data,
         )
         if not event_record.data:
             raise InvalidDBData(
