@@ -109,8 +109,10 @@ def _transform_snapshot(
     new_pending_transactions = []
     for transaction_data in pending_transactions:
         if 'raiden.transfer.events.ContractSend' not in transaction_data['_type']:
-            new_pending_transactions.append(transaction_data)
-            continue
+            raise InvalidDBData(
+                "Error during v18 -> v19 upgrade. Chain state's pending transactions "
+                "should only contain ContractSend transactions",
+            )
 
         # For each pending transaction find the corresponding DB event record.
         event_record = storage.get_latest_event_by_data_field(
