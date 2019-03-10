@@ -325,11 +325,27 @@ def test_batch_query_state_changes():
     state_changes = []
     state_changes_batch_query = storage.batch_query_state_changes(
         batch_size=10,
-        filters={'_type': 'raiden.transfer.state_change.Block'},
+        filters=[('_type', 'raiden.transfer.state_change.Block')],
     )
     for state_changes_batch in state_changes_batch_query:
         state_changes.extend(state_changes_batch)
     assert len(state_changes) == 77
+
+    # Test that filter works with logical or and a wildmark too
+    state_changes = []
+    state_changes_batch_query = storage.batch_query_state_changes(
+        batch_size=10,
+        filters=[
+            # Should be 5 of them
+            ('_type', 'raiden.transfer.state_change.ContractReceiveChannel%'),
+            # Should be only 1
+            ('_type', 'raiden.transfer.state_change.ContractReceiveNewPaymentNetwork'),
+        ],
+        logical_and=False,
+    )
+    for state_changes_batch in state_changes_batch_query:
+        state_changes.extend(state_changes_batch)
+    assert len(state_changes) == 6
 
 
 def test_batch_query_event_records():
@@ -372,10 +388,24 @@ def test_batch_query_event_records():
     events = []
     events_batch_query = storage.batch_query_event_records(
         batch_size=1,
-        filters={'_type': 'raiden.transfer.events.EventPaymentReceivedSuccess'},
+        filters=[('_type', 'raiden.transfer.events.EventPaymentReceivedSuccess')],
     )
     for events_batch in events_batch_query:
         events.extend(events_batch)
     assert len(events) == 1
     event_type = json.loads(events[0].data)['_type']
     assert event_type == 'raiden.transfer.events.EventPaymentReceivedSuccess'
+
+    # Test that we can also add a filter with logical OR
+    events = []
+    events_batch_query = storage.batch_query_event_records(
+        batch_size=1,
+        filters=[
+            ('_type', 'raiden.transfer.events.EventPaymentReceivedSuccess'),
+            ('_type', 'raiden.transfer.events.ContractSendChannelSettle'),
+        ],
+        logical_and=False,
+    )
+    for events_batch in events_batch_query:
+        events.extend(events_batch)
+    assert len(events) == 2

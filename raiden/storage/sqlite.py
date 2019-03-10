@@ -271,21 +271,27 @@ class SQLiteStorage(SerializationBase):
             query: str,
             limit: int = None,
             offset: int = None,
-            filters: Dict[str, Any] = None,
+            filters: List[Tuple[str, Any]] = None,
+            logical_and: bool = True,
     ):
         limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
         where_clauses = []
         args = []
         if filters:
-            for field, value in filters.items():
-                where_clauses.append('json_extract(data, ?)=?')
+            for field, value in filters:
+                where_clauses.append(f'json_extract(data, ?) LIKE ?')
                 args.append(f'$.{field}')
                 args.append(value)
 
-            query += (
-                f"WHERE {' AND '.join(where_clauses)}"
-            )
+            if logical_and:
+                query += (
+                    f"WHERE {' AND '.join(where_clauses)}"
+                )
+            else:
+                query += (
+                    f"WHERE {' OR '.join(where_clauses)}"
+                )
 
         query += 'ORDER BY identifier ASC LIMIT ? OFFSET ?'
         args.append(limit)
@@ -339,7 +345,8 @@ class SQLiteStorage(SerializationBase):
             self,
             limit: int = None,
             offset: int = None,
-            filters: Dict[str, Any] = None,
+            filters: List[Tuple[str, Any]] = None,
+            logical_and: bool = True,
     ) -> List[StateChangeRecord]:
         """ Return a batch of state change records (identifier and data)
 
@@ -353,6 +360,7 @@ class SQLiteStorage(SerializationBase):
             limit=limit,
             offset=offset,
             filters=filters,
+            logical_and=logical_and,
         )
         result = []
         try:
@@ -373,7 +381,8 @@ class SQLiteStorage(SerializationBase):
     def batch_query_state_changes(
             self,
             batch_size: int,
-            filters: Dict[str, Any] = None,
+            filters: List[Tuple[str, Any]] = None,
+            logical_and: bool = True,
     ) -> List[StateChangeRecord]:
         """Batch query state change records with a given batch size and an optional filter
 
@@ -388,6 +397,7 @@ class SQLiteStorage(SerializationBase):
                 limit=limit,
                 offset=offset,
                 filters=filters,
+                logical_and=logical_and,
             )
             result_length = len(result)
             offset += result_length
@@ -457,7 +467,8 @@ class SQLiteStorage(SerializationBase):
             self,
             limit: int = None,
             offset: int = None,
-            filters: Dict[str, Any] = None,
+            filters: List[Tuple[str, Any]] = None,
+            logical_and: bool = True,
     ) -> List[EventRecord]:
         """ Return a batch of event records
 
@@ -471,6 +482,7 @@ class SQLiteStorage(SerializationBase):
             limit=limit,
             offset=offset,
             filters=filters,
+            logical_and=logical_and,
         )
         result = []
         try:
@@ -491,7 +503,8 @@ class SQLiteStorage(SerializationBase):
     def batch_query_event_records(
             self,
             batch_size: int,
-            filters: Dict[str, Any] = None,
+            filters: List[Tuple[str, Any]] = None,
+            logical_and: bool = True,
     ) -> List[EventRecord]:
         """Batch query event records with a given batch size and an optional filter
 
@@ -506,6 +519,7 @@ class SQLiteStorage(SerializationBase):
                 limit=limit,
                 offset=offset,
                 filters=filters,
+                logical_and=logical_and,
             )
             result_length = len(result)
             offset += result_length
