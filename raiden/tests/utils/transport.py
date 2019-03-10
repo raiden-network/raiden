@@ -215,7 +215,7 @@ def matrix_server_starter(
                         '-m',
                         'synapse.app.homeserver',
                         f'--server-name={server_name}',
-                        f'--config-path={config_file.name}',
+                        f'--config-path={config_file!s}',
                     ],
                     url=urljoin(server_url, '/_matrix/client/versions'),
                     method='GET',
