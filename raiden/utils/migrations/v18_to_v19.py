@@ -53,19 +53,19 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
     """Adds blockhash to ContractReceiveXXX and ActionInitChain state changes"""
 
     batch_size = 50
-    for state_changes_batch in storage.batch_query_state_changes(batch_size=batch_size):
-
+    batch_query = storage.batch_query_state_changes(
+        batch_size=batch_size,
+        filters=[
+            ('_type', 'raiden.transfer.state_change.ContractReceive%'),
+            ('_type', 'raiden.transfer.state_change.ActionInitChain'),
+        ],
+        logical_and=False,
+    )
+    for state_changes_batch in batch_query:
         # Gather query records to pass to gevent pool imap to have concurrent RPC calls
         query_records = []
         for state_change in state_changes_batch:
             data = json.loads(state_change.data)
-            affected_state_change = (
-                'raiden.transfer.state_change.ContractReceive' in data['_type'] or
-                'raiden.transfer.state_change.ActionInitChain' in data['_type']
-            )
-            if not affected_state_change:
-                continue
-
             assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
             record = BlockQueryAndUpdateRecord(
                 block_number=int(data['block_number']),
@@ -91,13 +91,14 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
 
 def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Adds blockhash to all ContractSendXXX events"""
-    for events_batch in storage.batch_query_event_records(batch_size=500):
+    batch_query = storage.batch_query_event_records(
+        batch_size=500,
+        filters=[('_type', 'raiden.transfer.events.ContractSend%')],
+    )
+    for events_batch in batch_query:
         updated_events = []
         for event in events_batch:
             data = json.loads(event.data)
-            if 'raiden.transfer.events.ContractSend' not in data['_type']:
-                continue
-
             assert 'triggered_by_block_hash' not in data, 'v18 events cant contain blockhash'
             # Get the state_change that triggered the event and if it has
             # a block number get its hash. If not fall back to latest.

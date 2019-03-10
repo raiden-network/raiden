@@ -76,27 +76,38 @@ def test_upgrade_v18_to_v19(tmp_path):
 
     storage = SQLiteStorage(str(db_path))
     # Check that all the relevant state changes now have the blockhash attribute
-    for state_changes_batch in storage.batch_query_state_changes(batch_size=500):
+    batch_query = storage.batch_query_state_changes(
+        batch_size=500,
+        filters=[
+            ('_type', 'raiden.transfer.state_change.ContractReceive%'),
+            ('_type', 'raiden.transfer.state_change.ActionInitChain'),
+        ],
+    )
+    for state_changes_batch in batch_query:
         for state_change_record in state_changes_batch:
             data = json.loads(state_change_record.data)
             affected_state_change = (
                 'raiden.transfer.state_change.ContractReceive' in data['_type'] or
                 'raiden.transfer.state_change.ActionInitChain' in data['_type']
             )
-            if affected_state_change:
-                assert 'block_hash' in data
-                block_number = int(data['block_number'])
-                assert block_to_blockhash[block_number].hex() == data['block_hash']
+            assert affected_state_change, 'filtering did not work correctly'
+            assert 'block_hash' in data
+            block_number = int(data['block_number'])
+            assert block_to_blockhash[block_number].hex() == data['block_hash']
 
     # Check that all the relevant events now have the triggered_by_blockhash attribute
     event_records = []
-    for events_batch in storage.batch_query_event_records(batch_size=500):
+    batch_query = storage.batch_query_event_records(
+        batch_size=500,
+        filters=[('_type', 'events.ContractSend')],
+    )
+    for events_batch in batch_query:
         event_records.extend(events_batch)
 
     for event_record in event_records:
         data = json.loads(event_record.data)
-        if 'events.ContractSend' in data['_type']:
-            assert 'triggered_by_block_hash' in data
+        assert 'events.ContractSend' in data['_type']
+        assert 'triggered_by_block_hash' in data
 
     # Finally check that the snapshot is updated and that it contains a blockhash and that all
     # pending transactions in the list also contain one
