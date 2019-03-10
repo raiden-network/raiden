@@ -481,14 +481,12 @@ class RaidenAPI:
             channel_id=channel_state.identifier,
         )
 
-        token_network_balance = token.balance_of(registry_address)
+        total_network_balance = token.balance_of(registry_address)
 
-        if token_network_balance + total_deposit > per_token_network_deposit_limit:
+        if total_network_balance + total_deposit > per_token_network_deposit_limit:
             raise DepositOverLimit(
-                'The deposit of {} exceeds token network limit of {}'.format(
-                    total_deposit,
-                    per_token_network_deposit_limit,
-                ),
+                f'The deposit of {total_deposit} exceeds '
+                f'token network limit of {per_token_network_deposit_limit}',
             )
 
         balance = token.balance_of(self.raiden.address)
@@ -500,11 +498,8 @@ class RaidenAPI:
 
         if total_deposit > deposit_limit:
             raise DepositOverLimit(
-                'The deposit of {} is bigger than the current '
-                'channel participant limit of {}'.format(
-                    total_deposit,
-                    deposit_limit,
-                ),
+                f'The deposit of {total_deposit} is bigger than the current '
+                f'channel participant limit of {deposit_limit}',
             )
 
         if total_deposit == 0:
