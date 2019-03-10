@@ -161,16 +161,41 @@ def _transform_snapshot(
     return json.dumps(snapshot)
 
 
+class TransformSnapshotRecord(NamedTuple):
+    data: Any
+    identifier: int
+    storage: SQLiteStorage
+    cache: BlockHashCache
+
+
+def _do_transform_snapshot(record: TransformSnapshotRecord) -> Tuple[Dict[str, Any], int]:
+    new_snapshot = _transform_snapshot(
+        raw_snapshot=record.data,
+        storage=record.storage,
+        cache=record.cache,
+    )
+    return new_snapshot, record.identifier
+
+
 def _transform_snapshots_for_blockhash(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Upgrades the snapshots by adding the blockhash to it and to any pending transactions"""
-    updated_snapshots_data = []
-    for snapshot in storage.get_snapshots():
-        new_snapshot = _transform_snapshot(
-            raw_snapshot=snapshot.data,
+
+    snapshots = storage.get_snapshots()
+    snapshot_records = [
+        TransformSnapshotRecord(
+            data=snapshot.data,
+            identifier=snapshot.identifier,
             storage=storage,
             cache=cache,
         )
-        updated_snapshots_data.append((new_snapshot, snapshot.identifier))
+        for snapshot in snapshots
+    ]
+
+    pool_generator = Pool(len(snapshots)).imap(_do_transform_snapshot, snapshot_records)
+
+    updated_snapshots_data = []
+    for result in pool_generator:
+        updated_snapshots_data.append(result)
 
     storage.update_snapshots(updated_snapshots_data)
 
