@@ -4,7 +4,7 @@ from raiden.tests.utils.factories import make_block_hash
 from raiden.utils.typing import Any, Dict, Tuple
 
 
-class FakeEth(object):
+class FakeEth():
 
     def __init__(self, block_to_blockhash: Dict[int, Any]):
         self.block_to_blockhash = block_to_blockhash
@@ -14,7 +14,7 @@ class FakeEth(object):
         return {'hash': block_hash}
 
 
-class FakeWeb3(object):
+class FakeWeb3():
 
     def __init__(self, block_to_blockhash: Dict[int, Any]):
         self.eth = FakeEth(block_to_blockhash)
