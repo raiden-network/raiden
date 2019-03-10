@@ -534,11 +534,10 @@ class SQLiteStorage(SerializationBase):
     def get_snapshots(self):
         cursor = self.conn.cursor()
         cursor.execute('SELECT identifier, statechange_id, data FROM state_snapshot')
-        snapshots = cursor.fetchall()
 
         return [
             SnapshotRecord(snapshot[0], snapshot[1], snapshot[2])
-            for snapshot in snapshots
+            for snapshot in cursor
         ]
 
     def update_snapshot(self, identifier, new_snapshot):
