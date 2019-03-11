@@ -6,7 +6,7 @@ from raiden.constants import SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec
-from raiden.utils.typing import Any, Dict, List, NamedTuple, Optional, Tuple
+from raiden.utils.typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple
 
 from .serialize import SerializationBase
 
@@ -284,7 +284,7 @@ class SQLiteStorage(SerializationBase):
             offset: int = None,
             filters: List[Tuple[str, Any]] = None,
             logical_and: bool = True,
-    ):
+    ) -> sqlite3.Cursor:
         limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
         where_clauses = []
@@ -384,7 +384,7 @@ class SQLiteStorage(SerializationBase):
             batch_size: int,
             filters: List[Tuple[str, Any]] = None,
             logical_and: bool = True,
-    ) -> List[StateChangeRecord]:
+    ) -> Iterator[List[StateChangeRecord]]:
         """Batch query state change records with a given batch size and an optional filter
 
         This is a generator function returning each batch to the caller to work with.
@@ -494,7 +494,7 @@ class SQLiteStorage(SerializationBase):
             batch_size: int,
             filters: List[Tuple[str, Any]] = None,
             logical_and: bool = True,
-    ) -> List[EventRecord]:
+    ) -> Iterator[List[EventRecord]]:
         """Batch query event records with a given batch size and an optional filter
 
         This is a generator function returning each batch to the caller to work with.
@@ -560,7 +560,7 @@ class SQLiteStorage(SerializationBase):
         cursor = self.conn.cursor()
         cursor.executemany(
             'UPDATE state_snapshot SET data=? WHERE identifier=?',
-            (snapshots_data),
+            snapshots_data,
         )
         self.maybe_commit()
 
