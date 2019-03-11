@@ -114,5 +114,6 @@ def test_upgrade_v18_to_v19(tmp_path):
     _, snapshot = storage.get_latest_state_snapshot()
     snapshot_data = json.loads(snapshot)
     assert 'block_hash' in snapshot_data
+    assert len(snapshot_data['pending_transactions']) == 2
     for transaction_data in snapshot_data['pending_transactions']:
         assert 'triggered_by_block_hash' in transaction_data

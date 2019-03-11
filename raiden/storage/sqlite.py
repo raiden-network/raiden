@@ -52,6 +52,20 @@ def _sanitize_limit_and_offset(
     return limit, offset
 
 
+def _filter_from_dict(current: Dict[str, Any]) -> Dict[str, Any]:
+    """Takes in a nested dictionary as a filter and returns a flattened filter dictionary"""
+    filter_ = dict()
+
+    for k, v in current.items():
+        if isinstance(v, dict):
+            for sub, v2 in _filter_from_dict(v).items():
+                filter_[f'{k}.{sub}'] = v2
+        else:
+            filter_[k] = v
+
+    return filter_
+
+
 class SQLiteStorage(SerializationBase):
     def __init__(self, database_path):
         conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -229,6 +243,7 @@ class SQLiteStorage(SerializationBase):
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
 
+        filters = _filter_from_dict(filters)
         where_clauses = []
         args = []
         for field, value in filters.items():
@@ -309,6 +324,7 @@ class SQLiteStorage(SerializationBase):
 
         where_clauses = []
         args = []
+        filters = _filter_from_dict(filters)
         for field, value in filters.items():
             where_clauses.append('json_extract(data, ?)=?')
             args.append(f'$.{field}')
