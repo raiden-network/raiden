@@ -243,6 +243,7 @@ class NodeRunner:
     @property
     def _raiden_bin(self):
         _, bin_path = self._runner.release_keeper.install(self._raiden_version)
+        return bin_path
 
     @property
     def _keystore_file(self):
