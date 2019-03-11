@@ -650,8 +650,10 @@ def test_routing_updates(
     new_channel_identifier = factories.make_channel_identifier()
     channel_new_state_change = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=new_channel_identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=new_channel_identifier,
+        ),
         participant1=address2,
         participant2=address3,
         block_number=open_block_number,
@@ -853,8 +855,10 @@ def test_routing_issue2663(
     # create new channels without being participant
     channel_new_state_change3 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=3,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=3,
+        ),
         participant1=address2,
         participant2=address3,
         block_number=open_block_number,
@@ -876,8 +880,10 @@ def test_routing_issue2663(
 
     channel_new_state_change4 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=4,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=4,
+        ),
         participant1=address3,
         participant2=address1,
         block_number=open_block_number,
@@ -1097,8 +1103,10 @@ def test_routing_priority(
     # create new channels without being participant
     channel_new_state_change3 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=3,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=3,
+        ),
         participant1=address2,
         participant2=address3,
         block_number=open_block_number,
@@ -1116,8 +1124,10 @@ def test_routing_priority(
 
     channel_new_state_change4 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=4,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=4,
+        ),
         participant1=address3,
         participant2=address1,
         block_number=open_block_number,
@@ -1135,8 +1145,10 @@ def test_routing_priority(
 
     channel_new_state_change5 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=4,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=4,
+        ),
         participant1=address3,
         participant2=address4,
         block_number=open_block_number,
@@ -1154,8 +1166,10 @@ def test_routing_priority(
 
     channel_new_state_change6 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=4,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=4,
+        ),
         participant1=address2,
         participant2=address4,
         block_number=open_block_number,

@@ -115,8 +115,11 @@ def handle_channel_new(raiden: 'RaidenService', event: Event):
     else:
         new_route = ContractReceiveRouteNew(
             transaction_hash=transaction_hash,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=raiden.chain.network_id,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
             participant1=participant1,
             participant2=participant2,
             block_number=block_number,
