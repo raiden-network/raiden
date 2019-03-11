@@ -199,8 +199,11 @@ def test_channelstate_update_contract_balance():
     )
     state_change = ContractReceiveChannelNewBalance(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         deposit_transaction=deposit_transaction,
         block_number=block_number,
         block_hash=block_hash,
@@ -247,8 +250,11 @@ def test_channelstate_decreasing_contract_balance():
     )
     state_change = ContractReceiveChannelNewBalance(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         deposit_transaction=deposit_transaction,
         block_number=deposit_block_number,
         block_hash=deposit_block_hash,
@@ -288,8 +294,11 @@ def test_channelstate_repeated_contract_balance():
     )
     state_change = ContractReceiveChannelNewBalance(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         deposit_transaction=deposit_transaction,
         block_number=deposit_block_number,
         block_hash=deposit_block_hash,
@@ -343,8 +352,11 @@ def test_deposit_must_wait_for_confirmation():
     )
     new_balance = ContractReceiveChannelNewBalance(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         deposit_transaction=deposit_transaction,
         block_number=block_number,
         block_hash=block_hash,
