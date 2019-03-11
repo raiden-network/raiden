@@ -408,7 +408,7 @@ class SQLiteStorage(SerializationBase):
         cursor = self.conn.cursor()
         cursor.executemany(
             'UPDATE state_changes SET data=? WHERE identifier=?',
-            (state_changes_data),
+            state_changes_data,
         )
         self.maybe_commit()
 
@@ -530,7 +530,7 @@ class SQLiteStorage(SerializationBase):
         cursor = self.conn.cursor()
         cursor.executemany(
             'UPDATE state_events SET data=? WHERE identifier=?',
-            (events_data),
+            events_data,
         )
         self.maybe_commit()
 
