@@ -86,6 +86,7 @@ def upgrade_v17_to_v18(
         storage: SQLiteStorage,
         old_version: int,
         current_version: int,
+        **kwargs,
 ) -> int:
     if old_version == SOURCE_VERSION:
         _add_routes_to_mediator(storage)

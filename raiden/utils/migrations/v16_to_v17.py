@@ -49,7 +49,7 @@ def _transform_snapshots(storage: SQLiteStorage):
     storage.update_snapshots(updated_snapshots_data)
 
 
-def upgrade_v16_to_v17(storage: SQLiteStorage, old_version: int, current_version: int):
+def upgrade_v16_to_v17(storage: SQLiteStorage, old_version: int, current_version: int, **kwargs):
     """ InitiatorPaymentState was changed so that the "initiator"
     attribute is renamed to "initiator_transfers" and converted to a list.
     """

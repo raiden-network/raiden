@@ -382,7 +382,7 @@ def test_batch_query_event_records():
     events = []
     for events_batch in storage.batch_query_event_records(batch_size=1):
         events.extend(events_batch)
-    assert len(events) == 2
+    assert len(events) == 3
 
     # Test that we can also add a filter
     events = []
