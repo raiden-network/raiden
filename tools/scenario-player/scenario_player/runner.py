@@ -46,14 +46,14 @@ from scenario_player.utils import (
 log = structlog.get_logger(__name__)
 
 
-class ScenarioRunner(object):
+class ScenarioRunner:
     def __init__(
-        self,
-        account: Account,
-        chain_urls: Dict[str, List[str]],
-        auth: str,
-        data_path: Path,
-        scenario_file: Path,
+            self,
+            account: Account,
+            chain_urls: Dict[str, List[str]],
+            auth: str,
+            data_path: Path,
+            scenario_file: Path,
     ):
         from scenario_player.node_support import RaidenReleaseKeeper, NodeController
 
@@ -282,14 +282,15 @@ class ScenarioRunner(object):
             msg = str(ex)
         return code, msg
 
-    def _spawn_and_wait(self, objects, callback):
+    @staticmethod
+    def _spawn_and_wait(objects, callback):
         tasks = {obj: gevent.spawn(callback, obj) for obj in objects}
         gevent.joinall(tasks.values())
         return {obj: task.get() for obj, task in tasks.items()}
 
     @property
     def is_v2(self):
-        return self.scenario_version == 2
+        return self.scenario.version == 2
 
     @property
     def is_managed(self):
