@@ -1,6 +1,6 @@
 import pathlib
 from collections.abc import Mapping
-from typing import Dict, List, Tuple, Any, Union
+from typing import Dict, List, Tuple, Any, Union, Callable
 
 import structlog
 import yaml
@@ -51,7 +51,7 @@ class NodesConfig(Mapping):
                 mode = self._config['mode'].upper()
             except KeyError:
                 raise MissingNodesConfiguration(
-                    'Version 2 scenarios require a "mode" in the "nodes" section.'
+                    'Version 2 scenarios require a "mode" in the "nodes" section.',
                 )
             try:
                 return NodeMode[mode]
@@ -107,14 +107,14 @@ class NodesConfig(Mapping):
             except KeyError:
                 raise MissingNodesConfiguration(
                     'Setting "range" must be a dict containing keys "first" and "last",'
-                    ' whose values are integers!'
+                    ' whose values are integers!',
                 )
 
             try:
                 template = range_config['template']
             except KeyError:
                 raise MissingNodesConfiguration(
-                    'Must specify "template" setting when giving "range" setting.'
+                    'Must specify "template" setting when giving "range" setting.',
                 )
 
             return [template.format(i) for i in range(start, stop)]
@@ -240,7 +240,7 @@ class Scenario(Mapping):
             return self._config['scenario']
         except KeyError:
             raise ScenarioError(
-                "Invalid scenario definition. Missing 'scenario' key."
+                "Invalid scenario definition. Missing 'scenario' key.",
             )
 
     @property
@@ -254,7 +254,7 @@ class Scenario(Mapping):
             items, = self.configuration.items()
         except ValueError:
             raise MultipleTaskDefinitions(
-                'Multiple tasks defined in scenario configuration!'
+                'Multiple tasks defined in scenario configuration!',
             )
         return items
 
