@@ -119,8 +119,11 @@ def test_channel_settle_must_properly_cleanup():
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        token_network_identifier=token_network_id,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=token_network_id,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -228,8 +231,11 @@ def test_channel_data_removed_after_unlock(
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        token_network_identifier=token_network_state.address,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -368,8 +374,11 @@ def test_mediator_clear_pairs_after_batch_unlock(
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        token_network_identifier=token_network_state.address,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -519,8 +528,11 @@ def test_multiple_channel_states(
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        token_network_identifier=token_network_state.address,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -669,8 +681,11 @@ def test_routing_updates(
     channel_close_state_change1 = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        token_network_identifier=token_network_state.address,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -690,8 +705,11 @@ def test_routing_updates(
     channel_close_state_change2 = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.our_state.address,
-        token_network_identifier=token_network_state.address,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )

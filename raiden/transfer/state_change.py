@@ -310,16 +310,15 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
             self,
             transaction_hash: TransactionHash,
             transaction_from: Address,
-            token_network_identifier: TokenNetworkID,
-            channel_identifier: ChannelID,
+            canonical_identifier: CanonicalIdentifier,
             block_number: BlockNumber,
             block_hash: BlockHash,
     ):
         super().__init__(transaction_hash, block_number, block_hash)
 
         self.transaction_from = transaction_from
-        self.token_network_identifier = token_network_identifier
-        self.channel_identifier = channel_identifier
+        self.token_network_identifier = canonical_identifier.token_network_address
+        self.channel_identifier = canonical_identifier.channel_identifier
 
     def __repr__(self):
         return (
@@ -360,8 +359,11 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             transaction_from=to_canonical_address(data['transaction_from']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['channel_identifier'])),
+            ),
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
         )
