@@ -62,6 +62,7 @@ MANAGED_CONFIG_OPTIONS_OVERRIDABLE = {
     'endpoint-registry-contract-address',
     'tokennetwork-registry-contract-address',
     'secret-registry-contract-address',
+    'pathfinding-service-address',
 }
 
 
@@ -315,8 +316,13 @@ class NodeRunner:
             self.api_address,
             '--no-web-ui',
         ]
+
+        pfs_address = self._pfs_address
+        if pfs_address:
+            cmd.extend(['--pathfinding-service-address', pfs_address])
+
         for option_name in MANAGED_CONFIG_OPTIONS_OVERRIDABLE:
-            if option_name == 'api-address':
+            if option_name in ('api-address', 'pathfinding-service-address'):
                 # already handled above
                 continue
             if option_name in self._options:
@@ -384,6 +390,22 @@ class NodeRunner:
     @property
     def _stderr_file(self):
         return self._datadir.joinpath(f'run-{self._runner.run_number:03d}.stderr')
+
+    @property
+    def _pfs_address(self):
+        local_pfs = self._options.get('pathfinding-service-address')
+        global_pfs = self._runner.scenario.services.get('pfs', {}).get('url')
+        if local_pfs:
+            if global_pfs:
+                log.warning(
+                    'Overriding PFS option',
+                    global_pfs_address=global_pfs,
+                    local_pfs_address=local_pfs,
+                    node=self._index,
+                )
+            return local_pfs
+        if global_pfs:
+            return global_pfs
 
     def _validate_options(self, options: Dict[str, Any]):
         for option_name, option_value in options.items():
