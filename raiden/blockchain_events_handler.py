@@ -165,8 +165,11 @@ def handle_channel_new_balance(raiden: 'RaidenService', event: Event):
 
         newbalance_statechange = ContractReceiveChannelNewBalance(
             transaction_hash=transaction_hash,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=previous_channel_state.chain_id,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
             deposit_transaction=deposit_transaction,
             block_number=block_number,
             block_hash=block_hash,
