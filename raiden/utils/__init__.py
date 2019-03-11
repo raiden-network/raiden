@@ -26,6 +26,10 @@ from raiden.utils import typing
 from raiden.utils.signing import sha3  # noqa
 
 
+# Placeholder chain ID for refactoring in scope of #3493
+CHAIN_ID_UNSPECIFIED = typing.ChainID(-1)
+
+
 class CanonicalIdentifier(NamedTuple):
     chain_identifier: typing.ChainID
     # introducing the type as Union, to avoid casting for now. Should be only `..Address` later
