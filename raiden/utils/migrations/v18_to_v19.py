@@ -11,7 +11,7 @@ SOURCE_VERSION = 18
 TARGET_VERSION = 19
 
 
-class BlockHashCache(object):
+class BlockHashCache():
     """A small cache for blocknumber to blockhashes to optimize this migration a bit
 
     This cache lives only during the v18->v19 migration where numerous RPC calls are
@@ -100,8 +100,7 @@ def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> N
         for event in events_batch:
             data = json.loads(event.data)
             assert 'triggered_by_block_hash' not in data, 'v18 events cant contain blockhash'
-            # Get the state_change that triggered the event and if it has
-            # a block number get its hash. If not fall back to latest.
+            # Get the state_change that triggered the event and get its hash
             matched_state_changes = storage.get_statechanges_by_identifier(
                 from_identifier=event.state_change_identifier,
                 to_identifier=event.state_change_identifier,
@@ -112,11 +111,11 @@ def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> N
 
             statechange_data = json.loads(matched_state_changes[0])
             if 'block_hash' in statechange_data:
-                block_hash = statechange_data['block_hash']
+                data['triggered_by_block_hash'] = statechange_data['block_hash']
             elif 'block_number' in statechange_data:
                 block_number = int(statechange_data['block_number'])
-                block_hash = cache.get(block_number)
-            data['triggered_by_block_hash'] = block_hash
+                data['triggered_by_block_hash'] = cache.get(block_number)
+
             updated_events.append((
                 json.dumps(data),
                 event.event_identifier,
