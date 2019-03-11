@@ -1440,9 +1440,11 @@ def test_channelstate_unlock():
 
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
     settle_state_change = ContractReceiveChannelSettled(
+        canonical_identifier=make_canonical_identifier(
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
     )
@@ -1557,8 +1559,10 @@ def test_settle_transaction_must_be_sent_only_once():
     settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
     settle_state_change = ContractReceiveChannelSettled(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
     )

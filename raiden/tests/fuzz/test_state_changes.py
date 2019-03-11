@@ -433,8 +433,11 @@ class OnChainMixin:
 
         channel_settled_state_change = ContractReceiveChannelSettled(
             transaction_hash=factories.make_transaction_hash(),
-            token_network_identifier=channel.token_network_identifier,
-            channel_identifier=channel.identifier,
+            canonical_identifier=factories.make_canonical_identifier(
+                chain_identifier=channel.chain_id,
+                token_network_address=channel.token_network_identifier,
+                channel_identifier=channel.identifier,
+            ),
             block_number=self.block_number + 1,
             block_hash=factories.make_block_hash(),
         )
