@@ -1,11 +1,13 @@
 import pathlib
 import random
+
 from collections import defaultdict
-from typing import Dict, List, Tuple
 from pathlib import Path
+from typing import Dict, List, Tuple
 
 import gevent
 import structlog
+
 from eth_utils import to_checksum_address
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
 from requests import RequestException, Session
@@ -21,20 +23,15 @@ from scenario_player.constants import (
     OWN_ACCOUNT_BALANCE_MIN,
     NODE_ACCOUNT_BALANCE_MIN,
     NODE_ACCOUNT_BALANCE_FUND,
-    TIMEOUT,
     API_URL_ADDRESS,
     API_URL_TOKENS,
     API_URL_TOKEN_NETWORK_ADDRESS,
-    SUPPORTED_SCENARIO_VERSIONS,
     NodeMode,
 )
 from scenario_player.exceptions import (
     NodesUnreachableError,
     ScenarioError,
     TokenRegistrationError,
-    MissingNodesConfiguration,
-    MultipleTaskDefinitions,
-    InvalidScenarioVersion,
 )
 from scenario_player.scenario import Scenario
 from scenario_player.utils import (
@@ -42,6 +39,7 @@ from scenario_player.utils import (
     get_or_deploy_token,
     wait_for_txs,
 )
+
 
 log = structlog.get_logger(__name__)
 
