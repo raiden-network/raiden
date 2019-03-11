@@ -30,6 +30,10 @@ class RESTAPIStatusMismatchError(ScenarioError):
     pass
 
 
+class RESTAPITimeout(RESTAPIError):
+    pass
+
+
 class MultipleTaskDefinitions(ScenarioError):
     """Several root tasks were defined in the scenario configuration."""
 

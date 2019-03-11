@@ -1,22 +1,18 @@
 import pathlib
 from collections.abc import Mapping
-from typing import Dict, List, Tuple, Any, Union, Callable
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import structlog
 import yaml
-from scenario_player.constants import (
-    TIMEOUT,
-    SUPPORTED_SCENARIO_VERSIONS,
-    NodeMode,
-)
+
+from scenario_player.constants import SUPPORTED_SCENARIO_VERSIONS, TIMEOUT, NodeMode
 from scenario_player.exceptions import (
-    ScenarioError,
+    InvalidScenarioVersion,
     MissingNodesConfiguration,
     MultipleTaskDefinitions,
-    InvalidScenarioVersion,
+    ScenarioError,
 )
-from scenario_player.tasks.base import get_task_class_for_type
-from scenario_player.utils import get_gas_prize_strategy
+from scenario_player.utils import get_gas_price_strategy
 
 log = structlog.get_logger(__name__)
 
@@ -214,6 +210,11 @@ class Scenario(Mapping):
         return self.settings.get('chain', 'any')
 
     @property
+    def services(self):
+        """ Return the """
+        return self.settings.get('services', {})
+
+    @property
     def gas_price(self) -> str:
         """Return the configured gas price for this scenario.
 
@@ -223,7 +224,7 @@ class Scenario(Mapping):
 
     @property
     def gas_price_strategy(self) -> Callable:
-        return get_gas_prize_strategy(self.gas_price)
+        return get_gas_price_strategy(self.gas_price)
 
     @property
     def nodes(self) -> NodesConfig:
@@ -267,6 +268,8 @@ class Scenario(Mapping):
     @property
     def task_class(self):
         """Return the Task class type configured for the scenario."""
+        from scenario_player.tasks.base import get_task_class_for_type
+
         root_task_type, _ = self.task
 
         task_class = get_task_class_for_type(root_task_type)

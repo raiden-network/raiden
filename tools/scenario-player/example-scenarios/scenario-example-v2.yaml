@@ -18,6 +18,13 @@ settings:
   #chain: raiden_clique
   #chain: raiden_aura
 
+  ## Services
+  ## Define services to be used, if any. Defined here to allow assertions on PFS state.
+  ## Can optionally be overridden in node options.
+  services:
+#    pfs:
+#      url: http://pfs.example.com
+
 token:
   ## To use an existing token give an address
   #address: "0xabcdef0123456789abcdef0123456789abcdef01"
@@ -75,7 +82,8 @@ nodes:
 ## - wait
 ## - join_network
 ## - leave_network
-## - check_events
+## - assert_events
+## - assert_pfs_routes
 
 scenario:
   serial:
@@ -170,6 +178,29 @@ scenario:
 #            - close_channel: {from: 1, to: 2}
 #      - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 2}
 #      - assert: {from: 0, to: 1, total_deposit: 100, balance: 5, state: "closed"}
+#
+#      ## 4 requests where made from source node 0
+#      - assert_pfs_routes: {source: 0, request_count: 4}
+#
+#      ## 4 requests where made from source node 0 to target node 1
+#      - assert_pfs_routes: {source: 0, target: 1, request_count: 4}
+#
+#      ## 4 requests where made from source node 0 to target node 1 and 3 routes each have been
+#      ## returned
+#      - assert_pfs_routes: {source: 0, target: 1, request_count: 4, routes_count: 3}
+#
+#      ## 4 requests where made from source node 0 to target node 1 and the specified number of
+#      ## routes have been returned
+#      - assert_pfs_routes: {source: 0, target: 1, request_count: 4, routes_count: [3, 2, 1, 2]}
+#
+#      ## The listed routes have been returned for requests from source node 0 to target node 1
+#      - assert_pfs_routes:
+#          source: 0
+#          target: 1
+#          expected_routes:
+#            - ['0x00[...]01', '0x00[...]04']
+#            - ['0x00[...]01', '0x00[...]02', '0x00[...]04']
+
 
 # Status code matching (int or regex):
 #      - open_channel: {from: 0, to: 1}
