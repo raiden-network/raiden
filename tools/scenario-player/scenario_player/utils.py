@@ -8,7 +8,7 @@ from collections import defaultdict, deque
 from datetime import datetime
 from itertools import islice
 from pathlib import Path
-from typing import Dict, Union, Tuple
+from typing import Dict, Tuple, Union
 
 import click
 import mirakuru
@@ -68,6 +68,8 @@ class LogBuffer:
 
 
 class ConcatenableNone:
+    msg = ''
+
     def __radd__(self, other):
         return other
 
