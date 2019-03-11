@@ -132,8 +132,11 @@ def test_channel_closed_must_clear_ordered_messages(
     closed = state_change.ContractReceiveChannelClosed(
         transaction_hash=EMPTY_HASH,
         transaction_from=recipient,
-        token_network_identifier=token_network_state.address,
-        channel_identifier=channel_identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=netting_channel_state.chain_id,
+            token_network_address=token_network_state.address,
+            channel_identifier=channel_identifier,
+        ),
         block_number=1,
         block_hash=factories.make_block_hash(),
     )

@@ -1331,8 +1331,11 @@ def test_channelstate_unlock_without_locks():
     state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=our_model1.participant_address,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=77,
         block_hash=factories.make_block_hash(),
     )
@@ -1430,8 +1433,11 @@ def test_channelstate_unlock():
     close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=partner_model1.participant_address,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -1549,8 +1555,11 @@ def test_settle_transaction_must_be_sent_only_once():
     close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=partner_model1.participant_address,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -1659,8 +1668,11 @@ def test_update_must_be_called_if_close_lost_race():
     state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=partner_model1.participant_address,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=77,
         block_hash=factories.make_block_hash(),
     )
@@ -1700,8 +1712,11 @@ def test_update_transfer():
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=partner_model1.participant_address,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
