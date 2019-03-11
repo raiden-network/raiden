@@ -1,18 +1,16 @@
-import pathlib
 from collections.abc import Mapping
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Dict, Tuple, Any
+
 
 import structlog
-import yaml
-
-from scenario_player.constants import SUPPORTED_SCENARIO_VERSIONS, TIMEOUT, NodeMode
 from scenario_player.exceptions import (
-    InvalidScenarioVersion,
+    ScenarioError,
     MissingNodesConfiguration,
     MultipleTaskDefinitions,
-    ScenarioError,
+    InvalidScenarioVersion,
 )
-from scenario_player.utils import get_gas_price_strategy
+from scenario_player.utils import get_gas_prize_strategy
+
 
 log = structlog.get_logger(__name__)
 
@@ -27,7 +25,6 @@ class NodesConfig(Mapping):
     :param nodes_config: The node configuration as set in the scenario yaml.
     :param scenario_version: Version of the scenario yaml file.
     """
-
     def __init__(self, nodes_config: Dict, scenario_version: int = 1):
         self._config = nodes_config
         self._scenario_version = scenario_version
@@ -226,7 +223,7 @@ class Scenario(Mapping):
 
     @property
     def gas_price_strategy(self) -> Callable:
-        return get_gas_price_strategy(self.gas_price)
+        return get_gas_prize_strategy(self.gas_price)
 
     @property
     def nodes(self) -> NodesConfig:

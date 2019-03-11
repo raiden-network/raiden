@@ -1,25 +1,18 @@
 import hashlib
 import json
 import os
-import platform
 import random
 import shutil
 import socket
-import stat
-import sys
 import time
+
 from datetime import timedelta
 from enum import Enum
-from pathlib import Path
-from tarfile import TarFile
 from typing import Any, Dict, Set
-from urllib.parse import urljoin
-from zipfile import ZipFile
 
 import gevent
-import requests
 import structlog
-from cachetools.func import ttl_cache
+
 from eth_keyfile import create_keyfile_json
 from eth_utils import to_checksum_address
 from eth_utils.typing import ChecksumAddress
@@ -28,16 +21,13 @@ from gevent.pool import Group, Pool
 from mirakuru import ProcessExitedWithError
 
 from raiden.ui.cli import run as cli_run
+
 from scenario_player.exceptions import ScenarioError
 from scenario_player.runner import ScenarioRunner
 from scenario_player.utils import HTTPExecutor
 
+
 log = structlog.get_logger(__name__)
-
-
-RAIDEN_RELEASES_URL = 'https://raiden-nightlies.ams3.digitaloceanspaces.com/'
-RAIDEN_RELEASES_LATEST_FILE_TEMPLATE = '_LATEST-{platform}-{arch}.txt'
-RAIDEN_RELEASES_VERSIONED_NAME_TEMPLATE = 'raiden-v{version}-{platform}-{arch}.zip'
 
 
 MANAGED_CONFIG_OPTIONS = {
@@ -74,100 +64,6 @@ FLAG_OPTIONS = {param.name.replace('_', '-') for param in cli_run.params if para
 class NodeState(Enum):
     STOPPED = 1
     STARTED = 2
-
-
-class RaidenReleaseKeeper:
-    def __init__(self, release_cache_dir: Path):
-        self._releases = {}
-        self._downloads_path = release_cache_dir.joinpath('downloads')
-        self._bin_path = release_cache_dir.joinpath('bin')
-
-        self._downloads_path.mkdir(exist_ok=True, parents=True)
-        self._bin_path.mkdir(exist_ok=True, parents=True)
-
-    def get_release(self, version: str = 'LATEST'):
-        # `version` can also be a path
-        bin_path = Path(version)
-        if bin_path.exists() and bin_path.stat().st_mode & stat.S_IXUSR == stat.S_IXUSR:
-            # File exists and is executable
-            return bin_path
-
-        if version.lower() == 'latest':
-            release_file_name = self._latest_release_name
-        else:
-            if version.startswith('v'):
-                version = version.lstrip('v')
-            release_file_name = self._expand_release_template(
-                RAIDEN_RELEASES_VERSIONED_NAME_TEMPLATE,
-                version=version,
-            )
-
-        release_file_path = self._get_release_file(release_file_name)
-        return self._get_bin_for_release(release_file_path)
-
-    def _get_bin_for_release(self, release_file_path: Path):
-        if not release_file_path.exists():
-            raise ValueError(f'Release file {release_file_path} not found')
-
-        if release_file_path.suffix == '.gz':
-            opener = TarFile.open(release_file_path, 'r:*')
-        else:
-            opener = ZipFile(release_file_path, 'r')
-
-        with opener as archive:
-            if release_file_path.suffix == '.gz':
-                contents = archive.getnames()
-            else:
-                contents = archive.namelist()
-            if len(contents) != 1:
-                raise ValueError(
-                    f'Release archive has unexpected content. '
-                    f'Expected 1 file, found {len(contents)}: {", ".join(contents)}',
-                )
-            bin_file_path = self._bin_path.joinpath(contents[0])
-            if not bin_file_path.exists():
-                log.debug(
-                    'Extracting Raiden binary',
-                    release_file_name=release_file_path.name,
-                    bin_file_name=bin_file_path.name,
-                )
-                archive.extract(contents[0], self._bin_path)
-                bin_file_path.chmod(0o770)
-            return bin_file_path
-
-    def _get_release_file(self, release_file_name: str):
-        release_file_path = self._downloads_path.joinpath(release_file_name)
-        if release_file_path.exists():
-            return release_file_path
-
-        url = RAIDEN_RELEASES_URL + release_file_name
-        with requests.get(url, stream=True) as resp, release_file_path.open('wb') as release_file:
-            log.debug('Downloading Raiden release', release_file_name=release_file_name)
-            if not 199 < resp.status_code < 300:
-                raise ValueError(
-                    f"Can't download release file {release_file_name}: "
-                    f"{resp.status_code} {resp.text}",
-                )
-            shutil.copyfileobj(resp.raw, release_file)
-        return release_file_path
-
-    @property
-    @ttl_cache(maxsize=1, ttl=600)
-    def _latest_release_name(self):
-        latest_release_file_name = self._expand_release_template(
-            RAIDEN_RELEASES_LATEST_FILE_TEMPLATE,
-        )
-        url = urljoin(RAIDEN_RELEASES_URL, latest_release_file_name)
-        log.debug('Fetching latest Raiden release', lookup_url=url)
-        return requests.get(url).text.strip()
-
-    @staticmethod
-    def _expand_release_template(template, **kwargs):
-        return template.format(
-            platform='macOS' if sys.platform == 'darwin' else sys.platform,
-            arch=platform.machine(),
-            **kwargs,
-        )
 
 
 class NodeRunner:
@@ -346,7 +242,7 @@ class NodeRunner:
 
     @property
     def _raiden_bin(self):
-        return self._runner.release_keeper.get_release(self._raiden_version)
+        _, bin_path = self._runner.release_keeper.install(self._raiden_version)
 
     @property
     def _keystore_file(self):
