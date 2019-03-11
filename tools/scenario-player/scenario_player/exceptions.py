@@ -31,14 +31,10 @@ class RESTAPIStatusMismatchError(ScenarioError):
 
 
 class MultipleTaskDefinitions(ScenarioError):
-    """Several tasks were defined in the scenario configuration."""
+    """Several root tasks were defined in the scenario configuration."""
 
 
 class InvalidScenarioVersion(ScenarioError):
-    pass
-
-
-class UnexpectedScenarioVersion(ScenarioError):
     pass
 
 

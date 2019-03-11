@@ -4,26 +4,20 @@ from typing import Dict, List, Tuple, Any, Union
 
 import structlog
 import yaml
+from scenario_player.constants import (
+    TIMEOUT,
+    SUPPORTED_SCENARIO_VERSIONS,
+    NodeMode,
+)
 from scenario_player.exceptions import (
     ScenarioError,
     MissingNodesConfiguration,
     MultipleTaskDefinitions,
     InvalidScenarioVersion,
 )
-from scenario_player.constants import (
-    DEFAULT_TOKEN_BALANCE_MIN,
-    DEFAULT_TOKEN_BALANCE_FUND,
-    OWN_ACCOUNT_BALANCE_MIN,
-    NODE_ACCOUNT_BALANCE_MIN,
-    NODE_ACCOUNT_BALANCE_FUND,
-    TIMEOUT,
-    API_URL_ADDRESS,
-    API_URL_TOKENS,
-    API_URL_TOKEN_NETWORK_ADDRESS,
-    SUPPORTED_SCENARIO_VERSIONS,
-)
 from scenario_player.tasks.base import get_task_class_for_type
 from scenario_player.utils import get_gas_prize_strategy
+
 log = structlog.get_logger(__name__)
 
 
@@ -34,8 +28,8 @@ class NodesConfig(Mapping):
     to iter directly over the internal .nodes property, while also allowing
     key-based access to the original configuration dictionary.
 
-    :type nodes_config: Dict
-    :type scenario_version: int
+    :param nodes_config: The node configuration as set in the scenario yaml.
+    :param scenario_version: Version of the scenario yaml file.
     """
     def __init__(self, nodes_config: Dict, scenario_version: int = 1):
         self._config = nodes_config
@@ -69,7 +63,7 @@ class NodesConfig(Mapping):
         return NodeMode.EXTERNAL
 
     @property
-    def raiden_version(self):
+    def raiden_version(self) -> str:
         return self._config.get('raiden_version', 'LATEST')
 
     @property
@@ -80,11 +74,11 @@ class NodesConfig(Mapping):
             raise MissingNodesConfiguration('Must specify a "count" setting!')
 
     @property
-    def default_options(self):
+    def default_options(self) -> dict:
         return self._config.get('default_options', {})
 
     @property
-    def node_options(self):
+    def node_options(self) -> dict:
         return self._config.get('node_options', {})
 
     @property
@@ -104,7 +98,6 @@ class NodesConfig(Mapping):
             if the scenario version is 1 and a 'range' key was detected, but any
             one of the keys 'first', 'last', 'template' are missing; *or* the
             scenario version is not 1 or the 'range' key and the 'list' are absent.
-        :rtype: List
         """
         if self._scenario_version == 1 and 'range' in self._config:
             range_config = self._config['range']
@@ -131,11 +124,8 @@ class NodesConfig(Mapping):
             raise MissingNodesConfiguration('Must specify nodes under "list" setting!')
 
     @property
-    def commands(self) -> Dict:
-        """Return the commands configured for the nodes.
-
-        :rtype: Dict
-        """
+    def commands(self) -> dict:
+        """Return the commands configured for the nodes."""
         return self._config.get('commands', {})
 
 
@@ -148,7 +138,7 @@ class Scenario(Mapping):
     """
     def __init__(self, yaml_path: pathlib.Path) -> None:
         self._yaml_path = yaml_path
-        self._config = yaml.load(yaml_path.open())
+        self._config = yaml.safe_load(yaml_path.open())
         try:
             self._nodes = NodesConfig(self._config['nodes'], self.version)
         except KeyError:
@@ -171,7 +161,6 @@ class Scenario(Mapping):
 
         :raises InvalidScenarioVersion:
             if the supplied version is not present in :var:`SUPPORTED_SCENARIO_VERSIONS`.
-        :rtype: int
         """
         version = self._config.get('version', 1)
 
@@ -181,18 +170,12 @@ class Scenario(Mapping):
 
     @property
     def name(self) -> str:
-        """Return the name of the scenario file, sans extension.
-
-        :rtype: str
-        """
+        """Return the name of the scenario file, sans extension."""
         return self._yaml_path.stem
 
     @property
     def settings(self):
-        """Return the 'settings' dictionary for the scenario.
-
-        :rtype: Dict
-        """
+        """Return the 'settings' dictionary for the scenario."""
         return self._config.get('settings', {})
 
     @property
@@ -205,8 +188,6 @@ class Scenario(Mapping):
 
         Otherwise we simply access the 'protocol' key of the yaml, defaulting to
         'http' if it does not exist.
-
-        :rtype: str
         """
         if self.nodes.mode is NodeMode.MANAGED:
             if 'protocol' in self._config:
@@ -216,10 +197,7 @@ class Scenario(Mapping):
 
     @property
     def timeout(self) -> int:
-        """Returns the scenario's set timeout in seconds.
-
-        :rtype: int
-        """
+        """Returns the scenario's set timeout in seconds."""
         return self.settings.get('timeout', TIMEOUT)
 
     @property
@@ -227,17 +205,12 @@ class Scenario(Mapping):
         """Return the email address to which notifications are to be sent.
 
         If this isn't set, we return None.
-
-        :rtype: Union[str, None]
         """
         return self.settings.get('notify')
 
     @property
     def chain_name(self) -> str:
-        """Return the name of the chain to be used for this scenario.
-
-        :rtype: str
-        """
+        """Return the name of the chain to be used for this scenario."""
         return self.settings.get('chain', 'any')
 
     @property
@@ -245,21 +218,16 @@ class Scenario(Mapping):
         """Return the configured gas price for this scenario.
 
         This defaults to 'fast'.
-
-        :rtype: str
         """
         return self._config.get('gas_price', 'fast')
 
     @property
-    def gas_price_strategy(self):
+    def gas_price_strategy(self) -> Callable:
         return get_gas_prize_strategy(self.gas_price)
 
     @property
     def nodes(self) -> NodesConfig:
-        """Return the configuration of nodes used in this scenario.
-
-        :rtype: NodesConfig
-        """
+        """Return the configuration of nodes used in this scenario."""
         return self._nodes
 
     @property
@@ -267,7 +235,6 @@ class Scenario(Mapping):
         """Return the scenario's configuration.
 
         :raises ScenarioError: if no 'scenario' key is present in the yaml file.
-        :rtype: Dict[str, Any]
         """
         try:
             return self._config['scenario']
@@ -282,7 +249,6 @@ class Scenario(Mapping):
 
         :raises MultipleTaskDefinitions:
             if there is more than one task config under the 'scenario' key.
-        :rtype: Tuple[str, Any]
         """
         try:
             items, = self.configuration.items()
@@ -294,20 +260,14 @@ class Scenario(Mapping):
 
     @property
     def task_config(self) -> Dict:
-        """Return the task config for this scenario.
-
-        TODO: Check this is the correct type
-        :rtype: Dict
-        """
-        return self.task[1]
+        """Return the task config for this scenario."""
+        _, root_task_config = self.task
+        return root_task_config
 
     @property
     def task_class(self):
-        """Return the Task class type configured for the scenario.
-
-        :rtype: Type[]
-        """
-        root_task_type, root_task_config = self.task
+        """Return the Task class type configured for the scenario."""
+        root_task_type, _ = self.task
 
         task_class = get_task_class_for_type(root_task_type)
         return task_class

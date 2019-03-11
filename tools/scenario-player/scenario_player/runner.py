@@ -92,11 +92,11 @@ class ScenarioRunner(object):
 
         self.notification_email = self.scenario.notification_email
 
-        self.chain_name, chain_url = self.select_chain(chain_urls)
-        self.eth_rpc_urls = chain_url
+        self.chain_name, chain_urls = self.select_chain(chain_urls)
+        self.eth_rpc_urls = chain_urls
 
         self.client = JSONRPCClient(
-            Web3(HTTPProvider(chain_url[0])),
+            Web3(HTTPProvider(chain_urls[0])),
             privkey=account.privkey,
             gas_price_strategy=self.scenario.gas_price_strategy,
         )
