@@ -1592,8 +1592,11 @@ def test_action_close_must_change_the_channel_state():
 
     block_number = 10
     state_change = ActionChannelClose(
-        channel_state.token_network_identifier,
-        channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
     )
     iteration = channel.state_transition(
         channel_state=channel_state,
@@ -1640,8 +1643,11 @@ def test_update_must_be_called_if_close_lost_race():
 
     block_number = 10
     state_change = ActionChannelClose(
-        channel_state.token_network_identifier,
-        channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
     )
     iteration = channel.state_transition(
         channel_state=channel_state,
@@ -1672,8 +1678,11 @@ def test_update_transfer():
 
     block_number = 10
     state_change = ActionChannelClose(
-        channel_state.token_network_identifier,
-        channel_state.identifier,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
     )
     iteration = channel.state_transition(
         channel_state=channel_state,
