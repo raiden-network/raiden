@@ -35,7 +35,7 @@ from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import BalanceProofUnsignedState, HashTimeLockState
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
-from raiden.utils import pex
+from raiden.utils import CanonicalIdentifier, pex
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List, Optional, Union
 
@@ -360,8 +360,11 @@ def test_matrix_tx_error_handling(
 
     def make_tx(*args, **kwargs):
         close_channel = ActionChannelClose(
-            token_network_identifier=channel_state.token_network_identifier,
-            channel_identifier=channel_state.identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=channel_state.chain_id,
+                token_network_address=channel_state.token_network_identifier,
+                channel_identifier=channel_state.identifier,
+            ),
         )
         app0.raiden.handle_and_track_state_change(close_channel)
 
