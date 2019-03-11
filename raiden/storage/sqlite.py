@@ -263,20 +263,16 @@ class SQLiteStorage(SerializationBase):
             state_change_identifier=0,
             data=None,
         )
-        try:
-            row = cursor.fetchone()
-            if row:
-                event_id = row[0]
-                state_change_identifier = row[1]
-                event = row[2]
-                result = EventRecord(
-                    event_identifier=event_id,
-                    state_change_identifier=state_change_identifier,
-                    data=event,
-                )
-        except AttributeError:
-            raise InvalidDBData(
-                'Your local database is corrupt. Bailing ...',
+
+        row = cursor.fetchone()
+        if row:
+            event_id = row[0]
+            state_change_identifier = row[1]
+            event = row[2]
+            result = EventRecord(
+                event_identifier=event_id,
+                state_change_identifier=state_change_identifier,
+                data=event,
             )
 
         return result
@@ -341,18 +337,13 @@ class SQLiteStorage(SerializationBase):
         cursor.execute(sql, args)
 
         result = StateChangeRecord(state_change_identifier=0, data=None)
-        try:
-            row = cursor.fetchone()
-            if row:
-                state_change_identifier = row[0]
-                state_change = row[1]
-                result = StateChangeRecord(
-                    state_change_identifier=state_change_identifier,
-                    data=state_change,
-                )
-        except AttributeError:
-            raise InvalidDBData(
-                'Your local database is corrupt. Bailing ...',
+        row = cursor.fetchone()
+        if row:
+            state_change_identifier = row[0]
+            state_change = row[1]
+            result = StateChangeRecord(
+                state_change_identifier=state_change_identifier,
+                data=state_change,
             )
 
         return result
@@ -378,19 +369,13 @@ class SQLiteStorage(SerializationBase):
             filters=filters,
             logical_and=logical_and,
         )
-        result = []
-        try:
-            result = [
-                StateChangeRecord(
-                    state_change_identifier=row[0],
-                    data=row[1],
-                )
-                for row in cursor
-            ]
-        except AttributeError:
-            raise InvalidDBData(
-                'Your local database is corrupt. Bailing ...',
+        result = [
+            StateChangeRecord(
+                state_change_identifier=row[0],
+                data=row[1],
             )
+            for row in cursor
+        ]
 
         return result
 
@@ -456,13 +441,7 @@ class SQLiteStorage(SerializationBase):
                 'BETWEEN ? AND ? ORDER BY identifier ASC', (from_identifier, to_identifier),
             )
 
-        try:
-            result = [entry[0] for entry in cursor]
-        except AttributeError:
-            raise InvalidDBData(
-                'Your local database is corrupt. Bailing ...',
-            )
-
+        result = [entry[0] for entry in cursor]
         return result
 
     def _query_events(self, limit: int = None, offset: int = None):
@@ -500,20 +479,14 @@ class SQLiteStorage(SerializationBase):
             filters=filters,
             logical_and=logical_and,
         )
-        result = []
-        try:
-            result = [
-                EventRecord(
-                    event_identifier=row[0],
-                    state_change_identifier=row[1],
-                    data=row[2],
-                ) for row in cursor
-            ]
-        except AttributeError:
-            raise InvalidDBData(
-                'Your local database is corrupt. Bailing ...',
-            )
 
+        result = [
+            EventRecord(
+                event_identifier=row[0],
+                state_change_identifier=row[1],
+                data=row[2],
+            ) for row in cursor
+        ]
         return result
 
     def batch_query_event_records(
