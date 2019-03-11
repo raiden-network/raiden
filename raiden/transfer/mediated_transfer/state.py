@@ -774,7 +774,7 @@ class MediationPairState(State):
         )
 
     @property
-    def payer_address(self) -> bytes:
+    def payer_address(self) -> Address:
         return self.payer_transfer.payer_address
 
     def __eq__(self, other: Any) -> bool:
