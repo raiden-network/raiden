@@ -98,8 +98,10 @@ def create_square_network_topology(
     # create new channels without being participant
     channel_new_state_change3 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=3,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=3,
+        ),
         participant1=address2,
         participant2=address3,
         block_number=open_block_number,
@@ -121,8 +123,10 @@ def create_square_network_topology(
 
     channel_new_state_change4 = ContractReceiveRouteNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=4,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=4,
+        ),
         participant1=address3,
         participant2=address1,
         block_number=open_block_number,
