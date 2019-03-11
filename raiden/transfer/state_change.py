@@ -178,11 +178,10 @@ class ActionChannelClose(StateChange):
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkID,
-            channel_identifier: ChannelID,
+            canonical_identifier: CanonicalIdentifier,
     ):
-        self.token_network_identifier = token_network_identifier
-        self.channel_identifier = channel_identifier
+        self.token_network_identifier = TokenNetworkID(canonical_identifier.token_network_address)
+        self.channel_identifier = canonical_identifier.channel_identifier
 
     def __repr__(self):
         return '<ActionChannelClose channel_identifier:{}>'.format(
@@ -208,8 +207,11 @@ class ActionChannelClose(StateChange):
     @classmethod
     def from_dict(cls, data):
         return cls(
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=int(data['channel_identifier']),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=int(data['channel_identifier']),
+            ),
         )
 
 
