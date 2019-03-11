@@ -1066,8 +1066,11 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
     channel_closed = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=factories.make_address(),
-        token_network_identifier=setup.channel.token_network_identifier,
-        channel_identifier=setup.channel.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=setup.channel.chain_id,
+            token_network_address=setup.channel.token_network_identifier,
+            channel_identifier=setup.channel.identifier,
+        ),
         block_number=block_number,
         block_hash=block_hash,
     )
@@ -1211,8 +1214,11 @@ def test_initiator_handle_contract_receive_after_channel_closed():
     channel_closed = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=factories.make_address(),
-        token_network_identifier=setup.channel.token_network_identifier,
-        channel_identifier=setup.channel.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=setup.channel.chain_id,
+            token_network_address=setup.channel.token_network_identifier,
+            channel_identifier=setup.channel.identifier,
+        ),
         block_number=block_number,
         block_hash=block_hash,
     )

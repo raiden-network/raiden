@@ -213,8 +213,11 @@ def handle_channel_closed(raiden: 'RaidenService', event: Event):
         channel_closed = ContractReceiveChannelClosed(
             transaction_hash=transaction_hash,
             transaction_from=args['closing_participant'],
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=channel_state.chain_id,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
             block_number=block_number,
             block_hash=block_hash,
         )
