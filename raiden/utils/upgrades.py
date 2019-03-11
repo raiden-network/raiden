@@ -144,10 +144,7 @@ class UpgradeManager:
                 with storage.transaction():
                     version_iteration = older_version
                     for upgrade_func in UPGRADES_LIST:
-                        if upgrade_func == upgrade_v18_to_v19:
-                            extra_args = {'web3': self._web3}
-                        else:
-                            extra_args = {}
+                        extra_args = {'web3': self._web3}
 
                         version_iteration = _run_upgrade_func(
                             storage,

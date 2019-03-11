@@ -90,8 +90,8 @@ def test_sequential_version_numbers(tmp_path):
 
         UpgradeManager(db_filename=db_path).run()
 
-        upgrade_functions[0].assert_called_once_with(ANY, 16, 19)
-        upgrade_functions[1].assert_called_once_with(ANY, 17, 19)
-        upgrade_functions[2].assert_called_once_with(ANY, 18, 19)
+        upgrade_functions[0].assert_called_once_with(ANY, 16, 19, web3=None)
+        upgrade_functions[1].assert_called_once_with(ANY, 17, 19, web3=None)
+        upgrade_functions[2].assert_called_once_with(ANY, 18, 19, web3=None)
 
         assert get_db_version(str(db_path)) == 19

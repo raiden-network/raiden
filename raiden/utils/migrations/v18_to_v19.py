@@ -205,6 +205,7 @@ def upgrade_v18_to_v19(
         old_version: int,
         current_version: int,
         web3: Web3,
+        **kwargs,
 ) -> int:
     if old_version == SOURCE_VERSION:
         cache = BlockHashCache(web3)
