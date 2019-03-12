@@ -40,7 +40,7 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer.state import LockedTransferState
 from raiden.transfer.state import BalanceProofSignedState, NettingChannelState, TransferTask
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils import CanonicalIdentifier, pex, sha3, typing
+from raiden.utils import pex, sha3, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -586,21 +586,11 @@ class RaidenAPI:
             token_address=token_address,
             partner_addresses=partner_addresses,
         )
-        token_network_identifier = views.get_token_network_identifier_by_token_address(
-            chain_state=views.state_from_raiden(self.raiden),
-            payment_network_id=registry_address,
-            token_address=token_address,
-        )
 
         greenlets: typing.Set[Greenlet] = set()
-        assert token_network_identifier
         for channel_state in channels_to_close:
             channel_close = ActionChannelClose(
-                canonical_identifier=CanonicalIdentifier(
-                    chain_identifier=channel_state.chain_id,
-                    token_network_address=token_network_identifier,
-                    channel_identifier=channel_state.identifier,
-                ),
+                canonical_identifier=channel_state.canonical_identifier,
             )
 
             greenlets.update(

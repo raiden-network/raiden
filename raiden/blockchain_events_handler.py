@@ -167,11 +167,7 @@ def handle_channel_new_balance(raiden: 'RaidenService', event: Event):
 
         newbalance_statechange = ContractReceiveChannelNewBalance(
             transaction_hash=transaction_hash,
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=previous_channel_state.chain_id,
-                token_network_address=token_network_identifier,
-                channel_identifier=channel_identifier,
-            ),
+            canonical_identifier=previous_channel_state.canonical_identifier,
             deposit_transaction=deposit_transaction,
             block_number=block_number,
             block_hash=block_hash,
@@ -218,11 +214,7 @@ def handle_channel_closed(raiden: 'RaidenService', event: Event):
         channel_closed = ContractReceiveChannelClosed(
             transaction_hash=transaction_hash,
             transaction_from=args['closing_participant'],
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=channel_state.chain_id,
-                token_network_address=token_network_identifier,
-                channel_identifier=channel_identifier,
-            ),
+            canonical_identifier=channel_state.canonical_identifier,
             block_number=block_number,
             block_hash=block_hash,
         )
@@ -264,11 +256,7 @@ def handle_channel_update_transfer(raiden: 'RaidenService', event: Event):
     if channel_state:
         channel_transfer_updated = ContractReceiveUpdateTransfer(
             transaction_hash=transaction_hash,
-            canonical_identifier=CanonicalIdentifier(
-                channel_identifier=channel_identifier,
-                token_network_address=token_network_identifier,
-                chain_identifier=channel_state.chain_id,
-            ),
+            canonical_identifier=channel_state.canonical_identifier,
             nonce=args['nonce'],
             block_number=block_number,
             block_hash=block_hash,

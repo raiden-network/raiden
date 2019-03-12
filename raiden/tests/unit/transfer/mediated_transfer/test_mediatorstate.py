@@ -1533,11 +1533,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     channel_closed = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=factories.make_address(),
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=channel_state.token_network_identifier,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=block_number,
         block_hash=block_hash,
     )

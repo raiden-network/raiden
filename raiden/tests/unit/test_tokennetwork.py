@@ -116,11 +116,7 @@ def test_channel_settle_must_properly_cleanup():
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=token_network_id,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -137,10 +133,7 @@ def test_channel_settle_must_properly_cleanup():
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
         transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_id,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
     )
@@ -227,11 +220,7 @@ def test_channel_data_removed_after_unlock(
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=token_network_state.address,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -248,10 +237,7 @@ def test_channel_data_removed_after_unlock(
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
         transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
     )
@@ -273,9 +259,7 @@ def test_channel_data_removed_after_unlock(
     unlock_blocknumber = settle_block_number + 5
     channel_batch_unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         participant=our_address,
         partner=address,
         locksroot=lock_secrethash,
@@ -371,11 +355,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=token_network_state.address,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -392,10 +372,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
         transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
     )
@@ -417,9 +394,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
     block_number = closed_block_number + 1
     channel_batch_unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         participant=our_address,
         partner=address,
         locksroot=lock_secrethash,
@@ -526,11 +501,7 @@ def test_multiple_channel_states(
     channel_close_state_change = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=token_network_state.address,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -547,10 +518,7 @@ def test_multiple_channel_states(
     settle_block_number = closed_block_number + channel_state.settle_timeout + 1
     channel_settled_state_change = ContractReceiveChannelSettled(
         transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=token_network_state.address,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
     )
@@ -679,11 +647,7 @@ def test_routing_updates(
     channel_close_state_change1 = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.partner_state.address,
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=token_network_state.address,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -703,11 +667,7 @@ def test_routing_updates(
     channel_close_state_change2 = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=channel_state.our_state.address,
-        canonical_identifier=factories.make_canonical_identifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=token_network_state.address,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
