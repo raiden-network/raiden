@@ -60,14 +60,12 @@ def create_square_network_topology(
     # create new channels as participant
     channel_new_state_change1 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state1,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
     channel_new_state_change2 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state2,
         block_number=open_block_number,
         block_hash=open_block_hash,

@@ -258,14 +258,13 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
             channel_state: NettingChannelState,
             block_number: BlockNumber,
             block_hash: BlockHash,
     ):
         super().__init__(transaction_hash, block_number, block_hash)
 
-        self.token_network_identifier = token_network_identifier
+        self.token_network_identifier = channel_state.token_network_identifier
         self.channel_state = channel_state
         self.channel_identifier = channel_state.identifier
 
@@ -302,7 +301,6 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelNew':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
             channel_state=data['channel_state'],
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),

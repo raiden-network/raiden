@@ -99,7 +99,6 @@ def handle_channel_new(raiden: 'RaidenService', event: Event):
 
         new_channel = ContractReceiveChannelNew(
             transaction_hash=transaction_hash,
-            token_network_identifier=token_network_identifier,
             channel_state=channel_state,
             block_number=block_number,
             block_hash=block_hash,

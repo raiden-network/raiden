@@ -41,7 +41,6 @@ def test_contract_receive_channelnew_must_be_idempotent():
 
     state_change1 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_id,
         channel_state=channel_state1,
         block_number=block_number,
         block_hash=block_hash,
@@ -58,7 +57,6 @@ def test_contract_receive_channelnew_must_be_idempotent():
 
     state_change2 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_id,
         channel_state=channel_state2,
         block_number=block_number + 1,
         block_hash=factories.make_block_hash(),
@@ -99,7 +97,6 @@ def test_channel_settle_must_properly_cleanup():
 
     channel_new_state_change = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_id,
         channel_state=channel_state,
         block_number=open_block_number,
         block_hash=open_block_hash,
@@ -184,8 +181,7 @@ def test_channel_data_removed_after_unlock(
     payment_network_identifier = factories.make_payment_network_identifier()
 
     channel_new_state_change = ContractReceiveChannelNew(
-        factories.make_transaction_hash(),
-        token_network_state.address,
+        transaction_hash=factories.make_transaction_hash(),
         channel_state=channel_state,
         block_number=open_block_number,
         block_hash=open_block_hash,
@@ -329,7 +325,6 @@ def test_mediator_clear_pairs_after_batch_unlock(
 
     channel_new_state_change = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state,
         block_number=open_block_number,
         block_hash=open_block_hash,
@@ -486,7 +481,6 @@ def test_multiple_channel_states(
 
     channel_new_state_change = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state,
         block_number=open_block_number,
         block_hash=open_block_hash,
@@ -583,7 +577,6 @@ def test_multiple_channel_states(
     )
     channel_new_state_change = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=new_channel_state,
         block_number=closed_block_number + 1,
         block_hash=factories.make_block_hash(),
@@ -629,7 +622,6 @@ def test_routing_updates(
     # create a new channel as participant, check graph update
     channel_new_state_change = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state,
         block_number=open_block_number,
         block_hash=open_block_hash,
@@ -825,14 +817,12 @@ def test_routing_issue2663(
     # create new channels as participant
     channel_new_state_change1 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state1,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
     )
     channel_new_state_change2 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state2,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
@@ -1077,14 +1067,12 @@ def test_routing_priority(
     # create new channels as participant
     channel_new_state_change1 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state1,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
     )
     channel_new_state_change2 = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
         channel_state=channel_state2,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
