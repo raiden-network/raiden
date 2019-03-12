@@ -21,7 +21,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import CanonicalIdentifier, pex, typing
+from raiden.utils import CHANNEL_ID_UNSPECIFIED, CanonicalIdentifier, pex, typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -311,9 +311,17 @@ def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
     block_hash = data['block_hash']
     transaction_hash = data['transaction_hash']
 
+    chain_state = views.state_from_raiden(raiden)
     unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=transaction_hash,
-        token_network_identifier=token_network_identifier,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=token_network_identifier,
+            # FIXME: we will resolve the channel identifier only further down in
+            # raiden.transfer.token_network::handle_batch_unlock
+            # can/should we do it here already?
+            channel_identifier=CHANNEL_ID_UNSPECIFIED,
+        ),
         participant=args['participant'],
         partner=args['partner'],
         locksroot=args['locksroot'],
