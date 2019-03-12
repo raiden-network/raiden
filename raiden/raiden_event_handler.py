@@ -10,7 +10,7 @@ from raiden.network.proxies import PaymentChannel, TokenNetwork
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
-from raiden.transfer.channel import get_batch_unlock
+from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelClose,
@@ -38,6 +38,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
+from raiden.transfer.state import TransactionExecutionStatus
 from raiden.transfer.utils import (
     get_event_with_balance_proof_by_balance_hash,
     get_event_with_balance_proof_by_locksroot,
@@ -415,6 +416,25 @@ class RaidenEventHandler:
             channel_identifier=canonical_identifier.channel_identifier,
             state_change_identifier=state_change_identifier,
         )
+
+        # Decide which sides of the channel to unlock. Depending on the
+        # the expired sent, and the on-chain revealed token amounts,
+        # we decide for both sides, if it is in our favor to unlock.
+        gain_from_partner_locks, gain_from_our_locks = get_batch_unlock_gain(
+            restored_channel_state,
+        )
+
+        should_skip_unlock = (
+            (
+                restored_channel_state.our_state.address == participant and
+                gain_from_our_locks == 0
+            ) or (
+                restored_channel_state.partner_state.address == participant and
+                gain_from_partner_locks == 0
+            )
+        )
+        if should_skip_unlock:
+            return
 
         our_state = restored_channel_state.our_state
         partner_state = restored_channel_state.partner_state
