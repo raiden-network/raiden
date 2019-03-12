@@ -1671,10 +1671,12 @@ class RequestMonitoring(SignedMessage):
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
         packed = pack_reward_proof(
-            channel_identifier=self.balance_proof.channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=self.balance_proof.chain_id,
+                token_network_address=self.balance_proof.token_network_address,
+                channel_identifier=self.balance_proof.channel_identifier,
+            ),
             reward_amount=self.reward_amount,
-            token_network_address=self.balance_proof.token_network_address,
-            chain_id=self.balance_proof.chain_id,
             nonce=self.balance_proof.nonce,
         )
         return packed
@@ -1764,10 +1766,12 @@ class RequestMonitoring(SignedMessage):
             partner_signature=self.balance_proof.signature,
         )
         reward_proof_data = pack_reward_proof(
-            channel_identifier=self.balance_proof.channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=self.balance_proof.chain_id,
+                token_network_address=self.balance_proof.token_network_address,
+                channel_identifier=self.balance_proof.channel_identifier,
+            ),
             reward_amount=self.reward_amount,
-            token_network_address=self.balance_proof.token_network_address,
-            chain_id=self.balance_proof.chain_id,
             nonce=self.balance_proof.nonce,
         )
         return (
