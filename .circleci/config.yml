@@ -23,6 +23,11 @@ templates:
       default: "udp"
       type: enum
       enum: ["udp", "matrix"]
+    environment-type:
+      description: "Environment configuration to be used."
+      default: "production"
+      type: enum
+      enum: ["production", "development"]
     additional-args:
       description: "additional arguments to run smoketest if needed"
       default: ""
@@ -291,8 +296,8 @@ jobs:
             set -e
             set -x
       - run:
-          name: Running Raiden Smoketest with << parameters.transport-layer >>
-          command: raiden --transport=<< parameters.transport-layer >> smoketest << parameters.additional-args >>
+          name: Running Raiden Smoketest with << parameters.transport-layer >> and environment << parameters.environment-type >>
+          command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest << parameters.additional-args >>
 
   test:
     parameters:
@@ -671,16 +676,34 @@ workflows:
             - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-3.7
+          name: smoketest-udp-production-3.7
           py-version: "3.7"
           transport-layer: "udp"
+          environment-type: "production"
           requires:
             - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-matrix-3.7
+          name: smoketest-udp-development-3.7
+          py-version: "3.7"
+          transport-layer: "udp"
+          environment-type: "development"
+          requires:
+            - prepare-python-linux-3.7
+
+      - smoketest:
+          name: smoketest-matrix-production-3.7
           py-version: "3.7"
           transport-layer: "matrix"
+          environment-type: "production"
+          requires:
+            - prepare-python-linux-3.7
+
+      - smoketest:
+          name: smoketest-matrix-development-3.7
+          py-version: "3.7"
+          transport-layer: "matrix"
+          environment-type: "development"
           requires:
             - prepare-python-linux-3.7
 
@@ -710,7 +733,8 @@ workflows:
           transport-layer: "udp"
           parallelism: 25
           requires:
-            - smoketest-udp-3.7
+            - smoketest-udp-production-3.7
+            - smoketest-udp-development-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -723,7 +747,8 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-matrix-3.7
+            - smoketest-matrix-production-3.7
+            - smoketest-matrix-development-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -736,7 +761,8 @@ workflows:
           transport-layer: "udp"
           parallelism: 25
           requires:
-            - smoketest-udp-3.7
+            - smoketest-udp-production-3.7
+            - smoketest-udp-development-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -749,7 +775,8 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-matrix-3.7
+            - smoketest-matrix-production-3.7
+            - smoketest-matrix-development-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -887,16 +914,34 @@ workflows:
           - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-3.7
+          name: smoketest-udp-production-3.7
           py-version: "3.7"
           transport-layer: "udp"
+          environment-type: "production"
           requires:
           - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-matrix-3.7
+          name: smoketest-udp-development-3.7
+          py-version: "3.7"
+          transport-layer: "udp"
+          environment-type: "development"
+          requires:
+          - prepare-python-linux-3.7
+
+      - smoketest:
+          name: smoketest-matrix-production-3.7
           py-version: "3.7"
           transport-layer: "matrix"
+          environment-type: "production"
+          requires:
+          - prepare-python-linux-3.7
+
+      - smoketest:
+          name: smoketest-matrix-development-3.7
+          py-version: "3.7"
+          transport-layer: "matrix"
+          environment-type: "development"
           requires:
           - prepare-python-linux-3.7
 
@@ -926,7 +971,8 @@ workflows:
           transport-layer: "udp"
           parallelism: 25
           requires:
-          - smoketest-udp-3.7
+          - smoketest-udp-production-3.7
+          - smoketest-udp-development-3.7
           - test-unit-3.7
           - test-fuzz-3.7
 
@@ -939,7 +985,8 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-          - smoketest-matrix-3.7
+          - smoketest-matrix-production-3.7
+          - smoketest-matrix-development-3.7
           - test-unit-3.7
           - test-fuzz-3.7
 
@@ -952,7 +999,8 @@ workflows:
           transport-layer: "udp"
           parallelism: 25
           requires:
-          - smoketest-udp-3.7
+          - smoketest-udp-production-3.7
+          - smoketest-udp-development-3.7
           - test-unit-3.7
           - test-fuzz-3.7
 
@@ -965,7 +1013,8 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-          - smoketest-matrix-3.7
+          - smoketest-matrix-production-3.7
+          - smoketest-matrix-development-3.7
           - test-unit-3.7
           - test-fuzz-3.7
 
