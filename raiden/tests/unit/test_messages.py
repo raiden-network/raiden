@@ -148,6 +148,8 @@ def test_update_pfs():
     message.sign(signer)
     assert recover(message._data_to_sign(), message.signature) == ADDRESS
 
+    assert message == UpdatePFS.from_dict(message.to_dict())
+
 
 def test_tamper_request_monitoring():
     """ This test shows ways, how the current implementation of the RequestMonitoring's
