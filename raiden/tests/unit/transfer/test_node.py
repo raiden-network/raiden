@@ -1,11 +1,5 @@
 from raiden.constants import EMPTY_MERKLE_ROOT
-from raiden.tests.utils.factories import (
-    HOP1,
-    HOP2,
-    UNIT_SECRETHASH,
-    make_block_hash,
-    make_canonical_identifier,
-)
+from raiden.tests.utils.factories import HOP1, HOP2, UNIT_SECRETHASH, make_block_hash
 from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.node import is_transaction_effect_satisfied
 from raiden.transfer.state_change import ContractReceiveChannelBatchUnlock
@@ -17,18 +11,17 @@ def test_is_transaction_effect_satisfied(
         token_network_id,
         netting_channel_state,
 ):
+    canonical_identifier = netting_channel_state.canonical_identifier
+    assert token_network_id == canonical_identifier.token_network_address
     transaction = ContractSendChannelBatchUnlock(
         token_address=token_network_state.token_address,
-        token_network_identifier=token_network_id,
-        channel_identifier=netting_channel_state.identifier,
+        canonical_identifier=canonical_identifier,
         participant=HOP2,
         triggered_by_block_hash=make_block_hash(),
     )
     state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=UNIT_SECRETHASH,
-        canonical_identifier=make_canonical_identifier(
-            token_network_address=token_network_id,
-        ),
+        canonical_identifier=canonical_identifier,
         participant=HOP1,
         partner=HOP2,
         locksroot=EMPTY_MERKLE_ROOT,
