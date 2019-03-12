@@ -15,7 +15,13 @@ from raiden.transfer.state import (
     TransactionChannelNewBalance,
 )
 from raiden.transfer.utils import pseudo_random_generator_from_json
-from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier, pex, sha3
+from raiden.utils import (
+    CHAIN_ID_UNSPECIFIED,
+    CHANNEL_ID_UNSPECIFIED,
+    CanonicalIdentifier,
+    pex,
+    sha3,
+)
 from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 from raiden.utils.typing import (
     Address,
@@ -863,7 +869,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
+            canonical_identifier: CanonicalIdentifier,
             participant: Address,
             partner: Address,
             locksroot: Locksroot,
@@ -872,6 +878,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             block_number: BlockNumber,
             block_hash: BlockHash,
     ):
+        token_network_identifier = canonical_identifier.token_network_address
 
         if not isinstance(token_network_identifier, T_TokenNetworkID):
             raise ValueError('token_network_identifier must be of type TokenNtetworkIdentifier')
@@ -939,7 +946,11 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelBatchUnlock':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=CHANNEL_ID_UNSPECIFIED,
+            ),
             participant=to_canonical_address(data['participant']),
             partner=to_canonical_address(data['partner']),
             locksroot=deserialize_bytes(data['locksroot']),
