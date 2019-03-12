@@ -6,7 +6,6 @@ from eth_utils import (
     decode_hex,
     encode_hex,
     to_canonical_address,
-    to_checksum_address,
     to_normalized_address,
 )
 
@@ -1832,7 +1831,7 @@ class UpdatePFS(SignedMessage):
             'type': self.__class__.__name__,
             'chain_id': self.chain_id,
             'nonce': self.nonce,
-            'token_network_address': to_checksum_address(self.token_network_address),
+            'token_network_address': to_normalized_address(self.token_network_address),
             'channel_identifier': self.channel_identifier,
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
