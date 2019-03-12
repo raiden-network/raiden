@@ -1,3 +1,4 @@
+import structlog
 from eth_utils import decode_hex, event_abi_to_log_topic, to_checksum_address
 from gevent.lock import Semaphore
 from web3 import Web3
@@ -9,6 +10,14 @@ from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.utils.typing import BlockSpecification, ChannelID, Dict, TokenNetworkAddress
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
+
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+
+# The maximum block range to query in a single filter query
+# Helps against timeout errors that occur if you query a filter for
+# the mainnet from Genesis to latest head as we see in:
+# https://github.com/raiden-network/raiden/issues/3558
+FILTER_MAX_BLOCK_RANGE = 100000
 
 
 def get_filter_args_for_specific_event_from_channel(
@@ -103,19 +112,43 @@ class StatelessFilter(LogFilter):
         self._last_block: int = -1
         self._lock = Semaphore()
 
-    def get_new_entries(self, block_number: BlockSpecification):
+    def _do_get_new_entries(self, from_block: BlockSpecification, to_block: BlockSpecification):
+        filter_params = self.filter_params.copy()
+        filter_params['fromBlock'] = from_block
+        filter_params['toBlock'] = to_block
+
+        log.debug(f'Querying filter from block {from_block} to block {to_block}')
+        result = self.web3.eth.getLogs(filter_params)
+        self._last_block = to_block
+        return result
+
+    def get_new_entries(self, target_block_number: BlockSpecification):
+        latest_block_number = self.web3.eth.blockNumber
         with self._lock:
-            filter_params = self.filter_params.copy()
-            filter_params['fromBlock'] = max(
-                filter_params.get('fromBlock', GENESIS_BLOCK_NUMBER),
+            result = []
+            from_block = max(
+                self.filter_params.get('fromBlock', GENESIS_BLOCK_NUMBER),
                 self._last_block + 1,
             )
+            to_block = self.filter_params.get('toBlock')
+            if to_block in (None, 'latest', 'pending'):
+                if not isinstance(target_block_number, int):
+                    target_block_number = latest_block_number
 
-            if self.filter_params.get('toBlock') in (None, 'latest', 'pending'):
-                filter_params['toBlock'] = block_number or 'latest'
+            else:
+                target_block_number = to_block
 
-            result = self.web3.eth.getLogs(filter_params)
-            self._last_block = filter_params.get('toBlock') or block_number
+            # Batch the filter queries in ranges of FILTER_MAX_BLOCK_RANGE
+            # to avoid timeout problems
+            while from_block <= target_block_number:
+                to_block = min(
+                    from_block + FILTER_MAX_BLOCK_RANGE,
+                    target_block_number,
+                )
+                result.extend(
+                    self._do_get_new_entries(from_block=from_block, to_block=to_block),
+                )
+                from_block += FILTER_MAX_BLOCK_RANGE
 
             return result
 
