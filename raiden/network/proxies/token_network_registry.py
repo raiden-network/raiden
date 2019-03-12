@@ -99,6 +99,11 @@ class TokenNetworkRegistry:
             token_network_deposit_limit: TokenAmount,
             given_block_identifier: BlockSpecification,
     ):
+        """
+        Register token of `token_address` with the token network.
+        The limits apply for version 0.13.0 and above of raiden-contracts,
+        since instantation also takes the limits as constructor arguments.
+        """
         return self._add_token(
             token_address,
             [channel_participant_deposit_limit, token_network_deposit_limit],
@@ -110,6 +115,11 @@ class TokenNetworkRegistry:
             token_address: TokenAddress,
             given_block_identifier: BlockSpecification,
     ):
+        """
+        Register token of `token_address` with the token network.
+        This applies for versions prior to 0.13.0 of raiden-contracts,
+        since limits were hardcoded into the TokenNetwork contract.
+        """
         return self._add_token(
             token_address,
             list(),
