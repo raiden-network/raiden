@@ -51,12 +51,7 @@ from raiden.api.v1.resources import (
     TokensResource,
     create_blueprint,
 )
-from raiden.constants import (
-    GENESIS_BLOCK_NUMBER,
-    UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
-    UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
-    Environment,
-)
+from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AlreadyRegisteredTokenAddress,
@@ -589,8 +584,8 @@ class RestAPI:
             token_network_address = self.raiden_api.token_network_register(
                 registry_address=registry_address,
                 token_address=token_address,
-                channel_participant_deposit_limit=UNLIMITED_PER_CHANNEL_PARTICIPANT_LIMIT,
-                token_network_deposit_limit=UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+                channel_participant_deposit_limit=UINT256_MAX,
+                token_network_deposit_limit=UINT256_MAX,
             )
         except (InvalidAddress, AlreadyRegisteredTokenAddress, TransactionThrew) as e:
             return api_error(
