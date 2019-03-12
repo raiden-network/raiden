@@ -10,7 +10,7 @@ from raiden.constants import (
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     SECRET_HASH_HEXSTRING_LENGTH,
     SECRET_HEXSTRING_LENGTH,
-    UNLIMITED_PER_TOKEN_NETWORK_LIMIT,
+    UINT256_MAX,
     Environment,
 )
 from raiden.exceptions import (
@@ -470,7 +470,7 @@ class RaidenAPI:
         if self.raiden.config['environment_type'] == Environment.PRODUCTION:
             per_token_network_deposit_limit = RED_EYES_PER_TOKEN_NETWORK_LIMIT
         else:
-            per_token_network_deposit_limit = UNLIMITED_PER_TOKEN_NETWORK_LIMIT
+            per_token_network_deposit_limit = UINT256_MAX
 
         token = self.raiden.chain.token(token_address)
         token_network_registry = self.raiden.chain.token_network_registry(registry_address)
@@ -481,31 +481,29 @@ class RaidenAPI:
             channel_id=channel_state.identifier,
         )
 
+        if total_deposit == 0:
+            raise DepositMismatch('Attempted to deposit with total deposit being 0')
+
+        addendum = total_deposit - channel_state.our_state.contract_balance
+
         total_network_balance = token.balance_of(registry_address)
 
-        if total_network_balance + total_deposit > per_token_network_deposit_limit:
+        if total_network_balance + addendum > per_token_network_deposit_limit:
             raise DepositOverLimit(
-                f'The deposit of {total_deposit} exceeds '
+                f'The deposit of {addendum} will exceed the '
                 f'token network limit of {per_token_network_deposit_limit}',
             )
 
         balance = token.balance_of(self.raiden.address)
 
-        deposit_limit = (
-            token_network_proxy.proxy.contract.functions.
-            channel_participant_deposit_limit().call()
-        )
+        functions = token_network_proxy.proxy.contract.functions
+        deposit_limit = functions.channel_participant_deposit_limit().call()
 
         if total_deposit > deposit_limit:
             raise DepositOverLimit(
-                f'The deposit of {total_deposit} is bigger than the current '
+                f'The additional deposit of {addendum} will exceed the '
                 f'channel participant limit of {deposit_limit}',
             )
-
-        if total_deposit == 0:
-            raise DepositMismatch('Attempted to deposit with total deposit being 0')
-
-        addendum = total_deposit - channel_state.our_state.contract_balance
 
         # If this check succeeds it does not imply the the `deposit` will
         # succeed, since the `deposit` transaction may race with another

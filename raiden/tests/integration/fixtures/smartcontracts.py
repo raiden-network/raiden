@@ -4,7 +4,7 @@ from eth_utils import to_canonical_address, to_checksum_address
 from raiden.constants import (
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-    UNLIMITED_TOKEN_NETWORKS,
+    UINT256_MAX,
     Environment,
 )
 from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
@@ -125,7 +125,7 @@ def deploy_token_network_registry_and_return_address(
         settle_timeout_max,
     ]
     if environment_type == Environment.DEVELOPMENT:
-        constructor_arguments.append(UNLIMITED_TOKEN_NETWORKS)
+        constructor_arguments.append(UINT256_MAX)
 
     address = deploy_contract_web3(
         contract_name=CONTRACT_TOKEN_NETWORK_REGISTRY,
