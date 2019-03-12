@@ -98,6 +98,7 @@ def get_event_with_balance_proof_by_locksroot(
         storage: sqlite.SQLiteStorage,
         canonical_identifier: CanonicalIdentifier,
         locksroot: Locksroot,
+        recipient: Address,
 ) -> sqlite.EventRecord:
     """ Returns the event which contains the corresponding balance proof.
 
@@ -112,6 +113,7 @@ def get_event_with_balance_proof_by_locksroot(
         ),
         'balance_proof.channel_identifier': str(canonical_identifier.channel_identifier),
         'balance_proof.locksroot': serialize_bytes(locksroot),
+        'recipient': to_checksum_address(recipient),
     })
 
 
