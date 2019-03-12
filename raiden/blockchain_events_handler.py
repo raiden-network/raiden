@@ -265,8 +265,11 @@ def handle_channel_update_transfer(raiden: 'RaidenService', event: Event):
     if channel_state:
         channel_transfer_updated = ContractReceiveUpdateTransfer(
             transaction_hash=transaction_hash,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                channel_identifier=channel_identifier,
+                token_network_address=token_network_identifier,
+                chain_identifier=channel_state.chain_id,
+            ),
             nonce=args['nonce'],
             block_number=block_number,
             block_hash=block_hash,
