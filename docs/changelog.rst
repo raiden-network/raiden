@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`3558` Raiden will no longer crash if starting with a fresh DB due to the ethereum node queries timing out.
 * :bug:`3567` Properly check handling offline partners
 * :feature:`2436` Add an API endpoint to list pending transfers
 * :bug:`3475` Properly check async_result in rest api payments
