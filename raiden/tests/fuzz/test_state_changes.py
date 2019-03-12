@@ -95,7 +95,6 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
         channel_new_state_change = ContractReceiveChannelNew(
             transaction_hash=factories.make_transaction_hash(),
-            token_network_identifier=self.token_network_id,
             channel_state=self.address_to_channel[partner_address],
             block_number=self.block_number,
             block_hash=factories.make_block_hash(),
