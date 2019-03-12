@@ -1093,7 +1093,7 @@ def is_transaction_effect_satisfied(
         if partner_address:
             channel_state = views.get_channelstate_by_token_network_and_partner(
                 chain_state,
-                state_change.token_network_identifier,
+                TokenNetworkID(state_change.token_network_identifier),
                 partner_address,
             )
 
