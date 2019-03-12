@@ -891,7 +891,6 @@ class BalanceProofSignedState(State):
         'signature',
         'sender',
         'chain_id',
-        'canonical_identifier',
     )
 
     def __init__(
