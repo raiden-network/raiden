@@ -6,6 +6,7 @@ from eth_utils import (
     decode_hex,
     encode_hex,
     to_canonical_address,
+    to_checksum_address,
     to_normalized_address,
 )
 
@@ -70,6 +71,7 @@ __all__ = (
     'SignedBlindedBalanceProof',
     'SignedMessage',
     'Unlock',
+    'UpdatePFS',
     'decode',
     'from_dict',
 )
@@ -1830,7 +1832,7 @@ class UpdatePFS(SignedMessage):
             'type': self.__class__.__name__,
             'chain_id': self.chain_id,
             'nonce': self.nonce,
-            'token_network_address': to_normalized_address(self.token_network_address),
+            'token_network_address': to_checksum_address(self.token_network_address),
             'channel_identifier': self.channel_identifier,
             'transferred_amount': self.transferred_amount,
             'locked_amount': self.locked_amount,
@@ -1848,11 +1850,12 @@ class UpdatePFS(SignedMessage):
             nonce=data['nonce'],
             transferred_amount=data['transferred_amount'],
             locked_amount=data['locked_amount'],
-            locksroot=data['locksroot'],
-            token_network_address=data['token_network_address'],
+            locksroot=decode_hex(data['locksroot']),
+            token_network_address=to_canonical_address(data['token_network_address']),
             channel_identifier=data['channel_identifier'],
             chain_id=data['chain_id'],
             reveal_timeout=data['reveal_timeout'],
+            signature=decode_hex(data['signature']),
         )
 
     def packed(self) -> bytes:
