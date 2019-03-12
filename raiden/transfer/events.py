@@ -176,15 +176,14 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def __init__(
             self,
             expiration: BlockExpiration,
-            channel_identifier: ChannelID,
-            token_network_identifier: TokenNetworkID,
+            canonical_identifier: CanonicalIdentifier,
             balance_proof: BalanceProofSignedState,
             triggered_by_block_hash: BlockHash,
     ):
         super().__init__(triggered_by_block_hash, expiration)
 
-        self.channel_identifier = channel_identifier
-        self.token_network_identifier = token_network_identifier
+        self.channel_identifier = canonical_identifier.channel_identifier
+        self.token_network_identifier = canonical_identifier.token_network_address
         self.balance_proof = balance_proof
 
     def __repr__(self):
@@ -225,8 +224,11 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelUpdateTransfer':
         restored = cls(
             expiration=int(data['expiration']),
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['channel_identifier'])),
+            ),
             balance_proof=data['balance_proof'],
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
