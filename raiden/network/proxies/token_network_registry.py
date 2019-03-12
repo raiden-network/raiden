@@ -98,32 +98,32 @@ class TokenNetworkRegistry:
             channel_participant_deposit_limit: TokenAmount,
             token_network_deposit_limit: TokenAmount,
             given_block_identifier: BlockSpecification,
-    ):
+    ) -> Address:
         """
         Register token of `token_address` with the token network.
         The limits apply for version 0.13.0 and above of raiden-contracts,
         since instantation also takes the limits as constructor arguments.
         """
         return self._add_token(
-            token_address,
-            [channel_participant_deposit_limit, token_network_deposit_limit],
-            given_block_identifier,
+            token_address=token_address,
+            additional_arguments=[channel_participant_deposit_limit, token_network_deposit_limit],
+            given_block_identifier=given_block_identifier,
         )
 
     def add_token_without_limits(
             self,
             token_address: TokenAddress,
             given_block_identifier: BlockSpecification,
-    ):
+    ) -> Address:
         """
         Register token of `token_address` with the token network.
         This applies for versions prior to 0.13.0 of raiden-contracts,
         since limits were hardcoded into the TokenNetwork contract.
         """
         return self._add_token(
-            token_address,
-            list(),
-            given_block_identifier,
+            token_address=token_address,
+            additional_arguments=list(),
+            given_block_identifier=given_block_identifier,
         )
 
     def _add_token(
@@ -131,7 +131,7 @@ class TokenNetworkRegistry:
             token_address: TokenAddress,
             additional_arguments: List[Any],
             given_block_identifier: BlockSpecification,
-    ):
+    ) -> Address:
         # given_block_identifier is not really used in this function yet as there
         # are no preconditions to check with the given block
         if not is_binary_address(token_address):

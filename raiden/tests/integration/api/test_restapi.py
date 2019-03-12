@@ -1687,7 +1687,7 @@ def test_api_deposit_limit(
     response = response.json()
     assert (
         response['errors'] ==
-        'The deposit of 75000000000000001 is bigger than the current channel '
+        'The additional deposit of 75000000000000001 will exceed the channel '
         'participant limit of 75000000000000000'
     )
 
