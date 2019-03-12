@@ -1743,8 +1743,11 @@ def test_update_transfer():
 
     update_transfer_state_change = ContractReceiveUpdateTransfer(
         transaction_hash=partner_model1.participant_address,
-        token_network_identifier=channel_state.token_network_identifier,
-        channel_identifier=channel_state.identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            chain_identifier=channel_state.chain_id,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
         nonce=23,
         block_number=closed_block_number + 1,
         block_hash=factories.make_block_hash(),
