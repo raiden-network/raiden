@@ -242,15 +242,14 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def __init__(
             self,
             token_address: TokenAddress,
-            token_network_identifier: TokenNetworkID,
-            channel_identifier: ChannelID,
+            canonical_identifier: CanonicalIdentifier,
             participant: Address,
             triggered_by_block_hash: BlockHash,
     ):
         super().__init__(triggered_by_block_hash)
         self.token_address = token_address
-        self.token_network_identifier = token_network_identifier
-        self.channel_identifier = channel_identifier
+        self.token_network_identifier = canonical_identifier.token_network_address
+        self.channel_identifier = canonical_identifier.channel_identifier
         self.participant = participant
 
     def __repr__(self):
@@ -294,8 +293,11 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelBatchUnlock':
         restored = cls(
             token_address=to_canonical_address(data['token_address']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['channel_identifier'])),
+            ),
             participant=to_canonical_address(data['participant']),
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
