@@ -1795,8 +1795,7 @@ def handle_channel_closed(
             # proof available update this node half of the state
             update = ContractSendChannelUpdateTransfer(
                 expiration=expiration,
-                channel_identifier=channel_state.identifier,
-                token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
+                canonical_identifier=channel_state.canonical_identifier,
                 balance_proof=balance_proof,
                 triggered_by_block_hash=state_change.block_hash,
             )
