@@ -439,6 +439,8 @@ class OnChainMixin:
             ),
             block_number=self.block_number + 1,
             block_hash=factories.make_block_hash(),
+            our_onchain_locksroot=bytes(32),
+            partner_onchain_locksroot=bytes(32),
         )
 
         node.state_transition(self.chain_state, channel_settled_state_change)
