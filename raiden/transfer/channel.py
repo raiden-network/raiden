@@ -1384,9 +1384,8 @@ def events_for_close(
         assert balance_proof is None or isinstance(balance_proof, BalanceProofSignedState)
 
         close_event = ContractSendChannelClose(
-            channel_identifier=channel_state.identifier,
+            canonical_identifier=channel_state.canonical_identifier,
             token_address=channel_state.token_address,
-            token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
             balance_proof=balance_proof,
             triggered_by_block_hash=block_hash,
         )

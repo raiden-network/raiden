@@ -26,7 +26,7 @@ from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
 from raiden.transfer.state_change import ContractReceiveSecretReveal
-from raiden.utils import sha3, wait_until
+from raiden.utils import CanonicalIdentifier, sha3, wait_until
 from raiden.utils.typing import Address, BlockSpecification, ChannelID
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -552,9 +552,12 @@ def test_secret_revealed_on_chain(
 
     # Close the channel. This must register the secret on chain
     channel_close_event = ContractSendChannelClose(
-        channel_identifier=channel_state2_1.identifier,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=channel_state2_1.chain_id,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_state2_1.identifier,
+        ),
         token_address=channel_state2_1.token_address,
-        token_network_identifier=token_network_identifier,
         balance_proof=channel_state2_1.partner_state.balance_proof,
         triggered_by_block_hash=app0.raiden.chain.block_hash(),
     )

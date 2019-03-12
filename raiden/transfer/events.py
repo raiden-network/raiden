@@ -8,7 +8,7 @@ from raiden.transfer.architecture import (
     SendMessageEvent,
 )
 from raiden.transfer.state import BalanceProofSignedState
-from raiden.utils import pex, serialization, sha3
+from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier, pex, serialization, sha3
 from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 from raiden.utils.typing import (
     Address,
@@ -44,16 +44,15 @@ class ContractSendChannelClose(ContractSendEvent):
 
     def __init__(
             self,
-            channel_identifier: ChannelID,
+            canonical_identifier: CanonicalIdentifier,
             token_address: TokenAddress,
-            token_network_identifier: TokenNetworkID,
             balance_proof: Optional[BalanceProofSignedState],
             triggered_by_block_hash: BlockHash,
     ):
         super().__init__(triggered_by_block_hash)
-        self.channel_identifier = channel_identifier
+        self.channel_identifier = canonical_identifier.channel_identifier
         self.token_address = token_address
-        self.token_network_identifier = token_network_identifier
+        self.token_network_identifier = canonical_identifier.token_network_address
         self.balance_proof = balance_proof
 
     def __repr__(self):
@@ -95,9 +94,12 @@ class ContractSendChannelClose(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelClose':
         restored = cls(
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['channel_identifier'])),
+            ),
             token_address=to_canonical_address(data['token_address']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
             balance_proof=data['balance_proof'],
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
