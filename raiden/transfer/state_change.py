@@ -560,6 +560,8 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
             self,
             transaction_hash: TransactionHash,
             canonical_identifier: CanonicalIdentifier,
+            our_onchain_locksroot: Locksroot,
+            partner_onchain_locksroot: Locksroot,
             block_number: BlockNumber,
             block_hash: BlockHash,
     ) -> None:
@@ -567,6 +569,8 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
 
         self.token_network_identifier = canonical_identifier.token_network_address
         self.channel_identifier = canonical_identifier.channel_identifier
+        self.our_onchain_locksroot = our_onchain_locksroot
+        self.partner_onchain_locksroot = partner_onchain_locksroot
 
     def __repr__(self):
         return (
@@ -582,6 +586,8 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
             isinstance(other, ContractReceiveChannelSettled) and
             self.token_network_identifier == other.token_network_identifier and
             self.channel_identifier == other.channel_identifier and
+            self.our_onchain_locksroot == other.our_onchain_locksroot and
+            self.partner_onchain_locksroot == other.partner_onchain_locksroot and
             super().__eq__(other)
         )
 
@@ -593,6 +599,8 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
             'transaction_hash': serialize_bytes(self.transaction_hash),
             'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_identifier': str(self.channel_identifier),
+            'our_onchain_locksroot': serialize_bytes(self.our_onchain_locksroot),
+            'partner_onchain_locksroot': serialize_bytes(self.partner_onchain_locksroot),
             'block_number': str(self.block_number),
             'block_hash': serialize_bytes(self.block_hash),
         }
@@ -606,6 +614,8 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
                 token_network_address=to_canonical_address(data['token_network_identifier']),
                 channel_identifier=ChannelID(int(data['channel_identifier'])),
             ),
+            our_onchain_locksroot=deserialize_bytes(data['our_onchain_locksroot']),
+            partner_onchain_locksroot=deserialize_bytes(data['partner_onchain_locksroot']),
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
         )
