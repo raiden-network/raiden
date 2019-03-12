@@ -2,7 +2,6 @@ from typing import Any, List, Dict
 
 import structlog
 from eth_utils import to_checksum_address, decode_hex, event_abi_to_log_topic
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK
 from raiden_contracts.contract_manager import ContractManager
 
 from scenario_player.runner import ScenarioRunner
@@ -73,10 +72,11 @@ def query_blockchain_events(
 
     events = web3.eth.getLogs(filter_params)
 
+    contract_abi = contract_manager.get_contract_abi(contract_name)
     return [
         decode_event(
-            contract_manager.get_contract_abi(contract_name),
-            raw_event,
+            abi=contract_abi,
+            log_=raw_event,
         )
         for raw_event in events
     ]
@@ -114,7 +114,7 @@ class BlockchainEventFilter(Task):
             web3=self.web3,
             contract_manager=self._runner.contract_manager,
             contract_address=self._runner.token_network_address,
-            contract_name=CONTRACT_TOKEN_NETWORK,
+            contract_name=self.contract_name,
             topics=[],
             from_block=BlockNumber(self._runner.token_deployment_block),
             to_block=BlockNumber(self.web3.eth.blockNumber),
