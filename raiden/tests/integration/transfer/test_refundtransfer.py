@@ -489,7 +489,7 @@ def test_different_view_of_last_bp_during_unlock(
         unlock_app1 = wait_for_state_change(
             app1.raiden,
             ContractReceiveChannelBatchUnlock,
-            {'participant': app0.raiden.address},
+            {'participant': app1.raiden.address},
             retry_timeout,
         )
     assert unlock_app1.returned_tokens == 50
