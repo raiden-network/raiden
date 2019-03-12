@@ -31,7 +31,11 @@ from raiden.exceptions import (
     EthNodeInterfaceError,
     InsufficientFunds,
 )
-from raiden.network.rpc.middleware import block_hash_cache_middleware, connection_test_middleware
+from raiden.network.rpc.middleware import (
+    block_hash_cache_middleware,
+    connection_test_middleware,
+    http_retry_with_backoff_middleware,
+)
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import is_supported_client, pex, privatekey_to_address
 from raiden.utils.filters import StatelessFilter
@@ -346,6 +350,12 @@ def monkey_patch_web3(web3, gas_price_strategy):
 
         # set gas price strategy
         web3.eth.setGasPriceStrategy(gas_price_strategy)
+
+        # In the version of web3.py we are using the http_retry_request_middleware
+        # is not on by default. But in recent ones it is. This solves some random
+        # crashes that happen on the mainnet as reported in issue
+        # https://github.com/raiden-network/raiden/issues/3558
+        web3.middleware_stack.add(http_retry_with_backoff_middleware)
 
         # we use a PoA chain for smoketest, use this middleware to fix this
         web3.middleware_stack.inject(geth_poa_middleware, layer=0)
