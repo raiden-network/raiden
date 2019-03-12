@@ -1446,6 +1446,8 @@ def test_channelstate_unlock_unlocked_onchain():
         transaction_hash=factories.make_transaction_hash(),
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
+        partner_onchain_locksroot=factories.make_32bytes(),
+        our_onchain_locksroot=bytes(32),
     )
 
     iteration = channel.handle_channel_settled(
@@ -1509,81 +1511,6 @@ def test_refund_transfer_does_not_match_received():
     )
     # target cannot refund
     assert not channel.refund_transfer_matches_received(refund_from_target, transfer)
-
-
-def test_settle_transaction_must_be_sent_only_once():
-    our_model1, _ = create_model(70)
-    partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
-
-    lock_amount = 30
-    lock_expiration = 10
-    lock_secret = sha3(b'test_settle_transaction_must_be_sent_only_once')
-    lock_secrethash = sha3(lock_secret)
-    lock = HashTimeLockState(
-        lock_amount,
-        lock_expiration,
-        lock_secrethash,
-    )
-
-    nonce = 1
-    transferred_amount = 0
-    receive_lockedtransfer = make_receive_transfer_mediated(
-        channel_state,
-        privkey2,
-        nonce,
-        transferred_amount,
-        lock,
-    )
-
-    is_valid, _, msg = channel.handle_receive_lockedtransfer(
-        channel_state,
-        receive_lockedtransfer,
-    )
-    assert is_valid, msg
-
-    channel.register_onchain_secret(
-        channel_state=channel_state,
-        secret=lock_secret,
-        secrethash=lock_secrethash,
-        secret_reveal_block_number=lock_expiration - 1,
-    )
-
-    closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
-    closed_block_hash = factories.make_block_hash()
-    close_state_change = ContractReceiveChannelClosed(
-        transaction_hash=factories.make_transaction_hash(),
-        transaction_from=partner_model1.participant_address,
-        canonical_identifier=channel_state.canonical_identifier,
-        block_number=closed_block_number,
-        block_hash=closed_block_hash,
-    )
-    iteration = channel.handle_channel_closed(channel_state, close_state_change)
-
-    settle_block_number = lock_expiration + channel_state.reveal_timeout + 1
-    settle_state_change = ContractReceiveChannelSettled(
-        transaction_hash=factories.make_transaction_hash(),
-        canonical_identifier=make_canonical_identifier(
-            token_network_address=channel_state.token_network_identifier,
-            channel_identifier=channel_state.identifier,
-        ),
-        block_number=settle_block_number,
-        block_hash=factories.make_block_hash(),
-    )
-    iteration = channel.handle_channel_settled(
-        channel_state,
-        settle_state_change,
-        settle_block_number,
-    )
-    assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is not None
-
-    iteration = channel.handle_channel_settled(
-        channel_state,
-        settle_state_change,
-        settle_block_number,
-    )
-    msg = 'BatchUnlock must be sent only once, the second transaction will always fail'
-    assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is None, msg
 
 
 def test_action_close_must_change_the_channel_state():
