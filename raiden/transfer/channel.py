@@ -102,7 +102,6 @@ from raiden.utils.typing import (
     SuccessOrError,
     TargetAddress,
     TokenAmount,
-    TokenNetworkAddress,
     TokenNetworkID,
     Tuple,
 )
@@ -1752,10 +1751,8 @@ def handle_block(
                 None,
                 None,
             )
-            token_network_identifier = TokenNetworkAddress(channel_state.token_network_identifier)
             event = ContractSendChannelSettle(
-                channel_identifier=channel_state.identifier,
-                token_network_identifier=token_network_identifier,
+                canonical_identifier=channel_state.canonical_identifier,
                 triggered_by_block_hash=state_change.block_hash,
             )
             events.append(event)

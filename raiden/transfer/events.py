@@ -29,7 +29,6 @@ from raiden.utils.typing import (
     TargetAddress,
     TokenAddress,
     TokenAmount,
-    TokenNetworkAddress,
     TokenNetworkID,
 )
 
@@ -112,11 +111,12 @@ class ContractSendChannelSettle(ContractSendEvent):
 
     def __init__(
             self,
-            channel_identifier: ChannelID,
-            token_network_identifier: TokenNetworkAddress,
+            canonical_identifier: CanonicalIdentifier,
             triggered_by_block_hash: BlockHash,
     ):
         super().__init__(triggered_by_block_hash)
+        channel_identifier = canonical_identifier.channel_identifier
+        token_network_identifier = canonical_identifier.token_network_address
         if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be a ChannelID instance')
 
@@ -159,8 +159,11 @@ class ContractSendChannelSettle(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelSettle':
         restored = cls(
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['channel_identifier'])),
+            ),
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
 
