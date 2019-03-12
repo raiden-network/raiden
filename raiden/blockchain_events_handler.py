@@ -232,8 +232,11 @@ def handle_channel_closed(raiden: 'RaidenService', event: Event):
         # This is a channel close event of a channel we're not a participant of
         route_closed = ContractReceiveRouteClosed(
             transaction_hash=transaction_hash,
-            token_network_identifier=token_network_identifier,
-            channel_identifier=channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=chain_state.chain_id,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
             block_number=block_number,
             block_hash=block_hash,
         )

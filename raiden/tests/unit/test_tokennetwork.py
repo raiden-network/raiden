@@ -739,8 +739,10 @@ def test_routing_updates(
     # close the channel the node is not a participant of, check edge is removed from graph
     channel_close_state_change3 = ContractReceiveRouteClosed(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=new_channel_identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=new_channel_identifier,
+        ),
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -760,8 +762,10 @@ def test_routing_updates(
     closed_block_plus_10_hash = factories.make_block_hash()
     channel_close_state_change4 = ContractReceiveRouteClosed(
         transaction_hash=factories.make_transaction_hash(),
-        token_network_identifier=token_network_state.address,
-        channel_identifier=new_channel_identifier,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address,
+            channel_identifier=new_channel_identifier,
+        ),
         block_number=closed_block_number + 10,
         block_hash=closed_block_plus_10_hash,
     )

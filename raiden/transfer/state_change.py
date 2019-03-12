@@ -1046,15 +1046,14 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     def __init__(
             self,
             transaction_hash: TransactionHash,
-            token_network_identifier: TokenNetworkID,
-            channel_identifier: ChannelID,
+            canonical_identifier: CanonicalIdentifier,
             block_number: BlockNumber,
             block_hash: BlockHash,
     ):
         super().__init__(transaction_hash, block_number, block_hash)
 
-        self.token_network_identifier = token_network_identifier
-        self.channel_identifier = channel_identifier
+        self.token_network_identifier = canonical_identifier.token_network_address
+        self.channel_identifier = canonical_identifier.channel_identifier
 
     def __repr__(self):
         return '<ContractReceiveRouteClosed token_network:{} id:{} block:{}>'.format(
@@ -1087,8 +1086,11 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveRouteClosed':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                token_network_address=to_canonical_address(data['token_network_identifier']),
+                channel_identifier=ChannelID(int(data['channel_identifier'])),
+            ),
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
         )
