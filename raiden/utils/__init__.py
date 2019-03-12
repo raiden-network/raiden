@@ -28,6 +28,8 @@ from raiden.utils.signing import sha3  # noqa
 
 # Placeholder chain ID for refactoring in scope of #3493
 CHAIN_ID_UNSPECIFIED = typing.ChainID(-1)
+# Placeholder channel ID for refactoring in scope of #3493
+CHANNEL_ID_UNSPECIFIED = typing.ChannelID(-2)
 
 
 class CanonicalIdentifier(NamedTuple):
