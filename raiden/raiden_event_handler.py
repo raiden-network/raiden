@@ -345,9 +345,12 @@ class RaidenEventHandler:
             channel_identifier=canonical_identifier.channel_identifier,
         )
 
-        our_details = participants_details.our_details
-        our_address = our_details.address
-        our_locksroot = our_details.locksroot
+        if not channel_state:
+            # channel was cleaned up already due to an unlock
+            return
+
+        our_address = channel_state.our_state.address
+        our_locksroot = channel_state.our_state.onchain_locksroot
 
         partner_details = participants_details.partner_details
         partner_address = partner_details.address

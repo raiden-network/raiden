@@ -1400,6 +1400,7 @@ class NettingChannelEndState(State):
         'secrethashes_to_onchain_unlockedlocks',
         'merkletree',
         'balance_proof',
+        'onchain_locksroot',
     )
 
     def __init__(self, address: Address, balance: Balance) -> None:
@@ -1424,6 +1425,7 @@ class NettingChannelEndState(State):
         self.secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = dict()
         self.merkletree = make_empty_merkle_tree()
         self.balance_proof: OptionalBalanceProofState = None
+        self.onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
 
     def __repr__(self):
         return '<NettingChannelEndState address:{} contract_balance:{} merkletree:{}>'.format(
@@ -1444,7 +1446,8 @@ class NettingChannelEndState(State):
                 other.secrethashes_to_onchain_unlockedlocks
             ) and
             self.merkletree == other.merkletree and
-            self.balance_proof == other.balance_proof
+            self.balance_proof == other.balance_proof and
+            self.onchain_locksroot == other.onchain_locksroot
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -1470,6 +1473,7 @@ class NettingChannelEndState(State):
                 self.secrethashes_to_onchain_unlockedlocks,
             ),
             'merkletree': self.merkletree,
+            'onchain_locksroot': serialization.serialize_bytes(self.onchain_locksroot),
         }
         if self.balance_proof is not None:
             result['balance_proof'] = self.balance_proof
@@ -1502,6 +1506,8 @@ class NettingChannelEndState(State):
         balance_proof = data.get('balance_proof')
         if data is not None:
             restored.balance_proof = balance_proof
+
+        restored.onchain_locksroot = serialization.deserialize_bytes(data.get('onchain_locksroot'))
 
         return restored
 
