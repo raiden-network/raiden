@@ -38,7 +38,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.state import TransactionExecutionStatus
+from raiden.transfer.state import NettingChannelEndState
 from raiden.transfer.utils import (
     get_event_with_balance_proof_by_balance_hash,
     get_event_with_balance_proof_by_locksroot,
@@ -47,6 +47,7 @@ from raiden.transfer.utils import (
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils import CanonicalIdentifier, pex
+from raiden.utils.typing import Address, BlockHash
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -63,6 +64,30 @@ UNEVENTFUL_EVENTS = (
     EventInvalidReceivedTransferRefund,
     EventInvalidReceivedUnlock,
 )
+
+
+def unlock(
+        raiden: 'RaidenService',
+        payment_channel: PaymentChannel,
+        end_state: NettingChannelEndState,
+        participant: Address,
+        partner: Address,
+        block_identifier: BlockHash,
+):
+    merkle_tree_leaves = get_batch_unlock(end_state)
+
+    try:
+        payment_channel.unlock(
+            participant=participant,
+            partner=partner,
+            merkle_tree_leaves=merkle_tree_leaves,
+            block_identifier=block_identifier,
+        )
+    except ChannelOutdatedError as e:
+        log.error(
+            str(e),
+            node=pex(raiden.address),
+        )
 
 
 class RaidenEventHandler:
@@ -336,13 +361,11 @@ class RaidenEventHandler:
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
             canonical_identifier=canonical_identifier,
         )
-        token_network: TokenNetwork = payment_channel.token_network
 
-        participants_details = token_network.detail_participants(
-            participant1=participant,
-            participant2=partner,
-            block_identifier=triggered_by_block_hash,
-            channel_identifier=canonical_identifier.channel_identifier,
+        channel_state = get_channelstate_by_token_network_and_partner(
+            chain_state=state_from_raiden(raiden),
+            token_network_id=token_network_identifier,
+            partner_address=partner,
         )
 
         if not channel_state:
@@ -352,9 +375,8 @@ class RaidenEventHandler:
         our_address = channel_state.our_state.address
         our_locksroot = channel_state.our_state.onchain_locksroot
 
-        partner_details = participants_details.partner_details
-        partner_address = partner_details.address
-        partner_locksroot = partner_details.locksroot
+        partner_address = channel_state.partner_state.address
+        partner_locksroot = channel_state.partner_state.onchain_locksroot
 
         # we want to unlock because there are on-chain unlocked locks
         search_events = (
@@ -367,6 +389,18 @@ class RaidenEventHandler:
             partner_locksroot != EMPTY_HASH
         )
 
+        if not search_events and not search_state_changes:
+            # In the case that someone else sent the unlock we do nothing
+            # Check https://github.com/raiden-network/raiden/issues/3152
+            # for more details
+            log.warning(
+                'Onchain unlock already mined',
+                token_address=token_address,
+                channel_identifier=channel_identifier,
+                participant=participant,
+            )
+            return
+
         if search_state_changes:
             state_change_record = get_state_change_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
@@ -374,29 +408,74 @@ class RaidenEventHandler:
                 locksroot=partner_locksroot,
                 sender=partner_address,
             )
-            participant = our_address
-            partner = partner_address
             state_change_identifier = state_change_record.state_change_identifier
-        elif search_events:
+
+            if not state_change_identifier:
+                raise RaidenUnrecoverableError(
+                    f'Failed to find state that match current channel locksroots. '
+                    f'chain_id:{raiden.chain.network_id} '
+                    f'token:{to_checksum_address(token_address)} '
+                    f'token_network:{to_checksum_address(token_network_identifier)} '
+                    f'channel:{channel_identifier} '
+                    f'participant:{to_checksum_address(participant)} '
+                    f'our_locksroot:{to_hex(our_locksroot)} '
+                    f'partner_locksroot:{to_hex(partner_locksroot)} ',
+                )
+
+            restored_channel_state = channel_state_until_state_change(
+                raiden=raiden,
+                payment_network_identifier=raiden.default_registry.address,
+                token_address=token_address,
+                channel_identifier=channel_identifier,
+                state_change_identifier=state_change_identifier,
+            )
+
+            gain_from_partner_locks, _ = get_batch_unlock_gain(
+                restored_channel_state,
+            )
+
+            skip_unlock = (
+                restored_channel_state.partner_state.address == participant and
+                gain_from_partner_locks == 0
+            )
+            if not skip_unlock:
+                unlock(
+                    raiden=raiden,
+                    payment_channel=payment_channel,
+                    end_state=restored_channel_state.partner_state,
+                    participant=our_address,
+                    partner=partner_address,
+                    block_identifier=triggered_by_block_hash,
+                )
+
+        if search_events:
             event_record = get_event_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
                 locksroot=our_locksroot,
+                recipient=partner_address,
             )
-            participant = partner_address
-            partner = our_address
             state_change_identifier = event_record.state_change_identifier
-        else:
-            # In the case that someone else sent the unlock we do nothing
-            # Check https://github.com/raiden-network/raiden/issues/3152
-            # for more details
-            log.warning(
-                'Onchain unlock already mined',
+
+            if not state_change_identifier:
+                raise RaidenUnrecoverableError(
+                    f'Failed to find event that match current channel locksroots. '
+                    f'chain_id:{raiden.chain.network_id} '
+                    f'token:{to_checksum_address(token_address)} '
+                    f'token_network:{to_checksum_address(token_network_identifier)} '
+                    f'channel:{channel_identifier} '
+                    f'participant:{to_checksum_address(participant)} '
+                    f'our_locksroot:{to_hex(our_locksroot)} '
+                    f'partner_locksroot:{to_hex(partner_locksroot)} ',
+                )
+
+            restored_channel_state = channel_state_until_state_change(
+                raiden=raiden,
+                payment_network_identifier=raiden.default_registry.address,
                 token_address=token_address,
                 channel_identifier=canonical_identifier.channel_identifier,
                 participant=participant,
             )
-            return
 
         if not state_change_identifier:
             raise RaidenUnrecoverableError(
@@ -420,43 +499,22 @@ class RaidenEventHandler:
             state_change_identifier=state_change_identifier,
         )
 
-        # Decide which sides of the channel to unlock. Depending on the
-        # the expired sent, and the on-chain revealed token amounts,
-        # we decide for both sides, if it is in our favor to unlock.
-        gain_from_partner_locks, gain_from_our_locks = get_batch_unlock_gain(
+        _, gain_from_our_locks = get_batch_unlock_gain(
             restored_channel_state,
         )
 
-        should_skip_unlock = (
-            (
-                restored_channel_state.our_state.address == participant and
-                gain_from_our_locks == 0
-            ) or (
-                restored_channel_state.partner_state.address == participant and
-                gain_from_partner_locks == 0
-            )
+        skip_unlock = (
+            restored_channel_state.our_state.address == participant and
+            gain_from_our_locks == 0
         )
-        if should_skip_unlock:
-            return
-
-        our_state = restored_channel_state.our_state
-        partner_state = restored_channel_state.partner_state
-        if partner_state.address == participant:
-            merkle_tree_leaves = get_batch_unlock(our_state)
-        elif our_state.address == participant:
-            merkle_tree_leaves = get_batch_unlock(partner_state)
-
-        try:
-            payment_channel.unlock(
-                participant=participant,
-                partner=partner,
-                merkle_tree_leaves=merkle_tree_leaves,
+        if not skip_unlock:
+            unlock(
+                raiden=raiden,
+                payment_channel=payment_channel,
+                end_state=restored_channel_state.our_state,
+                participant=partner_address,
+                partner=our_address,
                 block_identifier=triggered_by_block_hash,
-            )
-        except ChannelOutdatedError as e:
-            log.error(
-                str(e),
-                node=pex(raiden.address),
             )
 
     @staticmethod

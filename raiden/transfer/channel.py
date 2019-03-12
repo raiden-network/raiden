@@ -1866,20 +1866,24 @@ def handle_channel_settled(
     if state_change.channel_identifier == channel_state.identifier:
         set_settled(channel_state, state_change.block_number)
 
-        our_merkle_tree_leaves = get_batch_unlock(channel_state.our_state)
-        partner_merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
-
         is_our_settle_pending = channel_state.our_unlock_transaction is not None
         is_partner_settle_pending = channel_state.partner_unlock_transaction is not None
 
+        our_locksroot = state_change.our_onchain_locksroot
+        partner_locksroot = state_change.partner_onchain_locksroot
+
         should_clear_channel = (
             not is_our_settle_pending and
-            not our_merkle_tree_leaves and
-            not partner_merkle_tree_leaves
+            not is_partner_settle_pending and
+            our_locksroot == EMPTY_MERKLE_ROOT and
+            partner_locksroot == EMPTY_MERKLE_ROOT
         )
 
         if should_clear_channel:
             return TransitionResult(None, events)
+
+        channel_state.our_state.onchain_locksroot = our_locksroot
+        channel_state.partner_state.onchain_locksroot = partner_locksroot
 
         onchain_unlock = ContractSendChannelBatchUnlock(
             token_address=channel_state.token_address,
@@ -1890,28 +1894,19 @@ def handle_channel_settled(
         )
         events.append(onchain_unlock)
 
-        channel_state.our_unlock_transaction = TransactionExecutionStatus(
-            block_number,
-            None,
-            None,
-        )
+        if our_locksroot != EMPTY_MERKLE_ROOT:
+            channel_state.our_unlock_transaction = TransactionExecutionStatus(
+                block_number,
+                None,
+                None,
+            )
 
-        if not is_partner_settle_pending and partner_merkle_tree_leaves:
-        onchain_unlock = ContractSendChannelBatchUnlock(
-            token_address=channel_state.token_address,
-            token_network_identifier=channel_state.token_network_identifier,
-            channel_identifier=channel_state.identifier,
-            participant=channel_state.partner_state.address,
-            partner=channel_state.our_state.address,
-            triggered_by_block_hash=state_change.block_hash,
-        )
-        events.append(onchain_unlock)
-
-        channel_state.partner_unlock_transaction = TransactionExecutionStatus(
-            block_number,
-            None,
-            None,
-        )
+        if partner_locksroot != EMPTY_MERKLE_ROOT:
+            channel_state.partner_unlock_transaction = TransactionExecutionStatus(
+                block_number,
+                None,
+                None,
+            )
 
     return TransitionResult(channel_state, events)
 
