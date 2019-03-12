@@ -96,11 +96,13 @@ def test_request_monitoring():
 
     # test signature verification
     reward_proof_data = pack_reward_proof(
-        request_monitoring.balance_proof.channel_identifier,
-        request_monitoring.reward_amount,
-        request_monitoring.balance_proof.token_network_address,
-        request_monitoring.balance_proof.chain_id,
-        request_monitoring.balance_proof.nonce,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=request_monitoring.balance_proof.chain_id,
+            token_network_address=request_monitoring.balance_proof.token_network_address,
+            channel_identifier=request_monitoring.balance_proof.channel_identifier,
+        ),
+        reward_amount=request_monitoring.reward_amount,
+        nonce=request_monitoring.balance_proof.nonce,
     )
 
     assert recover(reward_proof_data, request_monitoring.reward_proof_signature) == ADDRESS
@@ -173,11 +175,13 @@ def test_tamper_request_monitoring():
     exploited_signature = request_monitoring.reward_proof_signature
 
     reward_proof_data = pack_reward_proof(
-        request_monitoring.balance_proof.channel_identifier,
-        request_monitoring.reward_amount,
-        request_monitoring.balance_proof.token_network_address,
-        request_monitoring.balance_proof.chain_id,
-        request_monitoring.balance_proof.nonce,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=request_monitoring.balance_proof.chain_id,
+            token_network_address=request_monitoring.balance_proof.token_network_address,
+            channel_identifier=request_monitoring.balance_proof.channel_identifier,
+        ),
+        reward_amount=request_monitoring.reward_amount,
+        nonce=request_monitoring.balance_proof.nonce,
     )
 
     # An attacker might change the balance hash
@@ -188,12 +192,15 @@ def test_tamper_request_monitoring():
         reward_amount=55,
     )
 
+    tampered_bp = tampered_balance_hash_request_monitoring.balance_proof
     tampered_balance_hash_reward_proof_data = pack_reward_proof(
-        tampered_balance_hash_request_monitoring.balance_proof.channel_identifier,
-        tampered_balance_hash_request_monitoring.reward_amount,
-        tampered_balance_hash_request_monitoring.balance_proof.token_network_address,
-        tampered_balance_hash_request_monitoring.balance_proof.chain_id,
-        tampered_balance_hash_request_monitoring.balance_proof.nonce,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=tampered_bp.chain_id,
+            token_network_address=tampered_bp.token_network_address,
+            channel_identifier=tampered_bp.channel_identifier,
+        ),
+        reward_amount=tampered_balance_hash_request_monitoring.reward_amount,
+        nonce=tampered_balance_hash_request_monitoring.balance_proof.nonce,
     )
     # The signature works/is unaffected by that change...
     recovered_address_tampered = recover(
@@ -218,12 +225,15 @@ def test_tamper_request_monitoring():
         reward_amount=55,
     )
 
+    tampered_bp = tampered_additional_hash_request_monitoring.balance_proof
     tampered_additional_hash_reward_proof_data = pack_reward_proof(
-        tampered_additional_hash_request_monitoring.balance_proof.channel_identifier,
-        tampered_additional_hash_request_monitoring.reward_amount,
-        tampered_additional_hash_request_monitoring.balance_proof.token_network_address,
-        tampered_additional_hash_request_monitoring.balance_proof.chain_id,
-        tampered_additional_hash_request_monitoring.balance_proof.nonce,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=tampered_bp.chain_id,
+            token_network_address=tampered_bp.token_network_address,
+            channel_identifier=tampered_bp.channel_identifier,
+        ),
+        reward_amount=tampered_additional_hash_request_monitoring.reward_amount,
+        nonce=tampered_additional_hash_request_monitoring.balance_proof.nonce,
     )
 
     # The signature works/is unaffected by that change...
@@ -249,12 +259,15 @@ def test_tamper_request_monitoring():
         reward_amount=55,
     )
 
+    tampered_bp = tampered_non_closing_signature_request_monitoring.balance_proof
     tampered_non_closing_signature_reward_proof_data = pack_reward_proof(
-        tampered_non_closing_signature_request_monitoring.balance_proof.channel_identifier,
-        tampered_non_closing_signature_request_monitoring.reward_amount,
-        tampered_non_closing_signature_request_monitoring.balance_proof.token_network_address,
-        tampered_non_closing_signature_request_monitoring.balance_proof.chain_id,
-        tampered_non_closing_signature_request_monitoring.balance_proof.nonce,
+        canonical_identifier=make_canonical_identifier(
+            chain_identifier=tampered_bp.chain_id,
+            token_network_address=tampered_bp.token_network_address,
+            channel_identifier=tampered_bp.channel_identifier,
+        ),
+        reward_amount=tampered_non_closing_signature_request_monitoring.reward_amount,
+        nonce=tampered_non_closing_signature_request_monitoring.balance_proof.nonce,
     )
 
     # The signature works/is unaffected by that change...
