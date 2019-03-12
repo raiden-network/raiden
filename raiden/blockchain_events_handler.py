@@ -290,7 +290,7 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
         return
 
     payment_channel: PaymentChannel = raiden.chain.payment_channel(
-                token_network_address=token_network_identifier,
+        token_network_address=token_network_identifier,
         channel_id=channel_identifier,
     )
     token_network: TokenNetwork = payment_channel.token_network
@@ -298,7 +298,7 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
         participant1=channel_state.our_state.address,
         participant2=channel_state.partner_state.address,
         block_identifier=block_hash,
-                channel_identifier=channel_identifier,
+        channel_identifier=channel_identifier,
     )
 
     our_details = participants_details.our_details
@@ -308,15 +308,18 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     partner_locksroot = partner_details.locksroot
 
     channel_settled = ContractReceiveChannelSettled(
-            transaction_hash=transaction_hash,
-        token_network_identifier=token_network_identifier,
-        channel_identifier=channel_identifier,
+        transaction_hash=transaction_hash,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=raiden.chain.network_id,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
+        ),
         our_onchain_locksroot=our_locksroot,
         partner_onchain_locksroot=partner_locksroot,
-            block_number=block_number,
-            block_hash=block_hash,
-        )
-        raiden.handle_and_track_state_change(channel_settled)
+        block_number=block_number,
+        block_hash=block_hash,
+    )
+    raiden.handle_and_track_state_change(channel_settled)
 
 
 def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
