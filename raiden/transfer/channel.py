@@ -1866,17 +1866,14 @@ def handle_channel_settled(
     if state_change.channel_identifier == channel_state.identifier:
         set_settled(channel_state, state_change.block_number)
 
-        # Decide which sides of the channel to unlock. Depending on the
-        # the expired sent, and the on-chain revealed token amounts,
-        # we decide for both sides, if it is in our favor to unlock.
-        gain_from_partner_locks, gain_from_our_locks = get_batch_unlock_gain(channel_state)
-
-        is_settle_pending = channel_state.our_unlock_transaction is not None
         our_merkle_tree_leaves = get_batch_unlock(channel_state.our_state)
         partner_merkle_tree_leaves = get_batch_unlock(channel_state.partner_state)
 
+        is_our_settle_pending = channel_state.our_unlock_transaction is not None
+        is_partner_settle_pending = channel_state.partner_unlock_transaction is not None
+
         should_clear_channel = (
-            not is_settle_pending and
+            not is_our_settle_pending and
             not our_merkle_tree_leaves and
             not partner_merkle_tree_leaves
         )
@@ -1884,54 +1881,37 @@ def handle_channel_settled(
         if should_clear_channel:
             return TransitionResult(None, events)
 
-        if gain_from_our_locks > 0:
-            # There are locks which were sent to partner that were
-            # neither unlocked off-chain or on-chain
-            # i.e the locks are still in either:
-            # - lockhashes_to_lockedlocks
-            # - lockhashes_to_unlockedlocks
-            # Therefore, we try to unlock those locks to get back
-            # our tokens.
-            if not is_settle_pending and our_merkle_tree_leaves:
-                onchain_unlock = ContractSendChannelBatchUnlock(
-                    token_address=channel_state.token_address,
-                    canonical_identifier=channel_state.canonical_identifier,
-                    participant=channel_state.our_state.address,
-                    partner=channel_state.partner_state.address,
-                    triggered_by_block_hash=state_change.block_hash,
-                )
-                events.append(onchain_unlock)
+        onchain_unlock = ContractSendChannelBatchUnlock(
+            token_address=channel_state.token_address,
+            canonical_identifier=channel_state.canonical_identifier,
+            participant=channel_state.our_state.address,
+            partner=channel_state.partner_state.address,
+            triggered_by_block_hash=state_change.block_hash,
+        )
+        events.append(onchain_unlock)
 
-                channel_state.our_unlock_transaction = TransactionExecutionStatus(
-                    block_number,
-                    None,
-                    None,
-                )
+        channel_state.our_unlock_transaction = TransactionExecutionStatus(
+            block_number,
+            None,
+            None,
+        )
 
-        if gain_from_partner_locks > 0:
-            # We received locked transfer from partner, and before
-            # the channel was closed, we received the secret to unlock
-            # those transfers and registered this secret on-chain
-            # before the locks expired. Which means in this case that
-            # we can also unlock our partner's side to get the transfer's amount.
-            is_settle_pending = channel_state.partner_unlock_transaction is not None
+        if not is_partner_settle_pending and partner_merkle_tree_leaves:
+        onchain_unlock = ContractSendChannelBatchUnlock(
+            token_address=channel_state.token_address,
+            token_network_identifier=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+            participant=channel_state.partner_state.address,
+            partner=channel_state.our_state.address,
+            triggered_by_block_hash=state_change.block_hash,
+        )
+        events.append(onchain_unlock)
 
-            if not is_settle_pending and partner_merkle_tree_leaves:
-                onchain_unlock = ContractSendChannelBatchUnlock(
-                    token_address=channel_state.token_address,
-                    token_network_identifier=channel_state.token_network_identifier,
-                    channel_identifier=channel_state.identifier,
-                    participant=channel_state.partner_state.address,
-                    partner=channel_state.our_state.address,
-                    triggered_by_block_hash=state_change.block_hash,
-                )
-                events.append(onchain_unlock)
-
-                channel_state.partner_unlock_transaction = TransactionExecutionStatus(
-                    block_number,
-                    None,
-                    None,
-                )
+        channel_state.partner_unlock_transaction = TransactionExecutionStatus(
+            block_number,
+            None,
+            None,
+        )
 
     return TransitionResult(channel_state, events)
 
