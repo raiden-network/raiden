@@ -1611,6 +1611,14 @@ class NettingChannelState(State):
     def partner_total_deposit(self):
         return self.partner_state.contract_balance
 
+    @property
+    def canonical_identifier(self) -> CanonicalIdentifier:
+        return CanonicalIdentifier(
+            chain_identifier=self.chain_id,
+            token_network_address=self.token_network_identifier,
+            channel_identifier=self.identifier,
+        )
+
     def __ne__(self, other):
         return not self.__eq__(other)
 

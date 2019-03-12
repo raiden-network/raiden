@@ -1192,11 +1192,7 @@ def create_sendlockedtransfer(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=channel_state.token_network_identifier,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
     )
 
     locked_transfer = LockedTransferUnsignedState(
@@ -1259,11 +1255,7 @@ def create_unlock(
         transferred_amount=transferred_amount,
         locked_amount=locked_amount,
         locksroot=locksroot,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=channel_state.chain_id,
-            token_network_address=channel_state.token_network_identifier,
-            channel_identifier=channel_state.identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
     )
 
     unlock_lock = SendBalanceProof(
