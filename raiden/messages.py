@@ -1663,7 +1663,7 @@ class RequestMonitoring(SignedMessage):
         return {
             'type': self.__class__.__name__,
             'onchain_balance_proof': self.balance_proof.to_dict(),
-            'reward_amount': self.reward_amount,
+            'reward_amount': str(self.reward_amount),
             'non_closing_signature': encode_hex(self.non_closing_signature),
             'reward_proof_signature': encode_hex(self.reward_proof_signature),
         }
@@ -1833,8 +1833,8 @@ class UpdatePFS(SignedMessage):
             'nonce': self.nonce,
             'token_network_address': to_normalized_address(self.token_network_address),
             'channel_identifier': self.channel_identifier,
-            'transferred_amount': self.transferred_amount,
-            'locked_amount': self.locked_amount,
+            'transferred_amount': str(self.transferred_amount),
+            'locked_amount': str(self.locked_amount),
             'locksroot': encode_hex(self.locksroot),
             'signature': encode_hex(self.signature),
             'reveal_timeout': self.reveal_timeout,
@@ -1847,8 +1847,8 @@ class UpdatePFS(SignedMessage):
     ) -> 'UpdatePFS':
         return cls(
             nonce=data['nonce'],
-            transferred_amount=data['transferred_amount'],
-            locked_amount=data['locked_amount'],
+            transferred_amount=int(data['transferred_amount']),
+            locked_amount=int(data['locked_amount']),
             locksroot=decode_hex(data['locksroot']),
             token_network_address=to_canonical_address(data['token_network_address']),
             channel_identifier=data['channel_identifier'],
