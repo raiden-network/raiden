@@ -117,7 +117,11 @@ class StatelessFilter(LogFilter):
         filter_params['fromBlock'] = from_block
         filter_params['toBlock'] = to_block
 
-        log.debug(f'Querying filter from block {from_block} to block {to_block}')
+        log.debug(
+            'Querying StatelessFilter',
+            from_block=from_block,
+            to_block=to_block,
+        )
         result = self.web3.eth.getLogs(filter_params)
         self._last_block = to_block
         return result
