@@ -2088,6 +2088,43 @@ def test_payment_exceeding_balance(api_server_test_instance, raiden_network, tok
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
+def test_payment_exceeding_balance_for_offline_node(
+        api_server_test_instance,
+        raiden_network,
+        token_addresses,
+):
+    _, app1 = raiden_network
+    identifier1 = 42
+    token_address = token_addresses[0]
+
+    # sender_address = app0.raiden.address
+    target_address = app1.raiden.address
+
+    app1.stop()
+
+    # app0 is sending tokens to target
+    request = grequests.post(
+        api_url_for(
+            api_server_test_instance,
+            'token_target_paymentresource',
+            token_address=to_checksum_address(token_address),
+            target_address=to_checksum_address(target_address),
+        ),
+        json={'amount': UINT256_MAX, 'identifier': identifier1},
+    )
+    response = request.send().response
+
+    assert_proper_response(response, HTTPStatus.CONFLICT)
+
+    error_msg = (
+        "Payment couldn't be completed "
+        "(insufficient funds, no route to target or target offline)"
+    )
+    response = response.json()
+    assert error_msg in response['errors']
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
 def test_channel_events_raiden(api_server_test_instance, raiden_network, token_addresses):
     _, app1 = raiden_network
     amount = 200
