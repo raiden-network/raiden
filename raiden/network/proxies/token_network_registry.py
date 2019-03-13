@@ -102,7 +102,7 @@ class TokenNetworkRegistry:
         """
         Register token of `token_address` with the token network.
         The limits apply for version 0.13.0 and above of raiden-contracts,
-        since instantation also takes the limits as constructor arguments.
+        since instantiation also takes the limits as constructor arguments.
         """
         return self._add_token(
             token_address=token_address,
