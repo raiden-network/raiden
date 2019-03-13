@@ -1,10 +1,9 @@
 import requests
 
-from raiden_contracts.utils.proofs import sign_one_to_n_iou
-
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT
 from raiden.exceptions import ServiceRequestFailed
 from raiden.utils import typing
+from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 
 def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
@@ -41,9 +40,9 @@ def query_paths(
         our_address: typing.Address,
         privkey: bytes,
         current_block_number: typing.BlockNumber,
-        token_network_address: typing.TokenNetworkAddress,
-        route_from: typing.Address,
-        route_to: typing.Address,
+        token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
+        route_from: typing.InitiatorAddress,
+        route_to: typing.TargetAddress,
         value: typing.TokenAmount,
 ):
     max_paths = service_config['pathfinding_max_paths']
