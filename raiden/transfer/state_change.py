@@ -15,13 +15,7 @@ from raiden.transfer.state import (
     TransactionChannelNewBalance,
 )
 from raiden.transfer.utils import pseudo_random_generator_from_json
-from raiden.utils import (
-    CHAIN_ID_UNSPECIFIED,
-    CHANNEL_ID_UNSPECIFIED,
-    CanonicalIdentifier,
-    pex,
-    sha3,
-)
+from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier, pex, sha3
 from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 from raiden.utils.typing import (
     Address,
@@ -890,6 +884,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
         super().__init__(transaction_hash, block_number, block_hash)
 
         self.token_network_identifier = token_network_identifier
+        self.canonical_identifier = canonical_identifier
         self.participant = participant
         self.partner = partner
         self.locksroot = locksroot
@@ -915,7 +910,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __eq__(self, other):
         return (
             isinstance(other, ContractReceiveChannelBatchUnlock) and
-            self.token_network_identifier == other.token_network_identifier and
+            self.canonical_identifier == other.canonical_identifier and
             self.participant == other.participant and
             self.partner == other.partner and
             self.locksroot == other.locksroot and
@@ -938,17 +933,14 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             'returned_tokens': str(self.returned_tokens),
             'block_number': str(self.block_number),
             'block_hash': serialize_bytes(self.block_hash),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelBatchUnlock':
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=CHANNEL_ID_UNSPECIFIED,
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             participant=to_canonical_address(data['participant']),
             partner=to_canonical_address(data['partner']),
             locksroot=deserialize_bytes(data['locksroot']),
