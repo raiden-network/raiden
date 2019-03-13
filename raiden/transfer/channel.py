@@ -862,7 +862,7 @@ def get_batch_unlock_gain(
         lock.amount
         for lock in channel_state.our_state.secrethashes_to_lockedlocks.values()
     ) + sum(
-        lock.amount for lock in channel_state.our_state.secrethashes_to_unlockedlocks
+        lock.amount for lock in channel_state.our_state.secrethashes_to_unlockedlocks.values()
     )
     return (gain_from_partner_locks, gain_from_our_locks)
 
