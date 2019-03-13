@@ -22,13 +22,7 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import (
-    CHAIN_ID_UNSPECIFIED,
-    CHANNEL_ID_UNSPECIFIED,
-    CanonicalIdentifier,
-    pex,
-    typing,
-)
+from raiden.utils import CanonicalIdentifier, pex, typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -333,14 +327,9 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     to calculate the gain and potentially perform unlocks in case
     there is value to be gained.
     """
-    canonical_identifier = CanonicalIdentifier(
-        chain_identifier=CHAIN_ID_UNSPECIFIED,
-        token_network_address=token_network_identifier,
-        channel_identifier=channel_identifier,
-    )
     our_locksroot, partner_locksroot = get_onchain_locksroots(
         chain=raiden.chain,
-        canonical_identifier=canonical_identifier,
+        canonical_identifier=channel_state.canonical_identifier,
         participant1=channel_state.our_state.address,
         participant2=channel_state.partner_state.address,
         block_identifier=block_hash,
@@ -364,18 +353,40 @@ def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
     block_number = data['block_number']
     block_hash = data['block_hash']
     transaction_hash = data['transaction_hash']
+    participant1 = args['participant']
+    participant2 = args['partner']
 
     chain_state = views.state_from_raiden(raiden)
+    token_network_state = views.get_token_network_by_identifier(
+        chain_state,
+        token_network_identifier,
+    )
+    netting_channel_state = None
+    assert token_network_state is not None
+    for channel_state in list(token_network_state.channelidentifiers_to_channels.values()):
+        are_addresses_valid1 = (
+            channel_state.our_state.address == participant1 and
+            channel_state.partner_state.address == participant2
+        )
+        are_addresses_valid2 = (
+            channel_state.our_state.address == participant2 and
+            channel_state.partner_state.address == participant1
+        )
+        is_valid_locksroot = True
+        is_valid_channel = (
+            (are_addresses_valid1 or are_addresses_valid2) and
+            is_valid_locksroot
+        )
+
+        if is_valid_channel:
+            netting_channel_state = channel_state
+            break
+
+    if netting_channel_state is None:
+        return
     unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=transaction_hash,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=chain_state.chain_id,
-            token_network_address=token_network_identifier,
-            # FIXME: we will resolve the channel identifier only further down in
-            # raiden.transfer.token_network::handle_batch_unlock
-            # can/should we do it here already?
-            channel_identifier=CHANNEL_ID_UNSPECIFIED,
-        ),
+        canonical_identifier=netting_channel_state.canonical_identifier,
         participant=args['participant'],
         partner=args['partner'],
         locksroot=args['locksroot'],
