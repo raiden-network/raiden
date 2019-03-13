@@ -225,7 +225,7 @@ def api_error(errors, status_code):
 
 
 @parser.error_handler
-def handle_request_parsing_error(err, _req, _schema):
+def handle_request_parsing_error(err, _req, _schema, _err_status_code, err_headers):
     """ This handles request parsing errors generated for example by schema
     field validation failing."""
     abort(HTTPStatus.BAD_REQUEST, errors=err.messages)
