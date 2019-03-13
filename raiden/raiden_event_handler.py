@@ -489,9 +489,7 @@ class RaidenEventHandler:
         if our_details.balance_hash != EMPTY_HASH:
             event_record = get_event_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
-                chain_id=canonical_identifier.chain_identifier,
-                token_network_identifier=canonical_identifier.token_network_address,
-                channel_identifier=canonical_identifier.channel_identifier,
+                canonical_identifier=canonical_identifier,
                 balance_hash=our_details.balance_hash,
             )
 
