@@ -150,6 +150,19 @@ def create_square_network_topology(
     )
 
 
+CONFIG = {
+    'services': {
+        'pathfinding_service_address': 'my-pfs',
+        'pathfinding_eth_address': to_checksum_address(factories.make_address()),
+        'pathfinding_max_paths': 3,
+        'pathfinding_iou_timeout': 10,
+        'pathfinding_max_fee': 50,
+    },
+}
+
+PRIVKEY = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+
+
 def test_get_pfs_info_success():
     json_data = {
         'price_info': 0,
@@ -235,12 +248,8 @@ def test_routing_mocked_pfs_happy_path(
             to_address=address1,
             amount=50,
             previous_address=None,
-            config={
-                'services': {
-                    'pathfinding_service_address': 'my-pfs',
-                    'pathfinding_max_paths': 3,
-                },
-            },
+            config=CONFIG,
+            privkey=PRIVKEY,
         )
         assert routes[0].node_address == address2
         assert routes[0].channel_identifier == channel_state2.identifier
@@ -277,12 +286,8 @@ def test_routing_mocked_pfs_request_error(
             to_address=address1,
             amount=50,
             previous_address=None,
-            config={
-                'services': {
-                    'pathfinding_service_address': 'my-pfs',
-                    'pathfinding_max_paths': 3,
-                },
-            },
+            config=CONFIG,
+            privkey=PRIVKEY,
         )
         assert routes[0].node_address == address1
         assert routes[0].channel_identifier == channel_state1.identifier
@@ -337,12 +342,8 @@ def test_routing_mocked_pfs_bad_http_code(
             to_address=address1,
             amount=50,
             previous_address=None,
-            config={
-                'services': {
-                    'pathfinding_service_address': 'my-pfs',
-                    'pathfinding_max_paths': 3,
-                },
-            },
+            config=CONFIG,
+            privkey=PRIVKEY,
         )
         assert routes[0].node_address == address1
         assert routes[0].channel_identifier == channel_state1.identifier
@@ -372,7 +373,7 @@ def test_routing_mocked_pfs_invalid_json(
     }
 
     response = Mock()
-    response.configure_mock(status_code=400)
+    response.configure_mock(status_code=200)
     response.json = Mock(side_effect=ValueError())
 
     with patch.object(requests, 'post', return_value=response):
@@ -383,12 +384,8 @@ def test_routing_mocked_pfs_invalid_json(
             to_address=address1,
             amount=50,
             previous_address=None,
-            config={
-                'services': {
-                    'pathfinding_service_address': 'my-pfs',
-                    'pathfinding_max_paths': 3,
-                },
-            },
+            config=CONFIG,
+            privkey=PRIVKEY,
         )
         assert routes[0].node_address == address1
         assert routes[0].channel_identifier == channel_state1.identifier
@@ -429,12 +426,8 @@ def test_routing_mocked_pfs_invalid_json_structure(
             to_address=address1,
             amount=50,
             previous_address=None,
-            config={
-                'services': {
-                    'pathfinding_service_address': 'my-pfs',
-                    'pathfinding_max_paths': 3,
-                },
-            },
+            config=CONFIG,
+            privkey=PRIVKEY,
         )
         assert routes[0].node_address == address1
         assert routes[0].channel_identifier == channel_state1.identifier
@@ -496,12 +489,8 @@ def test_routing_mocked_pfs_unavailable_peer(
             to_address=address1,
             amount=50,
             previous_address=None,
-            config={
-                'services': {
-                    'pathfinding_service_address': 'my-pfs',
-                    'pathfinding_max_paths': 3,
-                },
-            },
+            config=CONFIG,
+            privkey=PRIVKEY,
         )
         assert routes[0].node_address == address2
         assert routes[0].channel_identifier == channel_state2.identifier
