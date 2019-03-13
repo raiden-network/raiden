@@ -43,9 +43,7 @@ def get_state_change_with_balance_proof_by_balance_hash(
 
 def get_state_change_with_balance_proof_by_locksroot(
         storage: sqlite.SQLiteStorage,
-        chain_id: ChainID,
-        token_network_identifier: TokenNetworkID,
-        channel_identifier: ChannelID,
+        canonical_identifier: CanonicalIdentifier,
         locksroot: Locksroot,
         sender: Address,
 ) -> sqlite.StateChangeRecord:
@@ -57,9 +55,11 @@ def get_state_change_with_balance_proof_by_locksroot(
     balance proof.
     """
     return storage.get_latest_state_change_by_data_field({
-        'balance_proof.chain_id': chain_id,
-        'balance_proof.token_network_identifier': to_checksum_address(token_network_identifier),
-        'balance_proof.channel_identifier': str(channel_identifier),
+        'balance_proof.chain_id': canonical_identifier.chain_identifier,
+        'balance_proof.token_network_identifier': to_checksum_address(
+            canonical_identifier.token_network_address,
+        ),
+        'balance_proof.channel_identifier': str(canonical_identifier.channel_identifier),
         'balance_proof.locksroot': serialize_bytes(locksroot),
         'balance_proof.sender': to_checksum_address(sender),
     })

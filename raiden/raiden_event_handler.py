@@ -330,15 +330,18 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
-        token_network_identifier = channel_unlock_event.token_network_identifier
-        channel_identifier = channel_unlock_event.channel_identifier
+        canonical_identifier = CanonicalIdentifier(
+            chain_identifier=raiden.chain.network_id,
+            token_network_address=channel_unlock_event.token_network_identifier,
+            channel_identifier=channel_unlock_event.channel_identifier,
+        )
         participant = channel_unlock_event.participant
         token_address = channel_unlock_event.token_address
         triggered_by_block_hash = channel_unlock_event.triggered_by_block_hash
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            token_network_address=token_network_identifier,
-            channel_id=channel_identifier,
+            token_network_address=canonical_identifier.token_network_address,
+            channel_id=canonical_identifier.channel_identifier,
         )
         token_network: TokenNetwork = payment_channel.token_network
 
@@ -346,7 +349,7 @@ class RaidenEventHandler:
             participant1=raiden.address,
             participant2=participant,
             block_identifier=triggered_by_block_hash,
-            channel_identifier=channel_identifier,
+            channel_identifier=canonical_identifier.channel_identifier,
         )
 
         our_details = participants_details.our_details
@@ -367,9 +370,7 @@ class RaidenEventHandler:
         if is_partner_unlock:
             state_change_record = get_state_change_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
-                chain_id=raiden.chain.network_id,
-                token_network_identifier=token_network_identifier,
-                channel_identifier=channel_identifier,
+                canonical_identifier=canonical_identifier,
                 locksroot=partner_locksroot,
                 sender=participants_details.partner_details.address,
             )
@@ -378,8 +379,8 @@ class RaidenEventHandler:
             event_record = get_event_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
                 chain_id=raiden.chain.network_id,
-                token_network_identifier=token_network_identifier,
-                channel_identifier=channel_identifier,
+                token_network_identifier=canonical_identifier.token_network_address,
+                channel_identifier=canonical_identifier.channel_identifier,
                 locksroot=our_locksroot.balance_hash,
             )
             state_change_identifier = event_record.state_change_identifier
@@ -390,7 +391,7 @@ class RaidenEventHandler:
             log.warning(
                 'Onchain unlock already mined',
                 token_address=token_address,
-                channel_identifier=channel_identifier,
+                channel_identifier=canonical_identifier.channel_identifier,
                 participant=participant,
             )
             return
@@ -398,10 +399,10 @@ class RaidenEventHandler:
         if not state_change_identifier:
             raise RaidenUnrecoverableError(
                 f'Failed to find state/event that match current channel locksroots. '
-                f'chain_id:{raiden.chain.network_id} '
+                f'chain_id:{canonical_identifier.chain_identifier} '
                 f'token:{to_checksum_address(token_address)} '
-                f'token_network:{to_checksum_address(token_network_identifier)} '
-                f'channel:{channel_identifier} '
+                f'token_network:{to_checksum_address(canonical_identifier.token_network_address)} '
+                f'channel:{canonical_identifier.channel_identifier} '
                 f'participant:{to_checksum_address(participant)} '
                 f'our_locksroot:{to_hex(our_locksroot)} '
                 f'our_balance_hash:{to_hex(our_details.balance_hash)} '
@@ -415,7 +416,7 @@ class RaidenEventHandler:
             raiden=raiden,
             payment_network_identifier=raiden.default_registry.address,
             token_address=token_address,
-            channel_identifier=channel_identifier,
+            channel_identifier=canonical_identifier.channel_identifier,
             state_change_identifier=state_change_identifier,
         )
 
