@@ -274,9 +274,7 @@ def test_get_event_with_balance_proof():
     for event, balance_proof in events_balanceproofs:
         event_record = get_event_with_balance_proof_by_balance_hash(
             storage=storage,
-            chain_id=balance_proof.chain_id,
-            token_network_identifier=balance_proof.token_network_identifier,
-            channel_identifier=balance_proof.channel_identifier,
+            canonical_identifier=balance_proof.canonical_identifier,
             balance_hash=balance_proof.balance_hash,
         )
         assert event_record.data == event
