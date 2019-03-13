@@ -176,13 +176,12 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def __init__(
             self,
             expiration: BlockExpiration,
-            # FIXME: balance_proof below needs to be fully identified, so we could get rid of this
-            canonical_identifier: CanonicalIdentifier,
             balance_proof: BalanceProofSignedState,
             triggered_by_block_hash: BlockHash,
     ):
         super().__init__(triggered_by_block_hash, expiration)
 
+        canonical_identifier = balance_proof.canonical_identifier
         self.channel_identifier = canonical_identifier.channel_identifier
         self.token_network_identifier = canonical_identifier.token_network_address
         self.balance_proof = balance_proof
