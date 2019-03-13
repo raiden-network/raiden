@@ -830,6 +830,14 @@ class BalanceProofUnsignedState(State):
             locksroot=self.locksroot,
         )
 
+    @property
+    def canonical_identifier(self) -> CanonicalIdentifier:
+        return CanonicalIdentifier(
+            chain_identifier=self.chain_id,
+            token_network_address=self.token_network_identifier,
+            channel_identifier=self.channel_identifier,
+        )
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'nonce': self.nonce,
@@ -1002,6 +1010,14 @@ class BalanceProofSignedState(State):
             transferred_amount=self.transferred_amount,
             locked_amount=self.locked_amount,
             locksroot=self.locksroot,
+        )
+
+    @property
+    def canonical_identifier(self) -> CanonicalIdentifier:
+        return CanonicalIdentifier(
+            chain_identifier=self.chain_id,
+            token_network_address=self.token_network_identifier,
+            channel_identifier=self.channel_identifier,
         )
 
     def to_dict(self) -> Dict[str, Any]:
