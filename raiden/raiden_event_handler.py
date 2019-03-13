@@ -378,9 +378,7 @@ class RaidenEventHandler:
         elif is_our_unlock:
             event_record = get_event_with_balance_proof_by_locksroot(
                 storage=raiden.wal.storage,
-                chain_id=raiden.chain.network_id,
-                token_network_identifier=canonical_identifier.token_network_address,
-                channel_identifier=canonical_identifier.channel_identifier,
+                canonical_identifier=canonical_identifier,
                 locksroot=our_locksroot.balance_hash,
             )
             state_change_identifier = event_record.state_change_identifier
