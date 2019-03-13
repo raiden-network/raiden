@@ -7,7 +7,7 @@ LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
 SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
 
-RAIDEN_DB_VERSION = 19
+RAIDEN_DB_VERSION = 20
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 PROTOCOL_VERSION = 1
 MIN_REQUIRED_SOLC = 'v0.4.23'

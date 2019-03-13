@@ -309,11 +309,7 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
 
     channel_settled = ContractReceiveChannelSettled(
         transaction_hash=transaction_hash,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=raiden.chain.network_id,
-            token_network_address=token_network_identifier,
-            channel_identifier=channel_identifier,
-        ),
+        canonical_identifier=channel_state.canonical_identifier,
         our_onchain_locksroot=our_locksroot,
         partner_onchain_locksroot=partner_locksroot,
         block_number=block_number,

@@ -13,6 +13,7 @@ from raiden.constants import RAIDEN_DB_VERSION
 from raiden.storage.migrations.v16_to_v17 import upgrade_v16_to_v17
 from raiden.storage.migrations.v17_to_v18 import upgrade_v17_to_v18
 from raiden.storage.migrations.v18_to_v19 import upgrade_v18_to_v19
+from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, older_db_file
 from raiden.utils.typing import Callable, Optional
@@ -21,6 +22,7 @@ UPGRADES_LIST = [
     upgrade_v16_to_v17,
     upgrade_v17_to_v18,
     upgrade_v18_to_v19,
+    upgrade_v19_to_v20,
 ]
 
 

@@ -1502,11 +1502,7 @@ class NettingChannelEndState(State):
             data['secrethashes_to_onchain_unlockedlocks'],
         )
         restored.merkletree = data['merkletree']
-
-        balance_proof = data.get('balance_proof')
-        if data is not None:
-            restored.balance_proof = balance_proof
-
+        restored.balance_proof = data.get('balance_proof')
         restored.onchain_locksroot = serialization.deserialize_bytes(data.get('onchain_locksroot'))
 
         return restored
