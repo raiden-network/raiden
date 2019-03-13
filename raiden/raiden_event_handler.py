@@ -442,9 +442,11 @@ class RaidenEventHandler:
             raiden: RaidenService,
             channel_settle_event: ContractSendChannelSettle,
     ):
-        chain_id = raiden.chain.network_id
-        token_network_identifier = channel_settle_event.token_network_identifier
-        channel_identifier = channel_settle_event.channel_identifier
+        canonical_identifier = CanonicalIdentifier(
+            chain_identifier=raiden.chain.network_id,
+            token_network_address=channel_settle_event.token_network_identifier,
+            channel_identifier=channel_settle_event.channel_identifier,
+        )
         triggered_by_block_hash = channel_settle_event.triggered_by_block_hash
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
@@ -464,9 +466,9 @@ class RaidenEventHandler:
         partner_details = participants_details.partner_details
 
         log_details = {
-            'chain_id': chain_id,
-            'token_network_identifier': token_network_identifier,
-            'channel_identifier': channel_identifier,
+            'chain_id': canonical_identifier.chain_identifier,
+            'token_network_identifier': canonical_identifier.token_network_address,
+            'channel_identifier': canonical_identifier.channel_identifier,
             'node': pex(raiden.address),
             'partner': to_checksum_address(partner_details.address),
             'our_deposit': our_details.deposit,
@@ -488,9 +490,9 @@ class RaidenEventHandler:
         if our_details.balance_hash != EMPTY_HASH:
             event_record = get_event_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
-                chain_id=chain_id,
-                token_network_identifier=token_network_identifier,
-                channel_identifier=channel_identifier,
+                chain_id=canonical_identifier.chain_identifier,
+                token_network_identifier=canonical_identifier.token_network_address,
+                channel_identifier=canonical_identifier.channel_identifier,
                 balance_hash=our_details.balance_hash,
             )
 
@@ -515,9 +517,7 @@ class RaidenEventHandler:
         if partner_details.balance_hash != EMPTY_HASH:
             state_change_record = get_state_change_with_balance_proof_by_balance_hash(
                 storage=raiden.wal.storage,
-                chain_id=chain_id,
-                token_network_identifier=token_network_identifier,
-                channel_identifier=channel_identifier,
+                canonical_identifier=canonical_identifier,
                 balance_hash=partner_details.balance_hash,
                 sender=participants_details.partner_details.address,
             )
