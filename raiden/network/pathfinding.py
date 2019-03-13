@@ -65,9 +65,12 @@ def query_paths(
 
     if response.status_code != 200:
         info = {'error_code': response.status_code}
-        error = response.json().get('errors')
-        if error is not None:
-            info['pfs_error'] = error
+        try:
+            error = response.json().get('errors')
+            if error is not None:
+                info['pfs_error'] = error
+        except ValueError:  # invalid json
+            pass
         raise ServiceRequestFailed('Pathfinding service returned error code', info)
 
     try:
