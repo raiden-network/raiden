@@ -186,43 +186,28 @@ def handle_batch_unlock(
         block_number: BlockNumber,
         block_hash: BlockHash,
 ) -> TransitionResult:
-    participant1 = state_change.participant
-    participant2 = state_change.partner
-
     events = list()
-    for channel_state in list(token_network_state.channelidentifiers_to_channels.values()):
-        are_addresses_valid1 = (
-            channel_state.our_state.address == participant1 and
-            channel_state.partner_state.address == participant2
+    channel_state = token_network_state.channelidentifiers_to_channels.get(
+        state_change.canonical_identifier.channel_identifier,
+    )
+    if channel_state is not None:
+        sub_iteration = channel.state_transition(
+            channel_state=channel_state,
+            state_change=state_change,
+            block_number=block_number,
+            block_hash=block_hash,
         )
-        are_addresses_valid2 = (
-            channel_state.our_state.address == participant2 and
-            channel_state.partner_state.address == participant1
-        )
-        is_valid_locksroot = True
-        is_valid_channel = (
-            (are_addresses_valid1 or are_addresses_valid2) and
-            is_valid_locksroot
-        )
+        events.extend(sub_iteration.events)
 
-        if is_valid_channel:
-            sub_iteration = channel.state_transition(
-                channel_state=channel_state,
-                state_change=state_change,
-                block_number=block_number,
-                block_hash=block_hash,
-            )
-            events.extend(sub_iteration.events)
+        if sub_iteration.new_state is None:
 
-            if sub_iteration.new_state is None:
+            token_network_state.partneraddresses_to_channelidentifiers[
+                channel_state.partner_state.address
+            ].remove(channel_state.identifier)
 
-                token_network_state.partneraddresses_to_channelidentifiers[
-                    channel_state.partner_state.address
-                ].remove(channel_state.identifier)
-
-                del token_network_state.channelidentifiers_to_channels[
-                    channel_state.identifier
-                ]
+            del token_network_state.channelidentifiers_to_channels[
+                channel_state.identifier
+            ]
 
     return TransitionResult(token_network_state, events)
 
