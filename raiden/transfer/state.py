@@ -121,6 +121,10 @@ def message_identifier_from_prng(prng):
     return prng.randint(0, UINT64_MAX)
 
 
+def to_comparable_graph(network: networkx.Graph) -> List[List[Any]]:
+    return sorted(sorted(edge) for edge in network.edges())
+
+
 class TransferTask(State):
     pass
 
@@ -275,20 +279,6 @@ class ChainState(State):
 
     TODO: Split the node specific attributes to a "NodeState" class
     """
-
-    __slots__ = (
-        'block_number',
-        'block_hash',
-        'chain_id',
-        'identifiers_to_paymentnetworks',
-        'nodeaddresses_to_networkstates',
-        'our_address',
-        'payment_mapping',
-        'pending_transactions',
-        'pseudo_random_generator',
-        'queueids_to_queues',
-        'last_transport_authdata',
-    )
 
     def __init__(
             self,
@@ -586,17 +576,12 @@ class TokenNetworkGraphState(State):
         return (
             isinstance(other, TokenNetworkGraphState) and
             self.token_network_id == other.token_network_id and
-            self._to_comparable_graph() == other._to_comparable_graph() and
+            to_comparable_graph(self.network) == to_comparable_graph(other.network) and
             self.channel_identifier_to_participants == other.channel_identifier_to_participants
         )
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-    def _to_comparable_graph(self):
-        return sorted([
-            sorted(edge) for edge in self.network.edges()
-        ])
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -1083,9 +1068,11 @@ class HashTimeLockState(State):
             raise ValueError('secrethash must be a keccak256 instance')
 
         packed = messages.Lock(buffer_for(messages.Lock))
+        # pylint: disable=assigning-non-slot
         packed.amount = amount
         packed.expiration = expiration
         packed.secrethash = secrethash
+        # pylint: enable=assigning-non-slot
         encoded = bytes(packed.data)
 
         self.amount = amount
