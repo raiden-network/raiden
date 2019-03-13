@@ -18,9 +18,9 @@ The preferred way to install Raiden is downloading a self contained application 
 Linux
 *****
 
-Download the latest :code:`raiden-<version>-linux.tar.gz`, and extract it::
+Download the latest :code:`raiden-<version>-linux-x86_64.tar.gz`, and extract it::
 
-    tar -xvzf raiden-<version>-linux.tar.gz
+    tar -xvzf raiden-<version>-linux-x86_64.tar.gz
 
 The Raiden binary should work on most 64bit GNU/Linux distributions without any specific system dependencies, other
 than an Ethereum client installed in your system (see below). The Raiden binary takes the same command line
@@ -29,9 +29,9 @@ arguments as the ``raiden`` script.
 macOS
 *****
 
-Download the latest :code:`raiden-<version>-macOS.zip`, and extract it::
+Download the latest :code:`raiden-<version>-macOS-x86_64.zip`, and extract it::
 
-    unzip raiden-<version>-macOS.zip
+    unzip raiden-<version>-macOS-x86_64.zip
 
 The resulting binary will work on any version of macOS from 10.12 onwards without any other
 dependencies.
