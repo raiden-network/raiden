@@ -208,9 +208,7 @@ def test_get_state_change_with_balance_proof():
     for state_change, balance_proof in statechanges_balanceproofs:
         state_change_record = get_state_change_with_balance_proof_by_balance_hash(
             storage=storage,
-            chain_id=balance_proof.chain_id,
-            token_network_identifier=balance_proof.token_network_identifier,
-            channel_identifier=balance_proof.channel_identifier,
+            canonical_identifier=balance_proof.canonical_identifier,
             sender=balance_proof.sender,
             balance_hash=balance_proof.balance_hash,
         )
