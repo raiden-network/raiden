@@ -6,6 +6,7 @@ from raiden.network.proxies import (
     Discovery,
     PaymentChannel,
     SecretRegistry,
+    ServiceRegistry,
     Token,
     TokenNetwork,
     TokenNetworkRegistry,
@@ -39,6 +40,7 @@ class BlockChainService:
         self.address_to_token_network = dict()
         self.address_to_token_network_registry = dict()
         self.address_to_user_deposit = dict()
+        self.address_to_service_registry = dict()
         self.identifier_to_payment_channel = dict()
 
         self.client = jsonrpc_client
@@ -192,6 +194,17 @@ class BlockChainService:
                 )
 
         return self.address_to_secret_registry[address]
+
+    def service_registry(self, address: Address) -> ServiceRegistry:
+        with self._secret_registry_creation_lock:
+            if address not in self.address_to_service_registry:
+                self.address_to_service_registry[address] = ServiceRegistry(
+                    jsonrpc_client=self.client,
+                    service_registry_address=address,
+                    contract_manager=self.contract_manager,
+                )
+
+        return self.address_to_service_registry[address]
 
     def payment_channel(
             self,

@@ -31,7 +31,7 @@ from raiden.messages import (
     message_from_sendevent,
 )
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import SecretRegistry, TokenNetworkRegistry
+from raiden.network.proxies import SecretRegistry, ServiceRegistry, TokenNetworkRegistry
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import node, views
@@ -237,6 +237,7 @@ class RaidenService(Runnable):
             query_start_block: BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
+            default_service_registry: ServiceRegistry,
             transport,
             raiden_event_handler,
             message_handler,
@@ -252,6 +253,7 @@ class RaidenService(Runnable):
         self.default_registry = default_registry
         self.query_start_block = query_start_block
         self.default_secret_registry = default_secret_registry
+        self.default_service_registry = default_service_registry
         self.config = config
 
         self.signer: Signer = LocalSigner(self.chain.client.privkey)
