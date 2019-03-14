@@ -5,7 +5,7 @@ import re
 import sys
 import time
 from itertools import zip_longest
-from typing import Iterable, List, Optional, Tuple, Union, NamedTuple
+from typing import Iterable, List, NamedTuple, Optional, Tuple, Union
 
 import gevent
 from eth_keys import keys
@@ -24,7 +24,6 @@ from raiden import constants
 from raiden.exceptions import InvalidAddress
 from raiden.utils import typing
 from raiden.utils.signing import sha3  # noqa
-
 
 # Placeholder chain ID for refactoring in scope of #3493
 CHAIN_ID_UNSPECIFIED = typing.ChainID(-1)
@@ -295,3 +294,8 @@ def safe_gas_limit(*estimates: int) -> int:
     assert None not in estimates, 'if estimateGas returned None it should not reach here'
     calculated_limit = max(estimates)
     return int(calculated_limit * constants.GAS_FACTOR)
+
+
+def to_rdn(rei: int) -> float:
+    """ Convert REI value to RDN. """
+    return rei / 10 ** 18
