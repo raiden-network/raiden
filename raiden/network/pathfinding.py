@@ -1,17 +1,78 @@
+import random
+import sys
+from typing import Optional
+
+import click
 import requests
+import structlog
 from eth_utils import to_hex
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT
 from raiden.exceptions import ServiceRequestFailed
+from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.utils import typing
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
+
+log = structlog.get_logger(__name__)
 
 
 def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
     try:
-        return requests.get(f'{url}/api/v1/info', timeout=DEFAULT_HTTP_REQUEST_TIMEOUT).json()
+        response = requests.get(
+            f'{url}/api/v1/info',
+            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
+        )
+        return response.json()
     except requests.exceptions.RequestException:
-        return None
+        return False
+
+
+def get_random_service(service_registry: ServiceRegistry) -> str:
+    services = service_registry.get_services_list('latest')
+    chosen_service = random.SystemRandom().choice(services)
+    return service_registry.get_service_url(chosen_service)
+
+
+def configure_pfs(
+        pfs_address: Optional[str],
+        use_basic_routing: bool,
+        service_registry,
+) -> str:
+    """
+    Take in the given pfs_address argument, the service registry and find out a
+    pfs address to use.
+
+    If pfs_address is empty then we either use basic routing if requested or get
+    a random address from the service registry.
+
+    If pfs_address is provided we use that.
+    """
+    if use_basic_routing:
+        click.secho(
+            'Requested to use basic routing. No path finding service is being used',
+        )
+        return ''
+
+    if pfs_address is None:
+        assert service_registry
+        pfs_address = get_random_service(service_registry)
+
+    pathfinding_service_info = get_pfs_info(pfs_address)
+    if not pathfinding_service_info:
+        click.secho(
+            f'There is an error with the pathfinding service with address'
+            f'{pfs_address}. Raiden will shut down.',
+        )
+        sys.exit(1)
+    else:
+        click.secho(
+            f"'{pathfinding_service_info['message']}'. "
+            f"You have chosen pathfinding operator '{pathfinding_service_info['operator']}' "
+            f"with the running version '{pathfinding_service_info['version']}' "
+            f"on chain_id: '{pathfinding_service_info['network_info']['chain_id']}."
+            f"Requesting a path will cost you: '{pathfinding_service_info['price_info']}",
+        )
+        log.info('Using PFS', pfs_info=pathfinding_service_info)
 
 
 def get_pfs_iou(
