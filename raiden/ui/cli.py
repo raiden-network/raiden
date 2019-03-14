@@ -237,6 +237,15 @@ def options(func):
         option_group(
             'Raiden Services Options',
             option(
+                '--use-basic-routing',
+                help=(
+                    'If given then, then no path finding service is going to be '
+                    'used and we are instead going to revent to basic routing',
+                ),
+                is_flag=True,
+                show_default=True,
+            ),
+            option(
                 '--pathfinding-service-address',
                 help=(
                     'URL to the Raiden path finding service to request paths from.\n'
