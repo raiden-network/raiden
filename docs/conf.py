@@ -54,6 +54,11 @@ def check_if_nightly(version):
         return version
 
 
+# Add customized stylesheet
+def setup(app):
+    app.add_stylesheet('css/custom.css')
+
+
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
