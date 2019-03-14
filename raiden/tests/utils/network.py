@@ -14,7 +14,8 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils import merge_dict, pex
+from raiden.transfer.views import state_from_raiden
+from raiden.utils import CanonicalIdentifier, merge_dict, pex
 from raiden.waiting import wait_for_payment_network
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
@@ -37,13 +38,16 @@ def check_channel(
         settle_timeout,
         deposit_amount,
 ):
+    canonical_identifier = CanonicalIdentifier(
+        chain_identifier=state_from_raiden(app1.raiden).chain_id,
+        token_network_address=token_network_identifier,
+        channel_identifier=channel_identifier,
+    )
     netcontract1 = app1.raiden.chain.payment_channel(
-        token_network_identifier,
-        channel_identifier,
+        canonical_identifier=canonical_identifier,
     )
     netcontract2 = app2.raiden.chain.payment_channel(
-        token_network_identifier,
-        channel_identifier,
+        canonical_identifier=canonical_identifier,
     )
 
     # Check a valid settle timeout was used, the netting contract has an
@@ -97,13 +101,17 @@ def payment_channel_open_and_deposit(app0, app1, token_address, deposit, settle_
         given_block_identifier='latest',
     )
     assert channel_identifier
+    canonical_identifier = CanonicalIdentifier(
+        chain_identifier=state_from_raiden(app0.raiden).chain_id,
+        token_network_address=token_network_proxy.address,
+        channel_identifier=channel_identifier,
+    )
 
     for app in [app0, app1]:
         # Use each app's own chain because of the private key / local signing
         token = app.raiden.chain.token(token_address)
         payment_channel_proxy = app.raiden.chain.payment_channel(
-            token_network_proxy.address,
-            channel_identifier,
+            canonical_identifier=canonical_identifier,
         )
 
         # This check can succeed and the deposit still fail, if channels are
