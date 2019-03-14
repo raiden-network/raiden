@@ -14,7 +14,7 @@ from raiden.utils.signer import LocalSigner
 class MockTokenNetwork:
 
     @staticmethod
-    def detail_participants(
+    def detail_participants(  # pylint: disable=unused-argument
             participant1,
             participant2,
             block_identifier,
@@ -26,7 +26,7 @@ class MockTokenNetwork:
 
 class MockPaymentChannel:
 
-    def __init__(self, token_network, channel_id):
+    def __init__(self, token_network, channel_id):  # pylint: disable=unused-argument
         self.token_network = token_network
 
 

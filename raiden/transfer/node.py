@@ -511,16 +511,12 @@ def handle_token_network_action(
         state_change.token_network_identifier,
     )
     assert payment_network_state, 'We should always get a payment_network_state'
-    payment_network_id = payment_network_state.address
 
     events: List[Event] = list()
     if token_network_state:
-        pseudo_random_generator = chain_state.pseudo_random_generator
         iteration = token_network.state_transition(
-            payment_network_identifier=PaymentNetworkID(payment_network_id),
             token_network_state=token_network_state,
             state_change=state_change,
-            pseudo_random_generator=pseudo_random_generator,
             block_number=chain_state.block_number,
             block_hash=chain_state.block_hash,
         )

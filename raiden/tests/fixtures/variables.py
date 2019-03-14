@@ -190,7 +190,7 @@ def privatekey_seed(request):
 
 
 @pytest.fixture
-def token_amount(number_of_nodes, deposit):
+def token_amount(number_of_nodes):
     total_per_node = RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT * 4
     total_token = total_per_node * number_of_nodes
     return total_token

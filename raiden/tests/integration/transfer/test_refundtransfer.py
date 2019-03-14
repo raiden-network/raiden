@@ -111,7 +111,7 @@ def test_refund_transfer(
         retry_timeout,
         # UDP does not seem to retry messages until processed
         # https://github.com/raiden-network/raiden/issues/3185
-        skip_if_not_matrix,
+        skip_if_not_matrix,  # pylint: disable=unused-argument
 ):
     """A failed transfer must send a refund back.
 
@@ -309,7 +309,7 @@ def test_different_view_of_last_bp_during_unlock(
         retry_timeout,
         # UDP does not seem to retry messages until processed
         # https://github.com/raiden-network/raiden/issues/3185
-        skip_if_not_matrix,
+        skip_if_not_matrix,  # pylint: disable=unused-argument
         blockchain_type,
 ):
     """Test for https://github.com/raiden-network/raiden/issues/3196#issuecomment-449163888"""

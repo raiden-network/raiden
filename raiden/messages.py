@@ -154,7 +154,7 @@ def from_dict(data: dict) -> 'Message':
     return klass.from_dict(data)
 
 
-def message_from_sendevent(send_event: SendMessageEvent, our_address: Address) -> 'Message':
+def message_from_sendevent(send_event: SendMessageEvent) -> 'Message':
     if type(send_event) == SendLockedTransfer:
         message = LockedTransfer.from_event(send_event)
     elif type(send_event) == SendSecretReveal:
@@ -295,7 +295,12 @@ class SignedMessage(AuthenticatedMessage):
 class RetrieableMessage:
     """ Message, that supports a retry-queue. """
 
-    def __init__(self, *, message_identifier: MessageID, **kwargs):
+    def __init__(
+            self,
+            *,
+            message_identifier: MessageID,
+            **kwargs,  # pylint: disable=unused-argument
+    ):
         self.message_identifier = message_identifier
 
 

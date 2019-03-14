@@ -104,10 +104,12 @@ class RaidenFilter(logging.Filter):
         return self._log_filter.should_log(record.name, record.levelname)
 
 
-def add_greenlet_name(logger: str, method_name: str, event_dict: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Add greenlet_name to the event dict for greenlets that have a non-default name.
-    """
+def add_greenlet_name(
+        _logger: str,
+        _method_name: str,
+        event_dict: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Add greenlet_name to the event dict for greenlets that have a non-default name."""
     current_greenlet = gevent.getcurrent()
     greenlet_name = getattr(current_greenlet, 'name', None)
     if greenlet_name is not None and not greenlet_name.startswith('Greenlet-'):

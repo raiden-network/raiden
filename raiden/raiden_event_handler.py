@@ -119,7 +119,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             send_lock_expired: SendLockExpired,
     ):
-        lock_expired_message = message_from_sendevent(send_lock_expired, raiden.address)
+        lock_expired_message = message_from_sendevent(send_lock_expired)
         raiden.sign(lock_expired_message)
         raiden.transport.send_async(
             send_lock_expired.queue_identifier,
@@ -131,7 +131,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             send_locked_transfer: SendLockedTransfer,
     ):
-        mediated_transfer_message = message_from_sendevent(send_locked_transfer, raiden.address)
+        mediated_transfer_message = message_from_sendevent(send_locked_transfer)
         raiden.sign(mediated_transfer_message)
         raiden.transport.send_async(
             send_locked_transfer.queue_identifier,
@@ -143,7 +143,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             reveal_secret_event: SendSecretReveal,
     ):
-        reveal_secret_message = message_from_sendevent(reveal_secret_event, raiden.address)
+        reveal_secret_message = message_from_sendevent(reveal_secret_event)
         raiden.sign(reveal_secret_message)
         raiden.transport.send_async(
             reveal_secret_event.queue_identifier,
@@ -155,7 +155,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             balance_proof_event: SendBalanceProof,
     ):
-        unlock_message = message_from_sendevent(balance_proof_event, raiden.address)
+        unlock_message = message_from_sendevent(balance_proof_event)
         raiden.sign(unlock_message)
         raiden.transport.send_async(
             balance_proof_event.queue_identifier,
@@ -167,7 +167,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             secret_request_event: SendSecretRequest,
     ):
-        secret_request_message = message_from_sendevent(secret_request_event, raiden.address)
+        secret_request_message = message_from_sendevent(secret_request_event)
         raiden.sign(secret_request_message)
         raiden.transport.send_async(
             secret_request_event.queue_identifier,
@@ -179,7 +179,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             refund_transfer_event: SendRefundTransfer,
     ):
-        refund_transfer_message = message_from_sendevent(refund_transfer_event, raiden.address)
+        refund_transfer_message = message_from_sendevent(refund_transfer_event)
         raiden.sign(refund_transfer_message)
         raiden.transport.send_async(
             refund_transfer_event.queue_identifier,
@@ -191,7 +191,7 @@ class RaidenEventHandler:
             raiden: RaidenService,
             processed_event: SendProcessed,
     ):
-        processed_message = message_from_sendevent(processed_event, raiden.address)
+        processed_message = message_from_sendevent(processed_event)
         raiden.sign(processed_message)
         raiden.transport.send_async(
             processed_event.queue_identifier,
@@ -424,10 +424,7 @@ class RaidenEventHandler:
             merkle_tree_leaves = get_batch_unlock(our_state)
 
         try:
-            payment_channel.unlock(
-                merkle_tree_leaves=merkle_tree_leaves,
-                block_identifier=triggered_by_block_hash,
-            )
+            payment_channel.unlock(merkle_tree_leaves=merkle_tree_leaves)
         except ChannelOutdatedError as e:
             log.error(
                 str(e),

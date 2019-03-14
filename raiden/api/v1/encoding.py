@@ -53,10 +53,10 @@ class AddressField(fields.Field):
     }
 
     @staticmethod
-    def _serialize(value, attr, obj):
+    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
         return to_checksum_address(value)
 
-    def _deserialize(self, value, attr, data):
+    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
             self.fail('missing_prefix')
 
@@ -76,11 +76,11 @@ class AddressField(fields.Field):
 
 class DataField(fields.Field):
     @staticmethod
-    def _serialize(value, attr, obj):
+    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
         return data_encoder(value)
 
     @staticmethod
-    def _deserialize(value, attr, data):
+    def _deserialize(value, attr, data):  # pylint: disable=unused-argument
         return data_decoder(value)
 
 
