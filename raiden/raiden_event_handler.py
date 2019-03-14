@@ -272,8 +272,11 @@ class RaidenEventHandler:
             message_hash = EMPTY_HASH
 
         channel_proxy = raiden.chain.payment_channel(
-            token_network_address=channel_close_event.token_network_identifier,
-            channel_id=channel_close_event.channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=state_from_raiden(raiden).chain_id,
+                token_network_address=channel_close_event.token_network_identifier,
+                channel_identifier=channel_close_event.channel_identifier,
+            ),
         )
 
         channel_proxy.close(
@@ -292,20 +295,16 @@ class RaidenEventHandler:
         balance_proof = channel_update_event.balance_proof
 
         if balance_proof:
+            canonical_identifier = balance_proof.canonical_identifier
             channel = raiden.chain.payment_channel(
-                token_network_address=channel_update_event.token_network_identifier,
-                channel_id=channel_update_event.channel_identifier,
+                canonical_identifier=canonical_identifier,
             )
 
             non_closing_data = pack_balance_proof_update(
                 nonce=balance_proof.nonce,
                 balance_hash=balance_proof.balance_hash,
                 additional_hash=balance_proof.message_hash,
-                canonical_identifier=CanonicalIdentifier(
-                    chain_identifier=balance_proof.chain_id,
-                    token_network_address=balance_proof.token_network_identifier,
-                    channel_identifier=balance_proof.channel_identifier,
-                ),
+                canonical_identifier=canonical_identifier,
                 partner_signature=balance_proof.signature,
             )
             our_signature = raiden.signer.sign(data=non_closing_data)
@@ -340,8 +339,7 @@ class RaidenEventHandler:
         triggered_by_block_hash = channel_unlock_event.triggered_by_block_hash
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            token_network_address=canonical_identifier.token_network_address,
-            channel_id=canonical_identifier.channel_identifier,
+            canonical_identifier=canonical_identifier,
         )
         token_network: TokenNetwork = payment_channel.token_network
 
@@ -449,10 +447,8 @@ class RaidenEventHandler:
         triggered_by_block_hash = channel_settle_event.triggered_by_block_hash
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            token_network_address=channel_settle_event.token_network_identifier,
-            channel_id=channel_settle_event.channel_identifier,
+            canonical_identifier=canonical_identifier,
         )
-
         token_network_proxy: TokenNetwork = payment_channel.token_network
         participants_details = token_network_proxy.detail_participants(
             participant1=payment_channel.participant1,

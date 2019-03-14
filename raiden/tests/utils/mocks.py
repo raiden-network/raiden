@@ -7,6 +7,7 @@ from raiden.tests.utils import factories
 from raiden.transfer import node
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state_change import ActionInitChain
+from raiden.utils import CanonicalIdentifier
 from raiden.utils.signer import LocalSigner
 
 
@@ -35,8 +36,8 @@ class MockChain:
         # let's make a single mock token network for testing
         self.token_network = MockTokenNetwork()
 
-    def payment_channel(self, token_network_address, channel_id):
-        return MockPaymentChannel(self.token_network, channel_id)
+    def payment_channel(self, canonical_identifier: CanonicalIdentifier):
+        return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
 
 
 class MockRaidenService:

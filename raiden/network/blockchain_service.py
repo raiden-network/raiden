@@ -11,11 +11,11 @@ from raiden.network.proxies import (
     TokenNetworkRegistry,
 )
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
     BlockHash,
     BlockNumber,
-    ChannelID,
     PaymentNetworkID,
     T_ChannelID,
     TokenNetworkAddress,
@@ -192,9 +192,11 @@ class BlockChainService:
 
     def payment_channel(
             self,
-            token_network_address: TokenNetworkAddress,
-            channel_id: ChannelID,
+            canonical_identifier: CanonicalIdentifier,
     ) -> PaymentChannel:
+
+        token_network_address = TokenNetworkAddress(canonical_identifier.token_network_address)
+        channel_id = canonical_identifier.channel_identifier
 
         if not is_binary_address(token_network_address):
             raise ValueError('address must be a valid address')

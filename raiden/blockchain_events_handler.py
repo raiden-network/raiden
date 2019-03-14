@@ -83,8 +83,11 @@ def handle_channel_new(raiden: 'RaidenService', event: Event):
     # Raiden node is participant
     if is_participant:
         channel_proxy = raiden.chain.payment_channel(
-            token_network_identifier,
-            channel_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=views.state_from_raiden(raiden).chain_id,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
         )
         token_address = channel_proxy.token_address()
         channel_state = get_channel_state(
