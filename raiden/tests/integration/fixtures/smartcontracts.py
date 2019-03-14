@@ -18,6 +18,7 @@ from raiden.utils import privatekey_to_address, typing
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
 )
 
@@ -86,6 +87,23 @@ def deploy_secret_registry_and_return_address(deploy_client, contract_manager) -
         contract_name=CONTRACT_SECRET_REGISTRY,
         deploy_client=deploy_client,
         contract_manager=contract_manager,
+    )
+    return address
+
+
+@pytest.fixture(name='service_registry_address')
+def deploy_service_registry_and_return_address(
+        deploy_client,
+        contract_manager,
+        token_proxy,
+) -> typing.Address:
+    address = deploy_contract_web3(
+        contract_name=CONTRACT_SERVICE_REGISTRY,
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        # Not sure what to put in the registration fee token for testing, so using
+        # the same token we use for testing for now
+        _token_for_registration=token_proxy.address,
     )
     return address
 

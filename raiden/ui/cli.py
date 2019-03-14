@@ -138,6 +138,11 @@ def options(func):
             show_default=True,
         ),
         option(
+            '--service-registry-contract-address',
+            help='hex encoded address of the Service Registry contract.',
+            type=ADDRESS_TYPE,
+        ),
+        option(
             '--endpoint-registry-contract-address',
             help='hex encoded address of the Endpoint Registry contract.',
             type=ADDRESS_TYPE,

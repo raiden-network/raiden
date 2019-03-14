@@ -125,6 +125,7 @@ def restart_app(app):
         query_start_block=0,
         default_registry=app.raiden.default_registry,
         default_secret_registry=app.raiden.default_secret_registry,
+        default_service_registry=app.raiden.default_service_registry,
         transport=new_transport,
         raiden_event_handler=RaidenEventHandler(),
         message_handler=MessageHandler(),
