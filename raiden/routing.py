@@ -22,11 +22,11 @@ def get_best_routes(
         amount: int,
         previous_address: typing.Optional[typing.Address],
         config: Dict[str, Any],
-        privkey: bytes = None,
+        privkey: typing.Optional[bytes] = None,
 ) -> List[RouteState]:
     services_config = config.get('services', None)
 
-    if services_config and services_config['pathfinding_service_address'] is not None:
+    if privkey and services_config and services_config['pathfinding_service_address'] is not None:
         pfs_answer_ok, pfs_routes = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_id=token_network_id,
