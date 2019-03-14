@@ -167,55 +167,29 @@ def insecure_tls():
 
 # Convert `--transport all` to two separate invocations with `matrix` and `udp`
 def pytest_generate_tests(metafunc):
-    fixtures = metafunc.fixturenames
-
-    if 'transport' in fixtures:
+    if 'transport' in metafunc.fixturenames:
         transport = metafunc.config.getoption('transport')
-        parmeterize_private_rooms = True
         transport_and_privacy = list()
-        number_of_transports = list()
 
-        # Filter existing parametrization which is already done in the test
-        for mark in metafunc.definition.own_markers:
-            if mark.name == 'parametrize':
-                # Check if 'private_rooms' gets parameterized
-                if 'private_rooms' in mark.args[0]:
-                    parmeterize_private_rooms = False
-                # Check if more than one transport is used
-                if 'number_of_transports' in mark.args[0]:
-                    number_of_transports = mark.args[1]
         # avoid collecting test if 'skip_if_not_*'
-        if transport in ('udp', 'all') and 'skip_if_not_matrix' not in fixtures:
+        if transport in ('udp', 'all') and 'skip_if_not_matrix' not in metafunc.fixturenames:
             transport_and_privacy.append(('udp', None))
 
-        if transport in ('matrix', 'all') and 'skip_if_not_udp' not in fixtures:
-
-            if 'public_and_private_rooms' in fixtures:
-                if number_of_transports:
-                    transport_and_privacy.extend([
-                        ('matrix', [False for _ in range(number_of_transports[0])]),
-                        ('matrix', [True for _ in range(number_of_transports[0])]),
-                    ])
-                else:
-                    transport_and_privacy.extend([('matrix', False), ('matrix', True)])
+        if transport in ('matrix', 'all') and 'skip_if_not_udp' not in metafunc.fixturenames:
+            if 'public_and_private_rooms' in metafunc.fixturenames:
+                transport_and_privacy.extend([('matrix', False), ('matrix', True)])
             else:
-                if number_of_transports:
-                    transport_and_privacy.extend([
-                        ('matrix', [False for _ in range(number_of_transports[0])]),
-                    ])
-                else:
-                    transport_and_privacy.append(('matrix', False))
+                transport_and_privacy.append(('matrix', False))
 
-        if not parmeterize_private_rooms or 'private_rooms' not in fixtures:
-            # If the test does not expect the private_rooms parameter or parametrizes
-            # `private_rooms` itself, only give he transport values
+        if 'private_rooms' in metafunc.fixturenames:
+            metafunc.parametrize('transport,private_rooms', transport_and_privacy)
+        else:
+            # If the test function isn't taking the `private_rooms` fixture only give the
+            # transport values
             metafunc.parametrize(
                 'transport',
                 list(set(transport_type for transport_type, _ in transport_and_privacy)),
             )
-
-        else:
-            metafunc.parametrize('transport,private_rooms', transport_and_privacy)
 
 
 if sys.platform == 'darwin':
