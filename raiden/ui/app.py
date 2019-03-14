@@ -44,6 +44,7 @@ from raiden.utils.cli import get_matrix_servers
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
     ID_TO_NETWORKNAME,
@@ -185,6 +186,7 @@ def run_app(
         eth_rpc_endpoint,
         tokennetwork_registry_contract_address,
         secret_registry_contract_address,
+        service_registry_contract_address,
         endpoint_registry_contract_address,
         user_deposit_contract_address,
         listen_address,
@@ -366,6 +368,7 @@ def run_app(
     contract_addresses_given = (
         tokennetwork_registry_contract_address is not None and
         secret_registry_contract_address is not None and
+        service_registry_contract_address is not None and
         endpoint_registry_contract_address is not None
     )
 
@@ -431,6 +434,19 @@ def run_app(
         except AddressWrongContract:
             handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
 
+    try:
+        service_registry = blockchain_service.service_registry(
+            service_registry_contract_address or to_canonical_address(
+                contracts[CONTRACT_SERVICE_REGISTRY]['address'],
+            ),
+        )
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
+    except AddressWithoutCode:
+        handle_contract_no_code('service registry', service_registry_contract_address)
+    except AddressWrongContract:
+        handle_contract_wrong_address('secret registry', service_registry_contract_address)
+
     database_path = os.path.join(
         datadir,
         f'node_{pex(address)}',
@@ -477,6 +493,7 @@ def run_app(
             query_start_block=start_block,
             default_registry=token_network_registry,
             default_secret_registry=secret_registry,
+            default_service_registry=service_registry,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,

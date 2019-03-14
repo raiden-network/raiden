@@ -279,6 +279,7 @@ def create_apps(
         endpoint_discovery_services,
         token_network_registry_address,
         secret_registry_address,
+        service_registry_address,
         raiden_udp_ports,
         reveal_timeout,
         settle_timeout,
@@ -360,6 +361,7 @@ def create_apps(
 
         registry = blockchain.token_network_registry(token_network_registry_address)
         secret_registry = blockchain.secret_registry(secret_registry_address)
+        service_registry = blockchain.service_registry(service_registry_address)
 
         if use_matrix:
             transport = MatrixTransport(config['transport']['matrix'])
@@ -386,6 +388,7 @@ def create_apps(
             query_start_block=0,
             default_registry=registry,
             default_secret_registry=secret_registry,
+            default_service_registry=service_registry,
             transport=transport,
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,

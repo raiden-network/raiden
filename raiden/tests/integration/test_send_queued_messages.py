@@ -69,6 +69,7 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
         query_start_block=0,
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
+        default_service_registry=app0.raiden.default_service_registry,
         transport=new_transport,
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
@@ -190,6 +191,7 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         query_start_block=0,
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
+        default_service_registry=app0.raiden.default_service_registry,
         transport=MatrixTransport(
             app0.raiden.config['transport']['matrix'],
         ),
