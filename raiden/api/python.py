@@ -477,8 +477,7 @@ class RaidenAPI:
         token_network_address = token_network_registry.get_token_network(token_address)
         token_network_proxy = self.raiden.chain.token_network(token_network_address)
         channel_proxy = self.raiden.chain.payment_channel(
-            token_network_address=token_network_proxy.address,
-            channel_id=channel_state.identifier,
+            canonical_identifier=channel_state.canonical_identifier,
         )
 
         if total_deposit == 0:
