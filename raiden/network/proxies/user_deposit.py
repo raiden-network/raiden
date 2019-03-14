@@ -2,7 +2,7 @@ from eth_utils import is_binary_address, to_normalized_address
 
 from raiden.exceptions import InvalidAddress
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.utils.typing import Address, Balance
+from raiden.utils.typing import Address, Balance, BlockSpecification
 from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager
 
@@ -32,9 +32,10 @@ class UserDeposit:
 
         self.client = jsonrpc_client
 
-    def effective_balance(self, address: Address) -> Balance:
+    def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
+        """ The user's balance with planned withdrawals deducted. """
         fn = getattr(self.proxy.contract.functions, 'effectiveBalance')
-        balance = fn(address).call()
+        balance = fn(address).call(block_identifier=block_identifier)
 
         if balance == b'':
             raise RuntimeError(f"Call to 'effectiveBalance' returned nothing")
