@@ -27,7 +27,7 @@ PARITY_CHAIN_SPEC_STUB = {
     "engine": {
         "authorityRound": {
             "params": {
-                "stepDuration": 3,
+                "stepDuration": 1,
             },
         },
     },
