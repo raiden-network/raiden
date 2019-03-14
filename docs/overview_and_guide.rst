@@ -26,6 +26,8 @@ The Raiden binary should work on most 64bit GNU/Linux distributions without any 
 than an Ethereum client installed in your system (see below). The Raiden binary takes the same command line
 arguments as the ``raiden`` script.
 
+Raiden is also available as a PyPi package and can be installed with ``pip install raiden``.
+
 macOS
 *****
 
@@ -43,6 +45,8 @@ Or you can use Homebrew to install the most up to date binary::
 
 An Ethereum client is required in both cases. The Raiden binary takes the same command line
 arguments as the ``raiden`` script.
+
+Raiden is also available as a PyPi package and can be installed with ``pip install raiden``.
 
 Raspberry Pi
 ************
@@ -216,4 +220,4 @@ In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node,
 Select the desired Ethereum account when prompted, and type in the account's password.
 
 
-See the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden.
+Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical approach.
