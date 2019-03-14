@@ -1,10 +1,12 @@
 import random
 from unittest.mock import Mock, patch
 
+import pytest
 import requests
 from eth_utils import to_checksum_address
 
-from raiden.network.pathfinding import get_pfs_info
+from raiden.exceptions import ServiceRequestFailed
+from raiden.network.pathfinding import get_pfs_info, get_pfs_iou, update_iou
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.transfer import token_network
@@ -240,7 +242,7 @@ def test_routing_mocked_pfs_happy_path(
     response.configure_mock(status_code=200)
     response.json = Mock(return_value=json_data)
 
-    with patch.object(requests, 'post', return_value=response):
+    with patch.object(requests, 'post', return_value=response) as patched:
         routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
@@ -251,10 +253,22 @@ def test_routing_mocked_pfs_happy_path(
             config=CONFIG,
             privkey=PRIVKEY,
         )
-        assert routes[0].node_address == address2
-        assert routes[0].channel_identifier == channel_state2.identifier
-        assert routes[1].node_address == address1
-        assert routes[1].channel_identifier == channel_state1.identifier
+
+    assert routes[0].node_address == address2
+    assert routes[0].channel_identifier == channel_state2.identifier
+    assert routes[1].node_address == address1
+    assert routes[1].channel_identifier == channel_state1.identifier
+
+    # Check for iou arguments in request payload
+    payload = patched.call_args[1]['data']
+    config = CONFIG['services']
+    assert all(
+        k in payload
+        for k in ('amount', 'expiration_block', 'signature', 'sender', 'receiver')
+    )
+    assert payload['amount'] <= config['pathfinding_max_fee']
+    latest_expected_expiration = config['pathfinding_iou_timeout'] + chain_state.block_number
+    assert payload['expiration_block'] <= latest_expected_expiration
 
 
 def test_routing_mocked_pfs_request_error(
@@ -494,3 +508,49 @@ def test_routing_mocked_pfs_unavailable_peer(
         )
         assert routes[0].node_address == address2
         assert routes[0].channel_identifier == channel_state2.identifier
+
+
+def test_get_and_update_iou():
+
+    # RequestExceptions should be reraised as ServiceRequestFailed
+    with pytest.raises(ServiceRequestFailed):
+        with patch.object(requests, 'get', side_effect=requests.RequestException):
+            get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
+
+    # invalid JSON should raise a ServiceRequestFailed
+    response = Mock()
+    response.configure_mock(status_code=200)
+    response.json = Mock(side_effect=ValueError)
+    with pytest.raises(ServiceRequestFailed):
+        with patch.object(requests, 'get', return_value=response):
+            get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
+
+    response = Mock()
+    response.configure_mock(status_code=200)
+    response.json = Mock(return_value={'other_key': 'other_value'})
+    with patch.object(requests, 'get', return_value=response):
+        iou = get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
+    assert iou is None, 'get_pfs_iou should return None if pfs returns no iou.'
+
+    response = Mock()
+    response.configure_mock(status_code=200)
+    last_iou = dict(
+        amount=7,
+        sender=to_checksum_address(factories.UNIT_TRANSFER_INITIATOR),
+        receiver=to_checksum_address(factories.UNIT_TRANSFER_TARGET),
+        expiration_block=42,
+    )
+    response.json = Mock(return_value=dict(last_iou=last_iou))
+    with patch.object(requests, 'get', return_value=response):
+        iou = get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
+    assert iou == last_iou
+
+    new_iou_1 = update_iou(iou, PRIVKEY, amount=12)
+    assert new_iou_1['amount'] == 12
+    assert all(new_iou_1[k] == iou[k] for k in ('expiration_block', 'sender', 'receiver'))
+    assert 'signature' in new_iou_1
+
+    new_iou_2 = update_iou(iou, PRIVKEY, expiration_block=45)
+    assert new_iou_2['expiration_block'] == 45
+    assert all(new_iou_2[k] == iou[k] for k in ('amount', 'sender', 'receiver'))
+    assert 'signature' in new_iou_2
