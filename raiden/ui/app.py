@@ -402,10 +402,11 @@ def run_app(
         handle_contract_wrong_address('secret registry', secret_registry_contract_address)
 
     user_deposit = None
-    if (
-            environment_type == Environment.DEVELOPMENT and
-            ID_TO_NETWORKNAME[node_network_id] != 'smoketest'
-    ):
+    should_use_user_deposit = (
+        environment_type == Environment.DEVELOPMENT and
+        ID_TO_NETWORKNAME[node_network_id] != 'smoketest'
+    )
+    if should_use_user_deposit:
         services_deployment_data = get_contracts_deployed(
             chain_id=node_network_id,
             version=contracts_version,

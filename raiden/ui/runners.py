@@ -166,13 +166,14 @@ class NodeRunner:
             app_.raiden.chain.client.web3,
         ))
 
-        if (
-                app_.user_deposit and
-                (
-                    self._options['pathfinding_service_address'] or
-                    self._options['enable_monitoring']
-                )
-        ):
+        spawn_user_deposit_task = (
+            app_.user_deposit and
+            (
+                self._options['pathfinding_service_address'] or
+                self._options['enable_monitoring']
+            )
+        )
+        if spawn_user_deposit_task:
             # spawn a greenlet to handle RDN deposits check
             tasks.append(gevent.spawn(
                 check_rdn_deposits,
