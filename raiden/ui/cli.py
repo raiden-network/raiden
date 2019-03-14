@@ -147,7 +147,6 @@ def options(func):
             '--user-deposit-contract-address',
             help='hex encoded address of the User Deposit contract.',
             type=ADDRESS_TYPE,
-            show_default=True,
         ),
         option(
             '--console',
