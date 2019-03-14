@@ -26,7 +26,7 @@ from raiden.exceptions import (
 from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.pathfinding import get_pfs_info
+from raiden.network.pathfinding import configure_pfs
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
@@ -207,6 +207,7 @@ def run_app(
         pathfinding_service_address,
         pathfinding_max_paths,
         enable_monitoring,
+        use_basic_routing,
         config=None,
         extra_config=None,
         **kwargs,
@@ -247,7 +248,6 @@ def run_app(
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['transport']['udp']['nat_keepalive_timeout'] = timeout
     config['unrecoverable_error_should_crash'] = unrecoverable_error_should_crash
-    config['services']['pathfinding_service_address'] = pathfinding_service_address
     config['services']['pathfinding_max_paths'] = pathfinding_max_paths
     config['services']['monitoring_enabled'] = enable_monitoring
 
@@ -260,30 +260,6 @@ def run_app(
     node_network_id = int(web3.version.network)  # pylint: disable=no-member
     known_given_network_id = given_network_id in ID_TO_NETWORKNAME
     known_node_network_id = node_network_id in ID_TO_NETWORKNAME
-
-    if config['services']['pathfinding_service_address'] is None:
-        click.secho(
-            "There is no pathfinding service defined, basic routing will be used",
-        )
-    else:
-        pathfinding_service_info = get_pfs_info(config['services']['pathfinding_service_address'])
-        if not pathfinding_service_info:
-            click.secho(
-                "There is a error with the pathfinding service "
-                f"'{config['services']['pathfinding_service_address']}' "
-                f"you defined."
-                "Raiden will shut down. Please update your settings.",
-            )
-            sys.exit(1)
-        else:
-            click.secho(
-                f"'{pathfinding_service_info['message']}'. "
-                f"You have chosen pathfinding operator '{pathfinding_service_info['operator']}' "
-                f"with the running version '{pathfinding_service_info['version']}' "
-                f"on chain_id: '{pathfinding_service_info['network_info']['chain_id']}."
-                f"Requesting a path will cost you: '{pathfinding_service_info['price_info']}",
-            )
-            log.info('Using PFS', pfs_info=pathfinding_service_info)
 
     if node_network_id != given_network_id:
         if known_given_network_id and known_node_network_id:
@@ -446,6 +422,12 @@ def run_app(
         handle_contract_no_code('service registry', service_registry_contract_address)
     except AddressWrongContract:
         handle_contract_wrong_address('secret registry', service_registry_contract_address)
+
+    config['services']['pathfinding_service_address'] = configure_pfs(
+        pfs_address=pathfinding_service_address,
+        use_basic_routing=use_basic_routing,
+        service_registry=service_registry,
+    )
 
     database_path = os.path.join(
         datadir,

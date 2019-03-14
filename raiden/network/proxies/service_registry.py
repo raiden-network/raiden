@@ -52,3 +52,10 @@ class ServiceRegistry:
     def get_services_list(self, block_identifier: BlockSpecification) -> List[Address]:
         # count = self.service_count(block_identifier)
         return self.proxy.contract.service_addresses
+
+    def get_service_url(
+            self,
+            block_identifier: BlockSpecification,
+            service_hex_address,
+    ) -> str:
+        return self.proxy.contract.service_urls(service_hex_address).call()
