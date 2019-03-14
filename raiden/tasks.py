@@ -21,8 +21,8 @@ from raiden.constants import (
 )
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.proxies import UserDeposit
-from raiden.settings import MIN_RDN_THRESHOLD
-from raiden.utils import gas_reserve, pex
+from raiden.settings import MIN_REI_THRESHOLD
+from raiden.utils import gas_reserve, pex, to_rdn
 from raiden.utils.runnable import Runnable
 from raiden.utils.typing import Tuple
 
@@ -101,17 +101,17 @@ def check_gas_reserve(raiden):
 def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):
     """ Check periodically for RDN deposits in the user-deposits contract """
     while True:
-        rdn_balance = user_deposit_proxy.effective_balance(raiden.address)
-
-        if rdn_balance < MIN_RDN_THRESHOLD:
+        rei_balance = user_deposit_proxy.effective_balance(raiden.address, "latest")
+        rdn_balance = to_rdn(rei_balance)
+        if rei_balance < MIN_REI_THRESHOLD:
             click.secho(
                 (
-                    'WARNING\n'
-                    f"Your account's RDN balance of {rdn_balance} is below the "
-                    'minimum threshold. Provided that you have either a monitoring '
-                    'service or a path finding service activated, your node is not going'
-                    'to be able to pay those services which may lead to denial of service or '
-                    'loss of funds.'
+                    f'WARNING\n'
+                    f'Your account\'s RDN balance of {rdn_balance} is below the '
+                    f'minimum threshold. Provided that you have either a monitoring '
+                    f'service or a path finding service activated, your node is not going'
+                    f'to be able to pay those services which may lead to denial of service or '
+                    f'loss of funds.'
                 ),
                 fg='red',
             )
