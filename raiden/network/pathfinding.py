@@ -13,6 +13,21 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
         return None
 
 
+def get_pfs_iou(
+        url: str,
+        token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
+        **kwargs,
+) -> typing.Optional[typing.Dict]:
+    try:
+        return requests.get(
+            f'{url}/api/v1/{token_network_address}/payment/iou',
+            data=kwargs,
+            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
+        ).json().get('last_iou')
+    except (requests.exceptions.RequestException, ValueError) as e:
+        raise ServiceRequestFailed(str(e))
+
+
 def make_iou(
         config: typing.Dict[str, typing.Any],
         our_address: typing.Address,
@@ -30,6 +45,29 @@ def make_iou(
     iou.update(
         expiration_block=expiration,
         signature=sign_one_to_n_iou(privatekey=privkey, expiration=expiration, **iou),
+    )
+
+    return iou
+
+
+def update_iou(
+        iou: typing.Dict[str, typing.Any],
+        privkey: str,
+        amount: typing.Optional[typing.TokenAmount] = None,
+        expiration_block: typing.Optional[typing.BlockNumber] = None,
+) -> typing.Dict[str, typing.Any]:
+
+    if amount:
+        iou['amount'] = amount
+    if expiration_block:
+        iou['expiration_block'] = expiration_block
+
+    iou['signature'] = sign_one_to_n_iou(
+        privatekey=privkey,
+        expiration=iou['expiration_block'],
+        sender=iou['sender'],
+        receiver=iou['receiver'],
+        amount=iou['amount'],
     )
 
     return iou
