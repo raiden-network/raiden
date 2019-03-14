@@ -31,7 +31,7 @@ def get_pfs_iou(
 def make_iou(
         config: typing.Dict[str, typing.Any],
         our_address: typing.Address,
-        privkey: bytes,
+        privkey: str,
         block_number: typing.BlockNumber,
 ) -> typing.Dict:
     expiration = block_number + config['pathfinding_iou_timeout']
@@ -53,12 +53,11 @@ def make_iou(
 def update_iou(
         iou: typing.Dict[str, typing.Any],
         privkey: str,
-        amount: typing.Optional[typing.TokenAmount] = None,
+        added_amount: typing.TokenAmount = 0,
         expiration_block: typing.Optional[typing.BlockNumber] = None,
 ) -> typing.Dict[str, typing.Any]:
 
-    if amount:
-        iou['amount'] = amount
+    iou['amount'] += added_amount
     if expiration_block:
         iou['expiration_block'] = expiration_block
 
@@ -71,6 +70,22 @@ def update_iou(
     )
 
     return iou
+
+
+def create_current_iou(
+        config: typing.Dict[str, typing.Any],
+        token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
+        our_address: typing.Address,
+        privkey: str,
+        block_number: typing.BlockNumber,
+):
+    url = config['pathfinding_service_address']
+    latest_iou = get_pfs_iou(url, token_network_address)
+    if latest_iou is None:
+        return make_iou(config, our_address, privkey, block_number)
+    else:
+        added_amount = config['pathfinding_max_fee']
+        return update_iou(latest_iou, privkey, added_amount=added_amount)
 
 
 def query_paths(
@@ -87,7 +102,13 @@ def query_paths(
     url = service_config['pathfinding_service_address']
     payload = {'from': route_from, 'to': route_to, 'value': value, 'max_paths': max_paths}
 
-    payload.update(make_iou(service_config, our_address, privkey, current_block_number))
+    payload.update(create_current_iou(
+        config=service_config,
+        token_network_address=token_network_address,
+        our_address=our_address,
+        privkey=privkey,
+        block_number=current_block_number,
+    ))
 
     try:
         response = requests.post(
