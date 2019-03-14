@@ -822,7 +822,7 @@ class RaidenService(Runnable):
             self.start_health_check_for(queue_identifier.recipient)
 
             for event in event_queue:
-                message = message_from_sendevent(event, self.address)
+                message = message_from_sendevent(event)
                 self.sign(message)
                 self.transport.send_async(queue_identifier, message)
 

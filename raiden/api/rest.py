@@ -225,7 +225,13 @@ def api_error(errors, status_code):
 
 
 @parser.error_handler
-def handle_request_parsing_error(err, _req, _schema, _err_status_code, err_headers):
+def handle_request_parsing_error(
+        err,
+        _req,
+        _schema,
+        _err_status_code,
+        _err_headers,
+):
     """ This handles request parsing errors generated for example by schema
     field validation failing."""
     abort(HTTPStatus.BAD_REQUEST, errors=err.messages)
@@ -648,8 +654,14 @@ class RestAPI:
                 partner_address,
                 settle_timeout,
             )
-        except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
-                AddressWithoutCode, DuplicatedChannelError, TokenNotRegistered) as e:
+        except (
+                InvalidAddress,
+                InvalidSettleTimeout,
+                SamePeerAddress,
+                AddressWithoutCode,
+                DuplicatedChannelError,
+                TokenNotRegistered,
+        ) as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,

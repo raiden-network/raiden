@@ -13,7 +13,7 @@ KEYFILE_INVALID = 'UTC--2017-06-20T16-06-00.000000000Z--invalid'
 
 
 @pytest.fixture(scope='module')
-def keystore_mock(request):
+def keystore_mock():
     keystore = os.path.join(get_project_root(), 'tests', 'test_files')
     # Create inaccessible keyfile
     inaccessible_file = os.path.join(keystore, KEYFILE_INACCESSIBLE)

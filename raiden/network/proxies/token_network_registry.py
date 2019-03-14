@@ -84,7 +84,7 @@ class TokenNetworkRegistry:
 
         address = self.proxy.contract.functions.token_to_token_networks(
             to_checksum_address(token_address),
-        ).call()
+        ).call(block_identifier=block_identifier)
         address = to_canonical_address(address)
 
         if is_same_address(address, NULL_ADDRESS):
@@ -97,7 +97,6 @@ class TokenNetworkRegistry:
             token_address: TokenAddress,
             channel_participant_deposit_limit: TokenAmount,
             token_network_deposit_limit: TokenAmount,
-            given_block_identifier: BlockSpecification,
     ) -> Address:
         """
         Register token of `token_address` with the token network.
@@ -107,13 +106,11 @@ class TokenNetworkRegistry:
         return self._add_token(
             token_address=token_address,
             additional_arguments=[channel_participant_deposit_limit, token_network_deposit_limit],
-            given_block_identifier=given_block_identifier,
         )
 
     def add_token_without_limits(
             self,
             token_address: TokenAddress,
-            given_block_identifier: BlockSpecification,
     ) -> Address:
         """
         Register token of `token_address` with the token network.
@@ -123,14 +120,12 @@ class TokenNetworkRegistry:
         return self._add_token(
             token_address=token_address,
             additional_arguments=list(),
-            given_block_identifier=given_block_identifier,
         )
 
     def _add_token(
             self,
             token_address: TokenAddress,
             additional_arguments: List[Any],
-            given_block_identifier: BlockSpecification,
     ) -> Address:
         # given_block_identifier is not really used in this function yet as there
         # are no preconditions to check with the given block

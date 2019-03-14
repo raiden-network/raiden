@@ -18,9 +18,8 @@ from raiden.transfer.mediated_transfer.events import SendSecretReveal
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_send_queued_messages(
+def test_send_queued_messages(  # pylint: disable=unused-argument
         raiden_network,
-        number_of_nodes,
         deposit,
         token_addresses,
         network_wait,
@@ -136,9 +135,8 @@ def test_send_queued_messages(
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_payment_statuses_are_restored(
+def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
         raiden_network,
-        number_of_nodes,
         token_addresses,
         network_wait,
         skip_if_not_matrix,

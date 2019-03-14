@@ -73,7 +73,6 @@ def deploy_tokens_and_fund_accounts(
             deploy_service.token(token_address).transfer(
                 to_address=transfer_to,
                 amount=token_amount // len(participants),
-                given_block_identifier='latest',
             )
 
     return result

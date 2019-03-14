@@ -41,7 +41,7 @@ def test_token_network_deposit_race(
         token_network_address=token_network_address,
         contract_manager=contract_manager,
     )
-    token_proxy.transfer(c1_client.address, 10, 'latest')
+    token_proxy.transfer(c1_client.address, 10)
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
         settle_timeout=TEST_SETTLE_TIMEOUT_MIN,
@@ -71,7 +71,7 @@ def test_token_network_proxy_basics(
         chain_id,
         web3,
         contract_manager,
-        skip_if_parity,
+        skip_if_parity,  # pylint: disable=unused-argument
 ):
     # check settlement timeouts
     assert token_network_proxy.settlement_timeout_min() == TEST_SETTLE_TIMEOUT_MIN
@@ -97,8 +97,8 @@ def test_token_network_proxy_basics(
     )
 
     initial_token_balance = 100
-    token_proxy.transfer(c1_client.address, initial_token_balance, 'latest')
-    token_proxy.transfer(c2_client.address, initial_token_balance, 'latest')
+    token_proxy.transfer(c1_client.address, initial_token_balance)
+    token_proxy.transfer(c2_client.address, initial_token_balance)
     initial_balance_c1 = token_proxy.balance_of(c1_client.address)
     assert initial_balance_c1 == initial_token_balance
     initial_balance_c2 = token_proxy.balance_of(c2_client.address)
@@ -369,7 +369,7 @@ def test_token_network_proxy_update_transfer(
         chain_id,
         web3,
         contract_manager,
-        skip_if_parity,
+        skip_if_parity,  # pylint: disable=unused-argument
 ):
     """Tests channel lifecycle, with `update_transfer` before settling"""
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
@@ -398,8 +398,8 @@ def test_token_network_proxy_update_transfer(
     )
     # deposit to the channel
     initial_balance = 100
-    token_proxy.transfer(c1_client.address, initial_balance, 'latest')
-    token_proxy.transfer(c2_client.address, initial_balance, 'latest')
+    token_proxy.transfer(c1_client.address, initial_balance)
+    token_proxy.transfer(c2_client.address, initial_balance)
     initial_balance_c1 = token_proxy.balance_of(c1_client.address)
     assert initial_balance_c1 == initial_balance
     initial_balance_c2 = token_proxy.balance_of(c2_client.address)

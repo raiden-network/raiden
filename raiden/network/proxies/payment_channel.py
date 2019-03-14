@@ -215,12 +215,11 @@ class PaymentChannel:
             given_block_identifier=block_identifier,
         )
 
-    def unlock(self, merkle_tree_leaves: bytes, block_identifier: BlockSpecification):
+    def unlock(self, merkle_tree_leaves: bytes):
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
             partner=self.participant2,
             merkle_tree_leaves=merkle_tree_leaves,
-            given_block_identifier=block_identifier,
         )
 
     def settle(

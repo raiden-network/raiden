@@ -32,7 +32,7 @@ def test_join_global_room():
     client = Mock()
     client.api = api
 
-    def create_room(alias, is_public=False, invitees=None):
+    def create_room(alias, is_public=False, invitees=None):  # pylint: disable=unused-argument
         room = Room(client, f'!room_id:ownserver.com')
         room.canonical_alias = alias
         return room
@@ -62,7 +62,7 @@ def test_login_or_register_default_user():
     client.api = api
 
     # login will assert user is hex-encoded address and pw is server_name signed with that address
-    def mock_login(user, pw, sync=True):
+    def mock_login(user, pw, sync=True):  # pylint: disable=unused-argument
         recovered = recover(data=server_name.encode(), signature=decode_hex(pw))
         if recovered != to_canonical_address(user):
             raise MatrixRequestError(403)
@@ -154,7 +154,7 @@ def test_validate_userid_signature():
 def test_sort_servers_closest(monkeypatch):
     cnt = 0
 
-    def random_or_none(url):
+    def random_or_none(url):  # pylint: disable=unused-argument
         nonlocal cnt
         cnt += 1
         return random.random() if cnt % 3 else None

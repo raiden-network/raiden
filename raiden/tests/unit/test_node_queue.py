@@ -100,9 +100,7 @@ def test_delivered_processed_message_cleanup():
 
 
 def test_channel_closed_must_clear_ordered_messages(
-        chain_id,
         chain_state,
-        payment_network_state,
         token_network_state,
         netting_channel_state,
 ):

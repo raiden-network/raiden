@@ -16,7 +16,7 @@ def test_token_network_registry(
         deploy_client,
         contract_manager,
         token_network_registry_address,
-        skip_if_parity,
+        skip_if_parity,  # pylint: disable=unused-argument
 ):
     registry_address = to_canonical_address(token_network_registry_address)
 
@@ -36,7 +36,6 @@ def test_token_network_registry(
             token_address=bad_token_address,
             channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
             token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-            given_block_identifier='latest',
         )
     # create token network & register it
     test_token = deploy_token(
@@ -53,7 +52,6 @@ def test_token_network_registry(
         token_address=test_token_address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-        given_block_identifier='latest',
     )
 
     with pytest.raises(RaidenRecoverableError) as exc:
@@ -61,7 +59,6 @@ def test_token_network_registry(
             token_address=test_token_address,
             channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
             token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-            given_block_identifier='latest',
         )
 
         assert 'Token already registered' in str(exc)

@@ -26,7 +26,7 @@ _SYNAPSE_CONFIG_TEMPLATE = Path(__file__).parent.joinpath('synapse_config.yaml.t
 
 class MockDiscovery:
     @staticmethod
-    def get(node_address: bytes):
+    def get(node_address: bytes):  # pylint: disable=unused-argument
         return '127.0.0.1:5252'
 
 

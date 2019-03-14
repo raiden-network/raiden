@@ -167,7 +167,7 @@ class SQLiteStorage(SerializationBase):
 
         return last_id
 
-    def write_events(self, state_change_identifier, events, log_time):
+    def write_events(self, events):
         """ Save events.
 
         Args:
@@ -611,7 +611,7 @@ class SerializedSQLiteStorage(SQLiteStorage):
             (None, state_change_identifier, log_time, self.serializer.serialize(event))
             for event in events
         ]
-        return super().write_events(state_change_identifier, events_data, log_time)
+        return super().write_events(events_data)
 
     def get_latest_state_snapshot(self) -> Optional[Tuple[int, Any]]:
         """ Return the tuple of (last_applied_state_change_id, snapshot) or None"""

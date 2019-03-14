@@ -51,7 +51,7 @@ block_hash_cache_middleware = construct_simple_cache_middleware(
 # We could potentially move it to a common code repository
 def http_retry_with_backoff_middleware(
         make_request,
-        web3,
+        web3,  # pylint: disable=unused-argument
         errors: Tuple = (
             exceptions.ConnectionError,
             exceptions.HTTPError,
