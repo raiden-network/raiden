@@ -1,4 +1,5 @@
 import requests
+from eth_utils import to_hex
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT
 from raiden.exceptions import ServiceRequestFailed
@@ -31,7 +32,7 @@ def get_pfs_iou(
 def make_iou(
         config: typing.Dict[str, typing.Any],
         our_address: typing.Address,
-        privkey: str,
+        privkey: bytes,
         block_number: typing.BlockNumber,
 ) -> typing.Dict:
     expiration = block_number + config['pathfinding_iou_timeout']
@@ -44,7 +45,7 @@ def make_iou(
 
     iou.update(
         expiration_block=expiration,
-        signature=sign_one_to_n_iou(privatekey=privkey, expiration=expiration, **iou),
+        signature=sign_one_to_n_iou(privatekey=to_hex(privkey), expiration=expiration, **iou),
     )
 
     return iou
@@ -52,7 +53,7 @@ def make_iou(
 
 def update_iou(
         iou: typing.Dict[str, typing.Any],
-        privkey: str,
+        privkey: bytes,
         added_amount: typing.TokenAmount = 0,
         expiration_block: typing.Optional[typing.BlockNumber] = None,
 ) -> typing.Dict[str, typing.Any]:
@@ -62,7 +63,7 @@ def update_iou(
         iou['expiration_block'] = expiration_block
 
     iou['signature'] = sign_one_to_n_iou(
-        privatekey=privkey,
+        privatekey=to_hex(privkey),
         expiration=iou['expiration_block'],
         sender=iou['sender'],
         receiver=iou['receiver'],
@@ -76,16 +77,21 @@ def create_current_iou(
         config: typing.Dict[str, typing.Any],
         token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
         our_address: typing.Address,
-        privkey: str,
+        privkey: bytes,
         block_number: typing.BlockNumber,
-):
+) -> typing.Dict[str, typing.Any]:
     url = config['pathfinding_service_address']
     latest_iou = get_pfs_iou(url, token_network_address)
     if latest_iou is None:
-        return make_iou(config, our_address, privkey, block_number)
+        return make_iou(
+            config=config,
+            our_address=our_address,
+            privkey=privkey,
+            block_number=block_number,
+        )
     else:
         added_amount = config['pathfinding_max_fee']
-        return update_iou(latest_iou, privkey, added_amount=added_amount)
+        return update_iou(iou=latest_iou, privkey=privkey, added_amount=added_amount)
 
 
 def query_paths(
@@ -97,7 +103,7 @@ def query_paths(
         route_from: typing.InitiatorAddress,
         route_to: typing.TargetAddress,
         value: typing.TokenAmount,
-):
+) -> typing.List[typing.Dict[str, typing.Any]]:
     max_paths = service_config['pathfinding_max_paths']
     url = service_config['pathfinding_service_address']
     payload = {'from': route_from, 'to': route_to, 'value': value, 'max_paths': max_paths}
