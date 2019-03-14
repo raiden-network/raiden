@@ -163,7 +163,7 @@ CONFIG = {
     },
 }
 
-PRIVKEY = '0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+PRIVKEY = b'privkeyprivkeyprivkeyprivkeypriv'
 
 
 def get_best_routes_with_iou_request_mocked(
