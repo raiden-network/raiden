@@ -15,7 +15,6 @@ from raiden.transfer.views import list_channelstate_for_tokennetwork
 
 def test_list_channelstate_for_tokennetwork(
         chain_state,
-        token_network_state,
         payment_network_id,
         token_id,
 ):

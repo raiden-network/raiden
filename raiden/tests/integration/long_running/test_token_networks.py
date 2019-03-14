@@ -75,11 +75,12 @@ def saturated_count(connection_managers, registry_address, token_address):
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
-def test_participant_selection(  # pylint: disable=too-many-locals
+def test_participant_selection(
         raiden_network,
         token_addresses,
-        skip_if_parity,
+        skip_if_parity,  # pylint: disable=unused-argument
 ):
+    # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address
     token_address = token_addresses[0]
 
@@ -177,15 +178,17 @@ def test_participant_selection(  # pylint: disable=too-many-locals
     # create a transfer to the leaving node, so we have a channel to settle
     for app in raiden_network:
         sender = app.raiden
-        sender_channel = next((
-            channel_state
-            for channel_state in RaidenAPI(sender).get_channel_list(
-                registry_address=registry_address,
-                token_address=token_address,
-            )
-            if channel_state.our_state.contract_balance > 0 and
-            channel_state.partner_state.contract_balance > 0
-        ), None)  # choose a fully funded channel from sender
+        sender_channel = next(
+            (
+                channel_state
+                for channel_state in RaidenAPI(sender).get_channel_list(
+                    registry_address=registry_address,
+                    token_address=token_address,
+                )
+                if channel_state.our_state.contract_balance > 0 and
+                channel_state.partner_state.contract_balance > 0
+            ), None,
+        )  # choose a fully funded channel from sender
         if sender_channel:
             break
     registry_address = sender.default_registry.address

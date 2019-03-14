@@ -167,7 +167,7 @@ def test_version_check_api_rate_limit_exceeded():
             "https://developer.github.com/v3/#rate-limiting"}"""
             return json.loads(response.replace('\n', ''))
 
-    def fake_request(endpoint):
+    def fake_request(endpoint):  # pylint: disable=unused-argument
         return Response()
 
     with patch.object(requests, 'get', side_effect=fake_request):
@@ -182,7 +182,7 @@ def test_version_check():
         def json():
             return json.loads(LATEST_RELEASE_RESPONSE.replace('\n', ''))
 
-    def fake_request(endpoint):
+    def fake_request(endpoint):  # pylint: disable=unused-argument
         return Response()
 
     with patch.object(requests, 'get', side_effect=fake_request):

@@ -13,7 +13,6 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT256_MAX
 from raiden.network.proxies import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
-from raiden.transfer import views
 from raiden.utils import typing
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
@@ -32,16 +31,20 @@ IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
 
 def print_usage():
     print("\t{}use `{}raiden{}` to interact with the raiden service.".format(
-        OKBLUE, HEADER, OKBLUE))
+        OKBLUE, HEADER, OKBLUE,
+    ))
     print("\tuse `{}chain{}` to interact with the blockchain.".format(HEADER, OKBLUE))
     print("\tuse `{}discovery{}` to find raiden nodes.".format(HEADER, OKBLUE))
     print("\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
-        HEADER, OKBLUE))
+        HEADER, OKBLUE,
+    ))
     print("\tuse `{}denoms{}` for ether calculations".format(HEADER, OKBLUE))
     print("\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(
-        HEADER, OKBLUE))
+        HEADER, OKBLUE,
+    ))
     print("\tuse `{}lasterr(n){}` to see n lines of stderr. [default 1]".format(
-        HEADER, OKBLUE))
+        HEADER, OKBLUE,
+    ))
     print("\tuse `{}help(<topic>){}` for help on a specific topic.".format(HEADER, OKBLUE))
     print("\ttype `{}usage(){}` to see this help again.".format(HEADER, OKBLUE))
     print("\n" + ENDC)
@@ -240,12 +243,10 @@ class ConsoleTools:
                 token_address=token_address,
                 channel_participant_deposit_limit=UINT256_MAX,
                 token_network_deposit_limit=UINT256_MAX,
-                given_block_identifier=views.state_from_raiden(self._raiden).block_hash,
             )
         else:
             token_network_address = registry.add_token_without_limits(
                 token_address=token_address,
-                given_block_identifier=views.state_from_raiden(self._raiden).block_hash,
             )
 
         # Register the channel manager with the raiden registry

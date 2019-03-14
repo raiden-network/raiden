@@ -5,7 +5,6 @@ from raiden.messages import message_from_sendevent
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
-    HOP1,
     HOP2,
     HOP2_KEY,
     UNIT_SECRET,
@@ -190,32 +189,34 @@ def test_regression_send_refund():
         secrethash=UNIT_SECRETHASH,
     )
     token_network_identifier = first_payer_transfer.balance_proof.token_network_identifier
-    assert search_for_item(iteration.events, SendRefundTransfer, {
-        'recipient': setup.channels.partner_address(0),
-        'queue_identifier': {
+    assert search_for_item(
+        iteration.events, SendRefundTransfer, {
             'recipient': setup.channels.partner_address(0),
-            'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
-        },
-        'transfer': {
-            'payment_identifier': UNIT_TRANSFER_IDENTIFIER,
-            'token': UNIT_TOKEN_ADDRESS,
-            'balance_proof': {
-                'transferred_amount': 0,
-                'locked_amount': 10,
-                'locksroot': lock.lockhash,
-                'token_network_identifier': token_network_identifier,
+            'queue_identifier': {
+                'recipient': setup.channels.partner_address(0),
                 'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
-                'chain_id': first_payer_transfer.balance_proof.chain_id,
             },
-            'lock': {
-                'amount': lock.amount,
-                'expiration': lock.expiration,
-                'secrethash': lock.secrethash,
+            'transfer': {
+                'payment_identifier': UNIT_TRANSFER_IDENTIFIER,
+                'token': UNIT_TOKEN_ADDRESS,
+                'balance_proof': {
+                    'transferred_amount': 0,
+                    'locked_amount': 10,
+                    'locksroot': lock.lockhash,
+                    'token_network_identifier': token_network_identifier,
+                    'channel_identifier': first_payer_transfer.balance_proof.channel_identifier,
+                    'chain_id': first_payer_transfer.balance_proof.chain_id,
+                },
+                'lock': {
+                    'amount': lock.amount,
+                    'expiration': lock.expiration,
+                    'secrethash': lock.secrethash,
+                },
+                'initiator': UNIT_TRANSFER_INITIATOR,
+                'target': UNIT_TRANSFER_TARGET,
             },
-            'initiator': UNIT_TRANSFER_INITIATOR,
-            'target': UNIT_TRANSFER_TARGET,
         },
-    })
+    )
 
     duplicate_iteration = mediator.handle_refundtransfer(
         mediator_state=iteration.new_state,
@@ -281,9 +282,11 @@ def test_regression_mediator_send_lock_expired_with_new_block():
     msg = 'The payer has not yet sent an expired lock, the task can not be cleared yet'
     assert iteration.new_state is not None, msg
 
-    assert search_for_item(iteration.events, SendLockExpired, {
-        'secrethash': transfer.lock.secrethash,
-    })
+    assert search_for_item(
+        iteration.events, SendLockExpired, {
+            'secrethash': transfer.lock.secrethash,
+        },
+    )
     assert transfer.lock.secrethash not in channels[1].our_state.secrethashes_to_lockedlocks
 
 
@@ -316,7 +319,8 @@ def test_regression_mediator_task_no_routes():
             sender=HOP2,
             pkey=HOP2_KEY,
             transfer=factories.LockedTransferProperties(expiration=30),
-        ))
+        ),
+    )
 
     init_state_change = ActionInitMediator(
         channels.get_routes(),
@@ -353,7 +357,7 @@ def test_regression_mediator_task_no_routes():
         recipient=channels[0].our_state.address,
     )
     assert send_lock_expired
-    lock_expired_message = message_from_sendevent(send_lock_expired, HOP1)
+    lock_expired_message = message_from_sendevent(send_lock_expired)
     lock_expired_message.sign(LocalSigner(channels.partner_privatekeys[0]))
     balance_proof = balanceproof_from_envelope(lock_expired_message)
 
@@ -562,7 +566,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
         recipient=payer_channel.our_state.address,
     )
     assert send_lock_expired
-    expired_message = message_from_sendevent(send_lock_expired, setup.channels.our_address(0))
+    expired_message = message_from_sendevent(send_lock_expired)
     expired_message.sign(LocalSigner(setup.channels.partner_privatekeys[0]))
     balance_proof = balanceproof_from_envelope(expired_message)
 

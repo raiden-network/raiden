@@ -1,4 +1,3 @@
-import random
 from copy import copy
 from unittest.mock import Mock, patch
 
@@ -22,7 +21,6 @@ from raiden.utils import typing
 
 
 def create_square_network_topology(
-        payment_network_state,
         token_network_state,
         our_address,
 ) -> typing.Tuple[
@@ -32,7 +30,6 @@ def create_square_network_topology(
 ]:
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
-    pseudo_random_generator = random.Random()
     address1 = factories.make_address()
     address2 = factories.make_address()
     address3 = factories.make_address()
@@ -75,19 +72,15 @@ def create_square_network_topology(
     )
 
     channel_new_iteration1 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=token_network_state,
         state_change=channel_new_state_change1,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
 
     channel_new_iteration2 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration1.new_state,
         state_change=channel_new_state_change2,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
@@ -110,10 +103,8 @@ def create_square_network_topology(
     )
 
     channel_new_iteration3 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration2.new_state,
         state_change=channel_new_state_change3,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -134,10 +125,8 @@ def create_square_network_topology(
         block_hash=open_block_hash,
     )
     channel_new_iteration4 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration3.new_state,
         state_change=channel_new_state_change4,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -232,12 +221,10 @@ def test_get_pfs_info_request_error():
 @pytest.fixture
 def happy_path_fixture(
         chain_state,
-        payment_network_state,
         token_network_state,
         our_address,
 ):
     token_network_state, addresses, channel_states = create_square_network_topology(
-        payment_network_state=payment_network_state,
         token_network_state=token_network_state,
         our_address=our_address,
     )
@@ -349,12 +336,10 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
 
 def test_routing_mocked_pfs_request_error(
         chain_state,
-        payment_network_state,
         token_network_state,
         our_address,
 ):
     token_network_state, addresses, channel_states = create_square_network_topology(
-        payment_network_state=payment_network_state,
         token_network_state=token_network_state,
         our_address=our_address,
     )
@@ -384,12 +369,10 @@ def test_routing_mocked_pfs_request_error(
 
 def test_routing_mocked_pfs_bad_http_code(
         chain_state,
-        payment_network_state,
         token_network_state,
         our_address,
 ):
     token_network_state, addresses, channel_states = create_square_network_topology(
-        payment_network_state=payment_network_state,
         token_network_state=token_network_state,
         our_address=our_address,
     )
@@ -437,12 +420,10 @@ def test_routing_mocked_pfs_bad_http_code(
 
 def test_routing_mocked_pfs_invalid_json(
         chain_state,
-        payment_network_state,
         token_network_state,
         our_address,
 ):
     token_network_state, addresses, channel_states = create_square_network_topology(
-        payment_network_state=payment_network_state,
         token_network_state=token_network_state,
         our_address=our_address,
     )
@@ -476,12 +457,10 @@ def test_routing_mocked_pfs_invalid_json(
 
 def test_routing_mocked_pfs_invalid_json_structure(
         chain_state,
-        payment_network_state,
         token_network_state,
         our_address,
 ):
     token_network_state, addresses, channel_states = create_square_network_topology(
-        payment_network_state=payment_network_state,
         token_network_state=token_network_state,
         our_address=our_address,
     )
@@ -515,12 +494,10 @@ def test_routing_mocked_pfs_invalid_json_structure(
 
 def test_routing_mocked_pfs_unavailable_peer(
         chain_state,
-        payment_network_state,
         token_network_state,
         our_address,
 ):
     token_network_state, addresses, channel_states = create_square_network_topology(
-        payment_network_state=payment_network_state,
         token_network_state=token_network_state,
         our_address=our_address,
     )

@@ -24,7 +24,6 @@ def test_mediated_transfer(
         deposit,
         token_addresses,
         network_wait,
-        public_and_private_rooms,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -139,7 +138,6 @@ def test_mediated_transfer_with_entire_deposit(
         token_addresses,
         deposit,
         network_wait,
-        public_and_private_rooms,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -189,7 +187,7 @@ def test_mediated_transfer_messages_out_of_order(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_matrix,
+        skip_if_not_matrix,  # pylint: disable=unused-argument
 ):
     """Raiden must properly handle repeated locked transfer messages."""
     app0, app1, app2 = raiden_network

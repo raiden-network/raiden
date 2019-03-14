@@ -66,7 +66,8 @@ class HelpFormatter(click.HelpFormatter):
                 self.write(next(lines) + '\n')
                 for line in lines:
                     self.write('%*s%s\n' % (
-                        first_col + self.current_indent, '', line))
+                        first_col + self.current_indent, '', line,
+                    ))
             else:
                 self.write('\n')
 
@@ -208,7 +209,7 @@ def option_group(name: str, *options: List[Callable]):
 class AddressType(click.ParamType):
     name = 'address'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx):  # pylint: disable=unused-argument
         try:
             return address_checksum_and_decode(value)
         except InvalidAddress as e:
@@ -226,7 +227,7 @@ class LogLevelConfigType(click.ParamType):
         re.IGNORECASE,
     )
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx):  # pylint: disable=unused-argument
         if not self._validate_re.match(value):
             self.fail('Invalid log config format')
         level_config = dict()
@@ -333,7 +334,7 @@ class PathRelativePath(click.Path):
             except KeyError as ex:
                 raise RuntimeError(
                     'Subsitution parameter not found in context. '
-                    'Make sure it\'s defined with `is_eager=True`.'  # noqa: C812
+                    'Make sure it\'s defined with `is_eager=True`.',  # noqa: C812
                 ) from ex
 
         return super().convert(value, param, ctx)

@@ -39,11 +39,13 @@ def wait_for_batch_unlock(app, token_network_id, participant, partner):
             to_identifier='latest',
         )
 
-        unlock_event = search_for_item(state_changes, ContractReceiveChannelBatchUnlock, {
-            'token_network_identifier': token_network_id,
-            'participant': participant,
-            'partner': partner,
-        })
+        unlock_event = search_for_item(
+            state_changes, ContractReceiveChannelBatchUnlock, {
+                'token_network_identifier': token_network_id,
+                'participant': participant,
+                'partner': partner,
+            },
+        )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -115,17 +117,21 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
         to_identifier='latest',
     )
 
-    assert search_for_item(state_changes, ContractReceiveChannelClosed, {
-        'token_network_identifier': token_network_identifier,
-        'channel_identifier': channel_identifier,
-        'transaction_from': app1.raiden.address,
-        'block_number': channel_state.close_transaction.finished_block_number,
-    })
+    assert search_for_item(
+        state_changes, ContractReceiveChannelClosed, {
+            'token_network_identifier': token_network_identifier,
+            'channel_identifier': channel_identifier,
+            'transaction_from': app1.raiden.address,
+            'block_number': channel_state.close_transaction.finished_block_number,
+        },
+    )
 
-    assert search_for_item(state_changes, ContractReceiveChannelSettled, {
-        'token_network_identifier': token_network_identifier,
-        'channel_identifier': channel_identifier,
-    })
+    assert search_for_item(
+        state_changes, ContractReceiveChannelSettled, {
+            'token_network_identifier': token_network_identifier,
+            'channel_identifier': channel_identifier,
+        },
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -405,7 +411,12 @@ def test_batch_unlock(
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_settled_lock(token_addresses, raiden_network, deposit, skip_if_parity):
+def test_settled_lock(
+        token_addresses,
+        raiden_network,
+        deposit,
+        skip_if_parity,  # pylint: disable=unused-argument
+):
     """ Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
@@ -487,10 +498,7 @@ def test_settled_lock(token_addresses, raiden_network, deposit, skip_if_parity):
     # The transfer locksroot must not contain the unlocked lock, the
     # unlock must fail.
     with pytest.raises(RaidenUnrecoverableError):
-        netting_channel.unlock(
-            merkle_tree_leaves=batch_unlock,
-            block_identifier='latest',
-        )
+        netting_channel.unlock(merkle_tree_leaves=batch_unlock)
 
     expected_balance0 = initial_balance0 + deposit0 - amount * 2
     expected_balance1 = initial_balance1 + deposit1 + amount * 2

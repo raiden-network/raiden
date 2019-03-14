@@ -368,11 +368,7 @@ def test_batch_query_event_records():
             log_time,
             event_data,
         )
-        storage.write_events(
-            state_change_identifier=state_change_identifier,
-            events=[event_tuple],
-            log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
-        )
+        storage.write_events([event_tuple])
 
     # Test that querying the events in batches of 1 works
     events = []

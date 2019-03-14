@@ -31,7 +31,7 @@ def test_recovery_happy_case(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
+        skip_if_not_udp,  # pylint: disable=unused-argument
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -166,7 +166,7 @@ def test_recovery_unhappy_case(
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
+        skip_if_not_udp,  # pylint: disable=unused-argument
         retry_timeout,
 ):
     app0, app1, app2 = raiden_network
@@ -251,10 +251,12 @@ def test_recovery_unhappy_case(
         to_identifier='latest',
     )
 
-    assert search_for_item(state_changes, ContractReceiveChannelSettled, {
-        'token_network_identifier': token_network_identifier,
-        'channel_identifier': channel01.identifier,
-    })
+    assert search_for_item(
+        state_changes, ContractReceiveChannelSettled, {
+            'token_network_identifier': token_network_identifier,
+            'channel_identifier': channel01.identifier,
+        },
+    )
 
 
 @pytest.mark.parametrize('deposit', [10])
@@ -262,11 +264,9 @@ def test_recovery_unhappy_case(
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_recovery_blockchain_events(
         raiden_network,
-        number_of_nodes,
-        deposit,
         token_addresses,
         network_wait,
-        skip_if_not_udp,
+        skip_if_not_udp,  # pylint: disable=unused-argument
 ):
     """ Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted

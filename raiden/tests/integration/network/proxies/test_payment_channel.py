@@ -12,7 +12,7 @@ from raiden.utils.signer import LocalSigner
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
 
 
-def test_payment_channel_proxy_basics(
+def test_payment_channel_proxy_basics(  # pylint: disable=unused-argument
         token_network_proxy,
         private_keys,
         token_proxy,
@@ -82,7 +82,7 @@ def test_payment_channel_proxy_basics(
 
     # test deposits
     initial_token_balance = 100
-    token_proxy.transfer(c1_client.address, initial_token_balance, 'latest')
+    token_proxy.transfer(c1_client.address, initial_token_balance)
     initial_balance_c1 = token_proxy.balance_of(c1_client.address)
     assert initial_balance_c1 == initial_token_balance
     initial_balance_c2 = token_proxy.balance_of(c2_client.address)
@@ -152,7 +152,7 @@ def test_payment_channel_proxy_basics(
     assert len(events) == 4  # ChannelOpened, ChannelNewDeposit, ChannelClosed, ChannelSettled
 
 
-def test_payment_channel_outdated_channel_close(
+def test_payment_channel_outdated_channel_close(  # pylint: disable=unused-argument
         token_network_proxy,
         private_keys,
         chain_id,

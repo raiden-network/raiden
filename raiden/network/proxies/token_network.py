@@ -721,7 +721,6 @@ class TokenNetwork:
         token.approve(
             allowed_address=Address(self.address),
             allowance=amount_to_deposit,
-            given_block_identifier=block_identifier,
         )
 
         return amount_to_deposit, log_details
@@ -1203,7 +1202,6 @@ class TokenNetwork:
             channel_identifier: ChannelID,
             partner: Address,
             merkle_tree_leaves: MerkleTreeLeaves,
-            given_block_identifier: BlockSpecification,
     ):
         # Note: given_block_identifier
         # is unused at the moment here

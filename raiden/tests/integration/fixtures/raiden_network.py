@@ -55,7 +55,6 @@ def raiden_chain(
         unrecoverable_error_should_crash,
         local_matrix_servers,
         private_rooms,
-        retry_timeout,
         blockchain_type,
         contracts_path,
 ):
@@ -121,8 +120,6 @@ def raiden_chain(
         token_addresses=token_addresses,
         channel_individual_deposit=deposit,
         channel_settle_timeout=settle_timeout,
-        token_network_registry_address=token_network_registry_address,
-        retry_timeout=retry_timeout,
     )
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, nodes are unreachable')
@@ -163,7 +160,6 @@ def raiden_network(
         unrecoverable_error_should_crash,
         local_matrix_servers,
         private_rooms,
-        retry_timeout,
         blockchain_type,
         contracts_path,
 ):
@@ -212,8 +208,6 @@ def raiden_network(
         token_addresses=token_addresses,
         channel_individual_deposit=deposit,
         channel_settle_timeout=settle_timeout,
-        token_network_registry_address=token_network_registry_address,
-        retry_timeout=retry_timeout,
     )
 
     exception = RuntimeError('`raiden_network` fixture setup failed, nodes are unreachable')

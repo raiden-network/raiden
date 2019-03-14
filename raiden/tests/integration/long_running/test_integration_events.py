@@ -598,7 +598,7 @@ def test_secret_revealed_on_chain(
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_clear_closed_queue(raiden_network, token_addresses, deposit, network_wait):
+def test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     """ Closing a channel clears the respective message queue. """
     app0, app1 = raiden_network
 

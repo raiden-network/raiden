@@ -50,7 +50,6 @@ class Token:
             self,
             allowed_address: Address,
             allowance: TokenAmount,
-            given_block_identifier: BlockSpecification,
     ):
         """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
 
@@ -166,7 +165,6 @@ class Token:
             self,
             to_address: Address,
             amount: TokenAmount,
-            given_block_identifier: BlockSpecification,
     ):
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction

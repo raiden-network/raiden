@@ -327,12 +327,10 @@ def setup_raiden(
             token_address=to_canonical_address(token.contract.address),
             channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
             token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-            given_block_identifier='latest',
         )
     else:
         registry.add_token_without_limits(
             token_address=to_canonical_address(token.contract.address),
-            given_block_identifier='latest',
         )
 
     print_step('Setting up Raiden')

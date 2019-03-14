@@ -895,10 +895,14 @@ def test_handle_offchain_secretreveal():
 
     initiator_state = get_transfer_at_index(setup.current_state, 0)
     payment_identifier = initiator_state.transfer_description.payment_identifier
-    balance_proof = search_for_item(iteration.events, SendBalanceProof, {
-        'message_identifier': message_identifier,
-        'payment_identifier': payment_identifier,
-    })
+    balance_proof = search_for_item(
+        iteration.events,
+        SendBalanceProof,
+        {
+            'message_identifier': message_identifier,
+            'payment_identifier': payment_identifier,
+        },
+    )
     assert balance_proof is not None
 
 
@@ -979,27 +983,35 @@ def test_initiator_lock_expired():
         block_number,
     )
 
-    lock_expired = search_for_item(iteration.events, SendLockExpired, {
-        'balance_proof': {
-            'nonce': 2,
-            'transferred_amount': 0,
-            'locked_amount': 0,
+    lock_expired = search_for_item(
+        iteration.events,
+        SendLockExpired,
+        {
+            'balance_proof': {
+                'nonce': 2,
+                'transferred_amount': 0,
+                'locked_amount': 0,
+            },
+            'secrethash': transfer.lock.secrethash,
+            'recipient': channel1.partner_state.address,
         },
-        'secrethash': transfer.lock.secrethash,
-        'recipient': channel1.partner_state.address,
-    })
+    )
     assert lock_expired is not None
 
     assert search_for_item(iteration.events, EventUnlockFailed, {})
 
     # Since the lock expired make sure we also get the payment sent failed event
-    payment_failed = search_for_item(iteration.events, EventPaymentSentFailed, {
-        'payment_network_identifier': channel1.payment_network_identifier,
-        'token_network_identifier': channel1.token_network_identifier,
-        'identifier': UNIT_TRANSFER_IDENTIFIER,
-        'target': transfer.target,
-        'reason': 'lock expired',
-    })
+    payment_failed = search_for_item(
+        iteration.events,
+        EventPaymentSentFailed,
+        {
+            'payment_network_identifier': channel1.payment_network_identifier,
+            'token_network_identifier': channel1.token_network_identifier,
+            'identifier': UNIT_TRANSFER_IDENTIFIER,
+            'target': transfer.target,
+            'reason': 'lock expired',
+        },
+    )
     assert payment_failed is not None
 
     assert transfer.lock.secrethash not in channel1.our_state.secrethashes_to_lockedlocks
@@ -1129,10 +1141,14 @@ def test_initiator_handle_contract_receive_secret_reveal():
     )
 
     payment_identifier = initiator_state.transfer_description.payment_identifier
-    balance_proof = search_for_item(iteration.events, SendBalanceProof, {
-        'message_identifier': message_identifier,
-        'payment_identifier': payment_identifier,
-    })
+    balance_proof = search_for_item(
+        iteration.events,
+        SendBalanceProof,
+        {
+            'message_identifier': message_identifier,
+            'payment_identifier': payment_identifier,
+        },
+    )
     assert balance_proof is not None
 
 
@@ -1159,7 +1175,6 @@ def test_initiator_handle_contract_receive_emptyhash_secret_reveal():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
-        block_number=transfer.lock.expiration,
     )
     assert len(iteration.events) == 0
     # make sure the original lock wasn't moved
@@ -1190,7 +1205,6 @@ def test_initiator_handle_contract_receive_secret_reveal_expired():
         state_change=state_change,
         channelidentifiers_to_channels=setup.channel_map,
         pseudo_random_generator=setup.prng,
-        block_number=transfer.lock.expiration + 1,
     )
 
     assert search_for_item(iteration.events, SendBalanceProof, {}) is None
@@ -1248,7 +1262,6 @@ def test_initiator_handle_contract_receive_after_channel_closed():
         state_change=state_change,
         channelidentifiers_to_channels=channel_map,
         pseudo_random_generator=setup.prng,
-        block_number=transfer.lock.expiration + 1,
     )
     initiator_task = get_transfer_at_index(setup.current_state, 0)
     secrethash = initiator_task.transfer_description.secrethash

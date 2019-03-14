@@ -533,7 +533,7 @@ def make_merkletree_leaves(width: int) -> typing.List[typing.Secret]:
 
 
 @singledispatch
-def create(properties, defaults=None):
+def create(properties, defaults=None):  # pylint: disable=unused-argument
     """Create objects from their associated property class.
 
     E. g. a NettingChannelState from NettingChannelStateProperties. For any field in

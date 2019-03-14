@@ -227,12 +227,10 @@ class RaidenAPI:
                     token_address=token_address,
                     channel_participant_deposit_limit=channel_participant_deposit_limit,
                     token_network_deposit_limit=token_network_deposit_limit,
-                    given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
                 )
             else:
                 return registry.add_token_without_limits(
                     token_address=token_address,
-                    given_block_identifier=views.state_from_raiden(self.raiden).block_hash,
                 )
         except RaidenRecoverableError as e:
             if 'Token already registered' in str(e):
@@ -516,7 +514,7 @@ class RaidenAPI:
             raise InsufficientFunds(msg)
 
         # set_total_deposit calls approve
-        # token.approve(netcontract_address, addendum, 'latest')
+        # token.approve(netcontract_address, addendum)
         channel_proxy.set_total_deposit(
             total_deposit=total_deposit,
             block_identifier=views.state_from_raiden(self.raiden).block_hash,

@@ -51,7 +51,7 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture(scope='session', autouse=True)
-def enable_gevent_monitoring_signal(request):
+def enable_gevent_monitoring_signal():
     """ Install a signal handler for SIGUSR1 that executes gevent.util.print_run_info().
     This can help evaluating the gevent greenlet tree.
     See http://www.gevent.org/monitoring.html for more information.
@@ -224,7 +224,7 @@ if sys.platform == 'darwin':
     # we override the pytest tmpdir machinery to produce shorter paths.
 
     @pytest.fixture(scope='session', autouse=True)
-    def _tmpdir_short(request):
+    def _tmpdir_short():
         """Shorten tmpdir paths"""
         from _pytest.tmpdir import TempPathFactory
 

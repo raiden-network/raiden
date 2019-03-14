@@ -1,5 +1,4 @@
 import copy
-import random
 
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
@@ -27,12 +26,10 @@ from raiden.utils import sha3
 def test_contract_receive_channelnew_must_be_idempotent():
     block_number = 10
     block_hash = factories.make_block_hash()
-    pseudo_random_generator = random.Random()
 
     token_network_id = factories.make_address()
     token_id = factories.make_address()
     token_network_state = TokenNetworkState(token_network_id, token_id)
-    payment_network_identifier = factories.make_payment_network_identifier()
 
     amount = 30
     our_balance = amount + 50
@@ -47,10 +44,8 @@ def test_contract_receive_channelnew_must_be_idempotent():
     )
 
     token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=token_network_state,
         state_change=state_change1,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=block_hash,
     )
@@ -64,10 +59,8 @@ def test_contract_receive_channelnew_must_be_idempotent():
 
     # replay the ContractReceiveChannelNew state change
     iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=token_network_state,
         state_change=state_change2,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=block_number,
         block_hash=block_hash,
     )
@@ -84,12 +77,10 @@ def test_contract_receive_channelnew_must_be_idempotent():
 def test_channel_settle_must_properly_cleanup():
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
-    pseudo_random_generator = random.Random()
 
     token_network_id = factories.make_address()
     token_id = factories.make_address()
     token_network_state = TokenNetworkState(token_network_id, token_id)
-    payment_network_identifier = factories.make_payment_network_identifier()
 
     amount = 30
     our_balance = amount + 50
@@ -103,10 +94,8 @@ def test_channel_settle_must_properly_cleanup():
     )
 
     channel_new_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=token_network_state,
         state_change=channel_new_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
@@ -122,10 +111,8 @@ def test_channel_settle_must_properly_cleanup():
     )
 
     channel_closed_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_new_iteration.new_state,
         state_change=channel_close_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -139,10 +126,8 @@ def test_channel_settle_must_properly_cleanup():
     )
 
     channel_settled_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_closed_iteration.new_state,
         state_change=channel_settled_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -159,7 +144,6 @@ def test_channel_data_removed_after_unlock(
 ):
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
-    pseudo_random_generator = random.Random()
     pkey, address = factories.make_privkey_address()
 
     amount = 30
@@ -171,7 +155,6 @@ def test_channel_data_removed_after_unlock(
         partner_address=address,
         token_network_identifier=token_network_state.address,
     )
-    payment_network_identifier = factories.make_payment_network_identifier()
 
     channel_new_state_change = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
@@ -181,10 +164,8 @@ def test_channel_data_removed_after_unlock(
     )
 
     channel_new_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=token_network_state,
         state_change=channel_new_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
@@ -226,10 +207,8 @@ def test_channel_data_removed_after_unlock(
     )
 
     channel_closed_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_new_iteration.new_state,
         state_change=channel_close_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -243,10 +222,8 @@ def test_channel_data_removed_after_unlock(
     )
 
     channel_settled_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_closed_iteration.new_state,
         state_change=channel_settled_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -269,10 +246,8 @@ def test_channel_data_removed_after_unlock(
         block_hash=factories.make_block_hash(),
     )
     channel_unlock_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_settled_iteration.new_state,
         state_change=channel_batch_unlock_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=unlock_blocknumber,
         block_hash=factories.make_block_hash(),
     )
@@ -293,7 +268,6 @@ def test_mediator_clear_pairs_after_batch_unlock(
     """
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
-    pseudo_random_generator = random.Random()
     pkey, address = factories.make_privkey_address()
 
     amount = 30
@@ -305,7 +279,6 @@ def test_mediator_clear_pairs_after_batch_unlock(
         partner_address=address,
         token_network_identifier=token_network_state.address,
     )
-    payment_network_identifier = factories.make_payment_network_identifier()
 
     channel_new_state_change = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
@@ -315,10 +288,8 @@ def test_mediator_clear_pairs_after_batch_unlock(
     )
 
     channel_new_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=token_network_state,
         state_change=channel_new_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
@@ -361,10 +332,8 @@ def test_mediator_clear_pairs_after_batch_unlock(
     )
 
     channel_closed_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_new_iteration.new_state,
         state_change=channel_close_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -378,10 +347,8 @@ def test_mediator_clear_pairs_after_batch_unlock(
     )
 
     channel_settled_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_closed_iteration.new_state,
         state_change=channel_settled_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -440,7 +407,6 @@ def test_multiple_channel_states(
 ):
     open_block_number = 10
     open_block_hash = factories.make_block_hash()
-    pseudo_random_generator = random.Random()
     pkey, address = factories.make_privkey_address()
 
     amount = 30
@@ -452,7 +418,6 @@ def test_multiple_channel_states(
         partner_address=address,
         token_network_identifier=token_network_state.address,
     )
-    payment_network_identifier = factories.make_payment_network_identifier()
 
     channel_new_state_change = ContractReceiveChannelNew(
         transaction_hash=factories.make_transaction_hash(),
@@ -462,10 +427,8 @@ def test_multiple_channel_states(
     )
 
     channel_new_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=token_network_state,
         state_change=channel_new_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
@@ -507,10 +470,8 @@ def test_multiple_channel_states(
     )
 
     channel_closed_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_new_iteration.new_state,
         state_change=channel_close_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -524,10 +485,8 @@ def test_multiple_channel_states(
     )
 
     channel_settled_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_closed_iteration.new_state,
         state_change=channel_settled_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -551,10 +510,8 @@ def test_multiple_channel_states(
     )
 
     channel_new_iteration = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=token_network_state,
         state_change=channel_new_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
@@ -571,7 +528,6 @@ def test_routing_updates(
         our_address,
 ):
     open_block_number = 10
-    pseudo_random_generator = random.Random()
     address1 = factories.make_address()
     address2 = factories.make_address()
     address3 = factories.make_address()
@@ -584,7 +540,6 @@ def test_routing_updates(
         partner_balance=our_balance,
         partner_address=address1,
     )
-    payment_network_identifier = factories.make_payment_network_identifier()
 
     open_block_hash = factories.make_block_hash()
     # create a new channel as participant, check graph update
@@ -596,10 +551,8 @@ def test_routing_updates(
     )
 
     channel_new_iteration1 = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=token_network_state,
         state_change=channel_new_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_hash,
     )
@@ -625,10 +578,8 @@ def test_routing_updates(
     )
 
     channel_new_iteration2 = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_new_iteration1.new_state,
         state_change=channel_new_state_change,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -653,10 +604,8 @@ def test_routing_updates(
     )
 
     channel_closed_iteration1 = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_new_iteration2.new_state,
         state_change=channel_close_state_change1,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -673,10 +622,8 @@ def test_routing_updates(
     )
 
     channel_closed_iteration2 = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_closed_iteration1.new_state,
         state_change=channel_close_state_change2,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number,
         block_hash=closed_block_hash,
     )
@@ -700,10 +647,8 @@ def test_routing_updates(
     )
 
     channel_closed_iteration3 = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_closed_iteration2.new_state,
         state_change=channel_close_state_change3,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -723,10 +668,8 @@ def test_routing_updates(
     )
 
     channel_closed_iteration4 = token_network.state_transition(
-        payment_network_identifier=payment_network_identifier,
         token_network_state=channel_closed_iteration3.new_state,
         state_change=channel_close_state_change4,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=closed_block_number + 10,
         block_hash=closed_block_plus_10_hash,
     )
@@ -740,13 +683,11 @@ def test_routing_updates(
 
 def test_routing_issue2663(
         chain_state,
-        payment_network_state,
         token_network_state,
         our_address,
 ):
     open_block_number = 10
     open_block_number_hash = factories.make_block_hash()
-    pseudo_random_generator = random.Random()
     address1 = factories.make_address()
     address2 = factories.make_address()
     address3 = factories.make_address()
@@ -789,19 +730,15 @@ def test_routing_issue2663(
     )
 
     channel_new_iteration1 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=token_network_state,
         state_change=channel_new_state_change1,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
     )
 
     channel_new_iteration2 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration1.new_state,
         state_change=channel_new_state_change2,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
     )
@@ -824,10 +761,8 @@ def test_routing_issue2663(
     )
 
     channel_new_iteration3 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration2.new_state,
         state_change=channel_new_state_change3,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -848,10 +783,8 @@ def test_routing_issue2663(
         block_hash=open_block_number_hash,
     )
     channel_new_iteration4 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration3.new_state,
         state_change=channel_new_state_change4,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -983,13 +916,11 @@ def test_routing_issue2663(
 
 def test_routing_priority(
         chain_state,
-        payment_network_state,
         token_network_state,
         our_address,
 ):
     open_block_number = 10
     open_block_number_hash = factories.make_block_hash()
-    pseudo_random_generator = random.Random()
     address1 = factories.make_address()
     address2 = factories.make_address()
     address3 = factories.make_address()
@@ -1039,19 +970,15 @@ def test_routing_priority(
     )
 
     channel_new_iteration1 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=token_network_state,
         state_change=channel_new_state_change1,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
     )
 
     channel_new_iteration2 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration1.new_state,
         state_change=channel_new_state_change2,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
     )
@@ -1070,10 +997,8 @@ def test_routing_priority(
     )
 
     channel_new_iteration3 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration2.new_state,
         state_change=channel_new_state_change3,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -1091,10 +1016,8 @@ def test_routing_priority(
     )
 
     channel_new_iteration4 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration3.new_state,
         state_change=channel_new_state_change4,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -1112,10 +1035,8 @@ def test_routing_priority(
     )
 
     channel_new_iteration5 = token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration4.new_state,
         state_change=channel_new_state_change5,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )
@@ -1133,10 +1054,8 @@ def test_routing_priority(
     )
 
     token_network.state_transition(
-        payment_network_identifier=payment_network_state.address,
         token_network_state=channel_new_iteration5.new_state,
         state_change=channel_new_state_change6,
-        pseudo_random_generator=pseudo_random_generator,
         block_number=open_block_number + 10,
         block_hash=factories.make_block_hash(),
     )

@@ -107,7 +107,7 @@ def test_register_token(raiden_network, token_amount, contract_manager, retry_ti
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_register_token_insufficient_eth(
+def test_register_token_insufficient_eth(  # pylint: disable=unused-argument
         raiden_network,
         token_amount,
         contract_manager,
@@ -410,7 +410,7 @@ def test_funds_check_for_openchannel(raiden_network, token_addresses):
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('reveal_timeout', [8])
 @pytest.mark.parametrize('settle_timeout', [30])
-def test_payment_timing_out_if_partner_does_not_respond(
+def test_payment_timing_out_if_partner_does_not_respond(  # pylint: disable=unused-argument
         raiden_network,
         token_addresses,
         reveal_timeout,
@@ -427,7 +427,7 @@ def test_payment_timing_out_if_partner_does_not_respond(
     app0, app1 = raiden_network
     token_address = token_addresses[0]
 
-    def fake_receive(room, event):
+    def fake_receive(room, event):  # pylint: disable=unused-argument
         return True
 
     with patch.object(app1.raiden.transport, '_handle_message', side_effect=fake_receive):
@@ -514,14 +514,7 @@ def test_set_deposit_limit_crash(raiden_network, token_amount, contract_manager,
 @pytest.mark.parametrize('deposit', [10])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_create_monitoring_request(
-        raiden_network,
-        number_of_nodes,
-        deposit,
-        token_addresses,
-        network_wait,
-        chain_id,
-):
+def test_create_monitoring_request(raiden_network, token_addresses):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)

@@ -60,7 +60,6 @@ def deploy_all_tokens_register_and_return_their_addresses(
                     token_address=token,
                     channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
                     token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-                    given_block_identifier='latest',
                 )
             else:
                 registry.add_token_without_limits(
@@ -154,7 +153,6 @@ def register_token_and_return_the_network_proxy(
         token_address=token_proxy.address,
         channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
         token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-        given_block_identifier='latest',
     )
 
     return TokenNetwork(

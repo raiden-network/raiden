@@ -66,20 +66,24 @@ def mock_matrix(
     from raiden.network.transport.matrix.client import User
     monkeypatch.setattr(User, 'get_display_name', lambda _: 'random_display_name')
 
-    def mock_get_user(klass, user: Union[User, str]) -> User:
+    def mock_get_user(klass, user: Union[User, str]) -> User:  # pylint: disable=unused-argument
         return User(None, USERID1)
 
-    def mock_get_room_ids_for_address(
+    def mock_get_room_ids_for_address(  # pylint: disable=unused-argument
             klass,
             address: Address,
             filter_private: bool = None,
     ) -> List[str]:
         return ['!roomID:server']
 
-    def mock_set_room_id_for_address(self, address: Address, room_id: Optional[str]):
+    def mock_set_room_id_for_address(  # pylint: disable=unused-argument
+            self,
+            address: Address,
+            room_id: Optional[str],
+    ):
         pass
 
-    def mock_receive_message(klass, message):
+    def mock_receive_message(klass, message):  # pylint: disable=unused-argument
         # We are just unit testing the matrix transport receive so do nothing
         assert message
 
@@ -160,7 +164,7 @@ def skip_userid_validation(monkeypatch):
     import raiden.network.transport.matrix.transport
     import raiden.network.transport.matrix.utils
 
-    def mock_validate_userid_signature(user):
+    def mock_validate_userid_signature(user):  # pylint: disable=unused-argument
         return HOP1
 
     monkeypatch.setattr(
@@ -211,46 +215,67 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
     return room, event
 
 
-def test_normal_processing_hex(mock_matrix, skip_userid_validation):
+def test_normal_processing_hex(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     assert m._handle_message(room, event)
 
 
-def test_normal_processing_json(mock_matrix, skip_userid_validation):
+def test_normal_processing_json(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     room, event = make_message(convert_to_hex=False)
     assert m._handle_message(room, event)
 
 
-def test_processing_invalid_json(mock_matrix, skip_userid_validation):
+def test_processing_invalid_json(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     invalid_json = '{"foo": 1,'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_json)
     assert not m._handle_message(room, event)
 
 
-def test_sending_nonstring_body(mock_matrix, skip_userid_validation):
+def test_sending_nonstring_body(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     room, event = make_message(overwrite_data=b'somebinarydata')
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_json(mock_matrix, skip_userid_validation):
+def test_processing_invalid_message_json(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     invalid_message = '{"this": 1, "message": 5, "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_json(mock_matrix, skip_userid_validation):
+def test_processing_invalid_message_cmdid_json(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     invalid_message = '{"type": "NonExistentMessage", "is": 3, "not_valid": 5}'
     room, event = make_message(convert_to_hex=False, overwrite_data=invalid_message)
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_hex(mock_matrix, skip_userid_validation):
+def test_processing_invalid_hex(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -258,7 +283,10 @@ def test_processing_invalid_hex(mock_matrix, skip_userid_validation):
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation):
+def test_processing_invalid_message_hex(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -266,7 +294,10 @@ def test_processing_invalid_message_hex(mock_matrix, skip_userid_validation):
     assert not m._handle_message(room, event)
 
 
-def test_processing_invalid_message_cmdid_hex(mock_matrix, skip_userid_validation):
+def test_processing_invalid_message_cmdid_hex(  # pylint: disable=unused-argument
+        mock_matrix,
+        skip_userid_validation,
+):
     m = mock_matrix
     room, event = make_message(convert_to_hex=True)
     old_data = event['content']['body']
@@ -386,7 +417,7 @@ def test_matrix_message_sync(
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_tokens', [1])
-def test_matrix_tx_error_handling(
+def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
         skip_if_not_matrix,
         skip_if_parity,
         raiden_chain,
@@ -404,7 +435,7 @@ def test_matrix_tx_error_handling(
     )
     burn_eth(app0.raiden)
 
-    def make_tx(*args, **kwargs):
+    def make_tx(*args, **kwargs):  # pylint: disable=unused-argument
         close_channel = ActionChannelClose(
             canonical_identifier=channel_state.canonical_identifier,
         )
@@ -788,8 +819,10 @@ def test_pfs_global_messages(
     for num, event in enumerate(send_balance_proof_events):
         assert event.balance_proof.nonce == num + 1
     # make sure we cover all configured event types
-    assert all(event in [type(event) for event in send_balance_proof_events]
-               for event in SEND_BALANCE_PROOF_EVENTS)
+    assert all(
+        event in [type(event) for event in send_balance_proof_events]
+        for event in SEND_BALANCE_PROOF_EVENTS
+    )
 
     event_handler = raiden_event_handler.RaidenEventHandler()
 

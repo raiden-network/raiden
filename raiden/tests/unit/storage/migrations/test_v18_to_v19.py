@@ -35,11 +35,7 @@ def setup_storage(db_path):
             log_time,
             event_data,
         ))
-    storage.write_events(
-        state_change_identifier=state_change_identifier,
-        events=event_tuples,
-        log_time=log_time,
-    )
+    storage.write_events(event_tuples)
 
     chain_state_data = Path(__file__).parent / 'data/v18_chainstate.json'
     chain_state = chain_state_data.read_text()
