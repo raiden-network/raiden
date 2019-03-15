@@ -1482,6 +1482,10 @@ class NettingChannelEndState(State):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'NettingChannelEndState':
+        onchain_locksroot = None
+        if data['onchain_locksroot']:
+            onchain_locksroot = serialization.deserialize_bytes(data['onchain_locksroot'])
+
         restored = cls(
             address=to_canonical_address(data['address']),
             balance=int(data['contract_balance']),
@@ -1503,7 +1507,7 @@ class NettingChannelEndState(State):
         )
         restored.merkletree = data['merkletree']
         restored.balance_proof = data.get('balance_proof')
-        restored.onchain_locksroot = serialization.deserialize_bytes(data.get('onchain_locksroot'))
+        restored.onchain_locksroot = onchain_locksroot
 
         return restored
 
