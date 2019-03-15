@@ -240,7 +240,7 @@ def options(func):
                 '--use-basic-routing',
                 help=(
                     'If given then, then no path finding service is going to be '
-                    'used and we are instead going to revent to basic routing',
+                    'used and we are instead going to revent to basic routing'
                 ),
                 is_flag=True,
                 show_default=True,
@@ -602,6 +602,11 @@ def smoketest(ctx, debug):
             merge_dict(config, args['extra_config'])
             del args['extra_config']
         args['config'] = config
+        # Should use basic routing in the smoke test for now
+        # TODO: If we ever utilize a PFS in the smoke test we
+        # need to use the deployed service registry, register the
+        # PFS service there and then change this argument.
+        args['use_basic_routing'] = True
 
         raiden_stdout = StringIO()
         with contextlib.redirect_stdout(raiden_stdout):
