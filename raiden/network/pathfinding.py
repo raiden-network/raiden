@@ -24,7 +24,7 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
         )
         return response.json()
     except requests.exceptions.RequestException:
-        return False
+        return None
 
 
 def get_random_service(service_registry: ServiceRegistry) -> Optional[str]:
