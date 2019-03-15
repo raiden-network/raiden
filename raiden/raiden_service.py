@@ -237,7 +237,7 @@ class RaidenService(Runnable):
             query_start_block: BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
-            default_service_registry: ServiceRegistry,
+            default_service_registry: Optional[ServiceRegistry],
             transport,
             raiden_event_handler,
             message_handler,

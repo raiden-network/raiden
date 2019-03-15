@@ -90,7 +90,7 @@ class App:  # pylint: disable=too-few-public-methods
             query_start_block: typing.BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
-            default_service_registry: ServiceRegistry,
+            default_service_registry: typing.Optional[ServiceRegistry],
             transport,
             raiden_event_handler,
             message_handler,

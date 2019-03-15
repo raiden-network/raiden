@@ -21,6 +21,7 @@ from raiden.tests.utils.smartcontracts import (
     deploy_tokens_and_fund_accounts,
 )
 from raiden.utils import privatekey_to_address, typing
+from raiden.utils.typing import Optional
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -98,11 +99,14 @@ def deploy_secret_registry_and_return_address(deploy_client, contract_manager) -
 
 
 @pytest.fixture(name='service_registry_address')
-def deploy_service_registry_and_return_address(
+def maybe_deploy_service_registry_and_return_address(
         deploy_client,
         contract_manager,
         token_proxy,
-) -> typing.Address:
+        environment_type,
+) -> Optional[typing.Address]:
+    if environment_type == Environment.PRODUCTION:
+        return None
     # Not sure what to put in the registration fee token for testing, so using
     # the same token we use for testing for now
     constructor_arguments = (token_proxy.address,)

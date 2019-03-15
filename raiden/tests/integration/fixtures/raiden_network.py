@@ -67,13 +67,16 @@ def raiden_chain(
         'with 0, 1 or 2 channels'
     )
 
+    service_registry_address = None
+    if blockchain_services.service_registry:
+        service_registry_address = blockchain_services.service_registry.address
     raiden_apps = create_apps(
         chain_id=chain_id,
         blockchain_services=blockchain_services.blockchain_services,
         endpoint_discovery_services=endpoint_discovery_services,
         token_network_registry_address=token_network_registry_address,
         secret_registry_address=blockchain_services.secret_registry.address,
-        service_registry_address=blockchain_services.service_registry.address,
+        service_registry_address=service_registry_address,
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
@@ -164,6 +167,9 @@ def raiden_network(
         blockchain_type,
         contracts_path,
 ):
+    service_registry_address = None
+    if blockchain_services.service_registry:
+        service_registry_address = blockchain_services.service_registry.address
     raiden_apps = create_apps(
         chain_id=chain_id,
         contracts_path=contracts_path,
@@ -171,7 +177,7 @@ def raiden_network(
         endpoint_discovery_services=endpoint_discovery_services,
         token_network_registry_address=token_network_registry_address,
         secret_registry_address=blockchain_services.secret_registry.address,
-        service_registry_address=blockchain_services.service_registry.address,
+        service_registry_address=service_registry_address,
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
