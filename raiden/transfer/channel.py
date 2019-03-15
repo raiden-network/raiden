@@ -66,6 +66,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import (
     ActionChannelClose,
+    ActionChannelSetFee,
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -1635,6 +1636,16 @@ def handle_action_close(
     return TransitionResult(channel_state, events)
 
 
+def handle_action_set_fee(
+        channel_state: NettingChannelState,
+        set_fee: ActionChannelSetFee,
+) -> TransitionResult[NettingChannelState]:
+    msg = 'caller must make sure the ids match'
+    assert channel_state.identifier == set_fee.channel_identifier, msg
+    channel_state.mediation_fee = set_fee.mediation_fee
+    return TransitionResult(channel_state, list())
+
+
 def handle_refundtransfer(
         received_transfer: LockedTransferUnsignedState,
         channel_state: NettingChannelState,
@@ -1985,6 +1996,12 @@ def state_transition(
             close=state_change,
             block_number=block_number,
             block_hash=block_hash,
+        )
+    elif type(state_change) == ActionChannelSetFee:
+        assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
+        iteration = handle_action_set_fee(
+            channel_state=channel_state,
+            set_fee=state_change,
         )
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
