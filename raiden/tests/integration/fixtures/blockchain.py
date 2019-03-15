@@ -141,15 +141,17 @@ def blockchain_services(
         deploy_service,
         private_keys,
         secret_registry_address,
+        service_registry_address,
         token_network_registry_address,
         web3,
         contract_manager,
 ):
     return jsonrpc_services(
-        deploy_service,
-        private_keys,
-        secret_registry_address,
-        token_network_registry_address,
+        deploy_service=deploy_service,
+        private_keys=private_keys,
+        secret_registry_address=secret_registry_address,
+        service_registry_address=service_registry_address,
+        token_network_registry_address=token_network_registry_address,
         web3=web3,
         contract_manager=contract_manager,
     )

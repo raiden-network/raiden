@@ -6,9 +6,6 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.factories import HOP1
 from raiden.utils import privatekey_to_address
 
-# from eth_utils import to_normalized_address
-
-
 
 def test_service_registry_random_pfs(
         service_registry_address,
