@@ -1888,8 +1888,7 @@ def handle_channel_settled(
         onchain_unlock = ContractSendChannelBatchUnlock(
             token_address=channel_state.token_address,
             canonical_identifier=channel_state.canonical_identifier,
-            participant=channel_state.our_state.address,
-            partner=channel_state.partner_state.address,
+            participant=channel_state.partner_state.address,
             triggered_by_block_hash=state_change.block_hash,
         )
         events.append(onchain_unlock)
