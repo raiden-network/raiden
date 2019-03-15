@@ -22,14 +22,14 @@ If you're new to Raiden and just want to install and try it out:
 
 Developing on Raiden?
 ~~~~~~~~~~~~~~~~~~~~~
-If you're looking for documentation relevant for building on to of Raiden:
+If you're looking for documentation relevant for building on top of Raiden:
 
     * Read the thorough guide to :doc:`get started with the Raiden API <api_walkthrough>`.
     * Checkout the complete :doc:`API documentation <rest_api>`.
 
 Contributing to Raiden?
 ~~~~~~~~~~~~~~~~~~~~~~~
-If you're looking for a more in depth understanding of Raiden and is interested in contributing:
+If you're looking for a more in depth understanding of Raiden and are interested in contributing:
 
     * Take a look at the :doc:`onboarding guide <onboarding>`.
     * Check out the code in our `Github repository <https://github.com/raiden-network/raiden>`_.
@@ -40,7 +40,7 @@ Need help?
 If you run in to any kind of problems or you discover bugs:
 
     * Ask for help or project related questions in the `Raiden gitter <https://gitter.im/raiden-network/raiden>`_.
-    * Create a `Github issue <https://github.com/raiden-network/raiden/issues/new/choose>`_ if you discover a bug or has a feature request.
+    * Create a `Github issue <https://github.com/raiden-network/raiden/issues/new/choose>`_ if you discover a bug or have a feature request.
 
 Disclaimer
 ----------
