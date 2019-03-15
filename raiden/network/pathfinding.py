@@ -51,7 +51,7 @@ def configure_pfs(
         pfs_address: Optional[str],
         use_basic_routing: bool,
         service_registry,
-) -> str:
+) -> Optional[str]:
     """
     Take in the given pfs_address argument, the service registry and find out a
     pfs address to use.
@@ -65,7 +65,7 @@ def configure_pfs(
         click.secho(
             'Requested to use basic routing. No path finding service is being used',
         )
-        return ''
+        return None
 
     if pfs_address is None:
         assert service_registry
@@ -93,6 +93,8 @@ def configure_pfs(
             f"Requesting a path will cost you: '{pathfinding_service_info['price_info']}",
         )
         log.info('Using PFS', pfs_info=pathfinding_service_info)
+
+    return pfs_address
 
 
 def get_pfs_iou(
