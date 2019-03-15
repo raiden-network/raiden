@@ -7,6 +7,7 @@ from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.proxies import PaymentChannel, TokenNetwork
+from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
@@ -376,6 +377,19 @@ class RaidenEventHandler:
 
         partner_address = channel_state.partner_state.address
         partner_locksroot = channel_state.partner_state.onchain_locksroot
+
+        # During a migration, a channel might have been settled
+        # but some funds might still be unlocked. At migration
+        # time, it's pretty hard to find the partner's address
+        # in a reliable way so it was opted here that the values
+        # are populated by None values where we re-query the contract
+        # here to be able to properly unlock funds.
+        if our_locksroot is None or partner_locksroot is None:
+            our_locksroot, partner_locksroot = get_onchain_locksroots(
+                raiden=raiden,
+                channel_state=channel_state,
+                block_hash=triggered_by_block_hash,
+            )
 
         # we want to unlock because there are on-chain unlocked locks
         search_events = (

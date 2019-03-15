@@ -607,6 +607,14 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelSettled':
+        our_onchain_locksroot = None
+        partner_onchain_locksroot = None
+        if data['our_onchain_locksroot']:
+            our_onchain_locksroot = deserialize_bytes(data['our_onchain_locksroot'])
+
+        if data['partner_onchain_locksroot']:
+            partner_onchain_locksroot = deserialize_bytes(data['partner_onchain_locksroot'])
+
         return cls(
             transaction_hash=deserialize_bytes(data['transaction_hash']),
             canonical_identifier=CanonicalIdentifier(
@@ -614,8 +622,8 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
                 token_network_address=to_canonical_address(data['token_network_identifier']),
                 channel_identifier=ChannelID(int(data['channel_identifier'])),
             ),
-            our_onchain_locksroot=deserialize_bytes(data['our_onchain_locksroot']),
-            partner_onchain_locksroot=deserialize_bytes(data['partner_onchain_locksroot']),
+            our_onchain_locksroot=our_onchain_locksroot,
+            partner_onchain_locksroot=partner_onchain_locksroot,
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
         )

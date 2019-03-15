@@ -6,7 +6,7 @@ import structlog
 from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
-from raiden.network.proxies import PaymentChannel, TokenNetwork
+from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.state import TokenNetworkState, TransactionChannelNewBalance
@@ -289,23 +289,11 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     if not channel_state:
         return
 
-    payment_channel: PaymentChannel = raiden.chain.payment_channel(
-        token_network_address=token_network_identifier,
-        channel_id=channel_identifier,
+    our_locksroot, partner_locksroot = get_onchain_locksroots(
+        raiden=raiden,
+        channel_state=channel_state,
+        block_hash=block_hash,
     )
-    token_network: TokenNetwork = payment_channel.token_network
-    participants_details = token_network.detail_participants(
-        participant1=channel_state.our_state.address,
-        participant2=channel_state.partner_state.address,
-        block_identifier=block_hash,
-        channel_identifier=channel_identifier,
-    )
-
-    our_details = participants_details.our_details
-    our_locksroot = our_details.locksroot
-
-    partner_details = participants_details.partner_details
-    partner_locksroot = partner_details.locksroot
 
     channel_settled = ContractReceiveChannelSettled(
         transaction_hash=transaction_hash,
