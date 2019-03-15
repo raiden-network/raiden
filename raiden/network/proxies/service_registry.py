@@ -1,11 +1,12 @@
 import structlog
+import web3
 from eth_utils import is_binary_address, to_normalized_address
 
 from raiden.exceptions import InvalidAddress
 from raiden.network.proxies.utils import compare_contract_versions
-from raiden.network.rpc.client import check_address_has_code
-from raiden.rpc.client import JSONRPCClient
-from raiden.utils.typing import Address, BlockSpecification, List
+from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
+from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.utils.typing import Address, AddressHex, BlockSpecification, List, Optional
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
@@ -49,13 +50,34 @@ class ServiceRegistry:
         )
         return result
 
-    def get_services_list(self, block_identifier: BlockSpecification) -> List[Address]:
-        # count = self.service_count(block_identifier)
-        return self.proxy.contract.service_addresses
+    def get_service_address(
+            self,
+            block_identifier: BlockSpecification,
+            index: int,
+    ) -> Optional[AddressHex]:
+        """Gets the address of a service by index. If index is out of range return None"""
+        try:
+            result = self.proxy.contract.functions.service_addresses(index).call(
+                block_identifier=block_identifier,
+            )
+        except web3.exceptions.BadFunctionCallOutput:
+            result = None
+        return result
 
     def get_service_url(
             self,
             block_identifier: BlockSpecification,
-            service_hex_address,
-    ) -> str:
-        return self.proxy.contract.service_urls(service_hex_address).call()
+            service_hex_address: AddressHex,
+    ) -> Optional[str]:
+        """Gets the URL of a service by address. If does not exist return None"""
+        result = self.proxy.contract.functions.urls(service_hex_address).call()
+        if result == b'':
+            return None
+        return result
+
+    def set_url(self, url: str):
+        """Sets the url needed to access the service via HTTP for the caller"""
+        gas_limit = self.proxy.estimate_gas('latest', 'setURL', url)
+        transaction_hash = self.proxy.transact('setURL', gas_limit, url)
+        self.client.poll(transaction_hash)
+        assert not check_transaction_threw(self.client, transaction_hash)
