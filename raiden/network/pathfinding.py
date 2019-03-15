@@ -28,9 +28,16 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
 
 
 def get_random_service(service_registry: ServiceRegistry) -> str:
-    services = service_registry.get_services_list('latest')
-    chosen_service = random.SystemRandom().choice(services)
-    return service_registry.get_service_url(chosen_service)
+    count = service_registry.service_count('latest')
+    index = random.SystemRandom().randint(0, count - 1)
+    address = service_registry.get_service_address(
+        block_identifier='latest',
+        index=index,
+    )
+    return service_registry.get_service_url(
+        block_identifier='latest',
+        service_hex_address=address,
+    )
 
 
 def configure_pfs(

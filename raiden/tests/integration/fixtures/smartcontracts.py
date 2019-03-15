@@ -7,7 +7,13 @@ from raiden.constants import (
     UINT256_MAX,
     Environment,
 )
-from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
+from raiden.network.proxies import (
+    SecretRegistry,
+    ServiceRegistry,
+    Token,
+    TokenNetwork,
+    TokenNetworkRegistry,
+)
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
 from raiden.tests.utils.smartcontracts import (
     deploy_contract_web3,
@@ -97,13 +103,14 @@ def deploy_service_registry_and_return_address(
         contract_manager,
         token_proxy,
 ) -> typing.Address:
+    # Not sure what to put in the registration fee token for testing, so using
+    # the same token we use for testing for now
+    constructor_arguments = (token_proxy.address,)
     address = deploy_contract_web3(
         contract_name=CONTRACT_SERVICE_REGISTRY,
         deploy_client=deploy_client,
         contract_manager=contract_manager,
-        # Not sure what to put in the registration fee token for testing, so using
-        # the same token we use for testing for now
-        _token_for_registration=token_proxy.address,
+        constructor_arguments=constructor_arguments,
     )
     return address
 
@@ -121,6 +128,15 @@ def secret_registry_proxy(deploy_client, secret_registry_address, contract_manag
     return SecretRegistry(
         jsonrpc_client=deploy_client,
         secret_registry_address=to_canonical_address(secret_registry_address),
+        contract_manager=contract_manager,
+    )
+
+
+@pytest.fixture
+def service_registry_proxy(deploy_client, service_registry_address, contract_manager):
+    return ServiceRegistry(
+        jsonrpc_client=deploy_client,
+        service_registry_address=to_canonical_address(service_registry_address),
         contract_manager=contract_manager,
     )
 
