@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     # pylint: disable=unused-import
     from messages import EnvelopeMessage
     from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
+    from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 
 SecretHashToLock = Dict[SecretHash, 'HashTimeLockState']
 SecretHashToPartialUnlockProof = Dict[SecretHash, 'UnlockPartialProofState']
@@ -151,7 +152,7 @@ class InitiatorTask(TransferTask):
     def __init__(
             self,
             token_network_identifier: TokenNetworkID,
-            manager_state: State,
+            manager_state: 'InitiatorPaymentState',
     ) -> None:
         self.token_network_identifier = token_network_identifier
         self.manager_state = manager_state
@@ -321,6 +322,7 @@ class ChainState(State):
         self.pseudo_random_generator = pseudo_random_generator
         self.queueids_to_queues: QueueIdsToQueues = dict()
         self.last_transport_authdata: Optional[str] = None
+        self.tokennetworkaddresses_to_paymentnetworkaddresses = dict()
 
     def __repr__(self):
         return (
@@ -335,6 +337,10 @@ class ChainState(State):
         )
 
     def __eq__(self, other: Any) -> bool:
+        # HACK to shorten the length of the line
+        from operator import attrgetter
+        tn_to_pn = attrgetter('tokennetworkaddresses_to_paymentnetworkaddresses')
+
         return (
             isinstance(other, ChainState) and
             self.block_number == other.block_number and
@@ -345,7 +351,8 @@ class ChainState(State):
             self.nodeaddresses_to_networkstates == other.nodeaddresses_to_networkstates and
             self.payment_mapping == other.payment_mapping and
             self.chain_id == other.chain_id and
-            self.last_transport_authdata == other.last_transport_authdata
+            self.last_transport_authdata == other.last_transport_authdata and
+            tn_to_pn(self) == tn_to_pn(other)
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -374,6 +381,11 @@ class ChainState(State):
                 self.queueids_to_queues,
             ),
             'last_transport_authdata': self.last_transport_authdata,
+            'tokennetworkaddresses_to_paymentnetworkaddresses': map_dict(
+                to_checksum_address,
+                to_checksum_address,
+                self.tokennetworkaddresses_to_paymentnetworkaddresses,
+            ),
         }
 
     @classmethod
@@ -406,6 +418,11 @@ class ChainState(State):
             data['queueids_to_queues'],
         )
         restored.last_transport_authdata = data.get('last_transport_authdata')
+        restored.tokennetworkaddresses_to_paymentnetworkaddresses = map_dict(
+            to_canonical_address,
+            to_canonical_address,
+            data['tokennetworkaddresses_to_paymentnetworkaddresses'],
+        )
 
         return restored
 
@@ -428,11 +445,11 @@ class PaymentNetworkState(State):
             raise ValueError('address must be an address instance')
 
         self.address = address
-        self.tokenidentifiers_to_tokennetworks = {
+        self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = {
             token_network.address: token_network
             for token_network in token_network_list
         }
-        self.tokenaddresses_to_tokenidentifiers = {
+        self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = {
             token_network.token_address: token_network.address
             for token_network in token_network_list
         }

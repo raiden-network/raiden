@@ -3,6 +3,7 @@ from raiden.transfer.architecture import StateChange, TransitionResult
 from raiden.transfer.state import TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChannelClose,
+    ActionChannelSetFee,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
     ContractReceiveChannelNew,
@@ -268,6 +269,14 @@ def state_transition(
     if type(state_change) == ActionChannelClose:
         assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_channel_close(
+            token_network_state,
+            state_change,
+            block_number,
+            block_hash,
+        )
+    elif type(state_change) == ActionChannelSetFee:
+        assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
+        iteration = subdispatch_to_channel_by_id(
             token_network_state,
             state_change,
             block_number,

@@ -34,6 +34,7 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
+    FeeAmount,
     Locksroot,
     MessageID,
     Nonce,
@@ -223,6 +224,38 @@ class ActionChannelClose(StateChange):
         )
 
 
+class ActionChannelSetFee(StateChange):
+    def __init__(self, canonical_identifier: CanonicalIdentifier, mediation_fee: FeeAmount):
+        self.canonical_identifier = canonical_identifier
+        self.mediation_fee = mediation_fee
+
+    def __repr__(self):
+        return f'<ActionChannelSetFee id:{self.canonical_identifier} fee:{self.mediation_fee}>'
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ActionChannelSetFee) and
+            self.canonical_identifier == other.canonical_identifier and
+            self.mediation_fee == other.mediation_fee
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'canonical_identifier': self.canonical_identifier,
+            'fee': str(self.mediation_fee),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ActionChannelSetFee':
+        return cls(
+            canonical_identifier=data['canonical_identifier'],
+            mediation_fee=int(data['mediation_fee']),
+        )
+
+
 class ActionCancelTransfer(StateChange):
     """ The user requests the transfer to be cancelled.
 
@@ -246,6 +279,11 @@ class ActionCancelTransfer(StateChange):
 
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'transfer_identifier': str(self.transfer_identifier),
+        }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ActionCancelTransfer':
