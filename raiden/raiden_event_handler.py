@@ -349,10 +349,12 @@ class RaidenEventHandler:
             raiden: 'RaidenService',
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
+        token_network_identifier = channel_unlock_event.token_network_identifier
+        channel_identifier = channel_unlock_event.channel_identifier
         canonical_identifier = CanonicalIdentifier(
             chain_identifier=raiden.chain.network_id,
-            token_network_address=channel_unlock_event.token_network_identifier,
-            channel_identifier=channel_unlock_event.channel_identifier,
+            token_network_address=token_network_identifier,
+            channel_identifier=channel_identifier,
         )
         participant = channel_unlock_event.participant
         token_address = channel_unlock_event.token_address
@@ -409,7 +411,7 @@ class RaidenEventHandler:
             log.warning(
                 'Onchain unlock already mined',
                 token_address=token_address,
-                channel_identifier=channel_identifier,
+                channel_identifier=canonical_identifier.channel_identifier,
                 participant=participant,
             )
             return
@@ -488,6 +490,7 @@ class RaidenEventHandler:
                 token_address=token_address,
                 channel_identifier=canonical_identifier.channel_identifier,
                 participant=participant,
+                state_change_identifier=state_change_identifier,
             )
 
         if not state_change_identifier:
