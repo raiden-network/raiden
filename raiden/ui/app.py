@@ -410,24 +410,27 @@ def run_app(
         except AddressWrongContract:
             handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
 
-    try:
-        service_registry = blockchain_service.service_registry(
-            service_registry_contract_address or to_canonical_address(
-                contracts[CONTRACT_SERVICE_REGISTRY]['address'],
-            ),
-        )
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
-    except AddressWithoutCode:
-        handle_contract_no_code('service registry', service_registry_contract_address)
-    except AddressWrongContract:
-        handle_contract_wrong_address('secret registry', service_registry_contract_address)
+    if environment_type == Environment.DEVELOPMENT:
+        try:
+            service_registry = blockchain_service.service_registry(
+                service_registry_contract_address or to_canonical_address(
+                    contracts[CONTRACT_SERVICE_REGISTRY]['address'],
+                ),
+            )
+        except ContractVersionMismatch as e:
+            handle_contract_version_mismatch(e)
+        except AddressWithoutCode:
+            handle_contract_no_code('service registry', service_registry_contract_address)
+        except AddressWrongContract:
+            handle_contract_wrong_address('secret registry', service_registry_contract_address)
 
-    config['services']['pathfinding_service_address'] = configure_pfs(
-        pfs_address=pathfinding_service_address,
-        use_basic_routing=use_basic_routing,
-        service_registry=service_registry,
-    )
+        config['services']['pathfinding_service_address'] = configure_pfs(
+            pfs_address=pathfinding_service_address,
+            use_basic_routing=use_basic_routing,
+            service_registry=service_registry,
+        )
+    else:
+        config['services']['pathfinding_service_address'] = None
 
     database_path = os.path.join(
         datadir,
