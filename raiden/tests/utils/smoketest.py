@@ -44,9 +44,11 @@ from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import get_project_root, privatekey_to_address
+from raiden.utils.typing import Address, AddressHex, ChainID, Dict
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     NETWORKNAME_TO_ID,
     TEST_SETTLE_TIMEOUT_MAX,
@@ -154,7 +156,12 @@ def run_smoketests(
     return None
 
 
-def deploy_smoketest_contracts(client, chain_id, contract_manager):
+def deploy_smoketest_contracts(
+        client: JSONRPCClient,
+        chain_id: ChainID,
+        contract_manager: ContractManager,
+        token_address: AddressHex,
+) -> Dict[str, Address]:
     client.web3.personal.unlockAccount(
         client.web3.eth.accounts[0],
         DEFAULT_PASSPHRASE,
@@ -170,6 +177,12 @@ def deploy_smoketest_contracts(client, chain_id, contract_manager):
         contract_name=CONTRACT_SECRET_REGISTRY,
         deploy_client=client,
         contract_manager=contract_manager,
+    )
+    service_registry_address = deploy_contract_web3(
+        contract_name=CONTRACT_SERVICE_REGISTRY,
+        deploy_client=client,
+        contract_manager=contract_manager,
+        constructor_arguments=(token_address,),
     )
     constructor_arguments = [
         to_checksum_address(secret_registry_address),
@@ -191,6 +204,7 @@ def deploy_smoketest_contracts(client, chain_id, contract_manager):
     addresses = {
         CONTRACT_ENDPOINT_REGISTRY: endpoint_registry_address,
         CONTRACT_SECRET_REGISTRY: secret_registry_address,
+        CONTRACT_SERVICE_REGISTRY: service_registry_address,
         CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
     }
     return addresses
@@ -303,11 +317,6 @@ def setup_raiden(
         contracts_precompiled_path(contracts_version),
     )
 
-    contract_addresses = deploy_smoketest_contracts(
-        client=client,
-        chain_id=NETWORKNAME_TO_ID['smoketest'],
-        contract_manager=contract_manager,
-    )
     token = deploy_token(
         deploy_client=client,
         contract_manager=contract_manager,
@@ -315,6 +324,12 @@ def setup_raiden(
         decimals=0,
         token_name='TKN',
         token_symbol='TKN',
+    )
+    contract_addresses = deploy_smoketest_contracts(
+        client=client,
+        chain_id=NETWORKNAME_TO_ID['smoketest'],
+        contract_manager=contract_manager,
+        token_address=to_canonical_address(token.contract.address),
     )
     registry = TokenNetworkRegistry(
         jsonrpc_client=client,
@@ -344,6 +359,9 @@ def setup_raiden(
     secret_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_SECRET_REGISTRY],
     )
+    service_registry_contract_address = to_checksum_address(
+        contract_addresses[CONTRACT_SERVICE_REGISTRY],
+    )
     return {
         'args': {
             'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
@@ -357,6 +375,7 @@ def setup_raiden(
             'password_file': click.File()(os.path.join(testchain_setup['base_datadir'], 'pw')),
             'tokennetwork_registry_contract_address': tokennetwork_registry_contract_address,
             'secret_registry_contract_address': secret_registry_contract_address,
+            'service_registry_contract_address': service_registry_contract_address,
             'sync_check': False,
             'transport': transport,
         },
