@@ -38,6 +38,7 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelClose,
+    ActionChannelSetFee,
     ActionInitChain,
     ActionLeaveAllNetworks,
     ActionNewTokenNetwork,
@@ -65,11 +66,14 @@ from raiden.utils.typing import (
     BlockNumber,
     ChannelID,
     List,
+    Optional,
     PaymentNetworkID,
     SecretHash,
     TokenAddress,
+    TokenNetworkAddress,
     TokenNetworkID,
     Tuple,
+    Union,
 )
 
 
@@ -110,6 +114,29 @@ def get_token_network_by_token_address(
     return token_network_state
 
 
+def get_token_network_by_address(
+        chain_state: ChainState,
+        token_network_address: Union[TokenNetworkID, TokenNetworkAddress],
+) -> Optional[TokenNetworkState]:
+    payment_network_identifier = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses.get(
+        token_network_address,
+    )
+
+    payment_network_state = None
+    if payment_network_identifier:
+        payment_network_state = chain_state.identifiers_to_paymentnetworks.get(
+            payment_network_identifier,
+        )
+
+    token_network_state = None
+    if payment_network_state:
+        token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
+            token_network_address,
+        )
+
+    return token_network_state
+
+
 def subdispatch_to_all_channels(
         chain_state: ChainState,
         state_change: StateChange,
@@ -128,6 +155,31 @@ def subdispatch_to_all_channels(
                     block_hash=block_hash,
                 )
                 events.extend(result.events)
+
+    return TransitionResult(chain_state, events)
+
+
+def subdispatch_by_canonical_id(
+        chain_state: ChainState,
+        canonical_identifier: CanonicalIdentifier,
+        state_change: StateChange,
+) -> TransitionResult[ChainState]:
+    token_network_state = get_token_network_by_address(
+        chain_state,
+        canonical_identifier.token_network_address,
+    )
+
+    events: List[Event] = list()
+    if token_network_state:
+        iteration = token_network.state_transition(
+            token_network_state=token_network_state,
+            state_change=state_change,
+            block_number=chain_state.block_number,
+            block_hash=chain_state.block_hash,
+        )
+        assert iteration.new_state, 'No token network state transition leads to None'
+
+        events = iteration.events
 
     return TransitionResult(chain_state, events)
 
@@ -161,7 +213,7 @@ def subdispatch_to_paymenttask(
 
         if isinstance(sub_task, InitiatorTask):
             token_network_identifier = sub_task.token_network_identifier
-            token_network_state = views.get_token_network_by_identifier(
+            token_network_state = get_token_network_by_address(
                 chain_state,
                 token_network_identifier,
             )
@@ -177,7 +229,7 @@ def subdispatch_to_paymenttask(
 
         elif isinstance(sub_task, MediatorTask):
             token_network_identifier = sub_task.token_network_identifier
-            token_network_state = views.get_token_network_by_identifier(
+            token_network_state = get_token_network_by_address(
                 chain_state,
                 token_network_identifier,
             )
@@ -250,7 +302,7 @@ def subdispatch_initiatortask(
     if is_valid_subtask:
         pseudo_random_generator = chain_state.pseudo_random_generator
 
-        token_network_state = views.get_token_network_by_identifier(
+        token_network_state = get_token_network_by_address(
             chain_state,
             token_network_identifier,
         )
@@ -300,7 +352,7 @@ def subdispatch_mediatortask(
 
     events: List[Event] = list()
     if is_valid_subtask:
-        token_network_state = views.get_token_network_by_identifier(
+        token_network_state = get_token_network_by_address(
             chain_state,
             token_network_identifier,
         )
@@ -419,6 +471,9 @@ def maybe_add_tokennetwork(
         ids_to_tokens[token_network_identifier] = token_network_state
         addresses_to_ids[token_address] = token_network_identifier
 
+        ids_to_ids = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
+        ids_to_ids[token_network_identifier] = payment_network_identifier
+
 
 def sanity_check(iteration: TransitionResult[ChainState]) -> None:
     assert isinstance(iteration.new_state, ChainState)
@@ -502,15 +557,10 @@ def handle_token_network_action(
         chain_state: ChainState,
         state_change: StateChange,
 ) -> TransitionResult[ChainState]:
-    token_network_state = views.get_token_network_by_identifier(
+    token_network_state = get_token_network_by_address(
         chain_state,
         state_change.token_network_identifier,
     )
-    payment_network_state = views.get_token_network_registry_by_token_network_identifier(
-        chain_state,
-        state_change.token_network_identifier,
-    )
-    assert payment_network_state, 'We should always get a payment_network_state'
 
     events: List[Event] = list()
     if token_network_state:
@@ -807,6 +857,13 @@ def handle_state_change(
         assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_token_network_action(
             chain_state,
+            state_change,
+        )
+    elif type(state_change) == ActionChannelSetFee:
+        assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
+        iteration = subdispatch_by_canonical_id(
+            chain_state,
+            state_change.canonical_identifier,
             state_change,
         )
     elif type(state_change) == ActionChangeNodeNetworkState:
