@@ -87,8 +87,8 @@ def test_upgrade_v19_to_v20(tmp_path):
     for state_changes_batch in batch_query:
         for state_change_record in state_changes_batch:
             data = json.loads(state_change_record.data)
-            assert data['our_onchain_locksroot'] == serialize_bytes(bytes(32))
-            assert data['partner_onchain_locksroot'] == serialize_bytes(bytes(32))
+            assert data['our_onchain_locksroot'] is None
+            assert data['partner_onchain_locksroot'] is None
 
     batch_query = storage.batch_query_event_records(
         batch_size=500,
@@ -105,5 +105,5 @@ def test_upgrade_v19_to_v20(tmp_path):
     for payment_network in snapshot.identifiers_to_paymentnetworks.values():
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
             for channel in token_network.channelidentifiers_to_channels.values():
-                assert channel.our_state.onchain_locksroot == bytes(32)
-                assert channel.partner_state.onchain_locksroot == bytes(32)
+                assert channel.our_state.onchain_locksroot is None
+                assert channel.partner_state.onchain_locksroot is None
