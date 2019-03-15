@@ -110,6 +110,50 @@ def mock_matrix(
     return transport
 
 
+def ping_pong_message_success(transport0, transport1):
+    queueid0 = QueueIdentifier(
+        recipient=transport0._raiden_service.address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+
+    queueid1 = QueueIdentifier(
+        recipient=transport1._raiden_service.address,
+        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    )
+
+    received_messages0 = transport0._raiden_service.message_handler.bag
+    received_messages1 = transport1._raiden_service.message_handler.bag
+    number_of_received_messages0 = len(received_messages0)
+    number_of_received_messages1 = len(received_messages1)
+
+    message = Processed(message_identifier=number_of_received_messages0)
+    transport0._raiden_service.sign(message)
+
+    transport0.send_async(queueid1, message)
+    with Timeout(20, exception=False):
+        all_messages_received = False
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == number_of_received_messages0 + 1 and
+                len(received_messages1) == number_of_received_messages1 + 1
+            )
+            gevent.sleep(.1)
+    message = Processed(message_identifier=number_of_received_messages1)
+    transport1._raiden_service.sign(message)
+    transport1.send_async(queueid0, message)
+
+    with Timeout(20, exception=False):
+        all_messages_received = False
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == number_of_received_messages0 + 2 and
+                len(received_messages1) == number_of_received_messages1 + 2
+            )
+            gevent.sleep(.1)
+
+    return all_messages_received
+
+
 @pytest.fixture()
 def skip_userid_validation(monkeypatch):
     import raiden.network.transport.matrix
@@ -297,10 +341,12 @@ def test_matrix_message_sync(
             queue_identifier,
             message,
         )
-
-    gevent.sleep(2)
+    with Timeout(retry_interval * 20, exception=False):
+        while not len(received_messages) == 10:
+            gevent.sleep(.1)
 
     assert len(received_messages) == 10
+
     for i in range(5):
         assert any(getattr(m, 'message_identifier', -1) == i for m in received_messages)
 
@@ -778,3 +824,25 @@ def test_pfs_global_messages(
     )
     transport.stop()
     transport.get()
+
+
+@pytest.mark.parametrize('private_rooms', [[True, True]])
+@pytest.mark.parametrize('matrix_server_count', [2])
+@pytest.mark.parametrize('number_of_transports', [2])
+def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
+    transport0, transport1 = matrix_transports
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
+
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
+    assert ping_pong_message_success(transport0, transport1)

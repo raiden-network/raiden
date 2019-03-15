@@ -69,7 +69,7 @@ def matrix_transports(
                 'server': server,
                 'server_name': server.netloc,
                 'available_servers': local_matrix_servers,
-                'private_rooms': private_rooms,
+                'private_rooms': private_rooms[transport_index],
             }),
         )
 
