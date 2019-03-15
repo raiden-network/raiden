@@ -126,7 +126,7 @@ def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> N
 
 
 def _transform_snapshot(
-        raw_snapshot: Dict[Any, Any],
+        raw_snapshot: str,
         storage: SQLiteStorage,
         cache: BlockHashCache,
 ) -> str:
@@ -204,9 +204,9 @@ def _transform_snapshots_for_blockhash(storage: SQLiteStorage, cache: BlockHashC
 def upgrade_v18_to_v19(
         storage: SQLiteStorage,
         old_version: int,
-        current_version: int,
+        curret_version: int,  # pylint: disable=unused-argument
         web3: Web3,
-        **kwargs,
+        **kwargs,  # pylint: disable=unused-argument
 ) -> int:
     if old_version == SOURCE_VERSION:
         cache = BlockHashCache(web3)
