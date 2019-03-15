@@ -27,15 +27,22 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
         return False
 
 
-def get_random_service(service_registry: ServiceRegistry) -> str:
-    count = service_registry.service_count('latest')
+def get_random_service(service_registry: ServiceRegistry) -> Optional[str]:
+    latest_block_hash = service_registry.proxy.client.blockhash_from_blocknumber(
+        block_number=service_registry.proxy.client.block_number(),
+    )
+    count = service_registry.service_count()
     index = random.SystemRandom().randint(0, count - 1)
     address = service_registry.get_service_address(
-        block_identifier='latest',
+        block_identifier=latest_block_hash,
         index=index,
     )
+    # We are using the same blockhash for both blockchain queries so the address
+    # should exist for this query. Additionally at the moment there is no way for
+    # services to be removed from the registry.
+    assert address, 'address should exist for this index'
     return service_registry.get_service_url(
-        block_identifier='latest',
+        block_identifier=latest_block_hash,
         service_hex_address=address,
     )
 
@@ -63,6 +70,12 @@ def configure_pfs(
     if pfs_address is None:
         assert service_registry
         pfs_address = get_random_service(service_registry)
+        if pfs_address is None:
+            click.secho(
+                'The service registry has no registered PFS services and we dont '
+                'use basic routing.',
+            )
+            sys.exit(1)
 
     pathfinding_service_info = get_pfs_info(pfs_address)
     if not pathfinding_service_info:
