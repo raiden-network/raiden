@@ -7,7 +7,6 @@ from urllib.parse import quote
 
 import gevent
 import structlog
-from cachetools.func import ttl_cache
 from gevent.lock import Semaphore
 from matrix_client.api import MatrixHttpApi
 from matrix_client.client import CACHE, MatrixClient
@@ -29,21 +28,21 @@ class Room(MatrixRoom):
         # dict of 'type': 'content' key/value pairs
         self.account_data: Dict[str, Dict[str, Any]] = dict()
 
-    @ttl_cache(ttl=10)
-    def get_joined_members(self) -> List[User]:
+    def get_joined_members(self, force_resync=False) -> List[User]:
         """ Return a list of members of this room. """
-        response = self.client.api.get_room_members(self.room_id)
-        for event in response['chunk']:
-            if event['content']['membership'] == 'join':
-                user_id = event["state_key"]
-                if user_id not in self._members:
-                    self._mkmembers(
-                        User(
-                            self.client.api,
-                            user_id,
-                            event['content'].get('displayname'),
-                        ),
-                    )
+        if force_resync:
+            response = self.client.api.get_room_members(self.room_id)
+            for event in response['chunk']:
+                if event['content']['membership'] == 'join':
+                    user_id = event["state_key"]
+                    if user_id not in self._members:
+                        self._mkmembers(
+                            User(
+                                self.client.api,
+                                user_id,
+                                event['content'].get('displayname'),
+                            ),
+                        )
         return list(self._members.values())
 
     def _mkmembers(self, member):
