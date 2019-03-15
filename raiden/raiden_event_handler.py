@@ -354,7 +354,6 @@ class RaidenEventHandler:
             channel_identifier=channel_unlock_event.channel_identifier,
         )
         participant = channel_unlock_event.participant
-        partner = channel_unlock_event.partner
         token_address = channel_unlock_event.token_address
         triggered_by_block_hash = channel_unlock_event.triggered_by_block_hash
 
@@ -365,7 +364,7 @@ class RaidenEventHandler:
         channel_state = get_channelstate_by_token_network_and_partner(
             chain_state=state_from_raiden(raiden),
             token_network_id=token_network_identifier,
-            partner_address=partner,
+            partner_address=participant,
         )
 
         if not channel_state:
