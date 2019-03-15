@@ -24,6 +24,7 @@ BlockchainServices = namedtuple(
     (
         'deploy_registry',
         'secret_registry',
+        'service_registry',
         'deploy_service',
         'blockchain_services',
     ),
@@ -415,11 +416,13 @@ def jsonrpc_services(
         deploy_service,
         private_keys,
         secret_registry_address,
+        service_registry_address,
         token_network_registry_address,
         web3,
         contract_manager,
 ):
     secret_registry = deploy_service.secret_registry(secret_registry_address)
+    service_registry = deploy_service.service_registry(service_registry_address)
     deploy_registry = deploy_service.token_network_registry(token_network_registry_address)
 
     blockchain_services = list()
@@ -432,10 +435,11 @@ def jsonrpc_services(
         blockchain_services.append(blockchain)
 
     return BlockchainServices(
-        deploy_registry,
-        secret_registry,
-        deploy_service,
-        blockchain_services,
+        deploy_registry=deploy_registry,
+        secret_registry=secret_registry,
+        service_registry=service_registry,
+        deploy_service=deploy_service,
+        blockchain_services=blockchain_services,
     )
 
 

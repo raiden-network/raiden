@@ -6,7 +6,7 @@ from raiden.exceptions import InvalidAddress
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.utils.typing import Address, AddressHex, BlockSpecification, List, Optional
+from raiden.utils.typing import Address, AddressHex, BlockSpecification, Optional
 from raiden_contracts.constants import CONTRACT_SERVICE_REGISTRY
 from raiden_contracts.contract_manager import ContractManager
 
