@@ -220,4 +220,4 @@ In order to use Raiden with an rpc-endpoint provided by an Infura Ethereum node,
 Select the desired Ethereum account when prompted, and type in the account's password.
 
 
-Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical approach.
+Now that Raiden is up and running, head over to the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden. There's also a :doc:`Web UI tutorial <webui_tutorial>` available for people who prefer a graphical interface.
