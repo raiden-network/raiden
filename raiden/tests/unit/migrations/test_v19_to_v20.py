@@ -7,7 +7,6 @@ from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.utils.migrations.v19_to_v20 import upgrade_v19_to_v20
-from raiden.utils.serialization import serialize_bytes
 from raiden.utils.upgrades import UpgradeManager
 
 
@@ -22,26 +21,6 @@ def setup_storage(db_path):
             state_change=json.dumps(state_change_record[1]),
             log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
         )
-
-    # Add the v18 events to the DB
-    events_file = Path(__file__).parent / 'data/v19_events.json'
-    events_data = json.loads(events_file.read_text())
-    event_tuples = []
-    for event in events_data:
-        state_change_identifier = event[1]
-        event_data = json.dumps(event[2])
-        log_time = datetime.utcnow().isoformat(timespec='milliseconds')
-        event_tuples.append((
-            None,
-            state_change_identifier,
-            log_time,
-            event_data,
-        ))
-    storage.write_events(
-        state_change_identifier=state_change_identifier,
-        events=event_tuples,
-        log_time=log_time,
-    )
 
     # Also add the v19 chainstate directly to the DB
     chain_state_data = Path(__file__).parent / 'data/v19_chainstate.json'
