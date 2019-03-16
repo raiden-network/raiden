@@ -5,6 +5,7 @@ from copy import copy
 import pexpect
 import pytest
 
+from raiden.constants import Environment
 from raiden.settings import RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
 
@@ -55,7 +56,7 @@ def changed_args():
 
 
 @pytest.fixture()
-def cli_args(raiden_testchain, removed_args, changed_args):
+def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
     initial_args = raiden_testchain.copy()
 
     if removed_args is not None:
@@ -68,7 +69,10 @@ def cli_args(raiden_testchain, removed_args, changed_args):
             initial_args[k] = v
 
     args = [
+        '--gas-price',
+        '1000000000',
         '--no-sync-check',
+        '--use-basic-routing',
         '--tokennetwork-registry-contract-address',
         initial_args['tokennetwork_registry_contract_address'],
         '--secret-registry-contract-address',
@@ -77,6 +81,12 @@ def cli_args(raiden_testchain, removed_args, changed_args):
         initial_args['endpoint_registry_contract_address'],
         '--disable-debug-logfile',
     ]
+
+    if environment_type == Environment.DEVELOPMENT.value:
+        args += [
+            '--service-registry-contract-address',
+            initial_args['service_registry_contract_address'],
+        ]
 
     for arg_name, arg_value in initial_args.items():
         if arg_name == 'sync_check':

@@ -28,10 +28,12 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
 
 
 def get_random_service(service_registry: ServiceRegistry) -> Optional[str]:
-    latest_block_hash = service_registry.proxy.client.blockhash_from_blocknumber(
-        block_number=service_registry.proxy.client.block_number(),
+    latest_block_hash = service_registry.client.blockhash_from_blocknumber(
+        block_number=service_registry.client.block_number(),
     )
-    count = service_registry.service_count()
+    count = service_registry.service_count(block_identifier=latest_block_hash)
+    if count == 0:
+        return None
     index = random.SystemRandom().randint(0, count - 1)
     address = service_registry.get_service_address(
         block_identifier=latest_block_hash,
