@@ -39,6 +39,9 @@ def test_service_registry_random_pfs(
         contract_manager=contract_manager,
     )
 
+    # Test that getting a random service for an empty registry returns None
+    assert get_random_service(c1_service_proxy) is None
+
     # Test that setting the urls works
     c1_service_proxy.set_url(urls[0])
     c2_service_proxy.set_url(urls[1])

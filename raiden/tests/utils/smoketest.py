@@ -178,12 +178,6 @@ def deploy_smoketest_contracts(
         deploy_client=client,
         contract_manager=contract_manager,
     )
-    service_registry_address = deploy_contract_web3(
-        contract_name=CONTRACT_SERVICE_REGISTRY,
-        deploy_client=client,
-        contract_manager=contract_manager,
-        constructor_arguments=(token_address,),
-    )
     constructor_arguments = [
         to_checksum_address(secret_registry_address),
         chain_id,
@@ -204,9 +198,16 @@ def deploy_smoketest_contracts(
     addresses = {
         CONTRACT_ENDPOINT_REGISTRY: endpoint_registry_address,
         CONTRACT_SECRET_REGISTRY: secret_registry_address,
-        CONTRACT_SERVICE_REGISTRY: service_registry_address,
         CONTRACT_TOKEN_NETWORK_REGISTRY: token_network_registry_address,
     }
+    if contract_manager.contracts_version == DEVELOPMENT_CONTRACT_VERSION:
+        service_registry_address = deploy_contract_web3(
+            contract_name=CONTRACT_SERVICE_REGISTRY,
+            deploy_client=client,
+            contract_manager=contract_manager,
+            constructor_arguments=(token_address,),
+        )
+        addresses[CONTRACT_SERVICE_REGISTRY] = service_registry_address
     return addresses
 
 
@@ -349,7 +350,6 @@ def setup_raiden(
         )
 
     print_step('Setting up Raiden')
-
     endpoint_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
     )
@@ -359,26 +359,31 @@ def setup_raiden(
     secret_registry_contract_address = to_checksum_address(
         contract_addresses[CONTRACT_SECRET_REGISTRY],
     )
-    service_registry_contract_address = to_checksum_address(
-        contract_addresses[CONTRACT_SERVICE_REGISTRY],
-    )
+
+    args = {
+        'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
+        'datadir': testchain_setup['keystore'],
+        'endpoint_registry_contract_address': endpoint_registry_contract_address,
+        'eth_rpc_endpoint': testchain_setup['eth_rpc_endpoint'],
+        'gas_price': 'fast',
+        'keystore_path': testchain_setup['keystore'],
+        'matrix_server': matrix_server,
+        'network_id': str(NETWORKNAME_TO_ID['smoketest']),
+        'password_file': click.File()(os.path.join(testchain_setup['base_datadir'], 'pw')),
+        'tokennetwork_registry_contract_address': tokennetwork_registry_contract_address,
+        'secret_registry_contract_address': secret_registry_contract_address,
+        'sync_check': False,
+        'transport': transport,
+    }
+
+    if contracts_version == DEVELOPMENT_CONTRACT_VERSION:
+        service_registry_contract_address = to_checksum_address(
+            contract_addresses[CONTRACT_SERVICE_REGISTRY],
+        )
+        args['service_registry_contract_address'] = service_registry_contract_address
+
     return {
-        'args': {
-            'address': to_checksum_address(TEST_ACCOUNT_ADDRESS),
-            'datadir': testchain_setup['keystore'],
-            'endpoint_registry_contract_address': endpoint_registry_contract_address,
-            'eth_rpc_endpoint': testchain_setup['eth_rpc_endpoint'],
-            'gas_price': 'fast',
-            'keystore_path': testchain_setup['keystore'],
-            'matrix_server': matrix_server,
-            'network_id': str(NETWORKNAME_TO_ID['smoketest']),
-            'password_file': click.File()(os.path.join(testchain_setup['base_datadir'], 'pw')),
-            'tokennetwork_registry_contract_address': tokennetwork_registry_contract_address,
-            'secret_registry_contract_address': secret_registry_contract_address,
-            'service_registry_contract_address': service_registry_contract_address,
-            'sync_check': False,
-            'transport': transport,
-        },
+        'args': args,
         'contract_addresses': contract_addresses,
         'ethereum': testchain_setup['processes_list'],
         'token': token,

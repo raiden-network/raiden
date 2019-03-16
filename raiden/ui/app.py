@@ -344,9 +344,13 @@ def run_app(
     contract_addresses_given = (
         tokennetwork_registry_contract_address is not None and
         secret_registry_contract_address is not None and
-        service_registry_contract_address is not None and
         endpoint_registry_contract_address is not None
     )
+    if environment_type == Environment.DEVELOPMENT:
+        contract_addresses_given = (
+            contract_addresses_given and
+            service_registry_contract_address is not None
+        )
 
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
@@ -410,6 +414,7 @@ def run_app(
         except AddressWrongContract:
             handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
 
+    service_registry = None
     if environment_type == Environment.DEVELOPMENT:
         try:
             service_registry = blockchain_service.service_registry(
