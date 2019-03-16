@@ -17,6 +17,11 @@ pytestmark = pytest.mark.parametrize(
     [RED_EYES_CONTRACT_VERSION],
     scope='module',
 )
+pytestmark = pytest.mark.parametrize(
+    'environment_type',
+    [EXPECTED_DEFAULT_ENVIRONMENT_VALUE],
+    scope='module',
+)
 
 
 @pytest.mark.timeout(65)
