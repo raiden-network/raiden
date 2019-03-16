@@ -52,7 +52,6 @@ def test_cli_wrong_keystore_path(cli_args, raiden_spawner):
 @pytest.mark.timeout(35)
 @pytest.mark.parametrize('removed_args', [['password_file']])
 def test_cli_missing_password_file_enter_password(raiden_testchain, cli_args, raiden_spawner):
-    print(cli_args)
     child = raiden_spawner(cli_args)
     try:
         expect_cli_until_acknowledgment(child)
