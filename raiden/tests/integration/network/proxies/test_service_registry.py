@@ -12,6 +12,7 @@ def test_service_registry_random_pfs(
         private_keys,
         web3,
         contract_manager,
+        skip_if_parity,
 ):
     urls = ['http://foo', 'http://boo', 'http://coo']
     addresses = [
