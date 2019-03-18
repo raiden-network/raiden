@@ -1,3 +1,5 @@
+import gevent
+
 import pytest
 from gevent import server
 
@@ -11,7 +13,7 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
-from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
+from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer, wait_assert
 from raiden.transfer import views
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
@@ -91,17 +93,20 @@ def test_recovery_happy_case(
     del app0  # from here on the app0_restart should be used
 
     app0_restart.start()
-
-    assert_synced_channel_state(
-        token_network_identifier,
-        app0_restart, deposit - spent_amount, [],
-        app1, deposit + spent_amount, [],
-    )
-    assert_synced_channel_state(
-        token_network_identifier,
-        app1, deposit - spent_amount, [],
-        app2, deposit + spent_amount, [],
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0_restart, deposit - spent_amount, [],
+            app1, deposit + spent_amount, [],
+        )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app1, deposit - spent_amount, [],
+            app2, deposit + spent_amount, [],
+        )
 
     # wait for the nodes' healthcheck to update the network statuses
     waiting.wait_for_healthy(
@@ -134,18 +139,22 @@ def test_recovery_happy_case(
         timeout=network_wait * number_of_nodes * 2,
     )
 
-    assert_synced_channel_state(
-        token_network_identifier,
-        app0_restart, deposit - spent_amount, [],
-        app1, deposit + spent_amount, [],
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0_restart, deposit - spent_amount, [],
+            app1, deposit + spent_amount, [],
+        )
 
     wait_for_payment.wait()
-    assert_synced_channel_state(
-        token_network_identifier,
-        app1, deposit - spent_amount, [],
-        app2, deposit + spent_amount, [],
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app1, deposit - spent_amount, [],
+            app2, deposit + spent_amount, [],
+        )
 
 
 @pytest.mark.parametrize('deposit', [10])
