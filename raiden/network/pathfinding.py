@@ -58,10 +58,11 @@ def configure_pfs(
     Take in the given pfs_address argument, the service registry and find out a
     pfs address to use.
 
-    If pfs_address is empty then we either use basic routing if requested or get
-    a random address from the service registry.
-
+    If pfs_address is None then basic routing must have been requested.
     If pfs_address is provided we use that.
+    If pfs_address is 'auto' then we randomly choose a PFS address from the registry
+
+    Returns the PFS url to use or None if we don't use the PFS and use basic routing
     """
     if routing_mode == RoutingMode.BASIC:
         click.secho(
@@ -69,7 +70,9 @@ def configure_pfs(
         )
         return None
 
-    if pfs_address is None:
+    msg = 'With PFS routing mode we shouldnt get to configure pfs with pfs_address being None'
+    assert pfs_address, msg
+    if pfs_address == 'auto':
         assert service_registry
         pfs_address = get_random_service(service_registry)
         if pfs_address is None:
