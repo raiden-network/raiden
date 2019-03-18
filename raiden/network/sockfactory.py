@@ -11,8 +11,8 @@ log = structlog.get_logger(__name__)
 
 
 class PortMappedSocket:
-    """Wrapper around a socket instance with port mapping information.
-    """
+    """Wrapper around a socket instance with port mapping information."""
+
     def __init__(self, sock, method, external_ip, external_port, **meta):
         self.socket = sock
         self.method = method
@@ -119,8 +119,10 @@ class SocketFactory:
             if result is not None:
                 self.storage['router'] = router
                 self.storage['external_port'] = result[1]
-                return PortMappedSocket(self.socket, 'UPnP', result[0], result[1],
-                                        router_location=location)
+                return PortMappedSocket(
+                    self.socket, 'UPnP', result[0], result[1],
+                    router_location=location,
+                )
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
                 raise RaidenServicePortInUseError()
@@ -151,8 +153,10 @@ class SocketFactory:
                 default_gw_if = netifaces.gateways()['default'][netifaces.AF_INET][1]
                 self.source_ip = netifaces.ifaddresses(default_gw_if)[netifaces.AF_INET][0]['addr']
             except (OSError, IndexError, KeyError):
-                log.critical("Couldn't get interface address. "
-                             "Try specifying with '--nat ext:<ip>'.")
+                log.critical(
+                    "Couldn't get interface address. "
+                    "Try specifying with '--nat ext:<ip>'.",
+                )
                 raise
         log.warning('Using internal interface address. Connectivity issues are likely.')
         return PortMappedSocket(self.socket, 'NONE', self.source_ip, self.source_port)
