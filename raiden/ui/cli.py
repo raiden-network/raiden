@@ -252,8 +252,11 @@ def options(func):
                 '--pathfinding-service-address',
                 help=(
                     'URL to the Raiden path finding service to request paths from.\n'
-                    'Example: https://pfs-ropsten.services-dev.raiden.network'
+                    'Example: https://pfs-ropsten.services-dev.raiden.network\n'
+                    'Can also be given the "auto" value so that raiden chooses a '
+                    'PFS randomly from the service registry address'
                 ),
+                default='auto',
                 type=str,
                 show_default=True,
             ),
