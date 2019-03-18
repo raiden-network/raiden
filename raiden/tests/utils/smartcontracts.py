@@ -1,4 +1,8 @@
+from typing import List, Tuple
+
 from raiden.network.blockchain_service import BlockChainService
+from raiden.network.pathfinding import get_random_service
+from raiden.network.proxies import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import typing
@@ -76,3 +80,40 @@ def deploy_tokens_and_fund_accounts(
             )
 
     return result
+
+
+def deploy_service_registry_and_set_urls(
+        private_keys,
+        web3,
+        contract_manager,
+        service_registry_address,
+) -> Tuple[ServiceRegistry, List[str]]:
+    urls = ['http://foo', 'http://boo', 'http://coo']
+    c1_client = JSONRPCClient(web3, private_keys[0])
+    c1_service_proxy = ServiceRegistry(
+        jsonrpc_client=c1_client,
+        service_registry_address=service_registry_address,
+        contract_manager=contract_manager,
+    )
+    c2_client = JSONRPCClient(web3, private_keys[1])
+    c2_service_proxy = ServiceRegistry(
+        jsonrpc_client=c2_client,
+        service_registry_address=service_registry_address,
+        contract_manager=contract_manager,
+    )
+    c3_client = JSONRPCClient(web3, private_keys[2])
+    c3_service_proxy = ServiceRegistry(
+        jsonrpc_client=c3_client,
+        service_registry_address=service_registry_address,
+        contract_manager=contract_manager,
+    )
+
+    # Test that getting a random service for an empty registry returns None
+    assert get_random_service(c1_service_proxy) is None
+
+    # Test that setting the urls works
+    c1_service_proxy.set_url(urls[0])
+    c2_service_proxy.set_url(urls[1])
+    c3_service_proxy.set_url(urls[2])
+
+    return c1_service_proxy, urls

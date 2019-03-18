@@ -85,7 +85,7 @@ def configure_pfs(
     pathfinding_service_info = get_pfs_info(pfs_address)
     if not pathfinding_service_info:
         click.secho(
-            f'There is an error with the pathfinding service with address'
+            f'There is an error with the pathfinding service with address '
             f'{pfs_address}. Raiden will shut down.',
         )
         sys.exit(1)

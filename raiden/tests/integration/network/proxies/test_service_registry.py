@@ -1,9 +1,13 @@
+from unittest.mock import Mock, patch
+
+import pytest
+import requests
 from eth_utils import to_checksum_address
 
-from raiden.network.pathfinding import get_random_service
-from raiden.network.proxies import ServiceRegistry
-from raiden.network.rpc.client import JSONRPCClient
+from raiden.constants import RoutingMode
+from raiden.network.pathfinding import configure_pfs, get_random_service
 from raiden.tests.utils.factories import HOP1
+from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils import privatekey_to_address
 
 
@@ -14,39 +18,17 @@ def test_service_registry_random_pfs(
         contract_manager,
         skip_if_parity,
 ):
-    urls = ['http://foo', 'http://boo', 'http://coo']
     addresses = [
         # to_normalized_address(privatekey_to_address(key))
         to_checksum_address(privatekey_to_address(key))
         for key in private_keys
     ]
-
-    c1_client = JSONRPCClient(web3, private_keys[0])
-    c1_service_proxy = ServiceRegistry(
-        jsonrpc_client=c1_client,
-        service_registry_address=service_registry_address,
+    c1_service_proxy, urls = deploy_service_registry_and_set_urls(
+        private_keys=private_keys,
+        web3=web3,
         contract_manager=contract_manager,
-    )
-    c2_client = JSONRPCClient(web3, private_keys[1])
-    c2_service_proxy = ServiceRegistry(
-        jsonrpc_client=c2_client,
         service_registry_address=service_registry_address,
-        contract_manager=contract_manager,
     )
-    c3_client = JSONRPCClient(web3, private_keys[2])
-    c3_service_proxy = ServiceRegistry(
-        jsonrpc_client=c3_client,
-        service_registry_address=service_registry_address,
-        contract_manager=contract_manager,
-    )
-
-    # Test that getting a random service for an empty registry returns None
-    assert get_random_service(c1_service_proxy) is None
-
-    # Test that setting the urls works
-    c1_service_proxy.set_url(urls[0])
-    c2_service_proxy.set_url(urls[1])
-    c3_service_proxy.set_url(urls[2])
     assert c1_service_proxy.service_count('latest') == 3
 
     # Test that getting the url for each service address works
@@ -63,3 +45,71 @@ def test_service_registry_random_pfs(
 
     # Test that getting a random service from the proxy works
     assert get_random_service(c1_service_proxy) in urls
+
+
+def test_configure_pfs(
+        service_registry_address,
+        private_keys,
+        web3,
+        contract_manager,
+        skip_if_parity,
+):
+    service_proxy, urls = deploy_service_registry_and_set_urls(
+        private_keys=private_keys,
+        web3=web3,
+        contract_manager=contract_manager,
+        service_registry_address=service_registry_address,
+    )
+    json_data = {
+        'price_info': 0,
+        'network_info': {
+            'chain_id': 1,
+            'registry_address': '0xB9633dd9a9a71F22C933bF121d7a22008f66B908',
+        },
+        'message': 'This is your favorite pathfinding service',
+        'operator': 'John Doe',
+        'version': '0.0.1',
+    }
+
+    response = Mock()
+    response.configure_mock(status_code=200)
+    response.json = Mock(return_value=json_data)
+
+    # With basic routing configure pfs should return None
+    assert not configure_pfs(
+        pfs_address=None,
+        routing_mode=RoutingMode.BASIC,
+        service_registry=service_proxy,
+    )
+
+    # Asking for auto address
+    with patch.object(requests, 'get', return_value=response):
+        pfs_url = configure_pfs(
+            pfs_address='auto',
+            routing_mode=RoutingMode.PFS,
+            service_registry=service_proxy,
+        )
+    assert pfs_url in urls
+
+    # Configuring a given address
+    given_address = 'http://ourgivenaddress'
+    with patch.object(requests, 'get', return_value=response):
+        pfs_url = configure_pfs(
+            pfs_address=given_address,
+            routing_mode=RoutingMode.PFS,
+            service_registry=service_proxy,
+        )
+    assert pfs_url == given_address
+
+    # Bad address, should exit the program
+    response = Mock()
+    response.configure_mock(status_code=400)
+    bad_address = 'http://badaddress'
+    with pytest.raises(SystemExit):
+        with patch.object(requests, 'get', side_effect=requests.RequestException()):
+            # Configuring a given address
+            pfs_url = configure_pfs(
+                pfs_address=bad_address,
+                routing_mode=RoutingMode.PFS,
+                service_registry=service_proxy,
+            )
