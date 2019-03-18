@@ -72,7 +72,6 @@ def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
         '--gas-price',
         '1000000000',
         '--no-sync-check',
-        '--use-basic-routing',
         '--tokennetwork-registry-contract-address',
         initial_args['tokennetwork_registry_contract_address'],
         '--secret-registry-contract-address',

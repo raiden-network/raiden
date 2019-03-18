@@ -17,7 +17,7 @@ from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
-from raiden.constants import Environment
+from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import InvalidAddress
 from raiden.utils import address_checksum_and_decode
 from raiden_contracts.constants import NETWORKNAME_TO_ID
@@ -279,6 +279,14 @@ class EnvironmentChoiceType(click.Choice):
             return Environment(value)
         except ValueError:
             self.fail(f"'{value}' is not a valid environment type", param, ctx)
+
+
+class RoutingModeChoiceType(click.Choice):
+    def convert(self, value, param, ctx):
+        try:
+            return RoutingMode(value)
+        except ValueError:
+            self.fail(f"'{value}' is not a valid routing mode type", param, ctx)
 
 
 class GasPriceChoiceType(click.Choice):

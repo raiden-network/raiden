@@ -207,7 +207,7 @@ def run_app(
         pathfinding_service_address,
         pathfinding_max_paths,
         enable_monitoring,
-        use_basic_routing,
+        routing_mode,
         config=None,
         extra_config=None,
         **kwargs,
@@ -431,7 +431,7 @@ def run_app(
 
         config['services']['pathfinding_service_address'] = configure_pfs(
             pfs_address=pathfinding_service_address,
-            use_basic_routing=use_basic_routing,
+            routing_mode=routing_mode,
             service_registry=service_registry,
         )
     else:

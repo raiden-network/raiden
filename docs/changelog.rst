@@ -2,7 +2,7 @@
 Changelog
 =========
 
-* :feature:`3467` Raiden now chooses a PFS from a provided registry. Also using PFS is now default. Use ``--use-basic-routing`` to revert to the old behavior.
+* :feature:`3467` Raiden now chooses a PFS from a provided registry. Also added a new argument ``--routing-mode`` to configure the routing mode to either be PFS or BASIC.
 * :bug:`3558` Raiden will no longer crash if starting with a fresh DB due to the ethereum node queries timing out.
 * :bug:`3567` Properly check handling offline partners
 * :feature:`2436` Add an API endpoint to list pending transfers

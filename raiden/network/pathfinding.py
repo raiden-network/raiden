@@ -7,7 +7,7 @@ import requests
 import structlog
 from eth_utils import to_hex
 
-from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT
+from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, RoutingMode
 from raiden.exceptions import ServiceRequestFailed
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.utils import typing
@@ -51,7 +51,7 @@ def get_random_service(service_registry: ServiceRegistry) -> Optional[str]:
 
 def configure_pfs(
         pfs_address: Optional[str],
-        use_basic_routing: bool,
+        routing_mode: RoutingMode,
         service_registry,
 ) -> Optional[str]:
     """
@@ -63,7 +63,7 @@ def configure_pfs(
 
     If pfs_address is provided we use that.
     """
-    if use_basic_routing:
+    if routing_mode == RoutingMode.BASIC:
         click.secho(
             'Requested to use basic routing. No path finding service is being used',
         )
