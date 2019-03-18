@@ -2,9 +2,8 @@ import os
 import re
 from glob import glob
 
+from raiden.constants import RAIDEN_DB_VERSION
 from raiden.utils import typing
-
-from .sqlite import RAIDEN_DB_VERSION
 
 VERSION_RE = re.compile(r'^v(\d+).*')
 

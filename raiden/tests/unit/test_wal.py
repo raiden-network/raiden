@@ -3,9 +3,10 @@ import sqlite3
 
 import pytest
 
+from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
 from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import RAIDEN_DB_VERSION, SerializedSQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.utils import TimestampedEvent
 from raiden.storage.wal import WriteAheadLog, restore_to_state_change
 from raiden.tests.utils import factories

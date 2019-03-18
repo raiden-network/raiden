@@ -8,10 +8,11 @@ import filelock
 import structlog
 from web3 import Web3
 
+from raiden.constants import RAIDEN_DB_VERSION
 from raiden.storage.migrations.v16_to_v17 import upgrade_v16_to_v17
 from raiden.storage.migrations.v17_to_v18 import upgrade_v17_to_v18
 from raiden.storage.migrations.v18_to_v19 import upgrade_v18_to_v19
-from raiden.storage.sqlite import RAIDEN_DB_VERSION, SQLiteStorage
+from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import older_db_file
 from raiden.utils.typing import Callable
 
