@@ -67,6 +67,7 @@ from raiden.utils import (
     pex,
     random_secret,
     sha3,
+    to_rdn,
 )
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
@@ -242,9 +243,22 @@ def update_monitoring_service_from_balance_proof(
     )
 
     if balance < MONITORING_MIN_CAPACITY:
+        log.warn(
+            f"Skipping update to Monitoring service. "
+            f"Available balance of {balance} is less than configured "
+            f"minimum capacity of {MONITORING_MIN_CAPACITY}",
+        )
         return
 
-    if raiden.user_deposit.effective_balance < MONITORING_REWARD:
+    rei_balance = raiden.user_deposit.effective_balance(raiden.address, "latest")
+    if rei_balance < MONITORING_REWARD:
+        rdn_balance = to_rdn(rei_balance)
+        rdn_reward = to_rdn(MONITORING_REWARD)
+        log.warn(
+            f"Skipping update to Monitoring service. "
+            f"Your deposit balance {rdn_balance} is less than "
+            f"the required monitoring service reward of {rdn_reward}",
+        )
         return
 
     log.info(
