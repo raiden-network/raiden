@@ -77,6 +77,7 @@ def raiden_chain(
         token_network_registry_address=token_network_registry_address,
         secret_registry_address=blockchain_services.secret_registry.address,
         service_registry_address=service_registry_address,
+        user_deposit_address=blockchain_services.user_deposit.address,
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
