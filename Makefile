@@ -43,6 +43,7 @@ ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive raiden/ -sg */
 
 lint:
 	flake8 raiden/ tools/
+	autopep8 --diff --exit-code $(shell find raiden -iname '*.py')
 	isort $(ISORT_PARAMS) --diff --check-only
 	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc raiden/
 	python setup.py check --restructuredtext --strict
