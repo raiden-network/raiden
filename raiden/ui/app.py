@@ -9,7 +9,12 @@ from eth_utils import to_canonical_address, to_checksum_address, to_normalized_a
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
-from raiden.constants import MONITORING_BROADCASTING_ROOM, SQLITE_MIN_REQUIRED_VERSION, Environment
+from raiden.constants import (
+    MONITORING_BROADCASTING_ROOM,
+    RAIDEN_DB_VERSION,
+    SQLITE_MIN_REQUIRED_VERSION,
+    Environment,
+)
 from raiden.exceptions import (
     AddressWithoutCode,
     AddressWrongContract,
@@ -33,7 +38,7 @@ from raiden.settings import (
     DEVELOPMENT_CONTRACT_VERSION,
     RED_EYES_CONTRACT_VERSION,
 )
-from raiden.storage.sqlite import RAIDEN_DB_VERSION, assert_sqlite_version
+from raiden.storage.sqlite import assert_sqlite_version
 from raiden.utils import is_supported_client, pex, split_endpoint, typing
 from raiden.utils.cli import get_matrix_servers
 from raiden_contracts.constants import (

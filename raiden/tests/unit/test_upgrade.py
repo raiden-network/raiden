@@ -30,7 +30,7 @@ def test_upgrade_manager_restores_backup(tmp_path):
 
     storage = setup_storage(old_db_filename)
 
-    with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
+    with patch('raiden.constants.RAIDEN_DB_VERSION', new=16):
         storage.update_version()
         storage.conn.close()
 
@@ -82,7 +82,7 @@ def test_sequential_version_numbers(tmp_path):
             new=upgrade_functions,
         ))
         stack.enter_context(patch(
-            'raiden.utils.upgrades.RAIDEN_DB_VERSION',
+            'raiden.constants.RAIDEN_DB_VERSION',
             new=19,
         ))
         older_db_file = stack.enter_context(patch('raiden.utils.upgrades.older_db_file'))
