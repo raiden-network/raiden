@@ -69,6 +69,12 @@ class Environment(Enum):
     DEVELOPMENT = 'development'
 
 
+class RoutingMode(Enum):
+    """Routing mode configuration that can be chosen on the command line"""
+    BASIC = 'basic'
+    PFS = 'pfs'
+
+
 GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK = 3_234_716
 GAS_REQUIRED_PER_SECRET_IN_BATCH = math.ceil(UNLOCK_TX_GAS_LIMIT / MAXIMUM_PENDING_TRANSFERS)
 GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL = 100_000

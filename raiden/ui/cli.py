@@ -18,7 +18,7 @@ from urllib3.exceptions import InsecureRequestWarning
 
 from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
-from raiden.constants import Environment
+from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import ReplacementTransactionUnderpriced, TransactionAlreadyPending
 from raiden.log_config import configure_logging
 from raiden.network.sockfactory import SocketFactory
@@ -39,6 +39,7 @@ from raiden.utils.cli import (
     NATChoiceType,
     NetworkChoiceType,
     PathRelativePath,
+    RoutingModeChoiceType,
     apply_config_file,
     group,
     option,
@@ -192,6 +193,17 @@ def options(func):
             show_default=True,
         ),
         option(
+            '--routing-mode',
+            help=(
+                'Specify the routing mode to be used.\n'
+                '"basic" - use local routing'
+                '"pfs" - use the pathfinding service"'
+            ),
+            type=RoutingModeChoiceType([e.value for e in RoutingMode]),
+            default=RoutingMode.BASIC.value,
+            show_default=True,
+        ),
+        option(
             '--accept-disclaimer',
             help='Bypass the experimental software disclaimer prompt',
             is_flag=True,
@@ -236,15 +248,6 @@ def options(func):
         ),
         option_group(
             'Raiden Services Options',
-            option(
-                '--use-basic-routing',
-                help=(
-                    'If given then, then no path finding service is going to be '
-                    'used and we are instead going to revent to basic routing'
-                ),
-                is_flag=True,
-                show_default=True,
-            ),
             option(
                 '--pathfinding-service-address',
                 help=(
@@ -606,7 +609,7 @@ def smoketest(ctx, debug):
         # TODO: If we ever utilize a PFS in the smoke test we
         # need to use the deployed service registry, register the
         # PFS service there and then change this argument.
-        args['use_basic_routing'] = True
+        args['routing_mode'] = RoutingMode.BASIC
 
         raiden_stdout = StringIO()
         with contextlib.redirect_stdout(raiden_stdout):
