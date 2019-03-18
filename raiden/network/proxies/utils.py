@@ -4,6 +4,7 @@ from web3.exceptions import BadFunctionCallOutput
 from raiden.exceptions import AddressWrongContract, ContractVersionMismatch
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.transfer.state import NettingChannelState
+from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import Address, BlockHash
 
 
@@ -42,8 +43,11 @@ def get_onchain_locksroots(
         block_hash: BlockHash,
 ):
     payment_channel = raiden.chain.payment_channel(
-        token_network_address=channel_state.token_network_identifier,
-        channel_id=channel_state.identifier,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=None,
+            token_network_address=channel_state.token_network_identifier,
+            channel_identifier=channel_state.identifier,
+        ),
     )
     token_network = payment_channel.token_network
     participants_details = token_network.detail_participants(
