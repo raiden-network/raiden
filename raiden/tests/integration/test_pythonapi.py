@@ -28,6 +28,7 @@ from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     get_channelstate,
     mediated_transfer,
+    wait_assert,
 )
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
@@ -265,7 +266,7 @@ def test_transfer_to_unknownchannel(raiden_network, token_addresses):
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [2])
 @pytest.mark.parametrize('settle_timeout', [TEST_TOKEN_SWAP_SETTLE_TIMEOUT])
-def test_token_swap(raiden_network, deposit, token_addresses):
+def test_token_swap(raiden_network, deposit, token_addresses, network_wait):
     app0, app1 = raiden_network
 
     maker_address = app0.raiden.address
@@ -299,19 +300,21 @@ def test_token_swap(raiden_network, deposit, token_addresses):
     assert async_result.wait()
 
     # wait for the taker to receive and process the messages
-    gevent.sleep(0.5)
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            maker_token,
+            app0, deposit - maker_amount, [],
+            app1, deposit + maker_amount, [],
+        )
 
-    assert_synced_channel_state(
-        maker_token,
-        app0, deposit - maker_amount, [],
-        app1, deposit + maker_amount, [],
-    )
-
-    assert_synced_channel_state(
-        taker_token,
-        app0, deposit + taker_amount, [],
-        app1, deposit - taker_amount, [],
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            taker_token,
+            app0, deposit + taker_amount, [],
+            app1, deposit - taker_amount, [],
+        )
 
 
 @pytest.mark.parametrize('channels_per_node', [1])

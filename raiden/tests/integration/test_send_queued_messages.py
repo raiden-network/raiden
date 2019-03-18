@@ -9,7 +9,7 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEvent, dont_handle_node_change_network_state
-from raiden.tests.utils.transfer import assert_synced_channel_state
+from raiden.tests.utils.transfer import assert_synced_channel_state, wait_assert
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
@@ -124,11 +124,13 @@ def test_send_queued_messages(
         retry_timeout=network_wait,
     )
 
-    assert_synced_channel_state(
-        token_network_identifier,
-        app0_restart, deposit - spent_amount, [],
-        app1, deposit + spent_amount, [],
-    )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0_restart, deposit - spent_amount, [],
+            app1, deposit + spent_amount, [],
+        )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
