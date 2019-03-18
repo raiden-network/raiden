@@ -93,7 +93,7 @@ def test_cli_wrong_rpc_endpoint(cli_args, raiden_spawner):
 
 @pytest.mark.timeout(35)
 @pytest.mark.parametrize('changed_args', [{'network_id': '42'}])
-def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner):
+def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner, skip_if_parity):
     child = raiden_spawner(cli_args)
     try:
         expect_cli_until_acknowledgment(child)
