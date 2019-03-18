@@ -281,6 +281,7 @@ def create_apps(
         token_network_registry_address,
         secret_registry_address,
         service_registry_address,
+        user_deposit_address,
         raiden_udp_ports,
         reveal_timeout,
         settle_timeout,
@@ -365,6 +366,7 @@ def create_apps(
         service_registry = None
         if service_registry_address:
             service_registry = blockchain.service_registry(service_registry_address)
+        user_deposit = blockchain.user_deposit(user_deposit_address)
 
         if use_matrix:
             transport = MatrixTransport(config['transport']['matrix'])
@@ -396,6 +398,7 @@ def create_apps(
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
             discovery=discovery,
+            user_deposit=user_deposit,
         )
         apps.append(app)
 
@@ -420,6 +423,7 @@ def jsonrpc_services(
         secret_registry_address,
         service_registry_address,
         token_network_registry_address,
+        user_deposit_address,
         web3,
         contract_manager,
 ):
@@ -428,6 +432,7 @@ def jsonrpc_services(
     if service_registry_address:
         service_registry = deploy_service.service_registry(service_registry_address)
     deploy_registry = deploy_service.token_network_registry(token_network_registry_address)
+    user_deposit = deploy_service.user_deposit(user_deposit_address)
 
     blockchain_services = list()
     for privkey in private_keys:
@@ -439,11 +444,13 @@ def jsonrpc_services(
         blockchain_services.append(blockchain)
 
     return BlockchainServices(
+
         deploy_registry=deploy_registry,
         secret_registry=secret_registry,
         service_registry=service_registry,
         deploy_service=deploy_service,
         blockchain_services=blockchain_services,
+        user_deposit=user_deposit,
     )
 
 
