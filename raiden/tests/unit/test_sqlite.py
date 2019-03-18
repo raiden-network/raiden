@@ -299,7 +299,7 @@ def test_log_run():
 def test_batch_query_state_changes():
     storage = SQLiteStorage(':memory:')
     # Add the v18 state changes to the DB
-    state_changes_file = Path(__file__).parent / 'migrations/data/v18_statechanges.json'
+    state_changes_file = Path(__file__).parent / 'storage/migrations/data/v18_statechanges.json'
     state_changes_data = json.loads(state_changes_file.read_text())
     for state_change_record in state_changes_data:
         storage.write_state_change(
@@ -347,7 +347,7 @@ def test_batch_query_state_changes():
 def test_batch_query_event_records():
     storage = SQLiteStorage(':memory:')
     # Add the v18 state changes to the DB (need them to satisfy foreign key constraints)
-    state_changes_file = Path(__file__).parent / 'migrations/data/v18_statechanges.json'
+    state_changes_file = Path(__file__).parent / 'storage/migrations/data/v18_statechanges.json'
     state_changes_data = json.loads(state_changes_file.read_text())
     for state_change_record in state_changes_data:
         storage.write_state_change(
@@ -356,7 +356,7 @@ def test_batch_query_event_records():
         )
 
     # Add the v18 events to the DB
-    events_file = Path(__file__).parent / 'migrations/data/v18_events.json'
+    events_file = Path(__file__).parent / 'storage/migrations/data/v18_events.json'
     events_data = json.loads(events_file.read_text())
     for event in events_data:
         state_change_identifier = event[1]
