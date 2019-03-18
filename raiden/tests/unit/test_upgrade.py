@@ -12,7 +12,7 @@ from raiden.utils.upgrades import UpgradeManager, get_db_version
 
 def setup_storage(db_path):
     # For a raw ActionInitChain let's get the v18 one. It should be the same as v16
-    state_changes_file = Path(__file__).parent / 'migrations' / 'data/v18_statechanges.json'
+    state_changes_file = Path(__file__).parent / 'storage/migrations/data/v18_statechanges.json'
     state_changes_data = json.loads(state_changes_file.read_text())
     action_init_chain_data = json.dumps(state_changes_data[0][1])
     storage = SQLiteStorage(str(db_path))
