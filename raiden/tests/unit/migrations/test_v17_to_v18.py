@@ -3,9 +3,9 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+from raiden.storage.migrations.v17_to_v18 import upgrade_v17_to_v18
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
-from raiden.utils.migrations.v17_to_v18 import upgrade_v17_to_v18
 from raiden.utils.upgrades import UpgradeManager
 
 

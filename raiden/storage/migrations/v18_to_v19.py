@@ -19,6 +19,7 @@ class BlockHashCache():
     To save RPC calls and make it a bit faster we keep this short-lived cache for the duration
     of the migration
     """
+
     def __init__(self, web3: Web3):
         self.web3 = web3
         self.mapping = {}
