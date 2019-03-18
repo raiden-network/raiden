@@ -21,6 +21,7 @@ from raiden_contracts.constants import (
     CONTRACT_SECRET_REGISTRY,
     CONTRACT_SERVICE_REGISTRY,
     CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
 )
 
 
@@ -110,6 +111,49 @@ def maybe_deploy_service_registry_and_return_address(
         contract_manager=contract_manager,
         constructor_arguments=constructor_arguments,
     )
+    return address
+
+
+@pytest.fixture(name='user_deposit_address')
+def deploy_user_deposit_and_return_address(
+        deploy_service,
+        deploy_client,
+        contract_manager,
+        token_proxy,
+        private_keys,
+) -> typing.Address:
+    """ Deploy a token to emulate RDN and fund accounts with some balances."""
+    constructor_arguments = [
+        token_proxy.address,
+        UINT256_MAX,
+    ]
+    address = deploy_contract_web3(
+        contract_name=CONTRACT_USER_DEPOSIT,
+        deploy_client=deploy_client,
+        contract_manager=contract_manager,
+        constructor_arguments=constructor_arguments,
+    )
+
+    user_deposit = deploy_service.user_deposit(token_proxy.address)
+
+    participants = [privatekey_to_address(key) for key in private_keys]
+    for transfer_to in participants:
+        token_proxy.transfer(
+            to_address=transfer_to,
+            amount=1000,
+            given_block_identifier='latest',
+        )
+        token_proxy.approve(
+            allowed_address=transfer_to,
+            allowance=100,
+            given_block_identifier='latest',
+        )
+        user_deposit.deposit(
+            beneficiary=transfer_to,
+            amount=100,
+            block_identifier='latest',
+        )
+
     return address
 
 
