@@ -41,7 +41,7 @@ def test_upgrade_v16_to_v17(tmp_path):
     with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
         older_db_file.return_value = str(old_db_filename)
         storage = setup_storage(str(old_db_filename))
-        with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
+        with patch('raiden.constants.RAIDEN_DB_VERSION', new=16):
             storage.update_version()
         storage.conn.close()
 
