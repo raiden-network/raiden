@@ -561,9 +561,16 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     ) -> None:
         super().__init__(transaction_hash, block_number, block_hash)
 
-        self.token_network_identifier = canonical_identifier.token_network_address
-        self.channel_identifier = canonical_identifier.channel_identifier
+        self.canonical_identifier = canonical_identifier
         self.deposit_transaction = deposit_transaction
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     def __repr__(self):
         return (
@@ -580,8 +587,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractReceiveChannelNewBalance) and
-            self.token_network_identifier == other.token_network_identifier and
-            self.channel_identifier == other.channel_identifier and
+            self.canonical_identifier == other.canonical_identifier and
             self.deposit_transaction == other.deposit_transaction and
             super().__eq__(other)
         )
@@ -592,8 +598,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     def to_dict(self) -> Dict[str, Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': str(self.channel_identifier),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             'deposit_transaction': self.deposit_transaction,
             'block_number': str(self.block_number),
             'block_hash': serialize_bytes(self.block_hash),
@@ -603,11 +608,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelNewBalance':
         return cls(
             transaction_hash=deserialize_transactionhash(data['transaction_hash']),
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=ChannelID(int(data['channel_identifier'])),
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             deposit_transaction=data['deposit_transaction'],
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
