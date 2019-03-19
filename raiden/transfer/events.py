@@ -26,12 +26,11 @@ from raiden.utils.typing import (
     PaymentNetworkID,
     Secret,
     SecretHash,
-    T_ChannelID,
     T_Secret,
-    T_TokenNetworkAddress,
     TargetAddress,
     TokenAddress,
     TokenAmount,
+    TokenNetworkAddress,
     TokenNetworkID,
 )
 
@@ -117,16 +116,17 @@ class ContractSendChannelSettle(ContractSendEvent):
             triggered_by_block_hash: BlockHash,
     ):
         super().__init__(triggered_by_block_hash)
-        channel_identifier = canonical_identifier.channel_identifier
-        token_network_identifier = canonical_identifier.token_network_address
-        if not isinstance(channel_identifier, T_ChannelID):
-            raise ValueError('channel_identifier must be a ChannelID instance')
+        canonical_identifier.validate()
 
-        if not isinstance(token_network_identifier, T_TokenNetworkAddress):
-            raise ValueError('token_network_identifier must be a TokenNetworkAddress instance')
+        self.canonical_identifier = canonical_identifier
 
-        self.channel_identifier = channel_identifier
-        self.token_network_identifier = token_network_identifier
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
 
     def __repr__(self):
         return (
@@ -142,8 +142,7 @@ class ContractSendChannelSettle(ContractSendEvent):
         return (
             super().__eq__(other) and
             isinstance(other, ContractSendChannelSettle) and
-            self.channel_identifier == other.channel_identifier and
-            self.token_network_identifier == other.token_network_identifier
+            self.canonical_identifier == other.canonical_identifier
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -151,24 +150,17 @@ class ContractSendChannelSettle(ContractSendEvent):
 
     def to_dict(self) -> Dict[str, Any]:
         result = {
-            'channel_identifier': str(self.channel_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
         }
-
         return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelSettle':
         restored = cls(
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=ChannelID(int(data['channel_identifier'])),
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
-
         return restored
 
 
