@@ -363,10 +363,14 @@ def create_apps(
 
         registry = blockchain.token_network_registry(token_network_registry_address)
         secret_registry = blockchain.secret_registry(secret_registry_address)
+
         service_registry = None
         if service_registry_address:
             service_registry = blockchain.service_registry(service_registry_address)
-        user_deposit = blockchain.user_deposit(user_deposit_address)
+
+        user_deposit = None
+        if user_deposit_address:
+            user_deposit = blockchain.user_deposit(user_deposit_address)
 
         if use_matrix:
             transport = MatrixTransport(config['transport']['matrix'])
