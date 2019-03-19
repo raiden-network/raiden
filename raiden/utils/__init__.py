@@ -47,8 +47,6 @@ from raiden.utils.typing import (
 
 # Placeholder chain ID for refactoring in scope of #3493
 CHAIN_ID_UNSPECIFIED = ChainID(-1)
-# Placeholder channel ID for refactoring in scope of #3493
-CHANNEL_ID_UNSPECIFIED = ChannelID(-2)
 
 
 class CanonicalIdentifier:
