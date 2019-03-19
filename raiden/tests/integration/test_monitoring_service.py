@@ -20,6 +20,7 @@ def test_monitoring_global_messages(
         retries_before_backoff,
         token_proxy,
         deploy_service,
+        skip_if_not_matrix,
 ):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
