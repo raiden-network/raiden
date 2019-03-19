@@ -174,11 +174,17 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
             triggered_by_block_hash: BlockHash,
     ) -> None:
         super().__init__(triggered_by_block_hash, expiration)
-
-        canonical_identifier = balance_proof.canonical_identifier
-        self.channel_identifier = canonical_identifier.channel_identifier
-        self.token_network_identifier = canonical_identifier.token_network_address
         self.balance_proof = balance_proof
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(
+            self.balance_proof.canonical_identifier.token_network_address,
+        )
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.balance_proof.channel_identifier
 
     def __repr__(self):
         return (
@@ -194,8 +200,6 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractSendChannelUpdateTransfer) and
-            self.channel_identifier == other.channel_identifier and
-            self.token_network_identifier == other.token_network_identifier and
             self.balance_proof == other.balance_proof and
             super().__eq__(other)
         )
@@ -206,8 +210,6 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def to_dict(self) -> Dict[str, Any]:
         result = {
             'expiration': str(self.expiration),
-            'channel_identifier': str(self.channel_identifier),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'balance_proof': self.balance_proof,
             'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
         }
