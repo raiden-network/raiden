@@ -1941,7 +1941,6 @@ def handle_channel_settled(
         channel_state.partner_state.onchain_locksroot = partner_locksroot
 
         onchain_unlock = ContractSendChannelBatchUnlock(
-            token_address=channel_state.token_address,
             canonical_identifier=channel_state.canonical_identifier,
             participant=channel_state.partner_state.address,
             triggered_by_block_hash=state_change.block_hash,

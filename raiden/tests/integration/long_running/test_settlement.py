@@ -370,9 +370,7 @@ def run_test_batch_unlock(
     # Test WAL restore to return the latest channel state
     restored_channel_state = channel_state_until_state_change(
         raiden=alice_app.raiden,
-        payment_network_identifier=alice_app.raiden.default_registry.address,
-        token_address=token_address,
-        channel_identifier=alice_bob_channel_state.identifier,
+        canonical_identifier=alice_bob_channel_state.canonical_identifier,
         state_change_identifier='latest',
     )
 
