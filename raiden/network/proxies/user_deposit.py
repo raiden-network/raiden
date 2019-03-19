@@ -1,10 +1,35 @@
-from eth_utils import is_binary_address, to_normalized_address
+import structlog
+from eth_utils import (
+    is_binary_address,
+    to_canonical_address,
+    to_checksum_address,
+    to_normalized_address,
+)
+from gevent.lock import RLock
 
-from raiden.exceptions import InvalidAddress
+from raiden.exceptions import (
+    DepositMismatch,
+    InvalidAddress,
+    RaidenRecoverableError,
+    RaidenUnrecoverableError,
+)
+from raiden.network.proxies import Token
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
-from raiden.utils.typing import Address, Balance, BlockSpecification
-from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
+from raiden.network.rpc.transactions import check_transaction_threw
+from raiden.utils import pex, safe_gas_limit
+from raiden.utils.typing import (
+    Address,
+    Balance,
+    BlockSpecification,
+    Dict,
+    TokenAmount,
+    Tuple,
+    Union,
+)
+from raiden_contracts.constants import CONTRACT_USER_DEPOSIT, GAS_REQUIRED_FOR_UDC_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager
+
+log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class UserDeposit:
@@ -140,3 +165,99 @@ class UserDeposit:
             raise RuntimeError(f"Call to 'effectiveBalance' returned nothing")
 
         return balance
+
+    def _deposit_preconditions(
+            self,
+            total_deposit: TokenAmount,
+            beneficiary: Address,
+            token: Token,
+            block_identifier: BlockSpecification,
+    ) -> Tuple[TokenAmount, Dict]:
+        if not isinstance(total_deposit, int):
+            raise ValueError('total_deposit needs to be an integral number.')
+
+        previous_total_deposit = self.get_total_deposit(
+            address=beneficiary,
+            block_identifier=block_identifier,
+        )
+        amount_to_deposit = total_deposit - previous_total_deposit
+
+        log_details = {
+            'user_deposit_address': pex(self.address),
+            'node': pex(self.node_address),
+            'beneficiary': pex(beneficiary),
+            'new_total_deposit': total_deposit,
+            'previous_total_deposit': previous_total_deposit,
+        }
+
+        if total_deposit < previous_total_deposit:
+            msg = (
+                f'Current total deposit ({previous_total_deposit}) is already larger '
+                f'than the requested total deposit amount ({total_deposit})'
+            )
+            log.info('deposit failed', reason=msg, **log_details)
+            raise DepositMismatch(msg)
+
+        if amount_to_deposit <= 0:
+            msg = (
+                f'new_total_deposit - previous_total_deposit must be greater than 0. '
+                f'new_total_deposit={total_deposit} '
+                f'previous_total_deposit={previous_total_deposit}'
+            )
+            log.info('deposit failed', reason=msg, **log_details)
+            raise DepositMismatch(msg)
+
+        current_balance = token.balance_of(self.node_address)
+        if current_balance < amount_to_deposit:
+            msg = (
+                f'new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not '
+                f'be larger than the available balance {current_balance}, '
+                f'for token at address {pex(token.address)}'
+            )
+            log.info('deposit failed', reason=msg, **log_details)
+            raise DepositMismatch(msg)
+
+        token.approve(
+            allowed_address=Address(self.address),
+            allowance=amount_to_deposit,
+            given_block_identifier=block_identifier,
+        )
+
+        return amount_to_deposit, log_details
+
+    def _check_why_deposit_failed(
+            self,
+            beneficiary: Address,
+            token: Token,
+            amount_to_deposit: TokenAmount,
+            total_deposit: TokenAmount,
+            block_identifier: BlockSpecification,
+    ) -> Tuple[
+        Union[RaidenRecoverableError, RaidenUnrecoverableError],
+        str,
+    ]:
+        error_type = RaidenUnrecoverableError
+        msg = ''
+        latest_deposit = self.get_total_deposit(
+            address=self.node_address,
+            block_identifier=block_identifier,
+        )
+
+        allowance = token.allowance(
+            owner=self.node_address,
+            spender=Address(self.address),
+            block_identifier=block_identifier,
+        )
+        if allowance < amount_to_deposit:
+            msg = (
+                'The allowance is insufficient. Check concurrent deposits '
+                'for the same token network but different proxies.'
+            )
+        elif token.balance_of(self.node_address, block_identifier) < amount_to_deposit:
+            msg = 'The address doesnt have enough tokens'
+        elif latest_deposit < total_deposit:
+            msg = 'Deposit amount did not increase after deposit transaction'
+        else:
+            msg = 'Deposit failed to unknown reason'
+
+        return error_type, msg
