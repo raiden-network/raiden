@@ -17,13 +17,7 @@ from raiden.transfer.state import (
     TransactionChannelNewBalance,
 )
 from raiden.transfer.utils import pseudo_random_generator_from_json
-from raiden.utils import (
-    CHAIN_ID_UNSPECIFIED,
-    CHANNEL_ID_UNSPECIFIED,
-    CanonicalIdentifier,
-    pex,
-    sha3,
-)
+from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier, pex, sha3
 from raiden.utils.serialization import (
     deserialize_blockhash,
     deserialize_bytes,
@@ -57,7 +51,6 @@ from raiden.utils.typing import (
     T_Secret,
     T_SecretHash,
     T_SecretRegistryAddress,
-    T_TokenNetworkID,
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
@@ -951,10 +944,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             block_number: BlockNumber,
             block_hash: BlockHash,
     ) -> None:
-        token_network_identifier = canonical_identifier.token_network_address
-
-        if not isinstance(token_network_identifier, T_TokenNetworkID):
-            raise ValueError('token_network_identifier must be of type TokenNtetworkIdentifier')
+        canonical_identifier.validate()
 
         if not isinstance(participant, T_Address):
             raise ValueError('participant must be of type address')
@@ -964,12 +954,16 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
 
         super().__init__(transaction_hash, block_number, block_hash)
 
-        self.token_network_identifier = token_network_identifier
+        self.canonical_identifier = canonical_identifier
         self.participant = participant
         self.partner = partner
         self.locksroot = locksroot
         self.unlocked_amount = unlocked_amount
         self.returned_tokens = returned_tokens
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     def __repr__(self):
         return (
@@ -990,7 +984,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractReceiveChannelBatchUnlock) and
-            self.token_network_identifier == other.token_network_identifier and
+            self.canonical_identifier == other.canonical_identifier and
             self.participant == other.participant and
             self.partner == other.partner and
             self.locksroot == other.locksroot and
@@ -1005,7 +999,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def to_dict(self) -> Dict[str, Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             'participant': to_checksum_address(self.participant),
             'partner': to_checksum_address(self.partner),
             'locksroot': serialize_bytes(self.locksroot),
@@ -1019,11 +1013,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelBatchUnlock':
         return cls(
             transaction_hash=deserialize_transactionhash(data['transaction_hash']),
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=CHANNEL_ID_UNSPECIFIED,
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             participant=to_canonical_address(data['participant']),
             partner=to_canonical_address(data['partner']),
             locksroot=deserialize_locksroot(data['locksroot']),
