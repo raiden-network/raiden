@@ -36,6 +36,9 @@ from raiden.utils.typing import (
     List,
     Optional,
     Port,
+    T_Address,
+    T_ChainID,
+    T_ChannelID,
     TokenAddress,
     TokenNetworkAddress,
     TokenNetworkID,
@@ -69,6 +72,22 @@ class CanonicalIdentifier:
             f'token_network_address:{pex(self.token_network_address)} '
             f'channel_id:{self.channel_identifier}>'
         )
+
+    def validate(self):
+        if not isinstance(self.token_network_address, T_Address):
+            raise ValueError('token_network_identifier must be an address instance')
+
+        if not isinstance(self.channel_identifier, T_ChannelID):
+            raise ValueError('channel_identifier must be an ChannelID instance')
+
+        if not isinstance(self.chain_identifier, T_ChainID):
+            raise ValueError('chain_id must be a ChainID instance')
+
+        if (
+                self.channel_identifier < 0 or
+                self.channel_identifier > constants.UINT256_MAX
+        ):
+            raise ValueError('channel id is invalid')
 
     def to_dict(self) -> Dict[str, Any]:
         return dict(
