@@ -14,8 +14,8 @@ from raiden.storage.migrations.v16_to_v17 import upgrade_v16_to_v17
 from raiden.storage.migrations.v17_to_v18 import upgrade_v17_to_v18
 from raiden.storage.migrations.v18_to_v19 import upgrade_v18_to_v19
 from raiden.storage.sqlite import SQLiteStorage
-from raiden.storage.versions import older_db_file
-from raiden.utils.typing import Callable
+from raiden.storage.versions import VERSION_RE, older_db_file
+from raiden.utils.typing import Callable, Optional
 
 UPGRADES_LIST = [
     upgrade_v16_to_v17,
@@ -40,7 +40,13 @@ def update_version(storage: SQLiteStorage, version: int):
     )
 
 
-def get_db_version(db_filename: Path):
+def get_db_version(db_filename: Path) -> Optional[int]:
+    """Return the version value stored in the db or None."""
+
+    # Do not create an empty database
+    if not db_filename.exists():
+        return None
+
     # Perform a query directly through SQL rather than using
     # storage.get_version()
     # as get_version will return the latest version if it doesn't
@@ -50,14 +56,21 @@ def get_db_version(db_filename: Path):
         detect_types=sqlite3.PARSE_DECLTYPES,
     )
     cursor = conn.cursor()
+
     try:
-        cursor.execute('SELECT value FROM settings WHERE name=?;', ('version',))
-        query = cursor.fetchall()
-        if len(query) == 0:
-            return 0
-        return int(query[0][0])
+        cursor.execute('SELECT value FROM settings WHERE name="version";')
+        result = cursor.fetchone()
     except sqlite3.OperationalError:
-        return 0
+        raise RuntimeError(
+            'Corrupted database. Database does not the settings table.',
+        )
+
+    if not result:
+        raise RuntimeError(
+            'Corrupted database. Settings table does not contain an entry the db version.',
+        )
+
+    return int(result[0])
 
 
 def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, **kwargs) -> int:
@@ -67,7 +80,7 @@ def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, **kw
     return new_version
 
 
-def _backup_old_db(filename):
+def _backup_old_db(filename: str):
     backup_name = filename.replace('_log.db', '_log.backup')
     shutil.move(filename, backup_name)
 
@@ -105,8 +118,13 @@ class UpgradeManager:
     """
 
     def __init__(self, db_filename: str, web3: Web3 = None):
+        base_name = os.path.basename(db_filename)
+        match = VERSION_RE.match(base_name)
+        assert match, f'Database name "{base_name}" does not match our format'
+
         self._current_db_filename = Path(db_filename)
         self._web3 = web3
+        self._current_version = match.group(1)
 
     def run(self):
         """
@@ -118,18 +136,31 @@ class UpgradeManager:
         functions.
         """
         paths = glob(f'{self._current_db_filename.parent}/v*_log.db')
-        old_db_filename = older_db_file(paths)
+        older_file = older_db_file(paths)
 
-        if old_db_filename is None:
+        if older_file is None or older_file == str(self._current_db_filename):
             return
 
+        old_db_filename = Path(older_file)
+
         with get_file_lock(old_db_filename), get_file_lock(self._current_db_filename):
-            if get_db_version(self._current_db_filename) >= RAIDEN_DB_VERSION:
-                # The current version has already been created / updraded.
-                return
-            else:
-                # The version inside the current database was not the expected one.
-                # Delete and re-run migration
+            if self._current_db_filename.exists():
+                db_version = get_db_version(self._current_db_filename)
+
+                # The current version matches our target version, nothing to do.
+                if db_version == RAIDEN_DB_VERSION:
+                    return
+
+                if db_version > RAIDEN_DB_VERSION:
+                    raise RuntimeError(
+                        f'Database version higher then expected. '
+                        f'It is {db_version} should be {self._current_version}',
+                    )
+
+                # The version number in the database is smaller then the
+                # current target, this means the migration failed to execute on
+                # the last iteration, delete the partially upgraded database
+                # and start again.
                 self._delete_current_db()
 
             older_version = get_db_version(old_db_filename)
@@ -158,7 +189,7 @@ class UpgradeManager:
 
                     update_version(storage, RAIDEN_DB_VERSION)
                     # Prevent the upgrade from happening on next restart
-                    _backup_old_db(old_db_filename)
+                    _backup_old_db(str(old_db_filename))
             except Exception as e:
                 self._delete_current_db()
                 log.error(f'Failed to upgrade database: {str(e)}')

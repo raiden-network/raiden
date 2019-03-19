@@ -35,8 +35,6 @@ def setup_storage(db_path):
 
 
 def test_upgrade_v16_to_v17(tmp_path):
-    db_path = tmp_path / Path('test.db')
-
     old_db_filename = tmp_path / Path('v16_log.db')
     with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
         older_db_file.return_value = str(old_db_filename)
@@ -45,6 +43,7 @@ def test_upgrade_v16_to_v17(tmp_path):
             storage.update_version()
         storage.conn.close()
 
+    db_path = tmp_path / Path('v17_log.db')
     web3, _ = create_fake_web3_for_block_hash(number_of_blocks=100)
     manager = UpgradeManager(db_filename=str(db_path), web3=web3)
     with patch(

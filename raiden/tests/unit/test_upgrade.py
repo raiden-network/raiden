@@ -86,7 +86,7 @@ def test_sequential_version_numbers(tmp_path):
             new=19,
         ))
         older_db_file = stack.enter_context(patch('raiden.utils.upgrades.older_db_file'))
-        older_db_file.return_value = str(old_db_filename)
+        older_db_file.return_value = old_db_filename
 
         UpgradeManager(db_filename=db_path).run()
 
@@ -94,4 +94,4 @@ def test_sequential_version_numbers(tmp_path):
         upgrade_functions[1].assert_called_once_with(ANY, 17, 19, web3=None)
         upgrade_functions[2].assert_called_once_with(ANY, 18, 19, web3=None)
 
-        assert get_db_version(str(db_path)) == 19
+        assert get_db_version(db_path) == 19
