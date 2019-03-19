@@ -7,7 +7,21 @@ from unittest.mock import ANY, Mock, patch
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
-from raiden.utils.upgrades import UpgradeManager, get_db_version
+from raiden.utils.upgrades import VERSION_RE, UpgradeManager, get_db_version
+
+
+def test_version_regex():
+    assert VERSION_RE.match('v0_log.db')
+    assert VERSION_RE.match('v11_log.db')
+    assert VERSION_RE.match('v9999_log.db')
+
+    assert not VERSION_RE.match('v0_log.dba')
+    assert not VERSION_RE.match('v0_log.db1')
+    assert not VERSION_RE.match('v0a_log.db')
+    assert not VERSION_RE.match('va1_log.db')
+    assert not VERSION_RE.match('v9999_logb.db')
+    assert not VERSION_RE.match('0_log.db')
+    assert not VERSION_RE.match('v0_log')
 
 
 def setup_storage(db_path):
