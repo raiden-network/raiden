@@ -2,6 +2,7 @@ import os
 import shutil
 import sqlite3
 from contextlib import closing
+from glob import glob
 from pathlib import Path
 
 import filelock
@@ -116,13 +117,14 @@ class UpgradeManager:
         all data to the current version's database and execute the migration
         functions.
         """
-        old_db_filename = older_db_file(str(self._current_db_filename.parent))
+        paths = glob(f'{self._current_db_filename.parent}/v*_log.db')
+        old_db_filename = older_db_file(paths)
 
         if old_db_filename is None:
             return
 
         with get_file_lock(old_db_filename), get_file_lock(self._current_db_filename):
-            if get_db_version(self._current_db_filename) == RAIDEN_DB_VERSION:
+            if get_db_version(self._current_db_filename) >= RAIDEN_DB_VERSION:
                 # The current version has already been created / updraded.
                 return
             else:

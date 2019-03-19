@@ -1,31 +1,31 @@
-import os
+import os.path
 import re
-from glob import glob
 
-from raiden.constants import RAIDEN_DB_VERSION
-from raiden.utils import typing
+from raiden.utils.typing import Optional
 
-VERSION_RE = re.compile(r'^v(\d+).*')
+VERSION_RE = re.compile(r'^v(\d+)_log[.]db$')
 
 
-def older_db_file(database_base_path: str) -> typing.Optional[str]:
-    """ Returns the path to a database file that belong to the previous version
-    of the schema.
+def older_db_file(paths) -> Optional[str]:
+    """Returns the path with matches our database naming convention and has the
+    highest version number or None.
     """
-    database_base_path = os.path.expanduser(database_base_path)
-    db_files = glob(f'{database_base_path}/**/*_log.db', recursive=True)
-    for db_file in sorted(db_files, reverse=True):
-        expanded_name = os.path.basename(db_file)
-        matches = VERSION_RE.search(expanded_name)
+    dbs = {}
+    for db_path in paths:
+        # Ignore files that don't match our naming format
+        matches = VERSION_RE.search(os.path.basename(db_path))
         if not matches:
             continue
+
         try:
             version = int(matches.group(1))
         except ValueError:
             continue
 
-        if version < RAIDEN_DB_VERSION:
-            old_db_filename = f'{database_base_path}/{expanded_name}'
-            return old_db_filename
+        dbs[version] = db_path
+
+    if dbs:
+        highest_version = sorted(dbs)[-1]
+        return dbs[highest_version]
 
     return None
