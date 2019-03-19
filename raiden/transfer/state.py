@@ -776,9 +776,7 @@ class BalanceProofUnsignedState(State):
         'transferred_amount',
         'locked_amount',
         'locksroot',
-        'token_network_identifier',
-        'channel_identifier',
-        'chain_id',
+        'canonical_identifier',
     )
 
     def __init__(
@@ -789,9 +787,6 @@ class BalanceProofUnsignedState(State):
             locksroot: Locksroot,
             canonical_identifier: CanonicalIdentifier,
     ) -> None:
-        chain_id = canonical_identifier.chain_identifier
-        token_network_identifier = canonical_identifier.token_network_address
-        channel_identifier = canonical_identifier.channel_identifier
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
@@ -803,12 +798,6 @@ class BalanceProofUnsignedState(State):
 
         if not isinstance(locksroot, T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
-
-        if not isinstance(channel_identifier, T_ChannelID):
-            raise ValueError('channel_identifier must be an T_ChannelID instance')
-
-        if not isinstance(chain_id, T_ChainID):
-            raise ValueError('chain_id must be a ChainID instance')
 
         if nonce <= 0:
             raise ValueError('nonce cannot be zero or negative')
@@ -825,16 +814,25 @@ class BalanceProofUnsignedState(State):
         if len(locksroot) != 32:
             raise ValueError('locksroot must have length 32')
 
-        if channel_identifier < 0 or channel_identifier > UINT256_MAX:
-            raise ValueError('channel id is invalid')
+        canonical_identifier.validate()
 
         self.nonce = nonce
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
-        self.token_network_identifier = token_network_identifier
-        self.channel_identifier = channel_identifier
-        self.chain_id = chain_id
+        self.canonical_identifier = canonical_identifier
+
+    @property
+    def chain_id(self) -> ChainID:
+        return self.canonical_identifier.chain_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
 
     def __repr__(self):
         return (
@@ -859,9 +857,7 @@ class BalanceProofUnsignedState(State):
             self.transferred_amount == other.transferred_amount and
             self.locked_amount == other.locked_amount and
             self.locksroot == other.locksroot and
-            self.token_network_identifier == other.token_network_identifier and
-            self.channel_identifier == other.channel_identifier and
-            self.chain_id == other.chain_id
+            self.canonical_identifier == other.canonical_identifier
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -875,23 +871,13 @@ class BalanceProofUnsignedState(State):
             locksroot=self.locksroot,
         )
 
-    @property
-    def canonical_identifier(self) -> CanonicalIdentifier:
-        return CanonicalIdentifier(
-            chain_identifier=self.chain_id,
-            token_network_address=self.token_network_identifier,
-            channel_identifier=self.channel_identifier,
-        )
-
     def to_dict(self) -> Dict[str, Any]:
         return {
             'nonce': self.nonce,
             'transferred_amount': str(self.transferred_amount),
             'locked_amount': str(self.locked_amount),
             'locksroot': serialization.serialize_bytes(self.locksroot),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': str(self.channel_identifier),
-            'chain_id': self.chain_id,
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             # Makes the balance hash available to query
             'balance_hash': serialize_bytes(self.balance_hash),
         }
@@ -903,11 +889,7 @@ class BalanceProofUnsignedState(State):
             transferred_amount=TokenAmount(int(data['transferred_amount'])),
             locked_amount=TokenAmount(int(data['locked_amount'])),
             locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=data['chain_id'],
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=ChannelID(int(data['channel_identifier'])),
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
         )
 
         return restored
@@ -923,12 +905,10 @@ class BalanceProofSignedState(State):
         'transferred_amount',
         'locked_amount',
         'locksroot',
-        'token_network_identifier',
-        'channel_identifier',
         'message_hash',
         'signature',
         'sender',
-        'chain_id',
+        'canonical_identifier',
     )
 
     def __init__(
@@ -942,10 +922,6 @@ class BalanceProofSignedState(State):
             sender: Address,
             canonical_identifier: CanonicalIdentifier,
     ) -> None:
-        chain_id = canonical_identifier.chain_identifier
-        token_network_identifier = canonical_identifier.token_network_address
-        channel_identifier = canonical_identifier.channel_identifier
-
         if not isinstance(nonce, int):
             raise ValueError('nonce must be int')
 
@@ -958,12 +934,6 @@ class BalanceProofSignedState(State):
         if not isinstance(locksroot, T_Keccak256):
             raise ValueError('locksroot must be a keccak256 instance')
 
-        if not isinstance(token_network_identifier, T_Address):
-            raise ValueError('token_network_identifier must be an address instance')
-
-        if not isinstance(channel_identifier, T_ChannelID):
-            raise ValueError('channel_identifier must be an ChannelID instance')
-
         if not isinstance(message_hash, T_Keccak256):
             raise ValueError('message_hash must be a keccak256 instance')
 
@@ -972,9 +942,6 @@ class BalanceProofSignedState(State):
 
         if not isinstance(sender, T_Address):
             raise ValueError('sender must be an address instance')
-
-        if not isinstance(chain_id, T_ChainID):
-            raise ValueError('chain_id must be a ChainID instance')
 
         if nonce <= 0:
             raise ValueError('nonce cannot be zero or negative')
@@ -991,25 +958,22 @@ class BalanceProofSignedState(State):
         if len(locksroot) != 32:
             raise ValueError('locksroot must have length 32')
 
-        if channel_identifier < 0 or channel_identifier > UINT256_MAX:
-            raise ValueError('channel id is invalid')
-
         if len(message_hash) != 32:
             raise ValueError('message_hash is an invalid hash')
 
         if len(signature) != 65:
             raise ValueError('signature is an invalid signature')
 
+        canonical_identifier.validate()
+
         self.nonce = nonce
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
         self.locksroot = locksroot
-        self.token_network_identifier = token_network_identifier
-        self.channel_identifier = channel_identifier
         self.message_hash = message_hash
         self.signature = signature
         self.sender = sender
-        self.chain_id = chain_id
+        self.canonical_identifier = canonical_identifier
 
     def __repr__(self):
         return (
@@ -1058,12 +1022,16 @@ class BalanceProofSignedState(State):
         )
 
     @property
-    def canonical_identifier(self) -> CanonicalIdentifier:
-        return CanonicalIdentifier(
-            chain_identifier=self.chain_id,
-            token_network_address=self.token_network_identifier,
-            channel_identifier=self.channel_identifier,
-        )
+    def chain_id(self) -> ChainID:
+        return self.canonical_identifier.chain_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -1071,12 +1039,10 @@ class BalanceProofSignedState(State):
             'transferred_amount': str(self.transferred_amount),
             'locked_amount': str(self.locked_amount),
             'locksroot': serialization.serialize_bytes(self.locksroot),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': str(self.channel_identifier),
             'message_hash': serialization.serialize_bytes(self.message_hash),
             'signature': serialization.serialize_bytes(self.signature),
             'sender': to_checksum_address(self.sender),
-            'chain_id': self.chain_id,
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             # Makes the balance hash available to query
             'balance_hash': serialize_bytes(self.balance_hash),
         }
@@ -1091,11 +1057,7 @@ class BalanceProofSignedState(State):
             message_hash=AdditionalHash(serialization.deserialize_bytes(data['message_hash'])),
             signature=Signature(serialization.deserialize_bytes(data['signature'])),
             sender=to_canonical_address(data['sender']),
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=data['chain_id'],
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=ChannelID(int(data['channel_identifier'])),
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
         )
 
         return restored
