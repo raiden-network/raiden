@@ -366,15 +366,10 @@ class RaidenEventHandler:
             raiden: 'RaidenService',
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
-        token_network_identifier = channel_unlock_event.token_network_identifier
-        channel_identifier = channel_unlock_event.channel_identifier
-        canonical_identifier = CanonicalIdentifier(
-            chain_identifier=raiden.chain.network_id,
-            token_network_address=token_network_identifier,
-            channel_identifier=channel_identifier,
-        )
+        canonical_identifier = channel_unlock_event.canonical_identifier
+        token_network_identifier = canonical_identifier.token_network_address
+        channel_identifier = canonical_identifier.channel_identifier
         participant = channel_unlock_event.participant
-        token_address = channel_unlock_event.token_address
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
             canonical_identifier=canonical_identifier,
@@ -410,7 +405,7 @@ class RaidenEventHandler:
             # for more details
             log.warning(
                 'Onchain unlock already mined',
-                token_address=token_address,
+                canonical_identifier=canonical_identifier,
                 channel_identifier=canonical_identifier.channel_identifier,
                 participant=participant,
             )
@@ -429,7 +424,6 @@ class RaidenEventHandler:
                 raise RaidenUnrecoverableError(
                     f'Failed to find state that matches the current channel locksroots. '
                     f'chain_id:{raiden.chain.network_id} '
-                    f'token:{to_checksum_address(token_address)} '
                     f'token_network:{to_checksum_address(token_network_identifier)} '
                     f'channel:{channel_identifier} '
                     f'participant:{to_checksum_address(participant)} '
@@ -439,9 +433,7 @@ class RaidenEventHandler:
 
             restored_channel_state = channel_state_until_state_change(
                 raiden=raiden,
-                payment_network_identifier=raiden.default_registry.address,
-                token_address=token_address,
-                channel_identifier=channel_identifier,
+                canonical_identifier=canonical_identifier,
                 state_change_identifier=state_change_identifier,
             )
             assert restored_channel_state is not None
@@ -476,7 +468,6 @@ class RaidenEventHandler:
                 raise RaidenUnrecoverableError(
                     f'Failed to find event that match current channel locksroots. '
                     f'chain_id:{raiden.chain.network_id} '
-                    f'token:{to_checksum_address(token_address)} '
                     f'token_network:{to_checksum_address(token_network_identifier)} '
                     f'channel:{channel_identifier} '
                     f'participant:{to_checksum_address(participant)} '
@@ -486,9 +477,7 @@ class RaidenEventHandler:
 
             restored_channel_state = channel_state_until_state_change(
                 raiden=raiden,
-                payment_network_identifier=raiden.default_registry.address,
-                token_address=token_address,
-                channel_identifier=canonical_identifier.channel_identifier,
+                canonical_identifier=canonical_identifier,
                 state_change_identifier=state_change_identifier,
             )
             assert restored_channel_state is not None

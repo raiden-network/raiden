@@ -23,7 +23,6 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     channel_identifier = 1
     payment_network_identifier = make_address()
     token_network_identifier = make_address()
-    token_address = make_address()
     participant = make_address()
     raiden = make_raiden_service_mock(
         payment_network_identifier=payment_network_identifier,
@@ -82,7 +81,6 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     raiden.chain.token_network.detail_participants = detail_participants
 
     event = ContractSendChannelBatchUnlock(
-        token_address=token_address,
         canonical_identifier=make_canonical_identifier(
             token_network_address=token_network_identifier,
             channel_identifier=channel_identifier,

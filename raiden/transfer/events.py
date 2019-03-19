@@ -28,7 +28,6 @@ from raiden.utils.typing import (
     SecretHash,
     T_Secret,
     TargetAddress,
-    TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
@@ -232,13 +231,11 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
     def __init__(
             self,
-            token_address: TokenAddress,
             canonical_identifier: CanonicalIdentifier,
             participant: Address,
             triggered_by_block_hash: BlockHash,
     ) -> None:
         super().__init__(triggered_by_block_hash)
-        self.token_address = token_address
         self.canonical_identifier = canonical_identifier
         self.participant = participant
 
@@ -252,11 +249,10 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
     def __repr__(self):
         return (
-            '<ContractSendChannelBatchUnlock token_address: {} token_network_id:{} '
+            '<ContractSendChannelBatchUnlock token_network_id:{} '
             'channel:{} participant:{} triggered_by_block_hash:{}'
             '>'
         ).format(
-            pex(self.token_address),
             pex(self.token_network_identifier),
             self.channel_identifier,
             pex(self.participant),
@@ -267,7 +263,6 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         return (
             super().__eq__(other) and
             isinstance(other, ContractSendChannelBatchUnlock) and
-            self.token_address == other.token_address and
             self.canonical_identifier == other.canonical_identifier and
             self.participant == other.participant
         )
@@ -277,7 +272,6 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 
     def to_dict(self) -> Dict[str, Any]:
         result = {
-            'token_address': to_checksum_address(self.token_address),
             'canonical_identifier': self.canonical_identifier.to_dict(),
             'participant': to_checksum_address(self.participant),
             'triggered_by_block_hash': serialize_bytes(self.triggered_by_block_hash),
@@ -288,8 +282,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractSendChannelBatchUnlock':
         restored = cls(
-            token_address=to_canonical_address(data['token_address']),
-            canonical_identifier=CanonicalIdentifier(data['canonical_identifier']),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             participant=to_canonical_address(data['participant']),
             triggered_by_block_hash=BlockHash(deserialize_bytes(data['triggered_by_block_hash'])),
         )
