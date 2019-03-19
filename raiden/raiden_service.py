@@ -231,7 +231,7 @@ def update_monitoring_service_from_balance_proof(
     )
 
     msg = (
-        f'Failed update monitoring service due to failing to find '
+        f'Failed update monitoring service due to inability to find '
         f'channel: {new_balance_proof.channel_identifier} '
         f'token_network_address: {pex(new_balance_proof.token_network_identifier)}.'
     )
