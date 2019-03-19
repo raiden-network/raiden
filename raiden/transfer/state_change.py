@@ -1043,12 +1043,20 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         if not isinstance(participant2, T_Address):
             raise ValueError('participant2 must be of type address')
 
+        canonical_identifier.validate()
         super().__init__(transaction_hash, block_number, block_hash)
 
-        self.token_network_identifier = canonical_identifier.token_network_address
-        self.channel_identifier = canonical_identifier.channel_identifier
+        self.canonical_identifier = canonical_identifier
         self.participant1 = participant1
         self.participant2 = participant2
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
     def __repr__(self):
         return (
@@ -1066,8 +1074,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractReceiveRouteNew) and
-            self.token_network_identifier == other.token_network_identifier and
-            self.channel_identifier == other.channel_identifier and
+            self.canonical_identifier == other.canonical_identifier and
             self.participant1 == other.participant1 and
             self.participant2 == other.participant2 and
             super().__eq__(other)
@@ -1079,8 +1086,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def to_dict(self) -> Dict[str, Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': str(self.channel_identifier),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             'participant1': to_checksum_address(self.participant1),
             'participant2': to_checksum_address(self.participant2),
             'block_number': str(self.block_number),
@@ -1091,11 +1097,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveRouteNew':
         return cls(
             transaction_hash=deserialize_transactionhash(data['transaction_hash']),
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
-                token_network_address=to_canonical_address(data['token_network_identifier']),
-                channel_identifier=ChannelID(int(data['channel_identifier'])),
-            ),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             participant1=to_canonical_address(data['participant1']),
             participant2=to_canonical_address(data['participant2']),
             block_number=BlockNumber(int(data['block_number'])),
