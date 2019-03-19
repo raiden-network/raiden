@@ -239,20 +239,17 @@ class MediatorTask(TransferTask):
 
 class TargetTask(TransferTask):
     __slots__ = (
-        'token_network_identifier',
-        'channel_identifier',
+        'canonical_identifier',
         'target_state',
     )
 
     def __init__(
             self,
-            token_network_identifier: TokenNetworkID,
-            channel_identifier: ChannelID,
+            canonical_identifier: CanonicalIdentifier,
             target_state: 'TargetTransferState',
     ) -> None:
-        self.token_network_identifier = token_network_identifier
+        self.canonical_identifier = canonical_identifier
         self.target_state = target_state
-        self.channel_identifier = channel_identifier
 
     def __repr__(self):
         return '<TargetTask token_network_identifier:{} channel_identifier:{} state:{}>'.format(
@@ -272,18 +269,24 @@ class TargetTask(TransferTask):
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
+    @property
+    def token_network_identifier(self) -> TokenNetworkID:
+        return TokenNetworkID(self.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
-            'channel_identifier': str(self.channel_identifier),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
             'target_state': self.target_state,
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'TargetTask':
         restored = cls(
-            token_network_identifier=to_canonical_address(data['token_network_identifier']),
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
             target_state=data['target_state'],
         )
 
