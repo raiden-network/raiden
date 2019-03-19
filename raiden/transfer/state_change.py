@@ -59,6 +59,7 @@ from raiden.utils.typing import (
     T_SecretRegistryAddress,
     T_TokenNetworkID,
     TokenAmount,
+    TokenNetworkAddress,
     TokenNetworkID,
     TransactionHash,
     TransferID,
@@ -321,9 +322,15 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     ) -> None:
         super().__init__(transaction_hash, block_number, block_hash)
 
-        self.token_network_identifier = channel_state.token_network_identifier
         self.channel_state = channel_state
-        self.channel_identifier = channel_state.identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.channel_state.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.channel_state.canonical_identifier.channel_identifier
 
     def __repr__(self):
         return (
@@ -337,7 +344,6 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ContractReceiveChannelNew) and
-            self.token_network_identifier == other.token_network_identifier and
             self.channel_state == other.channel_state and
             super().__eq__(other)
         )
@@ -348,7 +354,6 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def to_dict(self) -> Dict[str, Any]:
         return {
             'transaction_hash': serialize_bytes(self.transaction_hash),
-            'token_network_identifier': to_checksum_address(self.token_network_identifier),
             'channel_state': self.channel_state,
             'block_number': str(self.block_number),
             'block_hash': serialize_bytes(self.block_hash),
