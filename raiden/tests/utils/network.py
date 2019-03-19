@@ -423,7 +423,6 @@ def jsonrpc_services(
         secret_registry_address,
         service_registry_address,
         token_network_registry_address,
-        user_deposit_address,
         web3,
         contract_manager,
 ):
@@ -432,7 +431,6 @@ def jsonrpc_services(
     if service_registry_address:
         service_registry = deploy_service.service_registry(service_registry_address)
     deploy_registry = deploy_service.token_network_registry(token_network_registry_address)
-    user_deposit = deploy_service.user_deposit(user_deposit_address)
 
     blockchain_services = list()
     for privkey in private_keys:
@@ -444,13 +442,11 @@ def jsonrpc_services(
         blockchain_services.append(blockchain)
 
     return BlockchainServices(
-
         deploy_registry=deploy_registry,
         secret_registry=secret_registry,
         service_registry=service_registry,
         deploy_service=deploy_service,
         blockchain_services=blockchain_services,
-        user_deposit=user_deposit,
     )
 
 
