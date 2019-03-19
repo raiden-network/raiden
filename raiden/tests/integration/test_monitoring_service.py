@@ -29,8 +29,6 @@ def test_monitoring_global_messages(
         token_address,
     )
 
-    app0.raiden.user_deposit.deposit(
-
     """
     Test that RaidenService sends RequestMonitoring messages to global
     MONITORING_BROADCASTING_ROOM room on newly received balance proofs.
@@ -64,7 +62,6 @@ def test_monitoring_global_messages(
         signer=app0.raiden.signer,
         amount=1,
     )
-    import pdb; pdb.set_trace()
 
     update_monitoring_service_from_balance_proof(
         app0.raiden,

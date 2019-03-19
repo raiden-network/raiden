@@ -143,7 +143,6 @@ def blockchain_services(
         secret_registry_address,
         service_registry_address,
         token_network_registry_address,
-        user_deposit_address,
         web3,
         contract_manager,
 ):

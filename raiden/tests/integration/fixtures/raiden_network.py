@@ -57,6 +57,7 @@ def raiden_chain(
         private_rooms,
         blockchain_type,
         contracts_path,
+        user_deposit_address,
 ):
 
     if len(token_addresses) != 1:
@@ -77,7 +78,7 @@ def raiden_chain(
         token_network_registry_address=token_network_registry_address,
         secret_registry_address=blockchain_services.secret_registry.address,
         service_registry_address=service_registry_address,
-        user_deposit_address=blockchain_services.user_deposit.address,
+        user_deposit_address=user_deposit_address,
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
@@ -167,6 +168,7 @@ def raiden_network(
         private_rooms,
         blockchain_type,
         contracts_path,
+        user_deposit_address,
 ):
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -179,6 +181,7 @@ def raiden_network(
         token_network_registry_address=token_network_registry_address,
         secret_registry_address=blockchain_services.secret_registry.address,
         service_registry_address=service_registry_address,
+        user_deposit_address=user_deposit_address,
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,

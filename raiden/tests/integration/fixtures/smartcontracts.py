@@ -127,34 +127,24 @@ def deploy_user_deposit_and_return_address(
         token_proxy.address,
         UINT256_MAX,
     ]
-    address = deploy_contract_web3(
+    user_deposit_address = deploy_contract_web3(
         contract_name=CONTRACT_USER_DEPOSIT,
         deploy_client=deploy_client,
         contract_manager=contract_manager,
         constructor_arguments=constructor_arguments,
     )
 
-    user_deposit = deploy_service.user_deposit(token_proxy.address)
+    user_deposit = deploy_service.user_deposit(user_deposit_address)
 
     participants = [privatekey_to_address(key) for key in private_keys]
     for transfer_to in participants:
-        token_proxy.transfer(
-            to_address=transfer_to,
-            amount=1000,
-            given_block_identifier='latest',
-        )
-        token_proxy.approve(
-            allowed_address=transfer_to,
-            allowance=100,
-            given_block_identifier='latest',
-        )
         user_deposit.deposit(
             beneficiary=transfer_to,
-            amount=100,
+            total_deposit=100,
             block_identifier='latest',
         )
 
-    return address
+    return user_deposit_address
 
 
 @pytest.fixture
