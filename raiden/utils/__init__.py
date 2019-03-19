@@ -17,7 +17,6 @@ from eth_utils import (
     remove_0x_prefix,
     to_bytes,
     to_checksum_address,
-    to_hex,
 )
 
 import raiden
@@ -92,7 +91,7 @@ class CanonicalIdentifier:
     def to_dict(self) -> Dict[str, Any]:
         return dict(
             chain_identifier=str(self.chain_identifier),
-            token_network_address=to_hex(self.token_network_address),
+            token_network_address=to_checksum_address(self.token_network_address),
             channel_identifier=str(self.channel_identifier),
         )
 
