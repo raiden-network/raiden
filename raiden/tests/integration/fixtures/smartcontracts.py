@@ -121,8 +121,12 @@ def deploy_user_deposit_and_return_address(
         contract_manager,
         token_proxy,
         private_keys,
+        environment_type,
 ) -> typing.Address:
     """ Deploy a token to emulate RDN and fund accounts with some balances."""
+    if environment_type != Environment.DEVELOPMENT:
+        return None
+
     constructor_arguments = [
         token_proxy.address,
         UINT256_MAX,
