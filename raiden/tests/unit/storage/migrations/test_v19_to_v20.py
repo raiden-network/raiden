@@ -3,10 +3,10 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
-from raiden.utils.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.utils.upgrades import UpgradeManager
 
 
