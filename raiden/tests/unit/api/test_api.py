@@ -139,8 +139,7 @@ def test_target_task_view():
     ))
     transfer_state = TargetTransferState(route=None, transfer=transfer, secret=secret)
     task = TargetTask(
-        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
-        channel_identifier=mediator_channel.identifier,
+        canonical_identifier=mediator_channel.canonical_identifier,
         target_state=transfer_state,
     )
     payment_mapping = {secrethash: task}
