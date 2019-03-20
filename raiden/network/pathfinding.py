@@ -1,3 +1,4 @@
+import json
 import random
 import sys
 from typing import Optional
@@ -23,7 +24,7 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
             timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
         return response.json()
-    except requests.exceptions.RequestException:
+    except (json.JSONDecodeError, requests.exceptions.RequestException):
         return None
 
 
