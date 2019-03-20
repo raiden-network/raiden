@@ -136,15 +136,6 @@ def secret_registry_proxy(deploy_client, secret_registry_address, contract_manag
     )
 
 
-@pytest.fixture
-def service_registry_proxy(deploy_client, service_registry_address, contract_manager):
-    return ServiceRegistry(
-        jsonrpc_client=deploy_client,
-        service_registry_address=to_canonical_address(service_registry_address),
-        contract_manager=contract_manager,
-    )
-
-
 @pytest.fixture(name='token_network_registry_address')
 def deploy_token_network_registry_and_return_address(
         deploy_client,
