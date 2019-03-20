@@ -97,13 +97,6 @@ def get_db_version(db_filename: Path) -> Optional[int]:
     return int(result[0])
 
 
-def _run_upgrade_func(storage: SQLiteStorage, func: Callable, version: int, **kwargs) -> int:
-    """ Run the migration function, store the version and advance the version. """
-    new_version = func(storage, version, RAIDEN_DB_VERSION, **kwargs)
-    update_version(storage, new_version)
-    return new_version
-
-
 def _backup_old_db(filename: str):
     backup_name = filename.replace('_log.db', '_log.backup')
     shutil.move(filename, backup_name)
@@ -201,17 +194,17 @@ class UpgradeManager:
             try:
                 target_version = older_version
                 with storage.transaction():
+                    version_iteration = older_version
                     for upgrade_record in UPGRADES_LIST:
-                        if upgrade_record.from_version < target_version:
+                        if upgrade_record.from_version < older_version:
                             continue
 
-                        target_version = _run_upgrade_func(
-                            storage,
-                            upgrade_record.function,
-                            upgrade_record.from_version,
+                        version_iteration = upgrade_record.function(
+                            storage=storage,
+                            old_version=version_iteration,
+                            current_version=RAIDEN_DB_VERSION,
                             **self._kwargs,
                         )
-
                     update_version(storage, RAIDEN_DB_VERSION)
                     # Prevent the upgrade from happening on next restart
                     _backup_old_db(str(old_db_filename))
