@@ -4,8 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import ANY, Mock, patch
 
-from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
+from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.utils.upgrades import VERSION_RE, UpgradeManager, get_db_version
 
@@ -44,18 +43,29 @@ def test_upgrade_manager_restores_backup(tmp_path):
 
     storage = setup_storage(old_db_filename)
 
-    with patch('raiden.constants.RAIDEN_DB_VERSION', new=16):
+    with patch('raiden.utils.upgrades.RAIDEN_DB_VERSION', new=16):
         storage.update_version()
         storage.conn.close()
 
+    upgrade_functions = [Mock()]
+
+    upgrade_functions[0].return_value = 17
+
     web3, _ = create_fake_web3_for_block_hash(number_of_blocks=1)
-    with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
-        older_db_file.return_value = str(old_db_filename)
+    with ExitStack() as stack:
+        stack.enter_context(patch(
+            'raiden.utils.upgrades.UPGRADES_LIST',
+            new=upgrade_functions,
+        ))
+        stack.enter_context(patch(
+            'raiden.utils.upgrades.RAIDEN_DB_VERSION',
+            new=19,
+        ))
         UpgradeManager(db_filename=db_path, web3=web3).run()
 
     # Once restored, the state changes written above should be
     # in the restored database
-    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
+    storage = SQLiteStorage(str(db_path))
     state_change_record = storage.get_latest_state_change_by_data_field(
         {'_type': 'raiden.transfer.state_change.ActionInitChain'},
     )
@@ -96,7 +106,7 @@ def test_sequential_version_numbers(tmp_path):
             new=upgrade_functions,
         ))
         stack.enter_context(patch(
-            'raiden.constants.RAIDEN_DB_VERSION',
+            'raiden.utils.upgrades.RAIDEN_DB_VERSION',
             new=19,
         ))
         older_db_file = stack.enter_context(patch('raiden.utils.upgrades.older_db_file'))
@@ -104,8 +114,8 @@ def test_sequential_version_numbers(tmp_path):
 
         UpgradeManager(db_filename=db_path).run()
 
-        upgrade_functions[0].assert_called_once_with(ANY, 16, 19, web3=None)
-        upgrade_functions[1].assert_called_once_with(ANY, 17, 19, web3=None)
-        upgrade_functions[2].assert_called_once_with(ANY, 18, 19, web3=None)
+        upgrade_functions[0].assert_called_once_with(ANY, 16, 19)
+        upgrade_functions[1].assert_called_once_with(ANY, 17, 19)
+        upgrade_functions[2].assert_called_once_with(ANY, 18, 19)
 
         assert get_db_version(db_path) == 19
