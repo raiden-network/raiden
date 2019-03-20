@@ -17,7 +17,6 @@ from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     get_channelstate,
     mediated_transfer,
-    wait_assert,
 )
 from raiden.transfer import channel, views
 from raiden.transfer.state import UnlockProofState
@@ -135,7 +134,7 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_lock_expiry(raiden_network, token_addresses, deposit, network_wait):
+def test_lock_expiry(raiden_network, token_addresses, deposit):
     """Test lock expiry and removal."""
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
@@ -201,13 +200,11 @@ def test_lock_expiry(raiden_network, token_addresses, deposit, network_wait):
     #    A -> B LockedTransfer
     #    B -> A SecretRequest
     #    - protocol didn't continue
-    with gevent.Timeout(network_wait):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            alice_app, deposit, [lock],
-            bob_app, deposit, [],
-        )
+    assert_synced_channel_state(
+        token_network_identifier,
+        alice_app, deposit, [lock],
+        bob_app, deposit, [],
+    )
 
     # Verify lock is registered in both channel states
     alice_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
@@ -261,7 +258,6 @@ def test_batch_unlock(
         secret_registry_address,
         deposit,
         blockchain_type,
-        network_wait,
 ):
     """Batch unlock can be called after the channel is settled."""
     alice_app, bob_app = raiden_network
@@ -323,13 +319,11 @@ def test_batch_unlock(
     #    A -> B LockedTransfer
     #    B -> A SecretRequest
     #    - protocol didn't continue
-    with gevent.Timeout(network_wait):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            alice_app, deposit, [lock],
-            bob_app, deposit, [],
-        )
+    assert_synced_channel_state(
+        token_network_identifier,
+        alice_app, deposit, [lock],
+        bob_app, deposit, [],
+    )
 
     # Take a snapshot early on
     alice_app.raiden.wal.snapshot()
