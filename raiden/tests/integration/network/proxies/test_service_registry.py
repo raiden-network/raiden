@@ -35,7 +35,7 @@ def test_service_registry_random_pfs(
     for idx, address in enumerate(addresses):
         assert c1_service_proxy.get_service_url('latest', address) == urls[idx]
     # Test that getting the url for a non-existing service address returns None
-    assert not c1_service_proxy.get_service_url('latest', to_checksum_address(HOP1))
+    assert c1_service_proxy.get_service_url('latest', to_checksum_address(HOP1)) is None
 
     # Test that get_service_address by index works
     for idx, address in enumerate(addresses):
@@ -76,11 +76,11 @@ def test_configure_pfs(
     response.json = Mock(return_value=json_data)
 
     # With basic routing configure pfs should return None
-    assert not configure_pfs(
+    assert configure_pfs(
         pfs_address=None,
         routing_mode=RoutingMode.BASIC,
         service_registry=service_proxy,
-    )
+    ) is None
 
     # Asking for auto address
     with patch.object(requests, 'get', return_value=response):
