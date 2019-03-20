@@ -452,13 +452,14 @@ Minimal Example:
 
 class Diary:
 
-    def __init__(self, entries):
+    def __init__(self, entries: List[str]) -> None:
         self._entries = entries
 
-    def entry(index):
+    def entry(index: int) -> str:
         return _entries[index]
 
 ```
+(note the typing of ``__init__(...) -> None``)
 
 **NewTypes and type comparisons**
 
@@ -485,7 +486,7 @@ Good Example:
 
 ```python
 
-def foo(a: int = None)
+def foo(a: int = None) -> ReturnType
 ```
 
 Bad Example:
@@ -509,7 +510,7 @@ class Conflict:
     pass
 
 
-def f():
+def f() -> Tuple[a.Conflict, Normal]:
     return a.Conflict(), Normal()
 ```
 
