@@ -92,23 +92,23 @@ def _add_onchain_locksroot_to_snapshot(
 
                 # Create a dummy channel_state to satisfy the parameter requirements of
                 # get_on_chain_locksroots
-                channel_data = copy.deepcopy(channel)
+                channel_copy = copy.deepcopy(channel)
 
                 # Silence `from_dict`-related errors (INTENTIONAL)
-                channel_data['our_state']['onchain_locksroot'] = None
-                channel_data['partner_state']['onchain_locksroot'] = None
-                channel_data['open_transaction'] = TransactionExecutionStatus.from_dict(
-                    channel_data['open_transaction'],
+                channel_copy['our_state']['onchain_locksroot'] = None
+                channel_copy['partner_state']['onchain_locksroot'] = None
+                channel_copy['open_transaction'] = TransactionExecutionStatus.from_dict(
+                    channel_copy['open_transaction'],
                 )
 
-                channel_data['our_state'] = NettingChannelEndState.from_dict(
-                    channel_data['our_state'],
+                channel_copy['our_state'] = NettingChannelEndState.from_dict(
+                    channel_copy['our_state'],
                 )
-                channel_data['partner_state'] = NettingChannelEndState.from_dict(
-                    channel_data['partner_state'],
+                channel_copy['partner_state'] = NettingChannelEndState.from_dict(
+                    channel_copy['partner_state'],
                 )
 
-                channel_state = NettingChannelState.from_dict(channel_data)
+                channel_state = NettingChannelState.from_dict(channel_copy)
                 our_locksroot, partner_locksroot = get_onchain_locksroots(
                     raiden=raiden,
                     channel_state=channel_state,
