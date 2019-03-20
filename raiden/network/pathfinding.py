@@ -66,20 +66,20 @@ def configure_pfs(
     Returns the PFS url to use or None if we don't use the PFS and use basic routing
     """
     if routing_mode == RoutingMode.BASIC:
-        click.secho(
-            'Requested to use basic routing. No path finding service is being used',
-        )
+        msg = 'Not using path finding services, falling back to basic routing.'
+        log.info(msg)
+        click.secho(msg)
         return None
 
-    msg = 'With PFS routing mode we shouldnt get to configure pfs with pfs_address being None'
+    msg = "With PFS routing mode we shouldn't get to configure pfs with pfs_address being None"
     assert pfs_address, msg
     if pfs_address == 'auto':
-        assert service_registry
+        assert service_registry, 'Should not get here without a service registry'
         pfs_address = get_random_service(service_registry)
         if pfs_address is None:
             click.secho(
-                'The service registry has no registered PFS services and we dont '
-                'use basic routing.',
+                "The service registry has no registered path findind service "
+                "and we don't use basic routing.",
             )
             sys.exit(1)
 
