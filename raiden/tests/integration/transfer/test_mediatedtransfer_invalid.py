@@ -30,7 +30,6 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
         raiden_network,
         token_addresses,
         deposit,
-        network_wait,
 ):
 
     app0, app1 = raiden_network
@@ -52,13 +51,11 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
     assert payment_status.payment_done.get(timeout=5) is False
     assert payment_status.payment_done.successful()
 
-    with gevent.Timeout(network_wait):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, deposit, [],
-            app1, deposit, [],
-        )
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, deposit, [],
+        app1, deposit, [],
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -157,7 +154,6 @@ def test_receive_lockedtransfer_invalidsender(
         token_addresses,
         deposit,
         reveal_timeout,
-        network_wait,
 ):
 
     app0, app1 = raiden_network
@@ -195,13 +191,12 @@ def test_receive_lockedtransfer_invalidsender(
         LocalSigner(other_key),
         app0,
     )
-    with gevent.Timeout(network_wait):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, deposit, [],
-            app1, deposit, [],
-        )
+
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, deposit, [],
+        app1, deposit, [],
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -211,7 +206,6 @@ def test_receive_lockedtransfer_invalidrecipient(
         token_addresses,
         reveal_timeout,
         deposit,
-        network_wait,
 ):
 
     app0, app1 = raiden_network
@@ -251,13 +245,11 @@ def test_receive_lockedtransfer_invalidrecipient(
         app1,
     )
 
-    with gevent.Timeout(network_wait):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, deposit, [],
-            app1, deposit, [],
-        )
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, deposit, [],
+        app1, deposit, [],
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -268,7 +260,6 @@ def test_received_lockedtransfer_closedchannel(
         reveal_timeout,
         token_addresses,
         deposit,
-        network_wait,
 ):
 
     app0, app1 = raiden_network
@@ -320,10 +311,8 @@ def test_received_lockedtransfer_closedchannel(
     )
 
     # The local state must not change since the channel is already closed
-    with gevent.Timeout(network_wait):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, deposit, [],
-            app1, deposit, [],
-        )
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, deposit, [],
+        app1, deposit, [],
+    )

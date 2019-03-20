@@ -20,7 +20,7 @@ from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest
-from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, wait_assert
+from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
 from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
@@ -241,13 +241,12 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
     )
 
     wait_both_channel_open(app0, app1, registry_address, token_address, retry_timeout)
-    with gevent.Timeout(retry_timeout):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, 0, [],
-            app1, 0, [],
-        )
+
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, 0, [],
+        app1, 0, [],
+    )
 
     RaidenAPI(app0.raiden).set_total_channel_deposit(
         registry_address,
@@ -264,13 +263,12 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         deposit,
         retry_timeout,
     )
-    with gevent.Timeout(retry_timeout):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, deposit, [],
-            app1, 0, [],
-        )
+
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, deposit, [],
+        app1, 0, [],
+    )
 
     RaidenAPI(app1.raiden).set_total_channel_deposit(
         registry_address,
@@ -287,13 +285,12 @@ def test_channel_deposit(raiden_chain, deposit, retry_timeout, token_addresses):
         deposit,
         retry_timeout,
     )
-    with gevent.Timeout(retry_timeout):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, deposit, [],
-            app1, deposit, [],
-        )
+
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, deposit, [],
+        app1, deposit, [],
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -405,13 +402,11 @@ def test_query_events(
     )
     assert channelcount0 + 1 == channelcount1
 
-    with gevent.Timeout(retry_timeout):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, 0, [],
-            app1, 0, [],
-        )
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, 0, [],
+        app1, 0, [],
+    )
 
     RaidenAPI(app0.raiden).set_total_channel_deposit(
         registry_address,
@@ -580,13 +575,11 @@ def test_secret_revealed_on_chain(
 
     # The channel app0-app1 should continue with the protocol off-chain, once
     # the secret is released on-chain by app2
-    with gevent.Timeout(10):
-        wait_assert(
-            assert_synced_channel_state,
-            token_network_identifier,
-            app0, deposit - amount, [],
-            app1, deposit + amount, [],
-        )
+    assert_synced_channel_state(
+        token_network_identifier,
+        app0, deposit - amount, [],
+        app1, deposit + amount, [],
+    )
 
     with gevent.Timeout(10):
         wait_for_state_change(
