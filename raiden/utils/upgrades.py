@@ -14,8 +14,8 @@ from raiden.storage.migrations.v18_to_v19 import upgrade_v18_to_v19
 from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.storage.migrations.v20_to_v21 import upgrade_v20_to_v21
 from raiden.storage.sqlite import SQLiteStorage
-from raiden.storage.versions import VERSION_RE, older_db_file
-from raiden.utils.typing import Callable, NamedTuple, Optional
+from raiden.storage.versions import VERSION_RE, filter_db_names, latest_db_file
+from raiden.utils.typing import Callable, List, NamedTuple, Optional
 
 
 class UpgradeRecord(NamedTuple):
@@ -63,12 +63,17 @@ def update_version(storage: SQLiteStorage, version: int):
     )
 
 
+def get_file_version(db_path: str) -> int:
+    match = VERSION_RE.match(os.path.basename(db_path))
+    assert match, f'Database name "{db_path}" does not match our format'
+    file_version = int(match.group(1))
+    return file_version
+
+
 def get_db_version(db_filename: Path) -> Optional[int]:
     """Return the version value stored in the db or None."""
 
-    # Do not create an empty database
-    if not db_filename.exists():
-        return None
+    assert os.path.exists(db_filename)
 
     # Perform a query directly through SQL rather than using
     # storage.get_version()
@@ -110,6 +115,31 @@ def _copy(old_db_filename, current_db_filename):
         old_conn.backup(current_conn)
 
 
+def delete_dbs_with_failed_migrations(valid_db_names: List[str]) -> None:
+    for db_path in valid_db_names:
+        file_version = get_file_version(db_path)
+
+        with get_file_lock(db_path):
+            db_version = get_db_version(db_path)
+
+            # The version matches, nothing to do.
+            if db_version == file_version:
+                continue
+
+            elif db_version > file_version:
+                raise RuntimeError(
+                    f'Impossible database version. '
+                    f'The database {db_path} has a version too high ({db_version}), '
+                    f'this should never happen.',
+                )
+
+            # The version number in the database is smaller then the current
+            # target, this means that a migration failed to execute and the db
+            # is partially upgraded.
+            else:
+                os.remove(db_path)
+
+
 class UpgradeManager:
     """ Run migrations when a database upgrade is necesary.
 
@@ -120,12 +150,10 @@ class UpgradeManager:
 
     Upgrade procedure:
 
+    - Delete corrupted databases.
     - Copy the old file to the latest version (e.g. copy version v16 as v18).
     - In a transaction: Run every migration. Each migration must decide whether
       to proceed or not.
-    - If a single migration fails: The transaction is not commited and the DB
-      copy is deleted.
-    - If every migration succeeds: Rename the old DB.
     """
 
     def __init__(self, db_filename: str, **kwargs):
@@ -133,64 +161,63 @@ class UpgradeManager:
         match = VERSION_RE.match(base_name)
         assert match, f'Database name "{base_name}" does not match our format'
 
-        self._current_version = match.group(1)
         self._current_db_filename = Path(db_filename)
+        self._current_version = get_file_version(db_filename)
         self._kwargs = kwargs
 
     def run(self):
-        """
-        The `_current_db_filename` is going to hold the filename of the database
-        with the new version. However, the previous version's data
-        is going to exist in a file whose name contains the old version.
-        Therefore, running the migration means that we have to copy
-        all data to the current version's database and execute the migration
-        functions.
-        """
+        # First clear up any partially upgraded databases.
+        #
+        # A database will be partially upgraded if the process receives a
+        # SIGKILL/SIGINT while executing migrations. NOTE: It's very probable
+        # the content of the database remains consistent, because the upgrades
+        # are executed inside a migration, however making a second copy of the
+        # database does no harm.
         paths = glob(f'{self._current_db_filename.parent}/v*_log.db')
-        older_file = older_db_file(paths)
+        valid_db_names = filter_db_names(paths)
+        delete_dbs_with_failed_migrations(valid_db_names)
 
-        if older_file is None or older_file == str(self._current_db_filename):
+        # At this point we know every file version and db version match
+        # (assuming there are no concurrent runs).
+        paths = glob(f'{self._current_db_filename.parent}/v*_log.db')
+        valid_db_names = filter_db_names(paths)
+        latest_db_path = latest_db_file(valid_db_names)
+        file_version = get_file_version(latest_db_path)
+
+        # The latest version matches our target version, nothing to do.
+        if file_version == RAIDEN_DB_VERSION:
             return
 
-        old_db_filename = Path(older_file)
+        if file_version > RAIDEN_DB_VERSION:
+            raise RuntimeError(
+                f'Conflicting database versions detected, latest db version is {file_version}, '
+                f'Raiden client version is {RAIDEN_DB_VERSION}.'
+                f'\n\n'
+                f'Running a downgraded version of Raiden after an upgrade is not supported, '
+                f'because the transfers done with the new client are not understandable by the '
+                f'older.',
+            )
 
-        with get_file_lock(old_db_filename), get_file_lock(self._current_db_filename):
-            if self._current_db_filename.exists():
-                db_version = get_db_version(self._current_db_filename)
+        self._upgrade(
+            target_file=str(self._current_db_filename),
+            from_file=latest_db_path,
+            from_version=file_version,
+        )
 
-                # The current version matches our target version, nothing to do.
-                if db_version == RAIDEN_DB_VERSION:
-                    return
+    def _upgrade(self, target_file: str, from_file: str, from_version: int):
+        with get_file_lock(from_file), get_file_lock(target_file):
+            _copy(from_file, target_file)
 
-                if db_version > RAIDEN_DB_VERSION:
-                    raise RuntimeError(
-                        f'Database version higher then expected. '
-                        f'It is {db_version} should be {self._current_version}',
-                    )
+            storage = SQLiteStorage(target_file)
 
-                # The version number in the database is smaller then the
-                # current target, this means the migration failed to execute on
-                # the last iteration, delete the partially upgraded database
-                # and start again.
-                self._delete_current_db()
-
-            older_version = get_db_version(old_db_filename)
-            if not older_version:
-                # There are no older versions to upgrade from.
-                return
-
-            _copy(str(old_db_filename), str(self._current_db_filename))
-
-            storage = SQLiteStorage(str(self._current_db_filename))
-
-            log.debug(f'Upgrading database from {older_version} to v{RAIDEN_DB_VERSION}')
+            log.debug(f'Upgrading database from {from_version} to {RAIDEN_DB_VERSION}')
 
             try:
-                target_version = older_version
+                version_iteration = from_version
+
                 with storage.transaction():
-                    version_iteration = older_version
                     for upgrade_record in UPGRADES_LIST:
-                        if upgrade_record.from_version < older_version:
+                        if upgrade_record.from_version < from_version:
                             continue
 
                         version_iteration = upgrade_record.function(
@@ -199,13 +226,10 @@ class UpgradeManager:
                             current_version=RAIDEN_DB_VERSION,
                             **self._kwargs,
                         )
+
                     update_version(storage, RAIDEN_DB_VERSION)
             except Exception as e:
-                self._delete_current_db()
-                log.error(f'Failed to upgrade database: {str(e)}')
+                log.error(f'Failed to upgrade database: {e}')
                 raise
 
             storage.conn.close()
-
-    def _delete_current_db(self):
-        os.remove(str(self._current_db_filename))
