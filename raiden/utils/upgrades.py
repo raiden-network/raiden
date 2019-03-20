@@ -59,8 +59,8 @@ def get_file_lock(db_filename: Path):
 def update_version(storage: SQLiteStorage, version: int):
     cursor = storage.conn.cursor()
     cursor.execute(
-        'INSERT OR REPLACE INTO settings(name, value) VALUES(?, ?)',
-        ('version', str(version)),
+        'INSERT OR REPLACE INTO settings(name, value) VALUES("version", ?)',
+        (str(version), ),
     )
 
 
