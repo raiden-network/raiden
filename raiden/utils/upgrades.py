@@ -7,7 +7,6 @@ from pathlib import Path
 
 import filelock
 import structlog
-from web3 import Web3
 
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.storage.migrations.v16_to_v17 import upgrade_v16_to_v17
@@ -119,14 +118,14 @@ class UpgradeManager:
     - If every migration succeeds: Rename the old DB.
     """
 
-    def __init__(self, db_filename: str, web3: Web3 = None):
+    def __init__(self, db_filename: str, **kwargs):
         base_name = os.path.basename(db_filename)
         match = VERSION_RE.match(base_name)
         assert match, f'Database name "{base_name}" does not match our format'
 
-        self._current_db_filename = Path(db_filename)
-        self._web3 = web3
         self._current_version = match.group(1)
+        self._current_db_filename = Path(db_filename)
+        self._kwargs = kwargs
 
     def run(self):
         """
@@ -180,13 +179,11 @@ class UpgradeManager:
                 with storage.transaction():
                     version_iteration = older_version
                     for upgrade_func in UPGRADES_LIST:
-                        extra_args = {'web3': self._web3}
-
                         version_iteration = _run_upgrade_func(
                             storage,
                             upgrade_func,
                             version_iteration,
-                            **extra_args,
+                            **self._kwargs,
                         )
 
                     update_version(storage, RAIDEN_DB_VERSION)
