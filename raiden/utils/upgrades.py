@@ -15,7 +15,7 @@ from raiden.storage.migrations.v17_to_v18 import upgrade_v17_to_v18
 from raiden.storage.migrations.v18_to_v19 import upgrade_v18_to_v19
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, older_db_file
-from raiden.utils.typing import Callable, Optional
+from raiden.utils.typing import Optional
 
 UPGRADES_LIST = [
     upgrade_v16_to_v17,
@@ -71,13 +71,6 @@ def get_db_version(db_filename: Path) -> Optional[int]:
         )
 
     return int(result[0])
-
-
-def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, **kwargs) -> int:
-    """ Run the migration function, store the version and advance the version. """
-    new_version = func(cursor, version, RAIDEN_DB_VERSION, **kwargs)
-    update_version(cursor, new_version)
-    return new_version
 
 
 def _backup_old_db(filename: str):
@@ -178,13 +171,11 @@ class UpgradeManager:
                 with storage.transaction():
                     version_iteration = older_version
                     for upgrade_func in UPGRADES_LIST:
-                        extra_args = {'web3': self._web3}
-
-                        version_iteration = _run_upgrade_func(
-                            storage,
-                            upgrade_func,
-                            version_iteration,
-                            **extra_args,
+                        version_iteration = upgrade_func(
+                            storage=storage,
+                            old_version=version_iteration,
+                            current_version=RAIDEN_DB_VERSION,
+                            web3=self._web3,
                         )
 
                     update_version(storage, RAIDEN_DB_VERSION)
