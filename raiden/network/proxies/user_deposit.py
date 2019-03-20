@@ -64,7 +64,7 @@ class UserDeposit:
     def token_address(
             self,
             block_identifier: BlockSpecification,
-    ):
+    ) -> Address:
         return to_canonical_address(self.proxy.contract.functions.token().call(
             block_identifier=block_identifier,
         ))
@@ -144,7 +144,6 @@ class UserDeposit:
                 )
 
                 msg = self._check_why_deposit_failed(
-                    beneficiary=beneficiary,
                     token=token,
                     amount_to_deposit=amount_to_deposit,
                     total_deposit=total_deposit,
@@ -192,8 +191,8 @@ class UserDeposit:
 
         if total_deposit < previous_total_deposit:
             msg = (
-                f'Current total deposit ({previous_total_deposit}) is already larger '
-                f'than the requested total deposit amount ({total_deposit})'
+                f'Current total deposit {previous_total_deposit} is already larger '
+                f'than the requested total deposit amount {total_deposit}'
             )
             log.info('deposit failed', reason=msg, **log_details)
             raise DepositMismatch(msg)
@@ -207,7 +206,10 @@ class UserDeposit:
             log.info('deposit failed', reason=msg, **log_details)
             raise DepositMismatch(msg)
 
-        current_balance = token.balance_of(self.node_address)
+        current_balance = token.balance_of(
+            address=self.node_address,
+            block_identifier=block_identifier,
+        )
         if current_balance < amount_to_deposit:
             msg = (
                 f'new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not '
@@ -220,14 +222,12 @@ class UserDeposit:
         token.approve(
             allowed_address=Address(self.address),
             allowance=amount_to_deposit,
-            given_block_identifier=block_identifier,
         )
 
         return amount_to_deposit, log_details
 
     def _check_why_deposit_failed(
             self,
-            beneficiary: Address,
             token: Token,
             amount_to_deposit: TokenAmount,
             total_deposit: TokenAmount,
@@ -258,6 +258,6 @@ class UserDeposit:
         elif latest_deposit < total_deposit:
             msg = 'Deposit amount did not increase after deposit transaction'
         else:
-            msg = 'Deposit failed to unknown reason'
+            msg = 'Deposit failed of unknown reason'
 
         return error_type, msg

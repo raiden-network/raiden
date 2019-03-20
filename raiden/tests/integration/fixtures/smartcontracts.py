@@ -122,7 +122,7 @@ def deploy_user_deposit_and_return_address(
         token_proxy,
         private_keys,
         environment_type,
-) -> typing.Address:
+) -> typing.Optional[typing.Address]:
     """ Deploy a token to emulate RDN and fund accounts with some balances."""
     if environment_type != Environment.DEVELOPMENT:
         return None
