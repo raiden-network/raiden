@@ -28,11 +28,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.state import (
-    BalanceProofSignedState,
-    BalanceProofUnsignedState,
-    HashTimeLockState,
-)
+from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import CanonicalIdentifier, ishash, pex, sha3, typing
 from raiden.utils.signer import Signer, recover
@@ -1794,59 +1790,31 @@ class UpdatePFS(SignedMessage):
     def __init__(
             self,
             *,
-            nonce: typing.Nonce,
-            transferred_amount: typing.TokenAmount,
-            locked_amount: typing.TokenAmount,
-            locksroot: typing.Locksroot,
-            token_network_address: typing.TokenNetworkAddress,
-            channel_identifier: typing.ChannelID,
-            chain_id: typing.ChainID,
+            balance_proof: BalanceProofSignedState,
+            our_nonce: typing.Nonce,
             reveal_timeout: int,
             signature: typing.Optional[typing.Signature] = None,
             **kwargs,
     ):
         super().__init__(**kwargs)
-        self.nonce = nonce
-        self.transferred_amount = transferred_amount
-        self.locked_amount = locked_amount
-        self.locksroot = locksroot
-        self.token_network_address = token_network_address
-        self.channel_identifier = channel_identifier
-        self.chain_id = chain_id
+        assert isinstance(balance_proof, BalanceProofSignedState)
+        self.balance_proof = balance_proof
+        self.our_nonce = our_nonce
         self.reveal_timeout = reveal_timeout
         if signature is None:
             self.signature = b''
         else:
             self.signature = signature
 
-    @classmethod
-    def from_balance_proof(
-            cls,
-            balance_proof: BalanceProofUnsignedState,
-            reveal_timeout: int,
-    ) -> 'UpdatePFS':
-        assert isinstance(balance_proof, BalanceProofUnsignedState)
-        return cls(
-            nonce=balance_proof.nonce,
-            transferred_amount=balance_proof.transferred_amount,
-            locked_amount=balance_proof.locked_amount,
-            locksroot=balance_proof.locksroot,
-            token_network_address=TokenNetworkAddress(balance_proof.token_network_identifier),
-            channel_identifier=balance_proof.channel_identifier,
-            chain_id=balance_proof.chain_id,
-            reveal_timeout=reveal_timeout,
-        )
+    @property
+    def canonical_identifier(self) -> CanonicalIdentifier:
+        return self.balance_proof.canonical_identifier
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
-            'chain_id': self.chain_id,
-            'nonce': self.nonce,
-            'token_network_address': to_normalized_address(self.token_network_address),
-            'channel_identifier': self.channel_identifier,
-            'transferred_amount': str(self.transferred_amount),
-            'locked_amount': str(self.locked_amount),
-            'locksroot': encode_hex(self.locksroot),
+            'balance_proof': self.balance_proof.to_dict(),
+            'our_nonce': str(self.our_nonce),
             'signature': encode_hex(self.signature),
             'reveal_timeout': self.reveal_timeout,
         }
@@ -1857,15 +1825,10 @@ class UpdatePFS(SignedMessage):
             data: typing.Dict[str, typing.Any],
     ) -> 'UpdatePFS':
         return cls(
-            nonce=data['nonce'],
-            transferred_amount=int(data['transferred_amount']),
-            locked_amount=int(data['locked_amount']),
-            locksroot=decode_hex(data['locksroot']),
-            token_network_address=to_canonical_address(data['token_network_address']),
-            channel_identifier=data['channel_identifier'],
-            chain_id=data['chain_id'],
-            reveal_timeout=data['reveal_timeout'],
+            balance_proof=BalanceProofSignedState.from_dict(data['balance_proof']),
+            our_nonce=int(data['our_nonce']),
             signature=decode_hex(data['signature']),
+            reveal_timeout=data['reveal_timeout'],
         )
 
     def packed(self) -> bytes:
@@ -1876,13 +1839,16 @@ class UpdatePFS(SignedMessage):
         return packed
 
     def pack(self, packed: bytes) -> bytes:
-        packed.chain_id = self.chain_id
-        packed.nonce = self.nonce
-        packed.token_network_address = self.token_network_address
-        packed.channel_identifier = self.channel_identifier
-        packed.transferred_amount = self.transferred_amount
-        packed.locked_amount = self.locked_amount
-        packed.locksroot = self.locksroot
+        packed.nonce = self.balance_proof.nonce
+        packed.chain_id = self.canonical_identifier.chain_identifier
+        packed.token_network_address = self.canonical_identifier.token_network_address
+        packed.channel_identifier = self.canonical_identifier.channel_identifier
+        packed.transferred_amount = self.balance_proof.transferred_amount
+        packed.locked_amount = self.balance_proof.locked_amount
+        packed.locksroot = self.balance_proof.locksroot
+        packed.balance_proof_message_hash = self.balance_proof.message_hash
+        packed.partner_signature = self.balance_proof.signature
+        packed.our_nonce = self.our_nonce
         packed.reveal_timeout = self.reveal_timeout
         packed.signature = self.signature
 
@@ -1891,14 +1857,37 @@ class UpdatePFS(SignedMessage):
             cls,
             packed: bytes,
     ) -> 'UpdatePFS':
-        return cls(
-            chain_id=packed.chain_id,
-            nonce=packed.nonce,
+        canonical_identifier = CanonicalIdentifier(
+            chain_identifier=packed.chain_id,
             token_network_address=packed.token_network_address,
             channel_identifier=packed.channel_identifier,
-            transferred_amount=packed.transferred_amount,
-            locked_amount=packed.locked_amount,
-            locksroot=packed.locksroot,
+        )
+        # note: we have to recover the sender here
+        sender = recover(
+            data=pack_balance_proof(
+                nonce=packed.nonce,
+                balance_hash=hash_balance_data(
+                    transferred_amount=packed.transferred_amount,
+                    locked_amount=packed.locked_amount,
+                    locksroot=packed.locksroot,
+                ),
+                additional_hash=packed.balance_proof_message_hash,
+                canonical_identifier=canonical_identifier,
+            ),
+            signature=packed.partner_signature,
+        )
+        return cls(
+            balance_proof=BalanceProofSignedState(
+                nonce=packed.nonce,
+                transferred_amount=packed.transferred_amount,
+                locked_amount=packed.locked_amount,
+                locksroot=packed.locksroot,
+                message_hash=packed.balance_proof_message_hash,
+                signature=packed.partner_signature,
+                sender=sender,
+                canonical_identifier=canonical_identifier,
+            ),
+            our_nonce=packed.our_nonce,
             reveal_timeout=packed.reveal_timeout,
             signature=packed.signature,
         )
