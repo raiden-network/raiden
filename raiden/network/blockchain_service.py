@@ -54,6 +54,7 @@ class BlockChainService:
         self._token_network_creation_lock = Semaphore()
         self._token_network_registry_creation_lock = Semaphore()
         self._secret_registry_creation_lock = Semaphore()
+        self._service_registry_creation_lock = Semaphore()
         self._payment_channel_creation_lock = Semaphore()
         self._user_deposit_creation_lock = Semaphore()
 
@@ -196,7 +197,7 @@ class BlockChainService:
         return self.address_to_secret_registry[address]
 
     def service_registry(self, address: Address) -> ServiceRegistry:
-        with self._secret_registry_creation_lock:
+        with self._service_registry_creation_lock:
             if address not in self.address_to_service_registry:
                 self.address_to_service_registry[address] = ServiceRegistry(
                     jsonrpc_client=self.client,
