@@ -1,16 +1,42 @@
-from raiden.storage.versions import older_db_file
+import pytest
+
+from raiden.storage.versions import filter_db_names, latest_db_file
 
 
-def test_older_db_file():
-    assert older_db_file(['v10_log.db', 'v9_log.db']) == 'v10_log.db'
-    assert older_db_file(['v9_log.db', 'v10_log.db']) == 'v10_log.db'
-    assert older_db_file(['v1_log.db', 'v9_log.db']) == 'v9_log.db'
-    assert older_db_file(['v9_log.db', 'v1_log.db']) == 'v9_log.db'
+def test_latest_db_file():
+    assert latest_db_file(['v10_log.db', 'v9_log.db']) == 'v10_log.db'
+    assert latest_db_file(['v9_log.db', 'v10_log.db']) == 'v10_log.db'
+    assert latest_db_file(['v1_log.db', 'v9_log.db']) == 'v9_log.db'
+    assert latest_db_file(['v9_log.db', 'v1_log.db']) == 'v9_log.db'
+    assert latest_db_file([]) is None
 
-    assert older_db_file([]) is None
-    assert older_db_file(['a']) is None
-    assert older_db_file(['.db']) is None
-    assert older_db_file(['v9.db']) is None
-    assert older_db_file(['9_log.db']) is None
-    assert older_db_file(['va9_log.db']) is None
-    assert older_db_file(['v9a_log.db']) is None
+    values = [
+        'a',
+        '.db',
+        'v9.db',
+        '9_log.db',
+        'va9_log.db',
+        'v9a_log.db',
+    ]
+    for invalid_value in values:
+        with pytest.raises(AssertionError):
+            latest_db_file([invalid_value])
+
+
+def test_filter_db_names():
+    assert filter_db_names(['v10_log.db', 'v9_log.db']) == ['v10_log.db', 'v9_log.db']
+    assert filter_db_names(['v9_log.db', 'v10_log.db']) == ['v9_log.db', 'v10_log.db']
+    assert filter_db_names(['v1_log.db', 'v9_log.db']) == ['v1_log.db', 'v9_log.db']
+    assert filter_db_names(['v9_log.db', 'v1_log.db']) == ['v9_log.db', 'v1_log.db']
+
+    values = [
+        [],
+        ['a'],
+        ['.db'],
+        ['v9.db'],
+        ['9_log.db'],
+        ['va9_log.db'],
+        ['v9a_log.db'],
+    ]
+    for invalid_value in values:
+        assert filter_db_names(invalid_value) == []
