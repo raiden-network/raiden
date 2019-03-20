@@ -1,19 +1,21 @@
 import json
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
+from raiden.tests.utils.factories import make_32bytes, make_address
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
+from raiden.tests.utils.mocks import MockRaidenService
+from raiden.utils.serialization import serialize_bytes
 from raiden.utils.upgrades import UpgradeManager
 
 
 def setup_storage(db_path):
     storage = SQLiteStorage(str(db_path))
 
-    # Add the v18 state changes to the DB
     state_changes_file = Path(__file__).parent / 'data/v19_statechanges.json'
     state_changes_data = json.loads(state_changes_file.read_text())
     for state_change_record in state_changes_data:
@@ -22,7 +24,6 @@ def setup_storage(db_path):
             log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
         )
 
-    # Also add the v19 chainstate directly to the DB
     chain_state_data = Path(__file__).parent / 'data/v19_chainstate.json'
     chain_state = chain_state_data.read_text()
     cursor = storage.conn.cursor()
@@ -48,7 +49,26 @@ def test_upgrade_v19_to_v20(tmp_path):
         storage.conn.close()
 
     web3, _ = create_fake_web3_for_block_hash(number_of_blocks=100)
-    manager = UpgradeManager(db_filename=str(db_path), web3=web3)
+    raiden_service_mock = MockRaidenService()
+
+    our_onchain_locksroot = serialize_bytes(make_32bytes())
+    partner_onchain_locksroot = serialize_bytes(make_32bytes())
+
+    details = Mock()
+    details.our_details.address = make_address()
+    details.our_details.locksroot = our_onchain_locksroot
+    details.partner_details.address = make_address()
+    details.partner_details.locksroot = partner_onchain_locksroot
+
+    payment_channel = Mock()
+    payment_channel.token_network.detail_participants.return_value = details
+
+    payment_channel_func = Mock()
+    payment_channel_func.return_value = payment_channel
+
+    raiden_service_mock.chain.payment_channel = payment_channel_func
+
+    manager = UpgradeManager(db_filename=str(db_path), web3=web3, raiden=raiden_service_mock)
     with patch(
             'raiden.utils.upgrades.UPGRADES_LIST',
             new=[upgrade_v19_to_v20],
@@ -84,5 +104,11 @@ def test_upgrade_v19_to_v20(tmp_path):
     for payment_network in snapshot.identifiers_to_paymentnetworks.values():
         for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
             for channel in token_network.channelidentifiers_to_channels.values():
-                assert channel.our_state.onchain_locksroot is None
-                assert channel.partner_state.onchain_locksroot is None
+                channel_our_locksroot = serialize_bytes(
+                    channel.our_state.onchain_locksroot,
+                )
+                channel_partner_locksroot = serialize_bytes(
+                    channel.partner_state.onchain_locksroot,
+                )
+                assert channel_our_locksroot == our_onchain_locksroot
+                assert channel_partner_locksroot == partner_onchain_locksroot

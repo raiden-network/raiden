@@ -48,7 +48,7 @@ from raiden.transfer.utils import (
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils import CanonicalIdentifier, pex
-from raiden.utils.typing import Address, BlockHash
+from raiden.utils.typing import Address
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -73,7 +73,6 @@ def unlock(
         end_state: NettingChannelEndState,
         participant: Address,
         partner: Address,
-        block_identifier: BlockHash,
 ):
     merkle_tree_leaves = get_batch_unlock(end_state)
 
@@ -82,7 +81,6 @@ def unlock(
             participant=participant,
             partner=partner,
             merkle_tree_leaves=merkle_tree_leaves,
-            block_identifier=block_identifier,
         )
     except ChannelOutdatedError as e:
         log.error(
@@ -460,7 +458,6 @@ class RaidenEventHandler:
                     end_state=restored_channel_state.partner_state,
                     participant=our_address,
                     partner=partner_address,
-                    block_identifier=triggered_by_block_hash,
                 )
 
         if search_events:
@@ -489,7 +486,6 @@ class RaidenEventHandler:
                 payment_network_identifier=raiden.default_registry.address,
                 token_address=token_address,
                 channel_identifier=canonical_identifier.channel_identifier,
-                participant=participant,
                 state_change_identifier=state_change_identifier,
             )
 
@@ -530,7 +526,6 @@ class RaidenEventHandler:
                 end_state=restored_channel_state.our_state,
                 participant=partner_address,
                 partner=our_address,
-                block_identifier=triggered_by_block_hash,
             )
 
     @staticmethod
