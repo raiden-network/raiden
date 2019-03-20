@@ -28,6 +28,7 @@ from raiden.messages import (
     Message,
     RequestMonitoring,
     SignedMessage,
+    UpdatePFS,
     message_from_sendevent,
 )
 from raiden.network.blockchain_service import BlockChainService
@@ -69,6 +70,7 @@ from raiden.utils import (
     sha3,
     to_rdn,
 )
+from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -214,6 +216,40 @@ class PaymentStatus(NamedTuple):
             token_network_identifier == self.token_network_identifier and
             amount == self.amount
         )
+
+
+def update_services_from_balance_proof(
+        raiden: 'RaidenService',
+        chain_state: 'ChainState',
+        new_balance_proof: BalanceProofSignedState,
+):
+    update_monitoring_service_from_balance_proof(raiden, new_balance_proof)
+    update_path_finding_service_from_balance_proof(raiden, chain_state, new_balance_proof)
+
+
+def update_path_finding_service_from_balance_proof(raiden, chain_state, new_balance_proof):
+    channel_state = get_channelstate_by_token_network_and_partner(
+        chain_state=chain_state,
+        token_network_id=new_balance_proof.canonical_identifier.token_network_address,
+        partner_address=new_balance_proof.sender,
+    )
+    error_msg = 'tried to send a balance proof in non-existant channel '
+    f'token_network_address: {pex(new_balance_proof.canonical_identifier.token_network_address)} '
+    f'recipient: {pex(new_balance_proof.sender)}'
+    assert channel_state is not None, error_msg
+    assert channel_state.partner_state.balance_proof == new_balance_proof
+
+    msg = UpdatePFS(
+        balance_proof=new_balance_proof,
+        our_nonce=channel_state.our_state.balance_proof.nonce,
+        reveal_timeout=channel_state.reveal_timeout,
+    )
+    msg.sign(raiden.signer)
+    raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, msg)
+    log.debug(
+        'Sent a PFS Update',
+        balance_proof=new_balance_proof,
+    )
 
 
 def update_monitoring_service_from_balance_proof(
@@ -651,7 +687,7 @@ class RaidenService(Runnable):
 
         current_state = views.state_from_raiden(self)
         for balance_proof in views.detect_balance_proof_change(old_state, current_state):
-            update_monitoring_service_from_balance_proof(self, balance_proof)
+            update_services_from_balance_proof(self, current_state, balance_proof)
 
         log.debug(
             'Raiden events',
@@ -924,7 +960,7 @@ class RaidenService(Runnable):
             chain_state,
         )
         for balance_proof in current_balance_proofs:
-            update_monitoring_service_from_balance_proof(self, balance_proof)
+            update_services_from_balance_proof(self, chain_state, balance_proof)
 
     def _initialize_whitelists(self, chain_state: ChainState):
         """ Whitelist neighbors and mediated transfer targets on transport """
