@@ -7,7 +7,6 @@ from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils.factories import make_32bytes, make_address
-from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.utils.serialization import serialize_bytes
 from raiden.utils.upgrades import UpgradeManager
@@ -38,8 +37,6 @@ def setup_storage(db_path):
 
 
 def test_upgrade_v19_to_v20(tmp_path):
-    db_path = tmp_path / Path('test.db')
-
     old_db_filename = tmp_path / Path('v19_log.db')
     with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
         older_db_file.return_value = str(old_db_filename)
@@ -48,7 +45,6 @@ def test_upgrade_v19_to_v20(tmp_path):
             storage.update_version()
         storage.conn.close()
 
-    web3, _ = create_fake_web3_for_block_hash(number_of_blocks=100)
     raiden_service_mock = MockRaidenService()
 
     our_onchain_locksroot = serialize_bytes(make_32bytes())
@@ -68,7 +64,8 @@ def test_upgrade_v19_to_v20(tmp_path):
 
     raiden_service_mock.chain.payment_channel = payment_channel_func
 
-    manager = UpgradeManager(db_filename=str(db_path), web3=web3, raiden=raiden_service_mock)
+    db_path = tmp_path / Path('v20_log.db')
+    manager = UpgradeManager(db_filename=str(db_path), raiden=raiden_service_mock)
     with patch(
             'raiden.utils.upgrades.UPGRADES_LIST',
             new=[upgrade_v19_to_v20],
