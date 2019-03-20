@@ -220,7 +220,6 @@ class PaymentChannel:
             merkle_tree_leaves: bytes,
             participant: Address,
             partner: Address,
-            block_identifier: BlockSpecification,
     ):
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
