@@ -1,5 +1,4 @@
 import os
-import shutil
 import sqlite3
 from contextlib import closing
 from glob import glob
@@ -95,11 +94,6 @@ def get_db_version(db_filename: Path) -> Optional[int]:
         )
 
     return int(result[0])
-
-
-def _backup_old_db(filename: str):
-    backup_name = filename.replace('_log.db', '_log.backup')
-    shutil.move(filename, backup_name)
 
 
 def _copy(old_db_filename, current_db_filename):
@@ -206,8 +200,6 @@ class UpgradeManager:
                             **self._kwargs,
                         )
                     update_version(storage, RAIDEN_DB_VERSION)
-                    # Prevent the upgrade from happening on next restart
-                    _backup_old_db(str(old_db_filename))
             except Exception as e:
                 self._delete_current_db()
                 log.error(f'Failed to upgrade database: {str(e)}')
