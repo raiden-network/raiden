@@ -70,8 +70,10 @@ class ServiceRegistry:
             service_hex_address: AddressHex,
     ) -> Optional[str]:
         """Gets the URL of a service by address. If does not exist return None"""
-        result = self.proxy.contract.functions.urls(service_hex_address).call()
-        if result == b'':
+        result = self.proxy.contract.functions.urls(service_hex_address).call(
+            block_identifier=block_identifier,
+        )
+        if result == '':
             return None
         return result
 
