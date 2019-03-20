@@ -14,6 +14,7 @@ from raiden.constants import (
     RAIDEN_DB_VERSION,
     SQLITE_MIN_REQUIRED_VERSION,
     Environment,
+    RoutingMode,
 )
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -346,7 +347,8 @@ def run_app(
         secret_registry_contract_address is not None and
         endpoint_registry_contract_address is not None
     )
-    if environment_type == Environment.DEVELOPMENT:
+
+    if routing_mode == RoutingMode.PFS:
         contract_addresses_given = (
             contract_addresses_given and
             service_registry_contract_address is not None
@@ -415,7 +417,7 @@ def run_app(
             handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
 
     service_registry = None
-    if environment_type == Environment.DEVELOPMENT:
+    if routing_mode == RoutingMode.PFS:
         try:
             service_registry = blockchain_service.service_registry(
                 service_registry_contract_address or to_canonical_address(
