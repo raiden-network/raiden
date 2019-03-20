@@ -21,7 +21,11 @@ def test_monitoring_global_messages(
         token_proxy,
         deploy_service,
         skip_if_not_matrix,
-):
+):  # pylint: disable=unused-argument
+    """
+    Test that RaidenService sends RequestMonitoring messages to global
+    MONITORING_BROADCASTING_ROOM room on newly received balance proofs.
+    """
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -29,11 +33,6 @@ def test_monitoring_global_messages(
         app0.raiden.default_registry.address,
         token_address,
     )
-
-    """
-    Test that RaidenService sends RequestMonitoring messages to global
-    MONITORING_BROADCASTING_ROOM room on newly received balance proofs.
-    """
     transport = app0.raiden.transport
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
@@ -46,7 +45,10 @@ def test_monitoring_global_messages(
 
     ms_room_name = make_room_alias(transport.network_id, MONITORING_BROADCASTING_ROOM)
     ms_room = transport._global_rooms.get(ms_room_name)
-    assert isinstance(ms_room, Room)
+
+    msg = f'{MONITORING_BROADCASTING_ROOM} should exist at this point.'
+    assert isinstance(ms_room, Room), msg
+
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
 
     transport.log = MagicMock()
@@ -68,8 +70,9 @@ def test_monitoring_global_messages(
         app0.raiden,
         balance_proof,
     )
-    gevent.idle()
+    gevent.idle()  # Wait for the message to be sent
 
-    assert ms_room.send_text.call_count == 1
+    msg = f'The balance proof message was not sent to {MONITORING_BROADCASTING_ROOM}'
+    assert ms_room.send_text.call_count == 1, msg
     transport.stop()
     transport.get()
