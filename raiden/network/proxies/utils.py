@@ -5,7 +5,7 @@ from raiden.exceptions import AddressWrongContract, ContractVersionMismatch
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.transfer.state import NettingChannelState
 from raiden.utils import CanonicalIdentifier
-from raiden.utils.typing import Address, BlockHash
+from raiden.utils.typing import Address, BlockHash, Locksroot, Tuple
 
 
 def compare_contract_versions(
@@ -41,7 +41,7 @@ def get_onchain_locksroots(
         raiden,
         channel_state: NettingChannelState,
         block_hash: BlockHash,
-):
+) -> Tuple[Locksroot, Locksroot]:
     payment_channel = raiden.chain.payment_channel(
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=None,
@@ -50,6 +50,7 @@ def get_onchain_locksroots(
         ),
     )
     token_network = payment_channel.token_network
+
     participants_details = token_network.detail_participants(
         participant1=channel_state.our_state.address,
         participant2=channel_state.partner_state.address,
