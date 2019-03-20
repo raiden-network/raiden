@@ -17,7 +17,6 @@ from raiden.transfer.balance_proof import (
     pack_balance_proof_update,
     pack_reward_proof,
 )
-from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils.signer import LocalSigner, recover
 
 PRIVKEY, ADDRESS = make_privkey_address()
@@ -139,11 +138,11 @@ def test_request_monitoring():
 
 
 def test_update_pfs():
-    balance_proof = BalanceProofUnsignedState.from_dict(
-        make_balance_proof(signer=signer, amount=1).to_dict(),
-    )
-    message = UpdatePFS.from_balance_proof(
+    balance_proof = make_balance_proof(signer=signer, amount=1)
+
+    message = UpdatePFS(
         balance_proof=balance_proof,
+        our_nonce=15,
         reveal_timeout=1,
     )
     assert message.signature == b''

@@ -26,6 +26,7 @@ log = structlog.get_logger(__name__)
 
 
 nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
+our_nonce = make_field('our_nonce', 8, '8s', integer(0, UINT64_MAX))
 payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64_MAX))
 chain_id = make_field('chain_id', 32, '32s', integer(0, UINT256_MAX))
 message_identifier = make_field('message_identifier', 8, '8s', integer(0, UINT64_MAX))
@@ -49,6 +50,7 @@ locksroot = make_field('locksroot', 32, '32s')
 secrethash = make_field('secrethash', 32, '32s')
 balance_hash = make_field('balance_hash', 32, '32s')
 additional_hash = make_field('additional_hash', 32, '32s')
+balance_proof_message_hash = make_field('balance_proof_message_hash', 32, '32s')
 secret = make_field('secret', 32, '32s')
 transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, UINT256_MAX))
 locked_amount = make_field('locked_amount', 32, '32s', integer(0, UINT256_MAX))
@@ -58,6 +60,7 @@ fee = make_field('fee', 32, '32s', integer(0, UINT256_MAX))
 reveal_timeout = make_field('reveal_timeout', 32, '32s', integer(0, UINT256_MAX))
 
 signature = make_field('signature', 65, '65s')
+partner_signature = make_field('partner_signature', 65, '65s')
 non_closing_signature = make_field('non_closing_signature', 65, '65s')
 reward_proof_signature = make_field('reward_proof_signature', 65, '65s')
 
@@ -255,6 +258,9 @@ UpdatePFS = namedbuffer(
         transferred_amount,
         locked_amount,
         locksroot,
+        balance_proof_message_hash,
+        partner_signature,
+        our_nonce,
         reveal_timeout,
         signature,
     ],
