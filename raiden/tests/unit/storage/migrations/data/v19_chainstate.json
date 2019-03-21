@@ -737,11 +737,6 @@
                 "_type": "raiden.transfer.state.TransactionExecutionStatus",
                 "_version": 0
               },
-              "our_unlock_transaction": {
-                "started_block_number": "94",
-                "_type": "raiden.transfer.state.TransactionExecutionStatus",
-                "_version": 0
-              },
               "_type": "raiden.transfer.state.NettingChannelState",
               "_version": 0
             }

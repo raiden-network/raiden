@@ -1530,8 +1530,6 @@ class NettingChannelState(State):
         'close_transaction',
         'settle_transaction',
         'update_transaction',
-        'our_unlock_transaction',
-        'partner_unlock_transaction',
     )
 
     def __init__(
@@ -1605,8 +1603,6 @@ class NettingChannelState(State):
         self.close_transaction = close_transaction
         self.settle_transaction = settle_transaction
         self.update_transaction = update_transaction
-        self.our_unlock_transaction: TransactionExecutionStatus = None
-        self.partner_unlock_transaction: TransactionExecutionStatus = None
 
     def __repr__(self):
         return '<NettingChannelState id:{} opened:{} closed:{} settled:{} updated:{}>'.format(
@@ -1633,7 +1629,6 @@ class NettingChannelState(State):
             self.close_transaction == other.close_transaction and
             self.settle_transaction == other.settle_transaction and
             self.update_transaction == other.update_transaction and
-            self.our_unlock_transaction == other.our_unlock_transaction and
             self.chain_id == other.chain_id
         )
 
@@ -1677,8 +1672,6 @@ class NettingChannelState(State):
             result['settle_transaction'] = self.settle_transaction
         if self.update_transaction is not None:
             result['update_transaction'] = self.update_transaction
-        if self.our_unlock_transaction is not None:
-            result['our_unlock_transaction'] = self.our_unlock_transaction
 
         return result
 
@@ -1707,9 +1700,6 @@ class NettingChannelState(State):
         update_transaction = data.get('update_transaction')
         if update_transaction is not None:
             restored.update_transaction = update_transaction
-        our_unlock_transaction = data.get('our_unlock_transaction')
-        if our_unlock_transaction is not None:
-            restored.our_unlock_transaction = our_unlock_transaction
 
         restored.deposit_transaction_queue = data['deposit_transaction_queue']
 

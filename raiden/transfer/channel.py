@@ -1866,15 +1866,10 @@ def handle_channel_settled(
     if state_change.channel_identifier == channel_state.identifier:
         set_settled(channel_state, state_change.block_number)
 
-        is_our_settle_pending = channel_state.our_unlock_transaction is not None
-        is_partner_settle_pending = channel_state.partner_unlock_transaction is not None
-
         our_locksroot = state_change.our_onchain_locksroot
         partner_locksroot = state_change.partner_onchain_locksroot
 
         should_clear_channel = (
-            not is_our_settle_pending and
-            not is_partner_settle_pending and
             our_locksroot == EMPTY_MERKLE_ROOT and
             partner_locksroot == EMPTY_MERKLE_ROOT
         )
@@ -1892,20 +1887,6 @@ def handle_channel_settled(
             triggered_by_block_hash=state_change.block_hash,
         )
         events.append(onchain_unlock)
-
-        if our_locksroot != EMPTY_MERKLE_ROOT:
-            channel_state.our_unlock_transaction = TransactionExecutionStatus(
-                block_number,
-                None,
-                None,
-            )
-
-        if partner_locksroot != EMPTY_MERKLE_ROOT:
-            channel_state.partner_unlock_transaction = TransactionExecutionStatus(
-                block_number,
-                None,
-                None,
-            )
 
     return TransitionResult(channel_state, events)
 
