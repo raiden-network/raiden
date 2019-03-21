@@ -143,6 +143,7 @@ class AlarmTask(Runnable):
         self.chain = chain
         self.chain_id = None
         self.known_block_number = None
+        self._stop_event = None
 
         # TODO: Start with a larger sleep_time and decrease it as the
         # probability of a new block increases.

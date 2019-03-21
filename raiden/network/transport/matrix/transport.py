@@ -342,6 +342,8 @@ class MatrixTransport(Runnable):
         self._getroom_lock = Semaphore()
         self._account_data_lock = Semaphore()
 
+        self._message_handler = None
+
     def __repr__(self):
         if self._raiden_service is not None:
             node = f' node:{pex(self._raiden_service.address)}'
