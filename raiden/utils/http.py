@@ -43,6 +43,8 @@ class HTTPExecutor(MiHTTPExecutor):
         except (HTTPException, socket.timeout, socket.error):
             return False
 
+        return False
+
     def start(self):
         """
         Reimplements Executor and SimpleExecutor start to allow setting stdin/stdout/stderr/cwd

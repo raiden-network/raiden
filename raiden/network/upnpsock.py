@@ -48,7 +48,7 @@ def connect():
         log.debug('multiple upnp providers found', num_providers=providers)
     elif providers < 1:
         log.error('no upnp providers found')
-        return
+        return None
 
     try:
         location = upnp.selectigd()
@@ -59,11 +59,11 @@ def connect():
 
     if not valid_mappable_ipv4(upnp.lanaddr):
         log.error('could not query your lanaddr', reported=upnp.lanaddr)
-        return
+        return None
     try:  # this can fail if router advertises uPnP incorrectly
         if not valid_mappable_ipv4(upnp.externalipaddress()):
             log.error('could not query your externalipaddress', reported=upnp.externalipaddress())
-            return
+            return None
         return upnp, location
     except Exception:
         log.error('error when connecting with uPnP provider', location=location)
@@ -85,7 +85,7 @@ def open_port(upnp, internal_port, external_start_port=None):
         external_start_port = internal_port
 
     if upnp is None:
-        return
+        return False
 
     def register(internal, external):
         # test existing mappings
@@ -162,7 +162,9 @@ def open_port(upnp, internal_port, external_start_port=None):
             'could not register a port-mapping',
             location='FIXME',
         )
-        return
+        return False
+
+    return False
 
 
 def release_port(upnp, external_port):

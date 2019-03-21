@@ -114,7 +114,7 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
         }
 
         if len(received) != 1:
-            return
+            return None
         transfer = received.popitem()[1]
 
         is_not_valid = (
@@ -123,7 +123,7 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
         )
 
         if is_not_valid:
-            return
+            return None
         return transfer
 
     for handled_transfer in echo_node.seen_transfers:
@@ -217,7 +217,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
         }
 
         if len(received) != 1:
-            return
+            return None
         return received.popitem()[1]
 
     def received_is_of_size(size):
@@ -231,6 +231,8 @@ def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
             received[event.identifier] = event
         if len(received) == size:
             return received
+
+        return None
 
     # wait for the expected echoed transfers to be handled
     received = wait_until(lambda: received_is_of_size(2), 2 * network_wait)

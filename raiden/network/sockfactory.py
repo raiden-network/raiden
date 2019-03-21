@@ -108,7 +108,7 @@ class SocketFactory:
     def map_upnp(self):
         upnp = upnpsock.connect()
         if upnp is None:
-            return
+            return None
 
         router, location = upnp
         try:
@@ -132,6 +132,8 @@ class SocketFactory:
                 router_location=location,
             )
 
+        return None
+
     def unmap_upnp(self):
         upnpsock.release_port(self.storage['router'], self.storage['external_port'])
 
@@ -147,6 +149,8 @@ class SocketFactory:
                 return PortMappedSocket(self.socket, 'STUN', external_ip, external_port, **nat)
         except STUNUnavailableException:
             pass
+
+        return None
 
     def unmap_stun(self):
         pass
