@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 import structlog
 from eth_utils import to_canonical_address, to_checksum_address, to_hex
 
@@ -45,8 +47,9 @@ from raiden.transfer.utils import (
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils import CanonicalIdentifier, pex
 
-# type alias to avoid both circular dependencies and flake8 errors
-RaidenService = 'RaidenService'
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.raiden_service import RaidenService
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTFUL_EVENTS = (
@@ -70,7 +73,7 @@ SEND_BALANCE_PROOF_EVENTS = (
 
 class RaidenEventHandler:
 
-    def on_raiden_event(self, raiden: RaidenService, event: Event):
+    def on_raiden_event(self, raiden: 'RaidenService', event: Event):
         # pylint: disable=too-many-branches
         if type(event) in SEND_BALANCE_PROOF_EVENTS:
             self.update_pfs(raiden, event)
@@ -116,7 +119,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_send_lockexpired(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             send_lock_expired: SendLockExpired,
     ):
         lock_expired_message = message_from_sendevent(send_lock_expired)
@@ -128,7 +131,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_send_lockedtransfer(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             send_locked_transfer: SendLockedTransfer,
     ):
         mediated_transfer_message = message_from_sendevent(send_locked_transfer)
@@ -140,7 +143,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_send_secretreveal(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             reveal_secret_event: SendSecretReveal,
     ):
         reveal_secret_message = message_from_sendevent(reveal_secret_event)
@@ -152,7 +155,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_send_balanceproof(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             balance_proof_event: SendBalanceProof,
     ):
         unlock_message = message_from_sendevent(balance_proof_event)
@@ -164,7 +167,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_send_secretrequest(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             secret_request_event: SendSecretRequest,
     ):
         secret_request_message = message_from_sendevent(secret_request_event)
@@ -176,7 +179,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_send_refundtransfer(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             refund_transfer_event: SendRefundTransfer,
     ):
         refund_transfer_message = message_from_sendevent(refund_transfer_event)
@@ -188,7 +191,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_send_processed(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             processed_event: SendProcessed,
     ):
         processed_message = message_from_sendevent(processed_event)
@@ -200,7 +203,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_paymentsentsuccess(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             payment_sent_success_event: EventPaymentSentSuccess,
     ):
         target = payment_sent_success_event.target
@@ -214,7 +217,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_paymentsentfailed(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             payment_sent_failed_event: EventPaymentSentFailed,
     ):
         target = payment_sent_failed_event.target
@@ -231,7 +234,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_unlockfailed(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             unlock_failed_event: EventUnlockFailed,
     ):
         # pylint: disable=unused-argument
@@ -244,7 +247,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_secretreveal(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             channel_reveal_secret_event: ContractSendSecretReveal,
     ):
         raiden.default_secret_registry.register_secret(
@@ -254,7 +257,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_channelclose(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             channel_close_event: ContractSendChannelClose,
     ):
         balance_proof = channel_close_event.balance_proof
@@ -289,7 +292,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_channelupdate(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             channel_update_event: ContractSendChannelUpdateTransfer,
     ):
         balance_proof = channel_update_event.balance_proof
@@ -326,7 +329,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_channelunlock(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
         canonical_identifier = CanonicalIdentifier(
@@ -433,7 +436,7 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_channelsettle(
-            raiden: RaidenService,
+            raiden: 'RaidenService',
             channel_settle_event: ContractSendChannelSettle,
     ):
         canonical_identifier = CanonicalIdentifier(
@@ -540,7 +543,7 @@ class RaidenEventHandler:
         )
 
     @staticmethod
-    def update_pfs(raiden: RaidenService, event: Event):
+    def update_pfs(raiden: 'RaidenService', event: Event):
         channel_state = get_channelstate_by_token_network_and_partner(
             chain_state=state_from_raiden(raiden),
             token_network_id=to_canonical_address(
