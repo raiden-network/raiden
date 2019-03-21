@@ -71,13 +71,6 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         signature=EMPTY_SIGNATURE,
         given_block_identifier='latest',
     )
-    waiting.wait_for_close(
-        raiden=app0.raiden,
-        payment_network_id=registry_address,
-        token_address=token_address,
-        channel_ids=[channel_identifier],
-        retry_timeout=app0.raiden.alarm.sleep_time,
-    )
     waiting.wait_for_settle(
         raiden=app0.raiden,
         payment_network_id=registry_address,
@@ -143,13 +136,6 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
         registry_address=registry_address,
         token_address=token_address,
         partner_address=app1.raiden.address,
-    )
-    waiting.wait_for_close(
-        raiden=app0.raiden,
-        payment_network_id=registry_address,
-        token_address=token_address,
-        channel_ids=[channel_identifier],
-        retry_timeout=app0.raiden.alarm.sleep_time,
     )
 
     # app1 won't update the channel
