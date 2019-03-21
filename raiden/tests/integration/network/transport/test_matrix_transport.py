@@ -185,7 +185,6 @@ def skip_userid_validation(monkeypatch):
 
 
 def make_message(convert_to_hex: bool = False, overwrite_data=None):
-    from matrix_client.room import Room
     room = Room(None, '!roomID:server')
     if not overwrite_data:
         message = SecretRequest(

@@ -1,4 +1,5 @@
 import pytest
+import gevent
 from gevent import server
 
 from raiden import waiting
@@ -292,7 +293,6 @@ def test_recovery_blockchain_events(
 
     app0.stop()
 
-    import gevent
     gevent.sleep(1)
 
     raiden_event_handler = RaidenEventHandler()
