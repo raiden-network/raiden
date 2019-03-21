@@ -881,6 +881,15 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
     return (locksroot, nonce, transferred_amount, locked_amount)
 
 
+def get_current_nonce(end_state: NettingChannelEndState) -> Nonce:
+    balance_proof = end_state.balance_proof
+
+    if balance_proof:
+        return balance_proof.nonce
+    else:
+        return Nonce(0)
+
+
 def get_distributable(
         sender: NettingChannelEndState,
         receiver: NettingChannelEndState,
