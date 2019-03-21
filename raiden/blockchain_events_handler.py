@@ -30,6 +30,7 @@ from raiden_contracts.constants import (
 )
 
 if TYPE_CHECKING:
+    # pylint: disable=unused-import
     from raiden.raiden_service import RaidenService  # noqa: F401
 
 
