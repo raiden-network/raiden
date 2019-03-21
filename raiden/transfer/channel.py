@@ -1859,7 +1859,7 @@ def handle_channel_updated_transfer(
 def handle_channel_settled(
         channel_state: NettingChannelState,
         state_change: ContractReceiveChannelSettled,
-        block_number: BlockNumber,
+        block_number: BlockNumber,  # pylint: disable=unused-argument
 ) -> TransitionResult[Optional[NettingChannelState]]:
     events: List[Event] = list()
 
