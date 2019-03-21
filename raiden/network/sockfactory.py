@@ -110,23 +110,27 @@ class SocketFactory:
         if upnp is None:
             return
 
+        router, location = upnp
         try:
-            router, location = upnp
             result = upnpsock.open_port(
                 router,
                 self.source_port,
             )
-            if result is not None:
-                self.storage['router'] = router
-                self.storage['external_port'] = result[1]
-                return PortMappedSocket(
-                    self.socket, 'UPnP', result[0], result[1],
-                    router_location=location,
-                )
         except socket.error as e:
             if e.errno == errno.EADDRINUSE:
                 raise RaidenServicePortInUseError()
             raise
+
+        if result is not None:
+            self.storage['router'] = router
+            self.storage['external_port'] = result[1]
+            return PortMappedSocket(
+                sock=self.socket,
+                method='UPnP',
+                external_ip=result[0],
+                external_port=result[1],
+                router_location=location,
+            )
 
     def unmap_upnp(self):
         upnpsock.release_port(self.storage['router'], self.storage['external_port'])
