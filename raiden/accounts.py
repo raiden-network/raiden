@@ -228,7 +228,8 @@ class Account:
         if self.locked:
             self._privkey = decode_keyfile_json(self.keystore, password.encode('UTF-8'))
             self.locked = False
-            self.address  # get address such that it stays accessible after a subsequent lock
+            # get address such that it stays accessible after a subsequent lock
+            self._fill_address()
 
     def lock(self):
         """Relock an unlocked account.
@@ -239,6 +240,12 @@ class Account:
         """
         self._privkey = None
         self.locked = True
+
+    def _fill_address(self):
+        if 'address' in self.keystore:
+            self._address = decode_hex(self.keystore['address'])
+        elif not self.locked:
+            self._address = privatekey_to_address(self.privkey)
 
     @property
     def privkey(self):
@@ -260,14 +267,9 @@ class Account:
         """The account's address or `None` if the address is not stored in the key file and cannot
         be reconstructed (because the account is locked)
         """
-        if self._address:
-            pass
-        elif 'address' in self.keystore:
-            self._address = decode_hex(self.keystore['address'])
-        elif not self.locked:
-            self._address = privatekey_to_address(self.privkey)
-        else:
-            return None
+        if not self._address:
+            self._fill_address()
+
         return self._address
 
     @property
