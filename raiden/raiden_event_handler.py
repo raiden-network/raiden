@@ -393,12 +393,10 @@ class RaidenEventHandler:
 
         # we want to unlock because there are on-chain unlocked locks
         search_events = (
-            our_address == participant and
             our_locksroot != EMPTY_HASH
         )
         # we want to unlock, because there are unlocked/unclaimed locks
         search_state_changes = (
-            partner_address == participant and
             partner_locksroot != EMPTY_HASH
         )
 
@@ -489,44 +487,22 @@ class RaidenEventHandler:
                 state_change_identifier=state_change_identifier,
             )
 
-        if not state_change_identifier:
-            raise RaidenUnrecoverableError(
-                f'Failed to find state/event that match current channel locksroots. '
-                f'chain_id:{canonical_identifier.chain_identifier} '
-                f'token:{to_checksum_address(token_address)} '
-                f'token_network:{to_checksum_address(canonical_identifier.token_network_address)} '
-                f'channel:{canonical_identifier.channel_identifier} '
-                f'participant:{to_checksum_address(participant)} '
-                f'our_locksroot:{to_hex(our_locksroot)} '
-                f'partner_locksroot:{to_hex(partner_locksroot)} ',
+            _, gain_from_our_locks = get_batch_unlock_gain(
+                restored_channel_state,
             )
 
-        # Replay state changes until a channel state is reached where
-        # this channel state has the participants balance hash.
-        restored_channel_state = channel_state_until_state_change(
-            raiden=raiden,
-            payment_network_identifier=raiden.default_registry.address,
-            token_address=token_address,
-            channel_identifier=canonical_identifier.channel_identifier,
-            state_change_identifier=state_change_identifier,
-        )
-
-        _, gain_from_our_locks = get_batch_unlock_gain(
-            restored_channel_state,
-        )
-
-        skip_unlock = (
-            restored_channel_state.our_state.address == participant and
-            gain_from_our_locks == 0
-        )
-        if not skip_unlock:
-            unlock(
-                raiden=raiden,
-                payment_channel=payment_channel,
-                end_state=restored_channel_state.our_state,
-                participant=partner_address,
-                partner=our_address,
+            skip_unlock = (
+                restored_channel_state.our_state.address == participant and
+                gain_from_our_locks == 0
             )
+            if not skip_unlock:
+                unlock(
+                    raiden=raiden,
+                    payment_channel=payment_channel,
+                    end_state=restored_channel_state.our_state,
+                    participant=partner_address,
+                    partner=our_address,
+                )
 
     @staticmethod
     def handle_contract_send_channelsettle(
