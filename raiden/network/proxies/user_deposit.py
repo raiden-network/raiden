@@ -73,16 +73,17 @@ class UserDeposit:
             self,
             address: Address,
             block_identifier: BlockSpecification,
-    ):
-        fn = getattr(self.proxy.contract.functions, 'balances')
-        return fn(address).call(block_identifier=block_identifier)
+    ) -> TokenAmount:
+        return self.proxy.contract.functions.balances(address).call(
+            block_identifier=block_identifier,
+        )
 
     def deposit(
             self,
             beneficiary: Address,
             total_deposit: TokenAmount,
             block_identifier: BlockSpecification,
-    ):
+    ) -> None:
         """ Deposit provided amount into the user-deposit contract
         to the beneficiary's account. """
 
