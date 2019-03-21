@@ -187,6 +187,7 @@ class GMatrixClient(MatrixClient):
         # dict of 'type': 'content' key/value pairs
         self.account_data: Dict[str, Dict[str, Any]] = dict()
         self._post_hook_func: Optional[Callable[[str], None]] = None
+        self.token = None
 
         super().__init__(
             base_url,
