@@ -16,6 +16,10 @@ from raiden.transfer.state import (
 from raiden.utils import pex
 from raiden.utils.typing import Address, Dict
 
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.network.transport.udp.udp_transport import UDPTransport
+
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
@@ -165,7 +169,3 @@ def healthcheck(
                 )
                 event_unhealthy.clear()
                 event_healthy.set()
-
-
-if TYPE_CHECKING:
-    from raiden.network.transport.udp.udp_transport import UDPTransport
