@@ -38,6 +38,7 @@ from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event as RaidenEvent, State, StateChange
+from raiden.transfer.channel import get_current_nonce
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
@@ -241,7 +242,7 @@ def update_path_finding_service_from_balance_proof(raiden, chain_state, new_bala
 
     msg = UpdatePFS(
         balance_proof=new_balance_proof,
-        our_nonce=channel_state.our_state.balance_proof.nonce,
+        our_nonce=get_current_nonce(channel_state.our_state),
         reveal_timeout=channel_state.reveal_timeout,
     )
     msg.sign(raiden.signer)
