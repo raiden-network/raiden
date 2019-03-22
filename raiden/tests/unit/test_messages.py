@@ -1,7 +1,11 @@
 import pytest
 
 from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof, UpdatePFS
-from raiden.tests.utils.factories import make_canonical_identifier, make_privkey_address
+from raiden.tests.utils.factories import (
+    make_canonical_identifier,
+    make_channel_state,
+    make_privkey_address,
+)
 from raiden.tests.utils.messages import (
     ADDRESS as PARTNER_ADDRESS,
     MEDIATED_TRANSFER_INVALID_VALUES,
@@ -140,11 +144,10 @@ def test_request_monitoring():
 def test_update_pfs():
     balance_proof = make_balance_proof(signer=signer, amount=1)
 
-    message = UpdatePFS(
-        balance_proof=balance_proof,
-        our_nonce=15,
-        reveal_timeout=1,
-    )
+    channel_state = make_channel_state()
+    channel_state.our_state.balance_proof = balance_proof
+    channel_state.partner_state.balance_proof = balance_proof
+    message = UpdatePFS.from_channel_state(channel_state=channel_state)
     assert message.signature == b''
     message.sign(signer)
     assert recover(message._data_to_sign(), message.signature) == ADDRESS

@@ -1,4 +1,5 @@
 import random
+from unittest.mock import MagicMock
 
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
@@ -48,6 +49,8 @@ class MockRaidenService:
 
         self.chain.node_address = self.address
         self.message_handler = message_handler
+
+        self.user_deposit = MagicMock()
 
         if state_transition is None:
             state_transition = node.state_transition

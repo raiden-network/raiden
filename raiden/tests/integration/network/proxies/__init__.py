@@ -1,9 +1,9 @@
-from raiden.utils.typing import Address, ChannelID
-from web3 import Web3
 from eth_utils import decode_hex, encode_hex
+from web3 import Web3
 
-from raiden.utils.signing import pack_data
 from raiden.constants import UINT256_MAX
+from raiden.utils.signing import pack_data
+from raiden.utils.typing import Address, ChannelID
 from raiden_contracts.constants import MessageTypeId
 
 

@@ -38,7 +38,6 @@ from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event as RaidenEvent, State, StateChange
-from raiden.transfer.channel import get_current_nonce
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
@@ -62,6 +61,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
+from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils import (
     CanonicalIdentifier,
     create_default_identifier,
@@ -71,7 +71,6 @@ from raiden.utils import (
     sha3,
     to_rdn,
 )
-from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -224,44 +223,51 @@ def update_services_from_balance_proof(
         chain_state: 'ChainState',
         new_balance_proof: BalanceProofSignedState,
 ):
-    update_monitoring_service_from_balance_proof(raiden, new_balance_proof)
+    update_monitoring_service_from_balance_proof(raiden, chain_state, new_balance_proof)
     update_path_finding_service_from_balance_proof(raiden, chain_state, new_balance_proof)
 
 
-def update_path_finding_service_from_balance_proof(raiden, chain_state, new_balance_proof):
+def update_path_finding_service_from_balance_proof(
+        raiden,
+        chain_state: 'ChainState',
+        new_balance_proof: BalanceProofSignedState,
+):
     channel_state = get_channelstate_by_token_network_and_partner(
         chain_state=chain_state,
-        token_network_id=new_balance_proof.canonical_identifier.token_network_address,
+        token_network_id=TokenNetworkID(
+            new_balance_proof.canonical_identifier.token_network_address,
+        ),
         partner_address=new_balance_proof.sender,
     )
-    error_msg = 'tried to send a balance proof in non-existant channel '
-    f'token_network_address: {pex(new_balance_proof.canonical_identifier.token_network_address)} '
-    f'recipient: {pex(new_balance_proof.sender)}'
+    network_address = new_balance_proof.canonical_identifier.token_network_address
+    error_msg = (
+        'tried to send a balance proof in non-existant channel '
+        f'token_network_address: {pex(network_address)} '
+        f'recipient: {pex(new_balance_proof.sender)}'
+    )
     assert channel_state is not None, error_msg
     assert channel_state.partner_state.balance_proof == new_balance_proof
 
-    msg = UpdatePFS(
-        balance_proof=new_balance_proof,
-        our_nonce=get_current_nonce(channel_state.our_state),
-        reveal_timeout=channel_state.reveal_timeout,
-    )
+    msg = UpdatePFS.from_channel_state(channel_state)
     msg.sign(raiden.signer)
     raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, msg)
     log.debug(
         'Sent a PFS Update',
+        message=msg,
         balance_proof=new_balance_proof,
     )
 
 
 def update_monitoring_service_from_balance_proof(
         raiden: 'RaidenService',
+        chain_state: 'ChainState',
         new_balance_proof: BalanceProofSignedState,
 ):
     if raiden.config['services']['monitoring_enabled'] is False:
         return
 
     channel_state = views.get_channelstate_by_canonical_identifier(
-        chain_state=views.state_from_raiden(raiden),
+        chain_state=chain_state,
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=raiden.chain.network_id,
             token_network_address=new_balance_proof.token_network_identifier,

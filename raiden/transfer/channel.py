@@ -878,7 +878,7 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
         transferred_amount: TokenAmount = 0
         locked_amount: TokenAmount = 0
 
-    return (locksroot, nonce, transferred_amount, locked_amount)
+    return locksroot, nonce, transferred_amount, locked_amount
 
 
 def get_current_nonce(end_state: NettingChannelEndState) -> Nonce:

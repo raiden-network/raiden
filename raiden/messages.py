@@ -13,6 +13,7 @@ from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
+from raiden.transfer import channel
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.balance_proof import (
     pack_balance_proof,
@@ -28,7 +29,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState
+from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState, NettingChannelState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import CanonicalIdentifier, ishash, pex, sha3, typing
 from raiden.utils.signer import Signer, recover
@@ -71,6 +72,7 @@ __all__ = (
     'UpdatePFS',
     'decode',
     'from_dict',
+    'message_from_sendevent',
 )
 
 _senders_cache = LRUCache(maxsize=128)
@@ -1790,45 +1792,76 @@ class UpdatePFS(SignedMessage):
     def __init__(
             self,
             *,
-            balance_proof: BalanceProofSignedState,
-            our_nonce: typing.Nonce,
+            canonical_identifier: CanonicalIdentifier,
+            updating_participant: typing.Address,
+            other_participant: typing.Address,
+            updating_nonce: typing.Nonce,
+            other_nonce: typing.Nonce,
+            updating_capacity: typing.TokenAmount,
+            other_capacity: typing.TokenAmount,
             reveal_timeout: int,
             signature: typing.Optional[typing.Signature] = None,
             **kwargs,
     ):
         super().__init__(**kwargs)
-        assert isinstance(balance_proof, BalanceProofSignedState)
-        self.balance_proof = balance_proof
-        self.our_nonce = our_nonce
+        self.canonical_identifier = canonical_identifier
+        self.updating_participant = updating_participant
+        self.other_participant = other_participant
+        self.updating_nonce = updating_nonce
+        self.other_nonce = other_nonce
+        self.updating_capacity = updating_capacity
+        self.other_capacity = other_capacity
         self.reveal_timeout = reveal_timeout
         if signature is None:
             self.signature = b''
         else:
             self.signature = signature
 
-    @property
-    def canonical_identifier(self) -> CanonicalIdentifier:
-        return self.balance_proof.canonical_identifier
+    @classmethod
+    def from_channel_state(cls, channel_state: NettingChannelState) -> 'UpdatePFS':
+        return cls(
+            canonical_identifier=channel_state.canonical_identifier,
+            updating_participant=channel_state.our_state.address,
+            other_participant=channel_state.partner_state.address,
+            updating_nonce=channel.get_current_nonce(channel_state.our_state),
+            other_nonce=channel.get_current_nonce(channel_state.partner_state),
+            updating_capacity=channel.get_distributable(
+                sender=channel_state.our_state,
+                receiver=channel_state.partner_state,
+            ),
+            other_capacity=channel.get_distributable(
+                sender=channel_state.partner_state,
+                receiver=channel_state.our_state,
+            ),
+            reveal_timeout=channel_state.reveal_timeout,
+        )
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return {
             'type': self.__class__.__name__,
-            'balance_proof': self.balance_proof.to_dict(),
-            'our_nonce': str(self.our_nonce),
-            'signature': encode_hex(self.signature),
+            'canonical_identifier': self.canonical_identifier.to_dict(),
+            'updating_participant': to_normalized_address(self.updating_participant),
+            'other_participant': to_normalized_address(self.other_participant),
+            'updating_nonce': self.updating_nonce,
+            'other_nonce': self.other_nonce,
+            'updating_capacity': str(self.updating_capacity),
+            'other_capacity': str(self.other_capacity),
             'reveal_timeout': self.reveal_timeout,
+            'signature': encode_hex(self.signature),
         }
 
     @classmethod
-    def from_dict(
-            cls,
-            data: typing.Dict[str, typing.Any],
-    ) -> 'UpdatePFS':
+    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'UpdatePFS':
         return cls(
-            balance_proof=BalanceProofSignedState.from_dict(data['balance_proof']),
-            our_nonce=int(data['our_nonce']),
-            signature=decode_hex(data['signature']),
+            canonical_identifier=CanonicalIdentifier.from_dict(data['canonical_identifier']),
+            updating_participant=to_canonical_address(data['updating_participant']),
+            other_participant=to_canonical_address(data['other_participant']),
+            updating_nonce=data['updating_nonce'],
+            other_nonce=data['other_nonce'],
+            updating_capacity=int(data['updating_capacity']),
+            other_capacity=int(data['other_capacity']),
             reveal_timeout=data['reveal_timeout'],
+            signature=decode_hex(data['signature']),
         )
 
     def packed(self) -> bytes:
@@ -1839,55 +1872,32 @@ class UpdatePFS(SignedMessage):
         return packed
 
     def pack(self, packed: bytes) -> bytes:
-        packed.nonce = self.balance_proof.nonce
         packed.chain_id = self.canonical_identifier.chain_identifier
         packed.token_network_address = self.canonical_identifier.token_network_address
         packed.channel_identifier = self.canonical_identifier.channel_identifier
-        packed.transferred_amount = self.balance_proof.transferred_amount
-        packed.locked_amount = self.balance_proof.locked_amount
-        packed.locksroot = self.balance_proof.locksroot
-        packed.balance_proof_message_hash = self.balance_proof.message_hash
-        packed.partner_signature = self.balance_proof.signature
-        packed.our_nonce = self.our_nonce
+        packed.updating_participant = self.updating_participant
+        packed.other_participant = self.other_participant
+        packed.updating_nonce = self.updating_nonce
+        packed.other_nonce = self.other_nonce
+        packed.updating_capacity = self.updating_capacity
+        packed.other_capacity = self.other_capacity
         packed.reveal_timeout = self.reveal_timeout
         packed.signature = self.signature
 
     @classmethod
-    def unpack(
-            cls,
-            packed: bytes,
-    ) -> 'UpdatePFS':
-        canonical_identifier = CanonicalIdentifier(
-            chain_identifier=packed.chain_id,
-            token_network_address=packed.token_network_address,
-            channel_identifier=packed.channel_identifier,
-        )
-        # note: we have to recover the sender here
-        sender = recover(
-            data=pack_balance_proof(
-                nonce=packed.nonce,
-                balance_hash=hash_balance_data(
-                    transferred_amount=packed.transferred_amount,
-                    locked_amount=packed.locked_amount,
-                    locksroot=packed.locksroot,
-                ),
-                additional_hash=packed.balance_proof_message_hash,
-                canonical_identifier=canonical_identifier,
-            ),
-            signature=packed.partner_signature,
-        )
+    def unpack(cls, packed: bytes) -> 'UpdatePFS':
         return cls(
-            balance_proof=BalanceProofSignedState(
-                nonce=packed.nonce,
-                transferred_amount=packed.transferred_amount,
-                locked_amount=packed.locked_amount,
-                locksroot=packed.locksroot,
-                message_hash=packed.balance_proof_message_hash,
-                signature=packed.partner_signature,
-                sender=sender,
-                canonical_identifier=canonical_identifier,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=packed.chain_id,
+                token_network_address=packed.token_network_address,
+                channel_identifier=packed.channel_identifier,
             ),
-            our_nonce=packed.our_nonce,
+            updating_participant=packed.updating_participant,
+            other_participant=packed.other_participant,
+            updating_nonce=packed.updating_nonce,
+            other_nonce=packed.other_nonce,
+            updating_capacity=packed.other_capacity,
+            other_capacity=packed.other_capacity,
             reveal_timeout=packed.reveal_timeout,
             signature=packed.signature,
         )
