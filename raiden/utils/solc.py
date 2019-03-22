@@ -91,7 +91,14 @@ def compile_files_cwd(*args, **kwargs):
     cwd = os.getcwd()
     try:
         os.chdir(compile_wd)
-        compiled_contracts = compile_files(file_list, **kwargs)
+        compiled_contracts = compile_files(
+            source_files=file_list,
+            # We need to specify output values here because py-solc by default
+            # provides them all and does not know that "clone-bin" does not exist
+            # in solidity >= v0.5.0
+            output_values=('abi', 'asm', 'ast', 'bin', 'bin-runtime'),
+            **kwargs,
+        )
     finally:
         os.chdir(cwd)
     return compiled_contracts

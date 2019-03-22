@@ -1,4 +1,4 @@
-pragma solidity ^0.4.16;
+pragma solidity ^0.5.4;
 
 contract RpcTest {
     function fail() pure public {
@@ -22,6 +22,6 @@ contract RpcTest {
     );
 
     function createEvent(uint _someId) public {
-        RpcEvent(_someId);
+        emit RpcEvent(_someId);
     }
 }
