@@ -29,6 +29,11 @@ if [[ ! -x ${PARITY_PATH} ]]; then
 fi
 ln -sf ${PARITY_PATH} ${LOCAL_BASE}/bin/parity
 
+# Only deal with solc for Linux since it's only used for testing
+if [[ ${OS_NAME} != "LINUX" ]]; then
+    exit 0
+fi
+
 SOLC_PATH="${LOCAL_BASE}/bin/solc-${OS_NAME}-${SOLC_VERSION}"
 if [[ ! -x ${SOLC_PATH} ]]; then
   mkdir -p ${LOCAL_BASE}/bin
