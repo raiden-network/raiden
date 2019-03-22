@@ -321,8 +321,11 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     """
     our_locksroot, partner_locksroot = get_onchain_locksroots(
         raiden=raiden,
-        channel_state=channel_state,
-        block_hash=block_hash,
+        token_network_address=token_network_identifier,
+        channel_identifier=channel_identifier,
+        participant1=channel_state.our_state.address,
+        participant2=channel_state.partner_state.address,
+        block_identifier=block_hash,
     )
 
     channel_settled = ContractReceiveChannelSettled(
