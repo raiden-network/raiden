@@ -18,6 +18,7 @@ from raiden.exceptions import (
     DepositMismatch,
     DuplicatedChannelError,
     InvalidAddress,
+    InvalidBlockNumberInput,
     InvalidSettleTimeout,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
@@ -176,7 +177,10 @@ class TokenNetwork:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
 
         if not self.client.can_query_state_for_block(block_identifier):
-            return
+            raise InvalidBlockNumberInput(
+                'Tried to open a channel with a block identifier older than 128 '
+                'blocks. This should not happen.',
+            )
 
         channel_exists = self._channel_exists_and_not_settled(
             participant1=self.node_address,
