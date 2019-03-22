@@ -7,7 +7,7 @@ from eth_utils import keccak
 from raiden.constants import STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import SecretRegistry
+from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret

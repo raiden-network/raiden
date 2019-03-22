@@ -4,7 +4,7 @@ import structlog
 from eth_utils import is_binary_address
 
 from raiden.exceptions import InvalidAddress, UnknownAddress
-from raiden.network import proxies
+from raiden.network.proxies.discovery import Discovery as DiscoveryProxy
 from raiden.utils import host_port_to_endpoint, pex, split_endpoint
 
 log = structlog.get_logger(__name__)
@@ -46,7 +46,7 @@ class ContractDiscovery(Discovery):
     def __init__(
             self,
             node_address: bytes,
-            discovery_proxy: proxies.Discovery,
+            discovery_proxy: DiscoveryProxy,
     ):
 
         super().__init__()

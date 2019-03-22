@@ -2,16 +2,14 @@ import gevent
 from eth_utils import is_binary_address
 from gevent.lock import Semaphore
 
-from raiden.network.proxies import (
-    Discovery,
-    PaymentChannel,
-    SecretRegistry,
-    ServiceRegistry,
-    Token,
-    TokenNetwork,
-    TokenNetworkRegistry,
-    UserDeposit,
-)
+from raiden.network.proxies.discovery import Discovery
+from raiden.network.proxies.payment_channel import PaymentChannel
+from raiden.network.proxies.secret_registry import SecretRegistry
+from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.proxies.token import Token
+from raiden.network.proxies.token_network import TokenNetwork
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
+from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (

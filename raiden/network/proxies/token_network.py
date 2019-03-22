@@ -24,7 +24,7 @@ from raiden.exceptions import (
     RaidenUnrecoverableError,
     SamePeerAddress,
 )
-from raiden.network.proxies import Token
+from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw

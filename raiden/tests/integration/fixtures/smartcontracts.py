@@ -7,7 +7,10 @@ from raiden.constants import (
     UINT256_MAX,
     Environment,
 )
-from raiden.network.proxies import SecretRegistry, Token, TokenNetwork, TokenNetworkRegistry
+from raiden.network.proxies.secret_registry import SecretRegistry
+from raiden.network.proxies.token import Token
+from raiden.network.proxies.token_network import TokenNetwork
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
 from raiden.tests.utils.smartcontracts import (
     deploy_contract_web3,
