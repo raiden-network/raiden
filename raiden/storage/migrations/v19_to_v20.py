@@ -1,14 +1,8 @@
-import copy
 import json
 
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.sqlite import SQLiteStorage
-from raiden.transfer.state import (
-    NettingChannelEndState,
-    NettingChannelState,
-    TransactionExecutionStatus,
-)
 from raiden.utils.typing import Any, Dict
 
 RaidenService = 'RaidenService'
@@ -29,7 +23,37 @@ def _find_channel_new_state_change(
     })
 
 
+def _get_onchain_locksroots(
+        raiden: RaidenService,
+        storage: SQLiteStorage,
+        token_network: Dict[str, Any],
+        channel: Dict[str, Any],
+):
+    channel_new_state_change = _find_channel_new_state_change(
+        storage=storage,
+        token_network_address=token_network['address'],
+        channel_identifier=channel['identifier'],
+    )
+
+    if not channel_new_state_change:
+        raise RaidenUnrecoverableError(
+            'Could not find the state change for channel {channel_identifier}, '
+            'token network address: {token_network["address"]} being created. ',
+        )
+
+    our_locksroot, partner_locksroot = get_onchain_locksroots(
+        raiden=raiden,
+        token_network_address=token_network['address'],
+        channel_identifier=channel['identifier'],
+        participant1=channel['our_state']['address'],
+        participant2=channel['partner_state']['address'],
+        block_identifier='latest',
+    )
+    return our_locksroot, partner_locksroot
+
+
 def _add_onchain_locksroot_to_channel_settled_state_changes(
+        raiden: RaidenService,
         storage: SQLiteStorage,
 ) -> None:
     """ Adds `our_onchain_locksroot` and `partner_onchain_locksroot` to
@@ -104,42 +128,12 @@ def _add_onchain_locksroot_to_snapshot(
                 'channelidentifiers_to_channels',
                 dict(),
             )
-            for channel_identifier, channel in channelidentifiers_to_channels.items():
-                channel_new_state_change = _find_channel_new_state_change(
-                    storage=storage,
-                    token_network_address=token_network['address'],
-                    channel_identifier=channel_identifier,
-                )
-
-                if not channel_new_state_change:
-                    raise RaidenUnrecoverableError(
-                        'Could not find the state change for channel {channel_identifier}, '
-                        'token network address: {token_network["address"]} being created. ',
-                    )
-
-                # Create a dummy channel_state to satisfy the parameter requirements of
-                # get_on_chain_locksroots
-                channel_copy = copy.deepcopy(channel)
-
-                # Silence `from_dict`-related errors (INTENTIONAL)
-                channel_copy['our_state']['onchain_locksroot'] = None
-                channel_copy['partner_state']['onchain_locksroot'] = None
-                channel_copy['open_transaction'] = TransactionExecutionStatus.from_dict(
-                    channel_copy['open_transaction'],
-                )
-
-                channel_copy['our_state'] = NettingChannelEndState.from_dict(
-                    channel_copy['our_state'],
-                )
-                channel_copy['partner_state'] = NettingChannelEndState.from_dict(
-                    channel_copy['partner_state'],
-                )
-
-                channel_state = NettingChannelState.from_dict(channel_copy)
-                our_locksroot, partner_locksroot = get_onchain_locksroots(
+            for channel in channelidentifiers_to_channels.values():
+                our_locksroot, partner_locksroot = _get_onchain_locksroots(
                     raiden=raiden,
-                    channel_state=channel_state,
-                    block_hash='latest',
+                    storage=storage,
+                    token_network=token_network,
+                    channel=channel,
                 )
 
                 channel['our_state']['onchain_locksroot'] = our_locksroot
@@ -168,7 +162,7 @@ def upgrade_v19_to_v20(
         **kwargs,
 ) -> int:
     if old_version == SOURCE_VERSION:
-        _add_onchain_locksroot_to_channel_settled_state_changes(storage)
+        _add_onchain_locksroot_to_channel_settled_state_changes(raiden, storage)
         _add_onchain_locksroot_to_snapshots(raiden, storage)
 
     return TARGET_VERSION
