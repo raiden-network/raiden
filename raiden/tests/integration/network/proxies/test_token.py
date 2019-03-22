@@ -1,6 +1,6 @@
 from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.network.proxies import Token
+from raiden.network.proxies.token import Token
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import privatekey_to_address
 

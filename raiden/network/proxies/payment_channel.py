@@ -4,8 +4,7 @@ from eth_utils import decode_hex
 from web3.utils.filters import Filter
 
 from raiden.constants import UINT256_MAX
-from raiden.network.proxies import TokenNetwork
-from raiden.network.proxies.token_network import ChannelDetails
+from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.utils.typing import (
     AdditionalHash,

@@ -6,7 +6,8 @@ from eth_utils import to_checksum_address, to_hex
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
-from raiden.network.proxies import PaymentChannel, TokenNetwork
+from raiden.network.proxies.payment_channel import PaymentChannel
+from raiden.network.proxies.token_network import TokenNetwork
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update

@@ -4,7 +4,8 @@ from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_
 from raiden.constants import EMPTY_HASH
 from raiden.exceptions import ChannelOutdatedError
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import PaymentChannel, TokenNetwork
+from raiden.network.proxies.payment_channel import PaymentChannel
+from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.utils import privatekey_to_address

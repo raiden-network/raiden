@@ -6,7 +6,7 @@ from eth_utils import to_canonical_address
 from raiden.constants import GENESIS_BLOCK_NUMBER, UINT64_MAX
 from raiden.exceptions import InvalidBlockNumberInput, UnknownEventType
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import SecretRegistry
+from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.utils import pex, typing
 from raiden.utils.filters import (
     StatelessFilter,

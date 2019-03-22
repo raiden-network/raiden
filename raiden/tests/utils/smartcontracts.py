@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.pathfinding import get_random_service
-from raiden.network.proxies import ServiceRegistry
+from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import typing
