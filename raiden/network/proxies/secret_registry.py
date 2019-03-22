@@ -66,13 +66,7 @@ class SecretRegistry:
         self._open_secret_transactions_lock = Semaphore()
 
     def register_secret(self, secret: Secret, given_block_identifier: BlockSpecification):
-        try:
-            self.register_secret_batch([secret], given_block_identifier)
-        except NoStateForBlockIdentifier:
-            # If the given block identifier is older than 128 blocks then try again
-            # with the latest block. This can happen if we shut down for some time
-            # and we get to register_secret when replaying the state changes.
-            self.register_secret_batch([secret], given_block_identifier)
+        self.register_secret_batch([secret], given_block_identifier)
 
     def register_secret_batch(
             self,
@@ -80,10 +74,7 @@ class SecretRegistry:
             given_block_identifier: BlockSpecification,
     ):
         """Register a batch of secrets. Check if they are already registered at
-        the given block identifier.
-
-        Throws NoStateForBlockIdentifier if the given_block_identifier is older
-        than 128 blocks due to is_secret_registered()"""
+        the given block identifier."""
         secrets_to_register = list()
         secrethashes_to_register = list()
         secrethashes_not_sent = list()
@@ -113,10 +104,18 @@ class SecretRegistry:
                 # error will be treated as a race-condition.
                 other_result = self.open_secret_transactions.get(secret)
 
+                # If we end up going in here with a pruned block identifier we have
+                # to check with latest hash since register_secret is a special call
+                # that never fails, so we can't rely on estimate gas to know if we
+                # need to send an on-chain transaction or not
+                to_check_identifier = given_block_identifier
+                if not self.client.can_query_state_for_block(given_block_identifier):
+                    to_check_identifier = self.client.blockhash_from_blocknumber('latest')
+
                 if other_result is not None:
                     wait_for.add(other_result)
                     secrethashes_not_sent.append(secrethash_hex)
-                elif not self.is_secret_registered(secrethash, given_block_identifier):
+                elif not self.is_secret_registered(secrethash, to_check_identifier):
                     secrets_to_register.append(secret)
                     secrethashes_to_register.append(secrethash_hex)
                     self.open_secret_transactions[secret] = transaction_result
