@@ -18,7 +18,6 @@ from raiden.exceptions import (
     DepositMismatch,
     DuplicatedChannelError,
     InvalidAddress,
-    InvalidBlockNumberInput,
     InvalidSettleTimeout,
     NoStateForBlockIdentifier,
     RaidenRecoverableError,
