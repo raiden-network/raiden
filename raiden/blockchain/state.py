@@ -23,8 +23,11 @@ def get_channel_state(
 ):
     # Here we have to query the latest state as during restart a lot of things
     # can have happened, such as the channel having been closed. To get this
-    # information we should use 'latest'.
-    channel_details = payment_channel_proxy.detail('latest')
+    # information we should use the latest block hash
+    latest_block_hash = payment_channel_proxy.client.blockhash_from_blocknumber(
+        block_number=payment_channel_proxy.client.block_number(),
+    )
+    channel_details = payment_channel_proxy.detail(latest_block_hash)
 
     our_state = NettingChannelEndState(
         channel_details.participants_data.our_details.address,
