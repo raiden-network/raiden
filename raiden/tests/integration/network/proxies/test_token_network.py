@@ -589,8 +589,6 @@ def test_token_network_proxy_update_transfer(
 def test_query_pruned_state(
         token_network_proxy,
         private_keys,
-        token_proxy,
-        chain_id,
         web3,
         contract_manager,
 ):
