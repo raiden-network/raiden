@@ -1,9 +1,9 @@
 import json
-from contextlib import ExitStack
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import ANY, Mock, patch
 
+import raiden.utils.upgrades
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
 from raiden.utils.upgrades import VERSION_RE, UpgradeManager, get_db_version
@@ -36,7 +36,7 @@ def setup_storage(db_path):
     return storage
 
 
-def test_upgrade_manager_restores_backup(tmp_path):
+def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
     db_path = tmp_path / Path('v17_log.db')
 
     old_db_filename = tmp_path / Path('v16_log.db')
@@ -52,15 +52,17 @@ def test_upgrade_manager_restores_backup(tmp_path):
     upgrade_functions[0].return_value = 17
 
     web3, _ = create_fake_web3_for_block_hash(number_of_blocks=1)
-    with ExitStack() as stack:
-        stack.enter_context(patch(
-            'raiden.utils.upgrades.UPGRADES_LIST',
-            new=upgrade_functions,
-        ))
-        stack.enter_context(patch(
-            'raiden.utils.upgrades.RAIDEN_DB_VERSION',
-            new=19,
-        ))
+    with monkeypatch.context() as m:
+        m.setattr(
+            raiden.utils.upgrades,
+            'UPGRADES_LIST',
+            upgrade_functions,
+        )
+        m.setattr(
+            raiden.utils.upgrades,
+            'RAIDEN_DB_VERSION',
+            19,
+        )
         UpgradeManager(db_filename=db_path, web3=web3).run()
 
     # Once restored, the state changes written above should be
@@ -74,7 +76,7 @@ def test_upgrade_manager_restores_backup(tmp_path):
     assert Path(str(old_db_filename).replace('_log.db', '_log.backup')).exists()
 
 
-def test_sequential_version_numbers(tmp_path):
+def test_sequential_version_numbers(tmp_path, monkeypatch):
     """ Test that the version received by each migration
     function is sequentially incremented according to the
     version returned by the previous migration.
@@ -100,17 +102,25 @@ def test_sequential_version_numbers(tmp_path):
         storage.update_version()
         storage.conn.close()
 
-    with ExitStack() as stack:
-        stack.enter_context(patch(
-            'raiden.utils.upgrades.UPGRADES_LIST',
-            new=upgrade_functions,
-        ))
-        stack.enter_context(patch(
-            'raiden.utils.upgrades.RAIDEN_DB_VERSION',
-            new=19,
-        ))
-        older_db_file = stack.enter_context(patch('raiden.utils.upgrades.older_db_file'))
-        older_db_file.return_value = old_db_filename
+    with monkeypatch.context() as m:
+        def mock_older_db_file(paths):  # pylint: disable=unused-argument
+            return old_db_filename
+
+        m.setattr(
+            raiden.utils.upgrades,
+            'UPGRADES_LIST',
+            upgrade_functions,
+        )
+        m.setattr(
+            raiden.utils.upgrades,
+            'RAIDEN_DB_VERSION',
+            19,
+        )
+        m.setattr(
+            raiden.utils.upgrades,
+            'older_db_file',
+            mock_older_db_file,
+        )
 
         UpgradeManager(db_filename=db_path).run()
 
