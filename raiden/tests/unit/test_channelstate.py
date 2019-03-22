@@ -1453,7 +1453,6 @@ def test_channelstate_unlock_unlocked_onchain():
     iteration = channel.handle_channel_settled(
         channel_state,
         settle_state_change,
-        settle_block_number,
     )
     assert search_for_item(iteration.events, ContractSendChannelBatchUnlock, {}) is not None
 
