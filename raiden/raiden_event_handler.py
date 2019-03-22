@@ -507,10 +507,12 @@ class RaidenEventHandler:
 
         if not token_network_proxy.client.can_query_state_for_block(triggered_by_block_hash):
             # The only time this can happen is during restarts after a long time
-            # when the tip of the chain can end up being further than 128 blocks.
+            # when the triggered block ends up getting pruned
             # In that case it's safe to just use the latest view of the chain to
             # query the on-chain participant/channel details
-            triggered_by_block_hash = 'latest'
+            triggered_by_block_hash = token_network_proxy.client.blockhash_from_blocknumber(
+                'latest',
+            )
 
         participants_details = token_network_proxy.detail_participants(
             participant1=payment_channel.participant1,
