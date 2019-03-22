@@ -881,16 +881,37 @@ class RaidenService(Runnable):
         """Send the monitoring requests for all current balance proofs.
 
         Note:
-            The transport must be started before
-            `_initialize_monitoring_services_queue` is called, otherwise the
-            node will process off-chain messages, which may include new
-            transfers, without having the guarantee of the monitoring service
-            being up-to-date, which must never be the case for a node mediating
-            a transfer.
-        """
+            The node must always send the *received* balance proof to the
+            monitoring service, *before* sending its own locked transfer
+            forward. If the monitoring service is updated after, then the
+            following can happen:
 
-        assert not self.transport, 'Transport is running. node:{self!r}'
-        assert self.wal, 'The node state must have been restored. node:{self!r}'
+            For a transfer A-B-C where this node is B
+
+            - B receives T1 from A and processes it
+            - B forwards its T2 to C
+            * B crashes (the monitoring service is not updated)
+
+            For the above scenario, the monitoring service would not have the
+            latest balance proof received by B from A available with the lock
+            for T1, but C would. If the channel B-C is closed and B does not
+            come back online in time, the funds for the lock L1 can be lost.
+
+            During restarts the rationale from above has to be replicated.
+            Because the initialization code *is not* the same as the event
+            handler. This means the balance proof updates must be done prior to
+            the processing of the message queues.
+        """
+        msg = (
+            'Transport was started before the monitoring service queue was updated. '
+            'This can lead to safety issue. node:{self!r}'
+        )
+        assert not self.transport, msg
+
+        msg = (
+            'The node state was not yet recovered, cant read balance proofs. node:{self!r}'
+        )
+        assert self.wal, msg
 
         current_balance_proofs = views.detect_balance_proof_change(
             State(),
