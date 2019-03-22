@@ -60,7 +60,7 @@ class NonStringifyingProcessorFormatter(ProcessorFormatter, _DummyFormatter):
 class SelectableText(uwd.Text):
     _selectable = True
 
-    def keypress(self, size, key):
+    def keypress(self, size, key):  # pylint: disable=unused-argument,no-self-use
         return key
 
 
@@ -141,7 +141,8 @@ class UrwidLogRenderer:
 
         return log_lines
 
-    def _repr(self, inst):
+    @staticmethod
+    def _repr(inst):
         if isinstance(inst, str):
             return inst.replace('\n', '\\n')
         else:

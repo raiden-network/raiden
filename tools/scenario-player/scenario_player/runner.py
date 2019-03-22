@@ -283,12 +283,8 @@ class ScenarioRunner:
     @staticmethod
     def _spawn_and_wait(objects, callback):
         tasks = {obj: gevent.spawn(callback, obj) for obj in objects}
-        gevent.joinall(tasks.values())
+        gevent.joinall(set(tasks.values()))
         return {obj: task.get() for obj, task in tasks.items()}
-
-    @property
-    def is_v2(self):
-        return self.scenario.version == 2
 
     @property
     def is_managed(self):

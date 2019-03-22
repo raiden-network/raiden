@@ -31,7 +31,7 @@ class ProcessTask(Task):
             greenlet = gevent.spawn(subprocess.run, shlex.split(command), check=True)
             self._handle_process(greenlet)
 
-    def _handle_process(self, greenlet):
+    def _handle_process(self, greenlet):  # pylint: disable=no-self-use
         greenlet.join()
         greenlet.get()
 

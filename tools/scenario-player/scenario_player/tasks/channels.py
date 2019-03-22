@@ -76,11 +76,11 @@ class TransferTask(ChannelActionTask):
     _transfer_count = 0
 
     def __init__(
-        self,
-        runner: ScenarioRunner,
-        config: Any,
-        parent=None,
-        abort_on_fail=True,
+            self,
+            runner: ScenarioRunner,
+            config: Any,
+            parent=None,
+            abort_on_fail=True,
     ) -> None:
         super().__init__(runner, config, parent, abort_on_fail)
         # Unique transfer identifier
