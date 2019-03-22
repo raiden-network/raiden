@@ -2,7 +2,8 @@ from typing import Any, List, Dict
 
 import structlog
 from eth_utils import to_checksum_address, decode_hex, event_abi_to_log_topic
-from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK
+from raiden_contracts.contract_manager import ContractManager, get_contracts_deployed
 
 from scenario_player.runner import ScenarioRunner
 from scenario_player.exceptions import ScenarioError, ScenarioAssertionError
@@ -10,6 +11,7 @@ from web3 import Web3
 from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
 
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
 from raiden.utils.typing import BlockNumber, Address, ABI
 from .base import Task
 
@@ -103,11 +105,26 @@ class BlockchainEventFilter(Task):
                 'Not all required keys provided. Required: ' + ', '.join(required_keys),
             )
 
-        self.contract_name = config.get('contract_name', None)
-        self.event_name = config.get('event_name', None)
-        self.num_events = config.get('num_events', 0)
+        self.contract_name = config['contract_name']
+        self.event_name = config['event_name']
+        self.num_events = config['num_events']
 
         self.web3 = self._runner.client.web3
+
+        # get the correct contract address
+        service_contract_data = get_contracts_deployed(
+            chain_id=self._runner.chain_id,
+            version=DEVELOPMENT_CONTRACT_VERSION,
+            services=True,
+        )
+        if self.contract_name == CONTRACT_TOKEN_NETWORK:
+            self.contract_address = self._runner.token_network_address
+        else:
+            try:
+                contract_info = service_contract_data['contracts'][self.contract_name]
+                self.contract_address = contract_info['address']
+            except KeyError:
+                raise ScenarioError(f'Unknown contract name: {self.contract_name}')
 
     def _run(self, *args, **kwargs):
         events = query_blockchain_events(

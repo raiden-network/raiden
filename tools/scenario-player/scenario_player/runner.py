@@ -143,7 +143,7 @@ class ScenarioRunner(object):
             gas_price_strategy=get_gas_price_strategy(settings.get('gas_price', 'fast')),
         )
 
-        self.chain_id = self.client.web3.net.version
+        self.chain_id = int(self.client.web3.net.version)
         self.contract_manager = ContractManager(contracts_precompiled_path())
 
         balance = self.client.balance(account.address)
