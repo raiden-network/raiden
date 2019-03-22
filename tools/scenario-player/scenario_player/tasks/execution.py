@@ -17,11 +17,11 @@ class SerialTask(Task):
     _name = 'serial'
 
     def __init__(
-        self,
-        runner: ScenarioRunner,
-        config: Any,
-        parent: 'Task' = None,
-        abort_on_fail=True,
+            self,
+            runner: ScenarioRunner,
+            config: Any,
+            parent: 'Task' = None,
+            abort_on_fail=True,
     ) -> None:
         super().__init__(runner, config, parent, abort_on_fail)
         self._name = config.get('name')
@@ -35,7 +35,7 @@ class SerialTask(Task):
                         task_class(runner=self._runner, config=task_config, parent=self),
                     )
 
-    def _run(self, *args, **kwargs):
+    def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         for task in self._tasks:
             task()
 
@@ -70,5 +70,5 @@ class ParallelTask(SerialTask):
 class WaitTask(Task):
     _name = 'wait'
 
-    def _run(self, *args, **kwargs):
+    def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         gevent.sleep(self._config)

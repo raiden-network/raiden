@@ -39,13 +39,14 @@ clean-test:
 	rm -f .coverage
 	rm -fr htmlcov/
 
-ISORT_PARAMS = --ignore-whitespace --settings-path ./ --recursive raiden/ -sg */node_modules/*
+LINT_PATHS = raiden/ tools/scenario-player/
+ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' --recursive $(LINT_PATHS)
 
 lint:
 	flake8 raiden/ tools/
-	autopep8 --diff --exit-code $(shell find raiden -iname '*.py')
+	autopep8 --diff --exit-code --recursive $(LINT_PATHS)
 	isort $(ISORT_PARAMS) --diff --check-only
-	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc raiden/
+	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc $(LINT_PATHS)
 	python setup.py check --restructuredtext --strict
 
 mypy:

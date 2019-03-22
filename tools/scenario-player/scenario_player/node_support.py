@@ -432,12 +432,12 @@ class NodeRunner:
 
 class NodeController:
     def __init__(
-        self,
-        runner: ScenarioRunner,
-        raiden_version,
-        node_count,
-        global_options,
-        node_options,
+            self,
+            runner: ScenarioRunner,
+            raiden_version,
+            node_count,
+            global_options,
+            node_options,
     ):
         self._runner = runner
         self._global_options = global_options
@@ -478,13 +478,13 @@ class NodeController:
 
     def stop(self):
         log.info('Stopping nodes')
-        stop_tasks = [gevent.spawn(runner.stop) for runner in self._node_runners]
+        stop_tasks = set(gevent.spawn(runner.stop) for runner in self._node_runners)
         gevent.joinall(stop_tasks, raise_error=True)
         log.info('Nodes stopped')
 
     def kill(self):
         log.info('Killing nodes')
-        kill_tasks = [gevent.spawn(runner.kill) for runner in self._node_runners]
+        kill_tasks = set(gevent.spawn(runner.kill) for runner in self._node_runners)
         gevent.joinall(kill_tasks, raise_error=True)
         log.info('Nodes killed')
 

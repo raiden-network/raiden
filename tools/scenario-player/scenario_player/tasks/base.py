@@ -38,11 +38,11 @@ _TASK_ID = 0
 
 class Task:
     def __init__(
-        self,
-        runner: ScenarioRunner,
-        config: Any,
-        parent: 'Task' = None,
-        abort_on_fail=True,
+            self,
+            runner: ScenarioRunner,
+            config: Any,
+            parent: 'Task' = None,
+            abort_on_fail=True,
     ) -> None:
         global _TASK_ID
 
@@ -81,7 +81,7 @@ class Task:
                 log.info('Task successful', task=self)
                 self.state = TaskState.FINISHED
 
-    def _run(self, *args, **kwargs):
+    def _run(self, *args, **kwargs):  # pylint: disable=unused-argument,no-self-use
         gevent.sleep(1)
 
     def __repr__(self):

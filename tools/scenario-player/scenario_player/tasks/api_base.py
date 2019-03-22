@@ -19,11 +19,11 @@ class RESTAPIActionTask(Task):
     _expected_http_status: Union[int, str] = '2..'
 
     def __init__(
-        self,
-        runner: ScenarioRunner,
-        config: Any,
-        parent: 'Task' = None,
-        abort_on_fail=True,
+            self,
+            runner: ScenarioRunner,
+            config: Any,
+            parent: 'Task' = None,
+            abort_on_fail=True,
     ) -> None:
         super().__init__(runner, config, parent, abort_on_fail)
 
@@ -39,10 +39,10 @@ class RESTAPIActionTask(Task):
     def _url_params(self):
         return {}
 
-    def _process_response(self, response_dict: dict):
+    def _process_response(self, response_dict: dict):  # pylint: disable=no-self-use
         return response_dict
 
-    def _run(self, *args, **kwargs):
+    def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         url = self._expand_url()
         log.debug('Requesting', url=url, method=self._method)
         try:
