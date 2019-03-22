@@ -51,8 +51,35 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
             msg = 'v18 state changes cant contain partner_onchain_locksroot'
             assert 'partner_onchain_locksroot' not in data, msg
 
-            data['our_onchain_locksroot'] = None
-            data['partner_onchain_locksroot'] = None
+            state_change_data = json.loads(state_change.data)
+            token_network_identifier = state_change_data['token_network_identifier']
+            channel_identifier = state_change_data['channel_identifier']
+
+            channel_new_state_change = _find_channel_new_state_change(
+                storage=storage,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            )
+
+            if not channel_new_state_change.data:
+                raise RaidenUnrecoverableError(
+                    'Could not find the state change for channel {channel_identifier}, '
+                    'token network address: {token_network_identifier} being created. ',
+                )
+
+            channel_state_data = json.loads(channel_new_state_change.data)
+            new_channel_state = channel_state_data['channel_state']
+            our_locksroot, partner_locksroot = get_onchain_locksroots(
+                raiden=raiden,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+                participant1=new_channel_state['our_state']['address'],
+                participant2=new_channel_state['partner_state']['address'],
+                block_identifier='latest',
+            )
+
+            data['our_onchain_locksroot'] = our_locksroot
+            data['partner_onchain_locksroot'] = partner_locksroot
 
             updated_state_changes.append((
                 json.dumps(data),

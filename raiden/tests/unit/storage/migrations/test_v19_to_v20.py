@@ -83,8 +83,8 @@ def test_upgrade_v19_to_v20(tmp_path):
     for state_changes_batch in batch_query:
         for state_change_record in state_changes_batch:
             data = json.loads(state_change_record.data)
-            assert data['our_onchain_locksroot'] is None
-            assert data['partner_onchain_locksroot'] is None
+            assert data['our_onchain_locksroot'] is not None
+            assert data['partner_onchain_locksroot'] is not None
 
     batch_query = storage.batch_query_event_records(
         batch_size=500,
