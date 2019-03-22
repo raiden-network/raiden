@@ -123,6 +123,7 @@ class MessageHandler:
             amount=from_transfer.lock.amount,
             previous_address=message.sender,
             config=raiden.config,
+            privkey=raiden.privkey,
         )
 
         role = views.get_transfer_role(
