@@ -146,6 +146,7 @@ def initiator_init(
         amount=transfer_amount,
         previous_address=previous_address,
         config=raiden.config,
+        privkey=raiden.privkey,
     )
     init_initiator_statechange = ActionInitInitiator(
         transfer_state,
@@ -164,6 +165,7 @@ def mediator_init(raiden, transfer: LockedTransfer):
         amount=from_transfer.lock.amount,
         previous_address=transfer.sender,
         config=raiden.config,
+        privkey=raiden.privkey,
     )
     from_route = RouteState(
         transfer.sender,
@@ -556,6 +558,10 @@ class RaidenService(Runnable):
     @property
     def confirmation_blocks(self):
         return self.config['blockchain']['confirmation_blocks']
+
+    @property
+    def privkey(self):
+        return self.chain.client.privkey
 
     def add_pending_greenlet(self, greenlet: Greenlet):
         """ Ensures an error on the passed greenlet crashes self/main greenlet. """
