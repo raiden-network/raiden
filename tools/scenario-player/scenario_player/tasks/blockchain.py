@@ -43,13 +43,13 @@ def decode_event(abi: ABI, log_: Dict) -> Dict:
 
 
 def query_blockchain_events(
-    web3: Web3,
-    contract_manager: ContractManager,
-    contract_address: Address,
-    contract_name: str,
-    topics: List,
-    from_block: BlockNumber,
-    to_block: BlockNumber,
+        web3: Web3,
+        contract_manager: ContractManager,
+        contract_address: Address,
+        contract_name: str,
+        topics: List,
+        from_block: BlockNumber,
+        to_block: BlockNumber,
 ) -> List[Dict]:
     """Returns events emmitted by a contract for a given event name, within a certain range.
 
@@ -88,11 +88,11 @@ class BlockchainEventFilter(Task):
     _name = 'assert_events'
 
     def __init__(
-        self,
-        runner: ScenarioRunner,
-        config: Any,
-        parent: 'Task' = None,
-        abort_on_fail: bool = True,
+            self,
+            runner: ScenarioRunner,
+            config: Any,
+            parent: 'Task' = None,
+            abort_on_fail: bool = True,
     ) -> None:
         super().__init__(runner, config, parent, abort_on_fail)
 
@@ -126,7 +126,7 @@ class BlockchainEventFilter(Task):
             except KeyError:
                 raise ScenarioError(f'Unknown contract name: {self.contract_name}')
 
-    def _run(self, *args, **kwargs):
+    def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         events = query_blockchain_events(
             web3=self.web3,
             contract_manager=self._runner.contract_manager,
