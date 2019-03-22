@@ -20,6 +20,7 @@ from raiden.exceptions import (
     InvalidAddress,
     InvalidBlockNumberInput,
     InvalidSettleTimeout,
+    NoStateForBlockIdentifier,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
     SamePeerAddress,
@@ -177,9 +178,9 @@ class TokenNetwork:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
 
         if not self.client.can_query_state_for_block(block_identifier):
-            raise InvalidBlockNumberInput(
-                'Tried to open a channel with a block identifier older than 128 '
-                'blocks. This should not happen.',
+            raise NoStateForBlockIdentifier(
+                'Tried to open a channel with a block identifier older than '
+                'the pruning limit. This should not happen.',
             )
 
         channel_exists = self._channel_exists_and_not_settled(
@@ -635,11 +636,7 @@ class TokenNetwork:
             raise ValueError('total_deposit needs to be an integral number.')
 
         if not self.client.can_query_state_for_block(block_identifier):
-            # This can happen if we shutdown with a deposit transaction saved
-            # in our pending transactions and restart after 128 blocks. Then
-            # we have no choice but to query the latest state to calculate the
-            # deposit amounts
-            block_identifier = 'latest'
+            raise NoStateForBlockIdentifier()
 
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -765,13 +762,18 @@ class TokenNetwork:
         checking_block = self.client.get_checking_block()
         error_prefix = 'setTotalDeposit call will fail'
         with self.channel_operations_lock[partner], self.deposit_lock:
-            amount_to_deposit, log_details = self._deposit_preconditions(
-                channel_identifier=channel_identifier,
-                total_deposit=total_deposit,
-                partner=partner,
-                token=token,
-                block_identifier=given_block_identifier,
-            )
+            try:
+                amount_to_deposit, log_details = self._deposit_preconditions(
+                    channel_identifier=channel_identifier,
+                    total_deposit=total_deposit,
+                    partner=partner,
+                    token=token,
+                    block_identifier=given_block_identifier,
+                )
+            except NoStateForBlockIdentifier:
+                # If preconditions end up being on pruned state skip them. Estimate
+                # gas will stop us from sending a transaction that will fail
+                pass
 
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
@@ -904,8 +906,7 @@ class TokenNetwork:
             block_identifier: BlockSpecification,
     ):
         if not self.client.can_query_state_for_block(block_identifier):
-            # At this point in time we can't check the preconditions due to pruned blocks
-            return
+            raise NoStateForBlockIdentifier()
 
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -958,11 +959,16 @@ class TokenNetwork:
         log.debug('closeChannel called', **log_details)
 
         checking_block = self.client.get_checking_block()
-        self._close_preconditions(
-            channel_identifier,
-            partner=partner,
-            block_identifier=given_block_identifier,
-        )
+        try:
+            self._close_preconditions(
+                channel_identifier,
+                partner=partner,
+                block_identifier=given_block_identifier,
+            )
+        except NoStateForBlockIdentifier:
+            # If preconditions end up being on pruned state skip them. Estimate
+            # gas will stop us from sending a transaction that will fail
+            pass
 
         error_prefix = 'closeChannel call will fail'
         with self.channel_operations_lock[partner]:
@@ -1065,8 +1071,7 @@ class TokenNetwork:
             raise RaidenUnrecoverableError('Invalid balance proof signature')
 
         if not self.client.can_query_state_for_block(block_identifier):
-            # At this point in time we can't check the preconditions due to pruned blocks
-            return
+            raise NoStateForBlockIdentifier()
 
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -1123,15 +1128,20 @@ class TokenNetwork:
         log.debug('updateNonClosingBalanceProof called', **log_details)
 
         checking_block = self.client.get_checking_block()
-        self._update_preconditions(
-            channel_identifier=channel_identifier,
-            partner=partner,
-            balance_hash=balance_hash,
-            nonce=nonce,
-            additional_hash=additional_hash,
-            closing_signature=closing_signature,
-            block_identifier=given_block_identifier,
-        )
+        try:
+            self._update_preconditions(
+                channel_identifier=channel_identifier,
+                partner=partner,
+                balance_hash=balance_hash,
+                nonce=nonce,
+                additional_hash=additional_hash,
+                closing_signature=closing_signature,
+                block_identifier=given_block_identifier,
+            )
+        except NoStateForBlockIdentifier:
+            # If preconditions end up being on pruned state skip them. Estimate
+            # gas will stop us from sending a transaction that will fail
+            pass
 
         error_prefix = 'updateNonClosingBalanceProof call will fail'
         gas_limit = self.proxy.estimate_gas(
@@ -1316,8 +1326,7 @@ class TokenNetwork:
             block_identifier: BlockSpecification,
     ):
         if not self.client.can_query_state_for_block(block_identifier):
-            # At this point in time we can't check the preconditions due to pruned blocks
-            return
+            raise NoStateForBlockIdentifier()
 
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -1383,17 +1392,22 @@ class TokenNetwork:
         log.debug('settle called', **log_details)
 
         checking_block = self.client.get_checking_block()
-        args = self._settle_preconditions(
-            channel_identifier=channel_identifier,
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount,
-            locksroot=locksroot,
-            partner=partner,
-            partner_transferred_amount=partner_transferred_amount,
-            partner_locked_amount=partner_locked_amount,
-            partner_locksroot=partner_locksroot,
-            block_identifier=given_block_identifier,
-        )
+        try:
+            args = self._settle_preconditions(
+                channel_identifier=channel_identifier,
+                transferred_amount=transferred_amount,
+                locked_amount=locked_amount,
+                locksroot=locksroot,
+                partner=partner,
+                partner_transferred_amount=partner_transferred_amount,
+                partner_locked_amount=partner_locked_amount,
+                partner_locksroot=partner_locksroot,
+                block_identifier=given_block_identifier,
+            )
+        except NoStateForBlockIdentifier:
+            # If preconditions end up being on pruned state skip them. Estimate
+            # gas will stop us from sending a transaction that will fail
+            pass
 
         with self.channel_operations_lock[partner]:
             error_prefix = 'Call to settle will fail'
