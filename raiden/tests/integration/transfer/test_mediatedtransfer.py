@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import gevent
 import pytest
 
@@ -5,8 +7,8 @@ from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, RevealSecret
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
-from raiden.tests.utils.factories import UNIT_TRANSFER_INITIATOR, make_secret, make_signed_transfer
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer, wait_assert
@@ -79,7 +81,7 @@ def test_locked_transfer_secret_registered_onchain(
     )
 
     amount = 1
-    target = UNIT_TRANSFER_INITIATOR
+    target = factories.UNIT_TRANSFER_INITIATOR
     identifier = 1
     transfer_secret = sha3(target + b'1')
 
@@ -108,9 +110,9 @@ def test_locked_transfer_secret_registered_onchain(
 
     # Test that receiving a transfer with a secret already registered on chain fails
     expiration = 9999
-    transfer = make_signed_transfer(
+    transfer = factories.make_signed_transfer(
         amount,
-        UNIT_TRANSFER_INITIATOR,
+        factories.UNIT_TRANSFER_INITIATOR,
         app0.raiden.address,
         expiration,
         transfer_secret,
@@ -198,7 +200,7 @@ def test_mediated_transfer_messages_out_of_order(
     app1.raiden.message_handler = app1_wait_for_message
     app2.raiden.message_handler = app2_wait_for_message
 
-    secret = make_secret(0)
+    secret = factories.make_secret(0)
     secrethash = sha3(secret)
 
     # Save the messages, these will be processed again
@@ -273,3 +275,51 @@ def test_mediated_transfer_messages_out_of_order(
             app1, deposit - amount, [],
             app2, deposit + amount, [],
         )
+
+
+@pytest.mark.parametrize('number_of_nodes', (1,))
+@pytest.mark.parametrize('channels_per_node', (CHAIN,))
+def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
+
+    app0, = raiden_network
+    token_address = token_addresses[0]
+    chain_state = views.state_from_app(app0)
+    payment_network_id = app0.raiden.default_registry.address
+    token_network_id = views.get_token_network_identifier_by_token_address(
+        chain_state,
+        payment_network_id,
+        token_address,
+    )
+
+    with patch('raiden.routing.query_paths', return_value=[]) as patched:
+
+        app0.raiden.start_mediated_transfer_with_secret(
+            token_network_identifier=token_network_id,
+            amount=10,
+            target=factories.HOP1,
+            identifier=1,
+            secret=b'1' * 32,
+        )
+        assert not patched.called
+
+        app0.raiden.config['services']['pathfinding_service_address'] = 'mock_address'
+        app0.raiden.start_mediated_transfer_with_secret(
+            token_network_identifier=token_network_id,
+            amount=11,
+            target=factories.HOP2,
+            identifier=2,
+            secret=b'2' * 32,
+        )
+        assert patched.call_count == 1
+
+        transfer = factories.make_signed_transfer(
+            amount=5,
+            initiator=factories.HOP1,
+            target=factories.HOP2,
+            sender=factories.HOP1,
+            pkey=factories.HOP1_KEY,
+            token_network_address=token_network_id,
+            token=token_address,
+        )
+        app0.raiden.mediate_mediated_transfer(transfer)
+        assert patched.call_count == 2
