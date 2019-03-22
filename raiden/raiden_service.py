@@ -32,7 +32,9 @@ from raiden.messages import (
     message_from_sendevent,
 )
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import SecretRegistry, ServiceRegistry, TokenNetworkRegistry
+from raiden.network.proxies.secret_registry import SecretRegistry
+from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.settings import MEDIATION_FEE, MONITORING_MIN_CAPACITY, MONITORING_REWARD
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask

@@ -3,7 +3,7 @@ import pytest
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
-from raiden.network.proxies import TokenNetwork
+from raiden.network.proxies.token_network import TokenNetwork
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, mediated_transfer

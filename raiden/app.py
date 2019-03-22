@@ -4,13 +4,11 @@ from eth_utils import to_checksum_address
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import (
-    Discovery,
-    SecretRegistry,
-    ServiceRegistry,
-    TokenNetworkRegistry,
-    UserDeposit,
-)
+from raiden.network.proxies.discovery import Discovery
+from raiden.network.proxies.secret_registry import SecretRegistry
+from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
+from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NAT_INVITATION_TIMEOUT,

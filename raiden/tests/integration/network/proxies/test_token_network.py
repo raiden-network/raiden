@@ -12,7 +12,7 @@ from raiden.exceptions import (
     SamePeerAddress,
 )
 from raiden.network.blockchain_service import BlockChainService
-from raiden.network.proxies import TokenNetwork
+from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.integration.network.proxies import BalanceProof
 from raiden.utils.signer import LocalSigner

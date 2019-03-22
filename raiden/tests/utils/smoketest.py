@@ -26,7 +26,7 @@ from raiden.constants import (
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     UINT256_MAX,
 )
-from raiden.network.proxies import TokenNetworkRegistry
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService

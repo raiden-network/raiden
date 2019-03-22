@@ -20,7 +20,7 @@ from raiden.constants import (
     SECURITY_EXPRESSION,
 )
 from raiden.exceptions import EthNodeCommunicationError
-from raiden.network.proxies import UserDeposit
+from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.settings import MIN_REI_THRESHOLD
 from raiden.utils import gas_reserve, pex, to_rdn
 from raiden.utils.runnable import Runnable

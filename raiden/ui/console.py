@@ -11,7 +11,7 @@ from IPython.lib.inputhook import inputhook_manager, stdin_ready
 from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT256_MAX
-from raiden.network.proxies import TokenNetwork
+from raiden.network.proxies.token_network import TokenNetwork
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
 from raiden.utils import typing
 from raiden.utils.smart_contracts import deploy_contract_web3
