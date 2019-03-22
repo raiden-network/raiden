@@ -631,13 +631,5 @@ def test_query_pruned_state(
     target_block = block_number + STATE_PRUNING_AFTER_BLOCKS + 1
     c1_chain.wait_until_block(target_block_number=target_block)
 
-    # and now query again for the same old blockhash and see that we can't query
+    # and now query again for the old block identifier and see we can't query
     assert not c1_client.can_query_state_for_block(block_hash)
-    # The problem here is the following. This function below should now throw
-    channel_id = c1_token_network_proxy._inspect_channel_identifier(
-        participant1=c1_client.address,
-        participant2=c2_client.address,
-        called_by_fn='test',
-        block_identifier=block_hash,
-    )
-    assert channel_id == channel_identifier
