@@ -1,14 +1,17 @@
 from collections import defaultdict
 
 import gevent
+import pytest
 from eth_utils import keccak
 
+from raiden.exceptions import NoStateForBlockIdentifier
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
 
 
-def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry):
+def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contract_manager):
     """Test happy path of SecretRegistry with a single secret.
 
     Test that `register_secret` changes the smart contract state by registering
@@ -30,6 +33,18 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry):
         secrethash=secrethash_unregistered,
         block_identifier='latest',
     ), 'Test setup is invalid, secret must be unknown'
+
+    chain = BlockChainService(
+        jsonrpc_client=secret_registry_proxy.client,
+        contract_manager=contract_manager,
+    )
+    chain.wait_until_block(129)
+
+    with pytest.raises(NoStateForBlockIdentifier):
+        secret_registry_proxy.is_secret_registered(
+            secrethash=secrethash_unregistered,
+            block_identifier=0,
+        )
 
     secret_registry_proxy.register_secret(
         secret=secret,

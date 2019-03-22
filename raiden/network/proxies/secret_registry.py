@@ -11,7 +11,12 @@ from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     RECEIPT_FAILURE_CODE,
 )
-from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenUnrecoverableError
+from raiden.exceptions import (
+    InvalidAddress,
+    NoStateForBlockIdentifier,
+    RaidenRecoverableError,
+    RaidenUnrecoverableError,
+)
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.utils import pex, safe_gas_limit, sha3
@@ -61,13 +66,24 @@ class SecretRegistry:
         self._open_secret_transactions_lock = Semaphore()
 
     def register_secret(self, secret: Secret, given_block_identifier: BlockSpecification):
-        self.register_secret_batch([secret], given_block_identifier)
+        try:
+            self.register_secret_batch([secret], given_block_identifier)
+        except NoStateForBlockIdentifier:
+            # If the given block identifier is older than 128 blocks then try again
+            # with the latest block. This can happen if we shut down for some time
+            # and we get to register_secret when replaying the state changes.
+            self.register_secret_batch([secret], given_block_identifier)
 
     def register_secret_batch(
             self,
             secrets: List[Secret],
             given_block_identifier: BlockSpecification,
     ):
+        """Register a batch of secrets. Check if they are already registered at
+        the given block identifier.
+
+        Throws NoStateForBlockIdentifier if the given_block_identifier is older
+        than 128 blocks due to is_secret_registered()"""
         secrets_to_register = list()
         secrethashes_to_register = list()
         secrethashes_not_sent = list()
@@ -92,7 +108,7 @@ class SecretRegistry:
                 #   *not* send the transaction and wait for the confirmation)
                 #
                 # The code below respects the consistent blockchain view,
-                # meaning that if this proxy method is called with a really old
+                # meaning that if this proxy method is called with an old
                 # blockhash an unecessary transaction will be sent, and the
                 # error will be treated as a race-condition.
                 other_result = self.open_secret_transactions.get(secret)
@@ -300,9 +316,13 @@ class SecretRegistry:
             secrethash: SecretHash,
             block_identifier: BlockSpecification,
     ) -> bool:
-        """True if the secret for `secrethash` is registered at `block_identifier`."""
+        """True if the secret for `secrethash` is registered at `block_identifier`.
+
+        Throws NoStateForBlockIdentifier if the given block_identifier
+        is older than 128 blocks
+        """
         if not self.client.can_query_state_for_block(block_identifier):
-            block_identifier = 'latest'
+            raise NoStateForBlockIdentifier()
 
         block = self.get_secret_registration_block_by_secrethash(
             secrethash=secrethash,

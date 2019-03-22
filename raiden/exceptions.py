@@ -196,6 +196,10 @@ class InvalidBlockNumberInput(RaidenError):
     """Raised when the user provided a block number that is  < 0 or > UINT64_MAX"""
 
 
+class NoStateForBlockIdentifier(RaidenError):
+    """Raised when we attempt to provide a block identifier older than 128 blocks"""
+
+
 class InvalidNumberInput(RaidenError):
     """Raised when the user provided an invalid number"""
 
