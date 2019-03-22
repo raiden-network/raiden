@@ -13,7 +13,17 @@ from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, ChannelID, PaymentNetworkID, TokenNetworkID
 
 
+class MockJSONRPCClient:
+
+    @staticmethod
+    def can_query_state_for_block(block_identifier):  # pylint: disable=unused-argument
+        # To be changed by each test
+        return True
+
+
 class MockTokenNetworkProxy:
+    def __init__(self):
+        self.client = MockJSONRPCClient()
 
     @staticmethod
     def detail_participants(  # pylint: disable=unused-argument
