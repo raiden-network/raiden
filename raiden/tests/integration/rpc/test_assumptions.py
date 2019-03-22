@@ -1,4 +1,5 @@
 import os
+
 import pytest
 from eth_utils import decode_hex, to_checksum_address
 
