@@ -858,6 +858,14 @@ def get_batch_unlock_gain(
         unlock.lock.amount
         for unlock in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks.values()
     )
+
+    """
+    The current participant will gain from unlocking it's own locks when:
+    - The partner never managed to provide the secret to unlock the locked amount.
+    - The partner provided the secret to claim the locked amount but the current
+      participant node never sent out the unlocked balance proof and the partner
+      did not unlock the lock on-chain.
+    """
     gain_from_our_locks = sum(
         lock.amount
         for lock in channel_state.our_state.secrethashes_to_lockedlocks.values()

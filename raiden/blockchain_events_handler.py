@@ -289,6 +289,36 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     if not channel_state:
         return
 
+    """
+    This is resolving a corner case where the current node view
+    of the channel state does not reflect what the blockchain
+    contains.
+    The corner case goes as follows in a setup of nodes:
+    A -> B:
+    - A sends out a LockedTransfer to B
+    - B sends a refund to A
+    - B goes offline
+    - A sends LockExpired to B
+      Here:
+      (1) the lock is removed from A's state
+      (2) B never received the message
+    - A closes the channel with B's refund
+    - B comes back online and calls updateNonClosingBalanceProof
+      with A's LockedTransfer (LockExpired was never processed).
+    - When channel is settled, B unlocks it's refund transfer lock
+      provided that it gains from doing so.
+    - A does NOT try to unlock it's lock because it's side
+      of the channel state is empty (lock expired and was removed).
+
+    The above is resolved by providing the state machine with the
+    onchain locksroots for both participants in the channel so that
+    the channel state is updated to store these locksroots.
+    In `raiden_event_handler:handle_contract_send_channelunlock`,
+    those values are used to restore the channel state back to where
+    the locksroots values existed and this channel state is used
+    to calculate the gain and potentially perform unlocks in case
+    there is value to be gained.
+    """
     our_locksroot, partner_locksroot = get_onchain_locksroots(
         raiden=raiden,
         channel_state=channel_state,
