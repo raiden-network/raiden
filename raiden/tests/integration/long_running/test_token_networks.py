@@ -172,6 +172,7 @@ def test_participant_selection(
                 amount=1,
                 previous_address=None,
                 config={},
+                privkey=b'',  # not used if pfs is not configured
             )
             assert routes is not None
 
