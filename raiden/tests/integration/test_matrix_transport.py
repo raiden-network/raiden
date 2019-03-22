@@ -1,6 +1,6 @@
 import json
 import random
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 import gevent
 import pytest
@@ -17,15 +17,23 @@ from raiden.messages import Processed, SecretRequest
 from raiden.network.transport.matrix import MatrixTransport, UserPresence, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
-from raiden.raiden_service import update_services_from_balance_proof
+from raiden.raiden_service import (
+    update_monitoring_service_from_balance_proof,
+    update_path_finding_service_from_balance_proof,
+)
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.factories import HOP1, HOP1_KEY, UNIT_SECRETHASH, make_address
+from raiden.tests.utils.factories import (
+    HOP1,
+    HOP1_KEY,
+    UNIT_SECRETHASH,
+    make_address,
+    make_channel_state,
+)
 from raiden.tests.utils.messages import make_balance_proof
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.queue_identifier import QueueIdentifier
-from raiden.transfer.state import NettingChannelEndState, NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils import pex
 from raiden.utils.signer import LocalSigner
@@ -702,6 +710,7 @@ def test_monitoring_global_messages(
         private_rooms,
         retry_interval,
         retries_before_backoff,
+        monkeypatch,
 ):
     """
     Test that RaidenService sends RequestMonitoring messages to global
@@ -734,14 +743,33 @@ def test_monitoring_global_messages(
 
     raiden_service.transport = transport
     transport.log = MagicMock()
+
     balance_proof = make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1)
-    update_services_from_balance_proof(
+    channel_state = make_channel_state()
+    channel_state.our_state.balance_proof = balance_proof
+    channel_state.partner_state.balance_proof = balance_proof
+    monkeypatch.setattr(
+        raiden.transfer.views,
+        'get_channelstate_by_canonical_identifier',
+        lambda *a, **kw: channel_state,
+    )
+    monkeypatch.setattr(
+        raiden.transfer.channel,
+        'get_balance',
+        lambda *a, **kw: 123,
+    )
+    raiden_service.user_deposit.effective_balance.return_value = 100
+
+    update_monitoring_service_from_balance_proof(
         raiden=raiden_service,
         chain_state=None,
         new_balance_proof=balance_proof,
     )
     gevent.idle()
 
+    with gevent.Timeout(2):
+        while ms_room.send_text.call_count < 1:
+            gevent.idle()
     assert ms_room.send_text.call_count == 1
     transport.stop()
     transport.get()
@@ -789,18 +817,15 @@ def test_pfs_global_messages(
 
     balance_proof = make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1)
 
-    netting_channel_mock = Mock(spec=NettingChannelState)
-    netting_channel_mock.reveal_timeout = 30
-    netting_channel_mock.our_state = Mock(spec=NettingChannelEndState)
-    netting_channel_mock.our_state.balance_proof = None
-    netting_channel_mock.partner_state = Mock(spec=NettingChannelEndState)
-    netting_channel_mock.partner_state.balance_proof = balance_proof
+    channel_state = make_channel_state()
+    channel_state.our_state.balance_proof = balance_proof
+    channel_state.partner_state.balance_proof = balance_proof
     monkeypatch.setattr(
         raiden.raiden_service,
         'get_channelstate_by_token_network_and_partner',
-        lambda *a, **kw: netting_channel_mock,
+        lambda *a, **kw: channel_state,
     )
-    update_services_from_balance_proof(
+    update_path_finding_service_from_balance_proof(
         raiden=raiden_service,
         chain_state=None,
         new_balance_proof=balance_proof,
