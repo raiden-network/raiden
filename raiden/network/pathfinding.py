@@ -78,7 +78,7 @@ def configure_pfs(
         pfs_address = get_random_service(service_registry)
         if pfs_address is None:
             click.secho(
-                "The service registry has no registered path findind service "
+                "The service registry has no registered path finding service "
                 "and we don't use basic routing.",
             )
             sys.exit(1)

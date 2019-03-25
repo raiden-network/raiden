@@ -323,6 +323,12 @@ def run_app(
             )
             sys.exit(1)
 
+        services_deployment_data = get_contracts_deployed(
+            chain_id=node_network_id,
+            version=contracts_version,
+            services=True,
+        )
+        services_contracts = services_deployment_data['contracts']
         contracts = deployment_data['contracts']
         contract_addresses_known = True
 
@@ -391,19 +397,12 @@ def run_app(
     except AddressWrongContract:
         handle_contract_wrong_address('secret registry', secret_registry_contract_address)
 
-    services_deployment_data = get_contracts_deployed(
-        chain_id=node_network_id,
-        version=contracts_version,
-        services=True,
-    )
-
     user_deposit = None
     should_use_user_deposit = (
         environment_type == Environment.DEVELOPMENT and
         ID_TO_NETWORKNAME[node_network_id] != 'smoketest'
     )
     if should_use_user_deposit:
-        services_contracts = services_deployment_data['contracts']
         try:
             user_deposit = blockchain_service.user_deposit(
                 user_deposit_contract_address or to_canonical_address(
