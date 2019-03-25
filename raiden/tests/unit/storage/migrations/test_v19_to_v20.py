@@ -23,7 +23,7 @@ def setup_storage(db_path):
             log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
         )
 
-    # Add the v18 events to the DB
+    # Add the v19 events to the DB
     events_file = Path(__file__).parent / 'data/v19_events.json'
     events_data = json.loads(events_file.read_text())
     event_tuples = []

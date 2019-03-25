@@ -307,7 +307,7 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
       with A's LockedTransfer (LockExpired was never processed).
     - When channel is settled, B unlocks it's refund transfer lock
       provided that it gains from doing so.
-    - A does NOT try to unlock it's lock because it's side
+    - A does NOT try to unlock its lock because it's side
       of the channel state is empty (lock expired and was removed).
 
     The above is resolved by providing the state machine with the

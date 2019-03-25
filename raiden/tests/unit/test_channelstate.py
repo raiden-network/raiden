@@ -1446,8 +1446,8 @@ def test_channelstate_unlock_unlocked_onchain():
         transaction_hash=factories.make_transaction_hash(),
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
-        partner_onchain_locksroot=factories.make_32bytes(),
-        our_onchain_locksroot=bytes(32),
+        partner_onchain_locksroot=factories.make_32bytes(),  # non empty
+        our_onchain_locksroot=EMPTY_MERKLE_ROOT,
     )
 
     iteration = channel.handle_channel_settled(

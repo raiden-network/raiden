@@ -72,7 +72,7 @@ def unlock(
         end_state: NettingChannelEndState,
         participant: Address,
         partner: Address,
-):
+) -> None:
     merkle_tree_leaves = get_batch_unlock(end_state)
 
     try:
@@ -380,13 +380,9 @@ class RaidenEventHandler:
         partner_locksroot = channel_state.partner_state.onchain_locksroot
 
         # we want to unlock because there are on-chain unlocked locks
-        search_events = (
-            our_locksroot != EMPTY_HASH
-        )
+        search_events = our_locksroot != EMPTY_HASH
         # we want to unlock, because there are unlocked/unclaimed locks
-        search_state_changes = (
-            partner_locksroot != EMPTY_HASH
-        )
+        search_state_changes = partner_locksroot != EMPTY_HASH
 
         if not search_events and not search_state_changes:
             # In the case that someone else sent the unlock we do nothing
@@ -411,7 +407,7 @@ class RaidenEventHandler:
 
             if not state_change_identifier:
                 raise RaidenUnrecoverableError(
-                    f'Failed to find state that match current channel locksroots. '
+                    f'Failed to find state that matches the current channel locksroots. '
                     f'chain_id:{raiden.chain.network_id} '
                     f'token:{to_checksum_address(token_address)} '
                     f'token_network:{to_checksum_address(token_network_identifier)} '
@@ -429,13 +425,13 @@ class RaidenEventHandler:
                 state_change_identifier=state_change_identifier,
             )
 
-            gain_from_partner_locks, _ = get_batch_unlock_gain(
+            gain = get_batch_unlock_gain(
                 restored_channel_state,
             )
 
             skip_unlock = (
                 restored_channel_state.partner_state.address == participant and
-                gain_from_partner_locks == 0
+                gain.from_partner_locks == 0
             )
             if not skip_unlock:
                 unlock(
@@ -475,13 +471,13 @@ class RaidenEventHandler:
                 state_change_identifier=state_change_identifier,
             )
 
-            _, gain_from_our_locks = get_batch_unlock_gain(
+            gain = get_batch_unlock_gain(
                 restored_channel_state,
             )
 
             skip_unlock = (
                 restored_channel_state.our_state.address == participant and
-                gain_from_our_locks == 0
+                gain.from_our_locks == 0
             )
             if not skip_unlock:
                 unlock(

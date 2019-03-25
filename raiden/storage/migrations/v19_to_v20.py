@@ -2,8 +2,8 @@ import json
 
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
-from raiden.storage.sqlite import SQLiteStorage
-from raiden.utils.typing import Any, Dict
+from raiden.storage.sqlite import SQLiteStorage, StateChangeRecord
+from raiden.utils.typing import Any, Dict, Locksroot, Tuple
 
 RaidenService = 'RaidenService'
 
@@ -15,7 +15,7 @@ def _find_channel_new_state_change(
         storage: SQLiteStorage,
         token_network_address: str,
         channel_identifier: str,
-):
+) -> StateChangeRecord:
     return storage.get_latest_event_by_data_field({
         '_type': 'raiden.transfer.state_change.ContractReceiveChannelNew',
         'token_network_identifier': token_network_address,
@@ -28,7 +28,7 @@ def _get_onchain_locksroots(
         storage: SQLiteStorage,
         token_network: Dict[str, Any],
         channel: Dict[str, Any],
-):
+) -> Tuple[Locksroot, Locksroot]:
     channel_new_state_change = _find_channel_new_state_change(
         storage=storage,
         token_network_address=token_network['address'],
@@ -37,8 +37,8 @@ def _get_onchain_locksroots(
 
     if not channel_new_state_change:
         raise RaidenUnrecoverableError(
-            'Could not find the state change for channel {channel_identifier}, '
-            'token network address: {token_network["address"]} being created. ',
+            f'Could not find the state change for channel {channel["identifier"]}, '
+            f'token network address: {token_network["address"]} being created. ',
         )
 
     our_locksroot, partner_locksroot = get_onchain_locksroots(
@@ -66,7 +66,7 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
         ],
     )
     for state_changes_batch in batch_query:
-        updated_state_changes = []
+        updated_state_changes = list()
         for state_change in state_changes_batch:
             data = json.loads(state_change.data)
             msg = 'v18 state changes cant contain our_onchain_locksroot'
@@ -87,8 +87,8 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
 
             if not channel_new_state_change.data:
                 raise RaidenUnrecoverableError(
-                    'Could not find the state change for channel {channel_identifier}, '
-                    'token network address: {token_network_identifier} being created. ',
+                    f'Could not find the state change for channel {channel_identifier}, '
+                    f'token network address: {token_network_identifier} being created. ',
                 )
 
             channel_state_data = json.loads(channel_new_state_change.data)
@@ -116,14 +116,14 @@ def _add_onchain_locksroot_to_snapshot(
         raiden: RaidenService,
         storage: SQLiteStorage,
         raw_snapshot: Dict[str, Any],
-):
+) -> str:
     """
     Add `onchain_locksroot` to each NettingChannelEndState
     """
     snapshot = json.loads(raw_snapshot)
 
-    for payment_network in snapshot.get('identifiers_to_paymentnetworks', {}).values():
-        for token_network in payment_network.get('tokennetworks', []):
+    for payment_network in snapshot.get('identifiers_to_paymentnetworks', dict()).values():
+        for token_network in payment_network.get('tokennetworks', list()):
             channelidentifiers_to_channels = token_network.get(
                 'channelidentifiers_to_channels',
                 dict(),
@@ -145,8 +145,8 @@ def _add_onchain_locksroot_to_snapshot(
 def _add_onchain_locksroot_to_snapshots(
         raiden: RaidenService,
         storage: SQLiteStorage,
-):
-    updated_snapshots_data = []
+) -> None:
+    updated_snapshots_data = list()
     for snapshot in storage.get_snapshots():
         new_snapshot = _add_onchain_locksroot_to_snapshot(raiden, storage, snapshot.data)
         updated_snapshots_data.append((new_snapshot, snapshot.identifier))

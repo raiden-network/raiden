@@ -93,6 +93,7 @@ from raiden.utils.typing import (
     Locksroot,
     MerkleTreeLeaves,
     MessageID,
+    NamedTuple,
     Nonce,
     Optional,
     PaymentAmount,
@@ -116,6 +117,11 @@ BalanceProofData = Tuple[
     TokenAmount,
 ]
 SendUnlockAndMerkleTree = Tuple[SendBalanceProof, MerkleTreeState]
+
+
+class UnlockGain(NamedTuple):
+    from_our_locks: TokenAmount
+    from_partner_locks: TokenAmount
 
 
 def get_sender_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
@@ -846,13 +852,13 @@ def get_amount_locked(end_state: NettingChannelEndState) -> TokenAmount:
 
 def get_batch_unlock_gain(
         channel_state: NettingChannelState,
-) -> Tuple[TokenAmount, TokenAmount]:
+) -> UnlockGain:
     """Collect amounts for unlocked/unclaimed locks and onchain unlocked locks.
     Note: this function does not check expiry, so the values make only sense during settlement.
 
     Returns:
         gain_from_partner_locks: locks amount received and unlocked on-chain
-        from_from_our_locks: locks amount which are unlocked or unclaimed
+        gain_from_our_locks: locks amount which are unlocked or unclaimed
     """
     gain_from_partner_locks = sum(
         unlock.lock.amount
@@ -860,19 +866,24 @@ def get_batch_unlock_gain(
     )
 
     """
-    The current participant will gain from unlocking it's own locks when:
+    The current participant will gain from unlocking its own locks when:
     - The partner never managed to provide the secret to unlock the locked amount.
     - The partner provided the secret to claim the locked amount but the current
       participant node never sent out the unlocked balance proof and the partner
       did not unlock the lock on-chain.
     """
-    gain_from_our_locks = sum(
+    our_locked_locks_amount = sum(
         lock.amount
         for lock in channel_state.our_state.secrethashes_to_lockedlocks.values()
-    ) + sum(
+    )
+    our_unclaimed_locks_amount = sum(
         lock.amount for lock in channel_state.our_state.secrethashes_to_unlockedlocks.values()
     )
-    return (gain_from_partner_locks, gain_from_our_locks)
+    gain_from_our_locks = our_locked_locks_amount + our_unclaimed_locks_amount
+    return UnlockGain(
+        from_partner_locks=gain_from_partner_locks,
+        from_our_locks=gain_from_our_locks,
+    )
 
 
 def get_balance(
