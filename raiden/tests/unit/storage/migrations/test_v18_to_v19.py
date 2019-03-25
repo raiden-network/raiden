@@ -94,11 +94,13 @@ def test_upgrade_v18_to_v19(tmp_path):
     event_records = []
     batch_query = storage.batch_query_event_records(
         batch_size=500,
-        filters=[('_type', 'events.ContractSend')],
+        filters=[('_type', '%events.ContractSend%')],
     )
+
     for events_batch in batch_query:
         event_records.extend(events_batch)
 
+    assert len(event_records)
     for event_record in event_records:
         data = json.loads(event_record.data)
         assert 'events.ContractSend' in data['_type']
