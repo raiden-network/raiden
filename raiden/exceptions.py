@@ -197,7 +197,10 @@ class InvalidBlockNumberInput(RaidenError):
 
 
 class NoStateForBlockIdentifier(RaidenError):
-    """Raised when we attempt to provide a block identifier older than 128 blocks"""
+    """
+    Raised when we attempt to provide a block identifier older
+    than STATE_PRUNING_AFTER_BLOCKS blocks
+    """
 
 
 class InvalidNumberInput(RaidenError):

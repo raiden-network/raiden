@@ -318,7 +318,7 @@ class SecretRegistry:
         """True if the secret for `secrethash` is registered at `block_identifier`.
 
         Throws NoStateForBlockIdentifier if the given block_identifier
-        is older than 128 blocks
+        is older than the pruning limit
         """
         if not self.client.can_query_state_for_block(block_identifier):
             raise NoStateForBlockIdentifier()
