@@ -6,6 +6,7 @@ from raiden.exceptions import (
     DepositMismatch,
     DuplicatedChannelError,
     InvalidSettleTimeout,
+    NoStateForBlockIdentifier,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
     SamePeerAddress,
@@ -633,3 +634,142 @@ def test_query_pruned_state(
 
     # and now query again for the old block identifier and see we can't query
     assert not c1_client.can_query_state_for_block(block_hash)
+
+
+def test_token_network_actions_at_pruned_blocks(
+        token_network_proxy,
+        private_keys,
+        token_proxy,
+        web3,
+        chain_id,
+        contract_manager,
+):
+    token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
+    c1_client = JSONRPCClient(web3, private_keys[1])
+    c1_token_network_proxy = TokenNetwork(
+        jsonrpc_client=c1_client,
+        token_network_address=token_network_address,
+        contract_manager=contract_manager,
+    )
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
+    )
+    c2_client = JSONRPCClient(web3, private_keys[2])
+    c3_client = JSONRPCClient(web3, private_keys[0])
+    c2_token_network_proxy = TokenNetwork(
+        jsonrpc_client=c2_client,
+        token_network_address=token_network_address,
+        contract_manager=contract_manager,
+    )
+    initial_token_balance = 100
+    token_proxy.transfer(c1_client.address, initial_token_balance)
+    token_proxy.transfer(c2_client.address, initial_token_balance)
+    initial_balance_c1 = token_proxy.balance_of(c1_client.address)
+    assert initial_balance_c1 == initial_token_balance
+    initial_balance_c2 = token_proxy.balance_of(c2_client.address)
+    assert initial_balance_c2 == initial_token_balance
+    # create a channel
+    settle_timeout = 6
+    channel_identifier = c1_token_network_proxy.new_netting_channel(
+        partner=c2_client.address,
+        settle_timeout=settle_timeout,
+        given_block_identifier='latest',
+    )
+
+    pruned_number = c1_chain.block_number()
+    c1_chain.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)
+
+    # create a channel with given block being pruned, should always throw
+    with pytest.raises(NoStateForBlockIdentifier):
+        channel_identifier = c1_token_network_proxy.new_netting_channel(
+            partner=c3_client.address,
+            settle_timeout=10,
+            given_block_identifier=pruned_number,
+        )
+
+    # deposit with given block being pruned
+    c1_token_network_proxy.set_total_deposit(
+        given_block_identifier=pruned_number,
+        channel_identifier=channel_identifier,
+        total_deposit=2,
+        partner=c2_client.address,
+    )
+
+    # balance proof signed by c1
+    transferred_amount_c1 = 1
+    balance_proof_c1 = BalanceProof(
+        channel_identifier=channel_identifier,
+        token_network_address=to_checksum_address(token_network_address),
+        nonce=1,
+        chain_id=chain_id,
+        transferred_amount=transferred_amount_c1,
+    )
+    balance_proof_c1.signature = encode_hex(
+        LocalSigner(private_keys[1]).sign(
+            data=balance_proof_c1.serialize_bin(),
+        ),
+    )
+    non_closing_data = balance_proof_c1.serialize_bin(
+        msg_type=MessageTypeId.BALANCE_PROOF_UPDATE,
+    ) + decode_hex(balance_proof_c1.signature)
+    non_closing_signature = LocalSigner(c2_client.privkey).sign(
+        data=non_closing_data,
+    )
+
+    # close channel with given block being pruned
+    c1_token_network_proxy.close(
+        channel_identifier=channel_identifier,
+        partner=c2_client.address,
+        balance_hash=EMPTY_HASH,
+        nonce=0,
+        additional_hash=EMPTY_HASH,
+        signature=EMPTY_HASH,
+        given_block_identifier=pruned_number,
+    )
+    assert c1_token_network_proxy.channel_is_closed(
+        participant1=c1_client.address,
+        participant2=c2_client.address,
+        block_identifier='latest',
+        channel_identifier=channel_identifier,
+    ) is True
+    assert c1_token_network_proxy._channel_exists_and_not_settled(
+        participant1=c1_client.address,
+        participant2=c2_client.address,
+        channel_identifier=channel_identifier,
+        block_identifier='latest',
+    ) is True
+
+    # update transfer with given block being pruned
+    c2_token_network_proxy.update_transfer(
+        channel_identifier=channel_identifier,
+        partner=c1_client.address,
+        balance_hash=decode_hex(balance_proof_c1.balance_hash),
+        nonce=balance_proof_c1.nonce,
+        additional_hash=decode_hex(balance_proof_c1.additional_hash),
+        closing_signature=decode_hex(balance_proof_c1.signature),
+        non_closing_signature=non_closing_signature,
+        given_block_identifier=pruned_number,
+    )
+
+    # update transfer
+    c1_chain.wait_until_block(
+        target_block_number=c1_chain.block_number() + settle_timeout,
+    )
+
+    # settle with given block being pruned
+    c1_token_network_proxy.settle(
+        channel_identifier=channel_identifier,
+        transferred_amount=transferred_amount_c1,
+        locked_amount=0,
+        locksroot=EMPTY_HASH,
+        partner=c2_client.address,
+        partner_transferred_amount=0,
+        partner_locked_amount=0,
+        partner_locksroot=EMPTY_HASH,
+        given_block_identifier=pruned_number,
+    )
+    assert (token_proxy.balance_of(c2_client.address) ==
+            (initial_balance_c2 + transferred_amount_c1 - 0))
+    assert (token_proxy.balance_of(c1_client.address) ==
+            (initial_balance_c1 + 0 - transferred_amount_c1))

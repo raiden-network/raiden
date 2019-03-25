@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 import structlog
 from eth_utils import (
@@ -629,11 +629,10 @@ class TokenNetwork:
             total_deposit: TokenAmount,
             partner: Address,
             token: Token,
+            previous_total_deposit: TokenAmount,
+            log_details: Dict[str, Any],
             block_identifier: BlockSpecification,
-    ) -> Tuple[TokenAmount, Dict]:
-        if not isinstance(total_deposit, int):
-            raise ValueError('total_deposit needs to be an integral number.')
-
+    ) -> None:
         if not self.client.can_query_state_for_block(block_identifier):
             raise NoStateForBlockIdentifier()
 
@@ -656,22 +655,7 @@ class TokenNetwork:
         # This check is serialized with the channel_operations_lock to avoid
         # sending invalid transactions on-chain (decreasing total deposit).
         #
-        previous_total_deposit = self._detail_participant(
-            channel_identifier=channel_identifier,
-            participant=self.node_address,
-            partner=partner,
-            block_identifier=block_identifier,
-        ).deposit
         amount_to_deposit = total_deposit - previous_total_deposit
-
-        log_details = {
-            'token_network': pex(self.address),
-            'channel_identifier': channel_identifier,
-            'node': pex(self.node_address),
-            'partner': pex(partner),
-            'new_total_deposit': total_deposit,
-            'previous_total_deposit': previous_total_deposit,
-        }
 
         # These two scenarios can happen if two calls to deposit happen
         # and then we get here on the second call
@@ -714,31 +698,6 @@ class TokenNetwork:
             log.info('setTotalDeposit failed', reason=msg, **log_details)
             raise DepositMismatch(msg)
 
-        # If there are channels being set up concurrenlty either the
-        # allowance must be accumulated *or* the calls to `approve` and
-        # `setTotalDeposit` must be serialized. This is necessary otherwise
-        # the deposit will fail.
-        #
-        # Calls to approve and setTotalDeposit are serialized with the
-        # deposit_lock to avoid transaction failure, because with two
-        # concurrent deposits, we may have the transactions executed in the
-        # following order
-        #
-        # - approve
-        # - approve
-        # - setTotalDeposit
-        # - setTotalDeposit
-        #
-        # in which case  the second `approve` will overwrite the first,
-        # and the first `setTotalDeposit` will consume the allowance,
-        #  making the second deposit fail.
-        token.approve(
-            allowed_address=Address(self.address),
-            allowance=amount_to_deposit,
-        )
-
-        return amount_to_deposit, log_details
-
     def set_total_deposit(
             self,
             given_block_identifier: BlockSpecification,
@@ -752,6 +711,8 @@ class TokenNetwork:
             ChannelBusyError: If the channel is busy with another operation
             RuntimeError: If the token address is empty.
         """
+        if not isinstance(total_deposit, int):
+            raise ValueError('total_deposit needs to be an integral number.')
         token_address = self.token_address()
         token = Token(
             jsonrpc_client=self.client,
@@ -761,18 +722,58 @@ class TokenNetwork:
         checking_block = self.client.get_checking_block()
         error_prefix = 'setTotalDeposit call will fail'
         with self.channel_operations_lock[partner], self.deposit_lock:
+            previous_total_deposit = self._detail_participant(
+                channel_identifier=channel_identifier,
+                participant=self.node_address,
+                partner=partner,
+                block_identifier=given_block_identifier,
+            ).deposit
+            amount_to_deposit = total_deposit - previous_total_deposit
+            log_details = {
+                'token_network': pex(self.address),
+                'channel_identifier': channel_identifier,
+                'node': pex(self.node_address),
+                'partner': pex(partner),
+                'new_total_deposit': total_deposit,
+                'previous_total_deposit': previous_total_deposit,
+            }
             try:
-                amount_to_deposit, log_details = self._deposit_preconditions(
+                self._deposit_preconditions(
                     channel_identifier=channel_identifier,
                     total_deposit=total_deposit,
                     partner=partner,
                     token=token,
+                    previous_total_deposit=previous_total_deposit,
+                    log_details=log_details,
                     block_identifier=given_block_identifier,
                 )
             except NoStateForBlockIdentifier:
                 # If preconditions end up being on pruned state skip them. Estimate
                 # gas will stop us from sending a transaction that will fail
                 pass
+
+            # If there are channels being set up concurrenlty either the
+            # allowance must be accumulated *or* the calls to `approve` and
+            # `setTotalDeposit` must be serialized. This is necessary otherwise
+            # the deposit will fail.
+            #
+            # Calls to approve and setTotalDeposit are serialized with the
+            # deposit_lock to avoid transaction failure, because with two
+            # concurrent deposits, we may have the transactions executed in the
+            # following order
+            #
+            # - approve
+            # - approve
+            # - setTotalDeposit
+            # - setTotalDeposit
+            #
+            # in which case  the second `approve` will overwrite the first,
+            # and the first `setTotalDeposit` will consume the allowance,
+            #  making the second deposit fail.
+            token.approve(
+                allowed_address=Address(self.address),
+                allowance=amount_to_deposit,
+            )
 
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
@@ -1039,6 +1040,9 @@ class TokenNetwork:
             closing_signature: Signature,
             block_identifier: BlockSpecification,
     ) -> None:
+        if not self.client.can_query_state_for_block(block_identifier):
+            raise NoStateForBlockIdentifier()
+
         data_that_was_signed = pack_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
@@ -1068,9 +1072,6 @@ class TokenNetwork:
 
         if signer_address != partner:
             raise RaidenUnrecoverableError('Invalid balance proof signature')
-
-        if not self.client.can_query_state_for_block(block_identifier):
-            raise NoStateForBlockIdentifier()
 
         self._check_for_outdated_channel(
             participant1=self.node_address,
@@ -1315,13 +1316,7 @@ class TokenNetwork:
     def _settle_preconditions(
             self,
             channel_identifier: ChannelID,
-            transferred_amount: TokenAmount,
-            locked_amount: TokenAmount,
-            locksroot: Locksroot,
             partner: Address,
-            partner_transferred_amount: TokenAmount,
-            partner_locked_amount: TokenAmount,
-            partner_locksroot: Locksroot,
             block_identifier: BlockSpecification,
     ):
         if not self.client.can_query_state_for_block(block_identifier):
@@ -1333,35 +1328,6 @@ class TokenNetwork:
             block_identifier=block_identifier,
             channel_identifier=channel_identifier,
         )
-
-        # and now find out
-        our_maximum = transferred_amount + locked_amount
-        partner_maximum = partner_transferred_amount + partner_locked_amount
-
-        # The second participant transferred + locked amount must be higher
-        our_bp_is_larger = our_maximum > partner_maximum
-        if our_bp_is_larger:
-            return [
-                partner,
-                partner_transferred_amount,
-                partner_locked_amount,
-                partner_locksroot,
-                self.node_address,
-                transferred_amount,
-                locked_amount,
-                locksroot,
-            ]
-        else:
-            return [
-                self.node_address,
-                transferred_amount,
-                locked_amount,
-                locksroot,
-                partner,
-                partner_transferred_amount,
-                partner_locked_amount,
-                partner_locksroot,
-            ]
 
     def settle(
             self,
@@ -1391,16 +1357,38 @@ class TokenNetwork:
         log.debug('settle called', **log_details)
 
         checking_block = self.client.get_checking_block()
+        # and now find out
+        our_maximum = transferred_amount + locked_amount
+        partner_maximum = partner_transferred_amount + partner_locked_amount
+
+        # The second participant transferred + locked amount must be higher
+        our_bp_is_larger = our_maximum > partner_maximum
+        if our_bp_is_larger:
+            args = [
+                partner,
+                partner_transferred_amount,
+                partner_locked_amount,
+                partner_locksroot,
+                self.node_address,
+                transferred_amount,
+                locked_amount,
+                locksroot,
+            ]
+        else:
+            args = [
+                self.node_address,
+                transferred_amount,
+                locked_amount,
+                locksroot,
+                partner,
+                partner_transferred_amount,
+                partner_locked_amount,
+                partner_locksroot,
+            ]
         try:
-            args = self._settle_preconditions(
+            self._settle_preconditions(
                 channel_identifier=channel_identifier,
-                transferred_amount=transferred_amount,
-                locked_amount=locked_amount,
-                locksroot=locksroot,
                 partner=partner,
-                partner_transferred_amount=partner_transferred_amount,
-                partner_locked_amount=partner_locked_amount,
-                partner_locksroot=partner_locksroot,
                 block_identifier=given_block_identifier,
             )
         except NoStateForBlockIdentifier:
