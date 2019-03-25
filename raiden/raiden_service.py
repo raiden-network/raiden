@@ -33,7 +33,7 @@ from raiden.messages import (
 )
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry, ServiceRegistry, TokenNetworkRegistry
-from raiden.settings import MONITORING_MIN_CAPACITY, MONITORING_REWARD
+from raiden.settings import MEDIATION_FEE, MONITORING_MIN_CAPACITY, MONITORING_REWARD
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import channel, node, views
@@ -127,7 +127,7 @@ def initiator_init(
         payment_network_identifier=raiden.default_registry.address,
         payment_identifier=transfer_identifier,
         amount=transfer_amount,
-        allocated_fee=0,
+        allocated_fee=MEDIATION_FEE,
         token_network_identifier=token_network_identifier,
         initiator=InitiatorAddress(raiden.address),
         target=target_address,
