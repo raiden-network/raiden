@@ -3,7 +3,7 @@ from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import AddressWrongContract, ContractVersionMismatch
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import CanonicalIdentifier
+from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
     BlockSpecification,
@@ -53,7 +53,7 @@ def get_onchain_locksroots(
 ) -> Tuple[Locksroot, Locksroot]:
     payment_channel = raiden.chain.payment_channel(
         canonical_identifier=CanonicalIdentifier(
-            chain_identifier=None,
+            chain_identifier=CHAIN_ID_UNSPECIFIED,
             token_network_address=token_network_address,
             channel_identifier=channel_identifier,
         ),

@@ -1,5 +1,6 @@
 import copy
 
+from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.transfer import make_receive_transfer_mediated
@@ -123,8 +124,8 @@ def test_channel_settle_must_properly_cleanup():
         canonical_identifier=channel_state.canonical_identifier,
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
-        our_onchain_locksroot=bytes(32),
-        partner_onchain_locksroot=bytes(32),
+        our_onchain_locksroot=EMPTY_MERKLE_ROOT,
+        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -222,7 +223,7 @@ def test_channel_data_removed_after_unlock(
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
-        partner_onchain_locksroot=factories.make_32bytes(),
+        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -349,7 +350,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
-        partner_onchain_locksroot=factories.make_32bytes(),
+        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
     )
 
     channel_settled_iteration = token_network.state_transition(
@@ -489,7 +490,7 @@ def test_multiple_channel_states(
         block_number=settle_block_number,
         block_hash=factories.make_block_hash(),
         our_onchain_locksroot=factories.make_32bytes(),
-        partner_onchain_locksroot=factories.make_32bytes(),
+        partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
     )
 
     channel_settled_iteration = token_network.state_transition(
