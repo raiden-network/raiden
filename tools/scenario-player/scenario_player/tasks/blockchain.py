@@ -130,7 +130,7 @@ class BlockchainEventFilter(Task):
         events = query_blockchain_events(
             web3=self.web3,
             contract_manager=self._runner.contract_manager,
-            contract_address=self._runner.token_network_address,
+            contract_address=self.contract_address,
             contract_name=self.contract_name,
             topics=[],
             from_block=BlockNumber(self._runner.token_deployment_block),
