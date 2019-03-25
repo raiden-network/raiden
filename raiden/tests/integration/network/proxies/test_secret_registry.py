@@ -8,8 +8,44 @@ from raiden.constants import STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.events import must_have_event
 from raiden.tests.utils.factories import make_secret
+
+
+def secret_registry_batch_happy_path(secret_registry_proxy, block_identifier):
+    secrets = [make_secret() for i in range(4)]
+    secrethashes = [keccak(secret) for secret in secrets]
+
+    secret_registered_filter = secret_registry_proxy.secret_registered_filter()
+    secret_registry_proxy.register_secret_batch(
+        secrets=secrets,
+        given_block_identifier=block_identifier,
+    )
+
+    logs = [
+        secret_registry_proxy.proxy.decode_event(log)
+        for log in secret_registered_filter.get_all_entries()
+    ]
+
+    for secrethash in secrethashes:
+        secret_registered = must_have_event(
+            logs,
+            {
+                'event': 'SecretRevealed',
+                'args': {
+                    'secrethash': secrethash,
+                },
+            },
+        )
+        assert secret_registered, 'All secrets from the batch must be registered'
+
+        block = secret_registry_proxy.get_secret_registration_block_by_secrethash(
+            secrethash=secrethash,
+            block_identifier='latest',
+        )
+        msg = 'Block number reported by the proxy and the event must match'
+        assert block == secret_registered['blockNumber'], msg
 
 
 def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contract_manager):
@@ -87,39 +123,26 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
 
 
 def test_register_secret_batch_happy_path(secret_registry_proxy):
-    """Test happy patch for secret registration batching."""
-    secrets = [make_secret() for i in range(4)]
-    secrethashes = [keccak(secret) for secret in secrets]
+    """Test happy path for secret registration batching."""
+    secret_registry_batch_happy_path(secret_registry_proxy, 'latest')
 
-    secret_registered_filter = secret_registry_proxy.secret_registered_filter()
-    secret_registry_proxy.register_secret_batch(
-        secrets=secrets,
-        given_block_identifier='latest',
+
+def test_register_secret_batch_with_pruned_block(
+        secret_registry_proxy,
+        web3,
+        private_keys,
+        contract_manager,
+):
+    """Test secret registration with a pruned given block."""
+    c1_client = JSONRPCClient(web3, private_keys[1])
+    c1_chain = BlockChainService(
+        jsonrpc_client=c1_client,
+        contract_manager=contract_manager,
     )
-
-    logs = [
-        secret_registry_proxy.proxy.decode_event(log)
-        for log in secret_registered_filter.get_all_entries()
-    ]
-
-    for secrethash in secrethashes:
-        secret_registered = must_have_event(
-            logs,
-            {
-                'event': 'SecretRevealed',
-                'args': {
-                    'secrethash': secrethash,
-                },
-            },
-        )
-        assert secret_registered, 'All secrets from the batch must be registered'
-
-        block = secret_registry_proxy.get_secret_registration_block_by_secrethash(
-            secrethash=secrethash,
-            block_identifier='latest',
-        )
-        msg = 'Block number reported by the proxy and the event must match'
-        assert block == secret_registered['blockNumber'], msg
+    # Now wait until this block becomes pruned
+    pruned_number = c1_chain.block_number()
+    c1_chain.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)
+    secret_registry_batch_happy_path(secret_registry_proxy, pruned_number)
 
 
 def test_concurrent_secret_registration(secret_registry_proxy, monkeypatch):
