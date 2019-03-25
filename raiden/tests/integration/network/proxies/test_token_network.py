@@ -677,6 +677,7 @@ def test_token_network_actions_at_pruned_blocks(
         given_block_identifier='latest',
     )
 
+    # Now wait until this block becomes pruned
     pruned_number = c1_chain.block_number()
     c1_chain.wait_until_block(target_block_number=pruned_number + STATE_PRUNING_AFTER_BLOCKS)
 
