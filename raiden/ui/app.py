@@ -391,17 +391,18 @@ def run_app(
     except AddressWrongContract:
         handle_contract_wrong_address('secret registry', secret_registry_contract_address)
 
+    services_deployment_data = get_contracts_deployed(
+        chain_id=node_network_id,
+        version=contracts_version,
+        services=True,
+    )
+
     user_deposit = None
     should_use_user_deposit = (
         environment_type == Environment.DEVELOPMENT and
         ID_TO_NETWORKNAME[node_network_id] != 'smoketest'
     )
     if should_use_user_deposit:
-        services_deployment_data = get_contracts_deployed(
-            chain_id=node_network_id,
-            version=contracts_version,
-            services=True,
-        )
         services_contracts = services_deployment_data['contracts']
         try:
             user_deposit = blockchain_service.user_deposit(
@@ -418,10 +419,11 @@ def run_app(
 
     service_registry = None
     if routing_mode == RoutingMode.PFS:
+        services_contracts = services_deployment_data['contracts']
         try:
             service_registry = blockchain_service.service_registry(
                 service_registry_contract_address or to_canonical_address(
-                    contracts[CONTRACT_SERVICE_REGISTRY]['address'],
+                    services_contracts[CONTRACT_SERVICE_REGISTRY]['address'],
                 ),
             )
         except ContractVersionMismatch as e:
