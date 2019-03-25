@@ -594,7 +594,7 @@ def test_query_pruned_state(
 ):
     """A test for https://github.com/raiden-network/raiden/issues/3566
 
-    If 128 blocks pass make sure that can_query_state_for_block returns False.
+    If pruning limit blocks pass make sure that can_query_state_for_block returns False.
     """
 
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
