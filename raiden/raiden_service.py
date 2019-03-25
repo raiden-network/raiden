@@ -62,15 +62,7 @@ from raiden.transfer.state_change import (
     ContractReceiveNewPaymentNetwork,
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
-from raiden.utils import (
-    CanonicalIdentifier,
-    create_default_identifier,
-    lpex,
-    pex,
-    random_secret,
-    sha3,
-    to_rdn,
-)
+from raiden.utils import create_default_identifier, lpex, pex, random_secret, sha3, to_rdn
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
@@ -268,11 +260,7 @@ def update_monitoring_service_from_balance_proof(
 
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=raiden.chain.network_id,
-            token_network_address=new_balance_proof.token_network_identifier,
-            channel_identifier=new_balance_proof.channel_identifier,
-        ),
+        canonical_identifier=new_balance_proof.canonical_identifier,
     )
 
     msg = (
