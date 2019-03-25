@@ -14,7 +14,7 @@ from hypothesis.stateful import (
 )
 from hypothesis.strategies import builds, composite, integers, random_module, randoms
 
-from raiden.constants import GENESIS_BLOCK_NUMBER
+from raiden.constants import EMPTY_MERKLE_ROOT, GENESIS_BLOCK_NUMBER
 from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.tests.utils import factories
 from raiden.transfer import channel, node
@@ -439,8 +439,8 @@ class OnChainMixin:
             ),
             block_number=self.block_number + 1,
             block_hash=factories.make_block_hash(),
-            our_onchain_locksroot=bytes(32),
-            partner_onchain_locksroot=bytes(32),
+            our_onchain_locksroot=EMPTY_MERKLE_ROOT,
+            partner_onchain_locksroot=EMPTY_MERKLE_ROOT,
         )
 
         node.state_transition(self.chain_state, channel_settled_state_change)
