@@ -20,10 +20,16 @@ settings:
 
   ## Services
   ## Define services to be used, if any. Defined here to allow assertions on PFS state.
-  ## Can optionally be overridden in node options.
-  services:
+  ## PFS URL can optionally be overridden in node options.
+#  services:
 #    pfs:
-#      url: http://pfs.example.com
+#      url: https://pfs-kovan.services-dev.raiden.network
+#    udc:
+#      enable: true
+#      ## Optionally override UDC address
+#      #address:
+#      token:
+#        deposit: true
 
 token:
   ## To use an existing token give an address
