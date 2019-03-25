@@ -6,7 +6,7 @@ from typing import Optional
 import click
 import requests
 import structlog
-from eth_utils import to_hex
+from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, RoutingMode
 from raiden.exceptions import ServiceRequestFailed
@@ -110,7 +110,7 @@ def get_pfs_iou(
 ) -> typing.Optional[typing.Dict]:
     try:
         return requests.get(
-            f'{url}/api/v1/{token_network_address}/payment/iou',
+            f'{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou',
             data=kwargs,
             timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         ).json().get('last_iou')
@@ -207,7 +207,7 @@ def query_paths(
 
     try:
         response = requests.post(
-            f'{url}/api/v1/{token_network_address}/paths',
+            f'{url}/api/v1/{to_checksum_address(token_network_address)}/paths',
             data=payload,
             timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
