@@ -1,18 +1,18 @@
-from typing import Any, List, Dict
+from typing import Any, Dict, List
 
 import structlog
-from eth_utils import to_checksum_address, decode_hex, event_abi_to_log_topic
-from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK
-from raiden_contracts.contract_manager import ContractManager, get_contracts_deployed
-
-from scenario_player.runner import ScenarioRunner
-from scenario_player.exceptions import ScenarioError, ScenarioAssertionError
+from eth_utils import decode_hex, event_abi_to_log_topic, to_checksum_address
 from web3 import Web3
 from web3.utils.abi import filter_by_type
 from web3.utils.events import get_event_data
 
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
-from raiden.utils.typing import BlockNumber, Address, ABI
+from raiden.utils.typing import ABI, Address, BlockNumber
+from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK
+from raiden_contracts.contract_manager import ContractManager, get_contracts_deployed
+from scenario_player.exceptions import ScenarioAssertionError, ScenarioError
+from scenario_player.runner import ScenarioRunner
+
 from .base import Task
 
 log = structlog.get_logger(__name__)
