@@ -148,9 +148,12 @@ def test_update_pfs():
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof
     message = UpdatePFS.from_channel_state(channel_state=channel_state)
+
     assert message.signature == b''
-    message.sign(signer)
-    assert recover(message._data_to_sign(), message.signature) == ADDRESS
+    privkey2, address2 = make_privkey_address()
+    signer2 = LocalSigner(privkey2)
+    message.sign(signer2)
+    assert recover(message._data_to_sign(), message.signature) == address2
 
     assert message == UpdatePFS.from_dict(message.to_dict())
 
