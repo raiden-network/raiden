@@ -12,7 +12,7 @@ from datetime import timedelta
 from enum import Enum
 from pathlib import Path
 from tarfile import TarFile
-from typing import Any, Dict
+from typing import Any, Dict, Set
 from urllib.parse import urljoin
 from zipfile import ZipFile
 
@@ -22,6 +22,7 @@ import structlog
 from cachetools.func import ttl_cache
 from eth_keyfile import create_keyfile_json
 from eth_utils import to_checksum_address
+from eth_utils.typing import ChecksumAddress
 from gevent import Greenlet
 from gevent.pool import Group, Pool
 from mirakuru import ProcessExitedWithError
@@ -251,7 +252,7 @@ class NodeRunner:
         self._executor = None
 
     @property
-    def address(self):
+    def address(self) -> ChecksumAddress:
         if not self._address:
             with self._keystore_file.open('r') as keystore_file:
                 keystore_contents = json.load(keystore_file)
@@ -398,7 +399,7 @@ class NodeRunner:
         if local_pfs:
             if global_pfs:
                 log.warning(
-                    'Overriding PFS option',
+                    'Overriding global PFS configuration',
                     global_pfs_address=global_pfs,
                     local_pfs_address=local_pfs,
                     node=self._index,
@@ -493,7 +494,7 @@ class NodeController:
             runner.initialize()
 
     @property
-    def addresses(self):
+    def addresses(self) -> Set[ChecksumAddress]:
         return {runner.address for runner in self._node_runners}
 
     def start_node_monitor(self):
