@@ -1,3 +1,4 @@
+from raiden.settings import MEDIATION_FEE
 from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
@@ -73,7 +74,7 @@ def get_channel_state(
         payment_network_identifier=payment_network_identifier,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
-        mediation_fee=0,
+        mediation_fee=MEDIATION_FEE,
         our_state=our_state,
         partner_state=partner_state,
         open_transaction=open_transaction,
