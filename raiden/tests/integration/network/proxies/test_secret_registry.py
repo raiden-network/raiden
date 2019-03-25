@@ -4,6 +4,7 @@ import gevent
 import pytest
 from eth_utils import keccak
 
+from raiden.constants import STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import NoStateForBlockIdentifier
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies import SecretRegistry
@@ -38,7 +39,7 @@ def test_register_secret_happy_path(secret_registry_proxy: SecretRegistry, contr
         jsonrpc_client=secret_registry_proxy.client,
         contract_manager=contract_manager,
     )
-    chain.wait_until_block(129)
+    chain.wait_until_block(STATE_PRUNING_AFTER_BLOCKS + 1)
 
     with pytest.raises(NoStateForBlockIdentifier):
         secret_registry_proxy.is_secret_registered(
