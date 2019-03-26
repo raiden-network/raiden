@@ -55,7 +55,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendSecretReveal,
 )
-from raiden.transfer.mediated_transfer.mediator import set_offchain_secret
+from raiden.transfer.mediated_transfer.mediator import get_payee_channel, set_offchain_secret
 from raiden.transfer.mediated_transfer.state import MediatorTransferState, WaitingTransferState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
@@ -784,7 +784,11 @@ def test_secret_learned():
     transfer_pair = iteration.new_state.transfers_pair[0]
 
     assert from_transfer.lock.expiration == transfer_pair.payee_transfer.lock.expiration
-    assert mediator.is_send_transfer_almost_equal(transfer_pair.payee_transfer, from_transfer)
+    assert mediator.is_send_transfer_almost_equal(
+        get_payee_channel(channels.channel_map, transfer_pair),
+        transfer_pair.payee_transfer,
+        from_transfer,
+    )
     assert transfer_pair.payee_address == channels.get_route(1).node_address
 
     assert transfer_pair.payer_transfer.balance_proof.sender == channels.get_route(0).node_address
