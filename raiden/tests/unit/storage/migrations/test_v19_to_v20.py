@@ -4,8 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
-from raiden.storage.serialize import JSONSerializer
-from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
+from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.factories import make_32bytes, make_address
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.utils.serialization import serialize_bytes
@@ -88,7 +87,7 @@ def test_upgrade_v19_to_v20(tmp_path):
     ):
         manager.run()
 
-    storage = SerializedSQLiteStorage(str(db_path), JSONSerializer())
+    storage = SQLiteStorage(str(db_path))
 
     batch_query = storage.batch_query_state_changes(
         batch_size=500,
@@ -114,14 +113,12 @@ def test_upgrade_v19_to_v20(tmp_path):
     _, snapshot = storage.get_latest_state_snapshot()
     assert snapshot is not None
 
-    for payment_network in snapshot.identifiers_to_paymentnetworks.values():
-        for token_network in payment_network.tokenidentifiers_to_tokennetworks.values():
-            for channel in token_network.channelidentifiers_to_channels.values():
-                channel_our_locksroot = serialize_bytes(
-                    channel.our_state.onchain_locksroot,
-                )
-                channel_partner_locksroot = serialize_bytes(
-                    channel.partner_state.onchain_locksroot,
-                )
+    snapshot = json.loads(snapshot)
+
+    for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
+        for token_network in payment_network['tokennetworks']:
+            for channel in token_network['channelidentifiers_to_channels'].values():
+                channel_our_locksroot = channel['our_state']['onchain_locksroot']
+                channel_partner_locksroot = channel['partner_state']['onchain_locksroot']
                 assert channel_our_locksroot == our_onchain_locksroot
                 assert channel_partner_locksroot == partner_onchain_locksroot
