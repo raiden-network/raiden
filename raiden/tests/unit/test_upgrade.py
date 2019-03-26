@@ -36,6 +36,23 @@ def setup_storage(db_path):
     return storage
 
 
+def test_no_upgrade_executes_if_already_upgraded(tmp_path):
+    for version in [16, 17, 18, 19]:
+        old_db_filename = tmp_path / Path(f'v{version}_log.db')
+
+        storage = setup_storage(old_db_filename)
+
+        with patch('raiden.utils.upgrades.RAIDEN_DB_VERSION', new=version):
+            storage.update_version()
+            storage.conn.close()
+
+    db_path = tmp_path / Path('v19_log.db')
+
+    with patch('raiden.utils.upgrades._run_upgrade_func') as upgrade_mock:
+        UpgradeManager(db_filename=db_path).run()
+        assert not upgrade_mock.called
+
+
 def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
     db_path = tmp_path / Path('v17_log.db')
 
