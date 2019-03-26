@@ -37,6 +37,7 @@ def setup_storage(db_path):
 
 
 def test_no_upgrade_executes_if_already_upgraded(tmp_path):
+    # Setup multiple old databases
     for version in [16, 17, 18, 19]:
         old_db_filename = tmp_path / Path(f'v{version}_log.db')
 
@@ -50,7 +51,44 @@ def test_no_upgrade_executes_if_already_upgraded(tmp_path):
 
     with patch('raiden.utils.upgrades._run_upgrade_func') as upgrade_mock:
         UpgradeManager(db_filename=db_path).run()
+        # Oldest database is of the same version as the current, no migrations should execute
         assert not upgrade_mock.called
+
+
+def test_upgrade_executes_necessary_migration_functions(tmp_path, monkeypatch):
+    old_db_filename = tmp_path / Path(f'v18_log.db')
+
+    storage = setup_storage(old_db_filename)
+    with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=18):
+        storage.update_version()
+        storage.conn.close()
+
+    db_path = tmp_path / Path('v20_log.db')
+
+    upgrade_functions = {}
+    for i in range(16, 20):
+        mock = Mock()
+        mock.return_value = i + 1
+        upgrade_functions[i] = mock
+
+    with monkeypatch.context() as m:
+        m.setattr(
+            raiden.utils.upgrades,
+            'UPGRADES_LIST',
+            upgrade_functions,
+        )
+        m.setattr(
+            raiden.utils.upgrades,
+            'RAIDEN_DB_VERSION',
+            19,
+        )
+
+        UpgradeManager(db_filename=db_path).run()
+
+    assert upgrade_functions[16].call_count == 0
+    assert upgrade_functions[17].call_count == 0
+    assert upgrade_functions[18].call_count == 1
+    assert upgrade_functions[19].call_count == 1
 
 
 def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
