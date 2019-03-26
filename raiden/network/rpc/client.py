@@ -169,11 +169,11 @@ def geth_discover_next_available_nonce(
 
     queued = pool.get('queued', {}).get(address)
     if queued:
-        return max(queued.keys()) + 1
+        return Nonce(max(int(k) for k in queued.keys()) + 1)
 
     pending = pool.get('pending', {}).get(address)
     if pending:
-        return max(pending.keys()) + 1
+        return Nonce(max(int(k) for k in pending.keys()) + 1)
 
     # The first valid nonce is 0, therefore the count is already the next
     # available nonce
