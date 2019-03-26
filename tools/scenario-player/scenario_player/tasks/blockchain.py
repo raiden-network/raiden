@@ -111,7 +111,9 @@ class BlockchainEventFilter(Task):
 
         self.web3 = self._runner.client.web3
 
+    def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         # get the correct contract address
+        # this has to be done in `_run`, otherwise `_runner` is not initialized yet
         service_contract_data = get_contracts_deployed(
             chain_id=self._runner.chain_id,
             version=DEVELOPMENT_CONTRACT_VERSION,
@@ -126,7 +128,6 @@ class BlockchainEventFilter(Task):
             except KeyError:
                 raise ScenarioError(f'Unknown contract name: {self.contract_name}')
 
-    def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         events = query_blockchain_events(
             web3=self.web3,
             contract_manager=self._runner.contract_manager,
