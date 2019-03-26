@@ -75,10 +75,10 @@ def get_db_version(db_filename: Path) -> Optional[int]:
     return int(result[0])
 
 
-def _run_upgrade_func(cursor: sqlite3.Cursor, func: Callable, version: int, **kwargs) -> int:
+def _run_upgrade_func(storage: SQLiteStorage, func: Callable, version: int, **kwargs) -> int:
     """ Run the migration function, store the version and advance the version. """
-    new_version = func(cursor, version, RAIDEN_DB_VERSION, **kwargs)
-    update_version(cursor, new_version)
+    new_version = func(storage, version, RAIDEN_DB_VERSION, **kwargs)
+    update_version(storage, new_version)
     return new_version
 
 
@@ -177,13 +177,28 @@ class UpgradeManager:
             log.debug(f'Upgrading database from {older_version} to v{RAIDEN_DB_VERSION}')
 
             try:
+                target_version = older_version
                 with storage.transaction():
-                    version_iteration = older_version
-                    for upgrade_func in UPGRADES_LIST:
-                        version_iteration = _run_upgrade_func(
+                    for source_version, upgrade_func in UPGRADES_LIST.items():
+                        # Source_version represents the version number
+                        # from which a migration starts to upgrade to a target version.
+                        # The target version is returned by the upgrade_func.
+                        # The below step basically skips a migration in case
+                        # the **latest older** version we have is larger than
+                        # the current migration's source version.
+                        # Example, assuming some node was running version 18 and
+                        # Upgraded to 20.
+                        # In this case, only migrations:
+                        # - 18_to_19
+                        # - 19_to_20
+                        # should run.
+                        if source_version < target_version:
+                            continue
+
+                        target_version = _run_upgrade_func(
                             storage,
                             upgrade_func,
-                            version_iteration,
+                            source_version,
                             **self._kwargs,
                         )
 
