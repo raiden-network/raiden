@@ -420,6 +420,14 @@ def run_app(
 
     service_registry = None
     if routing_mode == RoutingMode.PFS:
+
+        if environment_type == Environment.PRODUCTION:
+            click.secho(
+                'Requested production mode and PFS routing mode. This is not supported',
+                fg='red',
+            )
+            sys.exit(1)
+
         try:
             service_registry = blockchain_service.service_registry(
                 service_registry_contract_address or to_canonical_address(
