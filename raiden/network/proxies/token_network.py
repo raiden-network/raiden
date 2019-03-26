@@ -712,7 +712,7 @@ class TokenNetwork:
             RuntimeError: If the token address is empty.
         """
         if not isinstance(total_deposit, int):
-            raise ValueError('total_deposit needs to be an integral number.')
+            raise ValueError('total_deposit needs to be an integer number.')
         token_address = self.token_address()
         token = Token(
             jsonrpc_client=self.client,
