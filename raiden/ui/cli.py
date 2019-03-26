@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple
 import click
 import structlog
 import urllib3
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
 from mirakuru import ProcessExitedWithError
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -25,6 +25,9 @@ from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    DEFAULT_PATHFINDING_MAX_FEE,
+    DEFAULT_PATHFINDING_IOU_TIMEOUT,
+    DEFAULT_PATHFINDING_MAX_PATHS,
     DEVELOPMENT_CONTRACT_VERSION,
     INITIAL_PORT,
 )
@@ -56,7 +59,11 @@ log = structlog.get_logger(__name__)
 
 
 OPTION_DEPENDENCIES: Dict[str, List[Tuple[str, Any]]] = {
-    'pathfinding-service-address': [('transport', 'matrix')],
+    'pathfinding-service-address': [('transport', 'matrix'), ('routing-mode', RoutingMode.PFS)],
+    'pathfinding-eth-address': [('transport', 'matrix'), ('routing-mode', RoutingMode.PFS)],
+    'pathfinding-max-paths': [('transport', 'matrix'), ('routing-mode', RoutingMode.PFS)],
+    'pathfinding-max-fee': [('transport', 'matrix'), ('routing-mode', RoutingMode.PFS)],
+    'pathfinding-iou-timeout': [('transport', 'matrix'), ('routing-mode', RoutingMode.PFS)],
     'enable-monitoring': [('transport', 'matrix')],
     'matrix-server': [('transport', 'matrix')],
     'listen-address': [('transport', 'udp')],
@@ -193,17 +200,6 @@ def options(func):
             show_default=True,
         ),
         option(
-            '--routing-mode',
-            help=(
-                'Specify the routing mode to be used.\n'
-                '"basic" - use local routing'
-                '"pfs" - use the pathfinding service"'
-            ),
-            type=RoutingModeChoiceType([e.value for e in RoutingMode]),
-            default=RoutingMode.BASIC.value,
-            show_default=True,
-        ),
-        option(
             '--accept-disclaimer',
             help='Bypass the experimental software disclaimer prompt',
             is_flag=True,
@@ -249,6 +245,17 @@ def options(func):
         option_group(
             'Raiden Services Options',
             option(
+                '--routing-mode',
+                help=(
+                    'Specify the routing mode to be used.\n'
+                    '"basic": use local routing\n'
+                    '"pfs": use the path finding service\n'
+                ),
+                type=RoutingModeChoiceType([e.value for e in RoutingMode]),
+                default=RoutingMode.BASIC.value,
+                show_default=True,
+            ),
+            option(
                 '--pathfinding-service-address',
                 help=(
                     'URL to the Raiden path finding service to request paths from.\n'
@@ -261,9 +268,34 @@ def options(func):
                 show_default=True,
             ),
             option(
+                '--pathfinding-eth-address',
+                help=(
+                    'Ethereum address to which to pay the fees of the path finding service.\n'
+                    'If the path finding service is chosen from the service registry contract, '
+                    'this option will be ignored. If the path finding service is configured '
+                    'manually, i. e. "--pathfinding-service-address" set to a value other than '
+                    '"auto", it must be set to a valid EIP55 address.'
+                ),
+                type=str,
+            ),
+            option(
                 '--pathfinding-max-paths',
                 help='Set maximum number of paths to be requested from the path finding service.',
-                default=3,
+                default=DEFAULT_PATHFINDING_MAX_PATHS,
+                type=int,
+                show_default=True,
+            ),
+            option(
+                '--pathfinding-max-fee',
+                help='Set max fee per request paid to the path finding service.',
+                default=DEFAULT_PATHFINDING_MAX_FEE,
+                type=int,
+                show_default=True,
+            ),
+            option(
+                '--pathfinding-iou-timeout',
+                help='Number of blocks before a new iou to the path finding service expires.',
+                default=DEFAULT_PATHFINDING_IOU_TIMEOUT,
                 type=int,
                 show_default=True,
             ),
