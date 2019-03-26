@@ -12,6 +12,10 @@ from raiden.utils import is_minified_address, is_supported_client
 # The tuples define the inverse values for the depended-on options
 _OPTION_DEPENDENCY_TEST_VALUES = {
     'pathfinding-service-address': 'https://example.com',
+    'pathfinding-eth-address': '0x22222222222222222222',
+    'pathfinding-max-paths': 5,
+    'pathfinding-max-fee': 1,
+    'pathfinding-iou-timeout': 200,
     'enable-monitoring': None,
     'matrix-server': 'https://example.com',
     'listen-address': '0.0.0.0:5001',
