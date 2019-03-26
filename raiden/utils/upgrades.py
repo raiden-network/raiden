@@ -17,12 +17,13 @@ from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, older_db_file
 from raiden.utils.typing import Callable, Optional
 
-UPGRADES_LIST = [
-    upgrade_v16_to_v17,
-    upgrade_v17_to_v18,
-    upgrade_v18_to_v19,
-    upgrade_v19_to_v20,
-]
+# Source Target -> Upgrade Func
+UPGRADES_LIST = {
+    16: upgrade_v16_to_v17,
+    17: upgrade_v17_to_v18,
+    18: upgrade_v18_to_v19,
+    19: upgrade_v19_to_v20,
+}
 
 
 log = structlog.get_logger(__name__)
