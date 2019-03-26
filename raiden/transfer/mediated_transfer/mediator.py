@@ -152,6 +152,7 @@ def is_channel_usable(
 
 
 def is_send_transfer_almost_equal(
+        send_channel: NettingChannelState,
         send: LockedTransferUnsignedState,
         received: LockedTransferSignedState,
 ) -> bool:
@@ -162,7 +163,7 @@ def is_send_transfer_almost_equal(
         isinstance(received, LockedTransferSignedState) and
         send.payment_identifier == received.payment_identifier and
         send.token == received.token and
-        send.lock.amount == received.lock.amount and
+        send.lock.amount == received.lock.amount - send_channel.mediation_fee and
         send.lock.expiration == received.lock.expiration and
         send.lock.secrethash == received.lock.secrethash and
         send.initiator == received.initiator and
@@ -286,7 +287,10 @@ def get_lock_amount_after_fees(
     return lock.amount - payee_channel.mediation_fee
 
 
-def sanity_check(state: MediatorTransferState) -> None:
+def sanity_check(
+        state: MediatorTransferState,
+        channelidentifiers_to_channels: ChannelMap,
+) -> None:
     """ Check invariants that must hold. """
 
     # if a transfer is paid we must know the secret
@@ -304,21 +308,47 @@ def sanity_check(state: MediatorTransferState) -> None:
         assert state.secrethash == first_pair.payer_transfer.lock.secrethash
 
     for pair in state.transfers_pair:
-        assert is_send_transfer_almost_equal(pair.payee_transfer, pair.payer_transfer)
+        payee_channel = get_payee_channel(
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            transfer_pair=pair,
+        )
+        assert is_send_transfer_almost_equal(
+            send_channel=payee_channel,
+            send=pair.payee_transfer,
+            received=pair.payer_transfer,
+        )
         assert pair.payer_state in pair.valid_payer_states
         assert pair.payee_state in pair.valid_payee_states
 
     for original, refund in zip(state.transfers_pair[:-1], state.transfers_pair[1:]):
         assert original.payee_address == refund.payer_address
-
+        payer_channel = get_payer_channel(
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            transfer_pair=refund,
+        )
         transfer_sent = original.payee_transfer
         transfer_received = refund.payer_transfer
-        assert is_send_transfer_almost_equal(transfer_sent, transfer_received)
+        assert is_send_transfer_almost_equal(
+            send_channel=payer_channel,
+            send=transfer_sent,
+            received=transfer_received,
+        )
 
     if state.waiting_transfer and state.transfers_pair:
-        transfer_sent = state.transfers_pair[-1].payee_transfer
+        last_transfer_pair = state.transfers_pair[-1]
+        payee_channel = get_payee_channel(
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            transfer_pair=last_transfer_pair,
+        )
+
+        transfer_sent = last_transfer_pair.payee_transfer
         transfer_received = state.waiting_transfer.transfer
-        assert is_send_transfer_almost_equal(transfer_sent, transfer_received)
+
+        assert is_send_transfer_almost_equal(
+            send_channel=payee_channel,
+            send=transfer_sent,
+            received=transfer_received,
+        )
 
 
 def clear_if_finalized(
@@ -1608,6 +1638,6 @@ def state_transition(
     # this is the place for paranoia
     if iteration.new_state is not None:
         assert isinstance(iteration.new_state, MediatorTransferState)
-        sanity_check(iteration.new_state)
+        sanity_check(iteration.new_state, channelidentifiers_to_channels)
 
     return clear_if_finalized(iteration, channelidentifiers_to_channels)
