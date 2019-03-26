@@ -5,7 +5,7 @@ import re
 import sys
 import time
 from itertools import zip_longest
-from typing import Iterable, List, NamedTuple, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 
 import gevent
 from eth_keys import keys
@@ -16,7 +16,9 @@ from eth_utils import (
     is_0x_prefixed,
     is_checksum_address,
     remove_0x_prefix,
+    to_bytes,
     to_checksum_address,
+    to_hex,
 )
 
 import raiden
@@ -31,16 +33,23 @@ CHAIN_ID_UNSPECIFIED = typing.ChainID(-1)
 CHANNEL_ID_UNSPECIFIED = typing.ChannelID(-2)
 
 
-class CanonicalIdentifier(NamedTuple):
-    chain_identifier: typing.ChainID
-    # introducing the type as Union, to avoid casting for now. Should be only `..Address` later
-    token_network_address: Union[typing.TokenNetworkAddress, typing.TokenNetworkID]
-    channel_identifier: typing.ChannelID
+class CanonicalIdentifier:
+    def __init__(
+            self,
+            chain_identifier: typing.ChainID,
+            # introducing the type as Union, to avoid casting for now.
+            # Should be only `..Address` later
+            token_network_address: Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
+            channel_identifier: typing.ChannelID,
+    ):
+        self.chain_identifier = chain_identifier
+        self.token_network_address = token_network_address
+        self.channel_identifier = channel_identifier
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return dict(
             chain_identifier=str(self.chain_identifier),
-            token_network_address=encode_hex(self.token_network_address),
+            token_network_address=to_hex(self.token_network_address),
             channel_identifier=str(self.channel_identifier),
         )
 
@@ -49,7 +58,7 @@ class CanonicalIdentifier(NamedTuple):
         return cls(
             chain_identifier=typing.ChainID(int(data['chain_identifier'])),
             token_network_address=typing.TokenNetworkAddress(
-                decode_hex(data['token_network_address']),
+                to_bytes(hexstr=data['token_network_address']),
             ),
             channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
         )
