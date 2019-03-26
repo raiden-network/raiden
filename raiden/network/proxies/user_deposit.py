@@ -174,7 +174,7 @@ class UserDeposit:
             block_identifier: BlockSpecification,
     ) -> Tuple[TokenAmount, Dict]:
         if not isinstance(total_deposit, int):
-            raise ValueError('total_deposit needs to be an integral number.')
+            raise ValueError('total_deposit needs to be an integer number.')
 
         previous_total_deposit = self.get_total_deposit(
             address=beneficiary,
