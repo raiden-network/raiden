@@ -125,6 +125,7 @@ class AssertTask(ChannelActionTask):
                     f'Is: "{response_dict[field]}" '
                     f'Channel: {response_dict}',
                 )
+        return response_dict
 
 
 class AssertAllTask(ChannelActionTask):
