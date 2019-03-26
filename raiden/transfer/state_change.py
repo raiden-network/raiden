@@ -255,6 +255,10 @@ class ActionChannelSetFee(StateChange):
             mediation_fee=int(data['mediation_fee']),
         )
 
+    @property
+    def channel_identifier(self):
+        return self.canonical_identifier.channel_identifier
+
 
 class ActionCancelTransfer(StateChange):
     """ The user requests the transfer to be cancelled.
