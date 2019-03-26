@@ -65,7 +65,7 @@ def test_upgrade_v18_to_v19(tmp_path):
     manager = UpgradeManager(db_filename=str(db_path), web3=web3)
     with patch(
             'raiden.utils.upgrades.UPGRADES_LIST',
-            new=[upgrade_v18_to_v19],
+            new={18: upgrade_v18_to_v19},
     ):
         manager.run()
 

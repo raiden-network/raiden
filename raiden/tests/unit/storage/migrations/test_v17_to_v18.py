@@ -49,7 +49,7 @@ def test_upgrade_v17_to_v18(tmp_path):
 
     with patch(
             'raiden.utils.upgrades.UPGRADES_LIST',
-            new=[upgrade_v17_to_v18],
+            new={17: upgrade_v17_to_v18},
     ):
         manager.run()
 

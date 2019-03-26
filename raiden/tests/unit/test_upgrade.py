@@ -102,9 +102,9 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
         storage.update_version()
         storage.conn.close()
 
-    upgrade_functions = [Mock()]
+    upgrade_functions = {16: Mock()}
 
-    upgrade_functions[0].return_value = 17
+    upgrade_functions[16].return_value = 17
 
     web3, _ = create_fake_web3_for_block_hash(number_of_blocks=1)
     with monkeypatch.context() as m:
@@ -146,11 +146,11 @@ def test_sequential_version_numbers(tmp_path, monkeypatch):
 
     old_db_filename = tmp_path / Path('v16_log.db')
 
-    upgrade_functions = [Mock(), Mock(), Mock()]
+    upgrade_functions = {16: Mock(), 17: Mock(), 18: Mock()}
 
-    upgrade_functions[0].return_value = 17
-    upgrade_functions[1].return_value = 18
-    upgrade_functions[2].return_value = 19
+    upgrade_functions[16].return_value = 17
+    upgrade_functions[17].return_value = 18
+    upgrade_functions[18].return_value = 19
 
     with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
         storage = setup_storage(old_db_filename)
@@ -179,8 +179,8 @@ def test_sequential_version_numbers(tmp_path, monkeypatch):
 
         UpgradeManager(db_filename=db_path).run()
 
-        upgrade_functions[0].assert_called_once_with(ANY, 16, 19)
-        upgrade_functions[1].assert_called_once_with(ANY, 17, 19)
-        upgrade_functions[2].assert_called_once_with(ANY, 18, 19)
+        upgrade_functions[16].assert_called_once_with(ANY, 16, 19)
+        upgrade_functions[17].assert_called_once_with(ANY, 17, 19)
+        upgrade_functions[18].assert_called_once_with(ANY, 18, 19)
 
         assert get_db_version(db_path) == 19
