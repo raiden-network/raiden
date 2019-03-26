@@ -67,6 +67,7 @@ def mediated_transfer(
         target_app,
         token_network_identifier,
         amount,
+        fee=0,
         identifier=None,
         timeout=5,
 ):
@@ -76,10 +77,11 @@ def mediated_transfer(
     # pylint: disable=too-many-arguments
 
     payment_status = initiator_app.raiden.mediated_transfer_async(
-        token_network_identifier,
-        amount,
-        target_app.raiden.address,
-        identifier,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        target=target_app.raiden.address,
+        identifier=identifier,
+        fee=fee,
     )
     assert payment_status.payment_done.wait(timeout), f'timeout for transfer id={identifier}'
     gevent.sleep(0.3)  # let the other nodes synch
