@@ -1,4 +1,7 @@
 import json
+from functools import partial
+
+from gevent.pool import Pool
 
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
@@ -115,12 +118,12 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
 def _add_onchain_locksroot_to_snapshot(
         raiden: RaidenService,
         storage: SQLiteStorage,
-        raw_snapshot: Dict[str, Any],
+        snapshot_record: StateChangeRecord,
 ) -> str:
     """
     Add `onchain_locksroot` to each NettingChannelEndState
     """
-    snapshot = json.loads(raw_snapshot)
+    snapshot = json.loads(snapshot_record.data)
 
     for payment_network in snapshot.get('identifiers_to_paymentnetworks', dict()).values():
         for token_network in payment_network.get('tokennetworks', list()):
@@ -135,21 +138,32 @@ def _add_onchain_locksroot_to_snapshot(
                     token_network=token_network,
                     channel=channel,
                 )
-
                 channel['our_state']['onchain_locksroot'] = our_locksroot
                 channel['partner_state']['onchain_locksroot'] = partner_locksroot
 
-    return json.dumps(snapshot, indent=4)
+    return json.dumps(snapshot, indent=4), snapshot_record.identifier
 
 
 def _add_onchain_locksroot_to_snapshots(
         raiden: RaidenService,
         storage: SQLiteStorage,
 ) -> None:
-    updated_snapshots_data = list()
-    for snapshot in storage.get_snapshots():
-        new_snapshot = _add_onchain_locksroot_to_snapshot(raiden, storage, snapshot.data)
-        updated_snapshots_data.append((new_snapshot, snapshot.identifier))
+    snapshots = storage.get_snapshots()
+
+    transform_func = partial(
+        _add_onchain_locksroot_to_snapshot,
+        raiden,
+        storage,
+    )
+
+    pool_generator = Pool(len(snapshots)).imap(
+        transform_func,
+        snapshots,
+    )
+
+    updated_snapshots_data = []
+    for result in pool_generator:
+        updated_snapshots_data.append(result)
 
     storage.update_snapshots(updated_snapshots_data)
 
