@@ -199,13 +199,18 @@ class ScenarioRunner:
         # https://github.com/raiden-network/raiden/issues/3544
         # FIXME: Add proper check via API
         log.info('Waiting till new network is found by nodes')
-        gevent.sleep(10)
+        while self.token_network_address is None:
+            self.token_network_address = self.session.get(API_URL_TOKEN_NETWORK_ADDRESS.format(
+                protocol=self.protocol,
+                target_host=first_node,
+                token_address=self.token_address,
+            )).json()
+            gevent.sleep(1)
 
-        self.token_network_address = self.session.get(API_URL_TOKEN_NETWORK_ADDRESS.format(
-            protocol=self.protocol,
-            target_host=first_node,
-            token_address=self.token_address,
-        )).json()
+        log.info(
+            'Received token network address',
+            token_network_address=self.token_network_address,
+        )
 
         # Start root task
         root_task_greenlet = gevent.spawn(self.root_task)
