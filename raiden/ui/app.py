@@ -347,12 +347,6 @@ def run_app(
         endpoint_registry_contract_address is not None
     )
 
-    if routing_mode == RoutingMode.PFS:
-        contract_addresses_given = (
-            contract_addresses_given and
-            service_registry_contract_address is not None
-        )
-
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
             f"There are no known contract addresses for network id '{given_network_id}'. "
@@ -390,6 +384,14 @@ def run_app(
     except AddressWrongContract:
         handle_contract_wrong_address('secret registry', secret_registry_contract_address)
 
+    # If services contracts are provided via the CLI use them instead
+    if user_deposit_contract_address is not None:
+        services_contracts[CONTRACT_USER_DEPOSIT] = user_deposit_contract_address
+    if service_registry_contract_address is not None:
+        services_contracts[CONTRACT_SERVICE_REGISTRY] = (
+            service_registry_contract_address
+        )
+
     user_deposit = None
     should_use_user_deposit = (
         environment_type == Environment.DEVELOPMENT and
@@ -416,6 +418,14 @@ def run_app(
         if environment_type == Environment.PRODUCTION:
             click.secho(
                 'Requested production mode and PFS routing mode. This is not supported',
+                fg='red',
+            )
+            sys.exit(1)
+
+        if CONTRACT_SERVICE_REGISTRY not in services_contracts:
+            click.secho(
+                'Requested PFS routing mode but no service registry is provided. Please'
+                'provide it via the --service-registry-contract-address argument',
                 fg='red',
             )
             sys.exit(1)
