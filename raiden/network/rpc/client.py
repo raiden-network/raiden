@@ -167,6 +167,7 @@ def geth_discover_next_available_nonce(
     # the user, these will be the younger transactions. Because this needs the
     # largest nonce, queued is checked first.
 
+    address = to_checksum_address(address)
     queued = pool.get('queued', {}).get(address)
     if queued:
         return Nonce(max(int(k) for k in queued.keys()) + 1)
