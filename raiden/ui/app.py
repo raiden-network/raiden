@@ -323,12 +323,14 @@ def run_app(
             )
             sys.exit(1)
 
-        services_deployment_data = get_contracts_deployed(
-            chain_id=node_network_id,
-            version=contracts_version,
-            services=True,
-        )
-        services_contracts = services_deployment_data['contracts']
+        if environment_type == Environment.DEVELOPMENT:
+            services_deployment_data = get_contracts_deployed(
+                chain_id=node_network_id,
+                version=contracts_version,
+                services=True,
+            )
+            services_contracts = services_deployment_data['contracts']
+
         contracts = deployment_data['contracts']
         contract_addresses_known = True
 
@@ -418,7 +420,6 @@ def run_app(
 
     service_registry = None
     if routing_mode == RoutingMode.PFS:
-        services_contracts = services_deployment_data['contracts']
         try:
             service_registry = blockchain_service.service_registry(
                 service_registry_contract_address or to_canonical_address(
