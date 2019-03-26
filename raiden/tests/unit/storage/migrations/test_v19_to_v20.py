@@ -83,7 +83,7 @@ def test_upgrade_v19_to_v20(tmp_path):
     manager = UpgradeManager(db_filename=str(db_path), raiden=raiden_service_mock)
     with patch(
             'raiden.utils.upgrades.UPGRADES_LIST',
-            new=[upgrade_v19_to_v20],
+            new={19: upgrade_v19_to_v20},
     ):
         manager.run()
 
