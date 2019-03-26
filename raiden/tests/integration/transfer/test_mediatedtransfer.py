@@ -14,7 +14,8 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer, wait_assert
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
-from raiden.utils import sha3
+from raiden.transfer.state_change import ActionChannelSetFee
+from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier, sha3
 from raiden.waiting import wait_for_block
 
 
@@ -323,3 +324,116 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         )
         app0.raiden.mediate_mediated_transfer(transfer)
         assert patched.call_count == 2
+
+
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('number_of_nodes', [4])
+def test_mediated_transfer_with_allocated_fee(
+        raiden_network,
+        number_of_nodes,
+        deposit,
+        token_addresses,
+        network_wait,
+):
+    """
+    Tests the topology of:
+    A -> B -> C -> D
+    Where C & D are mediators who gain tokens by mediating transfers.
+    The test checks that if no mediator sets the channel fee, then the fees
+    sent by the initiator will be gained completely by the target as no fees
+    will be deducted by the mediators.
+    However, if the mediator sets the fee, the channel's fee will be
+    deducted from received transfer's fee and the rest goes to
+    the mediators in the next hops and maybe eventually to the target.
+    """
+    app0, app1, app2, app3 = raiden_network
+    token_address = token_addresses[0]
+    chain_state = views.state_from_app(app0)
+    payment_network_id = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        chain_state,
+        payment_network_id,
+        token_address,
+    )
+    fee = 5
+    amount = 10
+
+    mediated_transfer(
+        initiator_app=app0,
+        target_app=app3,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=fee,
+        timeout=network_wait * number_of_nodes,
+    )
+
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0, deposit - amount - fee, [],
+            app1, deposit + amount + fee, [],
+        )
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app1, deposit - amount - fee, [],
+            app2, deposit + amount + fee, [],
+        )
+
+    app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(app1.raiden),
+        token_network_id=token_network_identifier,
+        partner_address=app2.raiden.address,
+    )
+
+    # Let app2 consume all of the allocated mediation fee
+    action_set_fee = ActionChannelSetFee(
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=CHAIN_ID_UNSPECIFIED,
+            token_network_address=token_network_identifier,
+            channel_identifier=app1_app2_channel_state.identifier,
+        ),
+        mediation_fee=fee,
+    )
+
+    app1.raiden.handle_state_change(
+        state_change=action_set_fee,
+    )
+
+    mediated_transfer(
+        initiator_app=app0,
+        target_app=app3,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=fee,
+        timeout=network_wait * number_of_nodes,
+    )
+
+    # The fees have been consumed exclusively by app1
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app0, deposit - 2 * (amount + fee), [],
+            app1, deposit + 2 * (amount + fee), [],
+        )
+
+    # app2's poor soul gets no mediation fees on the second transfer.
+    # Only the first transfer had a fee which was paid to app2 though
+    # app2 doesn't set it's fee but it would still receive the complete
+    # locked amount = transfer amount + fee.
+    # However app1 received from app0 two transfers
+    # which it sent to app2. The first transfer
+    # to app2 included the fee as it did not deduct
+    # any fee (the channel's fee was 0).
+    # The second transfer's fee was deducted by
+    # app1 (provided we've set the fee of the channel)
+    with gevent.Timeout(network_wait):
+        wait_assert(
+            assert_synced_channel_state,
+            token_network_identifier,
+            app1, deposit - (amount * 2) - fee, [],
+            app2, deposit + (amount * 2) + fee, [],
+        )
