@@ -4,7 +4,10 @@ from raiden.network.rpc.client import geth_discover_next_available_nonce
 from raiden.tests.utils.factories import make_address
 
 
-def test_geth_discover_next_available_nonce(deploy_client, skip_if_parity):
+def test_geth_discover_next_available_nonce(
+        deploy_client,
+        skip_if_parity,  # pylint: disable=unused-argument
+):
     """ Test that geth_discover_next_available nonce works correctly
 
     Reproduced the problem seen here:
