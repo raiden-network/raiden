@@ -139,6 +139,10 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.payment_network_id
         ] = self.payment_network_state
 
+        self.chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
+            self.token_network_id
+        ] = self.payment_network_id
+
         return self.new_channel_with_transaction()
 
     def event(self, description):
