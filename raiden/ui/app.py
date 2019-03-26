@@ -393,7 +393,7 @@ def run_app(
     user_deposit = None
     should_use_user_deposit = (
         environment_type == Environment.DEVELOPMENT and
-        ID_TO_NETWORKNAME[node_network_id] != 'smoketest'
+        ID_TO_NETWORKNAME.get(node_network_id) != 'smoketest'
     )
     if should_use_user_deposit:
         try:
