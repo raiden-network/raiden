@@ -89,8 +89,9 @@ nodes:
 ## - wait_blocks
 ## - join_network
 ## - leave_network
+## - store_channel_info
 ## - assert_events
-##  - assert_ms_claim
+## - assert_ms_claim
 ## - assert_pfs_routes
 
 scenario:
@@ -185,11 +186,17 @@ scenario:
 #            - close_channel: {from: 0, to: 1}
 #            - close_channel: {from: 1, to: 2}
 #      - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 2}
-#      - assert_ms_claim: {from: 0, to: 1}
 #      - assert: {from: 0, to: 1, total_deposit: 100, balance: 5, state: "closed"}
+#
 #
 #      ## Wait for 20 blocks
 #      - wait_blocks: 20
+#
+#
+#      ## Save channel information, close , assert MS claim action on stored data
+#      - store_channel_info: {from: 0, to: 1, key: "channel-0-1"}
+#      - close_channel: {from: 0, to: 1}
+#      - assert_ms_claim: {channel_info_key: "channel-0-1"}
 #
 #      ## 4 requests where made from source node 0
 #      - assert_pfs_routes: {source: 0, request_count: 4}
