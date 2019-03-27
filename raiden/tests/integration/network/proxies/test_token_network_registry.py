@@ -16,7 +16,6 @@ def test_token_network_registry(
         deploy_client,
         contract_manager,
         token_network_registry_address,
-        skip_if_parity,  # pylint: disable=unused-argument
 ):
     registry_address = to_canonical_address(token_network_registry_address)
 

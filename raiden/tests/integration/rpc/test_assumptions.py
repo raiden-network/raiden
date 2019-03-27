@@ -102,7 +102,7 @@ def test_call_throws(deploy_client, skip_if_parity):
     assert call() == []
 
 
-def test_estimate_gas_fail(deploy_client, skip_if_parity):
+def test_estimate_gas_fail(deploy_client):
     """ A JSON RPC estimate gas call for a throwing transaction returns None"""
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
