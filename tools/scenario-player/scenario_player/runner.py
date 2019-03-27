@@ -57,6 +57,7 @@ class ScenarioRunner:
         self.auth = auth
         self.release_keeper = RaidenReleaseKeeper(data_path.joinpath('raiden_releases'))
         self.task_cache = {}
+        # Storage for arbitrary data tasks might need to persist
         self.task_storage = defaultdict(dict)
 
         self.scenario = Scenario(pathlib.Path(scenario_file.name))

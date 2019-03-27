@@ -4,10 +4,13 @@ from typing import Any
 import structlog
 from toolz import first
 
-from scenario_player.exceptions import ScenarioAssertionError
+from scenario_player.exceptions import ScenarioAssertionError, ScenarioError
 from scenario_player.runner import ScenarioRunner
+from scenario_player.tasks.base import Task
 
 from .raiden_api import RaidenAPIActionTask
+
+STORAGE_KEY_CHANNEL_INFO = 'channel_info'
 
 log = structlog.get_logger(__name__)
 
@@ -103,6 +106,27 @@ class TransferTask(ChannelActionTask):
         if 'identifier' in self._config:
             params['identifier'] = self._config['identifier']
         return params
+
+
+class StoreChannelInfoTask(ChannelActionTask):
+    _name = 'store_channel_info'
+    _method = 'get'
+
+    def __init__(
+            self,
+            runner: ScenarioRunner,
+            config: Any,
+            parent: Task = None,
+            abort_on_fail=True,
+    ) -> None:
+        super().__init__(runner, config, parent, abort_on_fail)
+        if 'key' not in config:
+            raise ScenarioError('Required config "key" not found')
+
+    def _process_response(self, response_dict: dict):
+        response_dict = super()._process_response(response_dict)
+        self._runner.task_storage[STORAGE_KEY_CHANNEL_INFO][self._config['key']] = response_dict
+        return response_dict
 
 
 class AssertTask(ChannelActionTask):
