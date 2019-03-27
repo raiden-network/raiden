@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -256,6 +257,27 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
+def check_value_error_for_parity_estimate_gas(value_error: ValueError) -> bool:
+    """
+    For parity estimate gas does not return None if the transaction will fail
+    but instead throws a ValueError exception
+
+    This function checks the thrown exception to see if it's the correct one and
+    if yes returns True, if not returns False
+    """
+    try:
+        error_data = json.loads(str(value_error).replace("'", '"'))
+    except json.JSONDecodeError:
+        return False
+
+    code_checks_out = error_data['code'] == -32016
+    message_checks_out = 'The execution failed due to an exception' in error_data['message']
+    if code_checks_out and message_checks_out:
+        return True
+
+    return False
+
+
 def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
     """ Temporary workaround until next web3.py release (5.X.X)
 
@@ -270,10 +292,19 @@ def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
     else:
         params = [transaction, block_identifier]
 
-    return self.web3.manager.request_blocking(
-        'eth_estimateGas',
-        params,
-    )
+    try:
+        result = self.web3.manager.request_blocking(
+            'eth_estimateGas',
+            params,
+        )
+    except ValueError as e:
+        if check_value_error_for_parity_estimate_gas(e):
+            result = None
+        else:
+            # else the error is not denoting estimate gas failure and is something else
+            raise e
+
+    return result
 
 
 def estimate_gas_for_function(
@@ -299,7 +330,15 @@ def estimate_gas_for_function(
         fn_kwargs=kwargs,
     )
 
-    gas_estimate = web3.eth.estimateGas(estimate_transaction, block_identifier)
+    try:
+        gas_estimate = web3.eth.estimateGas(estimate_transaction, block_identifier)
+    except ValueError as e:
+        if check_value_error_for_parity_estimate_gas(e):
+            gas_estimate = None
+        else:
+            # else the error is not denoting estimate gas failure and is something else
+            raise e
+
     return gas_estimate
 
 
