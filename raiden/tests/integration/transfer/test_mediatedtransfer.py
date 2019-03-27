@@ -102,11 +102,12 @@ def test_locked_transfer_secret_registered_onchain(
     # Test that sending a transfer with a secret already registered on-chain fails
     with pytest.raises(RaidenUnrecoverableError):
         app0.raiden.start_mediated_transfer_with_secret(
-            token_network_identifier,
-            amount,
-            target,
-            identifier,
-            transfer_secret,
+            token_network_identifier=token_network_identifier,
+            amount=amount,
+            fee=0,
+            target=target,
+            identifier=identifier,
+            secret=transfer_secret,
         )
 
     # Test that receiving a transfer with a secret already registered on chain fails
@@ -236,11 +237,12 @@ def test_mediated_transfer_messages_out_of_order(
     amount = 10
     identifier = 1
     transfer_received = app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
-        amount,
-        app2.raiden.address,
-        identifier,
-        secret,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=0,
+        target=app2.raiden.address,
+        identifier=identifier,
+        secret=secret,
     )
 
     # - Wait until reveal secret is received to replay the message
@@ -297,6 +299,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_identifier=token_network_id,
             amount=10,
+            fee=0,
             target=factories.HOP1,
             identifier=1,
             secret=b'1' * 32,
@@ -307,6 +310,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_identifier=token_network_id,
             amount=11,
+            fee=0,
             target=factories.HOP2,
             identifier=2,
             secret=b'2' * 32,
