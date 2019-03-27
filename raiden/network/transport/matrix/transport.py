@@ -1077,37 +1077,47 @@ class MatrixTransport(Runnable):
 
     def _get_public_room(self, room_name, invitees: List[User]):
         """ Obtain a public, canonically named (if possible) room and invite peers """
-        room_name_full = f'#{room_name}:{self._server_name}'
         invitees_uids = [user.user_id for user in invitees]
-
-        for _ in range(JOIN_RETRIES):
-            # try joining room
+        servers = self._config.get('available_servers') or ()
+        our_server_name = urlparse(self._client.api.base_url).netloc
+        our_room_alias = f'#{room_name}:{servers[0]}'
+        assert our_server_name, 'Invalid client\'s homeserver url'
+        servers = [our_server_name] + [  # client's own server first
+            urlparse(s).netloc
+            for s in servers
+            if urlparse(s).netloc not in {None, '', our_server_name}
+        ]
+        # try joining the room on any of the available servers, starting with ours
+        for server in servers:
+            room_alias = f'#{room_name}:{server}'
             try:
-                room = self._client.join_room(room_name_full)
-            except MatrixRequestError as error:
-                if error.code == 404:
-                    self.log.debug(
-                        f'No room for peer, trying to create',
-                        room_name=room_name_full,
-                        error=error,
-                    )
-                else:
+                room = self._client.join_room(room_alias)
+                self.log.debug('Trying to join room on server', room=room, server=server)
+            except MatrixRequestError as ex:
+                if ex.code not in (403, 404, 500):
                     self.log.debug(
                         f'Error joining room',
                         room_name=room_name,
-                        error=error.content,
-                        error_code=error.code,
+                        error=ex.content,
+                        error_code=ex.code,
                     )
+                    raise
             else:
-                # Invite users to existing room
-                member_ids = {user.user_id for user in room.get_joined_members(force_resync=True)}
-                users_to_invite = set(invitees_uids) - member_ids
-                self.log.debug('Inviting users', room=room, invitee_ids=users_to_invite)
-                for invitee_id in users_to_invite:
-                    room.invite_user(invitee_id)
-                self.log.debug('Room joined successfully', room=room)
+                if our_room_alias not in room.aliases:
+                    # we managed to join a global room, but it's not aliased in our server
+                    room.add_room_alias(our_room_alias)
+                    room.aliases.append(our_room_alias)
+                    self.log.debug('Room joined successfully', room=room)
+                    # Invite users to existing room
+                    member_ids = {user.user_id for user in room.get_joined_members()}
+                    users_to_invite = set([user.id for user in invitees]) - member_ids
+                    if users_to_invite:
+                        self.log.debug('Inviting users', room=room, invitee_ids=users_to_invite)
+                        for invitee_id in users_to_invite:
+                            room.invite_user(invitee_id)
                 break
 
+        for _ in range(JOIN_RETRIES):
             # if can't, try creating it
             try:
                 room = self._client.create_room(
@@ -1141,7 +1151,7 @@ class MatrixTransport(Runnable):
                 is_public=True,
             )
             log.warning(
-                'Could not create nor join a named room. Successfuly created an unnamed one',
+                'Could not create nor join a named room. Successfully created an unnamed one',
                 room=room,
                 invitees=invitees,
             )
