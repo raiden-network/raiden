@@ -182,7 +182,7 @@ def pytest_generate_tests(metafunc):
                 if 'private_rooms' in mark.args[0]:
                     parmeterize_private_rooms = False
                 # Check if more than one transport is used
-                if 'number_of_transports' in mark.args[0]:
+                if 'number_of_transports' == mark.args[0]:
                     number_of_transports = mark.args[1]
         # avoid collecting test if 'skip_if_not_*'
         if transport in ('udp', 'all') and 'skip_if_not_matrix' not in fixtures:
