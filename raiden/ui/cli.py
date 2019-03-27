@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple
 import click
 import structlog
 import urllib3
-from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address, to_checksum_address
 from mirakuru import ProcessExitedWithError
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -25,8 +25,8 @@ from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
+    DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
     DEVELOPMENT_CONTRACT_VERSION,
     INITIAL_PORT,
