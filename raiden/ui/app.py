@@ -206,6 +206,7 @@ def run_app(
         environment_type,
         unrecoverable_error_should_crash,
         pathfinding_service_address,
+        pathfinding_eth_address,
         pathfinding_max_paths,
         enable_monitoring,
         routing_mode,
@@ -444,11 +445,17 @@ def run_app(
         except AddressWrongContract:
             handle_contract_wrong_address('secret registry', service_registry_contract_address)
 
-        config['services']['pathfinding_service_address'] = configure_pfs(
+        pfs_url, pfs_eth_address = configure_pfs(
             pfs_address=pathfinding_service_address,
+            pfs_eth_address=pathfinding_eth_address,
             routing_mode=routing_mode,
             service_registry=service_registry,
         )
+
+        assert pfs_eth_address is not None, 'Eth address of selected pathfinding service unknown.'
+        config['services']['pathfinding_service_address'] = pfs_url
+        config['services']['pathfinding_eth_address'] = pfs_eth_address
+
     else:
         config['services']['pathfinding_service_address'] = None
 
