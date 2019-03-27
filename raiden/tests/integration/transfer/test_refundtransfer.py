@@ -140,7 +140,7 @@ def test_refund_transfer(
         app2,
         token_network_identifier,
         amount_path,
-        identifier_path,
+        identifier=identifier_path,
         timeout=network_wait * number_of_nodes,
     )
 
@@ -337,7 +337,7 @@ def test_different_view_of_last_bp_during_unlock(
         app2,
         token_network_identifier,
         amount_path,
-        identifier_path,
+        identifier=identifier_path,
         timeout=network_wait * number_of_nodes,
     )
 

@@ -527,11 +527,12 @@ def test_secret_revealed_on_chain(
     app1_hold_event_handler.hold_unlock_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
-        amount,
-        target,
-        identifier,
-        secret,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=secret,
     )
 
     with gevent.Timeout(10):
@@ -628,6 +629,7 @@ def test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier=token_network_identifier,
         amount=amount,
+        fee=0,
         target=target,
         identifier=payment_identifier,
         secret=secret,
