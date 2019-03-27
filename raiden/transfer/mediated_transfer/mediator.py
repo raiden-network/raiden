@@ -312,6 +312,11 @@ def sanity_check(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             transfer_pair=pair,
         )
+
+        # Channel could have been removed
+        if not payee_channel:
+            continue
+
         assert is_send_transfer_almost_equal(
             send_channel=payee_channel,
             send=pair.payee_transfer,
@@ -326,6 +331,11 @@ def sanity_check(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             transfer_pair=refund,
         )
+
+        # Channel could have been removed
+        if not payer_channel:
+            continue
+
         transfer_sent = original.payee_transfer
         transfer_received = refund.payer_transfer
         assert is_send_transfer_almost_equal(
@@ -340,15 +350,16 @@ def sanity_check(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
             transfer_pair=last_transfer_pair,
         )
+        # Channel could have been removed
+        if payee_channel:
+            transfer_sent = last_transfer_pair.payee_transfer
+            transfer_received = state.waiting_transfer.transfer
 
-        transfer_sent = last_transfer_pair.payee_transfer
-        transfer_received = state.waiting_transfer.transfer
-
-        assert is_send_transfer_almost_equal(
-            send_channel=payee_channel,
-            send=transfer_sent,
-            received=transfer_received,
-        )
+            assert is_send_transfer_almost_equal(
+                send_channel=payee_channel,
+                send=transfer_sent,
+                received=transfer_received,
+            )
 
 
 def clear_if_finalized(
