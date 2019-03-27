@@ -38,7 +38,7 @@ def test_service_registry_random_pfs(
 
     # Test that get_service_address by index works
     for idx, address in enumerate(addresses):
-        c1_service_proxy.get_service_address('latest', idx) == address
+        assert c1_service_proxy.get_service_address('latest', idx) == address
     # Test that getting the address for an index out of bounds returns None
     assert not c1_service_proxy.get_service_address('latest', 9999)
 
