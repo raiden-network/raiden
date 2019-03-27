@@ -184,11 +184,12 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     )
 
     alice_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
-        alice_to_bob_amount,
-        target,
-        identifier,
-        transfer_1_secret,
+        token_network_identifier=token_network_identifier,
+        amount=alice_to_bob_amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=transfer_1_secret,
     )
     transfer1_received.wait()
 
@@ -235,11 +236,12 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
     hold_event_handler.hold_secretrequest_for(secrethash=transfer_2_secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
-        alice_to_bob_amount,
-        target,
-        identifier,
-        transfer_2_secret,
+        token_network_identifier=token_network_identifier,
+        amount=alice_to_bob_amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=transfer_2_secret,
     )
     transfer2_received.wait()
 
@@ -302,11 +304,12 @@ def test_batch_unlock(
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
-        alice_to_bob_amount,
-        target,
-        identifier,
-        secret,
+        token_network_identifier=token_network_identifier,
+        amount=alice_to_bob_amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=secret,
     )
 
     gevent.sleep(1)  # wait for the messages to be exchanged
@@ -443,11 +446,12 @@ def test_settled_lock(
     secret_available = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
-        amount,
-        target,
-        identifier,
-        secret,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=secret,
     )
 
     secret_available.wait()  # wait for the messages to be exchanged
@@ -528,11 +532,12 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
-        amount,
-        target,
-        identifier,
-        secret,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=secret,
     )
 
     gevent.sleep(1)  # wait for the messages to be exchanged
@@ -596,11 +601,12 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
-        token_network_identifier,
-        amount,
-        target,
-        identifier,
-        secret,
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=0,
+        target=target,
+        identifier=identifier,
+        secret=secret,
     )
 
     gevent.sleep(1)  # wait for the messages to be exchanged
