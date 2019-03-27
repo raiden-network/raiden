@@ -109,12 +109,15 @@ def setup_initiator_tests(
         our_address=EMPTY,
         partner_address=EMPTY,
         block_number=1,
+        allocated_fee=EMPTY,
 ) -> InitiatorSetup:
     """Commonly used setup code for initiator manager and channel"""
     prng = random.Random()
 
+    allocated_fee = factories.if_empty(allocated_fee, 0)
+
     channel1 = factories.make_channel(
-        our_balance=amount,
+        our_balance=amount + allocated_fee,
         partner_balance=partner_balance,
         our_address=our_address,
         partner_address=partner_address,
@@ -123,9 +126,13 @@ def setup_initiator_tests(
     )
     channel_map = {channel1.identifier: channel1}
     available_routes = [factories.route_from_channel(channel1)]
+    transfer_description = factories.make_transfer_description(
+        secret=UNIT_SECRET,
+        allocated_fee=allocated_fee,
+    )
     current_state = make_initiator_manager_state(
         available_routes,
-        factories.UNIT_TRANSFER_DESCRIPTION,
+        transfer_description,
         channel_map,
         prng,
         block_number,
@@ -1654,3 +1661,52 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         block_number=expiry_block,
     )
     assert not iteration.new_state, 'payment task should be deleted at this block'
+
+
+def test_state_wait_secretrequest_valid_amount_and_fee():
+    fee_amount = 5
+
+    setup = setup_initiator_tests(
+        allocated_fee=fee_amount,
+    )
+
+    state_change = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        setup.lock.amount - 1,  # Assuming 1 is the fee amount that was deducted
+        setup.lock.expiration,
+        setup.lock.secrethash,
+        UNIT_TRANSFER_TARGET,
+    )
+
+    iteration = initiator_manager.state_transition(
+        setup.current_state,
+        state_change,
+        setup.channel_map,
+        setup.prng,
+        setup.block_number,
+    )
+
+    assert search_for_item(iteration.events, SendSecretReveal, {}) is not None
+
+    initiator_state = get_transfer_at_index(iteration.new_state, 0)
+    assert initiator_state.received_secret_request is True
+
+    initiator_state.received_secret_request = False
+
+    state_change_2 = ReceiveSecretRequest(
+        UNIT_TRANSFER_IDENTIFIER,
+        setup.lock.amount - fee_amount - 1,
+        setup.lock.expiration,
+        setup.lock.secrethash,
+        UNIT_TRANSFER_TARGET,
+    )
+
+    iteration2 = initiator_manager.state_transition(
+        iteration.new_state,
+        state_change_2,
+        setup.channel_map,
+        setup.prng,
+        setup.block_number,
+    )
+
+    assert len(iteration2.events) == 0
