@@ -208,6 +208,7 @@ def make_transfer_description(
         initiator: typing.InitiatorAddress = EMPTY,
         target: typing.TargetAddress = EMPTY,
         secret: typing.Secret = EMPTY,
+        allocated_fee: typing.FeeAmount = EMPTY,
 ) -> TransferDescriptionWithSecretState:
     payment_network_identifier = if_empty(
         payment_network_identifier,
@@ -219,12 +220,13 @@ def make_transfer_description(
     initiator = if_empty(initiator, UNIT_TRANSFER_INITIATOR)
     target = if_empty(target, UNIT_TRANSFER_TARGET)
     secret = if_empty(secret, random_secret())
+    allocated_fee = if_empty(allocated_fee, 0)
 
     return TransferDescriptionWithSecretState(
         payment_network_identifier=payment_network_identifier,
         payment_identifier=payment_identifier,
         amount=amount,
-        allocated_fee=0,
+        allocated_fee=allocated_fee,
         token_network_identifier=token_network,
         initiator=initiator,
         target=target,
