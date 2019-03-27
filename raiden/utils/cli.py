@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 
 import click
 import requests
-from click import BadParameter, Choice
+from click import BadParameter, Choice, MissingParameter
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
 from pytoml import TomlError, load
@@ -21,6 +21,7 @@ from raiden.exceptions import InvalidAddress
 from raiden.utils import address_checksum_and_decode
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
+CONTEXT_KEY_DEFAULT_OPTIONS = "raiden.options_using_default"
 LOG_CONFIG_OPTION_NAME = "log_config"
 
 
@@ -102,7 +103,32 @@ class CustomContextMixin:
         return ctx
 
 
-class GroupableOption(click.Option):
+class UsesDefaultValueOptionMixin(click.Option):
+    def full_process_value(self, ctx, value):
+        """
+        Slightly modified copy of ``Option.full_process_value()`` that records which options use
+        default values in ``ctx.meta['raiden.options_using_default']``.
+
+        This is then used in ``apply_config_file()`` to establish precedence between values given
+        via the config file and the cli.
+        """
+        if value is None and self.prompt is not None and not ctx.resilient_parsing:
+            return self.prompt_for_value(ctx)
+
+        value = self.process_value(ctx, value)
+
+        if value is None:
+            value = self.get_default(ctx)
+            if not self.value_is_missing(value):
+                ctx.meta.setdefault(CONTEXT_KEY_DEFAULT_OPTIONS, set()).add(self.name)
+
+        if self.required and self.value_is_missing(value):
+            raise MissingParameter(ctx=ctx, param=self)
+
+        return value
+
+
+class GroupableOption(UsesDefaultValueOptionMixin, click.Option):
     def __init__(
         self,
         param_decls=None,
@@ -330,6 +356,7 @@ def apply_config_file(
     config_file_option_name="config_file",
 ):
     """ Applies all options set in the config file to `cli_params` """
+    options_using_default = ctx.meta.get(CONTEXT_KEY_DEFAULT_OPTIONS, set())
     paramname_to_param = {param.name: param for param in command_function.params}
     path_params = {
         param.name
@@ -343,7 +370,8 @@ def apply_config_file(
         with config_file_path.open() as config_file:
             config_file_values = load(config_file)
     except OSError as ex:
-        # Silently ignore if 'file not found' and the config file path is the default
+        # Silently ignore if 'file not found' and the config file path is the default and
+        # the option wasn't explicitly supplied on the command line
         config_file_param = paramname_to_param[config_file_option_name]
         config_file_default_path = Path(
             config_file_param.type.expand_default(  # type: ignore
@@ -353,6 +381,7 @@ def apply_config_file(
         default_config_missing = (
             ex.errno == errno.ENOENT
             and config_file_path.resolve() == config_file_default_path.resolve()
+            and config_file_option_name in options_using_default
         )
         if default_config_missing:
             cli_params["config_file"] = None
@@ -390,8 +419,9 @@ def apply_config_file(
                 click.secho(f"Invalid config file setting '{config_name}': {ex}", fg="red")
                 sys.exit(1)
 
-        # Use the config file value if the value from the command line is the default
-        if cli_params[config_name_int] == paramname_to_param[config_name_int].get_default(ctx):
+        # Only use the config file value if the option wasn't explicitly given on the command line
+        option_has_default = paramname_to_param[config_name_int].default is not None
+        if not option_has_default or config_name_int in options_using_default:
             cli_params[config_name_int] = config_value
 
 
