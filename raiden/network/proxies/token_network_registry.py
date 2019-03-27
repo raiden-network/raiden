@@ -23,9 +23,8 @@ from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.utils import pex, safe_gas_limit
 from raiden.utils.typing import (
     Address,
-    Any,
     BlockSpecification,
-    List,
+    Dict,
     PaymentNetworkID,
     T_TargetAddress,
     TokenAddress,
@@ -105,7 +104,10 @@ class TokenNetworkRegistry:
         """
         return self._add_token(
             token_address=token_address,
-            additional_arguments=[channel_participant_deposit_limit, token_network_deposit_limit],
+            additional_arguments={
+                '_channel_participant_deposit_limit': channel_participant_deposit_limit,
+                '_token_network_deposit_limit': token_network_deposit_limit,
+            },
         )
 
     def add_token_without_limits(
@@ -119,13 +121,13 @@ class TokenNetworkRegistry:
         """
         return self._add_token(
             token_address=token_address,
-            additional_arguments=list(),
+            additional_arguments=dict(),
         )
 
     def _add_token(
             self,
             token_address: TokenAddress,
-            additional_arguments: List[Any],
+            additional_arguments: Dict,
     ) -> Address:
         # given_block_identifier is not really used in this function yet as there
         # are no preconditions to check with the given block
@@ -142,11 +144,12 @@ class TokenNetworkRegistry:
         checking_block = self.client.get_checking_block()
         error_prefix = 'Call to createERC20TokenNetwork will fail'
 
-        arguments = [token_address] + additional_arguments
+        arguments = {'_token_address': token_address}
+        arguments.update(additional_arguments)
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             'createERC20TokenNetwork',
-            *arguments,
+            **arguments,
         )
 
         if gas_limit:
@@ -154,7 +157,7 @@ class TokenNetworkRegistry:
             transaction_hash = self.proxy.transact(
                 'createERC20TokenNetwork',
                 safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK),
-                *arguments,
+                **arguments,
             )
 
             self.client.poll(transaction_hash)
