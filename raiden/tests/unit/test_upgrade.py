@@ -6,7 +6,7 @@ from unittest.mock import ANY, Mock, patch
 import raiden.utils.upgrades
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
-from raiden.utils.upgrades import VERSION_RE, UpgradeManager, get_db_version
+from raiden.utils.upgrades import VERSION_RE, UpgradeManager, UpgradeRecord, get_db_version
 
 
 def test_version_regex():
@@ -65,11 +65,14 @@ def test_upgrade_executes_necessary_migration_functions(tmp_path, monkeypatch):
 
     db_path = tmp_path / Path('v20_log.db')
 
-    upgrade_functions = {}
+    upgrade_functions = []
     for i in range(16, 20):
         mock = Mock()
         mock.return_value = i + 1
-        upgrade_functions[i] = mock
+        upgrade_functions.append(UpgradeRecord(
+            from_version=i,
+            function=mock,
+        ))
 
     with monkeypatch.context() as m:
         m.setattr(
@@ -85,10 +88,10 @@ def test_upgrade_executes_necessary_migration_functions(tmp_path, monkeypatch):
 
         UpgradeManager(db_filename=db_path).run()
 
-    assert upgrade_functions[16].call_count == 0
-    assert upgrade_functions[17].call_count == 0
-    assert upgrade_functions[18].call_count == 1
-    assert upgrade_functions[19].call_count == 1
+    assert upgrade_functions[0].function.call_count == 0
+    assert upgrade_functions[1].function.call_count == 0
+    assert upgrade_functions[2].function.call_count == 1
+    assert upgrade_functions[3].function.call_count == 1
 
 
 def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
@@ -102,9 +105,14 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
         storage.update_version()
         storage.conn.close()
 
-    upgrade_functions = {16: Mock()}
+    upgrade_functions = [
+        UpgradeRecord(
+            from_version=16,
+            function=Mock(),
+        ),
+    ]
 
-    upgrade_functions[16].return_value = 17
+    upgrade_functions[0].function.return_value = 17
 
     web3, _ = create_fake_web3_for_block_hash(number_of_blocks=1)
     with monkeypatch.context() as m:
@@ -146,11 +154,14 @@ def test_sequential_version_numbers(tmp_path, monkeypatch):
 
     old_db_filename = tmp_path / Path('v16_log.db')
 
-    upgrade_functions = {16: Mock(), 17: Mock(), 18: Mock()}
-
-    upgrade_functions[16].return_value = 17
-    upgrade_functions[17].return_value = 18
-    upgrade_functions[18].return_value = 19
+    upgrade_functions = []
+    for i in range(16, 19):
+        mock = Mock()
+        mock.return_value = i + 1
+        upgrade_functions.append(UpgradeRecord(
+            from_version=i,
+            function=mock,
+        ))
 
     with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
         storage = setup_storage(old_db_filename)
@@ -179,8 +190,8 @@ def test_sequential_version_numbers(tmp_path, monkeypatch):
 
         UpgradeManager(db_filename=db_path).run()
 
-        upgrade_functions[16].assert_called_once_with(ANY, 16, 19)
-        upgrade_functions[17].assert_called_once_with(ANY, 17, 19)
-        upgrade_functions[18].assert_called_once_with(ANY, 18, 19)
+        upgrade_functions[0].function.assert_called_once_with(ANY, 16, 19)
+        upgrade_functions[1].function.assert_called_once_with(ANY, 17, 19)
+        upgrade_functions[2].function.assert_called_once_with(ANY, 18, 19)
 
         assert get_db_version(db_path) == 19
