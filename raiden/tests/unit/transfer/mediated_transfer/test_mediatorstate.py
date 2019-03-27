@@ -1504,10 +1504,11 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     pseudo_random_generator = random.Random()
 
     channels = mediator_make_channel_pair()
-    channel_state = channels[0]
+    payer_channel_state = channels[0]
+    payee_channel_state = channels[1]
 
     payer_transfer = factories.make_signed_transfer_for(
-        channel_state,
+        payer_channel_state,
         LockedTransferSignedStateProperties(
             transfer=LockedTransferProperties(
                 initiator=HOP1,
@@ -1534,17 +1535,17 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     channel_closed = ContractReceiveChannelClosed(
         transaction_hash=factories.make_transaction_hash(),
         transaction_from=factories.make_address(),
-        canonical_identifier=channel_state.canonical_identifier,
+        canonical_identifier=payee_channel_state.canonical_identifier,
         block_number=block_number,
         block_hash=block_hash,
     )
     channel_close_transition = channel.state_transition(
-        channel_state=channel_state,
+        channel_state=payee_channel_state,
         state_change=channel_closed,
         block_number=block_number,
         block_hash=block_hash,
     )
-    channel_state = channel_close_transition.new_state
+    payee_channel_state = channel_close_transition.new_state
 
     block_expiration_number = channel.get_sender_expiration_threshold(transfer.lock)
     block_expiration_hash = factories.make_transaction_hash()
@@ -1553,10 +1554,11 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
         gas_limit=1,
         block_hash=block_expiration_hash,
     )
+
     iteration = mediator.state_transition(
         mediator_state=mediator_state,
         state_change=block,
-        channelidentifiers_to_channels={channel_state.identifier: channel_state},
+        channelidentifiers_to_channels=channels.channel_map,
         nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
         block_number=block_expiration_number,
