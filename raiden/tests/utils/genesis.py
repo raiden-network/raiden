@@ -39,9 +39,14 @@ PARITY_CHAIN_SPEC_STUB = {
         "eip155Transition": "0x0",
         "eip98Transition": "0x7fffffffffffff",
         "eip140Transition": "0x0",
+        "eip160Transition": "0x0",
+        "eip210Transition": "0x0",
         "eip211Transition": "0x0",
         "eip214Transition": "0x0",
         "eip658Transition": "0x0",
+        "eip145Transition": "0x0",
+        "eip1014Transition": "0x0",
+        "eip1052Transition": "0x0",
     },
     "genesis": {
         "seal": {
