@@ -15,15 +15,32 @@ from raiden.storage.migrations.v18_to_v19 import upgrade_v18_to_v19
 from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, older_db_file
-from raiden.utils.typing import Callable, Optional
+from raiden.utils.typing import Callable, NamedTuple, Optional
 
-# Source Target -> Upgrade Func
-UPGRADES_LIST = {
-    16: upgrade_v16_to_v17,
-    17: upgrade_v17_to_v18,
-    18: upgrade_v18_to_v19,
-    19: upgrade_v19_to_v20,
-}
+
+class UpgradeRecord(NamedTuple):
+    from_version: int
+    function: Callable
+
+
+UPGRADES_LIST = [
+    UpgradeRecord(
+        from_version=16,
+        function=upgrade_v16_to_v17,
+    ),
+    UpgradeRecord(
+        from_version=17,
+        function=upgrade_v17_to_v18,
+    ),
+    UpgradeRecord(
+        from_version=18,
+        function=upgrade_v18_to_v19,
+    ),
+    UpgradeRecord(
+        from_version=19,
+        function=upgrade_v19_to_v20,
+    ),
+]
 
 
 log = structlog.get_logger(__name__)
@@ -179,26 +196,14 @@ class UpgradeManager:
             try:
                 target_version = older_version
                 with storage.transaction():
-                    for source_version, upgrade_func in UPGRADES_LIST.items():
-                        # Source_version represents the version number
-                        # from which a migration starts to upgrade to a target version.
-                        # The target version is returned by the upgrade_func.
-                        # The below step basically skips a migration in case
-                        # the **latest older** version we have is larger than
-                        # the current migration's source version.
-                        # Example, assuming some node was running version 18 and
-                        # Upgraded to 20.
-                        # In this case, only migrations:
-                        # - 18_to_19
-                        # - 19_to_20
-                        # should run.
-                        if source_version < target_version:
+                    for upgrade_record in UPGRADES_LIST:
+                        if upgrade_record.from_version < target_version:
                             continue
 
                         target_version = _run_upgrade_func(
                             storage,
-                            upgrade_func,
-                            source_version,
+                            upgrade_record.function,
+                            upgrade_record.from_version,
                             **self._kwargs,
                         )
 

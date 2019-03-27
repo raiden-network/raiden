@@ -6,7 +6,7 @@ from unittest.mock import patch
 from raiden.storage.migrations.v18_to_v19 import upgrade_v18_to_v19
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.migrations import create_fake_web3_for_block_hash
-from raiden.utils.upgrades import UpgradeManager
+from raiden.utils.upgrades import UpgradeManager, UpgradeRecord
 
 
 def setup_storage(db_path):
@@ -65,7 +65,7 @@ def test_upgrade_v18_to_v19(tmp_path):
     manager = UpgradeManager(db_filename=str(db_path), web3=web3)
     with patch(
             'raiden.utils.upgrades.UPGRADES_LIST',
-            new={18: upgrade_v18_to_v19},
+            new=[UpgradeRecord(from_version=18, function=upgrade_v18_to_v19)],
     ):
         manager.run()
 

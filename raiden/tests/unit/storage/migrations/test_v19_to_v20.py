@@ -8,7 +8,7 @@ from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.factories import make_32bytes, make_address
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.utils.serialization import serialize_bytes
-from raiden.utils.upgrades import UpgradeManager
+from raiden.utils.upgrades import UpgradeManager, UpgradeRecord
 
 
 def setup_storage(db_path):
@@ -83,7 +83,7 @@ def test_upgrade_v19_to_v20(tmp_path):
     manager = UpgradeManager(db_filename=str(db_path), raiden=raiden_service_mock)
     with patch(
             'raiden.utils.upgrades.UPGRADES_LIST',
-            new={19: upgrade_v19_to_v20},
+            new=[UpgradeRecord(from_version=19, function=upgrade_v19_to_v20)],
     ):
         manager.run()
 
