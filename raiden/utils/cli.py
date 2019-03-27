@@ -457,11 +457,11 @@ def validate_pfs_options(options):
     if options.get('pathfinding-service-address') not in ('auto', None) and eth_address is None:
         raise BadParameter(
             '"--pathfinding-service-address" set manually '
-            'but no "--pathfinding-eth-address" given.'
+            'but no "--pathfinding-eth-address" given.',
         )
     if eth_address is not None and not is_checksum_address(eth_address):
         raise BadParameter(
-            '"--pathfinging-eth-address" value is not a valid EIP55 address.'
+            '"--pathfinging-eth-address" value is not a valid EIP55 address.',
         )
 
 

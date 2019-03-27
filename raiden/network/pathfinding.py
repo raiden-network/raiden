@@ -129,7 +129,7 @@ def make_iou(
     expiration = block_number + config['pathfinding_iou_timeout']
 
     iou = dict(
-        sender=our_address,
+        sender=to_checksum_address(our_address),
         receiver=config['pathfinding_eth_address'],
         amount=config['pathfinding_max_fee'],
     )
