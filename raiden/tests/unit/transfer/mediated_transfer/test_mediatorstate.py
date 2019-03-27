@@ -21,6 +21,7 @@ from raiden.tests.utils.factories import (
     UNIT_TOKEN_ADDRESS,
     UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
+    UNIT_TRANSFER_FEE,
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_PKEY,
     UNIT_TRANSFER_SENDER,
@@ -1971,3 +1972,144 @@ def test_node_change_network_state_unreachable_node():
     assert iteration.new_state == mediator_state
     # No events
     assert iteration.events == []
+
+
+def test_next_transfer_pair_with_fees_deducted():
+    balance = 10
+    fee = 5
+
+    payer_transfer = create(LockedTransferSignedStateProperties(
+        transfer=LockedTransferProperties(
+            amount=balance + fee,
+            initiator=HOP1,
+            target=ADDR,
+            expiration=50,
+        ),
+    ))
+
+    channels = make_channel_set([
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=balance + fee),
+        ),
+    ])
+
+    pair, events = mediator.forward_transfer_pair(
+        payer_transfer=payer_transfer,
+        available_routes=channels.get_routes(0),
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=random.Random(),
+        block_number=2,
+    )
+
+    assert search_for_item(events, SendLockedTransfer, {
+        'recipient': pair.payee_address,
+        'transfer': {
+            'lock': {
+                'amount': payer_transfer.lock.amount,
+            },
+        },
+    })
+
+
+def test_backward_transfer_pair_with_fees_deducted():
+    amount = 10
+    fee = 5
+
+    refund_channel = factories.make_channel(
+        our_balance=amount + fee,
+        partner_balance=amount + fee,
+        partner_address=UNIT_TRANSFER_SENDER,
+    )
+
+    refund_channel.mediation_fee = fee
+
+    transfer_data = LockedTransferSignedStateProperties(
+        transfer=LockedTransferProperties(
+            amount=amount + fee,
+            expiration=10,
+            balance_proof=BalanceProofProperties(
+                channel_identifier=refund_channel.identifier,
+                token_network_identifier=refund_channel.token_network_identifier,
+                transferred_amount=0,
+                locked_amount=amount + fee,
+            ),
+        ),
+    )
+    received_transfer = create(transfer_data)
+
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(
+        refund_channel,
+        received_transfer,
+    )
+    assert is_valid, msg
+
+    transfer_pair, refund_events = mediator.backward_transfer_pair(
+        backward_channel=refund_channel,
+        payer_transfer=received_transfer,
+        pseudo_random_generator=random.Random(),
+        block_number=1,
+    )
+
+    assert search_for_item(refund_events, SendRefundTransfer, {
+        'transfer': {
+            'lock': {
+                'expiration': received_transfer.lock.expiration,
+                'amount': amount,
+                'secrethash': received_transfer.lock.secrethash,
+            },
+        },
+        'recipient': refund_channel.partner_state.address,
+    })
+    assert transfer_pair.payer_transfer == received_transfer
+
+
+def test_sanity_check_for_refund_transfer_with_fees():
+    channels = make_channel_set([
+        NettingChannelStateProperties(
+            mediation_fee=UNIT_TRANSFER_FEE,
+            canonical_identifier=make_canonical_identifier(channel_identifier=1),
+            partner_state=NettingChannelEndStateProperties(
+                balance=UNIT_TRANSFER_AMOUNT + UNIT_TRANSFER_FEE,
+                address=UNIT_TRANSFER_SENDER,
+            ),
+        ),
+        NettingChannelStateProperties(
+            make_canonical_identifier(channel_identifier=2),
+            our_state=NettingChannelEndStateProperties(balance=UNIT_TRANSFER_AMOUNT - 1),
+        ),
+        NettingChannelStateProperties(
+            make_canonical_identifier(channel_identifier=3),
+            our_state=NettingChannelEndStateProperties(balance=0),
+        ),
+    ])
+    from_transfer = factories.make_signed_transfer_for(
+        channels[0],
+        LockedTransferSignedStateProperties(
+            transfer=LockedTransferProperties(
+                initiator=HOP1,
+                amount=UNIT_TRANSFER_AMOUNT + UNIT_TRANSFER_FEE,
+            ),
+        ),
+    )
+
+    iteration = mediator.state_transition(
+        mediator_state=None,
+        state_change=mediator_make_init_action(channels, from_transfer),
+        channelidentifiers_to_channels=channels.channel_map,
+        nodeaddresses_to_networkstates=channels.nodeaddresses_to_networkstates,
+        pseudo_random_generator=random.Random(),
+        block_number=1,
+        block_hash=factories.make_block_hash(),
+    )
+    msg = (
+        'The task must be kept alive, '
+        'either to handle future available routes, or lock expired messages'
+    )
+    assert iteration.new_state is not None, msg
+    assert search_for_item(iteration.events, SendRefundTransfer, {
+        'transfer': {
+            'lock': {
+                'amount': UNIT_TRANSFER_AMOUNT,
+            },
+        },
+    }) is not None

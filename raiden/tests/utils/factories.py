@@ -477,6 +477,7 @@ make_privkey_address = make_privatekey_address
 UNIT_SETTLE_TIMEOUT = 50
 UNIT_REVEAL_TIMEOUT = 5
 UNIT_TRANSFER_AMOUNT = 10
+UNIT_TRANSFER_FEE = 5
 UNIT_SECRET = b'secretsecretsecretsecretsecretse'
 UNIT_SECRETHASH = sha3(UNIT_SECRET)
 UNIT_REGISTRY_IDENTIFIER = b'registryregistryregi'
