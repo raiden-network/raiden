@@ -1024,7 +1024,10 @@ class MatrixTransport(Runnable):
         peer_ids = self._address_to_userids[address]
         member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
         room_is_empty = not bool(peer_ids & member_ids)
-        if room_is_empty:
+        peer_reachable = (
+            self._address_to_presence.get(address) in _PRESENCE_REACHABLE_STATES
+        )
+        if room_is_empty and peer_reachable:
             last_ex: Optional[Exception] = False
             retry_interval = 0.1
             self.log.debug(
@@ -1110,7 +1113,7 @@ class MatrixTransport(Runnable):
                     self.log.debug('Room joined successfully', room=room)
                     # Invite users to existing room
                     member_ids = {user.user_id for user in room.get_joined_members()}
-                    users_to_invite = set([user.id for user in invitees]) - member_ids
+                    users_to_invite = set(invitees_uids) - member_ids
                     if users_to_invite:
                         self.log.debug('Inviting users', room=room, invitee_ids=users_to_invite)
                         for invitee_id in users_to_invite:
