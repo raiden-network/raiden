@@ -53,7 +53,7 @@ from raiden_contracts.constants import (
 from raiden_contracts.contract_manager import (
     ContractManager,
     contracts_precompiled_path,
-    get_contracts_deployed,
+    get_contracts_deployment_info,
 )
 
 from .prompt import prompt_account
@@ -295,7 +295,6 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
-    services_contracts = dict()
 
     if environment_type == Environment.DEVELOPMENT:
         contracts_version = DEVELOPMENT_CONTRACT_VERSION
@@ -305,7 +304,7 @@ def run_app(
     config['contracts_path'] = contracts_precompiled_path(contracts_version)
 
     if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
-        deployment_data = get_contracts_deployed(
+        deployment_data = get_contracts_deployment_info(
             chain_id=node_network_id,
             version=contracts_version,
         )
@@ -322,14 +321,6 @@ def run_app(
                 fg='red',
             )
             sys.exit(1)
-
-        if environment_type == Environment.DEVELOPMENT:
-            services_deployment_data = get_contracts_deployed(
-                chain_id=node_network_id,
-                version=contracts_version,
-                services=True,
-            )
-            services_contracts = services_deployment_data['contracts']
 
         contracts = deployment_data['contracts']
         contract_addresses_known = True
@@ -408,7 +399,7 @@ def run_app(
         try:
             user_deposit = blockchain_service.user_deposit(
                 user_deposit_contract_address or to_canonical_address(
-                    services_contracts[CONTRACT_USER_DEPOSIT]['address'],
+                    contracts[CONTRACT_USER_DEPOSIT]['address'],
                 ),
             )
         except ContractVersionMismatch as e:
@@ -431,7 +422,7 @@ def run_app(
         try:
             service_registry = blockchain_service.service_registry(
                 service_registry_contract_address or to_canonical_address(
-                    services_contracts[CONTRACT_SERVICE_REGISTRY]['address'],
+                    contracts[CONTRACT_SERVICE_REGISTRY]['address'],
                 ),
             )
         except ContractVersionMismatch as e:
