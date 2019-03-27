@@ -2,6 +2,7 @@ import copy
 import json
 import os
 import warnings
+from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import gevent
@@ -15,6 +16,7 @@ from eth_utils import (
     to_checksum_address,
 )
 from gevent.lock import Semaphore
+from hexbytes import HexBytes
 from requests import ConnectTimeout
 from web3 import Web3
 from web3.contract import ContractFunction
@@ -257,10 +259,15 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
-def check_value_error_for_parity_estimate_gas(value_error: ValueError) -> bool:
+class ParityCallType(Enum):
+    ESTIMATE_GAS = 1
+    CALL = 2
+
+
+def check_value_error_for_parity(value_error: ValueError, call_type: ParityCallType) -> bool:
     """
-    For parity estimate gas does not return None if the transaction will fail
-    but instead throws a ValueError exception
+    For parity failing calls and functions do not return None if the transaction
+    will fail but instead throw a ValueError exception.
 
     This function checks the thrown exception to see if it's the correct one and
     if yes returns True, if not returns False
@@ -270,8 +277,15 @@ def check_value_error_for_parity_estimate_gas(value_error: ValueError) -> bool:
     except json.JSONDecodeError:
         return False
 
-    code_checks_out = error_data['code'] == -32016
-    message_checks_out = 'The execution failed due to an exception' in error_data['message']
+    if call_type == ParityCallType.ESTIMATE_GAS:
+        code_checks_out = error_data['code'] == -32016
+        message_checks_out = 'The execution failed due to an exception' in error_data['message']
+    elif call_type == ParityCallType.CALL:
+        code_checks_out = error_data['code'] == -32015
+        message_checks_out = 'VM execution error' in error_data['message']
+    else:
+        raise ValueError('Called check_value_error_for_parity() with illegal call type')
+
     if code_checks_out and message_checks_out:
         return True
 
@@ -298,13 +312,35 @@ def patched_web3_eth_estimate_gas(self, transaction, block_identifier=None):
             params,
         )
     except ValueError as e:
-        if check_value_error_for_parity_estimate_gas(e):
+        if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
             result = None
         else:
             # else the error is not denoting estimate gas failure and is something else
             raise e
 
     return result
+
+
+def patched_web3_eth_call(self, transaction, block_identifier=None):
+    if 'from' not in transaction and is_checksum_address(self.defaultAccount):
+        transaction = assoc(transaction, 'from', self.defaultAccount)
+
+    if block_identifier is None:
+        block_identifier = self.defaultBlock
+
+    try:
+        result = self.web3.manager.request_blocking(
+            "eth_call",
+            [transaction, block_identifier],
+        )
+    except ValueError as e:
+        if check_value_error_for_parity(e, ParityCallType.CALL):
+            result = ''
+        else:
+            # else the error is not denoting a revert, something is wrong
+            raise e
+
+    return HexBytes(result)
 
 
 def estimate_gas_for_function(
@@ -333,7 +369,7 @@ def estimate_gas_for_function(
     try:
         gas_estimate = web3.eth.estimateGas(estimate_transaction, block_identifier)
     except ValueError as e:
-        if check_value_error_for_parity_estimate_gas(e):
+        if check_value_error_for_parity(e, ParityCallType.ESTIMATE_GAS):
             gas_estimate = None
         else:
             # else the error is not denoting estimate gas failure and is something else
@@ -412,6 +448,12 @@ def monkey_patch_web3(web3, gas_price_strategy):
     # Temporary until next web3.py release (5.X.X)
     ContractFunction.estimateGas = patched_contractfunction_estimateGas
     Eth.estimateGas = patched_web3_eth_estimate_gas
+
+    # Patch call() to achieve same behaviour between parity and geth
+    # At the moment geth returns '' for reverted/thrown transactions.
+    # Parity raises a value error. Raiden assumes the return of an empty
+    # string so we have to make parity behave like geth
+    Eth.call = patched_web3_eth_call
 
 
 class JSONRPCClient:
