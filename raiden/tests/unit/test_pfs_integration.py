@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from eth_utils import encode_hex, to_checksum_address
+
+from eth_utils import encode_hex, is_checksum_address, to_checksum_address
 
 from raiden.exceptions import ServiceRequestFailed
 from raiden.network.pathfinding import get_pfs_info, get_pfs_iou, make_iou, update_iou
@@ -20,6 +21,11 @@ from raiden.transfer.state_change import ContractReceiveChannelNew, ContractRece
 from raiden.utils import privatekey_to_address, typing
 from raiden.utils.typing import Address, TokenNetworkAddress
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
+
+
+def assert_checksum_address_in_url(url):
+    message = 'URL does not contain properly encoded address.'
+    assert any(is_checksum_address(token) for token in url.split('/')), message
 
 
 def create_square_network_topology(
@@ -169,8 +175,8 @@ def get_best_routes_with_iou_request_mocked(
     iou_response.configure_mock(status_code=200)
     iou_response.json = Mock(return_value=iou_json_data or {})
 
-    with patch.object(requests, 'get', return_value=iou_response):
-        return get_best_routes(
+    with patch.object(requests, 'get', return_value=iou_response) as patched:
+        best_routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
             from_address=from_address,
@@ -180,6 +186,8 @@ def get_best_routes_with_iou_request_mocked(
             config=CONFIG,
             privkey=PRIVKEY,
         )
+        assert_checksum_address_in_url(patched.call_args[0][0])
+        return best_routes
 
 
 def test_get_pfs_info_success():
@@ -276,6 +284,8 @@ def test_routing_mocked_pfs_happy_path(
             amount=50,
         )
 
+    assert_checksum_address_in_url(patched.call_args[0][0])
+
     assert routes[0].node_address == address2
     assert routes[0].channel_identifier == channel_state2.identifier
     assert routes[1].node_address == address1
@@ -318,6 +328,8 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
             amount=50,
             iou_json_data=dict(last_iou=iou),
         )
+
+    assert_checksum_address_in_url(patched.call_args[0][0])
 
     assert routes[0].node_address == address2
     assert routes[0].channel_identifier == channel_state2.identifier
