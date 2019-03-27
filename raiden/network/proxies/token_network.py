@@ -140,9 +140,10 @@ class TokenNetwork:
             block_identifier: BlockSpecification,
             function_name: str,
             *args,
+            **kwargs,
     ):
         fn = getattr(self.proxy.contract.functions, function_name)
-        call_result = fn(*args).call(block_identifier=block_identifier)
+        call_result = fn(*args, **kwargs).call(block_identifier=block_identifier)
 
         if call_result == b'':
             raise RuntimeError(f"Call to '{function_name}' returned nothing")
@@ -233,9 +234,9 @@ class TokenNetwork:
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             'openChannel',
-            self.node_address,
-            partner,
-            settle_timeout,
+            participant1=self.node_address,
+            participant2=partner,
+            settle_timeout=settle_timeout,
         )
         if not gas_limit:
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
@@ -263,9 +264,9 @@ class TokenNetwork:
                 transaction_hash = self.proxy.transact(
                     'openChannel',
                     gas_limit,
-                    self.node_address,
-                    partner,
-                    settle_timeout,
+                    participant1=self.node_address,
+                    participant2=partner,
+                    settle_timeout=settle_timeout,
                 )
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
@@ -309,8 +310,8 @@ class TokenNetwork:
     ) -> ChannelID:
         if not channel_identifier:
             channel_identifier = self.proxy.contract.functions.getChannelIdentifier(
-                to_checksum_address(participant1),
-                to_checksum_address(participant2),
+                participant=to_checksum_address(participant1),
+                partner=to_checksum_address(participant2),
             ).call(block_identifier=block_identifier)
 
         if not isinstance(channel_identifier, T_ChannelID):
@@ -361,9 +362,9 @@ class TokenNetwork:
         data = self._call_and_check_result(
             block_identifier,
             'getChannelParticipantInfo',
-            channel_identifier,
-            to_checksum_address(participant),
-            to_checksum_address(partner),
+            channel_identifier=channel_identifier,
+            participant=to_checksum_address(participant),
+            partner=to_checksum_address(partner),
         )
         return ParticipantDetails(
             address=participant,
@@ -400,9 +401,9 @@ class TokenNetwork:
         channel_data = self._call_and_check_result(
             block_identifier,
             'getChannelInfo',
-            channel_identifier,
-            to_checksum_address(participant1),
-            to_checksum_address(participant2),
+            channel_identifier=channel_identifier,
+            participant1=to_checksum_address(participant1),
+            participant2=to_checksum_address(participant2),
         )
 
         return ChannelData(
@@ -778,10 +779,10 @@ class TokenNetwork:
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
                 'setTotalDeposit',
-                channel_identifier,
-                self.node_address,
-                total_deposit,
-                partner,
+                channel_identifier=channel_identifier,
+                participant=self.node_address,
+                total_deposit=total_deposit,
+                partner=partner,
             )
 
             if gas_limit:
@@ -792,10 +793,10 @@ class TokenNetwork:
                 transaction_hash = self.proxy.transact(
                     'setTotalDeposit',
                     gas_limit,
-                    channel_identifier,
-                    self.node_address,
-                    total_deposit,
-                    partner,
+                    channel_identifier=channel_identifier,
+                    participant=self.node_address,
+                    total_deposit=total_deposit,
+                    partner=partner,
                 )
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
@@ -975,12 +976,12 @@ class TokenNetwork:
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
                 'closeChannel',
-                channel_identifier,
-                partner,
-                balance_hash,
-                nonce,
-                additional_hash,
-                signature,
+                channel_identifier=channel_identifier,
+                partner=partner,
+                balance_hash=balance_hash,
+                nonce=nonce,
+                additional_hash=additional_hash,
+                signature=signature,
             )
 
             if gas_limit:
@@ -988,12 +989,12 @@ class TokenNetwork:
                 transaction_hash = self.proxy.transact(
                     'closeChannel',
                     safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CLOSE_CHANNEL),
-                    channel_identifier,
-                    partner,
-                    balance_hash,
-                    nonce,
-                    additional_hash,
-                    signature,
+                    channel_identifier=channel_identifier,
+                    partner=partner,
+                    balance_hash=balance_hash,
+                    nonce=nonce,
+                    additional_hash=additional_hash,
+                    signature=signature,
                 )
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
@@ -1147,14 +1148,14 @@ class TokenNetwork:
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             'updateNonClosingBalanceProof',
-            channel_identifier,
-            partner,
-            self.node_address,
-            balance_hash,
-            nonce,
-            additional_hash,
-            closing_signature,
-            non_closing_signature,
+            channel_identifier=channel_identifier,
+            closing_participant=partner,
+            non_closing_participant=self.node_address,
+            balance_hash=balance_hash,
+            nonce=nonce,
+            additional_hash=additional_hash,
+            closing_signature=closing_signature,
+            non_closing_signature=non_closing_signature,
         )
 
         if gas_limit:
@@ -1162,14 +1163,14 @@ class TokenNetwork:
             transaction_hash = self.proxy.transact(
                 'updateNonClosingBalanceProof',
                 safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF),
-                channel_identifier,
-                partner,
-                self.node_address,
-                balance_hash,
-                nonce,
-                additional_hash,
-                closing_signature,
-                non_closing_signature,
+                channel_identifier=channel_identifier,
+                closing_participant=partner,
+                non_closing_participant=self.node_address,
+                balance_hash=balance_hash,
+                nonce=nonce,
+                additional_hash=additional_hash,
+                closing_signature=closing_signature,
+                non_closing_signature=non_closing_signature,
             )
 
             self.client.poll(transaction_hash)
@@ -1261,10 +1262,10 @@ class TokenNetwork:
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             'unlock',
-            channel_identifier,
-            participant,
-            partner,
-            leaves_packed,
+            channel_identifier=channel_identifier,
+            participant=participant,
+            partner=partner,
+            merkle_tree_leaves=leaves_packed,
         )
 
         if gas_limit:
@@ -1274,10 +1275,10 @@ class TokenNetwork:
             transaction_hash = self.proxy.transact(
                 'unlock',
                 gas_limit,
-                channel_identifier,
-                participant,
-                partner,
-                leaves_packed,
+                channel_identifier=channel_identifier,
+                participant=participant,
+                partner=partner,
+                merkle_tree_leaves=leaves_packed,
             )
 
             self.client.poll(transaction_hash)
@@ -1364,27 +1365,27 @@ class TokenNetwork:
         # The second participant transferred + locked amount must be higher
         our_bp_is_larger = our_maximum > partner_maximum
         if our_bp_is_larger:
-            args = [
-                partner,
-                partner_transferred_amount,
-                partner_locked_amount,
-                partner_locksroot,
-                self.node_address,
-                transferred_amount,
-                locked_amount,
-                locksroot,
-            ]
+            kwargs = {
+                'participant1': partner,
+                'participant1_transferred_amount': partner_transferred_amount,
+                'participant1_locked_amount': partner_locked_amount,
+                'participant1_locksroot': partner_locksroot,
+                'participant2': self.node_address,
+                'participant2_transferred_amount': transferred_amount,
+                'participant2_locked_amount': locked_amount,
+                'participant2_locksroot': locksroot,
+            }
         else:
-            args = [
-                self.node_address,
-                transferred_amount,
-                locked_amount,
-                locksroot,
-                partner,
-                partner_transferred_amount,
-                partner_locked_amount,
-                partner_locksroot,
-            ]
+            kwargs = {
+                'participant1': self.node_address,
+                'participant1_transferred_amount': transferred_amount,
+                'participant1_locked_amount': locked_amount,
+                'participant1_locksroot': locksroot,
+                'participant2': partner,
+                'participant2_transferred_amount': partner_transferred_amount,
+                'participant2_locked_amount': partner_locked_amount,
+                'participant2_locksroot': partner_locksroot,
+            }
         try:
             self._settle_preconditions(
                 channel_identifier=channel_identifier,
@@ -1401,8 +1402,8 @@ class TokenNetwork:
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
                 'settleChannel',
-                channel_identifier,
-                *args,
+                channel_identifier=channel_identifier,
+                **kwargs,
             )
 
             if gas_limit:
@@ -1412,8 +1413,8 @@ class TokenNetwork:
                 transaction_hash = self.proxy.transact(
                     'settleChannel',
                     gas_limit,
-                    channel_identifier,
-                    *args,
+                    channel_identifier=channel_identifier,
+                    **kwargs,
                 )
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
