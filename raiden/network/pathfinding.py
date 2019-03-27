@@ -1,7 +1,7 @@
 import json
 import random
 import sys
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 import requests
@@ -28,7 +28,7 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
         return None
 
 
-def get_random_service(service_registry: ServiceRegistry) -> Optional[str]:
+def get_random_service(service_registry: ServiceRegistry) -> Tuple[Optional[str], Optional[str]]:
     latest_block_hash = service_registry.client.blockhash_from_blocknumber(
         'latest',
     )
@@ -44,17 +44,19 @@ def get_random_service(service_registry: ServiceRegistry) -> Optional[str]:
     # should exist for this query. Additionally at the moment there is no way for
     # services to be removed from the registry.
     assert address, 'address should exist for this index'
-    return service_registry.get_service_url(
+    url = service_registry.get_service_url(
         block_identifier=latest_block_hash,
         service_hex_address=address,
     )
+    return url, address
 
 
 def configure_pfs(
         pfs_address: Optional[str],
+        pfs_eth_address: Optional[str],
         routing_mode: RoutingMode,
         service_registry,
-) -> Optional[str]:
+) -> Tuple[Optional[str], Optional[str]]:
     """
     Take in the given pfs_address argument, the service registry and find out a
     pfs address to use.
@@ -75,7 +77,7 @@ def configure_pfs(
     assert pfs_address, msg
     if pfs_address == 'auto':
         assert service_registry, 'Should not get here without a service registry'
-        pfs_address = get_random_service(service_registry)
+        pfs_address, pfs_eth_address = get_random_service(service_registry)
         if pfs_address is None:
             click.secho(
                 "The service registry has no registered path finding service "
@@ -100,7 +102,7 @@ def configure_pfs(
         )
         log.info('Using PFS', pfs_info=pathfinding_service_info)
 
-    return pfs_address
+    return pfs_address, pfs_eth_address
 
 
 def get_pfs_iou(

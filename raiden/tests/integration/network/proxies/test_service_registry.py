@@ -43,7 +43,7 @@ def test_service_registry_random_pfs(
     assert not c1_service_proxy.get_service_address('latest', 9999)
 
     # Test that getting a random service from the proxy works
-    assert get_random_service(c1_service_proxy) in urls
+    assert get_random_service(c1_service_proxy) in zip(urls, addresses)
 
 
 def test_configure_pfs(
@@ -76,14 +76,16 @@ def test_configure_pfs(
     # With basic routing configure pfs should return None
     assert configure_pfs(
         pfs_address=None,
+        pfs_eth_address=None,
         routing_mode=RoutingMode.BASIC,
         service_registry=service_proxy,
     ) is None
 
     # Asking for auto address
     with patch.object(requests, 'get', return_value=response):
-        pfs_url = configure_pfs(
+        pfs_url, pfs_eth_address = configure_pfs(
             pfs_address='auto',
+            pfs_eth_address=None,
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
         )
@@ -91,23 +93,27 @@ def test_configure_pfs(
 
     # Configuring a given address
     given_address = 'http://ourgivenaddress'
+    given_eth_address = '0x22222222222222222222'
     with patch.object(requests, 'get', return_value=response):
-        pfs_url = configure_pfs(
+        pfs_url, pfs_eth_address = configure_pfs(
             pfs_address=given_address,
+            pfs_eth_address=given_eth_address,
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
         )
-    assert pfs_url == given_address
+    assert pfs_url == given_address and pfs_eth_address == given_eth_address
 
     # Bad address, should exit the program
     response = Mock()
     response.configure_mock(status_code=400)
     bad_address = 'http://badaddress'
+    pfs_eth_address = '0x22222222222222222222'
     with pytest.raises(SystemExit):
         with patch.object(requests, 'get', side_effect=requests.RequestException()):
             # Configuring a given address
-            pfs_url = configure_pfs(
+            pfs_url, pfs_eth_address = configure_pfs(
                 pfs_address=bad_address,
+                pfs_eth_address=pfs_eth_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_proxy,
             )
