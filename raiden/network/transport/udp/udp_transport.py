@@ -443,6 +443,14 @@ class UDPTransport(Runnable):
         """ This method exists only for interface compatibility with MatrixTransport """
         self.log.warning('UDP is unable to send global messages. Ignoring')
 
+    def enqueue_global_message(  # pylint: disable=unused-argument
+            self,
+            room: str,
+            message: Message,
+    ) -> None:
+        """ This method exists only for interface compatibility with MatrixTransport """
+        self.log.warning('UDP is unable to send global messages. Ignoring')
+
     def maybe_send(self, recipient: Address, message: Message):
         """ Send message to recipient if the transport is running. """
 
