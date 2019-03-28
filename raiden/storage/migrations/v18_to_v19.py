@@ -204,7 +204,7 @@ def _transform_snapshots_for_blockhash(storage: SQLiteStorage, cache: BlockHashC
 def upgrade_v18_to_v19(
         storage: SQLiteStorage,
         old_version: int,
-        curret_version: int,  # pylint: disable=unused-argument
+        current_version: int,  # pylint: disable=unused-argument
         web3: Web3,
         **kwargs,  # pylint: disable=unused-argument
 ) -> int:
