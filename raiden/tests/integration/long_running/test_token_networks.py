@@ -78,7 +78,6 @@ def saturated_count(connection_managers, registry_address, token_address):
 def test_participant_selection(
         raiden_network,
         token_addresses,
-        skip_if_parity,  # pylint: disable=unused-argument
 ):
     # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address

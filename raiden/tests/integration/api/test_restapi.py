@@ -1272,7 +1272,6 @@ def test_register_token(
         token_addresses,
         raiden_network,
         contract_manager,
-        skip_if_parity,
 ):
     app0 = raiden_network[0]
     new_token_address = deploy_contract_web3(
@@ -1339,7 +1338,6 @@ def test_get_token_network_for_token(
         token_addresses,
         raiden_network,
         contract_manager,
-        skip_if_parity,
 ):
     app0 = raiden_network[0]
 

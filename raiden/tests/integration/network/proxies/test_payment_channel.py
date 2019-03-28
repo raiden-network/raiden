@@ -12,14 +12,13 @@ from raiden.utils.signer import LocalSigner
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MIN
 
 
-def test_payment_channel_proxy_basics(  # pylint: disable=unused-argument
+def test_payment_channel_proxy_basics(
         token_network_proxy,
         private_keys,
         token_proxy,
         chain_id,
         web3,
         contract_manager,
-        skip_if_parity,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 
@@ -152,13 +151,12 @@ def test_payment_channel_proxy_basics(  # pylint: disable=unused-argument
     assert len(events) == 4  # ChannelOpened, ChannelNewDeposit, ChannelClosed, ChannelSettled
 
 
-def test_payment_channel_outdated_channel_close(  # pylint: disable=unused-argument
+def test_payment_channel_outdated_channel_close(
         token_network_proxy,
         private_keys,
         chain_id,
         web3,
         contract_manager,
-        skip_if_parity,
 ):
     token_network_address = to_canonical_address(token_network_proxy.proxy.contract.address)
 

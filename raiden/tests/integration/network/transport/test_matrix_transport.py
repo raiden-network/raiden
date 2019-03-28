@@ -393,7 +393,6 @@ def test_matrix_message_sync(matrix_transports):
 @pytest.mark.parametrize('number_of_tokens', [1])
 def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
         skip_if_not_matrix,
-        skip_if_parity,
         raiden_chain,
         token_addresses,
 ):

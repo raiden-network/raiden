@@ -409,7 +409,6 @@ def test_settled_lock(
         token_addresses,
         raiden_network,
         deposit,
-        skip_if_parity,  # pylint: disable=unused-argument
 ):
     """ Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
