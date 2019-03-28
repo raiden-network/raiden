@@ -51,7 +51,7 @@ def inspect_client_error(val_err: ValueError, eth_node: EthClient) -> ClientErro
 
     elif eth_node == EthClient.PARITY:
         if error['code'] == -32010:
-            if 'insufficient funds' in error['message']:
+            if 'Insufficient funds' in error['message']:
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
             elif 'another transaction with same nonce in the queue' in error['message']:
                 return ClientErrorInspectResult.TRANSACTION_UNDERPRICED
