@@ -86,6 +86,7 @@ nodes:
 ## - assert
 ## - assert_all
 ## - wait
+## - wait_blocks
 ## - join_network
 ## - leave_network
 ## - assert_events
@@ -184,6 +185,9 @@ scenario:
 #            - close_channel: {from: 1, to: 2}
 #      - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 2}
 #      - assert: {from: 0, to: 1, total_deposit: 100, balance: 5, state: "closed"}
+#
+#      ## Wait for 20 blocks
+#      - wait_blocks: 20
 #
 #      ## 4 requests where made from source node 0
 #      - assert_pfs_routes: {source: 0, request_count: 4}
