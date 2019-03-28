@@ -16,7 +16,6 @@ def test_service_registry_random_pfs(
         private_keys,
         web3,
         contract_manager,
-        skip_if_parity,  # pylint: disable=unused-argument
 ):
     addresses = [
         # to_normalized_address(privatekey_to_address(key))
@@ -52,7 +51,6 @@ def test_configure_pfs(
         private_keys,
         web3,
         contract_manager,
-        skip_if_parity,  # pylint: disable=unused-argument
 ):
     service_proxy, urls = deploy_service_registry_and_set_urls(
         private_keys=private_keys,
