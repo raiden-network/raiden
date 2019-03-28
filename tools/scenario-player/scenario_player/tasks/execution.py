@@ -72,3 +72,15 @@ class WaitTask(Task):
 
     def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         gevent.sleep(self._config)
+
+
+class WaitBlocksTask(Task):
+    _name = 'wait_blocks'
+
+    def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
+        web3 = self._runner.client.web3
+        start_block = web3.eth.blockNumber
+        end_block = start_block + int(self._config)
+
+        while web3.eth.blockNumber < end_block:
+            gevent.sleep(10)
