@@ -121,7 +121,7 @@ class ContractProxy:
                     address=hex_address,
                     nonce=self.jsonrpc_client._available_nonce,
                 )
-                if not txhash:
+                if txhash:
                     raise TransactionAlreadyPending(
                         'Transaction was submitted via parity but parity saw it as'
                         ' already pending. Could not find the transaction in the '
