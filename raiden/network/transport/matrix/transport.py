@@ -397,6 +397,20 @@ class MatrixTransport(Runnable):
         self.greenlets = [self._client.sync_thread]
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
+
+        # Drain the global queue for PFS/MS Messages.
+        # This step is done to prevent an infinite loop
+        # of popping a message from the queue and requeuing it again.
+
+        messages = []
+        while self._global_send_queue.qsize() > 0:
+            msg_data = self._global_send_queue.get_nowait()
+            messages.append(msg_data)
+
+        # Send the initial monitoring/PFS messages before other messages
+        for room, message in messages:
+            self.send_global(room, message)
+
         # (re)start any _RetryQueue which was initialized before start
         for retrier in self._address_to_retrier.values():
             if not retrier:
@@ -564,6 +578,9 @@ class MatrixTransport(Runnable):
 
         self._global_send_queue.put((room_name, message))
         self._global_send_event.set()
+
+    def enqueue_global_message(self, room: str, message: Message):
+        self._global_send_queue.put((room, message))
 
     def _global_send_worker(self):
 
