@@ -127,9 +127,9 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_1.settle_timeout() == channel_proxy_2.settle_timeout()
     assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
-    # update transfer
+    # update transfer -- we need to wait on +1 since we use the latest block on parity
     c1_chain.wait_until_block(
-        target_block_number=c1_client.block_number() + TEST_SETTLE_TIMEOUT_MIN,
+        target_block_number=c1_client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1,
     )
 
     c2_token_network_proxy.settle(
@@ -229,8 +229,8 @@ def test_payment_channel_outdated_channel_close(
     # check the settlement timeouts again
     assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
-    # update transfer
-    chain.wait_until_block(target_block_number=client.block_number() + TEST_SETTLE_TIMEOUT_MIN)
+    # update transfer -- we need to wait on +1 since we use the latest block on parity
+    chain.wait_until_block(target_block_number=client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1)
 
     token_network_proxy.settle(
         channel_identifier=channel_identifier,
