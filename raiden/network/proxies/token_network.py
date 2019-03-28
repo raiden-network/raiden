@@ -246,7 +246,7 @@ class TokenNetwork:
             )
             self._new_channel_postconditions(
                 partner=partner,
-                block='pending',
+                block=checking_block,
             )
 
             log.critical('new_netting_channel call will fail', **log_details)
