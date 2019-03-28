@@ -588,10 +588,7 @@ def test_api_close_insufficient_eth(
         api_server_test_instance,
         token_addresses,
         reveal_timeout,
-        skip_if_parity,
 ):
-    # FIXME parity version of this test fails:
-    # parity reports 'insufficient funds' correctly but raiden does not recognize it.
 
     # let's create a new channel
     partner_address = '0x61C808D82A3Ac53231750daDc13c777b59310bD9'
