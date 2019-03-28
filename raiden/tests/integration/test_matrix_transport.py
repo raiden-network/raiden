@@ -769,6 +769,19 @@ def test_pfs_global_messages(
         'get_channelstate_by_token_network_and_partner',
         lambda *a, **kw: channel_state,
     )
+
+    # Make sure that without pfs activated, no attempt to send a PFS update is made
+    raiden_service.config['services']['pathfinding_service_address'] = None
+    update_path_finding_service_from_balance_proof(
+        raiden=raiden_service,
+        chain_state=None,
+        new_balance_proof=balance_proof,
+    )
+    gevent.sleep(.5)
+    assert pfs_room.send_text.call_count == 0
+
+    # And now activate pfs and try to send a PFS update again
+    raiden_service.config['services']['pathfinding_service_address'] = 'an address'
     update_path_finding_service_from_balance_proof(
         raiden=raiden_service,
         chain_state=None,
