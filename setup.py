@@ -44,6 +44,7 @@ setup(
     author_email='contact@brainbot.li',
     url='https://github.com/raiden-network/raiden',
     packages=find_packages(),
+    package_data={"raiden": ["py.typed"]},
     include_package_data=True,
     license='MIT',
     zip_safe=False,
