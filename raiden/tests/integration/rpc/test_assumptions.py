@@ -138,11 +138,9 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
     assert gas_estimate, 'Gas estimation should not fail here'
     startgas = safe_gas_limit(gas_estimate)
 
-    # startgas = 50000
-
+    contract_proxy.transact('ret', startgas)
     with pytest.raises(TransactionAlreadyPending):
         second_proxy.transact('ret', startgas)
-        contract_proxy.transact('ret', startgas)
 
 
 def test_duplicated_transaction_different_gas_price_raises(deploy_client):
