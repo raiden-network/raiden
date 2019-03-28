@@ -295,6 +295,7 @@ def run_app(
     chain_config = {}
     contract_addresses_known = False
     contracts = dict()
+    services_contracts = dict()
 
     if environment_type == Environment.DEVELOPMENT:
         contracts_version = DEVELOPMENT_CONTRACT_VERSION
