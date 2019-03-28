@@ -219,30 +219,45 @@ def update_services_from_balance_proof(
     update_path_finding_service_from_balance_proof(raiden, chain_state, new_balance_proof)
 
 
-def update_path_finding_service_from_balance_proof(
-        raiden,
+def get_path_finding_service_update_message(
+        raiden: 'RaidenService',
         chain_state: 'ChainState',
-        new_balance_proof: BalanceProofSignedState,
+        balance_proof: BalanceProofSignedState,
 ):
     channel_state = get_channelstate_by_token_network_and_partner(
         chain_state=chain_state,
         token_network_id=TokenNetworkID(
-            new_balance_proof.canonical_identifier.token_network_address,
+            balance_proof.canonical_identifier.token_network_address,
         ),
-        partner_address=new_balance_proof.sender,
+        partner_address=balance_proof.sender,
     )
-    network_address = new_balance_proof.canonical_identifier.token_network_address
+    network_address = balance_proof.canonical_identifier.token_network_address
     error_msg = (
         'tried to send a balance proof in non-existant channel '
         f'token_network_address: {pex(network_address)} '
-        f'recipient: {pex(new_balance_proof.sender)}'
+        f'recipient: {pex(balance_proof.sender)}'
     )
     assert channel_state is not None, error_msg
-    assert channel_state.partner_state.balance_proof == new_balance_proof
+    assert channel_state.partner_state.balance_proof == balance_proof
 
     msg = UpdatePFS.from_channel_state(channel_state)
     msg.sign(raiden.signer)
-    raiden.transport.send_global(constants.PATH_FINDING_BROADCASTING_ROOM, msg)
+
+    return msg, constants.PATH_FINDING_BROADCASTING_ROOM
+
+
+def update_path_finding_service_from_balance_proof(
+        raiden: 'RaidenService',
+        chain_state: 'ChainState',
+        new_balance_proof: BalanceProofSignedState,
+):
+    msg, room = get_path_finding_service_update_message(
+        raiden=raiden,
+        chain_state=chain_state,
+        balance_proof=new_balance_proof,
+    )
+
+    raiden.transport.send_global(room, msg)
     log.debug(
         'Sent a PFS Update',
         message=msg,
@@ -250,23 +265,20 @@ def update_path_finding_service_from_balance_proof(
     )
 
 
-def update_monitoring_service_from_balance_proof(
+def get_monitoring_service_update_message(
         raiden: 'RaidenService',
         chain_state: 'ChainState',
-        new_balance_proof: BalanceProofSignedState,
+        balance_proof: BalanceProofSignedState,
 ):
-    if raiden.config['services']['monitoring_enabled'] is False:
-        return
-
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
-        canonical_identifier=new_balance_proof.canonical_identifier,
+        canonical_identifier=balance_proof.canonical_identifier,
     )
 
     msg = (
         f'Failed to update monitoring service due to inability to find '
-        f'channel: {new_balance_proof.channel_identifier} '
-        f'token_network_address: {pex(new_balance_proof.token_network_identifier)}.'
+        f'channel: {balance_proof.channel_identifier} '
+        f'token_network_address: {pex(balance_proof.token_network_identifier)}.'
     )
     assert channel_state, msg
 
@@ -296,18 +308,33 @@ def update_monitoring_service_from_balance_proof(
 
     log.info(
         'Received new balance proof, creating message for Monitoring Service.',
-        balance_proof=new_balance_proof,
+        balance_proof=balance_proof,
     )
 
     monitoring_message = RequestMonitoring.from_balance_proof_signed_state(
-        new_balance_proof,
+        balance_proof,
         MONITORING_REWARD,
     )
     monitoring_message.sign(raiden.signer)
-    raiden.transport.send_global(
-        constants.MONITORING_BROADCASTING_ROOM,
-        monitoring_message,
+
+    return monitoring_message, constants.MONITORING_BROADCASTING_ROOM
+
+
+def update_monitoring_service_from_balance_proof(
+        raiden: 'RaidenService',
+        chain_state: 'ChainState',
+        new_balance_proof: BalanceProofSignedState,
+):
+    if raiden.config['services']['monitoring_enabled'] is False:
+        return
+
+    monitoring_message, room = get_monitoring_service_update_message(
+        raiden=raiden,
+        chain_state=chain_state,
+        balance_proof=new_balance_proof,
     )
+
+    raiden.transport.send_global(room, monitoring_message)
 
 
 class RaidenService(Runnable):
@@ -954,8 +981,28 @@ class RaidenService(Runnable):
             State(),
             chain_state,
         )
+        messages = []
         for balance_proof in current_balance_proofs:
-            update_services_from_balance_proof(self, chain_state, balance_proof)
+            messages.append(get_path_finding_service_update_message(
+                raiden=self,
+                chain_state=chain_state,
+                balance_proof=balance_proof,
+            ))
+
+            if self.config['services']['monitoring_enabled'] is False:
+                continue
+
+            messages.append(get_monitoring_service_update_message(
+                raiden=self,
+                chain_state=chain_state,
+                balance_proof=balance_proof,
+            ))
+
+        for message, room_name in messages:
+            self.transport.enqueue_global_message(
+                room=room_name,
+                message=message,
+            )
 
     def _initialize_whitelists(self, chain_state: ChainState):
         """ Whitelist neighbors and mediated transfer targets on transport """
