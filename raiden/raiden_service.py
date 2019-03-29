@@ -37,7 +37,7 @@ from raiden.settings import MEDIATION_FEE, MONITORING_MIN_CAPACITY, MONITORING_R
 from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import channel, node, views
-from raiden.transfer.architecture import Event as RaidenEvent, State, StateChange
+from raiden.transfer.architecture import Event as RaidenEvent, StateChange
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
@@ -964,8 +964,14 @@ class RaidenService(Runnable):
         assert self.wal, msg
 
         current_balance_proofs = views.detect_balance_proof_change(
-            State(),
-            chain_state,
+            old_state=ChainState(
+                pseudo_random_generator=chain_state.pseudo_random_generator,
+                block_number=1,
+                block_hash=constants.EMPTY_HASH,
+                our_address=chain_state.our_address,
+                chain_id=chain_state.chain_id,
+            ),
+            current_state=chain_state,
         )
         for balance_proof in current_balance_proofs:
             update_services_from_balance_proof(self, chain_state, balance_proof)
