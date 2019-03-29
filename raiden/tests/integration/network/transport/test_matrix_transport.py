@@ -1197,3 +1197,38 @@ def test_reproduce_handle_invite_send_race_issue_3588(matrix_transports):
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
     assert ping_pong_message_success(transport0, transport1)
+
+
+@pytest.mark.parametrize('matrix_server_count', [1])
+@pytest.mark.parametrize('number_of_transports', [2])
+def test_send_to_device(matrix_transports):
+    transport0, transport1 = matrix_transports
+    received_messages0 = set()
+    received_messages1 = set()
+
+    message_handler0 = MessageHandler(received_messages0)
+    message_handler1 = MessageHandler(received_messages1)
+
+    raiden_service0 = MockRaidenService(message_handler0)
+    raiden_service1 = MockRaidenService(message_handler1)
+
+    transport0.start(raiden_service0, message_handler0, '')
+    transport1.start(raiden_service1, message_handler1, '')
+
+    transport0.start_health_check(raiden_service1.address)
+    transport1.start_health_check(raiden_service0.address)
+    message = Processed(message_identifier=1)
+    transport0._raiden_service.sign(message)
+    transport0.send_to_device(raiden_service1.address, message)
+
+    with Timeout(20):
+        all_messages_received = False
+        while not all_messages_received:
+            all_messages_received = (
+                len(received_messages0) == 1 and
+                len(received_messages1) == 1
+            )
+            gevent.sleep(.1)
+
+    assert len(received_messages1) == 1
+    assert len(received_messages0) == 1
