@@ -398,18 +398,7 @@ class MatrixTransport(Runnable):
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
-        # Drain the global queue for PFS/MS Messages.
-        # This step is done to prevent an infinite loop
-        # of popping a message from the queue and requeuing it again.
-
-        messages = []
-        while self._global_send_queue.qsize() > 0:
-            msg_data = self._global_send_queue.get_nowait()
-            messages.append(msg_data)
-
-        # Send the initial monitoring/PFS messages before other messages
-        for room, message in messages:
-            self.send_global(room, message)
+        super().start()  # start greenlet
 
         # (re)start any _RetryQueue which was initialized before start
         for retrier in self._address_to_retrier.values():
@@ -418,8 +407,6 @@ class MatrixTransport(Runnable):
                 retrier.start()
 
         self.log.debug('Matrix started', config=self._config)
-
-        super().start()  # start greenlet
 
     def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
@@ -565,26 +552,23 @@ class MatrixTransport(Runnable):
             room: name suffix as passed in config['global_rooms'] list
             message: Message instance to be serialized and sent
         """
-        room_name = make_room_alias(self.network_id, room)
-        if room_name not in self._global_rooms:
-            room = join_global_room(
-                self._client,
-                room_name,
-                self._config.get('available_servers') or (),
-            )
-            self._global_rooms[room_name] = room
-
-        assert self._global_rooms.get(room_name), f'Unknown global room: {room_name!r}'
-
-        self._global_send_queue.put((room_name, message))
-        self._global_send_event.set()
-
-    def enqueue_global_message(self, room: str, message: Message):
         self._global_send_queue.put((room, message))
+        self._global_send_event.set()
 
     def _global_send_worker(self):
 
         def _send_global(room_name, serialized_message):
+            room_name = make_room_alias(self.network_id, room_name)
+            if room_name not in self._global_rooms:
+                room = join_global_room(
+                    self._client,
+                    room_name,
+                    self._config.get('available_servers') or (),
+                )
+                self._global_rooms[room_name] = room
+
+            assert self._global_rooms.get(room_name), f'Unknown global room: {room_name!r}'
+
             room = self._global_rooms[room_name]
             self.log.debug(
                 'Send global',
