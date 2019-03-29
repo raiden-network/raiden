@@ -90,7 +90,6 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
     transport = MatrixTransport(app0.config['transport']['matrix'])
     transport.send_async = Mock()
-    transport.send_global = Mock()
 
     old_start_transport = transport.start
 
@@ -122,5 +121,3 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
         user_deposit=app0.raiden.chain.user_deposit(user_deposit_address),
     )
     app0_restart.start()
-
-    assert transport.send_global.call_count == 2
