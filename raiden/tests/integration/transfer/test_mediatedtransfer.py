@@ -5,7 +5,7 @@ import pytest
 
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, RevealSecret
+from raiden.messages import LockedTransfer, RevealSecret, SecretRequest
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -441,3 +441,90 @@ def test_mediated_transfer_with_allocated_fee(
             app1, deposit - (amount * 2) - fee, [],
             app2, deposit + (amount * 2) + fee, [],
         )
+
+
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
+        raiden_network,
+        number_of_nodes,
+        deposit,
+        token_addresses,
+        network_wait,
+):
+    """
+    Tests a mediator node consuming more fees than allocated.
+    Which means that the initiator will not reveal the secret
+    to the target.
+    """
+    app0, app1, app2 = raiden_network
+    token_address = token_addresses[0]
+    chain_state = views.state_from_app(app0)
+    payment_network_id = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        chain_state,
+        payment_network_id,
+        token_address,
+    )
+    fee = 5
+    amount = 10
+
+    app1_app2_channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(app1.raiden),
+        token_network_id=token_network_identifier,
+        partner_address=app2.raiden.address,
+    )
+
+    # Let app1 consume all of the allocated mediation fee
+    action_set_fee = ActionChannelSetFee(
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=CHAIN_ID_UNSPECIFIED,
+            token_network_address=token_network_identifier,
+            channel_identifier=app1_app2_channel_state.identifier,
+        ),
+        mediation_fee=fee * 2,
+    )
+
+    app1.raiden.handle_state_change(
+        state_change=action_set_fee,
+    )
+
+    secret = factories.make_secret(0)
+    secrethash = sha3(secret)
+
+    wait_message_handler = WaitForMessage()
+    app0.raiden.message_handler = wait_message_handler
+    secret_request_received = wait_message_handler.wait_for_message(
+        SecretRequest,
+        {'secrethash': secrethash},
+    )
+
+    app0.raiden.start_mediated_transfer_with_secret(
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=fee,
+        target=app2.raiden.address,
+        identifier=1,
+        secret=secret,
+    )
+
+    app0_app1_channel_state = views.get_channelstate_by_token_network_and_partner(
+        chain_state=views.state_from_raiden(app0.raiden),
+        token_network_id=token_network_identifier,
+        partner_address=app1.raiden.address,
+    )
+
+    msg = 'App0 should have the transfer in secrethashes_to_lockedlocks'
+    assert secrethash in app0_app1_channel_state.our_state.secrethashes_to_lockedlocks, msg
+
+    msg = 'App0 should have locked the amount + fee'
+    lock_amount = app0_app1_channel_state.our_state.secrethashes_to_lockedlocks[secrethash].amount
+    assert lock_amount == amount + fee, msg
+
+    secret_request_received.wait()
+
+    app0_chain_state = views.state_from_app(app0)
+    initiator_task = app0_chain_state.payment_mapping.secrethashes_to_task[secrethash]
+
+    msg = 'App0 should have never revealed the secret'
+    assert initiator_task.manager_state.initiator_transfers[secrethash].revealsecret is None
