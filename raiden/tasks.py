@@ -109,7 +109,7 @@ def check_rdn_deposits(raiden, user_deposit_proxy: UserDeposit):
                     f'WARNING\n'
                     f'Your account\'s RDN balance of {rdn_balance} is below the '
                     f'minimum threshold. Provided that you have either a monitoring '
-                    f'service or a path finding service activated, your node is not going'
+                    f'service or a path finding service activated, your node is not going '
                     f'to be able to pay those services which may lead to denial of service or '
                     f'loss of funds.'
                 ),

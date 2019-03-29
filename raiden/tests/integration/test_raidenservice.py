@@ -1,7 +1,16 @@
+from unittest.mock import Mock
+
 import pytest
 
+from raiden.app import App
+from raiden.message_handler import MessageHandler
+from raiden.network.transport import MatrixTransport
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.network import CHAIN
+from raiden.tests.utils.transfer import mediated_transfer
+from raiden.transfer import views
 from raiden.transfer.state_change import Block
 
 
@@ -35,3 +44,83 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     assert not search_for_item(app0_state_changes, Block, {
         'block_number': target_block_num,
     })
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+def test_regression_transport_global_queues_are_initialized_on_restart_for_services(
+        raiden_network,
+        number_of_nodes,
+        token_addresses,
+        network_wait,
+        user_deposit_address,
+        skip_if_not_matrix,  # pylint: disable=unused-argument
+):
+    """On restarts, Raiden will restore state and publish new balance proof
+    updates to the global matrix room. This test will check for regressions
+    in the order of which the global queues are initialized on startup.
+
+    Regression test for: https://github.com/raiden-network/raiden/issues/3656.
+    """
+    app0, app1 = raiden_network
+
+    app0.config['services']['monitoring_enabled'] = True
+
+    # Send a transfer to make sure the state has a balance proof
+    # to publish to the global matrix rooms
+    token_address = token_addresses[0]
+    chain_state = views.state_from_app(app0)
+    payment_network_id = app0.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        chain_state,
+        payment_network_id,
+        token_address,
+    )
+
+    amount = 10
+    mediated_transfer(
+        app1,
+        app0,
+        token_network_identifier,
+        amount,
+        timeout=network_wait * number_of_nodes,
+    )
+
+    app0.stop()
+
+    transport = MatrixTransport(app0.config['transport']['matrix'])
+    transport.send_async = Mock()
+    transport.send_global = Mock()
+
+    old_start_transport = transport.start
+
+    # Check that the queue is populated before the transport sends it and empties the queue
+    def start_transport(*args, **kwargs):
+        # Before restart the transport's global message queue should be initialized
+        # There should be 2 messages in the global queue.
+        # 1 for the PFS and the other for MS
+        assert len(transport._global_send_queue) == 2
+        # No other messages were sent at this point
+        assert not transport.send_async.called
+        old_start_transport(*args, **kwargs)
+
+    transport.start = start_transport
+
+    raiden_event_handler = RaidenEventHandler()
+    message_handler = MessageHandler()
+    app0_restart = App(
+        config=app0.config,
+        chain=app0.raiden.chain,
+        query_start_block=0,
+        default_registry=app0.raiden.default_registry,
+        default_secret_registry=app0.raiden.default_secret_registry,
+        default_service_registry=app0.raiden.default_service_registry,
+        transport=transport,
+        raiden_event_handler=raiden_event_handler,
+        message_handler=message_handler,
+        discovery=app0.raiden.discovery,
+        user_deposit=app0.raiden.chain.user_deposit(user_deposit_address),
+    )
+    app0_restart.start()
+
+    assert transport.send_global.call_count == 2
