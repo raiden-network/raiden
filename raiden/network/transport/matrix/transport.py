@@ -332,6 +332,8 @@ class MatrixTransport(Runnable):
         )
 
         self._client.add_invite_listener(self._handle_invite)
+        self._client.add_presence_listener(self._handle_presence_change)
+        self._client.add_listener(self._handle_to_device_message, event_type='to_device')
 
         self._health_lock = Semaphore()
         self._getroom_lock = Semaphore()
@@ -1384,3 +1386,155 @@ class MatrixTransport(Runnable):
                     f'node:{pex(self._raiden_service.address)} '
                     f'user_id:{self._user_id}'
                 )
+
+    def send_to_device(self, address: Address, message: Message) -> None:
+        """ Sends send-to-device events to a all known devices of a peer without retries. """
+        user_ids = self._address_to_userids[address]
+
+        data = {
+            user_id:
+                {'*': json.dumps(message.to_dict())}
+            for user_id in user_ids}
+
+        return self._client.api.send_to_device('m.to_device_message', data)
+
+    def _handle_to_device_message(self, event):
+        """
+        Handles to_device_messages sent to us.
+        - validates peer_whitelisted
+        - validates userid_signature
+        Treats a to_device_message like a message sent to a room were listening to.
+        """
+        sender_id = event['sender']
+
+        if (
+                event['type'] != 'm.to_device_message' or
+                self._stop_event.ready() or
+                sender_id == self._user_id
+        ):
+            # Ignore non-messages and  our own messages
+            return False
+
+        user = self._get_user(sender_id)
+        peer_address = validate_userid_signature(user)
+        if not peer_address:
+            self.log.debug(
+                'To_device_message from invalid user displayName signature',
+                peer_user=user.user_id,
+            )
+            return False
+
+        # don't proceed if user isn't whitelisted (yet)
+        if peer_address not in self._address_to_userids:
+            # user not start_health_check'ed
+            self.log.debug(
+                'toDevice Message from non-whitelisted peer - ignoring',
+                sender=user,
+                sender_address=pex(peer_address),
+            )
+            return False
+
+        is_peer_reachable = (
+            self._userid_to_presence.get(sender_id) in _PRESENCE_REACHABLE_STATES and
+            self._address_to_presence.get(peer_address) in _PRESENCE_REACHABLE_STATES
+        )
+        if not is_peer_reachable:
+            self.log.debug('Forcing presence update', peer_address=peer_address, user_id=sender_id)
+            self._update_address_presence(peer_address)
+
+        data = event['content']
+        if not isinstance(data, str):
+            self.log.warning(
+                'Received toDevice Message body not a string',
+                peer_user=user.user_id,
+                peer_address=to_checksum_address(peer_address),
+            )
+            return False
+
+        messages: List[Message] = list()
+
+        if data.startswith('0x'):
+            try:
+                message = message_from_bytes(decode_hex(data))
+                if not message:
+                    raise InvalidProtocolMessage
+            except (DecodeError, AssertionError) as ex:
+                self.log.warning(
+                    "Can't parse toDevice Message binary data",
+                    message_data=data,
+                    peer_address=pex(peer_address),
+                    _exc=ex,
+                )
+                return False
+            except InvalidProtocolMessage as ex:
+                self.log.warning(
+                    'Received toDevice Message binary data is not a valid message',
+                    message_data=data,
+                    peer_address=pex(peer_address),
+                    _exc=ex,
+                )
+                return False
+            else:
+                messages.append(message)
+
+        else:
+            for line in data.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    message_dict = json.loads(line)
+                    message = message_from_dict(message_dict)
+                except (UnicodeDecodeError, json.JSONDecodeError) as ex:
+                    self.log.warning(
+                        "Can't parse toDevice Message data JSON",
+                        message_data=line,
+                        peer_address=pex(peer_address),
+                        _exc=ex,
+                    )
+                    continue
+                except InvalidProtocolMessage as ex:
+                    self.log.warning(
+                        "toDevice Message data JSON are not a valid toDevice Message",
+                        message_data=line,
+                        peer_address=pex(peer_address),
+                        _exc=ex,
+                    )
+                    continue
+                if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
+                    self.log.warning(
+                        'Received invalid toDevice Message',
+                        message=message,
+                        peer_address=peer_address,
+                    )
+                    continue
+                elif message.sender != peer_address:
+                    self.log.warning(
+                        'toDevice Message not signed by sender!',
+                        message=message,
+                        signer=message.sender,
+                        peer_address=peer_address,
+                    )
+                    continue
+                messages.append(message)
+
+        if not messages:
+            return False
+
+        self.log.debug(
+            'Incoming toDevice Messages',
+            messages=messages,
+            sender=pex(peer_address),
+            sender_user=user,
+        )
+
+        for message in messages:
+            if isinstance(message, Delivered):
+                self._receive_delivered(message)
+            elif isinstance(message, Processed):
+                self._receive_message(message)
+            else:
+                assert isinstance(message, SignedRetrieableMessage)
+                self._receive_message(message)
+
+        return True
