@@ -1,11 +1,13 @@
 import json
 from functools import partial
 
+from eth_utils import to_canonical_address
 from gevent.pool import Pool
 
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.sqlite import SQLiteStorage, StateChangeRecord
+from raiden.utils.serialization import serialize_bytes
 from raiden.utils.typing import Any, Dict, Locksroot, Tuple
 
 RaidenService = 'RaidenService'
@@ -46,10 +48,10 @@ def _get_onchain_locksroots(
 
     our_locksroot, partner_locksroot = get_onchain_locksroots(
         raiden=raiden,
-        token_network_address=token_network['address'],
-        channel_identifier=channel['identifier'],
-        participant1=channel['our_state']['address'],
-        participant2=channel['partner_state']['address'],
+        token_network_address=to_canonical_address(token_network['address']),
+        channel_identifier=int(channel['identifier']),
+        participant1=to_canonical_address(channel['our_state']['address']),
+        participant2=to_canonical_address(channel['partner_state']['address']),
         block_identifier='latest',
     )
     return our_locksroot, partner_locksroot
@@ -98,15 +100,15 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
             new_channel_state = channel_state_data['channel_state']
             our_locksroot, partner_locksroot = get_onchain_locksroots(
                 raiden=raiden,
-                token_network_address=token_network_identifier,
-                channel_identifier=channel_identifier,
-                participant1=new_channel_state['our_state']['address'],
-                participant2=new_channel_state['partner_state']['address'],
+                token_network_address=to_canonical_address(token_network_identifier),
+                channel_identifier=int(channel_identifier),
+                participant1=to_canonical_address(new_channel_state['our_state']['address']),
+                participant2=to_canonical_address(new_channel_state['partner_state']['address']),
                 block_identifier='latest',
             )
 
-            data['our_onchain_locksroot'] = our_locksroot
-            data['partner_onchain_locksroot'] = partner_locksroot
+            data['our_onchain_locksroot'] = serialize_bytes(our_locksroot)
+            data['partner_onchain_locksroot'] = serialize_bytes(partner_locksroot)
 
             updated_state_changes.append((
                 json.dumps(data),
@@ -138,8 +140,8 @@ def _add_onchain_locksroot_to_snapshot(
                     token_network=token_network,
                     channel=channel,
                 )
-                channel['our_state']['onchain_locksroot'] = our_locksroot
-                channel['partner_state']['onchain_locksroot'] = partner_locksroot
+                channel['our_state']['onchain_locksroot'] = serialize_bytes(our_locksroot)
+                channel['partner_state']['onchain_locksroot'] = serialize_bytes(partner_locksroot)
 
     return json.dumps(snapshot, indent=4), snapshot_record.identifier
 
