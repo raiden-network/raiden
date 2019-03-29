@@ -4,26 +4,18 @@ import networkx
 from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
 
 from raiden.transfer.merkle_tree import LEAVES, compute_layers
-from raiden.utils.typing import Address, Callable, Dict, List, Tuple, TypeVar
-
-T = TypeVar('T')
-RT = TypeVar('RT')
-
-KT = TypeVar('KT')
-VT = TypeVar('VT')
-KRT = TypeVar('KRT')
-VRT = TypeVar('VRT')
+from raiden.utils import typing
 
 
-def identity(val: T) -> T:
+def identity(val):
     return val
 
 
 def map_dict(
-        key_func: Callable[[KT], KRT],
-        value_func: Callable[[VT], VRT],
-        dict_: Dict[KT, VT],
-) -> Dict[KRT, VRT]:
+        key_func: typing.Callable,
+        value_func: typing.Callable,
+        dict_: typing.Dict,
+) -> typing.Dict[str, typing.Any]:
     return {
         key_func(k): value_func(v)
         for k, v in dict_.items()
@@ -31,9 +23,9 @@ def map_dict(
 
 
 def map_list(
-        value_func: Callable[[VT], RT],
-        list_: List[VT],
-) -> List[RT]:
+        value_func: typing.Callable,
+        list_: typing.List,
+) -> typing.List[typing.Any]:
     return [
         value_func(v)
         for v in list_
@@ -65,8 +57,8 @@ def deserialize_networkx_graph(data: str) -> networkx.Graph:
 
 
 def serialize_participants_tuple(
-        participants: Tuple[Address, Address],
-) -> List[str]:
+        participants: typing.Tuple[typing.Address, typing.Address],
+) -> typing.List[str]:
     return [
         to_checksum_address(participants[0]),
         to_checksum_address(participants[1]),
@@ -74,8 +66,8 @@ def serialize_participants_tuple(
 
 
 def deserialize_participants_tuple(
-        data: List[str],
-) -> Tuple[Address, Address]:
+        data: typing.List[str],
+) -> typing.Tuple[typing.Address, typing.Address]:
     assert len(data) == 2
     return (
         to_canonical_address(data[0]),
@@ -83,11 +75,11 @@ def deserialize_participants_tuple(
     )
 
 
-def serialize_merkletree_layers(data) -> List[str]:
+def serialize_merkletree_layers(data) -> typing.List[str]:
     return map_list(serialize_bytes, data[LEAVES])
 
 
-def deserialize_merkletree_layers(data: List[str]):
+def deserialize_merkletree_layers(data: typing.List[str]):
     elements = map_list(deserialize_bytes, data)
     if len(elements) == 0:
         from raiden.transfer.state import make_empty_merkle_tree
@@ -96,7 +88,7 @@ def deserialize_merkletree_layers(data: List[str]):
     return compute_layers(elements)
 
 
-def serialize_queueid_to_queue(data: Dict):
+def serialize_queueid_to_queue(data: typing.Dict):
     # QueueId cannot be the key in a JSON dict, so make it a str
     return {
         str(queue_id): (queue_id, queue)
@@ -104,7 +96,7 @@ def serialize_queueid_to_queue(data: Dict):
     }
 
 
-def deserialize_queueid_to_queue(data: Dict):
+def deserialize_queueid_to_queue(data: typing.Dict):
     return {
         queue_id: queue
         for queue_id, queue in data.values()

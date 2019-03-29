@@ -177,7 +177,7 @@ def subdispatch_by_canonical_id(
             block_number=chain_state.block_number,
             block_hash=chain_state.block_hash,
         )
-        assert iteration.new_state, 'No token network state transition leads to None'
+        assert iteration.new_state, 'No token network state transition can lead to None'
 
         events = iteration.events
 

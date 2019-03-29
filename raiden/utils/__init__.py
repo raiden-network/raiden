@@ -46,6 +46,18 @@ class CanonicalIdentifier:
         self.token_network_address = token_network_address
         self.channel_identifier = channel_identifier
 
+    def __str__(self):
+        return (
+            '<CanonicalIdentifier '
+            'chain_id:{} '
+            'token_network_address:{} '
+            'channel_id:{}>'
+        ).format(
+            self.chain_identifier,
+            pex(self.token_network_address),
+            self.channel_identifier,
+        )
+
     def to_dict(self) -> typing.Dict[str, typing.Any]:
         return dict(
             chain_identifier=str(self.chain_identifier),

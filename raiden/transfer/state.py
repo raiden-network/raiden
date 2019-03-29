@@ -354,7 +354,7 @@ class ChainState(State):
             self.payment_mapping == other.payment_mapping and
             self.chain_id == other.chain_id and
             self.last_transport_authdata == other.last_transport_authdata and
-            tn_to_pn(self) == tn_to_pn(other)
+            our_tnpn == other_tnpn
         )
 
     def __ne__(self, other: Any) -> bool:
