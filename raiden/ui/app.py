@@ -132,6 +132,7 @@ def run_app(
         pathfinding_eth_address,
         pathfinding_max_paths,
         enable_monitoring,
+        resolver_endpoint,
         routing_mode,
         config=None,
         extra_config=None,
@@ -181,6 +182,7 @@ def run_app(
     config['web_ui'] = rpc and web_ui
     config['api_host'] = api_host
     config['api_port'] = api_port
+    config['resolver_endpoint'] = resolver_endpoint
     if mapped_socket:
         config['socket'] = mapped_socket.socket
         config['transport']['udp']['external_ip'] = mapped_socket.external_ip
