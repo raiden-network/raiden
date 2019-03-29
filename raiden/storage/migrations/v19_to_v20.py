@@ -19,7 +19,7 @@ def _find_channel_new_state_change(
         token_network_address: str,
         channel_identifier: str,
 ) -> StateChangeRecord:
-    return storage.get_latest_event_by_data_field({
+    return storage.get_latest_state_change_by_data_field({
         '_type': 'raiden.transfer.state_change.ContractReceiveChannelNew',
         'token_network_identifier': token_network_address,
         'channel_state.identifier': channel_identifier,
