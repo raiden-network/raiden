@@ -22,22 +22,6 @@ def setup_storage(db_path):
             log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
         )
 
-    # Add the v19 events to the DB
-    events_file = Path(__file__).parent / 'data/v19_events.json'
-    events_data = json.loads(events_file.read_text())
-    event_tuples = []
-    for event in events_data:
-        state_change_identifier = event[1]
-        event_data = json.dumps(event[2])
-        log_time = datetime.utcnow().isoformat(timespec='milliseconds')
-        event_tuples.append((
-            None,
-            state_change_identifier,
-            log_time,
-            event_data,
-        ))
-    storage.write_events(event_tuples)
-
     chain_state_data = Path(__file__).parent / 'data/v19_chainstate.json'
     chain_state = chain_state_data.read_text()
     cursor = storage.conn.cursor()
