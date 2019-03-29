@@ -337,9 +337,11 @@ class ChainState(State):
         )
 
     def __eq__(self, other: Any) -> bool:
-        # HACK to shorten the length of the line
-        from operator import attrgetter
-        tn_to_pn = attrgetter('tokennetworkaddresses_to_paymentnetworkaddresses')
+        if other is None:
+            return False
+
+        our_tnpn = self.tokennetworkaddresses_to_paymentnetworkaddresses
+        other_tnpn = other.tokennetworkaddresses_to_paymentnetworkaddresses
 
         return (
             isinstance(other, ChainState) and
