@@ -214,7 +214,7 @@ def update_services_from_balance_proof(
         raiden: 'RaidenService',
         chain_state: 'ChainState',
         new_balance_proof: BalanceProofSignedState,
-):
+) -> None:
     update_monitoring_service_from_balance_proof(raiden, chain_state, new_balance_proof)
     update_path_finding_service_from_balance_proof(raiden, chain_state, new_balance_proof)
 
@@ -223,7 +223,7 @@ def update_path_finding_service_from_balance_proof(
         raiden,
         chain_state: 'ChainState',
         new_balance_proof: BalanceProofSignedState,
-):
+) -> None:
     channel_state = get_channelstate_by_token_network_and_partner(
         chain_state=chain_state,
         token_network_id=TokenNetworkID(
@@ -233,7 +233,7 @@ def update_path_finding_service_from_balance_proof(
     )
     network_address = new_balance_proof.canonical_identifier.token_network_address
     error_msg = (
-        'tried to send a balance proof in non-existant channel '
+        f'tried to send a balance proof in non-existant channel '
         f'token_network_address: {pex(network_address)} '
         f'recipient: {pex(new_balance_proof.sender)}'
     )
@@ -254,7 +254,7 @@ def update_monitoring_service_from_balance_proof(
         raiden: 'RaidenService',
         chain_state: 'ChainState',
         new_balance_proof: BalanceProofSignedState,
-):
+) -> None:
     if raiden.config['services']['monitoring_enabled'] is False:
         return
 
