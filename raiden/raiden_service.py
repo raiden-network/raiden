@@ -123,6 +123,7 @@ def initiator_init(
         transfer_fee: FeeAmount,
         token_network_identifier: TokenNetworkID,
         target_address: TargetAddress,
+        transfer_secret_hash: SecretHash = None,
 ):
     assert transfer_secret != constants.EMPTY_HASH, f'Empty secret node:{raiden!r}'
 
@@ -135,6 +136,7 @@ def initiator_init(
         initiator=InitiatorAddress(raiden.address),
         target=target_address,
         secret=transfer_secret,
+        secret_hash=transfer_secret_hash,
     )
     previous_address = None
     routes = routing.get_best_routes(
@@ -201,8 +203,6 @@ class PaymentStatus(NamedTuple):
     amount: PaymentAmount
     token_network_identifier: TokenNetworkID
     payment_done: AsyncResult
-    secret: Optional[Secret] = None
-    secret_hash: Optional[SecretHash] = None
 
     def matches(
             self,
@@ -1080,7 +1080,7 @@ class RaidenService(Runnable):
             - Network speed, making the transfer sufficiently fast so it doesn't
               expire.
         """
-        if secret is None:
+        if secret is None and secret_hash is None:
             secret = random_secret()
 
         payment_status = self.start_mediated_transfer_with_secret(
@@ -1152,8 +1152,6 @@ class RaidenService(Runnable):
                 amount=amount,
                 token_network_identifier=token_network_identifier,
                 payment_done=AsyncResult(),
-                secret=secret,
-                secret_hash=secret_hash,
             )
             self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
@@ -1165,6 +1163,7 @@ class RaidenService(Runnable):
             transfer_secret=secret,
             token_network_identifier=token_network_identifier,
             target_address=target,
+            transfer_secret_hash=secret_hash,
         )
 
         # Dispatch the state change even if there are no routes to create the
