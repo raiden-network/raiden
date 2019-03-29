@@ -127,7 +127,9 @@ def test_payment_channel_proxy_basics(
     assert channel_proxy_1.settle_timeout() == channel_proxy_2.settle_timeout()
     assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
-    # update transfer -- we need to wait on +1 since we use the latest block on parity
+    # update transfer -- we need to wait on +1 since we use the latest block on parity for
+    # estimate gas and at the time the latest block is the settle timeout block.
+    # More info: https://github.com/raiden-network/raiden/pull/3699#discussion_r270477227
     c1_chain.wait_until_block(
         target_block_number=c1_client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1,
     )
@@ -229,7 +231,9 @@ def test_payment_channel_outdated_channel_close(
     # check the settlement timeouts again
     assert channel_proxy_1.settle_timeout() == TEST_SETTLE_TIMEOUT_MIN
 
-    # update transfer -- we need to wait on +1 since we use the latest block on parity
+    # update transfer -- we need to wait on +1 since we use the latest block on parity for
+    # estimate gas and at the time the latest block is the settle timeout block.
+    # More info: https://github.com/raiden-network/raiden/pull/3699#discussion_r270477227
     chain.wait_until_block(target_block_number=client.block_number() + TEST_SETTLE_TIMEOUT_MIN + 1)
 
     token_network_proxy.settle(
