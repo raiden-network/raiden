@@ -46,8 +46,8 @@ def test_upgrade_v19_to_v20(tmp_path):
 
     raiden_service_mock = MockRaidenService()
 
-    our_onchain_locksroot = serialize_bytes(make_32bytes())
-    partner_onchain_locksroot = serialize_bytes(make_32bytes())
+    our_onchain_locksroot = make_32bytes()
+    partner_onchain_locksroot = make_32bytes()
 
     details = Mock()
     details.our_details.address = make_address()
@@ -82,8 +82,8 @@ def test_upgrade_v19_to_v20(tmp_path):
     for state_changes_batch in batch_query:
         for state_change_record in state_changes_batch:
             data = json.loads(state_change_record.data)
-            assert data['our_onchain_locksroot'] is not None
-            assert data['partner_onchain_locksroot'] is not None
+            assert data['our_onchain_locksroot'] == serialize_bytes(our_onchain_locksroot)
+            assert data['partner_onchain_locksroot'] == serialize_bytes(partner_onchain_locksroot)
 
     batch_query = storage.batch_query_event_records(
         batch_size=500,
@@ -104,5 +104,5 @@ def test_upgrade_v19_to_v20(tmp_path):
             for channel in token_network['channelidentifiers_to_channels'].values():
                 channel_our_locksroot = channel['our_state']['onchain_locksroot']
                 channel_partner_locksroot = channel['partner_state']['onchain_locksroot']
-                assert channel_our_locksroot == our_onchain_locksroot
-                assert channel_partner_locksroot == partner_onchain_locksroot
+                assert channel_our_locksroot == serialize_bytes(our_onchain_locksroot)
+                assert channel_partner_locksroot == serialize_bytes(partner_onchain_locksroot)
