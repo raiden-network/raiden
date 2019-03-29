@@ -7,6 +7,12 @@ TARGET_VERSION = 21
 
 
 def _transform_snapshot(raw_snapshot: str) -> str:
+    """
+    The transformation step does the following:
+    1. Add `allocated_fee` to all initiator tasks
+    2. Adds `mediation_fee` to all channels
+    3. Populates tokennetworkaddresses_to_paymentnetworkaddresses in chain state
+    """
     snapshot = json.loads(raw_snapshot)
 
     for task in snapshot['payment_mapping']['secrethashes_to_task'].values():
@@ -38,6 +44,10 @@ def _update_snapshots(storage: SQLiteStorage):
 
 
 def _update_statechanges(storage: SQLiteStorage):
+    """
+    Update each ContractReceiveChannelNew's channel_state member
+    by setting the `mediation_fee` that was added to the NettingChannelState
+    """
     batch_size = 50
     batch_query = storage.batch_query_state_changes(
         batch_size=batch_size,
