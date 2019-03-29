@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
 
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
@@ -388,12 +388,14 @@ class EventPaymentSentSuccess(Event):
             identifier: PaymentID,
             amount: PaymentAmount,
             target: TargetAddress,
+            secret: Secret = None,
     ) -> None:
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
         self.identifier = identifier
         self.amount = amount
         self.target = target
+        self.secret = secret
 
     def __repr__(self):
         return (
@@ -401,7 +403,7 @@ class EventPaymentSentSuccess(Event):
             'EventPaymentSentSuccess payment_network_identifier:{} '
             'token_network_identifier:{} '
             'identifier:{} amount:{} '
-            'target:{}'
+            'target:{} secret:{} '
             '>'
         ).format(
             pex(self.payment_network_identifier),
@@ -409,6 +411,7 @@ class EventPaymentSentSuccess(Event):
             self.identifier,
             self.amount,
             pex(self.target),
+            pex(self.secret),
         )
 
     def __eq__(self, other: Any) -> bool:
@@ -418,7 +421,8 @@ class EventPaymentSentSuccess(Event):
             self.amount == other.amount and
             self.target == other.target and
             self.payment_network_identifier == other.payment_network_identifier and
-            self.token_network_identifier == other.token_network_identifier
+            self.token_network_identifier == other.token_network_identifier and
+            self.secret == other.secret
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -432,17 +436,25 @@ class EventPaymentSentSuccess(Event):
             'amount': str(self.amount),
             'target': to_checksum_address(self.target),
         }
+        if self.secret is not None:
+            result['secret'] = to_hex(self.secret)
 
         return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'EventPaymentSentSuccess':
+        if 'secret' in data:
+            secret = to_bytes(hexstr=data['secret'])
+        else:
+            secret = None
+
         restored = cls(
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             identifier=PaymentID(int(data['identifier'])),
             amount=PaymentAmount(int(data['amount'])),
             target=to_canonical_address(data['target']),
+            secret=secret,
         )
 
         return restored

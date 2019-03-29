@@ -440,6 +440,20 @@ def options(func):
                 default=False,
             ),
         ),
+        option_group(
+            'Hash Resolver options',
+            option(
+                '--resolver-endpoint',
+                help=(
+                    'URL of the resolver server that is used to resolve '
+                    'a payment hash to a secret. '
+                    'Accepts a protocol prefix (http:// or https://) with optional port'
+                ),
+                default=None,
+                type=str,
+                show_default=True,
+            ),
+        ),
     ]
 
     for option_ in reversed(options_):

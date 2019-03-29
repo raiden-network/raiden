@@ -86,6 +86,7 @@ from raiden.utils import (
     create_default_identifier,
     optional_address_to_string,
     pex,
+    sha3,
     split_endpoint,
     typing,
 )
@@ -1138,6 +1139,8 @@ class RestAPI:
                 status_code=HTTPStatus.CONFLICT,
             )
 
+        secret = payment_status.payment_done.get()
+
         payment = {
             'initiator_address': self.raiden_api.address,
             'registry_address': registry_address,
@@ -1145,8 +1148,8 @@ class RestAPI:
             'target_address': target_address,
             'amount': amount,
             'identifier': identifier,
-            'secret': to_hex(payment_status.secret),
-            'secret_hash': to_hex(payment_status.secret_hash),
+            'secret': to_hex(secret),
+            'secret_hash': to_hex(sha3(secret)),
         }
         result = self.payment_schema.dump(payment)
         return api_response(result=result.data)

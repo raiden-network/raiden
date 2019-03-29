@@ -8,6 +8,7 @@ from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork
+from raiden.resolver.client import reveal_secret_with_resolver
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
@@ -200,6 +201,9 @@ class RaidenEventHandler:
             raiden: 'RaidenService',
             secret_request_event: SendSecretRequest,
     ):
+        if reveal_secret_with_resolver(raiden, secret_request_event):
+            return
+
         secret_request_message = message_from_sendevent(secret_request_event)
         raiden.sign(secret_request_message)
         raiden.transport.send_async(
@@ -243,7 +247,7 @@ class RaidenEventHandler:
         # With the introduction of the lock we should always get
         # here only once per identifier so payment_status should always exist
         # see: https://github.com/raiden-network/raiden/pull/3191
-        payment_status.payment_done.set(True)
+        payment_status.payment_done.set(payment_sent_success_event.secret)
 
     @staticmethod
     def handle_paymentsentfailed(
