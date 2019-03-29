@@ -9,7 +9,7 @@ import gevent
 import structlog
 from eth_utils import decode_hex, is_binary_address, to_checksum_address, to_normalized_address
 from gevent.lock import Semaphore
-from gevent.queue import Queue
+from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixRequestError
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
@@ -193,6 +193,11 @@ class _RetryQueue(Runnable):
         if self.transport._stop_event.ready() or not self.transport.greenlet:
             self.log.error("Can't retry - stopped")
             return
+
+        if self.transport._prioritize_global_messages:
+            # During startup global messages have to be sent first
+            self.transport._global_send_queue.join()
+
         self.log.debug('Retrying message', receiver=to_normalized_address(self.receiver))
         status = self.transport._address_to_presence.get(self.receiver)
         if status not in _PRESENCE_REACHABLE_STATES:
@@ -321,12 +326,14 @@ class MatrixTransport(Runnable):
         self._address_to_retrier: Dict[Address, _RetryQueue] = dict()
 
         self._global_rooms: Dict[str, Optional[Room]] = dict()
-        self._global_send_queue: Queue[Tuple[str, Message]] = Queue()
+        self._global_send_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
         self._stop_event = gevent.event.Event()
         self._stop_event.set()
 
         self._global_send_event = gevent.event.Event()
+
+        self._prioritize_global_messages = True
 
         self._client.add_invite_listener(self._handle_invite)
         self._client.add_presence_listener(self._handle_presence_change)
@@ -398,8 +405,6 @@ class MatrixTransport(Runnable):
 
         self._client.set_presence_state(UserPresence.ONLINE.value)
 
-        super().start()  # start greenlet
-
         # (re)start any _RetryQueue which was initialized before start
         for retrier in self._address_to_retrier.values():
             if not retrier:
@@ -407,6 +412,7 @@ class MatrixTransport(Runnable):
                 retrier.start()
 
         self.log.debug('Matrix started', config=self._config)
+        super().start()  # start greenlet
 
     def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
@@ -580,17 +586,20 @@ class MatrixTransport(Runnable):
 
         while not self._stop_event.ready():
             self._global_send_event.clear()
-            messages: List[Tuple[str, Message]] = list()
+            messages: Dict[str, List[Message]] = defaultdict(list)
             while self._global_send_queue.qsize() > 0:
-                messages.append(self._global_send_queue.get())
-            if messages:
-                for room_name in set(room_name for room_name, _ in messages):
-                    message_text = '\n'.join(
-                        json.dumps(message.to_dict())
-                        for target_room, message in messages
-                        if target_room == room_name
-                    )
-                    _send_global(room_name, message_text)
+                room_name, message = self._global_send_queue.get()
+                messages[room_name].append(message)
+            for room_name, messages_for_room in messages.items():
+                message_text = '\n'.join(
+                    json.dumps(message.to_dict())
+                    for message in messages_for_room
+                )
+                _send_global(room_name, message_text)
+                self._global_send_queue.task_done()
+
+            # Stop prioritizing global messages after initial queue has been emptied
+            self._prioritize_global_messages = False
             self._global_send_event.wait(self._config['retry_interval'])
 
     @property
