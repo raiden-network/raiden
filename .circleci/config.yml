@@ -761,9 +761,7 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-udp-production-3.7
-            # Issue https://github.com/raiden-network/raiden/issues/3565
-            # tracks fixing and unskipping this
-            # - smoketest-udp-development-3.7
+            - smoketest-udp-development-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -777,9 +775,7 @@ workflows:
           parallelism: 25
           requires:
             - smoketest-matrix-production-3.7
-            # Issue https://github.com/raiden-network/raiden/issues/3565
-            # tracks fixing and unskipping this
-            # - smoketest-matrix-development-3.7
+            - smoketest-matrix-development-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -1003,9 +999,7 @@ workflows:
           parallelism: 25
           requires:
           - smoketest-udp-production-3.7
-          # Issue https://github.com/raiden-network/raiden/issues/3565
-          # tracks fixing and unskipping this
-          # - smoketest-udp-development-3.7
+          - smoketest-udp-development-3.7
           - test-unit-3.7
           - test-fuzz-3.7
 
@@ -1019,9 +1013,7 @@ workflows:
           parallelism: 25
           requires:
           - smoketest-matrix-production-3.7
-          # Issue https://github.com/raiden-network/raiden/issues/3565
-          # tracks fixing and unskipping this
-          # - smoketest-matrix-development-3.7
+          - smoketest-matrix-development-3.7
           - test-unit-3.7
           - test-fuzz-3.7
 
