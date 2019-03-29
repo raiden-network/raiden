@@ -165,6 +165,29 @@ class GMatrixHttpApi(MatrixHttpApi):
         else:
             raise last_ex
 
+    def send_to_device(self, event_type, messages, txn_id=None):
+        started = time.time()
+        last_ex = None
+        for delay in self.retry_delay():
+            try:
+                with self._semaphore:
+                    return super().send_to_device(event_type, messages, txn_id=None)
+            except (MatrixRequestError, MatrixHttpLibError) as ex:
+                # from MatrixRequestError, retry only 5xx http errors
+                if isinstance(ex, MatrixRequestError) and ex.code < 500:
+                    raise
+                if time.time() > started + self.retry_timeout:
+                    raise
+                last_ex = ex
+                log.debug(
+                    'Got http _send exception, waiting then retrying',
+                    wait_for=delay,
+                    _exception=ex,
+                )
+                gevent.sleep(delay)
+        else:
+            raise last_ex
+
 
 class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
@@ -412,6 +435,11 @@ class GMatrixClient(MatrixClient):
         for presence_update in response['presence']['events']:
             for callback in self.presence_listeners.values():
                 self.call(callback, presence_update)
+
+        for to_device_message in response['to_device']['events']:
+            for listener in self.listeners:
+                if listener['event_type'] == 'to_device':
+                    self.call(listener['callback'], to_device_message)
 
         for room_id, invite_room in response['rooms']['invite'].items():
             for listener in self.invite_listeners:
