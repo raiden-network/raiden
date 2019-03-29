@@ -90,6 +90,7 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
     transport = MatrixTransport(app0.config['transport']['matrix'])
     transport.send_async = Mock()
+    transport._send_raw = Mock()
 
     old_start_transport = transport.start
 
@@ -100,7 +101,8 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
         # 1 for the PFS and the other for MS
         assert len(transport._global_send_queue) == 2
         # No other messages were sent at this point
-        assert not transport.send_async.called
+        transport.send_async.assert_not_called()
+        transport._send_raw.assert_not_called()
         old_start_transport(*args, **kwargs)
 
     transport.start = start_transport
