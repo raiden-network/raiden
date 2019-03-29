@@ -43,8 +43,11 @@ def assert_state_changes_are_transformed(storage: SQLiteStorage) -> None:
     for state_changes_batch in batch_query:
         for state_change in state_changes_batch:
             data = json.loads(state_change.data)
-            assert 'mediation_fee' in data['channel_state']
-            assert data['channel_state']['mediation_fee'] == '0'
+            msg = 'mediation_fee should have been added to channel_state'
+            assert 'mediation_fee' in data['channel_state'], msg
+
+            msg = 'mediation_fee should have an initial value of 0'
+            assert data['channel_state']['mediation_fee'] == '0', msg
 
     batch_query = storage.batch_query_state_changes(
         batch_size=50,
@@ -57,8 +60,11 @@ def assert_state_changes_are_transformed(storage: SQLiteStorage) -> None:
         for state_change in state_changes_batch:
             data = json.loads(state_change.data)
 
-            assert 'allocated_fee' in data['transfer']
-            assert data['transfer']['allocated_fee'] == '0'
+            msg = 'allocated_fee should been added to ActionInitInitiator'
+            assert 'allocated_fee' in data['transfer'], msg
+
+            msg = 'allocated_fee should have an initial value of 0'
+            assert data['transfer']['allocated_fee'] == '0', msg
 
 
 def assert_snapshots_are_transformed(storage: SQLiteStorage) -> None:
@@ -71,13 +77,23 @@ def assert_snapshots_are_transformed(storage: SQLiteStorage) -> None:
     tn_to_pn = snapshot['tokennetworkaddresses_to_paymentnetworkaddresses']
     for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
         for token_network in payment_network['tokennetworks']:
-            assert payment_network['address'] in tn_to_pn
-            assert tn_to_pn[payment_network['address']] == token_network['token_address']
+            msg = (
+                f'{payment_network["address"]} should exist in the chain state\'s '
+                f'tokennetworkaddresses_to_paymentnetworkaddresses member',
+            )
+            assert payment_network['address'] in tn_to_pn, msg
+
+            msg = (
+                f'Address of Payment network: {payment_network["address"]} does not equal '
+                f'the address in the token network: {token_network["token_address"]}',
+            )
+            assert tn_to_pn[payment_network['address']] == token_network['token_address'], msg
 
     for task in snapshot['payment_mapping']['secrethashes_to_task'].values():
         if 'raiden.transfer.state.InitiatorTask' in task['_type']:
             for initiator in task['manager_state']['initiator_transfers'].values():
-                assert initiator['transfer_description']['allocated_fee'] == '0'
+                msg = 'allocated_fee was not initialized in the initiator transfer description'
+                assert initiator['transfer_description']['allocated_fee'] == '0', msg
 
     for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
         for token_network in payment_network['tokennetworks']:
