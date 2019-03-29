@@ -966,7 +966,7 @@ class RaidenService(Runnable):
         current_balance_proofs = views.detect_balance_proof_change(
             old_state=ChainState(
                 pseudo_random_generator=chain_state.pseudo_random_generator,
-                block_number=1,
+                block_number=BlockNumber(1),
                 block_hash=constants.EMPTY_HASH,
                 our_address=chain_state.our_address,
                 chain_id=chain_state.chain_id,

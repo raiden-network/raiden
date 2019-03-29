@@ -186,12 +186,12 @@ def test_mediated_transfer_with_entire_deposit(
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_mediated_transfer_messages_out_of_order(
+def test_mediated_transfer_messages_out_of_order(  # pylint: disable=unused-argument
         raiden_network,
         deposit,
         token_addresses,
         network_wait,
-        skip_if_not_matrix,  # pylint: disable=unused-argument
+        skip_if_not_matrix,
 ):
     """Raiden must properly handle repeated locked transfer messages."""
     app0, app1, app2 = raiden_network
@@ -332,7 +332,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [4])
-def test_mediated_transfer_with_allocated_fee(
+def test_mediated_transfer_with_allocated_fee(  # pylint: disable=unused-argument
         raiden_network,
         number_of_nodes,
         deposit,
@@ -392,7 +392,7 @@ def test_mediated_transfer_with_allocated_fee(
         partner_address=app2.raiden.address,
     )
 
-    # Let app2 consume all of the allocated mediation fee
+    # Let app1 consume all of the allocated mediation fee
     action_set_fee = ActionChannelSetFee(
         canonical_identifier=CanonicalIdentifier(
             chain_identifier=CHAIN_ID_UNSPECIFIED,
@@ -426,7 +426,7 @@ def test_mediated_transfer_with_allocated_fee(
 
     # app2's poor soul gets no mediation fees on the second transfer.
     # Only the first transfer had a fee which was paid to app2 though
-    # app2 doesn't set it's fee but it would still receive the complete
+    # app2 doesn't set its fee but it would still receive the complete
     # locked amount = transfer amount + fee.
     # However app1 received from app0 two transfers
     # which it sent to app2. The first transfer
@@ -443,6 +443,7 @@ def test_mediated_transfer_with_allocated_fee(
         )
 
 
+# pylint: disable=unused-argument
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
