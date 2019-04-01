@@ -608,7 +608,6 @@ def test_get_and_update_iou():
     assert 'signature' in new_iou_2
 
 
-@pytest.mark.skip(reason="TODO: vulnerable to evil PFS")
 def test_get_pfs_iou():
     token_network_address = TokenNetworkAddress(bytes([1] * 20))
     privkey = bytes([2] * 32)
@@ -636,15 +635,7 @@ def test_get_pfs_iou():
         get_mock.return_value.json.return_value = {'last_iou': iou}
         assert get_pfs_iou('http://example.com', token_network_address) == iou
 
-        # Previous IOU with increased amount by evil PFS
-        with pytest.raises(ServiceRequestFailed):
-            iou['amount'] += 10
-            get_pfs_iou('http://example.com', token_network_address)
 
-
-@pytest.mark.skip(
-    reason="TODO: make_iou is declared to take sender as bytes, but actually expects hex",
-)
 def test_make_iou():
     privkey = bytes([2] * 32)
     sender = Address(privatekey_to_address(privkey))
@@ -655,7 +646,11 @@ def test_make_iou():
         'pathfinding_max_fee': 100,
     }
 
-    make_iou(config, our_address=sender, privkey=privkey, block_number=10)
+    iou = make_iou(config, our_address=sender, privkey=privkey, block_number=10)
+
+    assert iou['sender'] == to_checksum_address(sender)
+    assert iou['receiver'] == encode_hex(receiver)
+    assert 0 < iou['amount'] <= config['pathfinding_max_fee']
 
 
 def test_update_iou():
@@ -685,3 +680,9 @@ def test_update_iou():
     assert new_iou['sender'] == iou['sender']
     assert new_iou['receiver'] == iou['receiver']
     assert new_iou['signature'] != iou['signature']
+
+    # Previous IOU with increased amount by evil PFS
+    tampered_iou = new_iou.copy()
+    tampered_iou['amount'] += 10
+    with pytest.raises(ServiceRequestFailed):
+        update_iou(iou=tampered_iou, privkey=privkey, added_amount=added_amount)
