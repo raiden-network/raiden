@@ -26,7 +26,6 @@ eth-hash==0.2.0
 eth-keyfile==0.5.1
 eth-keys==0.2.1
 eth-rlp==0.1.2
-eth-tester==0.1.0b32
 eth-typing==2.1.0
 eth-utils==1.4.1
 filelock==3.0.8
@@ -72,7 +71,6 @@ prometheus-client==0.3.1
 psutil==5.4.7
 ptyprocess==0.6.0
 py-ecc==1.6.0
-py-evm==0.2.0a42
 py-geth==2.1.0
 py-solc==3.2.0
 py==1.6.0
