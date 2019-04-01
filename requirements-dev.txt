@@ -18,8 +18,6 @@ pexpect==4.6.0
 
 hypothesis==3.88.3
 
-eth-tester==0.1.0b32
-
 # Debugging
 pdbpp==0.9.2
 colour==0.1.5
