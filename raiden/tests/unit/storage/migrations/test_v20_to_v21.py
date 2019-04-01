@@ -73,7 +73,6 @@ def assert_snapshots_are_transformed(storage: SQLiteStorage) -> None:
 
     snapshot = json.loads(snapshot)
 
-    # tokennetworkaddresses_to_paymentnetworkaddresses =
     tn_to_pn = snapshot['tokennetworkaddresses_to_paymentnetworkaddresses']
     for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
         for token_network in payment_network['tokennetworks']:

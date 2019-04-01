@@ -281,9 +281,12 @@ def get_lock_amount_after_fees(
         lock: HashTimeLockState,
         payee_channel: NettingChannelState,
 ) -> PaymentWithFeeAmount:
-    """Return the lock.amount after fees are taken."""
-    # fees are taken only for the outgoing channel, which are the ones with
-    # collateral locked from this node.
+    """
+    Return the lock.amount after fees are taken.
+
+    Fees are taken only for the outgoing channel, which is the one with
+    collateral locked from this node.
+    """
     return lock.amount - payee_channel.mediation_fee
 
 
