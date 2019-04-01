@@ -149,6 +149,18 @@ def update_iou(
         expiration_block: typing.Optional[typing.BlockNumber] = None,
 ) -> typing.Dict[str, typing.Any]:
 
+    expected_signature = sign_one_to_n_iou(
+        privatekey=to_hex(privkey),
+        expiration=iou['expiration_block'],
+        sender=iou['sender'],
+        receiver=iou['receiver'],
+        amount=iou['amount'],
+    )
+    if iou.get('signature') != expected_signature:
+        raise ServiceRequestFailed(
+            'Last iou as given by the pathfinding service is invalid (signature does not match)',
+        )
+
     iou['amount'] += added_amount
     if expiration_block:
         iou['expiration_block'] = expiration_block
