@@ -50,6 +50,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import (
     BalanceProofSignedState,
+    BalanceProofUnsignedState,
     ChainState,
     InitiatorTask,
     PaymentNetworkState,
@@ -61,7 +62,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.transfer.views import get_channelstate_by_token_network_and_partner
+from raiden.transfer.views import BalanceProofType, ChangedBalanceProof
 from raiden.utils import create_default_identifier, lpex, pex, random_secret, sha3, to_rdn
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
@@ -213,32 +214,41 @@ class PaymentStatus(NamedTuple):
 def update_services_from_balance_proof(
         raiden: 'RaidenService',
         chain_state: 'ChainState',
-        new_balance_proof: BalanceProofSignedState,
+        changed_balance_proof: ChangedBalanceProof,
 ) -> None:
-    update_monitoring_service_from_balance_proof(raiden, chain_state, new_balance_proof)
-    update_path_finding_service_from_balance_proof(raiden, chain_state, new_balance_proof)
+    update_path_finding_service_from_balance_proof(
+        raiden=raiden,
+        chain_state=chain_state,
+        new_balance_proof=changed_balance_proof.balance_proof,
+    )
+    if changed_balance_proof.bp_type == BalanceProofType.PARTNER:
+        assert isinstance(changed_balance_proof.balance_proof, BalanceProofSignedState)
+        update_monitoring_service_from_balance_proof(
+            raiden=raiden,
+            chain_state=chain_state,
+            new_balance_proof=changed_balance_proof.balance_proof,
+        )
 
 
 def update_path_finding_service_from_balance_proof(
-        raiden,
+        raiden: 'RaidenService',
         chain_state: 'ChainState',
-        new_balance_proof: BalanceProofSignedState,
+        new_balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState],
 ) -> None:
-    channel_state = get_channelstate_by_token_network_and_partner(
+    channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state,
-        token_network_id=TokenNetworkID(
-            new_balance_proof.canonical_identifier.token_network_address,
-        ),
-        partner_address=new_balance_proof.sender,
+        canonical_identifier=new_balance_proof.canonical_identifier,
     )
     network_address = new_balance_proof.canonical_identifier.token_network_address
     error_msg = (
         f'tried to send a balance proof in non-existant channel '
         f'token_network_address: {pex(network_address)} '
-        f'recipient: {pex(new_balance_proof.sender)}'
     )
     assert channel_state is not None, error_msg
-    assert channel_state.partner_state.balance_proof == new_balance_proof
+    if isinstance(new_balance_proof, BalanceProofSignedState):
+        assert channel_state.partner_state.balance_proof == new_balance_proof
+    else:  # BalanceProofUnsignedState
+        assert channel_state.our_state.balance_proof == new_balance_proof
 
     msg = UpdatePFS.from_channel_state(channel_state)
     msg.sign(raiden.signer)
@@ -681,8 +691,8 @@ class RaidenService(Runnable):
         raiden_event_list = self.wal.log_and_dispatch(state_change)
 
         current_state = views.state_from_raiden(self)
-        for balance_proof in views.detect_balance_proof_change(old_state, current_state):
-            update_services_from_balance_proof(self, current_state, balance_proof)
+        for changed_balance_proof in views.detect_balance_proof_change(old_state, current_state):
+            update_services_from_balance_proof(self, current_state, changed_balance_proof)
 
         log.debug(
             'Raiden events',

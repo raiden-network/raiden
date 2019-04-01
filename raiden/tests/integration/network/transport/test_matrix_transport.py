@@ -764,8 +764,8 @@ def test_pfs_global_messages(
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof
     monkeypatch.setattr(
-        raiden.raiden_service,
-        'get_channelstate_by_token_network_and_partner',
+        raiden.transfer.views,
+        'get_channelstate_by_canonical_identifier',
         lambda *a, **kw: channel_state,
     )
     update_path_finding_service_from_balance_proof(

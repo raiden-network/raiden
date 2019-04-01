@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from enum import Enum
+
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, State
 from raiden.transfer.state import (
@@ -9,6 +12,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_UNUSABLE,
     NODE_NETWORK_UNKNOWN,
     BalanceProofSignedState,
+    BalanceProofUnsignedState,
     ChainState,
     InitiatorTask,
     MediatorTask,
@@ -33,10 +37,11 @@ from raiden.utils.typing import (
     Set,
     TokenAddress,
     TokenNetworkID,
+    Union,
 )
 
 # TODO: Either enforce immutability or make a copy of the values returned by
-# the view functions
+#     the view functions
 
 
 def all_neighbour_nodes(chain_state: ChainState) -> Set[Address]:
@@ -535,10 +540,21 @@ def filter_channels_by_status(
     return states
 
 
+class BalanceProofType(Enum):
+    OUR = 1
+    PARTNER = 2
+
+
+@dataclass
+class ChangedBalanceProof:
+    balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState]
+    bp_type: BalanceProofType
+
+
 def detect_balance_proof_change(
         old_state: State,
         current_state: State,
-) -> Iterator[BalanceProofSignedState]:
+) -> Iterator[ChangedBalanceProof]:
     """ Compare two states for any received balance_proofs that are not in `old_state`. """
     if old_state == current_state:
         return
@@ -581,12 +597,33 @@ def detect_balance_proof_change(
                 if current_channel == old_channel:
                     continue
 
-                elif (
+                else:
+                    partner_state_updated = (
                         current_channel.partner_state.balance_proof is not None and
                         (
                             old_channel is None or
                             old_channel.partner_state.balance_proof !=
                             current_channel.partner_state.balance_proof
                         )
-                ):
-                    yield current_channel.partner_state.balance_proof
+                    )
+
+                    if partner_state_updated:
+                        yield ChangedBalanceProof(
+                            balance_proof=current_channel.partner_state.balance_proof,
+                            bp_type=BalanceProofType.PARTNER,
+                        )
+
+                    our_state_updated = (
+                        current_channel.our_state.balance_proof is not None and
+                        (
+                            old_channel is None or
+                            old_channel.our_state.balance_proof !=
+                            current_channel.our_state.balance_proof
+                        )
+                    )
+
+                    if our_state_updated:
+                        yield ChangedBalanceProof(
+                            balance_proof=current_channel.our_state.balance_proof,
+                            bp_type=BalanceProofType.OUR,
+                        )
