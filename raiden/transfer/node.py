@@ -471,8 +471,8 @@ def maybe_add_tokennetwork(
         ids_to_tokens[token_network_identifier] = token_network_state
         addresses_to_ids[token_address] = token_network_identifier
 
-        ids_to_ids = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
-        ids_to_ids[token_network_identifier] = payment_network_identifier
+        mapping = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
+        mapping[token_network_identifier] = payment_network_identifier
 
 
 def sanity_check(iteration: TransitionResult[ChainState]) -> None:
@@ -862,9 +862,9 @@ def handle_state_change(
     elif type(state_change) == ActionChannelSetFee:
         assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
         iteration = subdispatch_by_canonical_id(
-            chain_state,
-            state_change.canonical_identifier,
-            state_change,
+            chain_state=chain_state,
+            canonical_identifier=state_change.canonical_identifier,
+            state_change=state_change,
         )
     elif type(state_change) == ActionChangeNodeNetworkState:
         assert isinstance(state_change, ActionChangeNodeNetworkState), MYPY_ANNOTATION
