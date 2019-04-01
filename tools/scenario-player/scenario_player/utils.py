@@ -25,9 +25,10 @@ from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_p
 from raiden.accounts import Account
 from raiden.network.rpc.client import JSONRPCClient, check_address_has_code
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
 from raiden.utils.typing import TransactionHash
 from raiden_contracts.constants import CONTRACT_CUSTOM_TOKEN, CONTRACT_USER_DEPOSIT
-from raiden_contracts.contract_manager import get_contracts_deployed
+from raiden_contracts.contract_manager import get_contracts_deployment_info
 from scenario_player.exceptions import ScenarioError, ScenarioTxError
 
 RECLAIM_MIN_BALANCE = 10 ** 12  # 1 µEth (a.k.a. Twei, szabo)
@@ -268,7 +269,10 @@ def get_udc_and_token(runner) -> Tuple[Optional[ContractProxy], Optional[Contrac
 
     udc_address = udc_config.get('address')
     if udc_address is None:
-        contracts = get_contracts_deployed(chain_id=runner.chain_id, services=True)
+        contracts = get_contracts_deployment_info(
+            chain_id=runner.chain_id,
+            version=DEVELOPMENT_CONTRACT_VERSION,
+        )
         udc_address = contracts['contracts'][CONTRACT_USER_DEPOSIT]['address']
     udc_abi = runner.contract_manager.get_contract_abi(CONTRACT_USER_DEPOSIT)
     udc_proxy = runner.client.new_contract_proxy(udc_abi, udc_address)
