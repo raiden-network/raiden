@@ -3,7 +3,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-
 from eth_utils import encode_hex, is_checksum_address, to_checksum_address
 
 from raiden.exceptions import ServiceRequestFailed
@@ -311,11 +310,15 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
     address1, address2, _ = addresses
     channel_state1, channel_state2 = channel_states
 
-    iou = dict(
-        amount=13,
-        expiration_block=110,
-        sender=to_checksum_address(our_address),
-        receiver=to_checksum_address(factories.UNIT_TRANSFER_TARGET),
+    iou = make_iou(
+        config=dict(
+            pathfinding_eth_address=to_checksum_address(factories.UNIT_TRANSFER_TARGET),
+            pathfinding_iou_timeout=100,
+            pathfinding_max_fee=13,
+        ),
+        our_address=factories.UNIT_TRANSFER_SENDER,
+        privkey=PRIVKEY,
+        block_number=10,
     )
     last_iou = copy(iou)
 
@@ -586,19 +589,23 @@ def test_get_and_update_iou():
 
     response = Mock()
     response.configure_mock(status_code=200)
-    last_iou = dict(
-        amount=7,
-        sender=to_checksum_address(factories.UNIT_TRANSFER_INITIATOR),
-        receiver=to_checksum_address(factories.UNIT_TRANSFER_TARGET),
-        expiration_block=42,
+    last_iou = make_iou(
+        config=dict(
+            pathfinding_eth_address=to_checksum_address(factories.UNIT_TRANSFER_TARGET),
+            pathfinding_iou_timeout=500,
+            pathfinding_max_fee=100,
+        ),
+        our_address=factories.UNIT_TRANSFER_INITIATOR,
+        privkey=PRIVKEY,
+        block_number=10,
     )
     response.json = Mock(return_value=dict(last_iou=last_iou))
     with patch.object(requests, 'get', return_value=response):
         iou = get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
     assert iou == last_iou
 
-    new_iou_1 = update_iou(iou, PRIVKEY, added_amount=10)
-    assert new_iou_1['amount'] == 17
+    new_iou_1 = update_iou(iou.copy(), PRIVKEY, added_amount=10)
+    assert new_iou_1['amount'] == last_iou['amount'] + 10
     assert all(new_iou_1[k] == iou[k] for k in ('expiration_block', 'sender', 'receiver'))
     assert 'signature' in new_iou_1
 
