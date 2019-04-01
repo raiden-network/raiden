@@ -10,7 +10,11 @@ from raiden.transfer.state import (
     TokenNetworkState,
     TransactionExecutionStatus,
 )
-from raiden.transfer.views import detect_balance_proof_change
+from raiden.transfer.views import (
+    BalanceProofType,
+    ChangedBalanceProof,
+    detect_balance_proof_change,
+)
 
 
 def test_detect_balance_proof_change():
@@ -47,19 +51,23 @@ def test_detect_balance_proof_change():
     assert len(diff()) == 0
 
     channel = NettingChannelState(
-        factories.make_canonical_identifier(),
-        b'a',
-        1,
-        1,
-        2,
-        None,
-        None,
-        TransactionExecutionStatus(result='success'),
+        canonical_identifier=factories.make_canonical_identifier(),
+        token_address=b'a',
+        payment_network_identifier=1,
+        reveal_timeout=1,
+        settle_timeout=2,
+        our_state=None,
+        partner_state=None,
+        open_transaction=TransactionExecutionStatus(result='success'),
     )
     channel_copy = deepcopy(channel)
     token_network.channelidentifiers_to_channels['a'] = channel
-    partner_state = NettingChannelEndState(b'a', 0)
+    our_state = NettingChannelEndState(address=b'b', balance=1)
+    our_state_copy = deepcopy(our_state)
+    partner_state = NettingChannelEndState(address=b'a', balance=0)
     partner_state_copy = deepcopy(partner_state)
+
+    channel.our_state = our_state
     channel.partner_state = partner_state
     assert len(diff()) == 0
 
@@ -83,4 +91,22 @@ def test_detect_balance_proof_change():
     channel_copy.partner_state.balance_proof = object()
     assert len(diff()) == 1
 
-    assert diff() == [balance_proof]
+    assert diff() == [ChangedBalanceProof(
+        balance_proof=balance_proof,
+        bp_type=BalanceProofType.PARTNER,
+    )]
+
+    # check our_state BP changes
+    channel_copy.partner_state.balance_proof = balance_proof
+    assert len(diff()) == 0
+
+    channel.our_state.balance_proof = object()
+    channel_copy.our_state = our_state_copy
+    assert len(diff()) == 1
+    assert diff() == [ChangedBalanceProof(
+        balance_proof=channel.our_state.balance_proof,
+        bp_type=BalanceProofType.OUR,
+    )]
+
+    channel_copy.our_state.balance_proof = channel.our_state.balance_proof
+    assert len(diff()) == 0
