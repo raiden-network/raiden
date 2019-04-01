@@ -13,7 +13,7 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
     MonitoringServiceEvent,
 )
-from raiden_contracts.contract_manager import ContractManager, get_contracts_deployed
+from raiden_contracts.contract_manager import ContractManager, get_contracts_deployment_info
 from scenario_player.exceptions import ScenarioAssertionError, ScenarioError
 from scenario_player.runner import ScenarioRunner
 from scenario_player.tasks.channels import STORAGE_KEY_CHANNEL_INFO
@@ -119,7 +119,7 @@ class AssertBlockchainEventsTask(Task):
     def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         # get the correct contract address
         # this has to be done in `_run`, otherwise `_runner` is not initialized yet
-        contract_data = get_contracts_deployed(
+        contract_data = get_contracts_deployment_info(
             chain_id=self._runner.chain_id,
             version=DEVELOPMENT_CONTRACT_VERSION,
         )
@@ -175,13 +175,12 @@ class AssertMSClaimTask(Task):
         self.contract_name = CONTRACT_MONITORING_SERVICE
 
         # get the MS contract address
-        service_contract_data = get_contracts_deployed(
+        contract_data = get_contracts_deployment_info(
             chain_id=self._runner.chain_id,
             version=DEVELOPMENT_CONTRACT_VERSION,
-            services=True,
         )
         try:
-            contract_info = service_contract_data['contracts'][self.contract_name]
+            contract_info = contract_data['contracts'][self.contract_name]
             self.contract_address = contract_info['address']
         except KeyError:
             raise ScenarioError(f'Unknown contract name: {self.contract_name}')
