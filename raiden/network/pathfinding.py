@@ -34,7 +34,7 @@ def get_random_service(service_registry: ServiceRegistry) -> Tuple[Optional[str]
     )
     count = service_registry.service_count(block_identifier=latest_block_hash)
     if count == 0:
-        return None
+        return None, None
     index = random.SystemRandom().randint(0, count - 1)
     address = service_registry.get_service_address(
         block_identifier=latest_block_hash,
@@ -71,7 +71,7 @@ def configure_pfs(
         msg = 'Not using path finding services, falling back to basic routing.'
         log.info(msg)
         click.secho(msg)
-        return None
+        return None, None
 
     msg = "With PFS routing mode we shouldn't get to configure pfs with pfs_address being None"
     assert pfs_address, msg
