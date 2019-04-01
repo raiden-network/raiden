@@ -74,12 +74,13 @@ def test_configure_pfs(
     response.json = Mock(return_value=json_data)
 
     # With basic routing configure pfs should return None
-    assert configure_pfs(
+    pfs_address, pfs_eth_address = configure_pfs(
         pfs_address=None,
         pfs_eth_address=None,
         routing_mode=RoutingMode.BASIC,
         service_registry=service_proxy,
-    ) is None
+    )
+    assert pfs_address is None and pfs_eth_address is None
 
     # Asking for auto address
     with patch.object(requests, 'get', return_value=response):
