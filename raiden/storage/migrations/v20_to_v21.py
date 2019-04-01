@@ -18,8 +18,12 @@ def _transform_snapshot(raw_snapshot: str) -> str:
     for task in snapshot['payment_mapping']['secrethashes_to_task'].values():
         if 'raiden.transfer.state.InitiatorTask' in task['_type']:
             for initiator in task['manager_state']['initiator_transfers'].values():
+                msg = 'v20 initiator task should not contain allocated_fee'
+                assert 'allocated_fee' not in initiator['transfer_description'], msg
                 initiator['transfer_description']['allocated_fee'] = '0'
 
+    msg = 'v20 snapshots should not contain tokennetworkaddresses_to_paymentnetworkaddresses'
+    assert 'tokennetworkaddresses_to_paymentnetworkaddresses' not in snapshot, msg
     ids_to_addrs = dict()
     for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
         for token_network in payment_network['tokennetworks']:
@@ -29,6 +33,8 @@ def _transform_snapshot(raw_snapshot: str) -> str:
     for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
         for token_network in payment_network['tokennetworks']:
             for channel_state in token_network['channelidentifiers_to_channels'].values():
+                msg = 'v20 channel state should not contain mediation_fee'
+                assert 'mediation_fee' not in channel_state, msg
                 channel_state['mediation_fee'] = '0'
 
     return json.dumps(snapshot)
@@ -60,6 +66,8 @@ def _update_statechanges(storage: SQLiteStorage):
         updated_state_changes = list()
         for state_change in state_changes_batch:
             data = json.loads(state_change.data)
+            msg = 'v20 ContractReceiveChannelNew channel state should not contain medation_fee'
+            assert 'mediation_fee' not in data['channel_state'], msg
             data['channel_state']['mediation_fee'] = '0'
 
             updated_state_changes.append((
@@ -80,6 +88,8 @@ def _update_statechanges(storage: SQLiteStorage):
         updated_state_changes = list()
         for state_change in state_changes_batch:
             data = json.loads(state_change.data)
+            msg = 'v20 ActionInitInitiator transfer should not contain allocated_fee'
+            assert 'allocated_fee' not in data['transfer'], msg
             data['transfer']['allocated_fee'] = '0'
 
             updated_state_changes.append((
