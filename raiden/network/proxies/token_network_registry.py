@@ -129,8 +129,6 @@ class TokenNetworkRegistry:
             token_address: TokenAddress,
             additional_arguments: Dict,
     ) -> Address:
-        # given_block_identifier is not really used in this function yet as there
-        # are no preconditions to check with the given block
         if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token')
 
@@ -144,12 +142,12 @@ class TokenNetworkRegistry:
         checking_block = self.client.get_checking_block()
         error_prefix = 'Call to createERC20TokenNetwork will fail'
 
-        arguments = {'_token_address': token_address}
-        arguments.update(additional_arguments)
+        kwarguments = {'_token_address': token_address}
+        kwarguments.update(additional_arguments)
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             'createERC20TokenNetwork',
-            **arguments,
+            **kwarguments,
         )
 
         if gas_limit:
@@ -157,7 +155,7 @@ class TokenNetworkRegistry:
             transaction_hash = self.proxy.transact(
                 'createERC20TokenNetwork',
                 safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK),
-                **arguments,
+                **kwarguments,
             )
 
             self.client.poll(transaction_hash)
