@@ -425,7 +425,7 @@ def run_app(
 
         if CONTRACT_SERVICE_REGISTRY not in services_contracts:
             click.secho(
-                'Requested PFS routing mode but no service registry is provided. Please'
+                'Requested PFS routing mode but no service registry is provided. Please '
                 'provide it via the --service-registry-contract-address argument',
                 fg='red',
             )
