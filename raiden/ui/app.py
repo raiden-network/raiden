@@ -264,10 +264,6 @@ def run_app(
     environment_type = setup_environment(config, environment_type)
 
     chain_config = {}
-    contract_addresses_known = False
-    contracts = dict()
-    services_contracts = dict()
-
     contracts, contract_addresses_known = setup_contracts_or_exit(config, node_network_id)
 
     rpc_client = JSONRPCClient(
@@ -331,9 +327,9 @@ def run_app(
 
     # If services contracts are provided via the CLI use them instead
     if user_deposit_contract_address is not None:
-        services_contracts[CONTRACT_USER_DEPOSIT] = user_deposit_contract_address
+        contracts[CONTRACT_USER_DEPOSIT] = user_deposit_contract_address
     if service_registry_contract_address is not None:
-        services_contracts[CONTRACT_SERVICE_REGISTRY] = (
+        contracts[CONTRACT_SERVICE_REGISTRY] = (
             service_registry_contract_address
         )
 
@@ -341,7 +337,7 @@ def run_app(
     should_use_user_deposit = (
         environment_type == Environment.DEVELOPMENT and
         ID_TO_NETWORKNAME.get(node_network_id) != 'smoketest' and
-        CONTRACT_USER_DEPOSIT in services_contracts
+        CONTRACT_USER_DEPOSIT in contracts
     )
     if should_use_user_deposit:
         try:
@@ -367,7 +363,7 @@ def run_app(
             )
             sys.exit(1)
 
-        if CONTRACT_SERVICE_REGISTRY not in services_contracts:
+        if CONTRACT_SERVICE_REGISTRY not in contracts:
             click.secho(
                 'Requested PFS routing mode but no service registry is provided. Please '
                 'provide it via the --service-registry-contract-address argument',
