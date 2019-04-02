@@ -10,7 +10,7 @@ import structlog
 from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, RoutingMode
-from raiden.exceptions import ServiceRequestFailed
+from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.utils import typing
 from raiden.utils.typing import BlockSpecification
@@ -227,6 +227,50 @@ def create_current_iou(
         return update_iou(iou=latest_iou, privkey=privkey, added_amount=added_amount)
 
 
+def post_pfs_paths(url, token_network_address, payload):
+    try:
+        response = requests.post(
+            f'{url}/api/v1/{to_checksum_address(token_network_address)}/paths',
+            data=payload,
+            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
+        )
+    except requests.RequestException as e:
+        raise ServiceRequestFailed(
+            f'Could not connect to Pathfinding Service ({e})',
+            dict(parameters=payload, exc_info=True),
+        )
+
+    if response.status_code != 200:
+        info = {'http_error': response.status_code}
+        try:
+            response_json = response.json()
+        except ValueError:
+            raise ServiceRequestFailed(
+                'Pathfinding service returned error code (malformed json in response)',
+                info,
+            )
+        else:
+            error = info['error'] = response_json.get('errors')
+            error_code = info['error_code'] = response_json.get('error_code', 0)
+            if PfsError.is_iou_rejected(error_code):
+                raise ServiceRequestIOURejected(error, error_code)
+
+        raise ServiceRequestFailed('Pathfinding service returned error code', info)
+
+    try:
+        return response.json()['result']
+    except KeyError:
+        raise ServiceRequestFailed(
+            "Answer from pathfinding service not understood ('result' field missing)",
+            dict(response=response.json()),
+        )
+    except ValueError:
+        raise ServiceRequestFailed(
+            'Pathfinding service returned invalid json',
+            dict(response_text=response.text, exc_info=True),
+        )
+
+
 def query_paths(
         service_config: typing.Dict[str, typing.Any],
         our_address: typing.Address,
@@ -249,37 +293,8 @@ def query_paths(
         block_number=current_block_number,
     ))
 
-    try:
-        response = requests.post(
-            f'{url}/api/v1/{to_checksum_address(token_network_address)}/paths',
-            data=payload,
-            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
-        )
-    except requests.RequestException:
-        raise ServiceRequestFailed(
-            'Could not connect to Pathfinding Service',
-            dict(parameters=payload, exc_info=True),
-        )
-
-    if response.status_code != 200:
-        info = {'error_code': response.status_code}
-        try:
-            error = response.json().get('errors')
-            if error is not None:
-                info['pfs_error'] = error
-        except ValueError:  # invalid json
-            pass
-        raise ServiceRequestFailed('Pathfinding service returned error code', info)
-
-    try:
-        return response.json()['result']
-    except KeyError:
-        raise ServiceRequestFailed(
-            "Answer from pathfinding service not understood ('result' field missing)",
-            dict(response=response.json()),
-        )
-    except ValueError:
-        raise ServiceRequestFailed(
-            'Pathfinding service returned invalid json',
-            dict(response_text=response.text, exc_info=True),
-        )
+    return post_pfs_paths(
+        url=url,
+        token_network_address=token_network_address,
+        payload=payload,
+    )
