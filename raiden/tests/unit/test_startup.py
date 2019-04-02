@@ -1,6 +1,10 @@
+from copy import deepcopy
+
 import pytest
 
-from raiden.ui.startup import setup_network_id_or_exit
+from raiden.app import App
+from raiden.constants import Environment
+from raiden.ui.startup import setup_environment, setup_network_id_or_exit
 
 
 class MockWeb3Version():
@@ -35,3 +39,16 @@ def test_setup_network_id():
         assert network_id == netid
         assert known
         assert config['chain_id'] == netid
+
+
+def test_setup_environment():
+    # Test that setting development works
+    config = deepcopy(App.DEFAULT_CONFIG)
+    assert Environment.DEVELOPMENT == setup_environment(config, Environment.DEVELOPMENT)
+    assert config['environment_type'] == Environment.DEVELOPMENT
+
+    # Test that setting production sets private rooms for Matrix
+    config = deepcopy(App.DEFAULT_CONFIG)
+    assert Environment.PRODUCTION == setup_environment(config, Environment.PRODUCTION)
+    assert config['environment_type'] == Environment.PRODUCTION
+    assert config['transport']['matrix']['private_rooms'] is True
