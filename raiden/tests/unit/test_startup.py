@@ -1,10 +1,18 @@
 from copy import deepcopy
+from typing import Any, Dict
 
 import pytest
 
 from raiden.app import App
 from raiden.constants import Environment
-from raiden.ui.startup import setup_environment, setup_network_id_or_exit
+from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_network_id_or_exit
+from raiden_contracts.constants import (
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
+)
 
 
 class MockWeb3Version():
@@ -52,3 +60,97 @@ def test_setup_environment():
     assert Environment.PRODUCTION == setup_environment(config, Environment.PRODUCTION)
     assert config['environment_type'] == Environment.PRODUCTION
     assert config['transport']['matrix']['private_rooms'] is True
+
+
+def raiden_contracts_in_data(contracts: Dict[str, Any]) -> bool:
+    return (
+        CONTRACT_SECRET_REGISTRY in contracts and
+        CONTRACT_TOKEN_NETWORK_REGISTRY in contracts and
+        CONTRACT_ENDPOINT_REGISTRY in contracts
+    )
+
+
+def service_contracts_in_data(contracts: Dict[str, Any]) -> bool:
+    return (
+        CONTRACT_SERVICE_REGISTRY in contracts and
+        CONTRACT_USER_DEPOSIT in contracts
+    )
+
+
+def test_setup_contracts():
+    # Mainnet production
+    config = {'environment_type': Environment.PRODUCTION}
+    contracts, addresses_known = setup_contracts_or_exit(config, 1)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
+
+    # Mainnet development -- NOT allowed
+    config = {'environment_type': Environment.DEVELOPMENT}
+    with pytest.raises(SystemExit):
+        setup_contracts_or_exit(config, 1)
+
+    # Ropsten production
+    config = {'environment_type': Environment.PRODUCTION}
+    contracts, addresses_known = setup_contracts_or_exit(config, 3)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
+
+    # Ropsten development
+    config = {'environment_type': Environment.DEVELOPMENT}
+    contracts, addresses_known = setup_contracts_or_exit(config, 3)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
+
+    # Rinkeby production
+    config = {'environment_type': Environment.PRODUCTION}
+    contracts, addresses_known = setup_contracts_or_exit(config, 4)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
+
+    # Rinkeby development
+    config = {'environment_type': Environment.DEVELOPMENT}
+    contracts, addresses_known = setup_contracts_or_exit(config, 4)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
+
+    # Kovan production
+    config = {'environment_type': Environment.PRODUCTION}
+    contracts, addresses_known = setup_contracts_or_exit(config, 42)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
+
+    # Kovan development
+    config = {'environment_type': Environment.DEVELOPMENT}
+    contracts, addresses_known = setup_contracts_or_exit(config, 42)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
+
+    # random private network production
+    config = {'environment_type': Environment.PRODUCTION}
+    contracts, addresses_known = setup_contracts_or_exit(config, 5257)
+    assert 'contracts_path' in config
+    assert not addresses_known
+    assert not raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
+
+    # random private network development
+    config = {'environment_type': Environment.DEVELOPMENT}
+    contracts, addresses_known = setup_contracts_or_exit(config, 5257)
+    assert 'contracts_path' in config
+    assert not addresses_known
+    assert not raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
