@@ -1,6 +1,7 @@
 import json
 import random
 import sys
+from enum import Enum
 from typing import Optional, Tuple
 
 import click
@@ -16,6 +17,24 @@ from raiden.utils.typing import BlockSpecification
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 log = structlog.get_logger(__name__)
+
+
+class PfsError(Enum):
+    INVALID_REQUEST = 2000
+    INVALID_SIGNATURE = 2001
+    REQUEST_OUTDATED = 2002
+    BAD_IOU = 2100
+    MISSING_IOU = 2101
+    WRONG_IOU_RECIPIENT = 2102
+    IOU_EXPIRED_TOO_EARLY = 2103
+    INSUFFICIENT_SERVICE_PAYMENT = 2104
+    IOU_ALREADY_CLAIMED = 2105
+    USE_THIS_IOU = 2106
+    DEPOSIT_TOO_LOW = 2107
+
+    @staticmethod
+    def is_iou_rejected(error_code):
+        return error_code >= 2100
 
 
 def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
