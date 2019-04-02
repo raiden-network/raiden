@@ -1,5 +1,5 @@
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import click
 
@@ -16,7 +16,7 @@ def setup_network_id_or_exit(
         config: Dict[str, Any],
         given_network_id: int,
         web3,
-) -> Dict[str, Any]:
+) -> Tuple[int, bool]
     """
     Takes the given network id and checks it against the connected network
 
@@ -62,3 +62,46 @@ def setup_environment(config: Dict[str, Any], environment_type: Environment) -> 
     return environment_type
 
 
+def setup_contracts_or_exit(
+        config: Dict[str, Any],
+        network_id: int,
+) -> Tuple[Dict[str, Any], bool]:
+    """Sets the contract deployment data depending on the network id and environment type
+
+
+    If an invalid combination of network id and environment type is provided, exits
+    the program with an error
+    """
+    environment_type = config['environment_type']
+    contracts = dict()
+    contract_addresses_known = False
+    if environment_type == Environment.DEVELOPMENT:
+        contracts_version = DEVELOPMENT_CONTRACT_VERSION
+    else:
+        contracts_version = RED_EYES_CONTRACT_VERSION
+
+    config['contracts_path'] = contracts_precompiled_path(contracts_version)
+
+    if network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[network_id] != 'smoketest':
+        deployment_data = get_contracts_deployment_info(
+            chain_id=network_id,
+            version=contracts_version,
+        )
+        not_allowed = (  # for now we only disallow mainnet with test configuration
+            network_id == 1 and
+            environment_type == Environment.DEVELOPMENT
+        )
+        if not_allowed:
+            click.secho(
+                f'The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, '
+                'but the "development" environment was selected.\n'
+                'This is not allowed. Please start again with a safe environment setting '
+                '(--environment production).',
+                fg='red',
+            )
+            sys.exit(1)
+
+        contracts = deployment_data['contracts']
+        contract_addresses_known = True
+
+    return contracts, contract_addresses_known
