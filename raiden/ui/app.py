@@ -40,7 +40,7 @@ from raiden.settings import (
     RED_EYES_CONTRACT_VERSION,
 )
 from raiden.storage.sqlite import assert_sqlite_version
-from raiden.ui.startup import setup_network_id_or_exit
+from raiden.ui.startup import setup_environment, setup_network_id_or_exit
 from raiden.utils import is_supported_client, pex, split_endpoint, typing
 from raiden.utils.cli import get_matrix_servers
 from raiden_contracts.constants import (
@@ -261,16 +261,7 @@ def run_app(
     web3 = _setup_web3(eth_rpc_endpoint)
     node_network_id, known_node_network_id = setup_network_id_or_exit(config, network_id, web3)
 
-    # interpret the provided string argument
-    if environment_type == Environment.PRODUCTION:
-        # Safe configuration: restrictions for mainnet apply and matrix rooms have to be private
-        config['environment_type'] = Environment.PRODUCTION
-        config['transport']['matrix']['private_rooms'] = True
-    else:
-        config['environment_type'] = Environment.DEVELOPMENT
-
-    environment_type = config['environment_type']
-    print(f'Raiden is running in {environment_type.value.lower()} mode')
+    environment_type = setup_environment(config, environment_type)
 
     chain_config = {}
     contract_addresses_known = False
