@@ -239,3 +239,11 @@ class InsufficientGasReserve(RaidenError):
 
 class ServiceRequestFailed(RaidenError):
     """ Raised when a request to one of the raiden services fails. """
+
+
+class ServiceRequestIOURejected(ServiceRequestFailed):
+    """ Raised when a service request fails due to a problem with the iou. """
+
+    def __init__(self, message, error_code):
+        super().__init__(f'{message} ({error_code})')
+        self.error_code = error_code
