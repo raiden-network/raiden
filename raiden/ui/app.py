@@ -40,7 +40,7 @@ from raiden.settings import (
     RED_EYES_CONTRACT_VERSION,
 )
 from raiden.storage.sqlite import assert_sqlite_version
-from raiden.ui.startup import setup_environment, setup_network_id_or_exit
+from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_network_id_or_exit
 from raiden.utils import is_supported_client, pex, split_endpoint, typing
 from raiden.utils.cli import get_matrix_servers
 from raiden_contracts.constants import (
@@ -268,34 +268,7 @@ def run_app(
     contracts = dict()
     services_contracts = dict()
 
-    if environment_type == Environment.DEVELOPMENT:
-        contracts_version = DEVELOPMENT_CONTRACT_VERSION
-    else:
-        contracts_version = RED_EYES_CONTRACT_VERSION
-
-    config['contracts_path'] = contracts_precompiled_path(contracts_version)
-
-    if node_network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[node_network_id] != 'smoketest':
-        deployment_data = get_contracts_deployment_info(
-            chain_id=node_network_id,
-            version=contracts_version,
-        )
-        not_allowed = (  # for now we only disallow mainnet with test configuration
-            network_id == 1 and
-            environment_type == Environment.DEVELOPMENT
-        )
-        if not_allowed:
-            click.secho(
-                f'The chosen network ({ID_TO_NETWORKNAME[node_network_id]}) is not a testnet, '
-                'but the "development" environment was selected.\n'
-                'This is not allowed. Please start again with a safe environment setting '
-                '(--environment production).',
-                fg='red',
-            )
-            sys.exit(1)
-
-        contracts = deployment_data['contracts']
-        contract_addresses_known = True
+    contracts, contract_addresses_known = setup_contracts_or_exit(config, node_network_id)
 
     rpc_client = JSONRPCClient(
         web3,
