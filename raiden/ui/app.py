@@ -40,6 +40,7 @@ from raiden.settings import (
     RED_EYES_CONTRACT_VERSION,
 )
 from raiden.storage.sqlite import assert_sqlite_version
+from raiden.ui.startup import setup_network_id_or_exit
 from raiden.utils import is_supported_client, pex, split_endpoint, typing
 from raiden.utils.cli import get_matrix_servers
 from raiden_contracts.constants import (
@@ -258,29 +259,7 @@ def run_app(
         eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
 
     web3 = _setup_web3(eth_rpc_endpoint)
-    given_network_id = network_id
-    node_network_id = int(web3.version.network)  # pylint: disable=no-member
-    known_given_network_id = given_network_id in ID_TO_NETWORKNAME
-    known_node_network_id = node_network_id in ID_TO_NETWORKNAME
-
-    if node_network_id != given_network_id:
-        if known_given_network_id and known_node_network_id:
-            click.secho(
-                f"The chosen ethereum network '{ID_TO_NETWORKNAME[given_network_id]}' "
-                f"differs from the ethereum client '{ID_TO_NETWORKNAME[node_network_id]}'. "
-                "Please update your settings.",
-                fg='red',
-            )
-        else:
-            click.secho(
-                f"The chosen ethereum network id '{given_network_id}' differs "
-                f"from the ethereum client '{node_network_id}'. "
-                "Please update your settings.",
-                fg='red',
-            )
-        sys.exit(1)
-
-    config['chain_id'] = given_network_id
+    node_network_id, known_node_network_id = setup_network_id_or_exit(config, network_id, web3)
 
     # interpret the provided string argument
     if environment_type == Environment.PRODUCTION:
@@ -351,7 +330,7 @@ def run_app(
 
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
-            f"There are no known contract addresses for network id '{given_network_id}'. "
+            f"There are no known contract addresses for network id '{node_network_id}'. "
             "Please provide them on the command line or in the configuration file.",
             fg='red',
         )
@@ -463,7 +442,7 @@ def run_app(
     database_path = os.path.join(
         datadir,
         f'node_{pex(address)}',
-        f'netid_{given_network_id}',
+        f'netid_{node_network_id}',
         f'network_{pex(token_network_registry.address)}',
         f'v{RAIDEN_DB_VERSION}_log.db',
     )
@@ -471,7 +450,7 @@ def run_app(
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(given_network_id, given_network_id),
+            ID_TO_NETWORKNAME.get(node_network_id, node_network_id),
             database_path,
         ),
     )
@@ -523,7 +502,7 @@ def run_app(
         click.secho(f'FATAL: {e}', fg='red')
         sys.exit(1)
     except filelock.Timeout:
-        name_or_id = ID_TO_NETWORKNAME.get(given_network_id, given_network_id)
+        name_or_id = ID_TO_NETWORKNAME.get(node_network_id, node_network_id)
         click.secho(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
             f'network id {name_or_id}',
