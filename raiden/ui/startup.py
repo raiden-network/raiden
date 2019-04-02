@@ -1,22 +1,45 @@
 import sys
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, NamedTuple, Optional, Tuple
 
 import click
+from eth_utils import to_canonical_address, to_checksum_address
 
-from raiden.constants import Environment
+from raiden.constants import Environment, RoutingMode
+from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
+from raiden.network.blockchain_service import BlockChainService
+from raiden.network.discovery import ContractDiscovery
+from raiden.network.pathfinding import configure_pfs
+from raiden.network.proxies import (
+    SecretRegistry,
+    ServiceRegistry,
+    TokenNetworkRegistry,
+    UserDeposit,
+)
+from raiden.network.throttle import TokenBucket
+from raiden.network.transport import UDPTransport
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
-from raiden_contracts.constants import ID_TO_NETWORKNAME
+from raiden.utils.typing import Address
+from raiden_contracts.constants import (
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_SECRET_REGISTRY,
+    CONTRACT_SERVICE_REGISTRY,
+    CONTRACT_TOKEN_NETWORK_REGISTRY,
+    CONTRACT_USER_DEPOSIT,
+    ID_TO_NETWORKNAME,
+)
 from raiden_contracts.contract_manager import (
     contracts_precompiled_path,
     get_contracts_deployment_info,
 )
+
+from .sync import check_discovery_registration_gas
 
 
 def setup_network_id_or_exit(
         config: Dict[str, Any],
         given_network_id: int,
         web3,
-) -> Tuple[int, bool]
+) -> Tuple[int, bool]:
     """
     Takes the given network id and checks it against the connected network
 
@@ -105,3 +128,219 @@ def setup_contracts_or_exit(
         contract_addresses_known = True
 
     return contracts, contract_addresses_known
+
+
+def handle_contract_version_mismatch(mismatch_exception: ContractVersionMismatch) -> None:
+    click.secho(
+        f'{str(mismatch_exception)}. Please update your Raiden installation.',
+        fg='red',
+    )
+    sys.exit(1)
+
+
+def handle_contract_no_code(name: str, address: Address) -> None:
+    hex_addr = to_checksum_address(address)
+    click.secho(f'Error: Provided {name} {hex_addr} contract does not contain code', fg='red')
+    sys.exit(1)
+
+
+def handle_contract_wrong_address(name: str, address: Address) -> None:
+    hex_addr = to_checksum_address(address)
+    click.secho(
+        f'Error: Provided address {hex_addr} for {name} contract'
+        ' does not contain expected code.',
+        fg='red',
+    )
+    sys.exit(1)
+
+
+class Proxies(NamedTuple):
+    token_network_registry: TokenNetworkRegistry
+    secret_registry: SecretRegistry
+    user_deposit: Optional[UserDeposit]
+    service_registry: Optional[ServiceRegistry]
+
+
+def setup_proxies_or_exit(
+        config: Dict[str, Any],
+        tokennetwork_registry_contract_address: str,
+        secret_registry_contract_address: str,
+        endpoint_registry_contract_address: str,
+        user_deposit_contract_address: str,
+        service_registry_contract_address: str,
+        contract_addresses_known: bool,
+        blockchain_service: BlockChainService,
+        contracts: Dict[str, Any],
+        routing_mode: RoutingMode,
+        pathfinding_service_address: str,
+):
+    """
+    Initialize and setup the contract proxies.
+
+    Depending on the provided contract addresses via the CLI, the routing mode,
+    the environment type and the network id try to initialize the proxies.
+    Returns the initialized proxies or exits the application with an error if
+    there is a problem.
+
+    Also depending on the given arguments populate config with PFS related settings
+    """
+    node_network_id = config['chain_id']
+    environment_type = config['environment_type']
+    contract_addresses_given = (
+        tokennetwork_registry_contract_address is not None and
+        secret_registry_contract_address is not None and
+        endpoint_registry_contract_address is not None
+    )
+
+    if not contract_addresses_given and not contract_addresses_known:
+        click.secho(
+            f"There are no known contract addresses for network id '{node_network_id}'. "
+            "Please provide them on the command line or in the configuration file.",
+            fg='red',
+        )
+        sys.exit(1)
+
+    try:
+        token_network_registry = blockchain_service.token_network_registry(
+            tokennetwork_registry_contract_address or to_canonical_address(
+                contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
+            ),
+        )
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
+    except AddressWithoutCode:
+        handle_contract_no_code('token network registry', tokennetwork_registry_contract_address)
+    except AddressWrongContract:
+        handle_contract_wrong_address(
+            'token network registry',
+            tokennetwork_registry_contract_address,
+        )
+
+    try:
+        secret_registry = blockchain_service.secret_registry(
+            secret_registry_contract_address or to_canonical_address(
+                contracts[CONTRACT_SECRET_REGISTRY]['address'],
+            ),
+        )
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
+    except AddressWithoutCode:
+        handle_contract_no_code('secret registry', secret_registry_contract_address)
+    except AddressWrongContract:
+        handle_contract_wrong_address('secret registry', secret_registry_contract_address)
+
+    # If services contracts are provided via the CLI use them instead
+    if user_deposit_contract_address is not None:
+        contracts[CONTRACT_USER_DEPOSIT] = user_deposit_contract_address
+    if service_registry_contract_address is not None:
+        contracts[CONTRACT_SERVICE_REGISTRY] = (
+            service_registry_contract_address
+        )
+
+    user_deposit = None
+    should_use_user_deposit = (
+        environment_type == Environment.DEVELOPMENT and
+        ID_TO_NETWORKNAME.get(node_network_id) != 'smoketest' and
+        CONTRACT_USER_DEPOSIT in contracts
+    )
+    if should_use_user_deposit:
+        try:
+            user_deposit = blockchain_service.user_deposit(
+                user_deposit_contract_address or to_canonical_address(
+                    contracts[CONTRACT_USER_DEPOSIT]['address'],
+                ),
+            )
+        except ContractVersionMismatch as e:
+            handle_contract_version_mismatch(e)
+        except AddressWithoutCode:
+            handle_contract_no_code('user deposit', user_deposit_contract_address)
+        except AddressWrongContract:
+            handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
+
+    service_registry = None
+    if routing_mode == RoutingMode.PFS:
+
+        if environment_type == Environment.PRODUCTION:
+            click.secho(
+                'Requested production mode and PFS routing mode. This is not supported',
+                fg='red',
+            )
+            sys.exit(1)
+
+        if CONTRACT_SERVICE_REGISTRY not in contracts:
+            click.secho(
+                'Requested PFS routing mode but no service registry is provided. Please '
+                'provide it via the --service-registry-contract-address argument',
+                fg='red',
+            )
+            sys.exit(1)
+
+        try:
+            service_registry = blockchain_service.service_registry(
+                service_registry_contract_address or to_canonical_address(
+                    contracts[CONTRACT_SERVICE_REGISTRY]['address'],
+                ),
+            )
+        except ContractVersionMismatch as e:
+            handle_contract_version_mismatch(e)
+        except AddressWithoutCode:
+            handle_contract_no_code('service registry', service_registry_contract_address)
+        except AddressWrongContract:
+            handle_contract_wrong_address('secret registry', service_registry_contract_address)
+
+        config['services']['pathfinding_service_address'] = configure_pfs(
+            pfs_address=pathfinding_service_address,
+            routing_mode=routing_mode,
+            service_registry=service_registry,
+        )
+    else:
+        config['services']['pathfinding_service_address'] = None
+
+    proxies = Proxies(
+        token_network_registry=token_network_registry,
+        secret_registry=secret_registry,
+        user_deposit=user_deposit,
+        service_registry=service_registry,
+    )
+    return proxies
+
+
+def setup_udp_or_exit(
+        config,
+        blockchain_service,
+        address,
+        contracts,
+        endpoint_registry_contract_address,
+):
+    check_discovery_registration_gas(blockchain_service, address)
+    try:
+        dicovery_proxy = blockchain_service.discovery(
+            endpoint_registry_contract_address or to_canonical_address(
+                contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
+            ),
+        )
+        discovery = ContractDiscovery(
+            blockchain_service.node_address,
+            dicovery_proxy,
+        )
+    except ContractVersionMismatch as e:
+        handle_contract_version_mismatch(e)
+    except AddressWithoutCode:
+        handle_contract_no_code('Endpoint Registry', endpoint_registry_contract_address)
+    except AddressWrongContract:
+        handle_contract_wrong_address('Endpoint Registry', endpoint_registry_contract_address)
+
+    throttle_policy = TokenBucket(
+        config['transport']['udp']['throttle_capacity'],
+        config['transport']['udp']['throttle_fill_rate'],
+    )
+
+    transport = UDPTransport(
+        address,
+        discovery,
+        config['socket'],
+        throttle_policy,
+        config['transport']['udp'],
+    )
+
+    return transport, discovery
