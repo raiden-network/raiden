@@ -108,8 +108,8 @@ def configure_pfs(
             f"'{pathfinding_service_info['message']}'. "
             f"You have chosen pathfinding operator '{pathfinding_service_info['operator']}' "
             f"with the running version '{pathfinding_service_info['version']}' "
-            f"on chain_id: '{pathfinding_service_info['network_info']['chain_id']}."
-            f"Requesting a path will cost you: '{pathfinding_service_info['price_info']}",
+            f"on chain_id: '{pathfinding_service_info['network_info']['chain_id']}'. "
+            f"Requesting a path will cost you: '{pathfinding_service_info['price_info']}'.",
         )
         log.info('Using PFS', pfs_info=pathfinding_service_info)
 
