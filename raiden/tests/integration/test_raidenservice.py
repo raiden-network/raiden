@@ -46,6 +46,7 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
     })
 
 
+@pytest.mark.xfail(reason='flaky, see issue #3714')
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_regression_transport_global_queues_are_initialized_on_restart_for_services(
