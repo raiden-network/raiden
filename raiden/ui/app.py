@@ -452,7 +452,8 @@ def run_app(
             service_registry=service_registry,
         )
 
-        assert pfs_eth_address is not None, 'Eth address of selected pathfinding service unknown.'
+        msg = 'Eth address of selected pathfinding service is unknown.'
+        assert pfs_eth_address is not None, msg
         config['services']['pathfinding_service_address'] = pfs_url
         config['services']['pathfinding_eth_address'] = pfs_eth_address
 

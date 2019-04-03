@@ -274,7 +274,7 @@ def options(func):
                     'If the path finding service is chosen from the service registry contract, '
                     'this option will be ignored. If the path finding service is configured '
                     'manually, i. e. "--pathfinding-service-address" set to a value other than '
-                    '"auto", it must be set to a valid EIP55 address.'
+                    '"auto", this argument must be set to a valid EIP55 address.'
                 ),
                 type=str,
             ),
@@ -294,7 +294,7 @@ def options(func):
             ),
             option(
                 '--pathfinding-iou-timeout',
-                help='Number of blocks before a new iou to the path finding service expires.',
+                help='Number of blocks before a new IOU to the path finding service expires.',
                 default=DEFAULT_PATHFINDING_IOU_TIMEOUT,
                 type=int,
                 show_default=True,
