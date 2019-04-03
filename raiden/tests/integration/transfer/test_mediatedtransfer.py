@@ -15,7 +15,7 @@ from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_tr
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state_change import ActionChannelSetFee
-from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier, sha3
+from raiden.utils import sha3
 from raiden.waiting import wait_for_block
 
 
@@ -394,11 +394,7 @@ def test_mediated_transfer_with_allocated_fee(  # pylint: disable=unused-argumen
 
     # Let app1 consume all of the allocated mediation fee
     action_set_fee = ActionChannelSetFee(
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=CHAIN_ID_UNSPECIFIED,
-            token_network_address=token_network_identifier,
-            channel_identifier=app1_app2_channel_state.identifier,
-        ),
+        canonical_identifier=app1_app2_channel_state.canonical_identifier,
         mediation_fee=fee,
     )
 
@@ -478,11 +474,7 @@ def test_mediated_transfer_with_node_consuming_more_than_allocated_fee(
 
     # Let app1 consume all of the allocated mediation fee
     action_set_fee = ActionChannelSetFee(
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=CHAIN_ID_UNSPECIFIED,
-            token_network_address=token_network_identifier,
-            channel_identifier=app1_app2_channel_state.identifier,
-        ),
+        canonical_identifier=app1_app2_channel_state.canonical_identifier,
         mediation_fee=fee * 2,
     )
 
