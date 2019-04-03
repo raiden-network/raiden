@@ -44,7 +44,7 @@ class RESTAPIActionTask(Task):
 
     def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         url = self._expand_url()
-        log.debug('Requesting', url=url, method=self._method)
+        log.debug('Requesting', url=url, method=self._method, json=self._request_params)
         try:
             resp = self._runner.session.request(
                 method=self._method,
@@ -67,6 +67,8 @@ class RESTAPIActionTask(Task):
                 response_dict = {}
             else:
                 response_dict = resp.json()
+
+            log.debug('Received response', json=response_dict)
             return self._process_response(response_dict)
         except (ValueError, UnicodeDecodeError) as ex:
             raise RESTAPIError(
