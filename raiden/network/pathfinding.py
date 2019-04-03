@@ -1,7 +1,7 @@
 import json
 import random
 import sys
-from enum import Enum
+from enum import IntEnum, unique
 from typing import Optional, Tuple
 
 import click
@@ -19,10 +19,14 @@ from raiden_contracts.utils.proofs import sign_one_to_n_iou
 log = structlog.get_logger(__name__)
 
 
-class PfsError(Enum):
+@unique
+class PfsError(IntEnum):
+    """ Error codes as returned by the PFS / defined in the PFS specs. """
+
     INVALID_REQUEST = 2000
     INVALID_SIGNATURE = 2001
     REQUEST_OUTDATED = 2002
+
     BAD_IOU = 2100
     MISSING_IOU = 2101
     WRONG_IOU_RECIPIENT = 2102
@@ -35,6 +39,9 @@ class PfsError(Enum):
     @staticmethod
     def is_iou_rejected(error_code):
         return error_code >= 2100
+
+
+MAX_PATHS_QUERY_ATTEMPTS = 2
 
 
 def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
@@ -155,13 +162,14 @@ def make_iou(
         our_address: typing.Address,
         privkey: bytes,
         block_number: typing.BlockNumber,
+        offered_fee: typing.TokenAmount = None,
 ) -> typing.Dict:
     expiration = block_number + config['pathfinding_iou_timeout']
 
     iou = dict(
         sender=to_checksum_address(our_address),
         receiver=config['pathfinding_eth_address'],
-        amount=config['pathfinding_max_fee'],
+        amount=offered_fee or config['pathfinding_max_fee'],
     )
 
     iou.update(
@@ -212,18 +220,26 @@ def create_current_iou(
         our_address: typing.Address,
         privkey: bytes,
         block_number: typing.BlockNumber,
+        offered_fee: int = None,
+        scrap_existing_iou: bool = False,
 ) -> typing.Dict[str, typing.Any]:
+
     url = config['pathfinding_service_address']
-    latest_iou = get_pfs_iou(url, token_network_address)
+
+    latest_iou = None
+    if not scrap_existing_iou:
+        latest_iou = get_pfs_iou(url, token_network_address)
+
     if latest_iou is None:
         return make_iou(
             config=config,
             our_address=our_address,
             privkey=privkey,
             block_number=block_number,
+            offered_fee=offered_fee,
         )
     else:
-        added_amount = config['pathfinding_max_fee']
+        added_amount = offered_fee or config['pathfinding_max_fee']
         return update_iou(iou=latest_iou, privkey=privkey, added_amount=added_amount)
 
 
@@ -281,20 +297,40 @@ def query_paths(
         route_to: typing.TargetAddress,
         value: typing.TokenAmount,
 ) -> typing.List[typing.Dict[str, typing.Any]]:
+
     max_paths = service_config['pathfinding_max_paths']
     url = service_config['pathfinding_service_address']
     payload = {'from': route_from, 'to': route_to, 'value': value, 'max_paths': max_paths}
+    scrap_existing_iou = False
+    # TODO set offered_fee to a more reasonable value (obtained from ServiceRegistry?)
+    offered_fee = int(service_config['pathfinding_max_fee'] / 2)
 
-    payload.update(create_current_iou(
-        config=service_config,
-        token_network_address=token_network_address,
-        our_address=our_address,
-        privkey=privkey,
-        block_number=current_block_number,
-    ))
+    for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
+        payload.update(create_current_iou(
+            config=service_config,
+            token_network_address=token_network_address,
+            our_address=our_address,
+            privkey=privkey,
+            block_number=current_block_number,
+            offered_fee=offered_fee,
+            scrap_existing_iou=scrap_existing_iou,
+        ))
 
-    return post_pfs_paths(
-        url=url,
-        token_network_address=token_network_address,
-        payload=payload,
-    )
+        try:
+            return post_pfs_paths(
+                url=url,
+                token_network_address=token_network_address,
+                payload=payload,
+            )
+        except ServiceRequestIOURejected as error:
+            code = error.error_code
+            if retries == 0 or code in (PfsError.WRONG_IOU_RECIPIENT, PfsError.DEPOSIT_TOO_LOW):
+                raise
+            elif code in (PfsError.IOU_ALREADY_CLAIMED, PfsError.IOU_EXPIRED_TOO_EARLY):
+                scrap_existing_iou = True
+            elif code == PfsError.INSUFFICIENT_SERVICE_PAYMENT:
+                if offered_fee < service_config['pathfinding_max_fee']:
+                    offered_fee = service_config['pathfinding_max_fee']
+                else:
+                    raise
+            log.info(f'PFS rejected our IOU, reason: {error}. Attempting again.')
