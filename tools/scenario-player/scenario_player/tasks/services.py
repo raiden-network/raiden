@@ -1,5 +1,80 @@
+import structlog
+
 from scenario_player.exceptions import ScenarioAssertionError, ScenarioError
 from scenario_player.tasks.api_base import RESTAPIActionTask
+
+log = structlog.get_logger(__name__)
+
+
+class PFSAPIAssertTask(RESTAPIActionTask):
+    """
+    PFS API Assert task
+
+    Example usages:
+
+        # Check that PFS response contains 2 routes
+        assert_pfs_routes: {from: 0, to: 1, amount: 100, expected_paths: 2}
+
+        # Check that PFS response contains 3 of 3 requested routes
+        assert_pfs_routes: {source: 0, target: 1, amount: 100, max_paths: 3, expected routes: 3}
+
+        Default of `max_paths` is 5
+    """
+    _name = 'assert_pfs_api'
+    _method = 'post'
+    _url_template = "{pfs_url}/api/v1/{token_network_address}/paths"
+
+    @property
+    def _request_params(self):
+        source = self._config['from']
+        if isinstance(source, str) and len(source) == 42:
+            source_address = source
+        else:
+            source_address = self._runner.get_node_address(source)
+
+        target = self._config['to']
+        if isinstance(target, str) and len(target) == 42:
+            target_address = target
+        else:
+            target_address = self._runner.get_node_address(target)
+
+        amount = int(self._config['amount'])
+        max_paths = int(self._config.get('max_paths', 5))
+
+        params = {
+            'from': source_address,
+            'to': target_address,
+            'value': amount,
+            'max_paths': max_paths,
+        }
+        return params
+
+    @property
+    def _url_params(self):
+        pfs_url = self._runner.scenario.settings.get('services', {}).get('pfs', {}).get('url')
+        if not pfs_url:
+            raise ScenarioError('PFS tasks require settings.services.pfs.url to be set.')
+
+        params = dict(
+            pfs_url=pfs_url,
+            token_network_address=self._runner.token_network_address,
+        )
+        return params
+
+    def _process_response(self, response_dict: dict):
+        log.debug('Received response', response=response_dict)
+
+        paths = response_dict.get('result')
+        if paths is None:
+            raise ScenarioAssertionError("No 'return' key in result from PFS")
+
+        num_paths = len(paths)
+        exptected_paths = int(self._config['expected_paths'])
+        if num_paths != exptected_paths:
+            log.debug('Received paths', paths=paths)
+            raise ScenarioAssertionError(
+                f'Expected {exptected_paths} paths, but PFS returned {num_paths} paths.',
+            )
 
 
 class PFSAssertTask(RESTAPIActionTask):
@@ -47,13 +122,13 @@ class PFSAssertTask(RESTAPIActionTask):
         }
     """
     _name = 'assert_pfs_routes'
-    _url_template = "{pfs_url}/v1/_debug/routes/{token_address}/{source_address}{extra_params}"
+    _url_template = "{pfs_url}/api/v1/_debug/routes/{token_address}/{source_address}{extra_params}"
 
     @property
     def _url_params(self):
-        pfs_url = self._runner.scenario.settings.get('pfs', {}).get('url')
+        pfs_url = self._runner.scenario.settings.get('services', {}).get('pfs', {}).get('url')
         if not pfs_url:
-            raise ScenarioError('PFS tasks require settings.pfs.url to be set.')
+            raise ScenarioError('PFS tasks require settings.services.pfs.url to be set.')
 
         source = self._config['source']
         if isinstance(source, str) and len(source) == 42:
@@ -63,7 +138,7 @@ class PFSAssertTask(RESTAPIActionTask):
 
         extra_params = ''
         if 'target' in self._config:
-            target = self._config['source']
+            target = self._config['target']
             if isinstance(target, str) and len(target) == 42:
                 target_address = target
             else:
