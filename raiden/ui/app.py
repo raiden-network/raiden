@@ -210,6 +210,7 @@ def run_app(
         contracts=contracts,
         routing_mode=routing_mode,
         pathfinding_service_address=pathfinding_service_address,
+        pathfinding_eth_address=pathfinding_eth_address,
     )
 
     database_path = os.path.join(
