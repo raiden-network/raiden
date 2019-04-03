@@ -461,7 +461,7 @@ def validate_pfs_options(options):
         )
     if eth_address is not None and not is_checksum_address(eth_address):
         raise BadParameter(
-            '"--pathfinging-eth-address" value is not a valid EIP55 address.',
+            '"--pathfinding-eth-address" value is not a valid EIP55 address.',
         )
 
 

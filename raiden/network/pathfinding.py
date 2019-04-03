@@ -29,6 +29,11 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
 
 
 def get_random_service(service_registry: ServiceRegistry) -> Tuple[Optional[str], Optional[str]]:
+    """Selects a random PFS from service_registry.
+
+    Returns a tuple of the chosen services url and eth address.
+    If there are no PFS in the given registry, it returns (None, None).
+    """
     latest_block_hash = service_registry.client.blockhash_from_blocknumber(
         'latest',
     )
@@ -65,7 +70,8 @@ def configure_pfs(
     If pfs_address is provided we use that.
     If pfs_address is 'auto' then we randomly choose a PFS address from the registry
 
-    Returns the PFS url to use or None if we don't use the PFS and use basic routing
+    Returns a tuple of url and eth address of the pfs to use or (None, None) if we
+    don't use the PFS and use basic routing
     """
     if routing_mode == RoutingMode.BASIC:
         msg = 'Not using path finding services, falling back to basic routing.'
@@ -158,7 +164,7 @@ def update_iou(
     )
     if iou.get('signature') != expected_signature:
         raise ServiceRequestFailed(
-            'Last iou as given by the pathfinding service is invalid (signature does not match)',
+            'Last IOU as given by the pathfinding service is invalid (signature does not match)',
         )
 
     iou['amount'] += added_amount
