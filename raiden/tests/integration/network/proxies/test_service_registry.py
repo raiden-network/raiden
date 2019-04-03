@@ -2,7 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from eth_utils import to_checksum_address
+from eth_utils import is_checksum_address, to_checksum_address
 
 from raiden.constants import RoutingMode
 from raiden.network.pathfinding import configure_pfs, get_random_service
@@ -80,7 +80,8 @@ def test_configure_pfs(
         routing_mode=RoutingMode.BASIC,
         service_registry=service_proxy,
     )
-    assert pfs_address is None and pfs_eth_address is None
+    assert pfs_address is None
+    assert pfs_eth_address is None
 
     # Asking for auto address
     with patch.object(requests, 'get', return_value=response):
@@ -91,6 +92,7 @@ def test_configure_pfs(
             service_registry=service_proxy,
         )
     assert pfs_url in urls
+    assert is_checksum_address(pfs_eth_address)
 
     # Configuring a given address
     given_address = 'http://ourgivenaddress'
@@ -102,7 +104,8 @@ def test_configure_pfs(
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
         )
-    assert pfs_url == given_address and pfs_eth_address == given_eth_address
+    assert pfs_url == given_address
+    assert pfs_eth_address == given_eth_address
 
     # Bad address, should exit the program
     response = Mock()
