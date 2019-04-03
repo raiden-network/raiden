@@ -92,6 +92,7 @@ nodes:
 ## - store_channel_info
 ## - assert_events
 ## - assert_ms_claim
+## - assert_pfs_api
 ## - assert_pfs_routes
 
 scenario:
@@ -197,6 +198,12 @@ scenario:
 #      - store_channel_info: {from: 0, to: 1, key: "channel-0-1"}
 #      - close_channel: {from: 0, to: 1}
 #      - assert_ms_claim: {channel_info_key: "channel-0-1"}
+#
+#      # Check that PFS response contains 2 routes
+#      assert_pfs_routes: {from: 0, to: 1, amount: 100, expected_paths: 2}
+#
+#      # Check that PFS response contains 3 of 3 requested routes
+#      assert_pfs_routes: {source: 0, target: 1, amount: 100, max_paths: 3, expected routes: 3}
 #
 #      ## 4 requests where made from source node 0
 #      - assert_pfs_routes: {source: 0, request_count: 4}

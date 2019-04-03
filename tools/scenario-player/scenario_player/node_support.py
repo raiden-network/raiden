@@ -63,7 +63,9 @@ MANAGED_CONFIG_OPTIONS_OVERRIDABLE = {
     'endpoint-registry-contract-address',
     'tokennetwork-registry-contract-address',
     'secret-registry-contract-address',
+    'service-registry-contract-address',
     'pathfinding-service-address',
+    'pathfinding-eth-address',
 }
 
 
