@@ -196,7 +196,7 @@ def options(func):
                 'for running Raiden on the mainnet.\n'
             ),
             type=EnvironmentChoiceType([e.value for e in Environment]),
-            default=Environment.PRODUCTION.value,
+            default=Environment.PRODUCTION,
             show_default=True,
         ),
         option(
