@@ -181,12 +181,13 @@ def matrix_server_starter(
         count: int = 1,
         config_generator: ContextManager = None,
         log_context: str = None,
+        initial_port: int = 8500,
 ) -> ContextManager:
     with ExitStack() as exit_stack:
         if config_generator is None:
             config_generator = exit_stack.enter_context(generate_synapse_config())
         server_urls = []
-        for _, port in zip(range(count), get_free_port(initial_port=8500)):
+        for _, port in zip(range(count), get_free_port(initial_port=initial_port)):
             server_name, config_file = config_generator(port)
             server_url = ParsedURL(f'https://{server_name}')
             server_urls.append(server_url)

@@ -38,6 +38,7 @@ def local_matrix_servers(
         count=matrix_server_count,
         config_generator=synapse_config_generator,
         log_context=request.node.name,
+        initial_port=request.config.getoption('synapse_base_port'),
     )
     with starter as server_urls:
         yield server_urls
