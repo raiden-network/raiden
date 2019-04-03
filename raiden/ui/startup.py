@@ -96,6 +96,21 @@ def setup_contracts_or_exit(
     the program with an error
     """
     environment_type = config['environment_type']
+
+    not_allowed = (  # for now we only disallow mainnet with test configuration
+        network_id == 1 and
+        environment_type == Environment.DEVELOPMENT
+    )
+    if not_allowed:
+        click.secho(
+            f'The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, '
+            f'but the "development" environment was selected.\n'
+            f'This is not allowed. Please start again with a safe environment setting '
+            f'(--environment production).',
+            fg='red',
+        )
+        sys.exit(1)
+
     contracts = dict()
     contract_addresses_known = False
     if environment_type == Environment.DEVELOPMENT:
@@ -110,19 +125,6 @@ def setup_contracts_or_exit(
             chain_id=network_id,
             version=contracts_version,
         )
-        not_allowed = (  # for now we only disallow mainnet with test configuration
-            network_id == 1 and
-            environment_type == Environment.DEVELOPMENT
-        )
-        if not_allowed:
-            click.secho(
-                f'The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, '
-                'but the "development" environment was selected.\n'
-                'This is not allowed. Please start again with a safe environment setting '
-                '(--environment production).',
-                fg='red',
-            )
-            sys.exit(1)
 
         contracts = deployment_data['contracts']
         contract_addresses_known = True
