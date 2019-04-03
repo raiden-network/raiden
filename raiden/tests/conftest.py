@@ -49,6 +49,14 @@ def pytest_addoption(parser):
         help='Run integration tests with udp, with matrix, with both or not at all.',
     )
 
+    parser.addoption(
+        '--synapse-base-port',
+        action='store',
+        default=8500,
+        type='int',
+        help='Base port number to use for synapse servers being started during Matrix tests.',
+    )
+
 
 @pytest.fixture(scope='session', autouse=True)
 def enable_gevent_monitoring_signal():
