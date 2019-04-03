@@ -1,5 +1,6 @@
-from dataclasses import dataclass
 from enum import Enum
+
+from dataclasses import dataclass
 
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, State

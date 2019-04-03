@@ -28,10 +28,10 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_IOU_TIMEOUT,
     DEFAULT_PATHFINDING_MAX_FEE,
     DEFAULT_PATHFINDING_MAX_PATHS,
-    DEVELOPMENT_CONTRACT_VERSION,
     INITIAL_PORT,
 )
 from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
+from raiden.ui.startup import environment_type_to_contracts_version
 from raiden.utils import get_system_spec, merge_dict, split_endpoint
 from raiden.utils.cli import (
     ADDRESS_TYPE,
@@ -609,13 +609,15 @@ def smoketest(ctx, debug):
         )
 
     print_step('Getting smoketest configuration')
+    contracts_version = environment_type_to_contracts_version(
+        ctx.parent.params['environment_type'],
+    )
 
     result = setup_testchain_and_raiden(
         ctx.parent.params['transport'],
         ctx.parent.params['matrix_server'],
         print_step,
-        # smoke test should work with pre-limits contract version
-        DEVELOPMENT_CONTRACT_VERSION,
+        contracts_version,
     )
     args = result['args']
     contract_addresses = result['contract_addresses']

@@ -35,6 +35,15 @@ from raiden_contracts.contract_manager import (
 from .sync import check_discovery_registration_gas
 
 
+def environment_type_to_contracts_version(environment_type: Environment) -> str:
+    if environment_type == Environment.DEVELOPMENT:
+        contracts_version = DEVELOPMENT_CONTRACT_VERSION
+    else:
+        contracts_version = RED_EYES_CONTRACT_VERSION
+
+    return contracts_version
+
+
 def setup_network_id_or_exit(
         config: Dict[str, Any],
         given_network_id: int,
@@ -113,10 +122,7 @@ def setup_contracts_or_exit(
 
     contracts = dict()
     contract_addresses_known = False
-    if environment_type == Environment.DEVELOPMENT:
-        contracts_version = DEVELOPMENT_CONTRACT_VERSION
-    else:
-        contracts_version = RED_EYES_CONTRACT_VERSION
+    contracts_version = environment_type_to_contracts_version(environment_type)
 
     config['contracts_path'] = contracts_precompiled_path(contracts_version)
 
