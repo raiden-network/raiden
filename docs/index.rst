@@ -58,6 +58,7 @@ Contents
   api_walkthrough
   webui_tutorial
   rest_api
+  private_net_tutorial
   glossary
 
 .. toctree::
