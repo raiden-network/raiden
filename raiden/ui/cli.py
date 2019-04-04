@@ -614,16 +614,17 @@ def smoketest(ctx, debug):
     )
 
     result = setup_testchain_and_raiden(
-        ctx.parent.params['transport'],
-        ctx.parent.params['matrix_server'],
-        print_step,
-        contracts_version,
+        transport=ctx.parent.params['transport'],
+        matrix_server=ctx.parent.params['matrix_server'],
+        print_step=print_step,
+        contracts_version=contracts_version,
     )
     args = result['args']
     contract_addresses = result['contract_addresses']
     token = result['token']
     ethereum = result['ethereum']
-
+    # Also respect environment type
+    args['environment_type'] = ctx.parent.params['environment_type']
     for option_ in run.params:
         if option_.name in args.keys():
             args[option_.name] = option_.process_value(ctx, args[option_.name])
