@@ -23,6 +23,8 @@ You should now be in the virtual environment, where all Python package installat
 
 Now the command prompt should look like:
 
+.. code:: bash
+
  (env) $
 
 
@@ -36,8 +38,6 @@ Install Raiden and dependencies
  (env) $ git clone https://github.com/raiden-network/raiden
  (env) $ cd raiden
  (env) $ pip install -r requirements.txt -c constraints.txt -e .
-
- 
 
 Launch a private network
 ========================
