@@ -3,6 +3,8 @@ from enum import Enum
 
 from eth_utils import keccak, to_checksum_address, to_hex
 
+from raiden.utils.typing import BlockNumber
+
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
 SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
@@ -20,7 +22,7 @@ RED_EYES_MAX_TOKEN_NETWORKS = 1
 RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT = int(0.075 * 10 ** 18)
 RED_EYES_PER_TOKEN_NETWORK_LIMIT = int(250 * 10 ** 18)
 
-GENESIS_BLOCK_NUMBER = 0
+GENESIS_BLOCK_NUMBER = BlockNumber(0)
 # Set at 64 since parity's default is 64 and Geth's default is 128
 # TODO: Make this configurable. Since in parity this is also a configurable value
 STATE_PRUNING_AFTER_BLOCKS = 64
