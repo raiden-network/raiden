@@ -195,8 +195,8 @@ class UpgradeManager:
 
         if file_version > RAIDEN_DB_VERSION:
             raise RuntimeError(
-                f'Conflicting database versions detected, latest db version is {file_version}, '
-                f'Raiden client version is {RAIDEN_DB_VERSION}.'
+                f'Conflicting database versions detected, latest db version is v{file_version}, '
+                f'Raiden client version is v{RAIDEN_DB_VERSION}.'
                 f'\n\n'
                 f'Running a downgraded version of Raiden after an upgrade is not supported, '
                 f'because the transfers done with the new client are not understandable by the '
@@ -215,7 +215,7 @@ class UpgradeManager:
 
             storage = SQLiteStorage(target_file)
 
-            log.debug(f'Upgrading database from {from_version} to {RAIDEN_DB_VERSION}')
+            log.debug(f'Upgrading database from v{from_version} to v{RAIDEN_DB_VERSION}')
 
             try:
                 version_iteration = from_version
