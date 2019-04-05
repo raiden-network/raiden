@@ -17,10 +17,21 @@ from raiden.utils.typing import Address, ChannelID, PaymentNetworkID, TokenNetwo
 
 class MockJSONRPCClient:
 
+    def __init__(self):
+        # To be manually set by each test
+        self.balances_mapping = {}
+
     @staticmethod
     def can_query_state_for_block(block_identifier):  # pylint: disable=unused-argument
         # To be changed by each test
         return True
+
+    def gas_price(self):
+        # 1 gwei
+        return 1000000000
+
+    def balance(self, address):
+        return self.balances_mapping[address]
 
 
 class MockTokenNetworkProxy:
@@ -44,15 +55,20 @@ class MockPaymentChannel:
 
 
 class MockChain:
-    def __init__(self, network_id: int):
+    def __init__(self, network_id: int, node_address: Address):
         self.network_id = network_id
         # let's make a single mock token network for testing
         self.token_network = MockTokenNetworkProxy()
+        self.node_address = node_address
+        self.client = MockJSONRPCClient()
 
     def payment_channel(self, canonical_identifier: CanonicalIdentifier):
         return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
 
     def token_network_registry(self, address: Address):
+        return object()
+
+    def discovery(self, address: Address):
         return object()
 
     def secret_registry(self, address: Address):
@@ -91,7 +107,7 @@ class MockChainState:
 
 class MockRaidenService:
     def __init__(self, message_handler=None, state_transition=None):
-        self.chain = MockChain(network_id=17)
+        self.chain = MockChain(network_id=17, node_address=factories.make_address())
         self.private_key, self.address = factories.make_privatekey_address()
         self.signer = LocalSigner(self.private_key)
 
