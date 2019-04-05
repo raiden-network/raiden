@@ -163,6 +163,112 @@ def test_setup_contracts():
     assert not service_contracts_in_data(contracts)
 
 
+def test_setup_proxies_raiden_addresses_are_given():
+    """
+    Test that startup for proxies works fine if raiden addresses only are given
+    """
+
+    network_id = 42
+    config = {
+        'environment_type': Environment.DEVELOPMENT,
+        'chain_id': network_id,
+        'services': {},
+    }
+    contracts = {}
+    blockchain_service = MockChain(network_id=network_id)
+
+    proxies = setup_proxies_or_exit(
+        config=config,
+        tokennetwork_registry_contract_address=make_address(),
+        secret_registry_contract_address=make_address(),
+        endpoint_registry_contract_address=make_address(),
+        user_deposit_contract_address=None,
+        service_registry_contract_address=None,
+        contract_addresses_known=False,
+        blockchain_service=blockchain_service,
+        contracts=contracts,
+        routing_mode=RoutingMode.BASIC,
+        pathfinding_service_address=None,
+        pathfinding_eth_address=None,
+    )
+    assert proxies
+    assert proxies.token_network_registry
+    assert proxies.secret_registry
+    assert not proxies.user_deposit
+    assert not proxies.service_registry
+
+
+def test_setup_proxies_all_addresses_are_given_basic_routing():
+    """
+    Test that startup for proxies works fine if all addresses are given and routing is basic
+    """
+
+    network_id = 42
+    config = {
+        'environment_type': Environment.DEVELOPMENT,
+        'chain_id': network_id,
+        'services': {},
+    }
+    contracts = {}
+    blockchain_service = MockChain(network_id=network_id)
+
+    proxies = setup_proxies_or_exit(
+        config=config,
+        tokennetwork_registry_contract_address=make_address(),
+        secret_registry_contract_address=make_address(),
+        endpoint_registry_contract_address=make_address(),
+        user_deposit_contract_address=make_address(),
+        service_registry_contract_address=make_address(),
+        contract_addresses_known=False,
+        blockchain_service=blockchain_service,
+        contracts=contracts,
+        routing_mode=RoutingMode.BASIC,
+        pathfinding_service_address=make_address(),
+        pathfinding_eth_address=make_address(),
+    )
+    assert proxies
+    assert proxies.token_network_registry
+    assert proxies.secret_registry
+    assert proxies.user_deposit
+    assert proxies.service_registry
+
+
+def test_setup_proxies_all_addresses_are_given_pfs_routing():
+    """
+    Test that startup for proxies works fine if all addresses are given and routing is PFS
+    """
+
+    network_id = 42
+    config = {
+        'environment_type': Environment.DEVELOPMENT,
+        'chain_id': network_id,
+        'services': {},
+    }
+    contracts = {}
+    blockchain_service = MockChain(network_id=network_id)
+
+    with patched_get_for_succesful_pfs_info():
+        proxies = setup_proxies_or_exit(
+            config=config,
+            tokennetwork_registry_contract_address=make_address(),
+            secret_registry_contract_address=make_address(),
+            endpoint_registry_contract_address=make_address(),
+            user_deposit_contract_address=make_address(),
+            service_registry_contract_address=make_address,
+            contract_addresses_known=False,
+            blockchain_service=blockchain_service,
+            contracts=contracts,
+            routing_mode=RoutingMode.PFS,
+            pathfinding_service_address=make_address(),
+            pathfinding_eth_address=make_address(),
+        )
+    assert proxies
+    assert proxies.token_network_registry
+    assert proxies.secret_registry
+    assert proxies.user_deposit
+    assert proxies.service_registry
+
+
 def test_setup_proxies_no_service_registry_but_pfs():
     """
     Test that if no service registry is provided but a manual pfs address is given then startup
@@ -188,7 +294,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
             endpoint_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
             service_registry_contract_address=None,
-            contract_addresses_known=True,
+            contract_addresses_known=False,
             blockchain_service=blockchain_service,
             contracts=contracts,
             routing_mode=RoutingMode.PFS,
@@ -222,7 +328,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
                 endpoint_registry_contract_address=make_address(),
                 user_deposit_contract_address=make_address(),
                 service_registry_contract_address=None,
-                contract_addresses_known=True,
+                contract_addresses_known=False,
                 blockchain_service=blockchain_service,
                 contracts=contracts,
                 routing_mode=RoutingMode.PFS,
