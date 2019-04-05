@@ -26,7 +26,7 @@ class MockJSONRPCClient:
         # To be changed by each test
         return True
 
-    def gas_price(self):
+    def gas_price(self):  # pylint: disable=unused-argument, no-self-use
         # 1 gwei
         return 1000000000
 
@@ -65,19 +65,34 @@ class MockChain:
     def payment_channel(self, canonical_identifier: CanonicalIdentifier):
         return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
 
-    def token_network_registry(self, address: Address):
+    def token_network_registry(  # pylint: disable=unused-argument, no-self-use
+            self,
+            address: Address,
+    ):
         return object()
 
-    def discovery(self, address: Address):
+    def discovery(  # pylint: disable=unused-argument, no-self-use
+            self,
+            address: Address,
+    ):
         return object()
 
-    def secret_registry(self, address: Address):
+    def secret_registry(  # pylint: disable=unused-argument, no-self-use
+            self,
+            address: Address,
+    ):
         return object()
 
-    def user_deposit(self, address: Address):
+    def user_deposit(  # pylint: disable=unused-argument, no-self-use
+            self,
+            address: Address,
+    ):
         return object()
 
-    def service_registry(self, address: Address):
+    def service_registry(  # pylint: disable=unused-argument, no-self-use
+            self,
+            address: Address,
+    ):
         return object()
 
 
