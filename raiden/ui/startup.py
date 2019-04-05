@@ -267,8 +267,21 @@ def setup_proxies_or_exit(
             handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
 
     service_registry = None
-    if routing_mode == RoutingMode.PFS:
+    if CONTRACT_SERVICE_REGISTRY in contracts or service_registry_contract_address:
+        try:
+            service_registry = blockchain_service.service_registry(
+                service_registry_contract_address or to_canonical_address(
+                    contracts[CONTRACT_SERVICE_REGISTRY]['address'],
+                ),
+            )
+        except ContractVersionMismatch as e:
+            handle_contract_version_mismatch(e)
+        except AddressWithoutCode:
+            handle_contract_no_code('service registry', service_registry_contract_address)
+        except AddressWrongContract:
+            handle_contract_wrong_address('secret registry', service_registry_contract_address)
 
+    if routing_mode == RoutingMode.PFS:
         if environment_type == Environment.PRODUCTION:
             click.secho(
                 'Requested production mode and PFS routing mode. This is not supported',
@@ -276,26 +289,15 @@ def setup_proxies_or_exit(
             )
             sys.exit(1)
 
-        if CONTRACT_SERVICE_REGISTRY not in contracts and not pathfinding_service_address:
+        if not service_registry and not pathfinding_service_address:
             click.secho(
-                'Requested PFS routing mode but no service registry is provided. Please '
-                'provide it via the --service-registry-contract-address argument',
+                'Requested PFS routing mode but no service registry or no specific pathfinding '
+                ' service address is provided. Please provide it via either the '
+                '--service-registry-contract-address or the --pathfinding-service-address '
+                'argument',
                 fg='red',
             )
             sys.exit(1)
-        elif service_registry_contract_address or CONTRACT_SERVICE_REGISTRY in contracts:
-            try:
-                service_registry = blockchain_service.service_registry(
-                    service_registry_contract_address or to_canonical_address(
-                        contracts[CONTRACT_SERVICE_REGISTRY]['address'],
-                    ),
-                )
-            except ContractVersionMismatch as e:
-                handle_contract_version_mismatch(e)
-            except AddressWithoutCode:
-                handle_contract_no_code('service registry', service_registry_contract_address)
-            except AddressWrongContract:
-                handle_contract_wrong_address('secret registry', service_registry_contract_address)
 
         pfs_url, pfs_eth_address = configure_pfs(
             pfs_address=pathfinding_service_address,
