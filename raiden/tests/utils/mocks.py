@@ -1,5 +1,7 @@
 import random
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+
+import requests
 
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
@@ -42,13 +44,25 @@ class MockPaymentChannel:
 
 
 class MockChain:
-    def __init__(self):
-        self.network_id = 17
+    def __init__(self, network_id: int):
+        self.network_id = network_id
         # let's make a single mock token network for testing
         self.token_network = MockTokenNetworkProxy()
 
     def payment_channel(self, canonical_identifier: CanonicalIdentifier):
         return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
+
+    def token_network_registry(self, address: Address):
+        return object()
+
+    def secret_registry(self, address: Address):
+        return object()
+
+    def user_deposit(self, address: Address):
+        return object()
+
+    def service_registry(self, address: Address):
+        return object()
 
 
 class MockChannelState:
@@ -77,7 +91,7 @@ class MockChainState:
 
 class MockRaidenService:
     def __init__(self, message_handler=None, state_transition=None):
-        self.chain = MockChain()
+        self.chain = MockChain(network_id=17)
         self.private_key, self.address = factories.make_privatekey_address()
         self.signer = LocalSigner(self.private_key)
 
@@ -142,3 +156,21 @@ def make_raiden_service_mock(
         payment_network_identifier: payment_network,
     }
     return raiden_service
+
+
+def patched_get_for_succesful_pfs_info():
+    json_data = {
+        'price_info': 0,
+        'network_info': {
+            'chain_id': 1,
+            'registry_address': '0xB9633dd9a9a71F22C933bF121d7a22008f66B908',
+        },
+        'message': 'This is your favorite pathfinding service',
+        'operator': 'John Doe',
+        'version': '0.0.1',
+    }
+
+    response = Mock()
+    response.configure_mock(status_code=200)
+    response.json = Mock(return_value=json_data)
+    return patch.object(requests, 'get', return_value=response)

@@ -9,6 +9,7 @@ from raiden.exceptions import ServiceRequestFailed
 from raiden.network.pathfinding import get_pfs_info, get_pfs_iou, make_iou, update_iou
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
+from raiden.tests.utils.mocks import patched_get_for_succesful_pfs_info
 from raiden.transfer import token_network
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
@@ -205,7 +206,7 @@ def test_get_pfs_info_success():
     response.configure_mock(status_code=200)
     response.json = Mock(return_value=json_data)
 
-    with patch.object(requests, 'get', return_value=response):
+    with patched_get_for_succesful_pfs_info():
         pathfinding_service_info = get_pfs_info('url')
 
         req_registry_address = '0xB9633dd9a9a71F22C933bF121d7a22008f66B908'
