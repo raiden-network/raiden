@@ -3,6 +3,7 @@ from typing import Any, Dict, NamedTuple, Optional, Tuple
 
 import click
 from eth_utils import to_canonical_address, to_checksum_address
+from web3 import Web3
 
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
@@ -47,7 +48,7 @@ def environment_type_to_contracts_version(environment_type: Environment) -> str:
 def setup_network_id_or_exit(
         config: Dict[str, Any],
         given_network_id: int,
-        web3,
+        web3: Web3,
 ) -> Tuple[int, bool]:
     """
     Takes the given network id and checks it against the connected network
@@ -99,7 +100,6 @@ def setup_contracts_or_exit(
         network_id: int,
 ) -> Tuple[Dict[str, Any], bool]:
     """Sets the contract deployment data depending on the network id and environment type
-
 
     If an invalid combination of network id and environment type is provided, exits
     the program with an error
@@ -182,7 +182,7 @@ def setup_proxies_or_exit(
         routing_mode: RoutingMode,
         pathfinding_service_address: str,
         pathfinding_eth_address: str,
-):
+) -> Proxies:
     """
     Initialize and setup the contract proxies.
 
