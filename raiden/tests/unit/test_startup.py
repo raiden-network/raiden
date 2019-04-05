@@ -30,7 +30,7 @@ class MockWeb3():
 def test_setup_network_id():
     config = {}
 
-    # Normal test
+    # Test a private chain network id (a network ID not known to Raiden)
     netid, known = setup_network_id_or_exit(config, 68, MockWeb3(68))
     assert netid == 68
     assert not known
