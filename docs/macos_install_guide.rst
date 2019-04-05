@@ -46,14 +46,13 @@ checkout of raiden.
 
     $ git clone https://github.com/raiden-network/raiden.git
 
-#. Install the dependecies::
+#. Install the dependencies and make raiden available inside the virtualenv::
 
     $ cd raiden
-    $ pip install -c constraints.txt -r requirements-dev.txt
+    $ make install-dev
 
-#. Make raiden available inside the virtualenv::
-
-    $ python setup.py develop
+    # or alternatively, manually:
+    # pip install -c constraints-dev.txt -r requirements-dev.txt -e .
 
 
 Now you have a working source installation of Raiden.
