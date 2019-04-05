@@ -4,8 +4,15 @@ from typing import Any, Dict
 import pytest
 
 from raiden.app import App
-from raiden.constants import Environment
-from raiden.ui.startup import setup_contracts_or_exit, setup_environment, setup_network_id_or_exit
+from raiden.constants import Environment, RoutingMode
+from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.mocks import MockChain, patched_get_for_succesful_pfs_info
+from raiden.ui.startup import (
+    setup_contracts_or_exit,
+    setup_environment,
+    setup_network_id_or_exit,
+    setup_proxies_or_exit,
+)
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -154,3 +161,38 @@ def test_setup_contracts():
     assert not addresses_known
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
+
+
+def test_setup_proxies_no_service_registry_but_pfs():
+    """
+    Test that if no service registry is provided but a manual pfs address is given then startup
+    still works
+
+    Regression test for https://github.com/raiden-network/raiden/issues/3740
+    """
+
+    network_id = 42
+    config = {
+        'environment_type': Environment.DEVELOPMENT,
+        'chain_id': network_id,
+        'services': {},
+    }
+    contracts = {}
+    blockchain_service = MockChain(network_id=network_id)
+
+    with patched_get_for_succesful_pfs_info():
+        proxies = setup_proxies_or_exit(
+            config=config,
+            tokennetwork_registry_contract_address=make_address(),
+            secret_registry_contract_address=make_address(),
+            endpoint_registry_contract_address=make_address(),
+            user_deposit_contract_address=make_address(),
+            service_registry_contract_address=None,
+            contract_addresses_known=True,
+            blockchain_service=blockchain_service,
+            contracts=contracts,
+            routing_mode=RoutingMode.PFS,
+            pathfinding_service_address=make_address(),
+            pathfinding_eth_address=make_address(),
+        )
+    assert proxies
