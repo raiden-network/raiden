@@ -128,8 +128,9 @@ It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev
 
 After you have done that you can proceed to install the dependencies::
 
-    pip install -c constraints.txt --upgrade -r requirements-dev.txt
-    python setup.py develop
+    make install-dev
+    # or alternatively, manually:
+    # pip install -c constraints-dev.txt -r requirements-dev.txt -e .
 
 You will also need to connect your Ethereum client to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
 

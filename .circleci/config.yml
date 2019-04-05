@@ -183,8 +183,8 @@ commands:
           command: |
             . ${VENV_PATH}/bin/activate
             pip install -U 'pip<19.0.0' wheel
-            pip install -c constraints.txt readme_renderer pyinstaller s3cmd
-            pip install -c constraints.txt -r requirements-dev.txt -e .
+            pip install -c constraints-dev.txt readme_renderer pyinstaller s3cmd
+            pip install -c constraints-dev.txt -r requirements-dev.txt -e .
       - save_cache:
           key: python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}
           paths:

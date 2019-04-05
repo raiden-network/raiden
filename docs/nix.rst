@@ -73,7 +73,7 @@ Run
 
 ::
 
-   pip install -r requirements-dev.txt -e .
+   pip install -r requirements-dev.txt -c constraints-dev.txt -e .
 
 to install the dependencies in ``requirements-dev.txt`` and ``raiden``
 itself.
