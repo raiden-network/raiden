@@ -180,7 +180,7 @@ def test_setup_proxies_raiden_addresses_are_given():
         'services': {},
     }
     contracts = {}
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address)
+    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
 
     proxies = setup_proxies_or_exit(
         config=config,
@@ -216,7 +216,7 @@ def test_setup_proxies_all_addresses_are_given(routing_mode):
         'services': {},
     }
     contracts = {}
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address)
+    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
 
     with patched_get_for_succesful_pfs_info():
         proxies = setup_proxies_or_exit(
@@ -253,7 +253,7 @@ def test_setup_proxies_all_addresses_are_known(routing_mode):
         'services': {},
     }
     contracts, contract_addresses_known = setup_contracts_or_exit(config, network_id)
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address)
+    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
 
     with patched_get_for_succesful_pfs_info():
         proxies = setup_proxies_or_exit(
@@ -292,7 +292,7 @@ def test_setup_proxies_no_service_registry_but_pfs():
         'services': {},
     }
     contracts = {}
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address)
+    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
 
     with patched_get_for_succesful_pfs_info():
         proxies = setup_proxies_or_exit(
@@ -325,7 +325,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
         'services': {},
     }
     contracts = {}
-    blockchain_service = MockChain(network_id=network_id, node_address=make_address)
+    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
 
     with pytest.raises(SystemExit):
         with patched_get_for_succesful_pfs_info():
@@ -355,7 +355,7 @@ def test_setup_udp_or_exit(raiden_udp_ports):
     config['socket'] = server._udp_socket((host, port))  # pylint: disable=protected-access
     contracts = {}
     our_address = make_address()
-    blockchain_service = MockChain(network_id=network_id, node_address=our_address)
+    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
     # set a big fake balance for us, to pass the test of sufficient gas for discovery transaction
     blockchain_service.client.balances_mapping[our_address] = 99999999999999999
     transport, discovery = setup_udp_or_exit(
@@ -376,7 +376,7 @@ def test_setup_udp_or_exit_insufficient_balance():
     config['environment_type'] = Environment.DEVELOPMENT
     contracts = {}
     our_address = make_address()
-    blockchain_service = MockChain(network_id=network_id, node_address=our_address)
+    blockchain_service = MockChain(network_id=network_id, node_address=make_address())
     # we don't have sufficient balance, so client should exit with a message
     blockchain_service.client.balances_mapping[our_address] = 1
     with pytest.raises(SystemExit):
