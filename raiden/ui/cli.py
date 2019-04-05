@@ -30,7 +30,6 @@ from raiden.settings import (
     DEFAULT_PATHFINDING_MAX_PATHS,
     INITIAL_PORT,
 )
-from raiden.tests.utils.transport import make_requests_insecure, matrix_server_starter
 from raiden.ui.startup import environment_type_to_contracts_version
 from raiden.utils import get_system_spec, merge_dict, split_endpoint
 from raiden.utils.cli import (
@@ -718,6 +717,8 @@ def smoketest(ctx, debug):
             args['mapped_socket'] = mapped_socket
             success = _run_smoketest()
     elif args['transport'] == 'matrix':
+        from raiden.tests.utils.transport import matrix_server_starter, make_requests_insecure
+
         args['mapped_socket'] = None
         print_step('Starting Matrix transport')
         try:

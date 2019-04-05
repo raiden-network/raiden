@@ -123,8 +123,11 @@ dist: clean
 	python setup.py bdist_wheel
 	ls -l dist
 
-install: clean
-	python setup.py install
+install: clean-pyc
+	pip install -c constraints.txt -r requirements.txt .
+
+install-dev: clean-pyc
+	pip install -c constraints-dev.txt -r requirements-dev.txt -e .
 
 logging_settings = :info,contracts:debug
 mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
