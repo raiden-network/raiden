@@ -196,3 +196,36 @@ def test_setup_proxies_no_service_registry_but_pfs():
             pathfinding_eth_address=make_address(),
         )
     assert proxies
+
+
+def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs():
+    """
+    Test that if pfs routing mode is requested and no address or service registry is given
+    then the client exits with an error message
+    """
+
+    network_id = 42
+    config = {
+        'environment_type': Environment.DEVELOPMENT,
+        'chain_id': network_id,
+        'services': {},
+    }
+    contracts = {}
+    blockchain_service = MockChain(network_id=network_id)
+
+    with pytest.raises(SystemExit):
+        with patched_get_for_succesful_pfs_info():
+            setup_proxies_or_exit(
+                config=config,
+                tokennetwork_registry_contract_address=make_address(),
+                secret_registry_contract_address=make_address(),
+                endpoint_registry_contract_address=make_address(),
+                user_deposit_contract_address=make_address(),
+                service_registry_contract_address=None,
+                contract_addresses_known=True,
+                blockchain_service=blockchain_service,
+                contracts=contracts,
+                routing_mode=RoutingMode.PFS,
+                pathfinding_service_address=None,
+                pathfinding_eth_address=make_address(),
+            )
