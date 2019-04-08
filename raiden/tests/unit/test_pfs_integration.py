@@ -5,8 +5,16 @@ import pytest
 import requests
 from eth_utils import encode_hex, is_checksum_address, to_checksum_address
 
-from raiden.exceptions import ServiceRequestFailed
-from raiden.network.pathfinding import get_pfs_info, get_pfs_iou, make_iou, update_iou
+from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
+from raiden.network.pathfinding import (
+    MAX_PATHS_QUERY_ATTEMPTS,
+    PfsError,
+    get_pfs_info,
+    get_pfs_iou,
+    make_iou,
+    query_paths,
+    update_iou,
+)
 from raiden.routing import get_best_routes
 from raiden.tests.utils import factories
 from raiden.tests.utils.mocks import patched_get_for_succesful_pfs_info
@@ -666,7 +674,7 @@ def test_update_iou():
     sender = Address(privatekey_to_address(privkey))
     receiver = Address(bytes([1] * 20))
 
-    # prepate iou
+    # prepare iou
     iou = {
         'sender': encode_hex(sender),
         'receiver': encode_hex(receiver),
@@ -694,3 +702,174 @@ def test_update_iou():
     tampered_iou['amount'] += 10
     with pytest.raises(ServiceRequestFailed):
         update_iou(iou=tampered_iou, privkey=privkey, added_amount=added_amount)
+
+
+def request_mock(response=None, status_code=200):
+    mock = Mock()
+    mock.configure_mock(status_code=status_code)
+    mock.json = Mock(return_value=response or {})
+    return mock
+
+
+def assert_failed_pfs_request(
+        paths_args: typing.Dict[str, typing.Any],
+        responses: typing.List[typing.Dict],
+        status_codes: typing.List[int] = (400, 400),
+        expected_requests: int = MAX_PATHS_QUERY_ATTEMPTS,
+        expected_get_iou_requests: int = None,
+        expected_success: bool = False,
+        exception_type: typing.Type = None,
+):
+    while len(responses) < MAX_PATHS_QUERY_ATTEMPTS:
+        responses.append(responses[0])
+    for response in responses:
+        if 'error_code' in response:
+            response['errors'] = 'broken iou'
+
+    path_mocks = [request_mock(*data) for data in zip(responses, status_codes)]
+
+    with patch.object(requests, 'get', return_value=request_mock()) as get_iou:
+        with patch.object(requests, 'post', side_effect=path_mocks) as post_paths:
+            if expected_success:
+                query_paths(**paths_args)
+            else:
+                with pytest.raises(exception_type or ServiceRequestFailed) as raised_exception:
+                    query_paths(**paths_args)
+                    assert 'broken iou' in str(raised_exception)
+            assert get_iou.call_count == expected_get_iou_requests or expected_requests
+            assert post_paths.call_count == expected_requests
+
+
+@pytest.fixture
+def pfs_max_fee():
+    return 1000
+
+
+@pytest.fixture
+def query_paths_args(token_network_state, our_address, pfs_max_fee):
+    service_config = dict(
+        pathfinding_service_address='mock.pathservice',
+        pathfinding_eth_address='0x22222222222222222222',
+        pathfinding_max_fee=pfs_max_fee,
+        pathfinding_max_paths=3,
+        pathfinding_iou_timeout=500,
+    )
+    return dict(
+        service_config=service_config,
+        our_address=our_address,
+        privkey=PRIVKEY,
+        current_block_number=10,
+        token_network_address=token_network_state.address,
+        route_from=our_address,
+        route_to=factories.make_address(),
+        value=50,
+    )
+
+
+@pytest.fixture
+def valid_response_json():
+    return dict(result='some result')
+
+
+def test_query_paths_with_second_try(query_paths_args, valid_response_json):
+    " IOU rejection errors that are expected to result in an unaltered second attempt "
+    for try_again in (PfsError.BAD_IOU, PfsError.MISSING_IOU, PfsError.USE_THIS_IOU):
+        response = [dict(error_code=try_again.value)] * 2
+        assert_failed_pfs_request(
+            query_paths_args,
+            response,
+            expected_requests=2,
+            exception_type=ServiceRequestIOURejected,
+        )
+
+        response[1] = valid_response_json
+        assert_failed_pfs_request(query_paths_args, response, [400, 200], expected_success=True)
+
+
+def test_query_paths_with_scrapped_iou(query_paths_args, valid_response_json):
+    " Errors that will result in reattempting with a new iou "
+    for scrap_iou in (PfsError.IOU_ALREADY_CLAIMED, PfsError.IOU_EXPIRED_TOO_EARLY):
+        response = [dict(error_code=scrap_iou.value)] * 2
+        assert_failed_pfs_request(
+            query_paths_args,
+            response,
+            expected_requests=2,
+            expected_get_iou_requests=1,
+            exception_type=ServiceRequestIOURejected,
+        )
+
+        response[1] = valid_response_json
+        assert_failed_pfs_request(query_paths_args, response, [400, 200], expected_success=True)
+
+
+def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
+    " No retries after unrecoverable errors. "
+    for unrecoverable in (
+            PfsError.INVALID_REQUEST,
+            PfsError.INVALID_SIGNATURE,
+            PfsError.REQUEST_OUTDATED,
+    ):
+        response = [dict(error_code=unrecoverable.value)] * 2
+        assert_failed_pfs_request(query_paths_args, response, expected_requests=1)
+
+    for unrecoverable in (PfsError.WRONG_IOU_RECIPIENT, PfsError.DEPOSIT_TOO_LOW):
+        response = [dict(error_code=unrecoverable.value)] * 2
+        assert_failed_pfs_request(
+            query_paths_args,
+            response,
+            expected_requests=1,
+            exception_type=ServiceRequestIOURejected,
+        )
+
+
+def test_query_paths_with_insufficient_payment(
+        query_paths_args,
+        valid_response_json,
+        pfs_max_fee,
+):
+    " After an insufficient payment response, we retry only if we are below our maximum fee. "
+    insufficient_payment = [dict(error_code=PfsError.INSUFFICIENT_SERVICE_PAYMENT.value)] * 2
+    assert_failed_pfs_request(
+        query_paths_args,
+        insufficient_payment,
+        expected_requests=1,
+        exception_type=ServiceRequestIOURejected,
+    )
+
+    query_paths_args['service_config']['pathfinding_fee'] = pfs_max_fee
+    assert_failed_pfs_request(
+        query_paths_args,
+        insufficient_payment,
+        expected_requests=1,
+        exception_type=ServiceRequestIOURejected,
+    )
+
+    query_paths_args['service_config']['pathfinding_fee'] = int(pfs_max_fee / 2)
+    assert_failed_pfs_request(
+        query_paths_args,
+        insufficient_payment,
+        expected_requests=2,
+        exception_type=ServiceRequestIOURejected,
+    )
+
+    # second attempt not rejected
+    insufficient_payment[1] = valid_response_json
+    assert_failed_pfs_request(
+        query_paths_args,
+        insufficient_payment,
+        [400, 200],
+        expected_success=True,
+    )
+
+
+def test_query_paths_with_multiple_errors(query_paths_args):
+    " Max. number of attempts is not exceeded also if there is a new recoverable issue. "
+    different_recoverable_errors = [
+        dict(error_code=PfsError.BAD_IOU.value),
+        dict(error_code=PfsError.IOU_ALREADY_CLAIMED.value),
+    ]
+    assert_failed_pfs_request(
+        query_paths_args,
+        different_recoverable_errors,
+        exception_type=ServiceRequestIOURejected,
+    )
