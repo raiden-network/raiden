@@ -301,9 +301,8 @@ def query_paths(
     max_paths = service_config['pathfinding_max_paths']
     url = service_config['pathfinding_service_address']
     payload = {'from': route_from, 'to': route_to, 'value': value, 'max_paths': max_paths}
+    offered_fee = service_config.get('pathfinding_fee', service_config['pathfinding_max_fee'])
     scrap_existing_iou = False
-    # TODO set offered_fee to a more reasonable value (obtained from ServiceRegistry?)
-    offered_fee = int(service_config['pathfinding_max_fee'] / 2)
 
     for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
         payload.update(create_current_iou(
