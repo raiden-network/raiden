@@ -549,6 +549,14 @@ class JSONRPCClient:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
+    def get_confirmed_blockhash(self):
+        """ Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash """
+        confirmed_block_number = self.web3.eth.blockNumber - self.default_block_num_confirmations
+        if confirmed_block_number < 0:
+            confirmed_block_number = 0
+
+        return self.blockhash_from_blocknumber(confirmed_block_number)
+
     def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
         """Given a block number, query the chain to get its corresponding block hash"""
         return bytes(self.web3.eth.getBlock(block_number)['hash'])

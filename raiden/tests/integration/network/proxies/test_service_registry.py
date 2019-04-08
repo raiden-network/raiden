@@ -42,7 +42,7 @@ def test_service_registry_random_pfs(
     assert not c1_service_proxy.get_service_address('latest', 9999)
 
     # Test that getting a random service from the proxy works
-    assert get_random_service(c1_service_proxy) in zip(urls, addresses)
+    assert get_random_service(c1_service_proxy, 'latest') in zip(urls, addresses)
 
 
 def test_configure_pfs(

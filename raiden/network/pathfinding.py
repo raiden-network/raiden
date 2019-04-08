@@ -12,6 +12,7 @@ from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, RoutingMode
 from raiden.exceptions import ServiceRequestFailed
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.utils import typing
+from raiden.utils.typing import BlockSpecification
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 log = structlog.get_logger(__name__)
@@ -28,21 +29,21 @@ def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
         return None
 
 
-def get_random_service(service_registry: ServiceRegistry) -> Tuple[Optional[str], Optional[str]]:
+def get_random_service(
+        service_registry: ServiceRegistry,
+        block_identifier: BlockSpecification,
+) -> Tuple[Optional[str], Optional[str]]:
     """Selects a random PFS from service_registry.
 
     Returns a tuple of the chosen services url and eth address.
     If there are no PFS in the given registry, it returns (None, None).
     """
-    latest_block_hash = service_registry.client.blockhash_from_blocknumber(
-        'latest',
-    )
-    count = service_registry.service_count(block_identifier=latest_block_hash)
+    count = service_registry.service_count(block_identifier=block_identifier)
     if count == 0:
         return None, None
     index = random.SystemRandom().randint(0, count - 1)
     address = service_registry.get_service_address(
-        block_identifier=latest_block_hash,
+        block_identifier=block_identifier,
         index=index,
     )
     # We are using the same blockhash for both blockchain queries so the address
@@ -50,7 +51,7 @@ def get_random_service(service_registry: ServiceRegistry) -> Tuple[Optional[str]
     # services to be removed from the registry.
     assert address, 'address should exist for this index'
     url = service_registry.get_service_url(
-        block_identifier=latest_block_hash,
+        block_identifier=block_identifier,
         service_hex_address=address,
     )
     return url, address
@@ -83,7 +84,11 @@ def configure_pfs(
     assert pfs_address, msg
     if pfs_address == 'auto':
         assert service_registry, 'Should not get here without a service registry'
-        pfs_address, pfs_eth_address = get_random_service(service_registry)
+        block_hash = service_registry.client.get_confirmed_blockhash()
+        pfs_address, pfs_eth_address = get_random_service(
+            service_registry=service_registry,
+            block_identifier=block_hash,
+        )
         if pfs_address is None:
             click.secho(
                 "The service registry has no registered path finding service "
