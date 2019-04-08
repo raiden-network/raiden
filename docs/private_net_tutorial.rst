@@ -4,7 +4,7 @@ Raiden on Private Network Tutorial
 Introduction
 ============
 
-This tutorial shows how to run Raiden on a private network, using the ``master`` branch (this is useful when you are working on a pull-request).
+This tutorial shows how to run Raiden on a private network, using the ``master`` branch (this is useful when you are working on a pull-request).  Also this tutorial assumes Ubuntu 18.04.2 LTS.
 
 Creating a Virtual Environment
 ==============================
@@ -13,6 +13,7 @@ In a shell, run
 
 .. code:: bash
 
+ $ sudo apt-get install libncurses5-dev
  $ rm -rf priv_chain
  $ mkdir priv_chain
  $ cd priv_chain
