@@ -264,6 +264,7 @@ UpdatePFS = namedbuffer(
         updating_capacity,
         other_capacity,
         reveal_timeout,
+        fee,
         signature,
     ],
 )
