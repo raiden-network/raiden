@@ -18,7 +18,6 @@ def test_service_registry_random_pfs(
         contract_manager,
 ):
     addresses = [
-        # to_normalized_address(privatekey_to_address(key))
         to_checksum_address(privatekey_to_address(key))
         for key in private_keys
     ]
