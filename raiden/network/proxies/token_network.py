@@ -644,35 +644,12 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
         )
 
-        # setTotalDeposit requires a monotonically increasing value. This
-        # is used to handle concurrent actions:
-        #
-        #  - The deposits will be done in order, i.e. the monotonic
-        #  property is preserved by the caller
-        #  - The race of two deposits will be resolved with the larger
-        #  deposit winning
-        #  - Retries wont have effect
-        #
-        # This check is serialized with the channel_operations_lock to avoid
-        # sending invalid transactions on-chain (decreasing total deposit).
-        #
         amount_to_deposit = total_deposit - previous_total_deposit
 
-        # These two scenarios can happen if two calls to deposit happen
-        # and then we get here on the second call
-        if total_deposit < previous_total_deposit:
+        if total_deposit <= previous_total_deposit:
             msg = (
                 f'Current total deposit ({previous_total_deposit}) is already larger '
                 f'than the requested total deposit amount ({total_deposit})'
-            )
-            log.info('setTotalDeposit failed', reason=msg, **log_details)
-            raise DepositMismatch(msg)
-
-        if amount_to_deposit <= 0:
-            msg = (
-                f'new_total_deposit - previous_total_deposit must be greater than 0. '
-                f'new_total_deposit={total_deposit} '
-                f'previous_total_deposit={previous_total_deposit}'
             )
             log.info('setTotalDeposit failed', reason=msg, **log_details)
             raise DepositMismatch(msg)
@@ -706,11 +683,35 @@ class TokenNetwork:
             total_deposit: TokenAmount,
             partner: Address,
     ):
-        """ Set total token deposit in the channel to total_deposit.
+        """ Set channel's total deposit.
+
+        `total_deposit` has to be monotonically increasing, this is enforced by
+        the `TokenNetwork` smart contract. This is done for the same reason why
+        the balance proofs have a monotonically increasing transferred amount,
+        it simplifies the analysis of bad behavior and the handling code of
+        out-dated balance proofs.
+
+        Races to `set_total_deposit` are handled by the smart contract, were
+        largest total deposit wins. The end balance of the funding accounts is
+        undefined. E.g.
+
+        - Acc1 calls set_total_deposit with 10 tokens
+        - Acc2 calls set_total_deposit with 13 tokens
+
+        - If Acc2's transaction is mined first, then Acc1 token supply is left intact.
+        - If Acc1's transaction is mined first, then Acc2 will only move 3 tokens.
+
+        Races for the same account don't have any unexpeted side-effect.
 
         Raises:
-            ChannelBusyError: If the channel is busy with another operation
+            DepositMismatch: If the new request total deposit is lower then the
+                existing total deposit on-chain for the `given_block_identifier`.
+            RaidenRecoverableError: If the channel was closed meanwhile the
+                deposit was in transit.
+            RaidenUnrecoverableError: If the transaction was sucessful and the
+                deposit_amount is not as large as the requested value.
             RuntimeError: If the token address is empty.
+            ValueError: If an argument is of the invalid type.
         """
         if not isinstance(total_deposit, int):
             raise ValueError('total_deposit needs to be an integer number.')
