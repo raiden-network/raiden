@@ -69,7 +69,7 @@ def mediated_transfer(
         amount,
         fee=0,
         identifier=None,
-        timeout=5,
+        timeout=10,
 ):
     """ Nice to read shortcut to make a LockedTransfer.
 
