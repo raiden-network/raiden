@@ -1800,6 +1800,7 @@ class UpdatePFS(SignedMessage):
             updating_capacity: typing.TokenAmount,
             other_capacity: typing.TokenAmount,
             reveal_timeout: int,
+            mediation_fee: typing.FeeAmount,
             signature: typing.Optional[typing.Signature] = None,
             **kwargs,
     ):
@@ -1812,6 +1813,7 @@ class UpdatePFS(SignedMessage):
         self.updating_capacity = updating_capacity
         self.other_capacity = other_capacity
         self.reveal_timeout = reveal_timeout
+        self.mediation_fee = mediation_fee
         if signature is None:
             self.signature = b''
         else:
@@ -1834,6 +1836,7 @@ class UpdatePFS(SignedMessage):
                 receiver=channel_state.our_state,
             ),
             reveal_timeout=channel_state.reveal_timeout,
+            mediation_fee=channel_state.mediation_fee,
         )
 
     def to_dict(self) -> typing.Dict[str, typing.Any]:
@@ -1847,6 +1850,7 @@ class UpdatePFS(SignedMessage):
             'updating_capacity': str(self.updating_capacity),
             'other_capacity': str(self.other_capacity),
             'reveal_timeout': self.reveal_timeout,
+            'mediation_fee': str(self.mediation_fee),
             'signature': encode_hex(self.signature),
         }
 
@@ -1858,9 +1862,10 @@ class UpdatePFS(SignedMessage):
             other_participant=to_canonical_address(data['other_participant']),
             updating_nonce=data['updating_nonce'],
             other_nonce=data['other_nonce'],
-            updating_capacity=int(data['updating_capacity']),
-            other_capacity=int(data['other_capacity']),
+            updating_capacity=TokenAmount(int(data['updating_capacity'])),
+            other_capacity=TokenAmount(int(data['other_capacity'])),
             reveal_timeout=data['reveal_timeout'],
+            mediation_fee=typing.FeeAmount(int(data['mediation_fee'])),
             signature=decode_hex(data['signature']),
         )
 
@@ -1882,6 +1887,7 @@ class UpdatePFS(SignedMessage):
         packed.updating_capacity = self.updating_capacity
         packed.other_capacity = self.other_capacity
         packed.reveal_timeout = self.reveal_timeout
+        packed.fee = self.mediation_fee
         packed.signature = self.signature
 
     @classmethod
@@ -1899,6 +1905,7 @@ class UpdatePFS(SignedMessage):
             updating_capacity=packed.other_capacity,
             other_capacity=packed.other_capacity,
             reveal_timeout=packed.reveal_timeout,
+            mediation_fee=packed.fee,
             signature=packed.signature,
         )
 
