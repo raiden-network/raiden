@@ -22,7 +22,13 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils import CHANNEL_ID_UNSPECIFIED, CanonicalIdentifier, pex, typing
+from raiden.utils import (
+    CHAIN_ID_UNSPECIFIED,
+    CHANNEL_ID_UNSPECIFIED,
+    CanonicalIdentifier,
+    pex,
+    typing,
+)
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,
@@ -327,10 +333,14 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
     to calculate the gain and potentially perform unlocks in case
     there is value to be gained.
     """
-    our_locksroot, partner_locksroot = get_onchain_locksroots(
-        raiden=raiden,
+    canonical_identifier = CanonicalIdentifier(
+        chain_identifier=CHAIN_ID_UNSPECIFIED,
         token_network_address=token_network_identifier,
         channel_identifier=channel_identifier,
+    )
+    our_locksroot, partner_locksroot = get_onchain_locksroots(
+        chain=raiden.chain,
+        canonical_identifier=canonical_identifier,
         participant1=channel_state.our_state.address,
         participant2=channel_state.partner_state.address,
         block_identifier=block_hash,

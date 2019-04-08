@@ -7,6 +7,7 @@ from gevent.pool import Pool
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.sqlite import SQLiteStorage, StateChangeRecord
+from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier
 from raiden.utils.serialization import serialize_bytes
 from raiden.utils.typing import Any, Dict, Locksroot, Tuple
 
@@ -46,10 +47,15 @@ def _get_onchain_locksroots(
             f'token network address: {token_network["address"]} being created. ',
         )
 
-    our_locksroot, partner_locksroot = get_onchain_locksroots(
-        raiden=raiden,
+    canonical_identifier = CanonicalIdentifier(
+        chain_identifier=CHAIN_ID_UNSPECIFIED,
         token_network_address=to_canonical_address(token_network['address']),
         channel_identifier=int(channel['identifier']),
+    )
+
+    our_locksroot, partner_locksroot = get_onchain_locksroots(
+        chain=raiden.chain,
+        canonical_identifier=canonical_identifier,
         participant1=to_canonical_address(channel['our_state']['address']),
         participant2=to_canonical_address(channel['partner_state']['address']),
         block_identifier='latest',
@@ -132,10 +138,15 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
 
             channel_state_data = json.loads(channel_new_state_change.data)
             new_channel_state = channel_state_data['channel_state']
-            our_locksroot, partner_locksroot = get_onchain_locksroots(
-                raiden=raiden,
+
+            canonical_identifier = CanonicalIdentifier(
+                chain_identifier=CHAIN_ID_UNSPECIFIED,
                 token_network_address=to_canonical_address(token_network_identifier),
                 channel_identifier=int(channel_identifier),
+            )
+            our_locksroot, partner_locksroot = get_onchain_locksroots(
+                chain=raiden.chain,
+                canonical_identifier=canonical_identifier,
                 participant1=to_canonical_address(new_channel_state['our_state']['address']),
                 participant2=to_canonical_address(new_channel_state['partner_state']['address']),
                 block_identifier='latest',
@@ -208,7 +219,7 @@ def _add_onchain_locksroot_to_snapshots(
     storage.update_snapshots(updated_snapshots_data)
 
 
-def upgrade_v19_to_v20(
+def upgrade_v19_to_v20(  # pylint: disable=unused-argument
         storage: SQLiteStorage,
         old_version: int,
         current_version: int,
