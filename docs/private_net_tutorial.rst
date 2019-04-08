@@ -43,6 +43,15 @@ Install Raiden and dependencies
 Launch a private network
 ========================
 
+Installing Geth
+---------------
+
+Follow `the guide <https://geth.ethereum.org/install-and-build/Installing-Geth>`__ and install Geth. A command ``geth`` should be available in your shell. This guide assumes version 1.8.23, but other versions might work.
+
+Preparing a genesis config
+--------------------------
+
+
 Create an account
 -----------------
 
