@@ -161,6 +161,10 @@ class Token:
             to_checksum_address(address),
         ).call(block_identifier=block_identifier)
 
+    def total_supply(self, block_identifier='latest'):
+        """ Return the total supply of the token at the given block identifier. """
+        return self.proxy.contract.functions.totalSupply().call(block_identifier=block_identifier)
+
     def transfer(
             self,
             to_address: Address,
