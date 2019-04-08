@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from eth_utils import is_same_address, to_canonical_address
 
@@ -5,7 +7,8 @@ from raiden.constants import (
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
 )
-from raiden.exceptions import RaidenRecoverableError, RaidenUnrecoverableError
+from raiden.exceptions import AddressWithoutCode, InvalidToken, RaidenRecoverableError
+from raiden.network.proxies.token import Token
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.smartcontracts import deploy_token
@@ -30,7 +33,7 @@ def test_token_network_registry(
 
     bad_token_address = make_address()
     # try to register non-existing token network
-    with pytest.raises(RaidenUnrecoverableError):
+    with pytest.raises(AddressWithoutCode):
         token_network_registry_proxy.add_token_with_limits(
             token_address=bad_token_address,
             channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
@@ -45,7 +48,21 @@ def test_token_network_registry(
         token_name='TKN',
         token_symbol='TKN',
     )
+
     test_token_address = to_canonical_address(test_token.contract.address)
+    # try to register a token network not following ERC20 protocol
+
+    def unimplemented_total_supply(block_identifier='latest'):  # pylint: disable=unused-argument
+        return ''
+
+    with patch.object(Token, 'total_supply', side_effect=unimplemented_total_supply):
+        with pytest.raises(InvalidToken):
+            token_network_registry_proxy.add_token_with_limits(
+                token_address=test_token_address,
+                channel_participant_deposit_limit=RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
+                token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
+            )
+
     event_filter = token_network_registry_proxy.tokenadded_filter()
     token_network_address = token_network_registry_proxy.add_token_with_limits(
         token_address=test_token_address,
