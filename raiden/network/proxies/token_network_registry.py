@@ -16,7 +16,13 @@ from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     NULL_ADDRESS,
 )
-from raiden.exceptions import InvalidAddress, RaidenRecoverableError, RaidenUnrecoverableError
+from raiden.exceptions import (
+    InvalidAddress,
+    InvalidToken,
+    RaidenRecoverableError,
+    RaidenUnrecoverableError,
+)
+from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
@@ -131,6 +137,17 @@ class TokenNetworkRegistry:
     ) -> Address:
         if not is_binary_address(token_address):
             raise InvalidAddress('Expected binary address format for token')
+
+        token_proxy = Token(
+            jsonrpc_client=self.client,
+            token_address=token_address,
+            contract_manager=self.contract_manager,
+        )
+
+        if token_proxy.total_supply() == '':
+            raise InvalidToken(
+                'Given token address does not follow the ERC20 standard (missing totalSupply()',
+            )
 
         log_details = {
             'node': pex(self.node_address),

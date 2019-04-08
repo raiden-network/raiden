@@ -68,6 +68,7 @@ from raiden.exceptions import (
     InvalidNumberInput,
     InvalidSecretOrSecretHash,
     InvalidSettleTimeout,
+    InvalidToken,
     PaymentConflict,
     SamePeerAddress,
     TokenNotRegistered,
@@ -580,6 +581,13 @@ class RestAPI:
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
 
+        conflict_exceptions = (
+            InvalidAddress,
+            AlreadyRegisteredTokenAddress,
+            TransactionThrew,
+            InvalidToken,
+            AddressWithoutCode,
+        )
         log.debug(
             'Registering token',
             node=pex(self.raiden_api.address),
@@ -593,7 +601,7 @@ class RestAPI:
                 channel_participant_deposit_limit=UINT256_MAX,
                 token_network_deposit_limit=UINT256_MAX,
             )
-        except (InvalidAddress, AlreadyRegisteredTokenAddress, TransactionThrew) as e:
+        except conflict_exceptions as e:
             return api_error(
                 errors=str(e),
                 status_code=HTTPStatus.CONFLICT,

@@ -125,6 +125,11 @@ class AlreadyRegisteredTokenAddress(RaidenError):
     pass
 
 
+class InvalidToken(RaidenError):
+    """ Raised if the token does not follow the ERC20 standard """
+    pass
+
+
 # Exceptions raised due to protocol errors (this includes messages received
 # from a byzantine node)
 
