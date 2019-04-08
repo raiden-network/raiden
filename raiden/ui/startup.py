@@ -297,16 +297,17 @@ def setup_proxies_or_exit(
             )
             sys.exit(1)
 
-        pfs_url, pfs_eth_address = configure_pfs(
+        pfs_config = configure_pfs(
             pfs_address=pathfinding_service_address,
             pfs_eth_address=pathfinding_eth_address,
             routing_mode=routing_mode,
             service_registry=service_registry,
         )
         msg = 'Eth address of selected pathfinding service is unknown.'
-        assert pfs_eth_address is not None, msg
-        config['services']['pathfinding_service_address'] = pfs_url
-        config['services']['pathfinding_eth_address'] = pfs_eth_address
+        assert pfs_config.eth_address is not None, msg
+        config['services']['pathfinding_service_address'] = pfs_config.url
+        config['services']['pathfinding_eth_address'] = pfs_config.eth_address
+        config['services']['pathfinding_fee'] = pfs_config.fee
     else:
         config['services']['pathfinding_service_address'] = None
         config['services']['pathfinding_eth_address'] = None

@@ -83,12 +83,18 @@ def get_random_service(
     return url, address
 
 
+class PFSConfiguration(typing.NamedTuple):
+    url: str
+    eth_address: str
+    fee: int
+
+
 def configure_pfs(
         pfs_address: Optional[str],
         pfs_eth_address: Optional[str],
         routing_mode: RoutingMode,
         service_registry,
-) -> Tuple[Optional[str], Optional[str]]:
+) -> Optional[PFSConfiguration]:
     """
     Take in the given pfs_address argument, the service registry and find out a
     pfs address to use.
@@ -97,14 +103,14 @@ def configure_pfs(
     If pfs_address is provided we use that.
     If pfs_address is 'auto' then we randomly choose a PFS address from the registry
 
-    Returns a tuple of url and eth address of the pfs to use or (None, None) if we
-    don't use the PFS and use basic routing
+    Returns a NamedTuple containing url, eth_address and fee (per paths request) of
+    the selected PFS, or None if we use basic routing instead of a PFS.
     """
     if routing_mode == RoutingMode.BASIC:
         msg = 'Not using path finding services, falling back to basic routing.'
         log.info(msg)
         click.secho(msg)
-        return None, None
+        return None
 
     msg = "With PFS routing mode we shouldn't get to configure pfs with pfs_address being None"
     assert pfs_address, msg
@@ -139,7 +145,11 @@ def configure_pfs(
         )
         log.info('Using PFS', pfs_info=pathfinding_service_info)
 
-    return pfs_address, pfs_eth_address
+    return PFSConfiguration(
+        url=pfs_address,
+        eth_address=pfs_eth_address,
+        fee=pathfinding_service_info['price_info'],
+    )
 
 
 def get_pfs_iou(

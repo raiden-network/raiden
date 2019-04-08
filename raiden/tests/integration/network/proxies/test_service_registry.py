@@ -74,38 +74,38 @@ def test_configure_pfs(
     response.json = Mock(return_value=json_data)
 
     # With basic routing configure pfs should return None
-    pfs_address, pfs_eth_address = configure_pfs(
+    config = configure_pfs(
         pfs_address=None,
         pfs_eth_address=None,
         routing_mode=RoutingMode.BASIC,
         service_registry=service_proxy,
     )
-    assert pfs_address is None
-    assert pfs_eth_address is None
+    assert config is None
 
     # Asking for auto address
     with patch.object(requests, 'get', return_value=response):
-        pfs_url, pfs_eth_address = configure_pfs(
+        config = configure_pfs(
             pfs_address='auto',
             pfs_eth_address=None,
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
         )
-    assert pfs_url in urls
-    assert is_checksum_address(pfs_eth_address)
+    assert config.url in urls
+    assert is_checksum_address(config.eth_address)
 
     # Configuring a given address
     given_address = 'http://ourgivenaddress'
     given_eth_address = '0x22222222222222222222'
     with patch.object(requests, 'get', return_value=response):
-        pfs_url, pfs_eth_address = configure_pfs(
+        config = configure_pfs(
             pfs_address=given_address,
             pfs_eth_address=given_eth_address,
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
         )
-    assert pfs_url == given_address
-    assert pfs_eth_address == given_eth_address
+    assert config.url == given_address
+    assert config.eth_address == given_eth_address
+    assert config.fee == json_data['price_info']
 
     # Bad address, should exit the program
     response = Mock()
@@ -115,7 +115,7 @@ def test_configure_pfs(
     with pytest.raises(SystemExit):
         with patch.object(requests, 'get', side_effect=requests.RequestException()):
             # Configuring a given address
-            pfs_url, pfs_eth_address = configure_pfs(
+            config = configure_pfs(
                 pfs_address=bad_address,
                 pfs_eth_address=pfs_eth_address,
                 routing_mode=RoutingMode.PFS,
