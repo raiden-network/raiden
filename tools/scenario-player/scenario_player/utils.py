@@ -83,10 +83,10 @@ class DummyStream:
 class ChainConfigType(click.ParamType):
     name = 'chain-config'
 
-    def get_metavar(self, param):
+    def get_metavar(self, param):  # pylint: disable=unused-argument,no-self-use
         return '<chain-name>:<eth-node-rpc-url>'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx):  # pylint: disable=unused-argument
         name, _, rpc_url = value.partition(':')
         if name.startswith('http'):
             self.fail(f'Invalid value: {value}. Use {self.get_metavar(None)}.')
@@ -303,6 +303,8 @@ def mint_token_if_balance_low(
     else:
         if no_action_msg:
             log.debug(no_action_msg, balance=balance)
+
+    return None
 
 
 def send_notification_mail(target_mail, subject, message, api_key):

@@ -186,11 +186,13 @@ class TabFocusSwitchingPile(uwd.Pile):
 
         if key == 'tab':
             self.focus_position = (self.focus_position + 1) % len(self.contents)
-            return
+            return None
 
         key = self.focus.keypress(size, key)
         if key:
             return key
+
+        return None
 
 
 class ScenarioUI:
