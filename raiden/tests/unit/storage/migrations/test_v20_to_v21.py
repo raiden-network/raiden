@@ -80,13 +80,13 @@ def assert_snapshots_are_transformed(storage: SQLiteStorage) -> None:
                 f'{payment_network["address"]} should exist in the chain state\'s '
                 f'tokennetworkaddresses_to_paymentnetworkaddresses member',
             )
-            assert payment_network['address'] in tn_to_pn, msg
+            assert token_network['address'] in tn_to_pn, msg
 
             msg = (
                 f'Address of Payment network: {payment_network["address"]} does not equal '
-                f'the address in the token network: {token_network["token_address"]}',
+                f'the address in the token network: {token_network["address"]}',
             )
-            assert tn_to_pn[payment_network['address']] == token_network['token_address'], msg
+            assert tn_to_pn[token_network['address']] == payment_network['address'], msg
 
     for task in snapshot['payment_mapping']['secrethashes_to_task'].values():
         if 'raiden.transfer.state.InitiatorTask' in task['_type']:
