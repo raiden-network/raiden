@@ -52,10 +52,7 @@ def test_token_network_registry(
     test_token_address = to_canonical_address(test_token.contract.address)
     # try to register a token network not following ERC20 protocol
 
-    def unimplemented_total_supply(block_identifier='latest'):  # pylint: disable=unused-argument
-        return ''
-
-    with patch.object(Token, 'total_supply', side_effect=unimplemented_total_supply):
+    with patch.object(Token, 'total_supply', return_value=''):
         with pytest.raises(InvalidToken):
             token_network_registry_proxy.add_token_with_limits(
                 token_address=test_token_address,
