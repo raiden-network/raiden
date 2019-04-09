@@ -1,5 +1,5 @@
-import pytest
 import gevent
+import pytest
 from gevent import server
 
 from raiden import waiting
