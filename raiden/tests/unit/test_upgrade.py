@@ -41,18 +41,18 @@ def test_no_upgrade_executes_if_already_upgraded(tmp_path):
     for version in [16, 17, 18, 19]:
         old_db_filename = tmp_path / Path(f'v{version}_log.db')
 
-        storage = setup_storage(old_db_filename)
-
-        with patch('raiden.utils.upgrades.RAIDEN_DB_VERSION', new=version):
+        with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=version):
+            storage = setup_storage(old_db_filename)
             storage.update_version()
             storage.conn.close()
 
     db_path = tmp_path / Path('v19_log.db')
 
-    with patch('raiden.utils.upgrades._run_upgrade_func') as upgrade_mock:
-        UpgradeManager(db_filename=db_path).run()
-        # Oldest database is of the same version as the current, no migrations should execute
-        assert not upgrade_mock.called
+    with patch('raiden.utils.upgrades.UpgradeManager._upgrade') as upgrade_mock:
+        with patch('raiden.utils.upgrades.RAIDEN_DB_VERSION', new=version):
+            UpgradeManager(db_filename=db_path).run()
+            # Oldest database is of the same version as the current, no migrations should execute
+            assert not upgrade_mock.called
 
 
 def test_upgrade_executes_necessary_migration_functions(tmp_path, monkeypatch):
@@ -101,7 +101,7 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
 
     storage = setup_storage(old_db_filename)
 
-    with patch('raiden.utils.upgrades.RAIDEN_DB_VERSION', new=16):
+    with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=16):
         storage.update_version()
         storage.conn.close()
 
@@ -135,8 +135,6 @@ def test_upgrade_manager_restores_backup(tmp_path, monkeypatch):
         {'_type': 'raiden.transfer.state_change.ActionInitChain'},
     )
     assert state_change_record.data is not None
-    assert not old_db_filename.exists()
-    assert Path(str(old_db_filename).replace('_log.db', '_log.backup')).exists()
 
 
 def test_sequential_version_numbers(tmp_path, monkeypatch):
@@ -169,7 +167,7 @@ def test_sequential_version_numbers(tmp_path, monkeypatch):
         storage.conn.close()
 
     with monkeypatch.context() as m:
-        def mock_older_db_file(paths):  # pylint: disable=unused-argument
+        def latest_db_file(paths):  # pylint: disable=unused-argument
             return old_db_filename
 
         m.setattr(
@@ -184,14 +182,26 @@ def test_sequential_version_numbers(tmp_path, monkeypatch):
         )
         m.setattr(
             raiden.utils.upgrades,
-            'older_db_file',
-            mock_older_db_file,
+            'latest_db_file',
+            latest_db_file,
         )
 
         UpgradeManager(db_filename=db_path).run()
 
-        upgrade_functions[0].function.assert_called_once_with(ANY, 16, 19)
-        upgrade_functions[1].function.assert_called_once_with(ANY, 17, 19)
-        upgrade_functions[2].function.assert_called_once_with(ANY, 18, 19)
+        upgrade_functions[0].function.assert_called_once_with(
+            old_version=16,
+            current_version=19,
+            storage=ANY,
+        )
+        upgrade_functions[1].function.assert_called_once_with(
+            old_version=17,
+            current_version=19,
+            storage=ANY,
+        )
+        upgrade_functions[2].function.assert_called_once_with(
+            old_version=18,
+            current_version=19,
+            storage=ANY,
+        )
 
         assert get_db_version(db_path) == 19
