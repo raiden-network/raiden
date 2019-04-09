@@ -37,8 +37,8 @@ def setup_storage(db_path):
 
 def test_upgrade_v19_to_v20(tmp_path):
     old_db_filename = tmp_path / Path('v19_log.db')
-    with patch('raiden.utils.upgrades.older_db_file') as older_db_file:
-        older_db_file.return_value = str(old_db_filename)
+    with patch('raiden.utils.upgrades.latest_db_file') as latest_db_file:
+        latest_db_file.return_value = str(old_db_filename)
         storage = setup_storage(str(old_db_filename))
         with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=19):
             storage.update_version()
