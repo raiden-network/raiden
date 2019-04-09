@@ -89,6 +89,19 @@ class PFSConfiguration(typing.NamedTuple):
     fee: int
 
 
+def configure_pfs_message(info: dict, url: str, eth_address: str) -> str:
+    message = info.get('message', 'PFS info request successful.')
+    operator = info.get('operator', 'unknown')
+    version = info.get('version', 'unknown')
+    chain_id = info.get('network_info', {}).get('chain_id', 'unknown')
+    price = info.get('price_info', '0 (no price given by the PFS)')
+    return (
+        f'{message} - You have chosen the pathfinding service at {url}. '
+        f'Operator: {operator}, running version: {version}, chain_id: {chain_id}. '
+        f'Fees will be paid to {eth_address}. For each request we will pay {price}.'
+    )
+
+
 def configure_pfs(
         pfs_address: Optional[str],
         pfs_eth_address: Optional[str],
@@ -136,19 +149,13 @@ def configure_pfs(
         )
         sys.exit(1)
     else:
-        click.secho(
-            f"'{pathfinding_service_info['message']}'. "
-            f"You have chosen pathfinding operator '{pathfinding_service_info['operator']}' "
-            f"with the running version '{pathfinding_service_info['version']}' "
-            f"on chain_id: '{pathfinding_service_info['network_info']['chain_id']}'. "
-            f"Requesting a path will cost you: '{pathfinding_service_info['price_info']}'.",
-        )
+        click.secho(configure_pfs_message(pathfinding_service_info, pfs_address, pfs_eth_address))
         log.info('Using PFS', pfs_info=pathfinding_service_info)
 
     return PFSConfiguration(
         url=pfs_address,
         eth_address=pfs_eth_address,
-        fee=pathfinding_service_info['price_info'],
+        fee=pathfinding_service_info.get('price_info', 0),
     )
 
 
