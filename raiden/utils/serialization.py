@@ -6,13 +6,16 @@ from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_he
 from raiden.transfer.merkle_tree import LEAVES, compute_layers
 from raiden.utils.typing import Address, Callable, Dict, List, Tuple, TypeVar
 
-T = TypeVar('T')
-RT = TypeVar('RT')
+# The names `T`, `KT`, `VT` are used the same way as the documentation:
+#    https://mypy.readthedocs.io/en/latest/generics.html#defining-sub-classes-of-generic-classes
+# R stands for return type
 
-KT = TypeVar('KT')
-VT = TypeVar('VT')
-KRT = TypeVar('KRT')
-VRT = TypeVar('VRT')
+T = TypeVar('T')  # function type
+RT = TypeVar('RT')  # function return type
+KT = TypeVar('KT')  # dict key type
+VT = TypeVar('VT')  # dict value type
+KRT = TypeVar('KRT')  # dict key return type
+VRT = TypeVar('VRT')  # dict value return type
 
 
 def identity(val: T) -> T:
