@@ -658,9 +658,8 @@ def smoketest(ctx, debug):
 
         raiden_stdout = StringIO()
         with contextlib.redirect_stdout(raiden_stdout):
-            app = run_app(**args)
-
             try:
+                app = run_app(**args)
                 raiden_api = RaidenAPI(app.raiden)
                 rest_api = RestAPI(raiden_api)
                 (api_host, api_port) = split_endpoint(args['api_address'])
@@ -697,13 +696,16 @@ def smoketest(ctx, debug):
                     args['transport'],
                     token_addresses,
                     contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
-                    debug=debug,
-                    orig_stdout=stdout,
                 )
                 if error is not None:
                     append_report('Smoketest assertion error', error)
                 else:
                     success = True
+            except:  # NOQA pylint: disable=bare-except
+                if debug:
+                    with contextlib.redirect_stdout(stdout):
+                        import pdb
+                        pdb.post_mortem()  # pylint: disable=no-member
             finally:
                 app.stop()
                 app.raiden.get()
