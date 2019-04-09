@@ -285,6 +285,14 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
         ),
     )
 
+    # This may happen for two reasons:
+    # - This node is not a participant for the given channel (normal operation,
+    #   the event should be ignored).
+    # - Something went wrong in our code and the channel state was cleared
+    #   before settle (a bug, this should raise an exception on development
+    #   mode).
+    # Because we cannot distinguish the two cases, assume the channel is not of
+    # interest and ignore the event.
     if not channel_state:
         return
 
