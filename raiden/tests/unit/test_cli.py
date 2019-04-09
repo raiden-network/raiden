@@ -6,7 +6,8 @@ from click.testing import CliRunner
 
 from raiden.constants import EthClient
 from raiden.ui.cli import OPTION_DEPENDENCIES, run
-from raiden.utils import is_minified_address, is_supported_client
+from raiden.utils import is_minified_address
+from raiden.utils.ethereum_clients import is_supported_client
 
 # Values to be used to test the option dependencies, need to be distinct form the default values
 # The tuples define the inverse values for the depended-on options
