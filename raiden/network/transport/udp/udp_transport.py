@@ -26,12 +26,20 @@ from raiden.transfer.state_change import ActionChangeNodeNetworkState
 from raiden.utils import pex
 from raiden.utils.notifying_queue import NotifyingQueue
 from raiden.utils.runnable import Runnable
-from raiden.utils.typing import MYPY_ANNOTATION, Address, Dict, List, MessageID, Tuple
+from raiden.utils.typing import (
+    MYPY_ANNOTATION,
+    Address,
+    Dict,
+    List,
+    MessageID,
+    Tuple,
+    UDPMessageID,
+)
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 log_healthcheck = structlog.get_logger(__name__ + '.healthcheck')  # pylint: disable=invalid-name
 
-QueueItem_T = Tuple[bytes, int]
+QueueItem_T = Tuple[bytes, MessageID]
 Queue_T = List[QueueItem_T]
 
 # GOALS:
@@ -458,7 +466,7 @@ class UDPTransport(Runnable):
             self,
             recipient: Address,
             messagedata: bytes,
-            message_id: MessageID,
+            message_id: UDPMessageID,
     ) -> AsyncResult:
         """ Send message to recipient if the transport is running.
 

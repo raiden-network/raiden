@@ -72,7 +72,10 @@ MerkleTreeLeaves = NewType('MerkleTreeLeaves', T_MerkleTreeLeaves)
 T_MessageID = int
 MessageID = NewType('MessageID', T_MessageID)
 
-UDPMessageID = Tuple[str, int, Address]
+UDPMessageID = Union[
+    Tuple[str, int, Address],
+    MessageID,
+]
 
 T_Nonce = int
 Nonce = NewType('Nonce', T_Nonce)

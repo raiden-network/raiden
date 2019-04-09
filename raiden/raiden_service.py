@@ -898,7 +898,9 @@ class RaidenService(Runnable):
                 self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
                     payment_identifier=identifier,
                     amount=transfer.lock.amount,
-                    token_network_identifier=balance_proof.token_network_identifier,
+                    token_network_identifier=TokenNetworkID(
+                        balance_proof.token_network_identifier,
+                    ),
                     payment_done=AsyncResult(),
                 )
 
