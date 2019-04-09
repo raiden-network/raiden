@@ -10,12 +10,10 @@ from raiden.exceptions import AddressWithoutCode, AddressWrongContract, Contract
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.pathfinding import configure_pfs
-from raiden.network.proxies import (
-    SecretRegistry,
-    ServiceRegistry,
-    TokenNetworkRegistry,
-    UserDeposit,
-)
+from raiden.network.proxies.secret_registry import SecretRegistry
+from raiden.network.proxies.service_registry import ServiceRegistry
+from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
+from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import UDPTransport
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
