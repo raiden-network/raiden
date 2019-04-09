@@ -33,8 +33,9 @@ from raiden.ui.startup import (
     setup_proxies_or_exit,
     setup_udp_or_exit,
 )
-from raiden.utils import is_supported_client, pex, split_endpoint
+from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
+from raiden.utils.ethereum_clients import is_supported_client
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
 
