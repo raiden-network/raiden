@@ -691,7 +691,7 @@ class TokenNetwork:
         it simplifies the analysis of bad behavior and the handling code of
         out-dated balance proofs.
 
-        Races to `set_total_deposit` are handled by the smart contract, were
+        Races to `set_total_deposit` are handled by the smart contract, where
         largest total deposit wins. The end balance of the funding accounts is
         undefined. E.g.
 
@@ -704,7 +704,7 @@ class TokenNetwork:
         Races for the same account don't have any unexpeted side-effect.
 
         Raises:
-            DepositMismatch: If the new request total deposit is lower then the
+            DepositMismatch: If the new request total deposit is lower than the
                 existing total deposit on-chain for the `given_block_identifier`.
             RaidenRecoverableError: If the channel was closed meanwhile the
                 deposit was in transit.
