@@ -182,6 +182,11 @@ class UpgradeManager:
         paths = glob(f'{self._current_db_filename.parent}/v*_log.db')
         valid_db_names = filter_db_names(paths)
         latest_db_path = latest_db_file(valid_db_names)
+
+        # First run, there is no database file available
+        if latest_db_path is None:
+            return
+
         file_version = get_file_version(latest_db_path)
 
         # The latest version matches our target version, nothing to do.
