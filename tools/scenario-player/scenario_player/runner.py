@@ -418,7 +418,7 @@ class ScenarioRunner:
                 resp = self.session.get(url)
             except RequestException:
                 log.error("Error fetching node address", url=url, node=node)
-                return
+                return None
             try:
                 return to_checksum_address(resp.json().get('our_address', ''))
             except ValueError:
@@ -428,6 +428,7 @@ class ScenarioRunner:
                     code=resp.status_code,
                     url=url,
                 )
+            return None
         ret = self._spawn_and_wait(nodes, cb)
         return ret
 

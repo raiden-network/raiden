@@ -410,6 +410,8 @@ class NodeRunner:
         if global_pfs:
             return global_pfs
 
+        return None
+
     def _validate_options(self, options: Dict[str, Any]):
         for option_name, option_value in options.items():
             if option_name.startswith('no-'):
