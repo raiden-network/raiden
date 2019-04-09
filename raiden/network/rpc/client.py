@@ -40,7 +40,8 @@ from raiden.network.rpc.middleware import (
     http_retry_with_backoff_middleware,
 )
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import is_supported_client, pex, privatekey_to_address
+from raiden.utils import pex, privatekey_to_address
+from raiden.utils.ethereum_clients import is_supported_client
 from raiden.utils.filters import StatelessFilter
 from raiden.utils.solc import (
     solidity_library_symbol,
