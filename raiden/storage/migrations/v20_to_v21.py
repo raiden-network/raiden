@@ -27,7 +27,7 @@ def _transform_snapshot(raw_snapshot: str) -> str:
     ids_to_addrs = dict()
     for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
         for token_network in payment_network['tokennetworks']:
-            ids_to_addrs[payment_network['address']] = token_network['token_address']
+            ids_to_addrs[token_network['address']] = payment_network['address']
     snapshot['tokennetworkaddresses_to_paymentnetworkaddresses'] = ids_to_addrs
 
     for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
