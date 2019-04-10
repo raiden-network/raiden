@@ -8,7 +8,7 @@ from eth_utils import encode_hex, is_checksum_address, to_checksum_address
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.pathfinding import (
     MAX_PATHS_QUERY_ATTEMPTS,
-    PfsError,
+    PFSError,
     get_pfs_info,
     get_pfs_iou,
     make_iou,
@@ -773,7 +773,7 @@ def valid_response_json():
 
 def test_query_paths_with_second_try(query_paths_args, valid_response_json):
     " IOU rejection errors that are expected to result in an unaltered second attempt "
-    for try_again in (PfsError.BAD_IOU, PfsError.MISSING_IOU, PfsError.USE_THIS_IOU):
+    for try_again in (PFSError.BAD_IOU, PFSError.MISSING_IOU, PFSError.USE_THIS_IOU):
         response = [dict(error_code=try_again.value)] * 2
         assert_failed_pfs_request(
             query_paths_args,
@@ -788,7 +788,7 @@ def test_query_paths_with_second_try(query_paths_args, valid_response_json):
 
 def test_query_paths_with_scrapped_iou(query_paths_args, valid_response_json):
     " Errors that will result in reattempting with a new iou "
-    for scrap_iou in (PfsError.IOU_ALREADY_CLAIMED, PfsError.IOU_EXPIRED_TOO_EARLY):
+    for scrap_iou in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
         response = [dict(error_code=scrap_iou.value)] * 2
         assert_failed_pfs_request(
             query_paths_args,
@@ -805,14 +805,14 @@ def test_query_paths_with_scrapped_iou(query_paths_args, valid_response_json):
 def test_query_paths_with_unrecoverable_pfs_error(query_paths_args):
     " No retries after unrecoverable errors. "
     for unrecoverable in (
-            PfsError.INVALID_REQUEST,
-            PfsError.INVALID_SIGNATURE,
-            PfsError.REQUEST_OUTDATED,
+            PFSError.INVALID_REQUEST,
+            PFSError.INVALID_SIGNATURE,
+            PFSError.REQUEST_OUTDATED,
     ):
         response = [dict(error_code=unrecoverable.value)] * 2
         assert_failed_pfs_request(query_paths_args, response, expected_requests=1)
 
-    for unrecoverable in (PfsError.WRONG_IOU_RECIPIENT, PfsError.DEPOSIT_TOO_LOW):
+    for unrecoverable in (PFSError.WRONG_IOU_RECIPIENT, PFSError.DEPOSIT_TOO_LOW):
         response = [dict(error_code=unrecoverable.value)] * 2
         assert_failed_pfs_request(
             query_paths_args,
@@ -828,7 +828,7 @@ def test_query_paths_with_insufficient_payment(
         pfs_max_fee,
 ):
     " After an insufficient payment response, we retry only if we are below our maximum fee. "
-    insufficient_payment = [dict(error_code=PfsError.INSUFFICIENT_SERVICE_PAYMENT.value)] * 2
+    insufficient_payment = [dict(error_code=PFSError.INSUFFICIENT_SERVICE_PAYMENT.value)] * 2
     assert_failed_pfs_request(
         query_paths_args,
         insufficient_payment,
@@ -865,8 +865,8 @@ def test_query_paths_with_insufficient_payment(
 def test_query_paths_with_multiple_errors(query_paths_args):
     " Max. number of attempts is not exceeded also if there is a new recoverable issue. "
     different_recoverable_errors = [
-        dict(error_code=PfsError.BAD_IOU.value),
-        dict(error_code=PfsError.IOU_ALREADY_CLAIMED.value),
+        dict(error_code=PFSError.BAD_IOU.value),
+        dict(error_code=PFSError.IOU_ALREADY_CLAIMED.value),
     ]
     assert_failed_pfs_request(
         query_paths_args,
