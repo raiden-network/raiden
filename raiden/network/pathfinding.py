@@ -20,8 +20,13 @@ log = structlog.get_logger(__name__)
 
 
 @unique
-class PfsError(IntEnum):
-    """ Error codes as returned by the PFS / defined in the PFS specs. """
+class PFSError(IntEnum):
+    """ Error codes as returned by the PFS.
+
+    Defined in the pathfinding_service.exceptions module in
+    https://github.com/raiden-network/raiden-services
+    """
+    # TODO: link to PFS spec as soon as the error codes are added there.
 
     INVALID_REQUEST = 2000
     INVALID_SIGNATURE = 2001
@@ -89,7 +94,11 @@ class PFSConfiguration(typing.NamedTuple):
     fee: int
 
 
-def configure_pfs_message(info: dict, url: str, eth_address: str) -> str:
+def configure_pfs_message(
+        info: typing.Dict[str, typing.Any],
+        url: str,
+        eth_address: str,
+) -> str:
     message = info.get('message', 'PFS info request successful.')
     operator = info.get('operator', 'unknown')
     version = info.get('version', 'unknown')
@@ -269,7 +278,7 @@ def post_pfs_paths(url, token_network_address, payload):
         )
     except requests.RequestException as e:
         raise ServiceRequestFailed(
-            f'Could not connect to Pathfinding Service ({e})',
+            f'Could not connect to Pathfinding Service ({str(e)})',
             dict(parameters=payload, exc_info=True),
         )
 
@@ -285,7 +294,7 @@ def post_pfs_paths(url, token_network_address, payload):
         else:
             error = info['error'] = response_json.get('errors')
             error_code = info['error_code'] = response_json.get('error_code', 0)
-            if PfsError.is_iou_rejected(error_code):
+            if PFSError.is_iou_rejected(error_code):
                 raise ServiceRequestIOURejected(error, error_code)
 
         raise ServiceRequestFailed('Pathfinding service returned error code', info)
@@ -314,10 +323,20 @@ def query_paths(
         route_to: typing.TargetAddress,
         value: typing.TokenAmount,
 ) -> typing.List[typing.Dict[str, typing.Any]]:
+    """ Query paths from the PFS.
+
+    Send a request to the /paths endpoint of the PFS specified in service_config, and
+    retry in case of a failed request if it makes sense.
+    """
 
     max_paths = service_config['pathfinding_max_paths']
     url = service_config['pathfinding_service_address']
-    payload = {'from': route_from, 'to': route_to, 'value': value, 'max_paths': max_paths}
+    payload = {
+        'from': route_from,
+        'to': route_to,
+        'value': value,
+        'max_paths': max_paths,
+    }
     offered_fee = service_config.get('pathfinding_fee', service_config['pathfinding_max_fee'])
     scrap_existing_iou = False
 
@@ -340,13 +359,14 @@ def query_paths(
             )
         except ServiceRequestIOURejected as error:
             code = error.error_code
-            if retries == 0 or code in (PfsError.WRONG_IOU_RECIPIENT, PfsError.DEPOSIT_TOO_LOW):
+            if retries == 0 or code in (PFSError.WRONG_IOU_RECIPIENT, PFSError.DEPOSIT_TOO_LOW):
                 raise
-            elif code in (PfsError.IOU_ALREADY_CLAIMED, PfsError.IOU_EXPIRED_TOO_EARLY):
+            elif code in (PFSError.IOU_ALREADY_CLAIMED, PFSError.IOU_EXPIRED_TOO_EARLY):
                 scrap_existing_iou = True
-            elif code == PfsError.INSUFFICIENT_SERVICE_PAYMENT:
+            elif code == PFSError.INSUFFICIENT_SERVICE_PAYMENT:
                 if offered_fee < service_config['pathfinding_max_fee']:
                     offered_fee = service_config['pathfinding_max_fee']
+                    # TODO: Query the PFS for the fee here instead of using the max fee
                 else:
                     raise
             log.info(f'PFS rejected our IOU, reason: {error}. Attempting again.')
