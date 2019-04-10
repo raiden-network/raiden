@@ -1242,8 +1242,6 @@ class TokenNetwork:
             partner: Address,
             merkle_tree_leaves: MerkleTreeLeaves,
     ):
-        # Note: given_block_identifier
-        # is unused at the moment here
         log_details = {
             'token_network': pex(self.address),
             'node': pex(self.node_address),
