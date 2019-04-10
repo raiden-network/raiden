@@ -164,6 +164,24 @@ commands:
           paths:
             - ".local-*"
 
+  prepare-pip-cache:
+    parameters:
+      py-version:
+        <<: *py-version-template
+    steps:
+      - restore_cache:
+          keys:
+          - pip-cache-{{ arch }}-<< parameters.py-version >>
+          - pip-cache-{{ arch }}-
+          - pip-cache-
+      - run:
+          name: Downloading dependencies
+          command: pip download --dest /tmp -c constraints-dev.txt -r requirements-circleci.txt
+      - save_cache:
+          key: pip-cache-{{ arch }}-<< parameters.py-version >>
+          paths:
+          - "~/.cache/pip"
+
   prepare-python:
     parameters:
       py-version:
@@ -171,8 +189,8 @@ commands:
     steps:
       - attach-and-configure:
           py-version: << parameters.py-version >>
-      - restore_cache:
-          key: pip-cache-{{ arch }}-<< parameters.py-version >>
+      - prepare-pip-cache:
+          py-version: << parameters.py-version >>
       - restore_cache:
           # Using a partial cache restore here is fine because pip is always
           # run, an outdated venv will be upgraded.
@@ -199,10 +217,6 @@ commands:
           key: python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}
           paths:
           - "~/venv-<< parameters.py-version >>-*"
-      - save_cache:
-          key: pip-cache-{{ arch }}-<< parameters.py-version >>
-          paths:
-          - "~/.cache/pip"
       - persist_to_workspace:
           root: "~"
           paths:

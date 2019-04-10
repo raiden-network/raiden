@@ -1,0 +1,7 @@
+-r requirements-dev.txt
+
+pip<19.0.0
+pyinstaller
+readme_renderer
+s3cmd
+wheel
