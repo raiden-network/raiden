@@ -120,6 +120,16 @@ commands:
             [[ -d ~/.local-${OS_NAME} ]] && ln -s ~/.local-${OS_NAME} ~/.local || true
             [[ -d ~/venv-<< parameters.py-version >>-${OS_NAME} ]] && ln -s ~/venv-<< parameters.py-version >>-${OS_NAME} ~/venv-<< parameters.py-version >> || true
 
+  attach-and-configure:
+    parameters:
+      py-version:
+        <<: *py-version-template
+    steps:
+      - attach-and-link:
+          py-version: << parameters.py-version >>
+      - conditional-skip
+      - config-path
+
   prepare-system:
     steps:
       - run:
@@ -159,10 +169,8 @@ commands:
       py-version:
         <<: *py-version-template
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - restore_cache:
           key: pip-cache-{{ arch }}-<< parameters.py-version >>
       - restore_cache:
@@ -247,10 +255,8 @@ jobs:
       py-version: << parameters.py-version >>
 
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           name: Validate CircleCI Config
           command: python tools/check_circleci_config.py
@@ -268,10 +274,8 @@ jobs:
       py-version: << parameters.py-version >>
 
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           name: mypy test
           command: make mypy
@@ -285,10 +289,8 @@ jobs:
       py-version: << parameters.py-version >>
 
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           name: Set Options
           command: |
@@ -328,10 +330,8 @@ jobs:
     parallelism: << parameters.parallelism >>
 
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - restore_cache:
           key: ethash-{{ checksum "~/.local/bin/geth" }}
       - restore_cache:
@@ -423,10 +423,8 @@ jobs:
       name: docker
       py-version: "3.7"
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           name: Report to Codecov
           command: |
@@ -465,10 +463,8 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "7b:c7:3d:f7:ff:1a:2b:8e:2d:18:93:be:c6:7b:b0:7c"
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - when:
           condition: << parameters.remote-host >>
           steps:
@@ -505,10 +501,8 @@ jobs:
       py-version: "3.7"
 
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           name: Prepare build
           command: |
@@ -540,10 +534,8 @@ jobs:
       - add_ssh_keys:
           fingerprints:
             - "46:b3:a5:c3:d8:21:63:cd:de:6d:07:5d:0c:5d:ba:73"
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           name: Configure Git
           command: |
@@ -587,10 +579,8 @@ jobs:
       py-version: "3.7"
 
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           name: upload-to-digitalocean
           command: .circleci/upload_to_s3.sh $DO_S3_ACCESS_KEY $DO_S3_SECRET_KEY dist/archive/ $DO_S3_BUCKET_NAME ams3.digitaloceanspaces.com
@@ -628,10 +618,8 @@ jobs:
       py-version: "3.7"
 
     steps:
-      - attach-and-link:
+      - attach-and-configure:
           py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
       - run:
           name: "install twine"
           command: pip install twine
