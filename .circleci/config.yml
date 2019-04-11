@@ -692,7 +692,8 @@ workflows:
           environment-type: "production"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - smoketest:
           name: smoketest-udp-development-geth-3.7
@@ -701,7 +702,8 @@ workflows:
           environment-type: "development"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-production-geth-3.7
@@ -710,7 +712,8 @@ workflows:
           environment-type: "production"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-development-geth-3.7
@@ -719,7 +722,8 @@ workflows:
           environment-type: "development"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-development-parity-3.7
@@ -728,7 +732,8 @@ workflows:
           environment-type: "development"
           blockchain-type: "parity"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - test:
           name: test-unit-3.7
@@ -736,7 +741,8 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -745,7 +751,8 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - test:
           name: test-integration-udp-geth-3.7
@@ -806,8 +813,6 @@ workflows:
 
       - finalize:
           requires:
-            - lint-3.7
-            - mypy-3.7
             - test-integration-udp-geth-3.7
             - test-integration-matrix-geth-3.7
             - test-integration-udp-parity-3.7
@@ -944,7 +949,8 @@ workflows:
           environment-type: "production"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - smoketest:
           name: smoketest-udp-development-geth-3.7
@@ -953,7 +959,8 @@ workflows:
           environment-type: "development"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-production-geth-3.7
@@ -962,7 +969,8 @@ workflows:
           environment-type: "production"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-development-geth-3.7
@@ -971,7 +979,8 @@ workflows:
           environment-type: "development"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-development-parity-3.7
@@ -980,7 +989,8 @@ workflows:
           environment-type: "development"
           blockchain-type: "parity"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - test:
           name: test-unit-3.7
@@ -988,7 +998,8 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -997,7 +1008,8 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - prepare-python-linux-3.7
+            - lint-3.7
+            - mypy-3.7
 
       - test:
           name: test-integration-udp-geth-3.7
@@ -1058,8 +1070,6 @@ workflows:
 
       - finalize:
           requires:
-          - lint-3.7
-          - mypy-3.7
           - test-integration-udp-geth-3.7
           - test-integration-matrix-geth-3.7
           - test-integration-udp-parity-3.7
