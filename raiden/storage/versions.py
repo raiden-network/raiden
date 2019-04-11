@@ -10,7 +10,7 @@ def latest_db_file(paths: List[str]) -> Optional[str]:
     """Returns the path with the highest `version` number.
 
     Raises:
-        AssertionError: If any the `paths` in list is an invalid name.
+        AssertionError: If any of the `paths` in the list is an invalid name.
 
     Args:
         paths: A list of file names.
