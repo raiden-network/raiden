@@ -57,6 +57,41 @@ def _get_onchain_locksroots(
     return our_locksroot, partner_locksroot
 
 
+def _add_onchain_locksroot_to_channel_new_state_changes(
+        raiden: RaidenService,
+        storage: SQLiteStorage,
+) -> None:
+    """ Adds `our_onchain_locksroot` and `partner_onchain_locksroot` to
+    ContractReceiveChannelNew. """
+    batch_size = 50
+    batch_query = storage.batch_query_state_changes(
+        batch_size=batch_size,
+        filters=[
+            ('_type', 'raiden.transfer.state_change.ContractReceiveChannelNew'),
+        ],
+    )
+    for state_changes_batch in batch_query:
+        updated_state_changes = list()
+        for state_change in state_changes_batch:
+            state_change_data = json.loads(state_change.data)
+
+            channel_state = state_change_data['channel_state']
+            msg = 'v18 state changes cant contain onchain_locksroot'
+            assert 'onchain_locksroot' not in channel_state['our_state'], msg
+
+            msg = 'v18 state changes cant contain onchain_locksroot'
+            assert 'onchain_locksroot' not in channel_state['partner_state'], msg
+
+            channel_state['our_state']['onchain_locksroot'] = None
+            channel_state['partner_state']['onchain_locksroot'] = None
+
+            updated_state_changes.append((
+                json.dumps(state_change_data),
+                state_change.state_change_identifier,
+            ))
+        storage.update_state_changes(updated_state_changes)
+
+
 def _add_onchain_locksroot_to_channel_settled_state_changes(
         raiden: RaidenService,
         storage: SQLiteStorage,
@@ -73,14 +108,13 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
     for state_changes_batch in batch_query:
         updated_state_changes = list()
         for state_change in state_changes_batch:
-            data = json.loads(state_change.data)
+            state_change_data = json.loads(state_change.data)
             msg = 'v18 state changes cant contain our_onchain_locksroot'
-            assert 'our_onchain_locksroot' not in data, msg
+            assert 'our_onchain_locksroot' not in state_change_data, msg
 
             msg = 'v18 state changes cant contain partner_onchain_locksroot'
-            assert 'partner_onchain_locksroot' not in data, msg
+            assert 'partner_onchain_locksroot' not in state_change_data, msg
 
-            state_change_data = json.loads(state_change.data)
             token_network_identifier = state_change_data['token_network_identifier']
             channel_identifier = state_change_data['channel_identifier']
 
@@ -107,11 +141,15 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
                 block_identifier='latest',
             )
 
-            data['our_onchain_locksroot'] = serialize_bytes(our_locksroot)
-            data['partner_onchain_locksroot'] = serialize_bytes(partner_locksroot)
+            state_change_data['our_onchain_locksroot'] = serialize_bytes(
+                our_locksroot,
+            )
+            state_change_data['partner_onchain_locksroot'] = serialize_bytes(
+                partner_locksroot,
+            )
 
             updated_state_changes.append((
-                json.dumps(data),
+                json.dumps(state_change_data),
                 state_change.state_change_identifier,
             ))
         storage.update_state_changes(updated_state_changes)
@@ -178,6 +216,7 @@ def upgrade_v19_to_v20(
         **kwargs,
 ) -> int:
     if old_version == SOURCE_VERSION:
+        _add_onchain_locksroot_to_channel_new_state_changes(raiden, storage)
         _add_onchain_locksroot_to_channel_settled_state_changes(raiden, storage)
         _add_onchain_locksroot_to_snapshots(raiden, storage)
 
