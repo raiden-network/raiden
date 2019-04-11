@@ -667,7 +667,6 @@
                         "_type": "raiden.transfer.state.MerkleTreeState",
                         "_version": 0
                     },
-                    "onchain_locksroot": "0x0000000000000000000000000000000000000000000000000000000000000000",
                     "_type": "raiden.transfer.state.NettingChannelEndState",
                     "_version": 0
                 },
@@ -685,7 +684,6 @@
                         "_type": "raiden.transfer.state.MerkleTreeState",
                         "_version": 0
                     },
-                    "onchain_locksroot": "0x0000000000000000000000000000000000000000000000000000000000000000",
                     "_type": "raiden.transfer.state.NettingChannelEndState",
                     "_version": 0
                 },
