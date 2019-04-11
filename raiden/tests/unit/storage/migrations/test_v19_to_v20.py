@@ -76,6 +76,18 @@ def test_upgrade_v19_to_v20(tmp_path):
     batch_query = storage.batch_query_state_changes(
         batch_size=500,
         filters=[
+            ('_type', 'raiden.transfer.state_change.ContractReceiveChannelNew'),
+        ],
+    )
+    for state_changes_batch in batch_query:
+        for state_change_record in state_changes_batch:
+            data = json.loads(state_change_record.data)
+            assert 'onchain_locksroot' in data['channel_state']['our_state']
+            assert 'onchain_locksroot' in data['channel_state']['partner_state']
+
+    batch_query = storage.batch_query_state_changes(
+        batch_size=500,
+        filters=[
             ('_type', 'raiden.transfer.state_change.ContractReceiveChannelSettled'),
         ],
     )
