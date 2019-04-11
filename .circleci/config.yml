@@ -633,10 +633,6 @@ jobs:
       - attach-and-configure:
           py-version: << parameters.py-version >>
       - run:
-          name: "install twine"
-          command: pip install twine
-
-      - run:
           name: "create packages"
           command: |
             echo $(python setup.py --version)

@@ -5,3 +5,4 @@ pyinstaller
 readme_renderer
 s3cmd
 wheel
+twine
