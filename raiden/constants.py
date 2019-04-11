@@ -1,7 +1,7 @@
 import math
 from enum import Enum
 
-from eth_utils import keccak, to_checksum_address, to_hex
+from eth_utils import keccak, to_checksum_address
 
 from raiden.utils.typing import (
     AdditionalHash,
@@ -51,8 +51,8 @@ EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
 EMPTY_SECRET = Secret(b"")
 ZERO_TOKENS = TokenAmount(0)
 
-SECRET_HEXSTRING_LENGTH = len(to_hex(EMPTY_HASH))
-SECRETHASH_HEXSTRING_LENGTH = SECRET_HEXSTRING_LENGTH
+SECRET_LENGTH = 32
+SECRETHASH_LENGTH = 32
 
 RECEIPT_FAILURE_CODE = 0
 

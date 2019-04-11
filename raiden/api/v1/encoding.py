@@ -1,8 +1,12 @@
+import binascii
+
 from eth_utils import (
     is_0x_prefixed,
     is_checksum_address,
+    to_bytes,
     to_canonical_address,
     to_checksum_address,
+    to_hex,
 )
 from marshmallow import Schema, SchemaOpts, fields, post_dump, post_load, pre_load
 from webargs import validate
@@ -10,6 +14,7 @@ from werkzeug.exceptions import NotFound
 from werkzeug.routing import BaseConverter
 
 from raiden.api.objects import Address, AddressList, PartnersPerToken, PartnersPerTokenList
+from raiden.constants import SECRET_LENGTH, SECRETHASH_LENGTH
 from raiden.settings import DEFAULT_INITIAL_CHANNEL_TARGET, DEFAULT_JOINABLE_FUNDS_TARGET
 from raiden.transfer import channel
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED
@@ -82,6 +87,62 @@ class DataField(fields.Field):
     @staticmethod
     def _deserialize(value, attr, data):  # pylint: disable=unused-argument
         return data_decoder(value)
+
+
+class SecretField(fields.Field):
+    default_error_messages = {
+        "missing_prefix": "Not a valid hex encoded value, must be 0x prefixed.",
+        "invalid_data": "Not a valid hex formated string, contains invalid characters.",
+        "invalid_size": (
+            f"Not a valid hex encoded secret, it is not {SECRET_LENGTH} characters long."
+        ),
+    }
+
+    @staticmethod
+    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+        return to_hex(value)
+
+    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
+        if not is_0x_prefixed(value):
+            self.fail("missing_prefix")
+
+        try:
+            value = to_bytes(hexstr=value)
+        except binascii.Error:
+            self.fail("invalid_data")
+
+        if len(value) != SECRET_LENGTH:
+            self.fail("invalid_size")
+
+        return value
+
+
+class SecretHashField(fields.Field):
+    default_error_messages = {
+        "missing_prefix": "Not a valid hex encoded value, must be 0x prefixed.",
+        "invalid_data": "Not a valid hex formated string, contains invalid characters.",
+        "invalid_size": (
+            f"Not a valid secrethash, decoded value is not {SECRETHASH_LENGTH} " f"bytes long."
+        ),
+    }
+
+    @staticmethod
+    def _serialize(value, attr, obj):  # pylint: disable=unused-argument
+        return to_hex(value)
+
+    def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
+        if not is_0x_prefixed(value):
+            self.fail("missing_prefix")
+
+        try:
+            value = to_bytes(hexstr=value)
+        except binascii.Error:
+            self.fail("invalid_data")
+
+        if len(value) != SECRETHASH_LENGTH:
+            self.fail("invalid_size")
+
+        return value
 
 
 class BaseOpts(SchemaOpts):
@@ -247,8 +308,8 @@ class PaymentSchema(BaseSchema):
     token_address = AddressField(missing=None)
     amount = fields.Integer(required=True)
     identifier = fields.Integer(missing=None)
-    secret = fields.String(missing=None)
-    secret_hash = fields.String(missing=None)
+    secret = SecretField(missing=None)
+    secret_hash = SecretHashField(missing=None)
 
     class Meta:
         strict = True
