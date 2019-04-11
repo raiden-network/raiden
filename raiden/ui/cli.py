@@ -167,7 +167,7 @@ def options(func):
         ),
         option(
             '--transport',
-            help='Transport system to use. Matrix is experimental.',
+            help='Transport system to use. UDP is not recommended',
             type=click.Choice(['udp', 'matrix']),
             default='matrix',
             show_default=True,
