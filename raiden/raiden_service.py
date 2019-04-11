@@ -18,12 +18,15 @@ from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     EMPTY_SECRET,
     GENESIS_BLOCK_NUMBER,
+    SECRET_LENGTH,
     SNAPSHOT_STATE_CHANGES_COUNT,
     Environment,
 )
 from raiden.exceptions import (
     InvalidAddress,
     InvalidDBData,
+    InvalidSecret,
+    InvalidSecretHash,
     PaymentConflict,
     RaidenRecoverableError,
     RaidenUnrecoverableError,
@@ -1062,6 +1065,11 @@ class RaidenService(Runnable):
 
         if secrethash is None:
             secrethash = sha3(secret)
+        elif secrethash != sha3(secret):
+            raise InvalidSecretHash("provided secret and secret_hash do not match.")
+
+        if len(secret) != SECRET_LENGTH:
+            raise InvalidSecret("secret of invalid length.")
 
         # We must check if the secret was registered against the latest block,
         # even if the block is forked away and the transaction that registers

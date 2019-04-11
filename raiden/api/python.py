@@ -1,6 +1,6 @@
 import gevent
 import structlog
-from eth_utils import is_binary_address, is_hex, to_bytes, to_checksum_address
+from eth_utils import is_binary_address, to_checksum_address
 from gevent import Greenlet
 
 import raiden.blockchain.events as blockchain_events
@@ -8,8 +8,6 @@ from raiden import waiting
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-    SECRET_HEXSTRING_LENGTH,
-    SECRETHASH_HEXSTRING_LENGTH,
     UINT256_MAX,
     Environment,
 )
@@ -23,7 +21,8 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAddress,
     InvalidAmount,
-    InvalidSecretOrSecretHash,
+    InvalidSecret,
+    InvalidSecretHash,
     InvalidSettleTimeout,
     RaidenRecoverableError,
     TokenNotRegistered,
@@ -46,7 +45,7 @@ from raiden.transfer.state import (
     TransferTask,
 )
 from raiden.transfer.state_change import ActionChannelClose
-from raiden.utils import pex, sha3
+from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
 from raiden.utils.typing import (
     Address,
@@ -733,6 +732,8 @@ class RaidenAPI:
         secret: Secret = None,
         secrethash: SecretHash = None,
     ):
+        current_state = views.state_from_raiden(self.raiden)
+        payment_network_identifier = self.raiden.default_registry.address
 
         if not isinstance(amount, int):
             raise InvalidAmount("Amount not a number")
@@ -740,41 +741,29 @@ class RaidenAPI:
         if amount <= 0:
             raise InvalidAmount("Amount negative")
 
+        if amount > UINT256_MAX:
+            raise InvalidAmount("Amount too large")
+
         if not is_binary_address(token_address):
             raise InvalidAddress("token address is not valid.")
 
+        if token_address not in views.get_token_identifiers(current_state, registry_address):
+            raise UnknownTokenAddress("Token address is not known.")
+
         if not is_binary_address(target):
             raise InvalidAddress("target address is not valid.")
-
-        if secret is not None:
-            if len(secret) != SECRET_HEXSTRING_LENGTH:
-                raise InvalidSecretOrSecretHash(
-                    "secret length should be " + str(SECRET_HEXSTRING_LENGTH) + "."
-                )
-            if not is_hex(secret):
-                raise InvalidSecretOrSecretHash("provided secret is not an hexadecimal string.")
-            secret = to_bytes(hexstr=secret)
-
-        if secrethash is not None:
-            if len(secrethash) != SECRETHASH_HEXSTRING_LENGTH:
-                raise InvalidSecretOrSecretHash(
-                    "secret_hash length should be " + str(SECRETHASH_HEXSTRING_LENGTH) + "."
-                )
-            if not is_hex(secrethash):
-                raise InvalidSecretOrSecretHash("secret_hash is not an hexadecimal string.")
-            secrethash = to_bytes(hexstr=secrethash)
-
-        # if both secret and secrethash were provided we check that sha3(secret)
-        # matches the secerthash. Note that it is valid to provide a secert_hash
-        # without providing a secret
-        if secret is not None and secrethash is not None and secrethash != sha3(secret):
-            raise InvalidSecretOrSecretHash("provided secret and secret_hash do not match.")
 
         valid_tokens = views.get_token_identifiers(
             views.state_from_raiden(self.raiden), registry_address
         )
         if token_address not in valid_tokens:
             raise UnknownTokenAddress("Token address is not known.")
+
+        if secret is not None and not isinstance(secret, typing.T_Secret):
+            raise InvalidSecret("secret is not valid.")
+
+        if secrethash is not None and not isinstance(secrethash, typing.T_SecretHash):
+            raise InvalidSecretHash("secrethash is not valid.")
 
         log.debug(
             "Initiating transfer",
@@ -785,9 +774,8 @@ class RaidenAPI:
             identifier=identifier,
         )
 
-        payment_network_identifier = self.raiden.default_registry.address
         token_network_identifier = views.get_token_network_identifier_by_token_address(
-            chain_state=views.state_from_raiden(self.raiden),
+            chain_state=current_state,
             payment_network_id=payment_network_identifier,
             token_address=token_address,
         )
