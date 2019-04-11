@@ -51,15 +51,70 @@ Follow `the guide <https://geth.ethereum.org/install-and-build/Installing-Geth>`
 Preparing a genesis config
 --------------------------
 
+Prepare a file ``genesis.json`` with the following content (`@offerm <https://github.com/offerm>`__ kindly allowed to use his file here).
 
-Create an account
------------------
+.. code:: bash
 
-Start mining
-------------
+ (env) $ cd ..
+ (env) $ pwd
+ <snip>/priv_chain
+ (env) $ cat genesis.json
+ {
+ "config": {
+ "chainId": 4321,
+ "homesteadBlock": 0,
+ "eip150Block": 0,
+ "eip155Block": 0,
+ "eip158Block": 0,
+ "ByzantiumBlock": 0
+ },
+ "alloc": {},
+ "difficulty" : "0x1",
+ "gasLimit"   : "0x9880000"
+ }
+
+Starting a chain
+----------------
+
+With the ``genesis.json`` you can initialize a blockchain.
+
+.. code:: bash
+
+ (env) $ pwd
+ <snip>/priv_chain
+ (env) $ geth --datadir blkchain1 init genesis.json
+ (env) $ geth --rpc --datadir blkchain1 --networkid 4321 --rpcapi "eth,net,web3,txpool" console
+ <snip>
+ > personal.newAccount()
+ "0xd4de892c06cf4a0557c7d515f79fd20b8356d6cf"
+
+Copy the shown address somewhere.  And start mining on your own private blockchain.
+
+.. code::bash
+
+ > miner.start()
+
+In this console ``geth`` should keep running.
 
 Figure out the contract version
 ===============================
+
+Open a new console, and load the Python environment.
+
+.. code:: bash
+
+ $ pwd
+ <snip>/priv_chain
+ $ source env/bin/activate
+ (env) $
+
+In the ``raiden`` directory, figure out the value ``DEVELOPMENT_CONTRACT_VERSION``
+
+ (env) $ cd raiden
+ (env) $ grep 'DEVELOPMENT_CONTRACT_VERSION = ' -r .
+ ./raiden/settings.py:DEVELOPMENT_CONTRACT_VERSION = '0.10.1'
+
+Copy the shown version somewhere.
 
 Deploy contracts
 ================
