@@ -51,7 +51,7 @@ def test_no_upgrade_executes_if_already_upgraded(tmp_path):
     with patch('raiden.utils.upgrades.UpgradeManager._upgrade') as upgrade_mock:
         with patch('raiden.utils.upgrades.RAIDEN_DB_VERSION', new=version):
             UpgradeManager(db_filename=db_path).run()
-            # Oldest database is of the same version as the current, no migrations should execute
+            # Latest database is of the same version as the current, no migrations should execute
             assert not upgrade_mock.called
 
 

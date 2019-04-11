@@ -129,7 +129,7 @@ def delete_dbs_with_failed_migrations(valid_db_names: List[str]) -> None:
             elif db_version > file_version:
                 raise RuntimeError(
                     f'Impossible database version. '
-                    f'The database {db_path} has a version too high ({db_version}), '
+                    f'The database {db_path} has too high a version ({db_version}), '
                     f'this should never happen.',
                 )
 
