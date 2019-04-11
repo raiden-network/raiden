@@ -1,8 +1,8 @@
 import pathlib
 import random
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
 from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
 import gevent
 import structlog
@@ -17,31 +17,20 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils.typing import TransactionHash
 from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
-
 from scenario_player.constants import (
-    DEFAULT_TOKEN_BALANCE_MIN,
-    DEFAULT_TOKEN_BALANCE_FUND,
-    OWN_ACCOUNT_BALANCE_MIN,
-    NODE_ACCOUNT_BALANCE_MIN,
-    NODE_ACCOUNT_BALANCE_FUND,
-    TIMEOUT,
     API_URL_ADDRESS,
-    API_URL_TOKENS,
     API_URL_TOKEN_NETWORK_ADDRESS,
-    SUPPORTED_SCENARIO_VERSIONS,
+    API_URL_TOKENS,
+    DEFAULT_TOKEN_BALANCE_FUND,
+    DEFAULT_TOKEN_BALANCE_MIN,
+    NODE_ACCOUNT_BALANCE_FUND,
+    NODE_ACCOUNT_BALANCE_MIN,
+    OWN_ACCOUNT_BALANCE_MIN,
     NodeMode,
 )
+from scenario_player.exceptions import NodesUnreachableError, ScenarioError, TokenRegistrationError
 from scenario_player.releases import ReleaseManager
-from scenario_player.exceptions import (
-    NodesUnreachableError,
-    ScenarioError,
-    TokenRegistrationError,
-    MissingNodesConfiguration,
-    MultipleTaskDefinitions,
-    InvalidScenarioVersion,
-)
 from scenario_player.scenario import Scenario
-from scenario_player.releases import ReleaseManager
 from scenario_player.utils import (
     TimeOutHTTPAdapter,
     get_or_deploy_token,

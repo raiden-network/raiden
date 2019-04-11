@@ -2,14 +2,12 @@ import pathlib
 import shutil
 import stat
 import sys
-
 from tarfile import TarFile
-from typing import Union, Tuple, List, Dict
+from typing import Dict, List, Tuple, Union
 from zipfile import ZipFile
 
 import requests
 import structlog
-
 from cachetools.func import ttl_cache
 
 log = structlog.get_logger(__name__)
@@ -43,6 +41,7 @@ class ReleaseArchive:
     Supplies a context manager and file-type detection, which allows choosing
     the correct library for opening the archive automatically.
     """
+
     def __init__(self, path: pathlib.Path) -> None:
         self.path = path
         if self.path.suffix == '.gz':
@@ -113,6 +112,7 @@ class Release:
     If the binary for the version is not present on the local machine, it can
     be downloaded using the :meth:`Release.download` method.
     """
+
     def __init__(self, version: Union[str, pathlib.Path]) -> None:
         #: Holds the original version value; this should not be changed.
         self._version = version
