@@ -66,7 +66,8 @@ from raiden.exceptions import (
     InvalidAmount,
     InvalidBlockNumberInput,
     InvalidNumberInput,
-    InvalidSecretOrSecretHash,
+    InvalidSecret,
+    InvalidSecretHash,
     InvalidSettleTimeout,
     InvalidToken,
     PaymentConflict,
@@ -973,7 +974,8 @@ class RestAPI:
         except (
             InvalidAmount,
             InvalidAddress,
-            InvalidSecretOrSecretHash,
+            InvalidSecret,
+            InvalidSecretHash,
             PaymentConflict,
             UnknownTokenAddress,
         ) as e:

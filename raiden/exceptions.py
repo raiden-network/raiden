@@ -87,8 +87,14 @@ class InvalidAddress(RaidenError):
     pass
 
 
-class InvalidSecretOrSecretHash(RaidenError):
+class InvalidSecret(RaidenError):
     """ Raised when the user provided value is not a valid secret. """
+
+    pass
+
+
+class InvalidSecretHash(RaidenError):
+    """ Raised when the user provided value is not a valid secrethash. """
 
     pass
 

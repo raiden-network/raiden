@@ -50,7 +50,7 @@ def random_secret() -> Secret:
     """ Return a random 32 byte secret except the 0 secret since it's not accepted in the contracts
     """
     while True:
-        secret = os.urandom(32)
+        secret = os.urandom(constants.SECRET_LENGTH)
         if secret != constants.EMPTY_HASH:
             return Secret(secret)
 
