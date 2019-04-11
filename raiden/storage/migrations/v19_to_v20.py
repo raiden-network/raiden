@@ -61,8 +61,8 @@ def _add_onchain_locksroot_to_channel_new_state_changes(
         raiden: RaidenService,
         storage: SQLiteStorage,
 ) -> None:
-    """ Adds `our_onchain_locksroot` and `partner_onchain_locksroot` to
-    ContractReceiveChannelNew. """
+    """ Adds `onchain_locksroot` to our_state/partner_state in
+    ContractReceiveChannelNew's channel_state object. """
     batch_size = 50
     batch_query = storage.batch_query_state_changes(
         batch_size=batch_size,
