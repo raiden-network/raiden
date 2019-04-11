@@ -219,6 +219,16 @@ commands:
           - venv-<< parameters.py-version >>-*
 
 jobs:
+  # This job exists to generate the `*.egg-info` metadata.
+  #
+  # From CircleCI's docs:
+  #
+  # > If multiple concurrent jobs persist the same filename then attaching
+  # > the workspace will error.
+  # [https://circleci.com/docs/2.0/configuration-reference/#attach_workspace]
+  #
+  # This is necessary otherwise neither `python setup.py install` nor `pip
+  # install -e .` could be executed in parallel jobs.
   checkout:
     executor: docker
     steps:
