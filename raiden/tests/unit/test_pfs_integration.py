@@ -300,15 +300,15 @@ def test_routing_mocked_pfs_happy_path(
     assert routes[1].channel_identifier == channel_state1.identifier
 
     # Check for iou arguments in request payload
-    payload = patched.call_args[1]['data']
+    iou = patched.call_args[1]['json']['iou']
     config = CONFIG['services']
     assert all(
-        k in payload
+        k in iou
         for k in ('amount', 'expiration_block', 'signature', 'sender', 'receiver')
     )
-    assert payload['amount'] <= config['pathfinding_max_fee']
+    assert iou['amount'] <= config['pathfinding_max_fee']
     latest_expected_expiration = config['pathfinding_iou_timeout'] + chain_state.block_number
-    assert payload['expiration_block'] <= latest_expected_expiration
+    assert iou['expiration_block'] <= latest_expected_expiration
 
 
 def test_routing_mocked_pfs_happy_path_with_updated_iou(
@@ -349,15 +349,15 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(
     assert routes[1].channel_identifier == channel_state1.identifier
 
     # Check for iou arguments in request payload
-    payload = patched.call_args[1]['data']
+    payload = patched.call_args[1]['json']
     config = CONFIG['services']
     old_amount = last_iou['amount']
-    assert old_amount < payload['amount'] <= config['pathfinding_max_fee'] + old_amount
+    assert old_amount < payload['iou']['amount'] <= config['pathfinding_max_fee'] + old_amount
     assert all(
-        payload[k] == last_iou[k]
+        payload['iou'][k] == last_iou[k]
         for k in ('expiration_block', 'sender', 'receiver')
     )
-    assert 'signature' in payload
+    assert 'signature' in payload['iou']
 
 
 def test_routing_mocked_pfs_request_error(
@@ -681,13 +681,13 @@ def test_update_iou():
         'amount': 10,
         'expiration_block': 1000,
     }
-    iou['signature'] = sign_one_to_n_iou(
+    iou['signature'] = encode_hex(sign_one_to_n_iou(
         privatekey=encode_hex(privkey),
         sender=iou['sender'],
         receiver=iou['receiver'],
         amount=iou['amount'],
         expiration=iou['expiration_block'],
-    )
+    ))
 
     # update and compare
     added_amount = 10

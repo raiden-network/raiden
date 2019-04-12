@@ -200,7 +200,9 @@ def make_iou(
 
     iou.update(
         expiration_block=expiration,
-        signature=sign_one_to_n_iou(privatekey=to_hex(privkey), expiration=expiration, **iou),
+        signature=to_hex(
+            sign_one_to_n_iou(privatekey=to_hex(privkey), expiration=expiration, **iou),
+        ),
     )
 
     return iou
@@ -213,13 +215,13 @@ def update_iou(
         expiration_block: typing.Optional[typing.BlockNumber] = None,
 ) -> typing.Dict[str, typing.Any]:
 
-    expected_signature = sign_one_to_n_iou(
+    expected_signature = to_hex(sign_one_to_n_iou(
         privatekey=to_hex(privkey),
         expiration=iou['expiration_block'],
         sender=iou['sender'],
         receiver=iou['receiver'],
         amount=iou['amount'],
-    )
+    ))
     if iou.get('signature') != expected_signature:
         raise ServiceRequestFailed(
             'Last IOU as given by the pathfinding service is invalid (signature does not match)',
@@ -273,7 +275,7 @@ def post_pfs_paths(url, token_network_address, payload):
     try:
         response = requests.post(
             f'{url}/api/v1/{to_checksum_address(token_network_address)}/paths',
-            data=payload,
+            json=payload,
             timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         )
     except requests.RequestException as e:
@@ -332,8 +334,8 @@ def query_paths(
     max_paths = service_config['pathfinding_max_paths']
     url = service_config['pathfinding_service_address']
     payload = {
-        'from': route_from,
-        'to': route_to,
+        'from': to_checksum_address(route_from),
+        'to': to_checksum_address(route_to),
         'value': value,
         'max_paths': max_paths,
     }
@@ -341,7 +343,7 @@ def query_paths(
     scrap_existing_iou = False
 
     for retries in reversed(range(MAX_PATHS_QUERY_ATTEMPTS)):
-        payload.update(create_current_iou(
+        payload['iou'] = create_current_iou(
             config=service_config,
             token_network_address=token_network_address,
             our_address=our_address,
@@ -349,7 +351,7 @@ def query_paths(
             block_number=current_block_number,
             offered_fee=offered_fee,
             scrap_existing_iou=scrap_existing_iou,
-        ))
+        )
 
         try:
             return post_pfs_paths(
