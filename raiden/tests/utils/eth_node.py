@@ -389,7 +389,7 @@ def geth_node_to_logpath(node_config, base_logdir):
     # longer than 108 characters).
     # BSD (and therefore macOS) socket path length limit is 104 chars
     nodekey_part = node_config['nodekeyhex'][:8]
-    logdir = os.path.join(base_logdir, nodekey_part)
+    logdir = os.path.join(base_logdir, f'{nodekey_part}.log')
     return logdir
 
 
