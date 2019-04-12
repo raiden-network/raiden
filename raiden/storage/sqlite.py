@@ -310,7 +310,7 @@ class SQLiteStorage(SerializationBase):
 
     def get_latest_state_change_by_data_field(
             self,
-            filters: Dict[str, str],
+            filters: Dict[str, Any],
     ) -> StateChangeRecord:
         """ Return all state changes filtered by a named field and value."""
         cursor = self.conn.cursor()
