@@ -122,7 +122,7 @@ class AccountManager:
 
         return address.lower() in self.accounts
 
-    def get_privkey(self, address: AddressHex, password: str = None) -> bytes:
+    def get_privkey(self, address: AddressHex, password: str) -> PrivateKey:
         """Find the keystore file for an account, unlock it and get the private key
 
         Args:
