@@ -19,6 +19,7 @@ In a shell, run
 If ``mkdir`` fails, choose a different name, or move the existing ``priv_chain`` directory to somewhere else.
 
 .. code:: bash
+
  $ cd priv_chain
  $ virtualenv -p python3.7 env
  $ source env/bin/activate
@@ -49,7 +50,7 @@ Launch a private network
 Installing Geth
 ---------------
 
-Follow `the guide <https://geth.ethereum.org/install-and-build/Installing-Geth>`__ and install Geth. A command ``geth`` should be available in your shell. This guide assumes version 1.8.23, but other versions might work.
+Follow `the guide <https://geth.ethereum.org/install-and-build/Installing-Geth>`__ and install Geth. A command ``geth`` should be available in your shell. This guide assumes version 1.8.26, but other versions might work.
 
 Preparing a genesis config
 --------------------------
@@ -93,7 +94,7 @@ With the ``genesis.json`` you can initialize a blockchain.
 
 Copy the shown address somewhere.  And start mining on your own private blockchain.
 
-.. code::bash
+.. code:: bash
 
  > miner.start()
 
@@ -137,7 +138,7 @@ You will need your private key for the account you created.
  (env) $ cd ..
  (env) $ pwd
  <snip>/priv_chain
- (env) $ export $PRIV_KEY=./blkchain1/keystore/UTC-<use TAB-completion to fill in>.json
+ (env) $ export PRIV_KEY=./blkchain1/keystore/UTC-<use TAB-completion to fill in>
 
 If the TAB-completion shows more than two files, something has gone wrong. In that case, back up all files and start over.
 
@@ -161,4 +162,4 @@ Deploy contracts
 
  (env) $ pwd
  <snip>/priv_chain
- (env) $ python -m raiden_contracts.deploy raiden --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000  $VERSION --max-token-networks $MAX_UINT256
+ (env) $ python -m raiden_contracts.deploy raiden --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --contracts-version $VERSION --max-token-networks $MAX_UINT256
