@@ -133,10 +133,12 @@ commands:
   prepare-system:
     steps:
       - run:
-          name: Generate cache key
-          command: echo "${GETH_VERSION}${PARITY_VERSION}${SOLC_VERSION}" > /tmp/binaries-versions
+          name: Get cache key
+          command: |
+            echo ${GETH_VERSION} > /tmp/geth-version
+            echo ${SOLC_VERSION} > /tmp/solc-version
       - restore_cache:
-          key: system-deps-v2-{{ arch }}-{{ checksum "/tmp/binaries-versions" }}
+          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
       - attach-and-link
       - run:
           name: Preparing environment
@@ -151,7 +153,7 @@ commands:
             .circleci/fetch_geth_parity_solc.sh
             ln -s ${LOCAL_BASE} ~/.local
       - save_cache:
-          key: system-deps-v2-{{ arch }}-{{ checksum "/tmp/binaries-versions" }}
+          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
             - "~/.local-*"
       - run:
