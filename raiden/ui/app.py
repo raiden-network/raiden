@@ -9,6 +9,7 @@ from eth_utils import to_canonical_address, to_normalized_address
 from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
+from raiden.accounts import AccountManager
 from raiden.constants import (
     MONITORING_BROADCASTING_ROOM,
     RAIDEN_DB_VERSION,
@@ -26,6 +27,12 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.storage.sqlite import assert_sqlite_version
+from raiden.ui.prompt import (
+    check_has_accounts,
+    prompt_account,
+    unlock_account_with_passwordfile,
+    unlock_account_with_passwordprompt,
+)
 from raiden.ui.startup import (
     setup_contracts_or_exit,
     setup_environment,
@@ -33,14 +40,12 @@ from raiden.ui.startup import (
     setup_proxies_or_exit,
     setup_udp_or_exit,
 )
+from raiden.ui.sync import check_synced
 from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.ethereum_clients import is_supported_client
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
-
-from .prompt import prompt_account
-from .sync import check_synced
 
 log = structlog.get_logger(__name__)
 
@@ -144,8 +149,26 @@ def run_app(
     if datadir is None:
         datadir = os.path.join(os.path.expanduser('~'), '.raiden')
 
-    address_hex = to_normalized_address(address) if address else None
-    address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
+    account_manager = AccountManager(keystore_path)
+    check_has_accounts(account_manager)
+
+    if not address:
+        address_hex = prompt_account(account_manager)
+    else:
+        address_hex = to_normalized_address(address)
+
+    if password_file:
+        privatekey_bin = unlock_account_with_passwordfile(
+            account_manager,
+            address_hex,
+            password_file,
+        )
+    else:
+        privatekey_bin = unlock_account_with_passwordprompt(
+            account_manager,
+            address_hex,
+        )
+
     address = to_canonical_address(address_hex)
 
     (listen_host, listen_port) = split_endpoint(listen_address)

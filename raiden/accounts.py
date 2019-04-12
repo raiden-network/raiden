@@ -1,4 +1,3 @@
-import getpass
 import json
 import os
 import sys
@@ -6,10 +5,10 @@ from typing import Dict, Optional
 
 import structlog
 from eth_keyfile import decode_keyfile_json
-from eth_utils import add_0x_prefix, decode_hex, encode_hex, remove_0x_prefix, to_checksum_address
+from eth_utils import add_0x_prefix, decode_hex, encode_hex, remove_0x_prefix
 
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
-from raiden.utils.typing import AddressHex
+from raiden.utils.typing import AddressHex, PrivateKey, PublicKey
 
 log = structlog.get_logger(__name__)
 
@@ -134,7 +133,6 @@ class AccountManager:
         Returns
             The private key associated with the address
         """
-
         address = add_0x_prefix(address).lower()
 
         if not self.address_in_keystore(address):
@@ -143,11 +141,6 @@ class AccountManager:
         with open(self.accounts[address]) as data_file:
             data = json.load(data_file)
 
-        # Since file was found prompt for a password if not already given
-        if password is None:
-            password = getpass.getpass(
-                f'Enter the password to unlock {to_checksum_address(address)}: ',
-            )
         acc = Account(data, password, self.accounts[address])
         return acc.privkey
 
@@ -248,14 +241,14 @@ class Account:
             self._address = privatekey_to_address(self.privkey)
 
     @property
-    def privkey(self):
+    def privkey(self) -> PrivateKey:
         """The account's private key or `None` if the account is locked"""
         if not self.locked:
             return self._privkey
         return None
 
     @property
-    def pubkey(self):
+    def pubkey(self) -> PublicKey:
         """The account's public key or `None` if the account is locked"""
         if not self.locked:
             return privatekey_to_publickey(self.privkey)
