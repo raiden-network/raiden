@@ -1154,10 +1154,6 @@ def test_api_payments_with_hash_no_secret(
     response = request.send().response
     assert_proper_response(response, status_code=HTTPStatus.CONFLICT)
     assert payment == payment
-    # assert_proper_response(response)
-    # response = response.json()
-    # assert_payment_secret_and_hash(response, payment)
-    # assert secret == response['secret']
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
