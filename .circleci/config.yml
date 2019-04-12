@@ -182,7 +182,7 @@ commands:
           paths:
           - "~/.cache/pip"
 
-  install-raiden:
+  prepare-python:
     parameters:
       py-version:
         <<: *py-version-template
@@ -246,7 +246,7 @@ jobs:
     steps:
       - prepare-system
 
-  install-raiden-linux:
+  prepare-python-linux:
     parameters:
       py-version:
         <<: *py-version-template
@@ -256,10 +256,10 @@ jobs:
       py-version: << parameters.py-version >>
 
     steps:
-      - install-raiden:
+      - prepare-python:
           py-version: << parameters.py-version >>
 
-  install-raiden-macos:
+  prepare-python-macos:
     parameters:
       py-version:
         <<: *py-version-template
@@ -267,7 +267,7 @@ jobs:
     executor: macos
 
     steps:
-      - install-raiden
+      - prepare-python
 
   lint:
     parameters:
@@ -668,8 +668,8 @@ workflows:
           requires:
             - checkout
 
-      - install-raiden-linux:
-          name: install-raiden-linux-3.7
+      - prepare-python-linux:
+          name: prepare-python-linux-3.7
           py-version: '3.7'
           requires:
             - prepare-system-linux
@@ -678,13 +678,13 @@ workflows:
           name: lint-3.7
           py-version: "3.7"
           requires:
-            - install-raiden-linux-3.7
+            - prepare-python-linux-3.7
 
       - mypy:
           name: mypy-3.7
           py-version: "3.7"
           requires:
-            - install-raiden-linux-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-udp-production-3.7
@@ -692,7 +692,7 @@ workflows:
           transport-layer: "udp"
           environment-type: "production"
           requires:
-            - install-raiden-linux-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-udp-development-3.7
@@ -700,7 +700,7 @@ workflows:
           transport-layer: "udp"
           environment-type: "development"
           requires:
-            - install-raiden-linux-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-matrix-production-3.7
@@ -708,7 +708,7 @@ workflows:
           transport-layer: "matrix"
           environment-type: "production"
           requires:
-            - install-raiden-linux-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-matrix-development-3.7
@@ -716,7 +716,7 @@ workflows:
           transport-layer: "matrix"
           environment-type: "development"
           requires:
-            - install-raiden-linux-3.7
+            - prepare-python-linux-3.7
 
       - test:
           name: test-unit-3.7
@@ -724,7 +724,7 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-            - install-raiden-linux-3.7
+            - prepare-python-linux-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -733,7 +733,7 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-            - install-raiden-linux-3.7
+            - prepare-python-linux-3.7
 
       - test:
           name: test-integration-udp-geth-3.7
@@ -818,14 +818,14 @@ workflows:
           filters:
             <<: *only-tagged-version-filter
 
-      - install-raiden-linux:
+      - prepare-python-linux:
           py-version: '3.7'
           requires:
             - prepare-system-linux
           filters:
             <<: *only-tagged-version-filter
 
-      - install-raiden-macos:
+      - prepare-python-macos:
           py-version: '3.7'
           requires:
             - prepare-system-macos
@@ -835,7 +835,7 @@ workflows:
       - build-binary-linux:
           name: build-binary-linux-x86
           requires:
-            - install-raiden-linux
+            - prepare-python-linux
           filters:
             <<: *only-tagged-version-filter
 
@@ -845,7 +845,7 @@ workflows:
           remote-host: "armv7"
           architecture: "armv7l"
           requires:
-            - install-raiden-linux
+            - prepare-python-linux
           filters:
             <<: *only-tagged-version-filter
 
@@ -855,13 +855,13 @@ workflows:
           remote-host: "armv8"
           architecture: "aarch64"
           requires:
-            - install-raiden-linux
+            - prepare-python-linux
           filters:
             <<: *only-tagged-version-filter
 
       - build-binary-macos:
           requires:
-            - install-raiden-macos
+            - prepare-python-macos
           filters:
             <<: *only-tagged-version-filter
 
@@ -894,7 +894,7 @@ workflows:
       - deploy-pypi:
           context: "Raiden Context"
           requires:
-            - install-raiden-linux
+            - prepare-python-linux
           filters:
             <<: *only-tagged-version-filter
 
@@ -906,8 +906,8 @@ workflows:
           requires:
             - checkout
 
-      - install-raiden-linux:
-          name: install-raiden-linux-3.7
+      - prepare-python-linux:
+          name: prepare-python-linux-3.7
           py-version: '3.7'
           requires:
           - prepare-system-linux
@@ -916,13 +916,13 @@ workflows:
           name: lint-3.7
           py-version: "3.7"
           requires:
-          - install-raiden-linux-3.7
+          - prepare-python-linux-3.7
 
       - mypy:
           name: mypy-3.7
           py-version: "3.7"
           requires:
-          - install-raiden-linux-3.7
+          - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-udp-production-3.7
@@ -930,7 +930,7 @@ workflows:
           transport-layer: "udp"
           environment-type: "production"
           requires:
-          - install-raiden-linux-3.7
+          - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-udp-development-3.7
@@ -938,7 +938,7 @@ workflows:
           transport-layer: "udp"
           environment-type: "development"
           requires:
-          - install-raiden-linux-3.7
+          - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-matrix-production-3.7
@@ -946,7 +946,7 @@ workflows:
           transport-layer: "matrix"
           environment-type: "production"
           requires:
-          - install-raiden-linux-3.7
+          - prepare-python-linux-3.7
 
       - smoketest:
           name: smoketest-matrix-development-3.7
@@ -954,7 +954,7 @@ workflows:
           transport-layer: "matrix"
           environment-type: "development"
           requires:
-          - install-raiden-linux-3.7
+          - prepare-python-linux-3.7
 
       - test:
           name: test-unit-3.7
@@ -962,7 +962,7 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-          - install-raiden-linux-3.7
+          - prepare-python-linux-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -971,7 +971,7 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-          - install-raiden-linux-3.7
+          - prepare-python-linux-3.7
 
       - test:
           name: test-integration-udp-geth-3.7
@@ -1063,8 +1063,8 @@ workflows:
           requires:
             - checkout
 
-      - install-raiden-macos:
-          name: install-raiden-macos-3.7
+      - prepare-python-macos:
+          name: prepare-python-macos-3.7
           py-version: '3.7'
           requires:
             - prepare-system-macos
@@ -1072,7 +1072,7 @@ workflows:
       - build-binary-macos:
           requires:
             - finalize
-            - install-raiden-macos-3.7
+            - prepare-python-macos-3.7
 
       - deploy-digitalocean:
           context: "Raiden Context"
