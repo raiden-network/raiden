@@ -158,8 +158,53 @@ The RPC connection point is used often.
 Deploy contracts
 ================
 
+Now we can start deploying the Raiden smart contracts on the private chain.
+
 .. code:: bash
 
  (env) $ pwd
  <snip>/priv_chain
  (env) $ python -m raiden_contracts.deploy raiden --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --contracts-version $VERSION --max-token-networks $MAX_UINT256
+ {
+     "EndpointRegistry": "0x6c9c647B37dC96a9916306db39403917f2deE247",
+     "SecretRegistry": "0x6436d3B7205F18044a320403b1Cd0FfFd7e5D998",
+     "TokenNetworkRegistry": "0xC5e4a9189ac801077317CD6BCFA643677897D15B"
+ }
+
+We will use the address of TokenNetworkRegistry later, so let's remember it.
+
+.. code:: bash
+
+ (env) $ export TokenNetworkRegistry="0xC5e4a9189ac801077317CD6BCFA643677897D15B"
+
+Before we deploy the other contracts, we need a token contract for service payments.
+
+.. code:: bash
+
+ (env) $ python -m raiden_contracts.deploy token --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-supply 10000000000 --token-name ServiceToken --token-decimals 18 --token-symbol SVT --contracts-version $VERSION
+{
+    "CustomToken": "0xC5e9F7407359d1492d515C303A3aeDB434D3f0e1"
+}
+
+We use the address of this token to deploy service contracts.
+
+.. code:: bash
+
+ (env) $ export SERVICE_TOKEN="0xC5e9F7407359d1492d515C303A3aeDB434D3f0e1"
+ (env) $ python -m raiden_contracts.deploy register --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 60000000 --token-address $SERVICE_TOKEN --token-network-registry-address $TokenNetworkRegistry --channel-participant-deposit-limit $MAX_UINT256 --token-network-deposit-limit $MAX_UINT256 --contracts-version $VERSION
+
+We deploy another Token contract that's going to be transferred on Raiden network.
+
+.. code:: bash
+
+ (env) $ python -m raiden_contracts.deploy token --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-supply 10000000000 --token-name Token --token-decimals 18 --token-symbol TKN --contracts-version $VERSION
+ {
+     "CustomToken": "0x818cBB172D1a1b769acaA94e80e4c71ba40bdc79"
+ }
+
+We register this token to the TokenNetworkRegistry.
+
+.. code:: bash
+
+ (env) $ export TOKEN="0x818cBB172D1a1b769acaA94e80e4c71ba40bdc79"
+ (env) $ python -m raiden_contracts.deploy register --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 60000000 --token-address $TOKEN --token-network-registry-address $TokenNetworkRegistry --contracts-version $VERSION --channel-participant-deposit-limit 10000000 --token-network-deposit-limit 1000000000
