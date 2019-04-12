@@ -1,10 +1,11 @@
 import json
+from typing import cast
 
 import networkx
 from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
 
 from raiden.transfer.merkle_tree import LEAVES, compute_layers
-from raiden.utils.typing import Address, Callable, Dict, List, Tuple, TypeVar
+from raiden.utils.typing import Address, Callable, Dict, Keccak256, List, Tuple, TypeVar
 
 # The names `T`, `KT`, `VT` are used the same way as the documentation:
 #    https://mypy.readthedocs.io/en/latest/generics.html#defining-sub-classes-of-generic-classes
@@ -91,7 +92,7 @@ def serialize_merkletree_layers(data) -> List[str]:
 
 
 def deserialize_merkletree_layers(data: List[str]):
-    elements = map_list(deserialize_bytes, data)
+    elements = cast(List[Keccak256], map_list(deserialize_bytes, data))
     if len(elements) == 0:
         from raiden.transfer.state import make_empty_merkle_tree
         return make_empty_merkle_tree().layers
