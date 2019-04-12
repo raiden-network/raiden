@@ -36,11 +36,11 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordprompt,
 )
 from raiden.ui.startup import (
+    UDPSetup,
     setup_contracts_or_exit,
     setup_environment,
     setup_network_id_or_exit,
     setup_proxies_or_exit,
-    UDPSetup,
 )
 from raiden.ui.sync import check_synced
 from raiden.utils import pex, split_endpoint
