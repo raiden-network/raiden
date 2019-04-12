@@ -14,15 +14,6 @@ from raiden.tests.utils.network import (
     wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
-from raiden.waiting import wait_for_block_using_web3
-
-
-def wait_for_confirmed_block(blockchain_services, raiden_apps):
-    wait_for_block_using_web3(
-        web3=blockchain_services.deploy_service.client.web3,
-        block_number=raiden_apps[0].raiden.confirmation_blocks + 1,
-        retry_timout=0.5,
-    )
 
 
 def timeout(blockchain_type: str):
@@ -97,7 +88,9 @@ def raiden_chain(
         contracts_path=contracts_path,
     )
 
-    wait_for_confirmed_block(blockchain_services, raiden_apps)
+    confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
+    blockchain_services.deploy_service.wait_until_block(target_block_number=confirmed_block)
+
     parallel_start_apps(raiden_apps)
 
     from_block = GENESIS_BLOCK_NUMBER
@@ -199,7 +192,9 @@ def raiden_network(
         private_rooms=private_rooms,
     )
 
-    wait_for_confirmed_block(blockchain_services, raiden_apps)
+    confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
+    blockchain_services.deploy_service.wait_until_block(target_block_number=confirmed_block)
+
     parallel_start_apps(raiden_apps)
 
     exception = RuntimeError('`raiden_chain` fixture setup failed, token networks unavailable')
