@@ -115,8 +115,7 @@ def data_encoder(data: bytes, length: int = 0) -> str:
 
 def data_decoder(data: str) -> bytes:
     assert is_0x_prefixed(data)
-    data = decode_hex(data)
-    return data
+    return decode_hex(data)
 
 
 def quantity_encoder(i: int) -> str:
@@ -136,14 +135,15 @@ def host_port_to_endpoint(host: str, port: int) -> str:
     return '{}:{}'.format(host, port)
 
 
-def split_endpoint(endpoint: str) -> Tuple[str, Union[str, int]]:
+def split_endpoint(endpoint: str) -> Tuple[str, Union[str, Optional[int]]]:
     match = re.match(r'(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?', endpoint, re.I)
     if not match:
         raise ValueError('Invalid endpoint', endpoint)
     host, port = match.groups()
+    returned_port = None
     if port:
-        port = int(port)
-    return host, port
+        returned_port = int(port)
+    return host, returned_port
 
 
 def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
@@ -189,7 +189,7 @@ def get_system_spec() -> typing.Dict[str, str]:
 
     try:
         version = pkg_resources.require(raiden.__name__)[0].version
-    except (pkg_resources.ContextualVersionConflict, pkg_resources.DistributionNotFound):
+    except (pkg_resources.VersionConflict, pkg_resources.DistributionNotFound):
         raise RuntimeError(
             'Cannot detect Raiden version. Did you do python setup.py?  '
             'Refer to https://raiden-network.readthedocs.io/en/latest/'
