@@ -9,6 +9,7 @@ from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import Address, BlockSpecification, Locksroot, Tuple
 
 if TYPE_CHECKING:
+    # pylint: disable=unused-import
     from raiden.network.blockchain_service import BlockChainService
 
 
