@@ -180,7 +180,6 @@ def run_app(
 
     environment_type = setup_environment(config, environment_type)
 
-    chain_config = {}
     contracts, contract_addresses_known = setup_contracts_or_exit(config, node_network_id)
 
     rpc_client = JSONRPCClient(
@@ -249,10 +248,9 @@ def run_app(
     message_handler = MessageHandler()
 
     try:
-        if 'contracts' in chain_config:
-            start_block = chain_config['contracts']['TokenNetworkRegistry']['block_number']
-        else:
-            start_block = 0
+        start_block = 0
+        if 'TokenNetworkRegistry' in contracts:
+            start_block = contracts['TokenNetworkRegistry']['block_number']
 
         raiden_app = App(
             config=config,
