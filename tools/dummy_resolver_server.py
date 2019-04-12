@@ -15,11 +15,11 @@ def resolve(request):
 
     preimage = None
 
-    x_secret = '2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e'
-    x_secret_hash = to_hex(sha3(to_bytes(hexstr=x_secret)))[2:]
+    x_secret = '0x2ff886d47b156de00d4cad5d8c332706692b5b572adfe35e6d2f65e92906806e'
+    x_secret_hash = to_hex(sha3(to_bytes(hexstr=x_secret)))
 
-    if request["secret_hash"] == x_secret_hash:
-        preimage = {"secret": x_secret}
+    if request['secret_hash'] == x_secret_hash:
+        preimage = {'secret': x_secret}
 
     return preimage
 

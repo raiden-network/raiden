@@ -15,7 +15,12 @@ from raiden import constants, routing
 from raiden.blockchain.events import BlockchainEvents
 from raiden.blockchain_events_handler import on_blockchain_event
 from raiden.connection_manager import ConnectionManager
-from raiden.constants import GENESIS_BLOCK_NUMBER, SNAPSHOT_STATE_CHANGES_COUNT, Environment
+from raiden.constants import (
+    EMPTY_SECRET,
+    GENESIS_BLOCK_NUMBER,
+    SNAPSHOT_STATE_CHANGES_COUNT,
+    Environment,
+)
 from raiden.exceptions import (
     InvalidAddress,
     InvalidDBData,
@@ -1080,8 +1085,11 @@ class RaidenService(Runnable):
             - Network speed, making the transfer sufficiently fast so it doesn't
               expire.
         """
-        if secret is None and secret_hash is None:
-            secret = random_secret()
+        if secret is None:
+            if secret_hash is None:
+                secret = random_secret()
+            else:
+                secret = EMPTY_SECRET
 
         payment_status = self.start_mediated_transfer_with_secret(
             token_network_identifier=token_network_identifier,
