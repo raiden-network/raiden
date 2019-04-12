@@ -210,7 +210,9 @@ commands:
           name: Installing dependencies
           command: |
             . ${VENV_PATH}/bin/activate
-            pip install -c constraints-dev.txt -r requirements-circleci.txt -e .
+            pip install -U 'pip<19.0.0' wheel
+            pip install -c constraints-dev.txt readme_renderer pyinstaller s3cmd
+            pip install -c constraints-dev.txt -r requirements-dev.txt -e .
       - save_cache:
           key: python-deps-v2-{{ arch }}-<< parameters.py-version >>-{{ checksum "requirements.txt" }}-{{ checksum "requirements-dev.txt" }}
           paths:
