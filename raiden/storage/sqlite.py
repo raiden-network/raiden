@@ -6,7 +6,7 @@ from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec
-from raiden.utils.typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple
+from raiden.utils.typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
 
 from .serialize import SerializationBase
 
@@ -285,7 +285,7 @@ class SQLiteStorage(SerializationBase):
         limit, offset = _sanitize_limit_and_offset(limit, offset)
         cursor = self.conn.cursor()
         where_clauses = []
-        args = []
+        args: List[Union[str, int]] = []
         if filters:
             for field, value in filters:
                 where_clauses.append(f'json_extract(data, ?) LIKE ?')
