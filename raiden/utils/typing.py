@@ -154,3 +154,7 @@ ChannelMap = Dict[ChannelID, 'NettingChannelState']
 InitiatorTransfersMap = Dict[SecretHash, 'InitiatorTransferState']
 
 NodeNetworkStateMap = Dict[Address, str]
+
+Host = NewType('Host', str)
+Port = NewType('Port', int)
+HostPort = Tuple[Host, Optional[Port]]

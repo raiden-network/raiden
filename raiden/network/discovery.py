@@ -6,6 +6,7 @@ from eth_utils import is_binary_address
 from raiden.exceptions import InvalidAddress, UnknownAddress
 from raiden.network.proxies.discovery import Discovery as DiscoveryProxy
 from raiden.utils import host_port_to_endpoint, pex, split_endpoint
+from raiden.utils.typing import HostPort
 
 log = structlog.get_logger(__name__)
 
@@ -91,7 +92,7 @@ class ContractDiscovery(Discovery):
                 port=port,
             )
 
-    def get(self, node_address: bytes):
+    def get(self, node_address: bytes) -> HostPort:
         endpoint = self.discovery_proxy.endpoint_by_address(node_address)
         host_port = split_endpoint(endpoint)
         return host_port

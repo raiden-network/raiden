@@ -5,7 +5,6 @@ import re
 import sys
 import time
 from itertools import zip_longest
-from typing import Iterable, List, Optional, Tuple, Union
 
 import gevent
 from eth_keys import keys
@@ -24,23 +23,38 @@ from eth_utils import (
 import raiden
 from raiden import constants
 from raiden.exceptions import InvalidAddress
-from raiden.utils import typing
 from raiden.utils.signing import sha3  # noqa
+from raiden.utils.typing import (
+    Address,
+    Any,
+    ChainID,
+    ChannelID,
+    Dict,
+    HostPort,
+    Iterable,
+    List,
+    Optional,
+    TokenAddress,
+    TokenNetworkAddress,
+    TokenNetworkID,
+    Tuple,
+    Union,
+)
 
 # Placeholder chain ID for refactoring in scope of #3493
-CHAIN_ID_UNSPECIFIED = typing.ChainID(-1)
+CHAIN_ID_UNSPECIFIED = ChainID(-1)
 # Placeholder channel ID for refactoring in scope of #3493
-CHANNEL_ID_UNSPECIFIED = typing.ChannelID(-2)
+CHANNEL_ID_UNSPECIFIED = ChannelID(-2)
 
 
 class CanonicalIdentifier:
     def __init__(
             self,
-            chain_identifier: typing.ChainID,
+            chain_identifier: ChainID,
             # introducing the type as Union, to avoid casting for now.
             # Should be only `..Address` later
-            token_network_address: Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
-            channel_identifier: typing.ChannelID,
+            token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+            channel_identifier: ChannelID,
     ):
         self.chain_identifier = chain_identifier
         self.token_network_address = token_network_address
@@ -54,7 +68,7 @@ class CanonicalIdentifier:
             f'channel_id:{self.channel_identifier}>'
         )
 
-    def to_dict(self) -> typing.Dict[str, typing.Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return dict(
             chain_identifier=str(self.chain_identifier),
             token_network_address=to_hex(self.token_network_address),
@@ -62,13 +76,13 @@ class CanonicalIdentifier:
         )
 
     @classmethod
-    def from_dict(cls, data: typing.Dict[str, typing.Any]) -> 'CanonicalIdentifier':
+    def from_dict(cls, data: Dict[str, Any]) -> 'CanonicalIdentifier':
         return cls(
-            chain_identifier=typing.ChainID(int(data['chain_identifier'])),
-            token_network_address=typing.TokenNetworkAddress(
+            chain_identifier=ChainID(int(data['chain_identifier'])),
+            token_network_address=TokenNetworkAddress(
                 to_bytes(hexstr=data['token_network_address']),
             ),
-            channel_identifier=typing.ChannelID(int(data['channel_identifier'])),
+            channel_identifier=ChannelID(int(data['channel_identifier'])),
         )
 
 
@@ -89,7 +103,7 @@ def is_minified_address(addr):
     return re.compile('(0x)?[a-f0-9]{6,8}').match(addr)
 
 
-def address_checksum_and_decode(addr: str) -> typing.Address:
+def address_checksum_and_decode(addr: str) -> Address:
     """ Accepts a string address and turns it into binary.
 
         Makes sure that the string address provided starts is 0x prefixed and
@@ -103,7 +117,7 @@ def address_checksum_and_decode(addr: str) -> typing.Address:
 
     addr_bytes = decode_hex(addr)
     assert len(addr_bytes) in (20, 0)
-    return typing.Address(addr_bytes)
+    return Address(addr_bytes)
 
 
 def data_encoder(data: bytes, length: int = 0) -> str:
@@ -135,7 +149,7 @@ def host_port_to_endpoint(host: str, port: int) -> str:
     return '{}:{}'.format(host, port)
 
 
-def split_endpoint(endpoint: str) -> Tuple[str, Union[str, Optional[int]]]:
+def split_endpoint(endpoint: str) -> HostPort:
     match = re.match(r'(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?', endpoint, re.I)
     if not match:
         raise ValueError('Invalid endpoint', endpoint)
@@ -153,7 +167,7 @@ def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
     return keys.PrivateKey(private_key_bin).public_key.to_bytes()
 
 
-def privatekey_to_address(private_key_bin: bytes) -> typing.Address:
+def privatekey_to_address(private_key_bin: bytes) -> Address:
     return keys.PrivateKey(private_key_bin).public_key.to_canonical_address()
 
 
@@ -169,7 +183,7 @@ def get_relative_path(file_name) -> str:
     return file_name.replace(prefix + '/', '')
 
 
-def get_system_spec() -> typing.Dict[str, str]:
+def get_system_spec() -> Dict[str, str]:
     """Collect information about the system and installation.
     """
     import pkg_resources
@@ -271,8 +285,8 @@ def merge_dict(to_update: dict, other_dict: dict):
 
 
 def optional_address_to_string(
-        address: Optional[Union[typing.Address, typing.TokenAddress]] = None,
-) -> typing.Optional[str]:
+        address: Optional[Union[Address, TokenAddress]] = None,
+) -> Optional[str]:
     if address is None:
         return None
 
