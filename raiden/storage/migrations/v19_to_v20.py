@@ -65,7 +65,6 @@ def _get_onchain_locksroots(
 
 
 def _add_onchain_locksroot_to_channel_new_state_changes(
-        raiden: RaidenService,
         storage: SQLiteStorage,
 ) -> None:
     """ Adds `onchain_locksroot` to our_state/partner_state in
@@ -89,8 +88,10 @@ def _add_onchain_locksroot_to_channel_new_state_changes(
             msg = 'v18 state changes cant contain onchain_locksroot'
             assert 'onchain_locksroot' not in channel_state['partner_state'], msg
 
-            channel_state['our_state']['onchain_locksroot'] = EMPTY_MERKLE_ROOT
-            channel_state['partner_state']['onchain_locksroot'] = EMPTY_MERKLE_ROOT
+            channel_state['our_state']['onchain_locksroot'] = serialize_bytes(EMPTY_MERKLE_ROOT)
+            channel_state['partner_state']['onchain_locksroot'] = serialize_bytes(
+                EMPTY_MERKLE_ROOT,
+            )
 
             updated_state_changes.append((
                 json.dumps(state_change_data),
@@ -223,12 +224,12 @@ def _add_onchain_locksroot_to_snapshots(
 def upgrade_v19_to_v20(  # pylint: disable=unused-argument
         storage: SQLiteStorage,
         old_version: int,
-        current_version: int,
+        current_version: int,  # pylint: disable=unused-argument
         raiden: 'RaidenService',
-        **kwargs,
+        **kwargs,  # pylint: disable=unused-argument
 ) -> int:
     if old_version == SOURCE_VERSION:
-        _add_onchain_locksroot_to_channel_new_state_changes(raiden, storage)
+        _add_onchain_locksroot_to_channel_new_state_changes(storage)
         _add_onchain_locksroot_to_channel_settled_state_changes(raiden, storage)
         _add_onchain_locksroot_to_snapshots(raiden, storage)
 
