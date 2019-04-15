@@ -5,7 +5,17 @@ import networkx
 from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
 
 from raiden.transfer.merkle_tree import LEAVES, compute_layers
-from raiden.utils.typing import Address, Callable, Dict, Keccak256, List, Tuple, TypeVar
+from raiden.utils.typing import (
+    Address,
+    Callable,
+    ChannelID,
+    Dict,
+    Keccak256,
+    List,
+    SecretHash,
+    Tuple,
+    TypeVar,
+)
 
 # The names `T`, `KT`, `VT` are used the same way as the documentation:
 #    https://mypy.readthedocs.io/en/latest/generics.html#defining-sub-classes-of-generic-classes
@@ -50,6 +60,14 @@ def serialize_bytes(data: bytes) -> str:
 
 def deserialize_bytes(data: str) -> bytes:
     return to_bytes(hexstr=data)
+
+
+def deserialize_secret_hash(data: str) -> SecretHash:
+    return SecretHash(deserialize_bytes(data))
+
+
+def deserialize_keccak(data: str) -> Keccak256:
+    return Keccak256(deserialize_bytes(data))
 
 
 def serialize_networkx_graph(graph: networkx.Graph) -> str:
@@ -113,3 +131,7 @@ def deserialize_queueid_to_queue(data: Dict):
         queue_id: queue
         for queue_id, queue in data.values()
     }
+
+
+def deserialize_channel_id(data: str) -> ChannelID:
+    return ChannelID(int(data))
