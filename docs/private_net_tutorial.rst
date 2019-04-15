@@ -208,3 +208,16 @@ We register this token to the TokenNetworkRegistry.
 
  (env) $ export TOKEN="0x818cBB172D1a1b769acaA94e80e4c71ba40bdc79"
  (env) $ python -m raiden_contracts.deploy register --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 60000000 --token-address $TOKEN --token-network-registry-address $TokenNetworkRegistry --contracts-version $VERSION --channel-participant-deposit-limit 10000000 --token-network-deposit-limit 1000000000
+
+Start Raiden Client
+===================
+
+Find the relevant contract addresses and you can start the Raiden client:
+
+.. code:: bash
+
+ (env) $ export EndpointRegistry=0xb145DF6d93EdB61280E4c5c9a3Abb853c329a43D
+ (env) $ export SecretRegistry=0xbF45e5a082Be39692c800D985e9c45F49aE26d69
+ (env) $ export TokenNetworkRegistry=0x2f7C7bbF10bCEe496F42F1eaB87Ab50a48FdBa61
+ (env) $ export Address=0x8AE8A9d3074CAdf540506FFEdca8A3a9da4f0e71
+ (env) $ raiden --datadir exchange-a  --keystore-path   ./blkchain1/keystore/ --network-id 4321  --accept-disclaimer --address $Address --rpc --api-address 0.0.0.0:5001 --web-ui  --environment-type development  --password-file passwd_file  --console --no-sync-check --accept-disclaimer --tokennetwork-registry-contract-address $TokenNetworkRegistry --secret-registry-contract-address  $SecretRegistry --endpoint-registry-contract-address $EndpointRegistry  #--gas-price 10000000000 --transport udp --nat ext:127.0.0.1
