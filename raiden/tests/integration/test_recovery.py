@@ -75,7 +75,7 @@ def test_recovery_happy_case(
     )
 
     raiden_event_handler = RaidenEventHandler()
-    message_handler = MessageHandler()
+    message_handler = WaitForMessage()
 
     app0_restart = App(
         config=app0.config,
