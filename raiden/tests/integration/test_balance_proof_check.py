@@ -4,6 +4,7 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
 from raiden.network.proxies.token_network import TokenNetwork
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import get_channelstate, transfer
@@ -30,7 +31,22 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
     - Assert that app0 can settle the closed channel, even though app1 didn't
     use the latest balance proof
     """
+    raise_on_failure(
+        raiden_network,
+        run_test_node_can_settle_if_close_didnt_use_any_balance_proof,
+        raiden_network=raiden_network,
+        number_of_nodes=number_of_nodes,
+        token_addresses=token_addresses,
+        network_wait=network_wait,
+    )
 
+
+def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
+        raiden_network,
+        number_of_nodes,
+        token_addresses,
+        network_wait,
+):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -111,7 +127,22 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
     - Assert that app0 can settle the closed channel, even though app1 didn't
     use the latest balance proof
     """
+    raise_on_failure(
+        raiden_network,
+        run_test_node_can_settle_if_partner_does_not_call_update_transfer,
+        raiden_network=raiden_network,
+        number_of_nodes=number_of_nodes,
+        token_addresses=token_addresses,
+        network_wait=network_wait,
+    )
 
+
+def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
+        raiden_network,
+        number_of_nodes,
+        token_addresses,
+        network_wait,
+):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)

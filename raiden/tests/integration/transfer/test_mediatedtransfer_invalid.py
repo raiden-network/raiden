@@ -6,6 +6,7 @@ import pytest
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.messages import Lock, LockedTransfer
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import (
     UNIT_CHAIN_ID,
     UNIT_SECRETHASH,
@@ -27,6 +28,20 @@ from raiden.utils.signer import LocalSigner
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_failsfast_lockedtransfer_exceeding_distributable(
+        raiden_network,
+        token_addresses,
+        deposit,
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_failsfast_lockedtransfer_exceeding_distributable,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        deposit=deposit,
+    )
+
+
+def run_test_failsfast_lockedtransfer_exceeding_distributable(
         raiden_network,
         token_addresses,
         deposit,
@@ -61,6 +76,15 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
+    raise_on_failure(
+        raiden_network,
+        run_test_failfast_lockedtransfer_nochannel,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+    )
+
+
+def run_test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
     """When the node has no channels it should fail without raising exceptions."""
     token_address = token_addresses[0]
     app0, app1 = raiden_network
@@ -84,6 +108,26 @@ def test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_receive_lockedtransfer_invalidnonce(
+        raiden_network,
+        number_of_nodes,
+        deposit,
+        token_addresses,
+        reveal_timeout,
+        network_wait,
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_receive_lockedtransfer_invalidnonce,
+        raiden_network=raiden_network,
+        number_of_nodes=number_of_nodes,
+        deposit=deposit,
+        token_addresses=token_addresses,
+        reveal_timeout=reveal_timeout,
+        network_wait=network_wait,
+    )
+
+
+def run_test_receive_lockedtransfer_invalidnonce(
         raiden_network,
         number_of_nodes,
         deposit,
@@ -156,6 +200,22 @@ def test_receive_lockedtransfer_invalidsender(
         deposit,
         reveal_timeout,
 ):
+    raise_on_failure(
+        raiden_network,
+        run_test_receive_lockedtransfer_invalidsender,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        deposit=deposit,
+        reveal_timeout=reveal_timeout,
+    )
+
+
+def run_test_receive_lockedtransfer_invalidsender(
+        raiden_network,
+        token_addresses,
+        deposit,
+        reveal_timeout,
+):
 
     app0, app1 = raiden_network
     token_address = token_addresses[0]
@@ -203,6 +263,22 @@ def test_receive_lockedtransfer_invalidsender(
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_receive_lockedtransfer_invalidrecipient(
+        raiden_network,
+        token_addresses,
+        reveal_timeout,
+        deposit,
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_receive_lockedtransfer_invalidrecipient,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        reveal_timeout=reveal_timeout,
+        deposit=deposit,
+    )
+
+
+def run_test_receive_lockedtransfer_invalidrecipient(
         raiden_network,
         token_addresses,
         reveal_timeout,
@@ -257,6 +333,22 @@ def test_receive_lockedtransfer_invalidrecipient(
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('settle_timeout', [30])
 def test_received_lockedtransfer_closedchannel(
+        raiden_network,
+        reveal_timeout,
+        token_addresses,
+        deposit,
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_received_lockedtransfer_closedchannel,
+        raiden_network=raiden_network,
+        reveal_timeout=reveal_timeout,
+        token_addresses=token_addresses,
+        deposit=deposit,
+    )
+
+
+def run_test_received_lockedtransfer_closedchannel(
         raiden_network,
         reveal_timeout,
         token_addresses,

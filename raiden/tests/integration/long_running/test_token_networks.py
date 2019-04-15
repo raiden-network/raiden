@@ -4,6 +4,7 @@ import pytest
 from raiden import routing, waiting
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import InvalidAmount
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 
@@ -75,10 +76,16 @@ def saturated_count(connection_managers, registry_address, token_address):
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
-def test_participant_selection(
+def test_participant_selection(raiden_network, token_addresses):
+    raise_on_failure(
         raiden_network,
-        token_addresses,
-):
+        run_test_participant_selection,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+    )
+
+
+def run_test_participant_selection(raiden_network, token_addresses):
     # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address
     token_address = token_addresses[0]

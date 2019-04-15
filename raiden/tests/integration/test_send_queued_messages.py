@@ -6,6 +6,7 @@ from raiden.app import App
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldRaidenEvent, dont_handle_node_change_network_state
@@ -26,6 +27,22 @@ def test_send_queued_messages(  # pylint: disable=unused-argument
         skip_if_not_matrix,
 ):
     """Test re-sending of undelivered messages on node restart"""
+    raise_on_failure(
+        raiden_network,
+        run_test_send_queued_messages,
+        raiden_network=raiden_network,
+        deposit=deposit,
+        token_addresses=token_addresses,
+        network_wait=network_wait,
+    )
+
+
+def run_test_send_queued_messages(
+        raiden_network,
+        deposit,
+        token_addresses,
+        network_wait,
+):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
@@ -151,6 +168,20 @@ def test_payment_statuses_are_restored(  # pylint: disable=unused-argument
     started the transfers.
     Related issue: https://github.com/raiden-network/raiden/issues/3432
     """
+    raise_on_failure(
+        raiden_network,
+        run_test_payment_statuses_are_restored,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        network_wait=network_wait,
+    )
+
+
+def run_test_payment_statuses_are_restored(
+        raiden_network,
+        token_addresses,
+        network_wait,
+):
     app0, app1 = raiden_network
 
     token_address = token_addresses[0]

@@ -3,6 +3,7 @@ from eth_utils import to_checksum_address
 
 from raiden.api.python import RaidenAPI
 from raiden.exceptions import DepositMismatch, UnknownTokenAddress
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.transfer import get_channelstate
 from raiden.transfer import channel, views
@@ -19,6 +20,15 @@ from raiden_contracts.constants import ChannelEvent
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [1])
 def test_token_addresses(raiden_network, token_addresses):
+    raise_on_failure(
+        raiden_network,
+        run_test_token_addresses,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+    )
+
+
+def run_test_token_addresses(raiden_network, token_addresses):
     app = raiden_network[0]
     api = RaidenAPI(app.raiden)
     registry_address = app.raiden.default_registry.address
@@ -29,6 +39,17 @@ def test_token_addresses(raiden_network, token_addresses):
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, retry_timeout):
     """Uses RaidenAPI to go through a complete channel lifecycle."""
+    raise_on_failure(
+        raiden_network,
+        run_test_raidenapi_channel_lifecycle,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        deposit=deposit,
+        retry_timeout=retry_timeout,
+    )
+
+
+def run_test_raidenapi_channel_lifecycle(raiden_network, token_addresses, deposit, retry_timeout):
     node1, node2 = raiden_network
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(

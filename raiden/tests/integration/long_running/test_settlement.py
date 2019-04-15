@@ -10,6 +10,7 @@ from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
@@ -45,6 +46,15 @@ def wait_for_batch_unlock(app, token_network_id, participant, partner):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_settle_is_automatically_called(raiden_network, token_addresses):
+    raise_on_failure(
+        raiden_network,
+        run_test_settle_is_automatically_called,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+    )
+
+
+def run_test_settle_is_automatically_called(raiden_network, token_addresses):
     """Settle is automatically called by one of the nodes."""
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
@@ -132,6 +142,16 @@ def test_settle_is_automatically_called(raiden_network, token_addresses):
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_lock_expiry(raiden_network, token_addresses, deposit):
     """Test lock expiry and removal."""
+    raise_on_failure(
+        raiden_network,
+        run_test_lock_expiry,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        deposit=deposit,
+    )
+
+
+def run_test_lock_expiry(raiden_network, token_addresses, deposit):
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -251,6 +271,24 @@ def test_lock_expiry(raiden_network, token_addresses, deposit):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_batch_unlock(
+        raiden_network,
+        token_addresses,
+        secret_registry_address,
+        deposit,
+        blockchain_type,
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_batch_unlock,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        secret_registry_address=secret_registry_address,
+        deposit=deposit,
+        blockchain_type=blockchain_type,
+    )
+
+
+def run_test_batch_unlock(
         raiden_network,
         token_addresses,
         secret_registry_address,
@@ -409,6 +447,20 @@ def test_settled_lock(
         raiden_network,
         deposit,
 ):
+    raise_on_failure(
+        raiden_network,
+        run_test_settled_lock,
+        token_addresses=token_addresses,
+        raiden_network=raiden_network,
+        deposit=deposit,
+    )
+
+
+def run_test_settled_lock(
+        token_addresses,
+        raiden_network,
+        deposit,
+):
     """ Any transfer following a secret reveal must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
@@ -507,6 +559,15 @@ def test_settled_lock(
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_automatic_secret_registration(raiden_chain, token_addresses):
+    raise_on_failure(
+        raiden_chain,
+        run_test_automatic_secret_registration,
+        raiden_chain=raiden_chain,
+        token_addresses=token_addresses,
+    )
+
+
+def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -570,6 +631,16 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
 @pytest.mark.xfail(reason='test incomplete')
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_start_end_attack(token_addresses, raiden_chain, deposit):
+    raise_on_failure(
+        raiden_chain,
+        run_test_start_end_attack,
+        token_addresses=token_addresses,
+        raiden_chain=raiden_chain,
+        deposit=deposit,
+    )
+
+
+def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     """ An attacker can try to steal tokens from a hub or the last node in a
     path.
 
@@ -674,6 +745,16 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_automatic_dispute(raiden_network, deposit, token_addresses):
+    raise_on_failure(
+        raiden_network,
+        run_test_automatic_dispute,
+        raiden_network=raiden_network,
+        deposit=deposit,
+        token_addresses=token_addresses,
+    )
+
+
+def run_test_automatic_dispute(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
