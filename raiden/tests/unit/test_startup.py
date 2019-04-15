@@ -51,7 +51,7 @@ def test_setup_network_id():
         setup_network_id_or_exit(config, 61, MockWeb3(68))
 
 
-@pytest.mark.parametrize('netid', [1, 3, 4, 42, 627])
+@pytest.mark.parametrize('netid', [1, 3, 4, 42, 5, 627])
 def test_setup_network_id_known(netid):
     """Test that network setup works for the known network ids"""
     config = {}
@@ -130,6 +130,22 @@ def test_setup_contracts():
     # Rinkeby development
     config = {'environment_type': Environment.DEVELOPMENT}
     contracts, addresses_known = setup_contracts_or_exit(config, 4)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert service_contracts_in_data(contracts)
+
+    # Goerli production
+    config = {'environment_type': Environment.PRODUCTION}
+    contracts, addresses_known = setup_contracts_or_exit(config, 5)
+    assert 'contracts_path' in config
+    assert addresses_known
+    assert raiden_contracts_in_data(contracts)
+    assert not service_contracts_in_data(contracts)
+
+    # Goerli development
+    config = {'environment_type': Environment.DEVELOPMENT}
+    contracts, addresses_known = setup_contracts_or_exit(config, 5)
     assert 'contracts_path' in config
     assert addresses_known
     assert raiden_contracts_in_data(contracts)

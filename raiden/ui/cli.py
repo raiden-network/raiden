@@ -180,10 +180,18 @@ def options(func):
                 '"mainnet" - network id: 1\n'
                 '"ropsten" - network id: 3\n'
                 '"rinkeby" - network id: 4\n'
+                '"goerli" - network id: 5\n'
                 '"kovan" - network id: 42\n'
                 '"<NETWORK_ID>": use the given network id directly\n'
             ),
-            type=NetworkChoiceType(['mainnet', 'ropsten', 'rinkeby', 'kovan', '<NETWORK_ID>']),
+            type=NetworkChoiceType([
+                'mainnet',
+                'ropsten',
+                'rinkeby',
+                'goerli',
+                'kovan',
+                '<NETWORK_ID>',
+            ]),
             default='mainnet',
             show_default=True,
         ),
