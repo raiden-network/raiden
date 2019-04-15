@@ -56,6 +56,7 @@ from raiden.utils.typing import (
     T_TokenAmount,
     TokenAddress,
     TokenAmount,
+    TokenNetworkAddress,
     TokenNetworkID,
     Union,
 )
@@ -323,7 +324,10 @@ class ChainState(State):
         self.pseudo_random_generator = pseudo_random_generator
         self.queueids_to_queues: QueueIdsToQueues = dict()
         self.last_transport_authdata: Optional[str] = None
-        self.tokennetworkaddresses_to_paymentnetworkaddresses: Dict[Address, Address] = {}
+        self.tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
+            TokenNetworkAddress,
+            PaymentNetworkID,
+        ] = {}
 
     def __repr__(self):
         return (
