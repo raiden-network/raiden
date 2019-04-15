@@ -125,10 +125,13 @@ def setup_contracts_or_exit(
     config['contracts_path'] = contracts_precompiled_path(contracts_version)
 
     if network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[network_id] != 'smoketest':
-        deployment_data = get_contracts_deployment_info(
-            chain_id=network_id,
-            version=contracts_version,
-        )
+        try:
+            deployment_data = get_contracts_deployment_info(
+                chain_id=network_id,
+                version=contracts_version,
+            )
+        except ValueError:
+            return contracts, False
 
         contracts = deployment_data['contracts']
         contract_addresses_known = True
@@ -201,8 +204,9 @@ def setup_proxies_or_exit(
 
     if not contract_addresses_given and not contract_addresses_known:
         click.secho(
-            f"There are no known contract addresses for network id '{node_network_id}'. "
-            "Please provide them on the command line or in the configuration file.",
+            f"There are no known contract addresses for network id '{node_network_id}'. and "
+            f"environment type {environment_type}. Please provide them on the command line or "
+            f"in the configuration file.",
             fg='red',
         )
         sys.exit(1)
