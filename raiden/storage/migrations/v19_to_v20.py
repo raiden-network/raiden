@@ -4,6 +4,7 @@ from functools import partial
 from eth_utils import to_canonical_address
 from gevent.pool import Pool
 
+from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.sqlite import SQLiteStorage, StateChangeRecord
@@ -88,8 +89,8 @@ def _add_onchain_locksroot_to_channel_new_state_changes(
             msg = 'v18 state changes cant contain onchain_locksroot'
             assert 'onchain_locksroot' not in channel_state['partner_state'], msg
 
-            channel_state['our_state']['onchain_locksroot'] = None
-            channel_state['partner_state']['onchain_locksroot'] = None
+            channel_state['our_state']['onchain_locksroot'] = EMPTY_MERKLE_ROOT
+            channel_state['partner_state']['onchain_locksroot'] = EMPTY_MERKLE_ROOT
 
             updated_state_changes.append((
                 json.dumps(state_change_data),
