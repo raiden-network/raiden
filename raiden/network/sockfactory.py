@@ -6,6 +6,7 @@ import structlog
 
 from raiden.exceptions import RaidenServicePortInUseError, STUNUnavailableException
 from raiden.network import stunsock, upnpsock
+from raiden.utils.typing import Host, Port
 
 log = structlog.get_logger(__name__)
 
@@ -38,7 +39,7 @@ class SocketFactory:
         'ext': ['ext'],
     }
 
-    def __init__(self, source_ip, source_port, strategy='auto', **kwargs):
+    def __init__(self, source_ip: Host, source_port: Port, strategy='auto', **kwargs):
         """
         Create a port mapped socket via selectable strategy.
         Args:
