@@ -222,6 +222,7 @@ def matrix_server_starter(
                     method='GET',
                     timeout=30,
                     cwd=config_file.parent,
+                    verify_tls=False,
                     io=synapse_io,
                 ),
             )

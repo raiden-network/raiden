@@ -14,8 +14,8 @@ import pytest
 from _pytest.pathlib import LOCK_TIMEOUT, ensure_reset_dir, make_numbered_dir_with_cleanup
 from _pytest.tmpdir import get_user
 
+from raiden.constants import EthClient
 from raiden.log_config import configure_logging
-from raiden.settings import SUPPORTED_ETH_CLIENTS
 from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
@@ -24,7 +24,7 @@ from raiden.utils.cli import LogLevelConfigType
 def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
-        choices=SUPPORTED_ETH_CLIENTS,
+        choices=[client.value for client in EthClient],
         default='geth',
     )
 

@@ -36,7 +36,7 @@ def test_cli_full_init(cli_args, raiden_spawner):
         child.close()
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(45)
 @pytest.mark.parametrize('changed_args', [{'keystore_path': '.'}])
 def test_cli_wrong_keystore_path(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
@@ -49,7 +49,7 @@ def test_cli_wrong_keystore_path(cli_args, raiden_spawner):
         child.close()
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(45)
 @pytest.mark.parametrize('removed_args', [['password_file']])
 def test_cli_missing_password_file_enter_password(raiden_testchain, cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
@@ -78,7 +78,7 @@ def test_cli_missing_data_dir(cli_args, raiden_spawner):
         child.close()
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(45)
 @pytest.mark.parametrize('changed_args', [{'eth_rpc_endpoint': 'http://8.8.8.8:2020'}])
 def test_cli_wrong_rpc_endpoint(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
@@ -91,7 +91,7 @@ def test_cli_wrong_rpc_endpoint(cli_args, raiden_spawner):
         child.close()
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(45)
 @pytest.mark.parametrize('changed_args', [{'network_id': '42'}])
 def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
@@ -107,7 +107,7 @@ def test_cli_wrong_network_id_try_kovan(cli_args, raiden_spawner):
         child.close()
 
 
-@pytest.mark.timeout(35)
+@pytest.mark.timeout(45)
 @pytest.mark.parametrize('changed_args', [{
     'tokennetwork_registry_contract_address': to_checksum_address(
         '0xfb6916095ca1df60bb79ce92ce3ea74c37c5d359',
