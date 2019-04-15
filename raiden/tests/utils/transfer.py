@@ -3,6 +3,7 @@ import random
 
 import gevent
 
+from raiden.app import App
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, LockExpired
@@ -23,6 +24,7 @@ from raiden.transfer.state import (
 )
 from raiden.utils import sha3
 from raiden.utils.signer import LocalSigner, Signer
+from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, TokenAddress
 
 
 def sign_and_inject(message, signer: Signer, app):
@@ -40,42 +42,26 @@ def get_channelstate(app0, app1, token_network_identifier) -> NettingChannelStat
     return channel_state
 
 
-def transfer(initiator_app, target_app, token, amount, identifier):
+def transfer(
+        initiator_app: App,
+        target_app: App,
+        token_address: TokenAddress,
+        amount: PaymentAmount,
+        identifier: PaymentID,
+        fee: FeeAmount = 0,
+        timeout: float = 10,
+) -> None:
     """ Nice to read shortcut to make a transfer.
 
-    The transfer is a LockedTransfer and we make sure,
-    all apps are synched. The secret
-    will also be revealed.
+    The transfer is a LockedTransfer and we make sure, all apps are synched.
+    The secret will also be revealed.
     """
     payment_network_identifier = initiator_app.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(initiator_app),
-        payment_network_identifier,
-        token,
+        chain_state=views.state_from_app(initiator_app),
+        payment_network_id=payment_network_identifier,
+        token_address=token_address,
     )
-    payment_status = initiator_app.raiden.mediated_transfer_async(
-        token_network_identifier,
-        amount,
-        target_app.raiden.address,
-        identifier,
-    )
-    assert payment_status.payment_done.wait()
-
-
-def mediated_transfer(
-        initiator_app,
-        target_app,
-        token_network_identifier,
-        amount,
-        fee=0,
-        identifier=None,
-        timeout=10,
-):
-    """ Nice to read shortcut to make a LockedTransfer.
-
-    The secret will be revealed and the apps will be synchronized."""
-    # pylint: disable=too-many-arguments
-
     payment_status = initiator_app.raiden.mediated_transfer_async(
         token_network_identifier=token_network_identifier,
         amount=amount,
@@ -83,7 +69,7 @@ def mediated_transfer(
         identifier=identifier,
         fee=fee,
     )
-    assert payment_status.payment_done.wait(timeout), f'timeout for transfer id={identifier}'
+    assert payment_status.payment_done.wait(timeout)
     gevent.sleep(0.3)  # let the other nodes synch
 
 

@@ -12,7 +12,7 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
-from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer
+from raiden.tests.utils.transfer import assert_synced_channel_state, transfer
 from raiden.transfer import views
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
@@ -50,11 +50,12 @@ def test_recovery_happy_case(
     amount = 1
     spent_amount = deposit - 2
     for _ in range(spent_amount):
-        mediated_transfer(
-            app0,
-            app2,
-            token_network_identifier,
-            amount,
+        transfer(
+            initiator_app=app0,
+            target_app=app2,
+            token_address=token_address,
+            amount=amount,
+            identifier=None,
             timeout=network_wait * number_of_nodes,
         )
 
@@ -120,17 +121,18 @@ def test_recovery_happy_case(
     identifier = create_default_identifier()
     wait_for_payment = app2_wait_for.wait_for_message(Unlock, {'payment_identifier': identifier})
 
-    mediated_transfer(
-        app2,
-        app0_restart,
-        token_network_identifier,
-        amount,
+    transfer(
+        initiator_app=app2,
+        target_app=app0_restart,
+        token_address=token_address,
+        amount=amount,
+        identifier=None,
         timeout=network_wait * number_of_nodes * 2,
     )
-    mediated_transfer(
+    transfer(
         initiator_app=app0_restart,
         target_app=app2,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount,
         identifier=identifier,
         timeout=network_wait * number_of_nodes * 2,
@@ -176,11 +178,12 @@ def test_recovery_unhappy_case(
     amount = 1
     spent_amount = deposit - 2
     for _ in range(spent_amount):
-        mediated_transfer(
-            app0,
-            app2,
-            token_network_identifier,
-            amount,
+        transfer(
+            initiator_app=app0,
+            target_app=app2,
+            token_address=token_address,
+            amount=amount,
+            identifier=None,
             timeout=network_wait * number_of_nodes,
         )
 

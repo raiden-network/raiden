@@ -24,11 +24,7 @@ from raiden.tests.utils.events import must_have_event, wait_for_state_change
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    get_channelstate,
-    mediated_transfer,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentReceivedSuccess, EventPaymentSentSuccess
 from raiden.transfer.state_change import ContractReceiveNewTokenNetwork
@@ -318,17 +314,12 @@ def test_token_swap(raiden_network, deposit, token_addresses):
 def test_api_channel_events(raiden_chain, token_addresses):
     app0, app1 = raiden_chain
     token_address = token_addresses[0]
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_address,
-    )
 
     amount = 30
-    mediated_transfer(
+    transfer(
         initiator_app=app0,
         target_app=app1,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount,
         identifier=1,
     )
@@ -522,10 +513,10 @@ def test_create_monitoring_request(raiden_network, token_addresses):
     )
 
     payment_identifier = create_default_identifier()
-    mediated_transfer(
+    transfer(
         initiator_app=app1,
         target_app=app0,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=1,
         identifier=payment_identifier,
     )
