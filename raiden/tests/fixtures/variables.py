@@ -223,7 +223,7 @@ def deploy_key(privatekey_seed):
     return sha3(privatekey_seed.format('deploykey').encode())
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def blockchain_type(request):
     return request.config.option.blockchain_type
 
@@ -261,7 +261,7 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
 @pytest.fixture(scope='session')
 def port_generator():
     """ count generator used to get a unique port number. """
-    return get_free_port('127.0.0.1')
+    return get_free_port()
 
 
 @pytest.fixture

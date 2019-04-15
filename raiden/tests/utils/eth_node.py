@@ -1,14 +1,12 @@
-import io
 import json
 import os
 import shutil
 import subprocess
-import sys
-import termios
 import time
+from contextlib import ExitStack, contextmanager
+from typing import ContextManager, Union
 
 import gevent
-import requests
 import structlog
 from eth_keyfile import create_keyfile_json
 from eth_utils import encode_hex, remove_0x_prefix, to_checksum_address, to_normalized_address
@@ -17,9 +15,18 @@ from web3 import Web3
 from raiden.tests.fixtures.constants import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHRASE
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
+from raiden.utils.http import JSONRPCExecutor
 from raiden.utils.typing import Any, Dict, List, NamedTuple
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
+
+
+_GETH_VERBOSITY_LEVEL = {
+    'error': 1,
+    'warn': 2,
+    'info': 3,
+    'debug': 4,
+}
 
 
 class EthNodeDescription(NamedTuple):
@@ -48,7 +55,7 @@ def geth_to_cmd(
         node: Dict,
         datadir: str,
         chain_id: int,
-        verbosity: int,
+        verbosity: str,
 ) -> List[str]:
     """
     Transform a node configuration into a cmd-args list for `subprocess.Popen`.
@@ -56,7 +63,7 @@ def geth_to_cmd(
     Args:
         node: a node configuration
         datadir: the node's datadir
-        verbosity: geth structlog verbosity, 0 - nothing, 5 - max
+        verbosity: verbosity one of {'error', 'warn', 'info', 'debug'}
 
     Return:
         cmd-args list
@@ -85,7 +92,7 @@ def geth_to_cmd(
         '--rpcapi', 'eth,net,web3,personal,txpool',
         '--rpcaddr', '0.0.0.0',
         '--networkid', str(chain_id),
-        '--verbosity', str(verbosity),
+        '--verbosity', str(_GETH_VERBOSITY_LEVEL[verbosity]),
         '--datadir', datadir,
     ])
 
@@ -97,7 +104,13 @@ def geth_to_cmd(
     return cmd
 
 
-def parity_to_cmd(node: Dict, datadir: str, chain_id: int, chain_spec: str) -> List[str]:
+def parity_to_cmd(
+        node: Dict,
+        datadir: str,
+        chain_id: int,
+        chain_spec: str,
+        verbosity: str,
+) -> List[str]:
 
     node_config = {
         'nodekeyhex': 'node-key',
@@ -110,17 +123,19 @@ def parity_to_cmd(node: Dict, datadir: str, chain_id: int, chain_spec: str) -> L
 
     for config, option in node_config.items():
         if config in node:
-            cmd.append(f'--{option}={str(node[config])}')
+            cmd.append(f'--{option}={node[config]}')
 
     cmd.extend([
-        '--jsonrpc-apis=eth,net,web3,parity',
+        '--jsonrpc-apis=eth,net,web3,parity,personal',
         '--jsonrpc-interface=0.0.0.0',
         '--no-discovery',
         '--no-ws',
+        '--no-ipc',  # Disable IPC to prevent 'path too long' errors on macOS
         '--min-gas-price=1800000000',
         f'--base-path={datadir}',
         f'--chain={chain_spec}',
-        f'--network-id={str(chain_id)}',
+        f'--network-id={chain_id}',
+        f'--logging={verbosity}',
     ])
 
     if node.get('mine', False):
@@ -167,10 +182,12 @@ def geth_create_account(datadir: str, privkey: bytes):
 def parity_generate_chain_spec(
         spec_path: str,
         accounts_addresses: List[bytes],
-        seal_account: str,
+        seal_account: Union[str, bytes],
         random_marker: str,
-) -> Dict[str, Any]:
+        chain_id: int,
+):
     chain_spec = PARITY_CHAIN_SPEC_STUB.copy()
+    chain_spec['params']['networkID'] = chain_id
     chain_spec['accounts'].update({
         to_checksum_address(address): {'balance': 1000000000000000000}
         for address in accounts_addresses
@@ -185,9 +202,10 @@ def parity_generate_chain_spec(
 
 def geth_generate_poa_genesis(
         genesis_path: str,
-        accounts_addresses: List[str],
-        seal_address: str,
+        accounts_addresses: List[Union[str, bytes]],
+        seal_address: Union[str, bytes],
         random_marker: str,
+        chain_id: int,
 ):
     """Writes a bare genesis to `genesis_path`.
 
@@ -208,6 +226,7 @@ def geth_generate_poa_genesis(
     genesis = GENESIS_STUB.copy()
     genesis['alloc'].update(alloc)
 
+    genesis['config']['ChainID'] = chain_id
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
 
     genesis['extraData'] = clique_extradata(
@@ -265,88 +284,49 @@ def parity_create_account(
         node_configuration: Dict[str, Any],
         base_path: str,
         chain_spec: str,
-) -> None:
+) -> str:
     key = node_configuration['nodekey']
     keyhex = node_configuration['nodekeyhex']
     password = node_configuration['password']
 
     path = parity_write_key_file(key, keyhex, password, base_path)
-
-    process = subprocess.Popen((
-        'parity',
-        'account',
-        'import',
-        f'--base-path={path}',
-        f'--chain={chain_spec}',
-        f'--password={password}',
-        f'{path}/keyfile',
-    ))
-
-    return_code = process.wait()
-    if return_code:
-        raise RuntimeError(
-            f'Creation of parity signer account failed with return code {return_code}',
+    try:
+        subprocess.run(
+            [
+                'parity',
+                'account',
+                'import',
+                f'--base-path={path}',
+                f'--chain={chain_spec}',
+                f'--password={password}',
+                f'{path}/keyfile',
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
+    except subprocess.CalledProcessError as ex:
+        raise RuntimeError(
+            f'Creation of parity signer account failed with return code {ex.returncode}. '
+            f'Output: {ex.output.decode()}',
+        ) from ex
+    return path
 
 
-def eth_wait_and_check(
-        web3: Web3,
-        accounts_addresses: List[bytes],
-        random_marker: str,
-        processes_list: List[subprocess.Popen],
-        blockchain_type: str = 'geth',
-) -> None:
-    """ Wait until the geth/parity cluster is ready.
+def eth_check_balance(web3: Web3, accounts_addresses: List[bytes], retries: int = 10) -> None:
+    """ Wait until the given addresses have a balance.
 
-    This will raise an exception if either:
-
-    - The geth/parity process exits (successfully or not)
-    - The JSON RPC interface is not available after a very short moment
+    Raises a ValueError if any of the addresses still have no balance after ``retries``.
     """
-    jsonrpc_running = False
+    addresses = {to_checksum_address(account) for account in accounts_addresses}
+    for _ in range(retries):
+        for address in addresses.copy():
+            if web3.eth.getBalance(address, 'latest') > 0:
+                addresses.remove(address)
+        gevent.sleep(1)
 
-    tries = 5
-    retry_interval = 2 if blockchain_type == 'parity' else .5
-    while not jsonrpc_running and tries > 0:
-        try:
-            # don't use web3 here as this will cause problem in the middleware
-            response = web3.providers[0].make_request(
-                'eth_getBlockByNumber',
-                ['0x0', False],
-            )
-        except requests.exceptions.ConnectionError:
-            gevent.sleep(retry_interval)
-            tries -= 1
-        else:
-            jsonrpc_running = True
-
-            block = response['result']
-            running_marker = block['extraData'][2:len(random_marker) + 2]
-            if running_marker != random_marker:
-                raise RuntimeError(
-                    'the test marker does not match, maybe two tests are running in '
-                    'parallel with the same port?',
-                )
-
-    for process in processes_list:
-        process.poll()
-
-        if process.returncode is not None:
-            raise ValueError(f'geth/parity process failed with exit code {process.returncode}')
-
-    if jsonrpc_running is False:
-        raise ValueError('The jsonrpc interface is not reachable.')
-
-    for account in accounts_addresses:
-        tries = 10
-        balance = 0
-        while balance == 0 and tries > 0:
-            balance = web3.eth.getBalance(to_checksum_address(account), 'latest')
-            gevent.sleep(1)
-            tries -= 1
-
-        if balance == 0:
-            raise ValueError('account is with a balance of 0')
+    if len(addresses) > 0:
+        raise ValueError(f'Account(s) {", ".join(addresses)} have no balance')
 
 
 def eth_node_config(miner_pkey: bytes, p2p_port: int, rpc_port: int) -> Dict[str, Any]:
@@ -366,7 +346,7 @@ def eth_node_config(miner_pkey: bytes, p2p_port: int, rpc_port: int) -> Dict[str
     return config
 
 
-def eth_node_config_set_bootnodes(nodes_configuration: Dict) -> None:
+def eth_node_config_set_bootnodes(nodes_configuration: List[Dict[str, Any]]) -> None:
     bootnodes = ','.join(node['enode'] for node in nodes_configuration)
 
     for config in nodes_configuration:
@@ -383,14 +363,14 @@ def eth_node_to_datadir(node_config, base_datadir):
     return datadir
 
 
-def geth_node_to_logpath(node_config, base_logdir):
+def eth_node_to_logpath(node_config, base_logdir):
     # HACK: Use only the first 8 characters to avoid golang's issue
     # https://github.com/golang/go/issues/6895 (IPC bind fails with path
     # longer than 108 characters).
     # BSD (and therefore macOS) socket path length limit is 104 chars
     nodekey_part = node_config['nodekeyhex'][:8]
-    logdir = os.path.join(base_logdir, f'{nodekey_part}.log')
-    return logdir
+    logpath = os.path.join(base_logdir, f'{nodekey_part}.log')
+    return logpath
 
 
 def geth_prepare_datadir(datadir, genesis_file):
@@ -405,25 +385,23 @@ def geth_prepare_datadir(datadir, genesis_file):
 
 def eth_nodes_to_cmds(
         nodes_configuration,
-        eth_nodes,
+        eth_node_descs,
         base_datadir,
         genesis_file,
         chain_id,
         verbosity,
 ):
     cmds = []
-    for config, node in zip(nodes_configuration, eth_nodes):
+    for config, node_desc in zip(nodes_configuration, eth_node_descs):
         datadir = eth_node_to_datadir(config, base_datadir)
 
-        if node.blockchain_type == 'geth':
+        if node_desc.blockchain_type == 'geth':
             geth_prepare_datadir(datadir, genesis_file)
-            if node.miner:
-                geth_create_account(datadir, node.private_key)
+            if node_desc.miner:
+                geth_create_account(datadir, node_desc.private_key)
             commandline = geth_to_cmd(config, datadir, chain_id, verbosity)
-
-        elif node.blockchain_type == 'parity':
-            chain_spec = f'{base_datadir}/chainspec.json'
-            commandline = parity_to_cmd(config, datadir, chain_id, chain_spec)
+        elif node_desc.blockchain_type == 'parity':
+            commandline = parity_to_cmd(config, datadir, chain_id, genesis_file, verbosity)
 
         else:
             assert False, f'Invalid blockchain type {config.blockchain_type}'
@@ -433,15 +411,30 @@ def eth_nodes_to_cmds(
     return cmds
 
 
+@contextmanager
 def eth_run_nodes(
-        eth_nodes: List[EthNodeDescription],
+        eth_node_descs: List[EthNodeDescription],
         nodes_configuration: List[Dict],
         base_datadir: str,
         genesis_file: str,
         chain_id: int,
-        verbosity: int,
+        random_marker: str,
+        verbosity: str,
         logdir: str,
-) -> List[subprocess.Popen]:
+) -> ContextManager[List[JSONRPCExecutor]]:
+
+    def _validate_jsonrpc_result(result):
+        running_marker = result['extraData'][2:len(random_marker) + 2]
+        if running_marker != random_marker:
+            return (
+                False,
+                (
+                    'The test marker does not match, maybe two tests are running in '
+                    'parallel with the same port?'
+                ),
+            )
+        return True, None
+
     os.makedirs(logdir, exist_ok=True)
 
     password_path = os.path.join(base_datadir, 'pw')
@@ -450,44 +443,36 @@ def eth_run_nodes(
 
     cmds = eth_nodes_to_cmds(
         nodes_configuration,
-        eth_nodes,
+        eth_node_descs,
         base_datadir,
         genesis_file,
         chain_id,
         verbosity,
     )
 
-    processes_list = []
-    for node_config, cmd in zip(nodes_configuration, cmds):
-        log_path = geth_node_to_logpath(node_config, logdir)
-        logfile = open(log_path, 'w')
-        stdout = logfile
+    with ExitStack() as stack:
+        executors = []
+        for node_config, cmd in zip(nodes_configuration, cmds):
+            log_path = eth_node_to_logpath(node_config, logdir)
+            logfile = stack.enter_context(open(log_path, 'w+'))
 
-        if 'geth' in cmd and '--unlock' in cmd:
-            process = subprocess.Popen(
-                cmd,
-                universal_newlines=True,
-                stdin=subprocess.PIPE,
-                stdout=stdout,
-                stderr=subprocess.STDOUT,
+            executor = JSONRPCExecutor(
+                command=cmd,
+                url=f'http://127.0.0.1:{node_config["rpcport"]}',
+                timeout=10,
+                jsonrpc_method='eth_getBlockByNumber',
+                jsonrpc_params=['0x0', False],
+                result_validator=_validate_jsonrpc_result,
+                io=(subprocess.DEVNULL, logfile, subprocess.STDOUT),
             )
 
-            # --password wont work, write password to unlock
-            process.stdin.write(DEFAULT_PASSPHRASE + os.linesep)  # Passphrase:
-            process.stdin.write(DEFAULT_PASSPHRASE + os.linesep)  # Repeat passphrase:
-        else:
-            process = subprocess.Popen(
-                cmd,
-                universal_newlines=True,
-                stdout=stdout,
-                stderr=subprocess.STDOUT,
-            )
+            stack.enter_context(executor)
+            executors.append(executor)
 
-        processes_list.append(process)
-
-    return processes_list
+        yield executors
 
 
+@contextmanager
 def run_private_blockchain(
         web3: Web3,
         accounts_to_fund: List[bytes],
@@ -523,14 +508,13 @@ def run_private_blockchain(
         )
 
         if node.miner:
-            config['unlock'] = 0
+            config['unlock'] = to_checksum_address(config['address'])
             config['mine'] = True
             config['password'] = os.path.join(base_datadir, 'pw')
 
         nodes_configuration.append(config)
 
     blockchain_type = eth_nodes[0].blockchain_type
-    genesis_path = None
     seal_account = privatekey_to_address(eth_nodes[0].private_key)
 
     if blockchain_type == 'geth':
@@ -542,51 +526,33 @@ def run_private_blockchain(
             accounts_addresses=accounts_to_fund,
             seal_address=seal_account,
             random_marker=random_marker,
+            chain_id=chain_id,
         )
 
     elif blockchain_type == 'parity':
-        chainspec_path = f'{base_datadir}/chainspec.json'
+        genesis_path = f'{base_datadir}/chainspec.json'
         parity_generate_chain_spec(
-            spec_path=chainspec_path,
+            spec_path=genesis_path,
             accounts_addresses=accounts_to_fund,
             seal_account=seal_account,
             random_marker=random_marker,
+            chain_id=chain_id,
         )
-        parity_create_account(nodes_configuration[0], base_datadir, chainspec_path)
+        parity_create_account(nodes_configuration[0], base_datadir, genesis_path)
 
-    # check that the test is running on non-capture mode, and if it is save
-    # current term settings before running geth
-    if isinstance(sys.stdin, io.IOBase):
-        term_settings = termios.tcgetattr(sys.stdin)
+    else:
+        raise TypeError(f'Unknown blockchain client type "{blockchain_type}"')
 
-    processes_list = eth_run_nodes(
-        eth_nodes=eth_nodes,
+    runner = eth_run_nodes(
+        eth_node_descs=eth_nodes,
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,
         genesis_file=genesis_path,
         chain_id=chain_id,
+        random_marker=random_marker,
         verbosity=verbosity,
         logdir=log_dir,
     )
-
-    try:
-        eth_wait_and_check(
-            web3=web3,
-            accounts_addresses=accounts_to_fund,
-            random_marker=random_marker,
-            processes_list=processes_list,
-            blockchain_type=blockchain_type,
-        )
-    except (ValueError, RuntimeError) as e:
-        # If geth_wait_and_check or the above loop throw an exception make sure
-        # we don't end up with a rogue geth process running in the background
-        for process in processes_list:
-            process.terminate()
-        raise e
-
-    finally:
-        # reenter echo mode (disabled by geth pasphrase prompt)
-        if isinstance(sys.stdin, io.IOBase):
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
-
-    return processes_list
+    with runner as executors:
+        eth_check_balance(web3, accounts_to_fund)
+        yield executors

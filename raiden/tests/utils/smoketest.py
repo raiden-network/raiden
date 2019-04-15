@@ -1,9 +1,16 @@
+import contextlib
 import os
 import shutil
+import signal
 import sys
 import tempfile
 import traceback
+from contextlib import contextmanager
+from copy import deepcopy
 from http import HTTPStatus
+from io import StringIO
+from subprocess import TimeoutExpired
+from typing import Any, Callable, ContextManager, List
 
 import click
 import requests
@@ -18,31 +25,41 @@ from web3 import HTTPProvider, Web3
 from web3.middleware import geth_poa_middleware
 
 from raiden.accounts import AccountManager
+from raiden.api.python import RaidenAPI
+from raiden.api.rest import APIServer, RestAPI
+from raiden.app import App
 from raiden.connection_manager import ConnectionManager
 from raiden.constants import (
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
     UINT256_MAX,
+    EthClient,
+    RoutingMode,
 )
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
-from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
+from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEVELOPMENT_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
     EthNodeDescription,
     eth_node_config,
-    eth_node_config_set_bootnodes,
     eth_node_to_datadir,
     eth_run_nodes,
-    eth_wait_and_check,
+    geth_generate_poa_genesis,
+    parity_create_account,
+    parity_generate_chain_spec,
 )
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.utils import get_project_root, privatekey_to_address
+from raiden.ui.app import run_app
+from raiden.utils import merge_dict, privatekey_to_address, split_endpoint
+from raiden.utils.http import HTTPExecutor
 from raiden.utils.typing import Address, AddressHex, ChainID, Dict
+from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
     CONTRACT_SECRET_REGISTRY,
@@ -93,7 +110,7 @@ def run_restapi_smoketests():
     assert response_json[0]['balance'] > 0
 
 
-def run_smoketests(
+def smoketest_perform_tests(
         raiden_service: RaidenService,
         transport: str,
         token_addresses,
@@ -212,22 +229,33 @@ def get_private_key(keystore):
     return accmgr.get_privkey(addresses[0], DEFAULT_PASSPHRASE)
 
 
-def setup_testchain_and_raiden(transport, matrix_server, print_step, contracts_version):
-    return setup_raiden(
-        transport,
-        matrix_server,
-        print_step,
-        contracts_version,
-        setup_testchain(print_step),
-    )
+@contextmanager
+def setup_testchain_and_raiden(
+        transport: str,
+        eth_client: EthClient,
+        matrix_server: str,
+        contracts_version: str,
+        print_step: Callable,
+):
+    with setup_testchain(eth_client, print_step) as testchain:
+        yield setup_raiden(
+            transport,
+            matrix_server,
+            print_step,
+            contracts_version,
+            testchain,
+        )
 
 
-def setup_testchain(print_step):
+@contextmanager
+def setup_testchain(eth_client: EthClient, print_step: Callable) -> ContextManager[Dict[str, Any]]:
+    # TODO: This has a lot of overlap with `raiden.tests.utils.eth_node.run_private_blockchain` -
+    #       refactor into a unified utility
     print_step('Starting Ethereum node')
 
-    ensure_executable('geth')
+    ensure_executable(eth_client.value)
 
-    free_port = get_free_port('127.0.0.1')
+    free_port = get_free_port()
     rpc_port = next(free_port)
     p2p_port = next(free_port)
     base_datadir = os.environ['RST_DATADIR']
@@ -237,6 +265,7 @@ def setup_testchain(print_step):
         rpc_port=rpc_port,
         p2p_port=p2p_port,
         miner=True,
+        blockchain_type=eth_client.value,
     )
 
     eth_rpc_endpoint = f'http://127.0.0.1:{rpc_port}'
@@ -256,44 +285,55 @@ def setup_testchain(print_step):
     })
 
     nodes_configuration = [config]
-    eth_node_config_set_bootnodes(nodes_configuration)
-    keystore = os.path.join(eth_node_to_datadir(config, base_datadir), 'keystore')
-
     logdir = os.path.join(base_datadir, 'logs')
 
-    processes_list = eth_run_nodes(
-        eth_nodes=[description],
+    # the marker is hardcoded in the genesis file
+    random_marker = remove_0x_prefix(encode_hex(b'raiden'))
+    seal_account = privatekey_to_address(description.private_key)
+    accounts_to_fund = [TEST_ACCOUNT_ADDRESS, TEST_PARTNER_ADDRESS]
+
+    if eth_client is EthClient.GETH:
+        keystore = os.path.join(eth_node_to_datadir(config, base_datadir), 'keystore')
+        genesis_path = os.path.join(base_datadir, 'custom_genesis.json')
+        geth_generate_poa_genesis(
+            genesis_path=genesis_path,
+            accounts_addresses=accounts_to_fund,
+            seal_address=seal_account,
+            random_marker=random_marker,
+            chain_id=NETWORKNAME_TO_ID['smoketest'],
+        )
+    elif eth_client is EthClient.PARITY:
+        genesis_path = f'{base_datadir}/chainspec.json'
+        parity_generate_chain_spec(
+            spec_path=genesis_path,
+            accounts_addresses=accounts_to_fund,
+            seal_account=seal_account,
+            random_marker=random_marker,
+            chain_id=NETWORKNAME_TO_ID['smoketest'],
+        )
+        keystore = parity_create_account(nodes_configuration[0], base_datadir, genesis_path)
+    else:
+        raise RuntimeError(f'Invalid eth client type: {eth_client.value}')
+
+    node_runner = eth_run_nodes(
+        eth_node_descs=[description],
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,
-        genesis_file=os.path.join(get_project_root(), 'smoketest_genesis.json'),
+        genesis_file=genesis_path,
         chain_id=NETWORKNAME_TO_ID['smoketest'],
-        verbosity=0,
+        random_marker=random_marker,
+        verbosity='info',
         logdir=logdir,
     )
-
-    try:
-        # the marker is hardcoded in the genesis file
-        random_marker = remove_0x_prefix(encode_hex(b'raiden'))
-        eth_wait_and_check(
+    with node_runner as node_executors:
+        yield dict(
+            eth_client=eth_client,
+            base_datadir=base_datadir,
+            eth_rpc_endpoint=eth_rpc_endpoint,
+            keystore=keystore,
+            node_executors=node_executors,
             web3=web3,
-            accounts_addresses=[],
-            random_marker=random_marker,
-            processes_list=processes_list,
         )
-    except (ValueError, RuntimeError) as e:
-        # If geth_wait_and_check or the above loop throw an exception make sure
-        # we don't end up with a rogue geth process running in the background
-        for process in processes_list:
-            process.terminate()
-        raise e
-
-    return dict(
-        base_datadir=base_datadir,
-        eth_rpc_endpoint=eth_rpc_endpoint,
-        keystore=keystore,
-        processes_list=processes_list,
-        web3=web3,
-    )
 
 
 def setup_raiden(
@@ -305,7 +345,17 @@ def setup_raiden(
 ):
     print_step('Deploying Raiden contracts')
 
-    client = JSONRPCClient(testchain_setup['web3'], get_private_key(testchain_setup['keystore']))
+    if testchain_setup['eth_client'] is EthClient.PARITY:
+        client = JSONRPCClient(
+            testchain_setup['web3'],
+            get_private_key(testchain_setup['keystore']),
+            gas_estimate_correction=lambda gas: gas * 2,
+        )
+    else:
+        client = JSONRPCClient(
+            testchain_setup['web3'],
+            get_private_key(testchain_setup['keystore']),
+        )
     contract_manager = ContractManager(
         contracts_precompiled_path(contracts_version),
     )
@@ -377,6 +427,111 @@ def setup_raiden(
     return {
         'args': args,
         'contract_addresses': contract_addresses,
-        'ethereum': testchain_setup['processes_list'],
+        'ethereum_nodes': testchain_setup['node_executors'],
         'token': token,
     }
+
+
+def run_smoketest(
+        print_step: Callable,
+        append_report: Callable,
+        args: Dict[str, Any],
+        contract_addresses: List[Address],
+        token: ContractProxy,
+        debug: bool,
+        ethereum_nodes: List[HTTPExecutor],
+):
+    print_step('Starting Raiden')
+
+    config = deepcopy(App.DEFAULT_CONFIG)
+    extra_config = args.pop('extra_config', None)
+    if extra_config:
+        merge_dict(config, extra_config)
+    args['config'] = config
+    # Should use basic routing in the smoke test for now
+    # TODO: If we ever utilize a PFS in the smoke test we
+    # need to use the deployed service registry, register the
+    # PFS service there and then change this argument.
+    args['routing_mode'] = RoutingMode.BASIC
+
+    raiden_stdout = StringIO()
+    maybe_redirect_stdout = contextlib.redirect_stdout(raiden_stdout)
+    if debug:
+        maybe_redirect_stdout = contextlib.nullcontext()
+    with maybe_redirect_stdout:
+        success = False
+        app = None
+        try:
+            app = run_app(**args)
+            raiden_api = RaidenAPI(app.raiden)
+            rest_api = RestAPI(raiden_api)
+            (api_host, api_port) = split_endpoint(args['api_address'])
+            api_server = APIServer(rest_api, config={'host': api_host, 'port': api_port})
+            api_server.start()
+
+            block = app.raiden.get_block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+            # Proxies now use the confirmed block hash to query the chain for
+            # prerequisite checks. Wait a bit here to make sure that the confirmed
+            # block hash contains the deployed token network or else things break
+            wait_for_block(
+                raiden=app.raiden,
+                block_number=block,
+                retry_timeout=1.0,
+            )
+
+            raiden_api.channel_open(
+                registry_address=contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+                token_address=to_canonical_address(token.contract.address),
+                partner_address=to_canonical_address(TEST_PARTNER_ADDRESS),
+            )
+            raiden_api.set_total_channel_deposit(
+                contract_addresses[CONTRACT_TOKEN_NETWORK_REGISTRY],
+                to_canonical_address(token.contract.address),
+                to_canonical_address(TEST_PARTNER_ADDRESS),
+                TEST_DEPOSIT_AMOUNT,
+            )
+            token_addresses = [to_checksum_address(token.contract.address)]
+
+            print_step('Running smoketest')
+            error = smoketest_perform_tests(
+                app.raiden,
+                args['transport'],
+                token_addresses,
+                contract_addresses[CONTRACT_ENDPOINT_REGISTRY],
+            )
+            if error is not None:
+                append_report('Smoketest assertion error', error)
+            else:
+                success = True
+        except:  # noqa pylint: disable=bare-except
+            if debug:
+                import pdb
+                # The pylint comment is required when pdbpp is installed
+                pdb.post_mortem()  # pylint: disable=no-member
+            else:
+                error = traceback.format_exc()
+                append_report('Smoketest execution error', error)
+        finally:
+            if app is not None:
+                app.stop()
+                app.raiden.get()
+            node_executor = ethereum_nodes[0]
+            node = node_executor.process
+            node.send_signal(signal.SIGINT)
+            try:
+                node.wait(10)
+            except TimeoutExpired:
+                print_step('Ethereum node shutdown unclean, check log!', error=True)
+                node.kill()
+
+            if isinstance(node_executor.stdio, tuple):
+                logfile = node_executor.stdio[1]
+                logfile.flush()
+                logfile.seek(0)
+                append_report('Ethereum Node log output', logfile.read())
+    append_report('Raiden Node stdout', raiden_stdout.getvalue())
+    if success:
+        print_step(f'Smoketest successful')
+    else:
+        print_step(f'Smoketest had errors', error=True)
+    return success

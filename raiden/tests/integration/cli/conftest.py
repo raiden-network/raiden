@@ -5,19 +5,16 @@ from copy import copy
 import pexpect
 import pytest
 
-from raiden.constants import Environment
+from raiden.constants import Environment, EthClient
 from raiden.settings import RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.smoketest import setup_raiden, setup_testchain
 
 
 @pytest.fixture(scope='session')
-def testchain_provider():
-    testchain = setup_testchain(print_step=lambda x: None)
-
-    yield testchain
-
-    for geth_process in testchain['processes_list']:
-        geth_process.kill()
+def testchain_provider(blockchain_type):
+    eth_client = EthClient(blockchain_type)
+    with setup_testchain(eth_client=eth_client, print_step=lambda x: None) as testchain:
+        yield testchain
 
 
 @pytest.fixture(scope='module')

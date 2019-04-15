@@ -44,8 +44,8 @@ RECEIPT_FAILURE_CODE = 0
 
 
 class EthClient(Enum):
-    GETH = 1
-    PARITY = 2
+    GETH = 'geth'
+    PARITY = 'parity'
 
 
 ETH_RPC_DEFAULT_PORT = 8545

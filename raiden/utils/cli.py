@@ -3,11 +3,12 @@ import os
 import re
 import string
 import sys
+from enum import Enum
 from ipaddress import AddressValueError, IPv4Address
 from itertools import groupby
 from pathlib import Path
 from string import Template
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union
 
 import click
 import requests
@@ -18,12 +19,13 @@ from eth_utils import is_checksum_address
 from pytoml import TomlError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
-from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import InvalidAddress
 from raiden.utils import address_checksum_and_decode
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 LOG_CONFIG_OPTION_NAME = 'log_config'
+
+T_Enum = TypeVar('T_Enum', bound=Enum)
 
 
 class HelpFormatter(click.HelpFormatter):
@@ -274,20 +276,16 @@ class NetworkChoiceType(click.Choice):
             return NETWORKNAME_TO_ID[network_name]
 
 
-class EnvironmentChoiceType(click.Choice):
+class EnumChoiceType(click.Choice):
+    def __init__(self, enum_type: T_Enum, case_sensitive=True):
+        self._enum_type = enum_type
+        super().__init__([choice.value for choice in enum_type], case_sensitive)
+
     def convert(self, value, param, ctx):
         try:
-            return Environment(value)
+            return self._enum_type(value)
         except ValueError:
-            self.fail(f"'{value}' is not a valid environment type", param, ctx)
-
-
-class RoutingModeChoiceType(click.Choice):
-    def convert(self, value, param, ctx):
-        try:
-            return RoutingMode(value)
-        except ValueError:
-            self.fail(f"'{value}' is not a valid routing mode type", param, ctx)
+            self.fail(f"'{value}' is not a valid {self._enum_type.__name__.lower()}", param, ctx)
 
 
 class GasPriceChoiceType(click.Choice):
