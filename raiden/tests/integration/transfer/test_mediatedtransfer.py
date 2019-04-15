@@ -11,7 +11,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
-from raiden.tests.utils.transfer import assert_synced_channel_state, mediated_transfer, wait_assert
+from raiden.tests.utils.transfer import assert_synced_channel_state, transfer, wait_assert
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state_change import ActionChannelSetFee
@@ -39,11 +39,12 @@ def test_mediated_transfer(
     )
 
     amount = 10
-    mediated_transfer(
-        app0,
-        app2,
-        token_network_identifier,
-        amount,
+    transfer(
+        initiator_app=app0,
+        target_app=app2,
+        token_address=token_address,
+        amount=amount,
+        identifier=None,
         timeout=network_wait * number_of_nodes,
     )
 
@@ -112,7 +113,7 @@ def test_locked_transfer_secret_registered_onchain(
 
     # Test that receiving a transfer with a secret already registered on chain fails
     expiration = 9999
-    transfer = factories.make_signed_transfer(
+    locked_transfer = factories.make_signed_transfer(
         amount,
         factories.UNIT_TRANSFER_INITIATOR,
         app0.raiden.address,
@@ -123,7 +124,7 @@ def test_locked_transfer_secret_registered_onchain(
     message_handler = MessageHandler()
     message_handler.handle_message_lockedtransfer(
         app0.raiden,
-        transfer,
+        locked_transfer,
     )
 
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(0, 'latest')
@@ -152,19 +153,21 @@ def test_mediated_transfer_with_entire_deposit(
         payment_network_id,
         token_address,
     )
-    mediated_transfer(
-        app0,
-        app2,
-        token_network_identifier,
-        deposit,
+    transfer(
+        initiator_app=app0,
+        target_app=app2,
+        token_address=token_address,
+        amount=deposit,
+        identifier=None,
         timeout=network_wait * number_of_nodes,
     )
 
-    mediated_transfer(
-        app2,
-        app0,
-        token_network_identifier,
-        deposit * 2,
+    transfer(
+        initiator_app=app2,
+        target_app=app0,
+        token_address=token_address,
+        amount=deposit * 2,
+        identifier=None,
         timeout=network_wait * number_of_nodes,
     )
 
@@ -317,7 +320,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         )
         assert patched.call_count == 1
 
-        transfer = factories.make_signed_transfer(
+        locked_transfer = factories.make_signed_transfer(
             amount=5,
             initiator=factories.HOP1,
             target=factories.HOP2,
@@ -326,7 +329,7 @@ def test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
             token_network_address=token_network_id,
             token=token_address,
         )
-        app0.raiden.mediate_mediated_transfer(transfer)
+        app0.raiden.mediate_mediated_transfer(locked_transfer)
         assert patched.call_count == 2
 
 
@@ -362,11 +365,12 @@ def test_mediated_transfer_with_allocated_fee(  # pylint: disable=unused-argumen
     fee = 5
     amount = 10
 
-    mediated_transfer(
+    transfer(
         initiator_app=app0,
         target_app=app3,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount,
+        identifier=None,
         fee=fee,
         timeout=network_wait * number_of_nodes,
     )
@@ -402,11 +406,12 @@ def test_mediated_transfer_with_allocated_fee(  # pylint: disable=unused-argumen
         state_change=action_set_fee,
     )
 
-    mediated_transfer(
+    transfer(
         initiator_app=app0,
         target_app=app3,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount,
+        identifier=None,
         fee=fee,
         timeout=network_wait * number_of_nodes,
     )

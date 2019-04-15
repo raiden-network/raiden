@@ -9,8 +9,7 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import mediated_transfer
-from raiden.transfer import views
+from raiden.tests.utils.transfer import transfer
 from raiden.transfer.state_change import Block
 
 
@@ -38,12 +37,20 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
         to_identifier='latest',
     )
 
-    assert search_for_item(app0_state_changes, Block, {
-        'block_number': target_block_num - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-    })
-    assert not search_for_item(app0_state_changes, Block, {
-        'block_number': target_block_num,
-    })
+    assert search_for_item(
+        app0_state_changes,
+        Block,
+        {
+            'block_number': target_block_num - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+        },
+    )
+    assert not search_for_item(
+        app0_state_changes,
+        Block,
+        {
+            'block_number': target_block_num,
+        },
+    )
 
 
 @pytest.mark.xfail(reason='flaky, see issue #3714')
@@ -70,20 +77,14 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
     # Send a transfer to make sure the state has a balance proof
     # to publish to the global matrix rooms
     token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        chain_state,
-        payment_network_id,
-        token_address,
-    )
 
     amount = 10
-    mediated_transfer(
-        app1,
-        app0,
-        token_network_identifier,
-        amount,
+    transfer(
+        initiator_app=app1,
+        target_app=app0,
+        token_address=token_address,
+        amount=amount,
+        identifier=None,
         timeout=network_wait * number_of_nodes,
     )
 
