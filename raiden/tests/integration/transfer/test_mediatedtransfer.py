@@ -44,7 +44,7 @@ def test_mediated_transfer(
         target_app=app2,
         token_address=token_address,
         amount=amount,
-        identifier=None,
+        identifier=1,
         timeout=network_wait * number_of_nodes,
     )
 
@@ -158,7 +158,7 @@ def test_mediated_transfer_with_entire_deposit(
         target_app=app2,
         token_address=token_address,
         amount=deposit,
-        identifier=None,
+        identifier=1,
         timeout=network_wait * number_of_nodes,
     )
 
@@ -167,7 +167,7 @@ def test_mediated_transfer_with_entire_deposit(
         target_app=app0,
         token_address=token_address,
         amount=deposit * 2,
-        identifier=None,
+        identifier=2,
         timeout=network_wait * number_of_nodes,
     )
 
@@ -370,7 +370,7 @@ def test_mediated_transfer_with_allocated_fee(  # pylint: disable=unused-argumen
         target_app=app3,
         token_address=token_address,
         amount=amount,
-        identifier=None,
+        identifier=1,
         fee=fee,
         timeout=network_wait * number_of_nodes,
     )
@@ -411,7 +411,7 @@ def test_mediated_transfer_with_allocated_fee(  # pylint: disable=unused-argumen
         target_app=app3,
         token_address=token_address,
         amount=amount,
-        identifier=None,
+        identifier=2,
         fee=fee,
         timeout=network_wait * number_of_nodes,
     )

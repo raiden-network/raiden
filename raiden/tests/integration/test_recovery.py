@@ -6,7 +6,6 @@ from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.app import App
 from raiden.message_handler import MessageHandler
-from raiden.messages import Unlock
 from raiden.network.transport import UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import search_for_item
@@ -49,13 +48,14 @@ def test_recovery_happy_case(
     # make a few transfers from app0 to app2
     amount = 1
     spent_amount = deposit - 2
-    for _ in range(spent_amount):
+    identifier = 0
+    for identifier in range(spent_amount):
         transfer(
             initiator_app=app0,
             target_app=app2,
             token_address=token_address,
             amount=amount,
-            identifier=None,
+            identifier=identifier,
             timeout=network_wait * number_of_nodes,
         )
 
@@ -118,15 +118,12 @@ def test_recovery_happy_case(
         network_wait,
     )
 
-    identifier = create_default_identifier()
-    wait_for_payment = app2_wait_for.wait_for_message(Unlock, {'payment_identifier': identifier})
-
     transfer(
         initiator_app=app2,
         target_app=app0_restart,
         token_address=token_address,
         amount=amount,
-        identifier=None,
+        identifier=create_default_identifier(),
         timeout=network_wait * number_of_nodes * 2,
     )
     transfer(
@@ -134,7 +131,7 @@ def test_recovery_happy_case(
         target_app=app2,
         token_address=token_address,
         amount=amount,
-        identifier=identifier,
+        identifier=create_default_identifier(),
         timeout=network_wait * number_of_nodes * 2,
     )
 
@@ -144,7 +141,6 @@ def test_recovery_happy_case(
         app1, deposit + spent_amount, [],
     )
 
-    wait_for_payment.wait()
     assert_synced_channel_state(
         token_network_identifier,
         app1, deposit - spent_amount, [],
@@ -177,13 +173,13 @@ def test_recovery_unhappy_case(
     # make a few transfers from app0 to app2
     amount = 1
     spent_amount = deposit - 2
-    for _ in range(spent_amount):
+    for identifier in range(spent_amount):
         transfer(
             initiator_app=app0,
             target_app=app2,
             token_address=token_address,
             amount=amount,
-            identifier=None,
+            identifier=identifier,
             timeout=network_wait * number_of_nodes,
         )
 
