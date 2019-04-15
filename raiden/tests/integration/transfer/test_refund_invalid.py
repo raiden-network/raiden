@@ -4,6 +4,7 @@ import pytest
 
 from raiden.constants import UINT64_MAX
 from raiden.messages import RevealSecret, SecretRequest, Unlock
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.factories import (
     HOP1_KEY,
     UNIT_CHAIN_ID,
@@ -20,6 +21,15 @@ from raiden.utils.signer import LocalSigner
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
+    raise_on_failure(
+        raiden_network,
+        run_test_receive_secrethashtransfer_unknown,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+    )
+
+
+def run_test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     app0 = raiden_network[0]
     token_address = token_addresses[0]
 

@@ -2,6 +2,7 @@ import gevent
 import pytest
 
 from raiden.api.python import RaidenAPI
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import (
     raiden_events_search_for_item,
     search_for_item,
@@ -35,6 +36,17 @@ from raiden.waiting import wait_for_block, wait_for_settle
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('settle_timeout', [50])
 def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
+    raise_on_failure(
+        raiden_chain,
+        run_test_refund_messages,
+        raiden_chain=raiden_chain,
+        token_addresses=token_addresses,
+        deposit=deposit,
+        network_wait=network_wait,
+    )
+
+
+def run_test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
     # The network has the following topology:
     #
     #   App0 <---> App1 <---> App2
@@ -112,6 +124,26 @@ def test_refund_transfer(
         # UDP does not seem to retry messages until processed
         # https://github.com/raiden-network/raiden/issues/3185
         skip_if_not_matrix,  # pylint: disable=unused-argument
+):
+    raise_on_failure(
+        raiden_chain,
+        run_test_refund_transfer,
+        raiden_chain=raiden_chain,
+        number_of_nodes=number_of_nodes,
+        token_addresses=token_addresses,
+        deposit=deposit,
+        network_wait=network_wait,
+        retry_timeout=retry_timeout,
+    )
+
+
+def run_test_refund_transfer(
+        raiden_chain,
+        number_of_nodes,
+        token_addresses,
+        deposit,
+        network_wait,
+        retry_timeout,
 ):
     """A failed transfer must send a refund back.
 
@@ -312,6 +344,28 @@ def test_different_view_of_last_bp_during_unlock(
         skip_if_not_matrix,  # pylint: disable=unused-argument
         blockchain_type,
 ):
+    raise_on_failure(
+        raiden_chain,
+        run_test_different_view_of_last_bp_during_unlock,
+        raiden_chain=raiden_chain,
+        number_of_nodes=number_of_nodes,
+        token_addresses=token_addresses,
+        deposit=deposit,
+        network_wait=network_wait,
+        retry_timeout=retry_timeout,
+        blockchain_type=blockchain_type,
+    )
+
+
+def run_test_different_view_of_last_bp_during_unlock(
+        raiden_chain,
+        number_of_nodes,
+        token_addresses,
+        deposit,
+        network_wait,
+        retry_timeout,
+        blockchain_type,
+):
     """Test for https://github.com/raiden-network/raiden/issues/3196#issuecomment-449163888"""
     # Topology:
     #
@@ -505,6 +559,24 @@ def test_different_view_of_last_bp_during_unlock(
 @pytest.mark.parametrize('number_of_tokens', [1])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_refund_transfer_after_2nd_hop(
+        raiden_chain,
+        number_of_nodes,
+        token_addresses,
+        deposit,
+        network_wait,
+):
+    raise_on_failure(
+        raiden_chain,
+        run_test_refund_transfer_after_2nd_hop,
+        raiden_chain=raiden_chain,
+        number_of_nodes=number_of_nodes,
+        token_addresses=token_addresses,
+        deposit=deposit,
+        network_wait=network_wait,
+    )
+
+
+def run_test_refund_transfer_after_2nd_hop(
         raiden_chain,
         number_of_nodes,
         token_addresses,

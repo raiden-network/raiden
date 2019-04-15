@@ -4,6 +4,7 @@ from eth_utils import to_hex
 
 from raiden.api.python import RaidenAPI
 from raiden.messages import Unlock
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
@@ -19,6 +20,18 @@ from raiden.utils.echo_node import EchoNode
 @pytest.mark.parametrize('settle_timeout', [120])
 @pytest.mark.skip('Issue: 3750')
 def test_event_transfer_received_success(
+        token_addresses,
+        raiden_chain,
+):
+    raise_on_failure(
+        raiden_chain,
+        run_test_event_transfer_received_success,
+        token_addresses=token_addresses,
+        raiden_chain=raiden_chain,
+    )
+
+
+def run_test_event_transfer_received_success(
         token_addresses,
         raiden_chain,
 ):
@@ -74,6 +87,16 @@ def test_event_transfer_received_success(
 @pytest.mark.parametrize('settle_timeout', [120])
 @pytest.mark.skip('Issue: 3750')
 def test_echo_node_response(token_addresses, raiden_chain, network_wait):
+    raise_on_failure(
+        raiden_chain,
+        run_test_echo_node_response,
+        token_addresses=token_addresses,
+        raiden_chain=raiden_chain,
+        network_wait=network_wait,
+    )
+
+
+def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, echo_app = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
@@ -139,6 +162,16 @@ def test_echo_node_response(token_addresses, raiden_chain, network_wait):
 @pytest.mark.parametrize('settle_timeout', [120])
 @pytest.mark.skip('Issue: 3750')
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
+    raise_on_failure(
+        raiden_chain,
+        run_test_echo_node_lottery,
+        token_addresses=token_addresses,
+        raiden_chain=raiden_chain,
+        network_wait=network_wait,
+    )
+
+
+def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     app0, app1, app2, app3, echo_app, app4, app5, app6 = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
