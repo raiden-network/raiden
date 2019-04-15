@@ -2,6 +2,7 @@
 import random
 
 import gevent
+from gevent.timeout import Timeout
 
 from raiden.app import App
 from raiden.constants import UINT64_MAX
@@ -71,14 +72,17 @@ def transfer(
         payment_network_id=payment_network_identifier,
         token_address=token_address,
     )
-    initiator_app.raiden.mediated_transfer_async(
+    payment_status = initiator_app.raiden.mediated_transfer_async(
         token_network_identifier=token_network_identifier,
         amount=amount,
         target=target_app.raiden.address,
         identifier=identifier,
         fee=fee,
     )
-    wait_for_unlock.get(timeout=timeout)
+
+    with Timeout(seconds=timeout):
+        wait_for_unlock.get()
+        payment_status.payment_done.wait()
 
 
 def assert_synced_channel_state(
