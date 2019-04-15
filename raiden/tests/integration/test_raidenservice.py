@@ -7,6 +7,7 @@ from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import transfer
@@ -22,6 +23,14 @@ def test_regression_filters_must_be_installed_from_confirmed_block(raiden_networ
 
     Regression test for: https://github.com/raiden-network/raiden/issues/2894.
     """
+    raise_on_failure(
+        raiden_network,
+        run_test_regression_filters_must_be_installed_from_confirmed_block,
+        raiden_network=raiden_network,
+    )
+
+
+def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_network):
     app0 = raiden_network[0]
 
     app0.raiden.alarm.stop()
@@ -70,6 +79,24 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
     Regression test for: https://github.com/raiden-network/raiden/issues/3656.
     """
+    raise_on_failure(
+        raiden_network,
+        run_test_regression_transport_global_queues_are_initialized_on_restart_for_services,
+        raiden_network=raiden_network,
+        number_of_nodes=number_of_nodes,
+        token_addresses=token_addresses,
+        network_wait=network_wait,
+        user_deposit_address=user_deposit_address,
+    )
+
+
+def run_test_regression_transport_global_queues_are_initialized_on_restart_for_services(
+        raiden_network,
+        number_of_nodes,
+        token_addresses,
+        network_wait,
+        user_deposit_address,
+):
     app0, app1 = raiden_network
 
     app0.config['services']['monitoring_enabled'] = True

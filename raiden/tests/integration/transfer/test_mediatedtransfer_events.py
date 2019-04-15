@@ -1,5 +1,6 @@
 import pytest
 
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import transfer
@@ -15,6 +16,22 @@ from raiden.utils import wait_until
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_mediated_transfer_events(raiden_network, number_of_nodes, token_addresses, network_wait):
+    raise_on_failure(
+        raiden_network,
+        run_test_mediated_transfer_events,
+        raiden_network=raiden_network,
+        number_of_nodes=number_of_nodes,
+        token_addresses=token_addresses,
+        network_wait=network_wait,
+    )
+
+
+def run_test_mediated_transfer_events(
+        raiden_network,
+        number_of_nodes,
+        token_addresses,
+        network_wait,
+):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
 

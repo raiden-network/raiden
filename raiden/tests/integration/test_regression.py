@@ -7,6 +7,7 @@ from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX
 from raiden.messages import Lock, LockedTransfer, RevealSecret, Unlock
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
+from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
@@ -32,6 +33,22 @@ def test_regression_unfiltered_routes(
     Transfers failed in networks where two or more paths to the destination are
     possible but they share same node as a first hop.
     """
+    raise_on_failure(
+        raiden_network,
+        run_test_regression_unfiltered_routes,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        settle_timeout=settle_timeout,
+        deposit=deposit,
+    )
+
+
+def run_test_regression_unfiltered_routes(
+        raiden_network,
+        token_addresses,
+        settle_timeout,
+        deposit,
+):
     app0, app1, app2, app3, app4 = raiden_network
     token = token_addresses[0]
     registry_address = app0.raiden.default_registry.address
@@ -89,6 +106,20 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses, t
     """ A RevealSecret message received after a Unlock message must be cleanly
     handled.
     """
+    raise_on_failure(
+        raiden_network,
+        run_test_regression_revealsecret_after_secret,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        transport_protocol=transport_protocol,
+    )
+
+
+def run_test_regression_revealsecret_after_secret(
+        raiden_network,
+        token_addresses,
+        transport_protocol,
+):
     app0, app1, app2 = raiden_network
     token = token_addresses[0]
 
@@ -151,6 +182,16 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     unregistered. And because the channel was already updated an exception was raised
     for an unknown secret.
     """
+    raise_on_failure(
+        raiden_network,
+        run_test_regression_multiple_revealsecret,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        transport_protocol=transport_protocol,
+    )
+
+
+def run_test_regression_multiple_revealsecret(raiden_network, token_addresses, transport_protocol):
     app0, app1 = raiden_network
     token = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -257,7 +298,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses, trans
     gevent.joinall(wait)
 
 
-def test_regression_register_secret_once(secret_registry_address, deploy_service):
+def run_test_regression_register_secret_once(secret_registry_address, deploy_service):
     """Register secret transaction must not be sent if the secret is already registered"""
     # pylint: disable=protected-access
 
