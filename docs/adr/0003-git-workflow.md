@@ -39,9 +39,9 @@ After discussing this with @hackaugusto, @LefterisJP and @konradkonrad, we reali
 So, we seem to agree on using parts of the git-workflow where:
 1. A `develop` branch is introduced.
 2. The `master` branch will be our "production-ready" branch.
-3. When a bug is reported, the assignee of the issue will branch of the latest master, provide a fix which will be merged to this master branch.
+3. When a bug is reported, the assignee of the issue will branch of the latest master, provide a fix which will be merged into both `master` and `develop`.
 4. The `develop` branch will contain all the work we do for new features and code refactorings.
-5.  Once any code changes are merged to master, `develop` should be rebased on top of the latest master to ensure that our fixes are also residing in the develop branch in case any team member is working on the same code base.
+5. Once any code changes are merged to master, `develop` should be merged on top of the latest master to ensure that our fixes are also residing in the develop branch in case any team member is working on the same code base.
 
 The Pros of this new workflow:
 1. Resolving bugs, merging them to master and instantly creating a release which contains the new bug fix(es)
