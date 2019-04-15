@@ -286,7 +286,6 @@ def run_app(
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
             discovery=discovery,
-            user_deposit=proxies.user_deposit,
         )
     except RaidenError as e:
         click.secho(f'FATAL: {e}', fg='red')

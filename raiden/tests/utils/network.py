@@ -17,6 +17,7 @@ from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer.views import state_from_raiden
 from raiden.utils import CanonicalIdentifier, merge_dict, pex
 from raiden.waiting import wait_for_payment_network
+from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 BlockchainServices = namedtuple(
@@ -320,6 +321,11 @@ def create_apps(
             'database_path': database_paths[idx],
             'blockchain': {
                 'confirmation_blocks': DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+                'contracts': {
+                    CONTRACT_USER_DEPOSIT: {
+                        'address': user_deposit_address,
+                    },
+                },
             },
             'transport': {
                 'udp': {
@@ -370,10 +376,6 @@ def create_apps(
         if service_registry_address:
             service_registry = blockchain.service_registry(service_registry_address)
 
-        user_deposit = None
-        if user_deposit_address:
-            user_deposit = blockchain.user_deposit(user_deposit_address)
-
         if use_matrix:
             transport = MatrixTransport(config['transport']['matrix'])
         else:
@@ -404,7 +406,6 @@ def create_apps(
             raiden_event_handler=raiden_event_handler,
             message_handler=message_handler,
             discovery=discovery,
-            user_deposit=user_deposit,
         )
         apps.append(app)
 

@@ -8,7 +8,6 @@ from raiden.network.proxies.discovery import Discovery
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
-from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
     DEFAULT_NAT_INVITATION_TIMEOUT,
@@ -29,7 +28,9 @@ from raiden.settings import (
     INITIAL_PORT,
     RED_EYES_CONTRACT_VERSION,
 )
-from raiden.utils import pex, typing
+from raiden.utils import pex
+from raiden.utils.typing import BlockNumber, Dict, Optional
+from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -44,6 +45,11 @@ class App:  # pylint: disable=too-few-public-methods
         'transport_type': 'udp',
         'blockchain': {
             'confirmation_blocks': DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+            'contracts': {
+                CONTRACT_USER_DEPOSIT: {
+                    'address': None,
+                },
+            },
         },
         'transport': {
             'udp': {
@@ -83,17 +89,16 @@ class App:  # pylint: disable=too-few-public-methods
 
     def __init__(
             self,
-            config: typing.Dict,
+            config: Dict,
             chain: BlockChainService,
-            query_start_block: typing.BlockNumber,
+            query_start_block: BlockNumber,
             default_registry: TokenNetworkRegistry,
             default_secret_registry: SecretRegistry,
-            default_service_registry: typing.Optional[ServiceRegistry],
+            default_service_registry: Optional[ServiceRegistry],
             transport,
             raiden_event_handler,
             message_handler,
             discovery: Discovery = None,
-            user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
             chain=chain,
@@ -106,7 +111,6 @@ class App:  # pylint: disable=too-few-public-methods
             message_handler=message_handler,
             config=config,
             discovery=discovery,
-            user_deposit=user_deposit,
         )
 
         # check that the settlement timeout fits the limits of the contract
@@ -130,7 +134,6 @@ class App:  # pylint: disable=too-few-public-methods
 
         self.config = config
         self.discovery = discovery
-        self.user_deposit = user_deposit
         self.raiden = raiden
         self.start_console = self.config['console']
 

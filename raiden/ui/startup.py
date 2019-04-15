@@ -13,7 +13,6 @@ from raiden.network.pathfinding import configure_pfs
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
-from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import UDPTransport
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
@@ -166,7 +165,6 @@ def handle_contract_wrong_address(name: str, address: Address) -> None:
 class Proxies(NamedTuple):
     token_network_registry: TokenNetworkRegistry
     secret_registry: SecretRegistry
-    user_deposit: Optional[UserDeposit]
     service_registry: Optional[ServiceRegistry]
 
 
@@ -248,26 +246,6 @@ def setup_proxies_or_exit(
             service_registry_contract_address
         )
 
-    user_deposit = None
-    should_use_user_deposit = (
-        environment_type == Environment.DEVELOPMENT and
-        ID_TO_NETWORKNAME.get(node_network_id) != 'smoketest' and
-        CONTRACT_USER_DEPOSIT in contracts
-    )
-    if should_use_user_deposit:
-        try:
-            user_deposit = blockchain_service.user_deposit(
-                user_deposit_contract_address or to_canonical_address(
-                    contracts[CONTRACT_USER_DEPOSIT]['address'],
-                ),
-            )
-        except ContractVersionMismatch as e:
-            handle_contract_version_mismatch(e)
-        except AddressWithoutCode:
-            handle_contract_no_code('user deposit', user_deposit_contract_address)
-        except AddressWrongContract:
-            handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
-
     service_registry = None
     if CONTRACT_SERVICE_REGISTRY in contracts or service_registry_contract_address:
         try:
@@ -319,7 +297,6 @@ def setup_proxies_or_exit(
     proxies = Proxies(
         token_network_registry=token_network_registry,
         secret_registry=secret_registry,
-        user_deposit=user_deposit,
         service_registry=service_registry,
     )
     return proxies

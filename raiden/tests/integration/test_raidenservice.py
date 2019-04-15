@@ -70,7 +70,6 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
         number_of_nodes,
         token_addresses,
         network_wait,
-        user_deposit_address,
         skip_if_not_matrix,  # pylint: disable=unused-argument
 ):
     """On restarts, Raiden will restore state and publish new balance proof
@@ -149,6 +148,5 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
         discovery=app0.raiden.discovery,
-        user_deposit=app0.raiden.chain.user_deposit(user_deposit_address),
     )
     app0_restart.start()

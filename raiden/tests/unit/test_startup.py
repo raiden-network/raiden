@@ -215,7 +215,6 @@ def test_setup_proxies_raiden_addresses_are_given():
     assert proxies
     assert proxies.token_network_registry
     assert proxies.secret_registry
-    assert not proxies.user_deposit
     assert not proxies.service_registry
 
 
@@ -252,7 +251,6 @@ def test_setup_proxies_all_addresses_are_given(routing_mode):
     assert proxies
     assert proxies.token_network_registry
     assert proxies.secret_registry
-    assert proxies.user_deposit
     assert proxies.service_registry
 
 
@@ -289,7 +287,6 @@ def test_setup_proxies_all_addresses_are_known(routing_mode):
     assert proxies
     assert proxies.token_network_registry
     assert proxies.secret_registry
-    assert proxies.user_deposit
     assert proxies.service_registry
 
 

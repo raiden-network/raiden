@@ -83,6 +83,7 @@ from raiden.utils.typing import (
     TokenNetworkID,
 )
 from raiden.utils.upgrades import UpgradeManager
+from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -296,7 +297,11 @@ def update_monitoring_service_from_balance_proof(
         )
         return
 
-    rei_balance = raiden.user_deposit.effective_balance(raiden.address, 'latest')
+    contracts = raiden.config['blockchain']['contracts']
+    user_deposit_address = contracts[CONTRACT_USER_DEPOSIT]['address']
+    user_deposit_proxy = raiden.chain.user_deposit(user_deposit_address)
+    rei_balance = user_deposit_proxy.effective_balance(raiden.address, 'latest')
+
     if rei_balance < MONITORING_REWARD:
         rdn_balance = to_rdn(rei_balance)
         rdn_reward = to_rdn(MONITORING_REWARD)
@@ -338,7 +343,6 @@ class RaidenService(Runnable):
             message_handler,
             config,
             discovery=None,
-            user_deposit=None,
     ):
         super().__init__()
         self.tokennetworkids_to_connectionmanagers: ConnectionManagerDict = dict()
@@ -355,8 +359,6 @@ class RaidenService(Runnable):
         self.address = self.signer.address
         self.discovery = discovery
         self.transport = transport
-
-        self.user_deposit = user_deposit
 
         self.blockchain_events = BlockchainEvents()
         self.alarm = AlarmTask(chain)

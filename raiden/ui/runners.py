@@ -29,6 +29,7 @@ from raiden.tasks import check_gas_reserve, check_network_id, check_rdn_deposits
 from raiden.utils import get_system_spec, merge_dict, split_endpoint, typing
 from raiden.utils.echo_node import EchoNode
 from raiden.utils.runnable import Runnable
+from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 
 from .app import run_app
 from .config import dump_cmd_options, dump_config, dump_module
@@ -167,18 +168,17 @@ class NodeRunner:
         ))
 
         spawn_user_deposit_task = (
-            app_.user_deposit and
-            (
-                self._options['pathfinding_service_address'] or
-                self._options['enable_monitoring']
-            )
+            self._options['pathfinding_service_address'] or
+            self._options['enable_monitoring']
         )
         if spawn_user_deposit_task:
-            # spawn a greenlet to handle RDN deposits check
+            user_deposit = app_.raiden.chain.user_deposit(
+                app_.raiden.config['blockchain']['contracts'][CONTRACT_USER_DEPOSIT]['address'],
+            )
             tasks.append(gevent.spawn(
                 check_rdn_deposits,
                 app_.raiden,
-                app_.user_deposit,
+                user_deposit,
             ))
 
         # spawn a greenlet to handle the functions
