@@ -1,3 +1,5 @@
+from typing import List, cast
+
 import gevent
 import structlog
 
@@ -261,14 +263,16 @@ def wait_for_settle_all_channels(
 
         id_tokennetworkstate = payment_network_state.tokenidentifiers_to_tokennetworks.items()
         for token_network_id, token_network_state in id_tokennetworkstate:
-            channel_ids = token_network_state.channelidentifiers_to_channels.keys()
+            channel_ids = cast(
+                List[typing.ChannelID], token_network_state.channelidentifiers_to_channels.keys(),
+            )
 
             wait_for_settle(
-                raiden,
-                payment_network_id,
-                token_network_id,
-                channel_ids,
-                retry_timeout,
+                raiden=raiden,
+                payment_network_id=payment_network_id,
+                token_address=typing.TokenAddress(token_network_id),
+                channel_ids=channel_ids,
+                retry_timeout=retry_timeout,
             )
 
 

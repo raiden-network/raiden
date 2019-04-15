@@ -119,7 +119,7 @@ def get_token_network_by_address(
         token_network_address: Union[TokenNetworkID, TokenNetworkAddress],
 ) -> Optional[TokenNetworkState]:
     payment_network_identifier = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses.get(
-        token_network_address,
+        TokenNetworkAddress(token_network_address),
     )
 
     payment_network_state = None
@@ -131,7 +131,7 @@ def get_token_network_by_address(
     token_network_state = None
     if payment_network_state:
         token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
-            token_network_address,
+            TokenNetworkID(token_network_address),
         )
 
     return token_network_state
@@ -262,11 +262,11 @@ def subdispatch_to_paymenttask(
 
             if channel_state:
                 sub_iteration = target.state_transition(
-                    sub_task.target_state,
-                    state_change,
-                    channel_state,
-                    pseudo_random_generator,
-                    block_number,
+                    target_state=sub_task.target_state,
+                    state_change=state_change,
+                    channel_state=channel_state,
+                    pseudo_random_generator=pseudo_random_generator,
+                    block_number=block_number,
                 )
                 events = sub_iteration.events
 
@@ -668,7 +668,7 @@ def handle_new_payment_network(
     events: List[Event] = list()
 
     payment_network = state_change.payment_network
-    payment_network_identifier = payment_network.address
+    payment_network_identifier = PaymentNetworkID(payment_network.address)
     if payment_network_identifier not in chain_state.identifiers_to_paymentnetworks:
         chain_state.identifiers_to_paymentnetworks[payment_network_identifier] = payment_network
 
