@@ -80,7 +80,7 @@ def transfer(
     The transfer is a LockedTransfer and we make sure, all apps are synched.
     The secret will also be revealed.
     """
-    assert identifier is not None, 'The identifier must be provided'
+    assert identifier, 'The identifier must be provided'
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
 
     wait_for_unlock = target_app.raiden.message_handler.wait_for_message(
@@ -94,17 +94,14 @@ def transfer(
         payment_network_id=payment_network_identifier,
         token_address=token_address,
     )
-    payment_status = initiator_app.raiden.mediated_transfer_async(
+    initiator_app.raiden.mediated_transfer_async(
         token_network_identifier=token_network_identifier,
         amount=amount,
         target=target_app.raiden.address,
         identifier=identifier,
         fee=fee,
     )
-
-    with Timeout(seconds=timeout):
-        wait_for_unlock.get()
-        payment_status.payment_done.wait()
+    wait_for_unlock.get(timeout=timeout)
 
 
 def assert_synced_channel_state(
