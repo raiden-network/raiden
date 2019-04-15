@@ -2,6 +2,8 @@
 Changelog
 =========
 
+* :release:`0.100.3-rc3 <2019-04-15>`
+* :feature:`-` Add support for Görli testnet in Raiden.
 * :release:`0.100.3-rc2 <2019-04-11>`
 * :release:`0.100.3-rc1 <2019-03-29>`
 * :feature:`3467` Raiden now chooses a PFS from a provided registry. Also added a new argument ``--routing-mode`` to configure the routing mode to either be PFS or BASIC.
