@@ -611,6 +611,10 @@ class JSONRPCClient:
             # we can sporadically get an AtttributeError here. If that happens
             # use latest gas price
             price = int(self.web3.eth.gasPrice)
+        except IndexError:  # work around for a web3.py exception when
+            # the blockchain is somewhat empty.
+            # https://github.com/ethereum/web3.py/issues/1149
+            price = int(self.web3.eth.gasPrice)
 
         return price
 
