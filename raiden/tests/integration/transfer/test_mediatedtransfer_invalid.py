@@ -16,8 +16,8 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     get_channelstate,
-    mediated_transfer,
     sign_and_inject,
+    transfer,
     wait_assert,
 )
 from raiden.transfer import views
@@ -102,11 +102,12 @@ def test_receive_lockedtransfer_invalidnonce(
     channel0 = get_channelstate(app0, app1, token_network_identifier)
 
     amount = 10
-    mediated_transfer(
-        app0,
-        app2,
-        token_network_identifier,
-        amount,
+    transfer(
+        initiator_app=app0,
+        target_app=app2,
+        token_address=token_address,
+        amount=amount,
+        identifier=None,
         timeout=network_wait * number_of_nodes,
     )
 

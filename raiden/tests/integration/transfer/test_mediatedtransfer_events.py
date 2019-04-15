@@ -2,8 +2,7 @@ import pytest
 
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.transfer import mediated_transfer
-from raiden.transfer import views
+from raiden.tests.utils.transfer import transfer
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimSuccess,
     EventUnlockSuccess,
@@ -18,20 +17,14 @@ from raiden.utils import wait_until
 def test_mediated_transfer_events(raiden_network, number_of_nodes, token_addresses, network_wait):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
-    chain_state = views.state_from_app(app0)
-    payment_network_id = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        chain_state,
-        payment_network_id,
-        token_address,
-    )
 
     amount = 10
-    mediated_transfer(
-        app0,
-        app2,
-        token_network_identifier,
-        amount,
+    transfer(
+        initiator_app=app0,
+        target_app=app2,
+        token_address=token_address,
+        amount=amount,
+        identifier=None,
         timeout=network_wait * number_of_nodes,
     )
 

@@ -13,11 +13,7 @@ from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
-from raiden.tests.utils.transfer import (
-    assert_synced_channel_state,
-    get_channelstate,
-    mediated_transfer,
-)
+from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
 from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
@@ -466,10 +462,10 @@ def test_settled_lock(
         secrethash,
     )
 
-    mediated_transfer(
+    transfer(
         initiator_app=app0,
         target_app=app1,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount,
         identifier=2,
     )
@@ -687,27 +683,30 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
     initial_balance1 = token_proxy.balance_of(app1.raiden.address)
 
     amount0_1 = 10
-    mediated_transfer(
+    transfer(
         initiator_app=app0,
         target_app=app1,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount0_1,
+        identifier=None,
     )
 
     amount1_1 = 50
-    mediated_transfer(
+    transfer(
         initiator_app=app1,
         target_app=app0,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount1_1,
+        identifier=None,
     )
 
     amount0_2 = 60
-    mediated_transfer(
+    transfer(
         initiator_app=app0,
         target_app=app1,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount0_2,
+        identifier=None,
     )
 
     # Alice can only provide one of Bob's transfer, so she is incentivized to

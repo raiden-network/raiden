@@ -16,7 +16,7 @@ from raiden.tests.utils.protocol import (
 from raiden.tests.utils.transfer import (
     assert_synced_channel_state,
     get_channelstate,
-    mediated_transfer,
+    transfer,
     wait_assert,
 )
 from raiden.transfer import channel, views
@@ -49,10 +49,10 @@ def test_refund_messages(raiden_chain, token_addresses, deposit, network_wait):
 
     # Exhaust the channel App1 <-> App2 (to force the refund transfer)
     exhaust_amount = deposit
-    mediated_transfer(
+    transfer(
         initiator_app=app1,
         target_app=app2,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=exhaust_amount,
         identifier=1,
     )
@@ -135,11 +135,11 @@ def test_refund_transfer(
     # make a transfer to test the path app0 -> app1 -> app2
     identifier_path = 1
     amount_path = 1
-    mediated_transfer(
-        app0,
-        app2,
-        token_network_identifier,
-        amount_path,
+    transfer(
+        initiator_app=app0,
+        target_app=app2,
+        token_address=token_address,
+        amount=amount_path,
         identifier=identifier_path,
         timeout=network_wait * number_of_nodes,
     )
@@ -147,10 +147,10 @@ def test_refund_transfer(
     # drain the channel app1 -> app2
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
-    mediated_transfer(
+    transfer(
         initiator_app=app1,
         target_app=app2,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount_drain,
         identifier=identifier_drain,
         timeout=network_wait,
@@ -332,11 +332,11 @@ def test_different_view_of_last_bp_during_unlock(
     # make a transfer to test the path app0 -> app1 -> app2
     identifier_path = 1
     amount_path = 1
-    mediated_transfer(
-        app0,
-        app2,
-        token_network_identifier,
-        amount_path,
+    transfer(
+        initiator_app=app0,
+        target_app=app2,
+        token_address=token_address,
+        amount=amount_path,
         identifier=identifier_path,
         timeout=network_wait * number_of_nodes,
     )
@@ -344,10 +344,10 @@ def test_different_view_of_last_bp_during_unlock(
     # drain the channel app1 -> app2
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
-    mediated_transfer(
+    transfer(
         initiator_app=app1,
         target_app=app2,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount_drain,
         identifier=identifier_drain,
         timeout=network_wait,
@@ -528,10 +528,10 @@ def test_refund_transfer_after_2nd_hop(
     # make a transfer to test the path app0 -> app1 -> app2 -> app3
     identifier_path = 1
     amount_path = 1
-    mediated_transfer(
+    transfer(
         initiator_app=app0,
         target_app=app3,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount_path,
         identifier=identifier_path,
         timeout=network_wait * number_of_nodes,
@@ -540,10 +540,10 @@ def test_refund_transfer_after_2nd_hop(
     # drain the channel app2 -> app3
     identifier_drain = 2
     amount_drain = deposit * 8 // 10
-    mediated_transfer(
+    transfer(
         initiator_app=app2,
         target_app=app3,
-        token_network_identifier=token_network_identifier,
+        token_address=token_address,
         amount=amount_drain,
         identifier=identifier_drain,
         timeout=network_wait,
