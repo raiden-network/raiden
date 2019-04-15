@@ -107,7 +107,7 @@ def test_receive_lockedtransfer_invalidnonce(
         target_app=app2,
         token_address=token_address,
         amount=amount,
-        identifier=None,
+        identifier=1,
         timeout=network_wait * number_of_nodes,
     )
 

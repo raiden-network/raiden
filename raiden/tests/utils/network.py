@@ -6,7 +6,6 @@ from gevent import server
 
 from raiden import waiting
 from raiden.app import App
-from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
@@ -14,6 +13,7 @@ from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
+from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer.views import state_from_raiden
 from raiden.utils import CanonicalIdentifier, merge_dict, pex
 from raiden.waiting import wait_for_payment_network
@@ -148,14 +148,16 @@ def create_all_channels_for_network(
     greenlets = set()
     for token_address in token_addresses:
         for app_pair in app_channels:
-            greenlets.add(gevent.spawn(
-                payment_channel_open_and_deposit,
-                app_pair[0],
-                app_pair[1],
-                token_address,
-                channel_individual_deposit,
-                channel_settle_timeout,
-            ))
+            greenlets.add(
+                gevent.spawn(
+                    payment_channel_open_and_deposit,
+                    app_pair[0],
+                    app_pair[1],
+                    token_address,
+                    channel_individual_deposit,
+                    channel_settle_timeout,
+                ),
+            )
     gevent.joinall(greenlets, raise_error=True)
 
 
@@ -389,7 +391,7 @@ def create_apps(
             )
 
         raiden_event_handler = RaidenEventHandler()
-        message_handler = MessageHandler()
+        message_handler = WaitForMessage()
 
         app = App(
             config=config_copy,

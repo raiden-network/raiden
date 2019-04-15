@@ -50,7 +50,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
         target_app=app1,
         token_address=token_address,
         amount=1,
-        identifier=None,
+        identifier=1,
         timeout=network_wait * number_of_nodes,
     )
     # stop app1 - the test uses token_network_contract now
@@ -129,7 +129,7 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
         target_app=app1,
         token_address=token_address,
         amount=1,
-        identifier=None,
+        identifier=1,
         timeout=network_wait * number_of_nodes,
     )
     # stop app1 - the test uses token_network_contract now
