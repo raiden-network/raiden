@@ -688,7 +688,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
         target_app=app1,
         token_address=token_address,
         amount=amount0_1,
-        identifier=None,
+        identifier=1,
     )
 
     amount1_1 = 50
@@ -697,7 +697,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
         target_app=app0,
         token_address=token_address,
         amount=amount1_1,
-        identifier=None,
+        identifier=2,
     )
 
     amount0_2 = 60
@@ -706,7 +706,7 @@ def test_automatic_dispute(raiden_network, deposit, token_addresses):
         target_app=app1,
         token_address=token_address,
         amount=amount0_2,
-        identifier=None,
+        identifier=3,
     )
 
     # Alice can only provide one of Bob's transfer, so she is incentivized to

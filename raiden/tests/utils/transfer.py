@@ -6,8 +6,9 @@ import gevent
 from raiden.app import App
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, LockExpired
+from raiden.messages import LockedTransfer, LockExpired, Unlock
 from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -56,21 +57,28 @@ def transfer(
     The transfer is a LockedTransfer and we make sure, all apps are synched.
     The secret will also be revealed.
     """
+    assert identifier is not None, 'The identifier must be provided'
+    assert isinstance(target_app.raiden.message_handler, WaitForMessage)
+
+    wait_for_unlock = target_app.raiden.message_handler.wait_for_message(
+        Unlock,
+        {'payment_identifier': identifier},
+    )
+
     payment_network_identifier = initiator_app.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
         chain_state=views.state_from_app(initiator_app),
         payment_network_id=payment_network_identifier,
         token_address=token_address,
     )
-    payment_status = initiator_app.raiden.mediated_transfer_async(
+    initiator_app.raiden.mediated_transfer_async(
         token_network_identifier=token_network_identifier,
         amount=amount,
         target=target_app.raiden.address,
         identifier=identifier,
         fee=fee,
     )
-    assert payment_status.payment_done.wait(timeout)
-    gevent.sleep(0.3)  # let the other nodes synch
+    wait_for_unlock.get(timeout=timeout)
 
 
 def assert_synced_channel_state(

@@ -84,7 +84,7 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
         target_app=app0,
         token_address=token_address,
         amount=amount,
-        identifier=None,
+        identifier=1,
         timeout=network_wait * number_of_nodes,
     )
 

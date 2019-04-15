@@ -24,7 +24,7 @@ def test_mediated_transfer_events(raiden_network, number_of_nodes, token_address
         target_app=app2,
         token_address=token_address,
         amount=amount,
-        identifier=None,
+        identifier=1,
         timeout=network_wait * number_of_nodes,
     )
 
