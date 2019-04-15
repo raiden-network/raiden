@@ -29,6 +29,7 @@ from raiden.tests.utils.factories import (
     UNIT_SECRETHASH,
     make_address,
     make_channel_state,
+    make_privatekey_address,
 )
 from raiden.tests.utils.messages import make_balance_proof
 from raiden.tests.utils.mocks import MockRaidenService
@@ -39,6 +40,7 @@ from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTranspo
 from raiden.utils import pex
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List, Optional, Union
+from raiden_contracts.constants import CONTRACT_USER_DEPOSIT
 
 USERID1 = '@Alice:Wonderland'
 
@@ -671,8 +673,26 @@ def test_monitoring_global_messages(
     })
     transport._client.api.retry_timeout = 0
     transport._send_raw = MagicMock()
-    raiden_service = MockRaidenService(None)
-    raiden_service.config = dict(services=dict(monitoring_enabled=True))
+    raiden_service = MagicMock()
+    raiden_service.config = {
+        'blockchain': {
+            'contracts': {
+                CONTRACT_USER_DEPOSIT: {
+                    'address': None,
+                },
+            },
+        },
+        'services': {
+            'monitoring_enabled': True,
+        },
+    }
+    user_proxy_mock = MagicMock()
+    user_proxy_mock.effective_balance.return_value = 100
+    raiden_service.chain.user_deposit.return_value = user_proxy_mock
+    private_key, address = make_privatekey_address()
+    raiden_service.address = address
+    raiden_service.signer = LocalSigner(private_key)
+    raiden_service.chain.network_id = 17
 
     transport.start(
         raiden_service,
@@ -702,7 +722,6 @@ def test_monitoring_global_messages(
         'get_balance',
         lambda *a, **kw: 123,
     )
-    raiden_service.user_deposit.effective_balance.return_value = 100
 
     update_monitoring_service_from_balance_proof(
         raiden=raiden_service,
@@ -782,12 +801,14 @@ def test_pfs_global_messages(
     transport.get()
 
 
-@pytest.mark.parametrize('private_rooms, expected_join_rule', [
-    [[True, True], 'invite'],
-    [[True, False], 'invite'],
-    [[False, True], 'public'],
-    [[False, False], 'public'],
-])
+@pytest.mark.parametrize(
+    'private_rooms, expected_join_rule', [
+        [[True, True], 'invite'],
+        [[True, False], 'invite'],
+        [[False, True], 'public'],
+        [[False, False], 'public'],
+    ],
+)
 @pytest.mark.parametrize('number_of_transports', [2])
 @pytest.mark.parametrize('matrix_server_count', [2])
 def test_matrix_invite_private_room_happy_case(
@@ -839,12 +860,14 @@ def test_matrix_invite_private_room_happy_case(
     assert join_rule1 == expected_join_rule
 
 
-@pytest.mark.parametrize('private_rooms, expected_join_rule0, expected_join_rule1', [
-    [[True, True], 'invite', 'invite'],
-    [[True, False], 'invite', 'invite'],
-    [[False, True], 'public', 'public'],
-    [[False, False], 'public', 'public'],
-])
+@pytest.mark.parametrize(
+    'private_rooms, expected_join_rule0, expected_join_rule1', [
+        [[True, True], 'invite', 'invite'],
+        [[True, False], 'invite', 'invite'],
+        [[False, True], 'public', 'public'],
+        [[False, False], 'public', 'public'],
+    ],
+)
 @pytest.mark.parametrize('matrix_server_count', [2])
 @pytest.mark.parametrize('number_of_transports', [2])
 def test_matrix_invite_private_room_unhappy_case1(
@@ -897,12 +920,14 @@ def test_matrix_invite_private_room_unhappy_case1(
     assert join_rule1 == expected_join_rule1
 
 
-@pytest.mark.parametrize('private_rooms, expected_join_rule0, expected_join_rule1', [
-    [[True, True], 'invite', 'invite'],
-    [[True, False], 'invite', 'invite'],
-    [[False, True], 'public', 'public'],
-    [[False, False], 'public', 'public'],
-])
+@pytest.mark.parametrize(
+    'private_rooms, expected_join_rule0, expected_join_rule1', [
+        [[True, True], 'invite', 'invite'],
+        [[True, False], 'invite', 'invite'],
+        [[False, True], 'public', 'public'],
+        [[False, False], 'public', 'public'],
+    ],
+)
 @pytest.mark.parametrize('matrix_server_count', [2])
 @pytest.mark.parametrize('number_of_transports', [2])
 def test_matrix_invite_private_room_unhappy_case_2(
@@ -968,12 +993,14 @@ def test_matrix_invite_private_room_unhappy_case_2(
     assert join_rule1 == expected_join_rule1
 
 
-@pytest.mark.parametrize('private_rooms, expected_join_rule', [
-    [[True, True], 'invite'],
-    [[True, False], 'invite'],
-    [[False, True], 'public'],
-    [[False, False], 'public'],
-])
+@pytest.mark.parametrize(
+    'private_rooms, expected_join_rule', [
+        [[True, True], 'invite'],
+        [[True, False], 'invite'],
+        [[False, True], 'public'],
+        [[False, False], 'public'],
+    ],
+)
 @pytest.mark.parametrize('number_of_transports', [2])
 @pytest.mark.parametrize('matrix_server_count', [2])
 def test_matrix_invite_private_room_unhappy_case_3(
