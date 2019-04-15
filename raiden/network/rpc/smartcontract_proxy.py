@@ -37,7 +37,7 @@ def inspect_client_error(val_err: ValueError, eth_node: EthClient) -> ClientErro
     except json.JSONDecodeError:
         return ClientErrorInspectResult.PROPAGATE_ERROR
 
-    if eth_node == EthClient.GETH:
+    if eth_node is EthClient.GETH:
         if error['code'] == -32000:
             if 'insufficient funds' in error['message']:
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
@@ -48,7 +48,7 @@ def inspect_client_error(val_err: ValueError, eth_node: EthClient) -> ClientErro
             elif error['message'].startswith('known transaction:'):
                 return ClientErrorInspectResult.TRANSACTION_PENDING
 
-    elif eth_node == EthClient.PARITY:
+    elif eth_node is EthClient.PARITY:
         if error['code'] == -32010:
             if 'Insufficient funds' in error['message']:
                 return ClientErrorInspectResult.INSUFFICIENT_FUNDS
@@ -188,7 +188,7 @@ class ContractProxy:
         the logic in the called function."""
         fn = getattr(self.contract.functions, function)
         address = to_checksum_address(self.jsonrpc_client.address)
-        if self.jsonrpc_client.eth_node == constants.EthClient.GETH:
+        if self.jsonrpc_client.eth_node is constants.EthClient.GETH:
             # Unfortunately geth does not follow the ethereum JSON-RPC spec and
             # does not accept a block identifier argument for eth_estimateGas
             # parity and py-evm (trinity) do.

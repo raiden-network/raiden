@@ -28,6 +28,11 @@ templates:
       default: "production"
       type: enum
       enum: ["production", "development"]
+    blockchain-type:
+      description: "blockchain type client passed to test run if needed"
+      default: "geth"
+      type: enum
+      enum: ["geth", "parity"]
     additional-args:
       description: "additional arguments to run smoketest if needed"
       default: ""
@@ -126,9 +131,10 @@ commands:
           name: Get cache key
           command: |
             echo ${GETH_VERSION} > /tmp/geth-version
+            echo ${PARITY_VERSION} > /tmp/parity-version
             echo ${SOLC_VERSION} > /tmp/solc-version
       - restore_cache:
-          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
       - attach-and-link
       - run:
           name: Preparing environment
@@ -143,7 +149,7 @@ commands:
             .circleci/fetch_geth_parity_solc.sh
             ln -s ${LOCAL_BASE} ~/.local
       - save_cache:
-          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-solc-{{ checksum "/tmp/solc-version" }}
+          key: system-deps-v2-{{ arch }}-geth-{{ checksum "/tmp/geth-version" }}-parity-{{ checksum "/tmp/parity-version" }}-solc-{{ checksum "/tmp/solc-version" }}
           paths:
             - "~/.local-*"
       - run:
@@ -305,8 +311,8 @@ jobs:
             set -e
             set -x
       - run:
-          name: Running Raiden Smoketest with << parameters.transport-layer >> and environment << parameters.environment-type >>
-          command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest << parameters.additional-args >>
+          name: Running Raiden Smoketest with << parameters.transport-layer >>, environment << parameters.environment-type >> on ethereum client << parameters.blockchain-type >>
+          command: raiden --environment-type=<< parameters.environment-type >> --transport=<< parameters.transport-layer >> smoketest --eth-client << parameters.blockchain-type >> << parameters.additional-args >>
 
   test:
     parameters:
@@ -315,11 +321,6 @@ jobs:
         description: "type of test"
         type: enum
         enum: ["integration", "unit", "fuzz"]
-      blockchain-type:
-        description: "blockchain type client passed to test run if needed"
-        default: "geth"
-        type: enum
-        enum: ["geth", "parity"]
       parallelism:
         description: "number of containers to be used in parallel for this test"
         default: 1
@@ -332,7 +333,7 @@ jobs:
     environment:
       RAIDEN_TESTS_SYNAPSE_BASE_DIR: /home/circleci/.cache/synapse
       RAIDEN_TESTS_SYNAPSE_LOGS_DIR: /tmp/synapse-logs
-      RAIDEN_TESTS_GETH_LOGSDIR: /tmp/geth/logs
+      RAIDEN_TESTS_ETH_LOGSDIR: /tmp/eth/logs
       COVERAGE_DIR: /home/circleci/raiden/coverage
 
     parallelism: << parameters.parallelism >>
@@ -422,8 +423,8 @@ jobs:
           destination: synapse-logs
 
       - store_artifacts:
-          path: /tmp/geth/logs
-          destination: geth-logs
+          path: /tmp/eth/logs
+          destination: eth-logs
 
   finalize:
     parameters:
@@ -685,34 +686,47 @@ workflows:
             - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-production-3.7
+          name: smoketest-udp-production-geth-3.7
           py-version: "3.7"
           transport-layer: "udp"
           environment-type: "production"
+          blockchain-type: "geth"
           requires:
             - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-development-3.7
+          name: smoketest-udp-development-geth-3.7
           py-version: "3.7"
           transport-layer: "udp"
           environment-type: "development"
+          blockchain-type: "geth"
           requires:
             - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-matrix-production-3.7
+          name: smoketest-matrix-production-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
           environment-type: "production"
+          blockchain-type: "geth"
           requires:
             - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-matrix-development-3.7
+          name: smoketest-matrix-development-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
           environment-type: "development"
+          blockchain-type: "geth"
+          requires:
+            - prepare-python-linux-3.7
+
+      - smoketest:
+          name: smoketest-matrix-development-parity-3.7
+          py-version: "3.7"
+          transport-layer: "matrix"
+          environment-type: "development"
+          blockchain-type: "parity"
           requires:
             - prepare-python-linux-3.7
 
@@ -742,8 +756,8 @@ workflows:
           transport-layer: "udp"
           parallelism: 25
           requires:
-            - smoketest-udp-production-3.7
-            - smoketest-udp-development-3.7
+            - smoketest-udp-production-geth-3.7
+            - smoketest-udp-development-geth-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -756,8 +770,8 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-matrix-production-3.7
-            - smoketest-matrix-development-3.7
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-development-geth-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -770,8 +784,8 @@ workflows:
           transport-layer: "udp"
           parallelism: 25
           requires:
-            - smoketest-udp-production-3.7
-            - smoketest-udp-development-3.7
+            - smoketest-udp-production-geth-3.7
+            - smoketest-udp-development-geth-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -784,8 +798,9 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-            - smoketest-matrix-production-3.7
-            - smoketest-matrix-development-3.7
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -923,36 +938,49 @@ workflows:
           - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-production-3.7
+          name: smoketest-udp-production-geth-3.7
           py-version: "3.7"
           transport-layer: "udp"
           environment-type: "production"
+          blockchain-type: "geth"
           requires:
-          - prepare-python-linux-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-udp-development-3.7
+          name: smoketest-udp-development-geth-3.7
           py-version: "3.7"
           transport-layer: "udp"
           environment-type: "development"
+          blockchain-type: "geth"
           requires:
-          - prepare-python-linux-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-matrix-production-3.7
+          name: smoketest-matrix-production-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
           environment-type: "production"
+          blockchain-type: "geth"
           requires:
-          - prepare-python-linux-3.7
+            - prepare-python-linux-3.7
 
       - smoketest:
-          name: smoketest-matrix-development-3.7
+          name: smoketest-matrix-development-geth-3.7
           py-version: "3.7"
           transport-layer: "matrix"
           environment-type: "development"
+          blockchain-type: "geth"
           requires:
-          - prepare-python-linux-3.7
+            - prepare-python-linux-3.7
+
+      - smoketest:
+          name: smoketest-matrix-development-parity-3.7
+          py-version: "3.7"
+          transport-layer: "matrix"
+          environment-type: "development"
+          blockchain-type: "parity"
+          requires:
+            - prepare-python-linux-3.7
 
       - test:
           name: test-unit-3.7
@@ -960,7 +988,7 @@ workflows:
           test-type: "unit"
           blockchain-type: "geth"
           requires:
-          - prepare-python-linux-3.7
+            - prepare-python-linux-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -969,7 +997,7 @@ workflows:
           blockchain-type: "geth"
           additional-args: "--hypothesis-show-statistics"
           requires:
-          - prepare-python-linux-3.7
+            - prepare-python-linux-3.7
 
       - test:
           name: test-integration-udp-geth-3.7
@@ -980,10 +1008,10 @@ workflows:
           transport-layer: "udp"
           parallelism: 25
           requires:
-          - smoketest-udp-production-3.7
-          - smoketest-udp-development-3.7
-          - test-unit-3.7
-          - test-fuzz-3.7
+            - smoketest-udp-production-geth-3.7
+            - smoketest-udp-development-geth-3.7
+            - test-unit-3.7
+            - test-fuzz-3.7
 
       - test:
           name: test-integration-matrix-geth-3.7
@@ -994,10 +1022,10 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-          - smoketest-matrix-production-3.7
-          - smoketest-matrix-development-3.7
-          - test-unit-3.7
-          - test-fuzz-3.7
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-development-geth-3.7
+            - test-unit-3.7
+            - test-fuzz-3.7
 
       - test:
           name: test-integration-udp-parity-3.7
@@ -1008,10 +1036,10 @@ workflows:
           transport-layer: "udp"
           parallelism: 25
           requires:
-          - smoketest-udp-production-3.7
-          - smoketest-udp-development-3.7
-          - test-unit-3.7
-          - test-fuzz-3.7
+            - smoketest-udp-production-geth-3.7
+            - smoketest-udp-development-geth-3.7
+            - test-unit-3.7
+            - test-fuzz-3.7
 
       - test:
           name: test-integration-matrix-parity-3.7
@@ -1022,10 +1050,11 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
-          - smoketest-matrix-production-3.7
-          - smoketest-matrix-development-3.7
-          - test-unit-3.7
-          - test-fuzz-3.7
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
+            - test-unit-3.7
+            - test-fuzz-3.7
 
       - finalize:
           requires:

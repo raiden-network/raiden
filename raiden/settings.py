@@ -52,8 +52,6 @@ ETHERSCAN_API = 'https://{network}.etherscan.io/api?module=proxy&action={action}
 RED_EYES_CONTRACT_VERSION = '0.4.0'
 DEVELOPMENT_CONTRACT_VERSION = '0.11.1'
 
-SUPPORTED_ETH_CLIENTS = ('geth', 'parity')
-
 MIN_REI_THRESHOLD = 100
 
 MONITORING_REWARD = 1

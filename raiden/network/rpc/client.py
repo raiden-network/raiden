@@ -509,14 +509,14 @@ class JSONRPCClient:
             # available nonce
             available_nonce = web3.eth.getTransactionCount(address_checksumed, 'pending')
 
-        elif eth_node == constants.EthClient.PARITY:
+        elif eth_node is constants.EthClient.PARITY:
             parity_assert_rpc_interfaces(web3)
             available_nonce = parity_discover_next_available_nonce(
                 web3,
                 address_checksumed,
             )
 
-        elif eth_node == constants.EthClient.GETH:
+        elif eth_node is constants.EthClient.GETH:
             geth_assert_rpc_interfaces(web3)
             available_nonce = geth_discover_next_available_nonce(
                 web3,
@@ -589,7 +589,7 @@ class JSONRPCClient:
         Checks the local tx pool for a transaction from a particular address and for
         a given nonce. If it exists it returns the transaction hash.
         """
-        assert self.eth_node == constants.EthClient.PARITY
+        assert self.eth_node is constants.EthClient.PARITY
         # https://wiki.parity.io/JSONRPC-parity-module.html?q=traceTransaction#parity_alltransactions
         transactions = self.web3.manager.request_blocking('parity_allTransactions', [])
         log.debug('RETURNED TRANSACTIONS', transactions=transactions)
@@ -938,6 +938,6 @@ class JSONRPCClient:
         and use the latest block for checking.
         """
         checking_block = 'pending'
-        if self.eth_node == constants.EthClient.PARITY:
+        if self.eth_node is constants.EthClient.PARITY:
             checking_block = 'latest'
         return checking_block

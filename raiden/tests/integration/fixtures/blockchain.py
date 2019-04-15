@@ -3,15 +3,11 @@ import os
 import pytest
 from web3 import HTTPProvider, Web3
 
-from raiden.constants import Environment
+from raiden.constants import Environment, EthClient
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.settings import (
-    DEVELOPMENT_CONTRACT_VERSION,
-    RED_EYES_CONTRACT_VERSION,
-    SUPPORTED_ETH_CLIENTS,
-)
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
 from raiden.tests.utils.eth_node import EthNodeDescription, run_private_blockchain
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
@@ -20,7 +16,7 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
-_GETH_LOGDIR = os.environ.get('RAIDEN_TESTS_GETH_LOGSDIR')
+_ETH_LOGDIR = os.environ.get('RAIDEN_TESTS_ETH_LOGSDIR')
 
 
 @pytest.fixture
@@ -50,7 +46,7 @@ def web3(
     keys_to_fund.add(deploy_key)
     keys_to_fund = sorted(keys_to_fund)
 
-    if blockchain_type not in SUPPORTED_ETH_CLIENTS:
+    if blockchain_type not in {client.value for client in EthClient}:
         raise ValueError(f'unknown blockchain_type {blockchain_type}')
 
     host = '0.0.0.0'
@@ -83,26 +79,23 @@ def web3(
 
     base_datadir = str(tmpdir)
 
-    if _GETH_LOGDIR:
-        base_logdir = os.path.join(_GETH_LOGDIR, request.node.name)
+    if _ETH_LOGDIR:
+        base_logdir = os.path.join(_ETH_LOGDIR, blockchain_type, request.node.name)
     else:
         base_logdir = os.path.join(base_datadir, 'logs')
 
-    geth_processes = run_private_blockchain(
+    eth_node_runner = run_private_blockchain(
         web3=web3,
         accounts_to_fund=accounts_to_fund,
         eth_nodes=eth_nodes,
         base_datadir=base_datadir,
         log_dir=base_logdir,
         chain_id=chain_id,
-        verbosity=request.config.option.verbose,
+        verbosity='info',
         random_marker=random_marker,
     )
-
-    yield web3
-
-    for process in geth_processes:
-        process.terminate()
+    with eth_node_runner:
+        yield web3
 
     cleanup_tasks()
 
