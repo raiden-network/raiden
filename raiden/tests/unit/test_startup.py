@@ -135,13 +135,13 @@ def test_setup_contracts():
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
-    # Goerli production
-    config = {'environment_type': Environment.PRODUCTION}
-    contracts, addresses_known = setup_contracts_or_exit(config, 5)
-    assert 'contracts_path' in config
-    assert addresses_known
-    assert raiden_contracts_in_data(contracts)
-    assert not service_contracts_in_data(contracts)
+    # Goerli production TODO: Uncomment when production contracts are deployed in Goerli
+    # config = {'environment_type': Environment.PRODUCTION}
+    # contracts, addresses_known = setup_contracts_or_exit(config, 5)
+    # assert 'contracts_path' in config
+    # assert addresses_known
+    # assert raiden_contracts_in_data(contracts)
+    # assert not service_contracts_in_data(contracts)
 
     # Goerli development
     config = {'environment_type': Environment.DEVELOPMENT}
