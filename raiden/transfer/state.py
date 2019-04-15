@@ -3,7 +3,7 @@ import random
 from collections import defaultdict
 from functools import total_ordering
 from random import Random
-from typing import TYPE_CHECKING, Callable, Tuple, cast
+from typing import TYPE_CHECKING, Tuple
 
 import networkx
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
@@ -570,7 +570,7 @@ class TokenNetworkState(State):
         )
         restored.network_graph = data['network_graph']
         restored.channelidentifiers_to_channels = map_dict(
-            cast(Callable[[Any], ChannelID], int),
+            serialization.deserialize_channel_id,
             serialization.identity,
             data['channelidentifiers_to_channels'],
         )
@@ -641,7 +641,7 @@ class TokenNetworkGraphState(State):
         )
         restored.network = serialization.deserialize_networkx_graph(data['network'])
         restored.channel_identifier_to_participants = map_dict(
-            cast(Callable[[Any], ChannelID], int),
+            serialization.deserialize_channel_id,
             serialization.deserialize_participants_tuple,
             data['channel_identifier_to_participants'],
         )
@@ -699,7 +699,7 @@ class PaymentMappingState(State):
     def from_dict(cls, data: Dict[str, Any]) -> 'PaymentMappingState':
         restored = cls()
         restored.secrethashes_to_task = map_dict(
-            cast(Callable[[str], SecretHash], serialization.deserialize_bytes),
+            serialization.deserialize_secret_hash,
             serialization.identity,
             data['secrethashes_to_task'],
         )
@@ -1283,7 +1283,7 @@ class UnlockProofState(State):
     def from_dict(cls, data: Dict[str, Any]) -> 'UnlockProofState':
         restored = cls(
             merkle_proof=map_list(
-                cast(Callable[[str], Keccak256], serialization.deserialize_bytes),
+                serialization.deserialize_keccak,
                 data['merkle_proof'],
             ),
             lock_encoded=serialization.deserialize_bytes(data['lock_encoded']),
@@ -1526,17 +1526,17 @@ class NettingChannelEndState(State):
             balance=Balance(int(data['contract_balance'])),
         )
         restored.secrethashes_to_lockedlocks = map_dict(
-            cast(Callable[[str], SecretHash], serialization.deserialize_bytes),
+            serialization.deserialize_secret_hash,
             serialization.identity,
             data['secrethashes_to_lockedlocks'],
         )
         restored.secrethashes_to_unlockedlocks = map_dict(
-            cast(Callable[[str], SecretHash], serialization.deserialize_bytes),
+            serialization.deserialize_secret_hash,
             serialization.identity,
             data['secrethashes_to_unlockedlocks'],
         )
         restored.secrethashes_to_onchain_unlockedlocks = map_dict(
-            cast(Callable[[str], SecretHash], serialization.deserialize_bytes),
+            serialization.deserialize_secret_hash,
             serialization.identity,
             data['secrethashes_to_onchain_unlockedlocks'],
         )
