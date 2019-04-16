@@ -149,13 +149,10 @@ class StatelessFilter(LogFilter):
                     from_block + FILTER_MAX_BLOCK_RANGE,
                     target_block_number,
                 )
-                try:
-                    result.extend(
-                        self._do_get_new_entries(from_block=from_block, to_block=to_block),
-                    )
-                    from_block += FILTER_MAX_BLOCK_RANGE
-                except ValueError:
-                    from_block += 0x1000
+                result.extend(
+                    self._do_get_new_entries(from_block=from_block, to_block=to_block),
+                )
+                from_block += FILTER_MAX_BLOCK_RANGE
 
             return result
 
