@@ -157,7 +157,6 @@ class StatelessFilter(LogFilter):
                 except ValueError:
                     from_block += 0x1000
 
-
             return result
 
     def get_all_entries(self, block_number: BlockSpecification = None):
