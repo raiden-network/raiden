@@ -71,7 +71,8 @@ def unlock_account_with_passwordprompt(
         account_manager: AccountManager,
         address_hex: AddressHex,
 ) -> PrivateKey:
-    while True:
+    tries = 3
+    for current in range(tries):
         try:
             password = getpass.getpass(
                 f'Enter the password to unlock {address_hex}: ',
@@ -79,7 +80,10 @@ def unlock_account_with_passwordprompt(
             return account_manager.get_privkey(address_hex, password)
         except ValueError:
             print(
-                'Incorrect passphrase to unlock the private key. '
-                'Please try again or kill the process to quit. '
-                'Usually Ctrl-c.',
+                f'Incorrect passphrase to unlock the private key. '
+                f'{current} out of {tries} tries. '
+                f'Please try again or kill the process to quit. '
+                f'Usually Ctrl-c.',
             )
+
+    sys.exit(1)
