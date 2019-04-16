@@ -37,6 +37,7 @@ def web3(
         blockchain_private_keys,
         blockchain_rpc_ports,
         blockchain_type,
+        blockchain_extra_config,
         deploy_key,
         private_keys,
         random_marker,
@@ -67,6 +68,7 @@ def web3(
             rpc_port=rpc,
             p2p_port=p2p,
             miner=(pos == 0),
+            extra_config=blockchain_extra_config,
             blockchain_type=blockchain_type,
         )
         for pos, (key, rpc, p2p) in enumerate(

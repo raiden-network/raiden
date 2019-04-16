@@ -229,6 +229,11 @@ def blockchain_type(request):
 
 
 @pytest.fixture
+def blockchain_extra_config():
+    return {}
+
+
+@pytest.fixture
 def blockchain_number_of_nodes():
     """ Number of nodes in the cluster, not the same as the number of raiden
     nodes. Used for all geth clusters.
