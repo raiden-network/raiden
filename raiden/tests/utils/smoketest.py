@@ -116,8 +116,7 @@ def smoketest_perform_tests(
         token_addresses,
         discovery_address,
 ):
-    """ Test that the assembled raiden_service correctly reflects the configuration from the
-    smoketest_genesis. """
+    """ Perform high level tests designed to quickly discover broken functionality. """
     try:
         chain = raiden_service.chain
         token_network_added_events = raiden_service.default_registry.filter_token_added_events()

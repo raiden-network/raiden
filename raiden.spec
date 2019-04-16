@@ -1,8 +1,9 @@
 # -*- mode: python -*-
 from __future__ import print_function
-import sys
+
 import pdb
 import platform
+import sys
 
 from raiden.utils import get_system_spec
 
@@ -87,9 +88,7 @@ a = Entrypoint(
         'tools/pyinstaller_hooks/runtime_raiden_contracts.py',
     ],
     hiddenimports=['scrypt', 'eth_tester'],
-    datas=[
-        ('raiden/smoketest_genesis.json', 'raiden'),
-    ],
+    datas=[],
     excludes=['FixTk', 'tcl', 'tk', '_tkinter', 'tkinter', 'Tkinter'],
 )
 
