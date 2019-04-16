@@ -628,27 +628,21 @@ def test_refund_transfer_no_more_routes():
     assert unlocked_failed
     assert sent_failed
 
-    invalid_balance_proof = factories.make_signed_balance_proof(
-        nonce=2,
-        transferred_amount=original_transfer.balance_proof.transferred_amount,
-        locked_amount=0,
-        token_network_address=original_transfer.balance_proof.token_network_identifier,
-        channel_identifier=setup.channel.identifier,
-        locksroot=EMPTY_MERKLE_ROOT,
-        extra_hash=original_transfer.lock.secrethash,
-        sender_address=refund_address,
+    missing_pkey = factories.create_properties(factories.BalanceProofSignedStateProperties(
+        balance_proof=factories.BalanceProofProperties(
+            nonce=2,
+            transferred_amount=original_transfer.balance_proof.transferred_amount,
+            canonical_identifier=setup.channel.canonical_identifier,
+        ),
+        message_hash=original_transfer.lock.secrethash,
+        sender=refund_address,
+    ))
+    complete = factories.create_properties(
+        factories.BalanceProofSignedStateProperties(pkey=refund_pkey),
+        defaults=missing_pkey,
     )
-    balance_proof = factories.make_signed_balance_proof(
-        nonce=2,
-        transferred_amount=original_transfer.balance_proof.transferred_amount,
-        locked_amount=0,
-        token_network_address=original_transfer.balance_proof.token_network_identifier,
-        channel_identifier=setup.channel.identifier,
-        locksroot=EMPTY_MERKLE_ROOT,
-        extra_hash=original_transfer.lock.secrethash,
-        sender_address=refund_address,
-        private_key=refund_pkey,
-    )
+    invalid_balance_proof = factories.create(missing_pkey)
+    balance_proof = factories.create(complete)
     invalid_lock_expired_state_change = ReceiveLockExpired(
         invalid_balance_proof,
         secrethash=original_transfer.lock.secrethash,
@@ -1599,17 +1593,16 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     ##
     # Expire both locks of the initial transfer and it's refund
     ##
-    balance_proof = factories.make_signed_balance_proof(
-        nonce=2,
-        transferred_amount=initial_transfer.balance_proof.transferred_amount,
-        locked_amount=0,
-        token_network_address=initial_transfer.balance_proof.token_network_identifier,
-        channel_identifier=channel1.identifier,
-        locksroot=EMPTY_MERKLE_ROOT,
-        extra_hash=initial_transfer.lock.secrethash,
-        sender_address=refund_address,
-        private_key=refund_pkey,
-    )
+    balance_proof = factories.create(factories.BalanceProofSignedStateProperties(
+        balance_proof=factories.BalanceProofProperties(
+            nonce=2,
+            transferred_amount=initial_transfer.balance_proof.transferred_amount,
+            canonical_identifier=channel1.canonical_identifier,
+        ),
+        message_hash=initial_transfer.lock.secrethash,
+        sender=refund_address,
+        pkey=refund_pkey,
+    ))
     lock_expired_state_change = ReceiveLockExpired(
         balance_proof,
         secrethash=initial_transfer.lock.secrethash,

@@ -418,61 +418,6 @@ def make_signed_transfer_state(
     return lockedtransfersigned_from_message(transfer)
 
 
-def make_signed_balance_proof(
-        nonce: typing.Nonce = EMPTY,
-        transferred_amount: typing.TokenAmount = EMPTY,
-        locked_amount: typing.TokenAmount = EMPTY,
-        token_network_address: typing.TokenNetworkID = EMPTY,
-        channel_identifier: typing.ChannelID = EMPTY,
-        locksroot: typing.Locksroot = EMPTY,
-        extra_hash: typing.Keccak256 = EMPTY,
-        private_key: bytes = EMPTY,
-        sender_address: typing.Address = EMPTY,
-) -> BalanceProofSignedState:
-
-    nonce = if_empty(nonce, make_uint256())
-    transferred_amount = if_empty(transferred_amount, make_uint256())
-    locked_amount = if_empty(locked_amount, make_uint256())
-    token_network_address = if_empty(token_network_address, make_address())
-    channel_identifier = if_empty(channel_identifier, make_uint256())
-    locksroot = if_empty(locksroot, make_32bytes())
-    extra_hash = if_empty(extra_hash, make_keccak_hash())
-    private_key = if_empty(private_key, make_privatekey())
-    sender_address = if_empty(sender_address, make_address())
-    signer = LocalSigner(private_key)
-
-    balance_hash = hash_balance_data(
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        locksroot=locksroot,
-    )
-    data_to_sign = balance_proof.pack_balance_proof(
-        nonce=nonce,
-        balance_hash=balance_hash,
-        additional_hash=extra_hash,
-        canonical_identifier=make_canonical_identifier(
-            token_network_address=token_network_address,
-            channel_identifier=channel_identifier,
-        ),
-    )
-
-    signature = signer.sign(data=data_to_sign)
-
-    return BalanceProofSignedState(
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        locksroot=locksroot,
-        message_hash=extra_hash,
-        signature=signature,
-        sender=sender_address,
-        canonical_identifier=make_canonical_identifier(
-            token_network_address=token_network_address,
-            channel_identifier=channel_identifier,
-        ),
-    )
-
-
 # ALIASES
 make_channel = make_channel_state
 route_from_channel = make_route_from_channel
