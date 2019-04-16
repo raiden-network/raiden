@@ -5,7 +5,7 @@ from typing import NamedTuple
 
 import pytest
 
-from raiden.constants import EMPTY_HASH, EMPTY_MERKLE_ROOT, MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import EMPTY_HASH, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
@@ -547,8 +547,6 @@ def test_refund_transfer_next_route():
             payment_identifier=original_transfer.payment_identifier,
             balance_proof=factories.BalanceProofProperties(
                 canonical_identifier=channel1.canonical_identifier,
-                transferred_amount=0,
-                locked_amount=UNIT_TRANSFER_AMOUNT,
             ),
         ),
         sender=refund_address,
@@ -605,8 +603,6 @@ def test_refund_transfer_no_more_routes():
             payment_identifier=original_transfer.payment_identifier,
             balance_proof=factories.BalanceProofProperties(
                 canonical_identifier=setup.channel.canonical_identifier,
-                transferred_amount=0,
-                locked_amount=UNIT_TRANSFER_AMOUNT,
             ),
         ),
         sender=refund_address,
@@ -1379,8 +1375,6 @@ def test_secret_reveal_cancel_other_transfers():
             payment_identifier=original_transfer.payment_identifier,
             balance_proof=factories.BalanceProofProperties(
                 canonical_identifier=channel1.canonical_identifier,
-                transferred_amount=0,
-                locked_amount=UNIT_TRANSFER_AMOUNT,
             ),
         ),
         sender=refund_address,
@@ -1493,8 +1487,6 @@ def test_refund_after_secret_request():
             payment_identifier=original_transfer.payment_identifier,
             balance_proof=factories.BalanceProofProperties(
                 canonical_identifier=setup.channel.canonical_identifier,
-                transferred_amount=0,
-                locked_amount=UNIT_TRANSFER_AMOUNT,
             ),
         ),
         sender=refund_address,
@@ -1582,8 +1574,6 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
             payment_identifier=original_transfer.payment_identifier,
             balance_proof=factories.BalanceProofProperties(
                 canonical_identifier=channel1.canonical_identifier,
-                transferred_amount=0,
-                locked_amount=UNIT_TRANSFER_AMOUNT,
             ),
         ),
         sender=refund_address,

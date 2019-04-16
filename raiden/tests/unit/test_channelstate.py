@@ -14,10 +14,7 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
     HOP1,
     UNIT_CHAIN_ID,
-    UNIT_SECRET,
-    UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_SENDER,
-    UNIT_TRANSFER_TARGET,
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
     TransactionExecutionStatusProperties,

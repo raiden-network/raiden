@@ -115,12 +115,14 @@ def make_signed_transfer_from_counter(counter):
 
 
 def make_from_route_from_counter(counter):
-    from_channel = factories.make_channel(
-        partner_balance=next(counter),
-        partner_address=factories.HOP1,
+    from_channel = factories.create(factories.NettingChannelStateProperties(
+        canonical_identifier=factories.make_canonical_identifier(),
         token_address=factories.make_address(),
-        channel_identifier=next(counter),
-    )
+        partner_state=factories.NettingChannelEndStateProperties(
+            balance=next(counter),
+            address=factories.HOP1,
+        ),
+    ))
     from_route = factories.route_from_channel(from_channel)
 
     expiration = factories.UNIT_REVEAL_TIMEOUT + 1
