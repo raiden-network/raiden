@@ -111,7 +111,10 @@ class AssertPFSHistoryTask(RESTAPIActionTask):
                     "source": <address>,
                     "target": <address>,
                     "routes": [
-                        [<address>, <address>, ...],
+                    {
+                        "path": [<address>, <address>, ...],
+                        "estimated_fee": <estimated_fee>
+                    }
                         ...,
                     ]
                 },
@@ -120,7 +123,9 @@ class AssertPFSHistoryTask(RESTAPIActionTask):
         }
     """
     _name = 'assert_pfs_history'
-    _url_template = "{pfs_url}/api/v1/_debug/routes/{token_address}/{source_address}{extra_params}"
+    _url_template = (
+        "{pfs_url}/api/v1/_debug/routes/{token_network_address}/{source_address}{extra_params}"
+    )
 
     @property
     def _url_params(self):
@@ -145,7 +150,7 @@ class AssertPFSHistoryTask(RESTAPIActionTask):
 
         params = dict(
             pfs_url=pfs_url,
-            token_address=self._runner.token_address,
+            token_network_address=self._runner.token_network_address,
             source_address=source_address,
             extra_params=extra_params,
         )
@@ -181,7 +186,13 @@ class AssertPFSHistoryTask(RESTAPIActionTask):
                         f'at index {i}',
                     )
 
-        actual_routes = [response['routes'] for response in response_dict['responses']]
+        actual_routes = [
+            route['path']
+            for response in response_dict['responses']
+            for route in response['routes']
+            if response['routes']
+        ]
+
         exp_routes = self._config.get('expected_routes')
         if exp_routes:
             if len(exp_routes) != len(actual_routes):
@@ -189,7 +200,8 @@ class AssertPFSHistoryTask(RESTAPIActionTask):
                     f'Expected {len(exp_routes)} routes but got {len(actual_routes)}.',
                 )
             for i, (exp_route, actual_route) in enumerate(zip(exp_routes, actual_routes)):
-                if exp_route != actual_route:
+                exp_route_addr = [self._runner.get_node_address(node) for node in exp_route]
+                if exp_route_addr != actual_route:
                     raise ScenarioAssertionError(
                         f'Expected route {exp_route} but got {actual_route} at index {i}',
                     )
