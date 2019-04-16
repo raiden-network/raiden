@@ -390,6 +390,8 @@ jobs:
               --select-fail-on-missing \
               --select-from-file selected-tests.txt \
               << parameters.additional-args >>
+            # Force fail - we don't want to pollute the circle ci parallelization time database
+            false
 
       - run:
           name: Store coverage
