@@ -1,12 +1,12 @@
-from raiden.tests.utils.factories import make_address, make_channel_identifier, make_transfer
+from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import SendRefundTransfer
 
 
 def test_send_refund_transfer_contains_balance_proof():
-    recipient = make_address()
-    transfer = make_transfer()
+    recipient = factories.make_address()
+    transfer = factories.create(factories.LockedTransferProperties())
     message_identifier = 1
-    channel_identifier = make_channel_identifier()
+    channel_identifier = factories.make_channel_identifier()
     event = SendRefundTransfer(
         recipient=recipient,
         channel_identifier=channel_identifier,

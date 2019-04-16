@@ -150,19 +150,23 @@ def test_regression_send_refund():
 
     last_pair = setup.transfers_pair[-1]
     channel_identifier = last_pair.payee_transfer.balance_proof.channel_identifier
+    canonical_identifier = last_pair.payee_transfer.balance_proof.canonical_identifier
     lock_expiration = last_pair.payee_transfer.lock.expiration
 
-    received_transfer = factories.make_signed_transfer_state(
-        amount=UNIT_TRANSFER_AMOUNT,
-        initiator=UNIT_TRANSFER_INITIATOR,
-        target=UNIT_TRANSFER_TARGET,
-        expiration=lock_expiration,
-        secret=UNIT_SECRET,
-        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-        channel_identifier=channel_identifier,
-        pkey=setup.channels.partner_privatekeys[2],
+    received_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+        transfer=factories.LockedTransferProperties(
+            expiration=lock_expiration,
+            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+            balance_proof=factories.BalanceProofProperties(
+                canonical_identifier=canonical_identifier,
+                transferred_amount=0,
+                locked_amount=UNIT_TRANSFER_AMOUNT,
+            ),
+        ),
         sender=setup.channels.partner_address(2),
-    )
+        pkey=setup.channels.partner_privatekeys[2],
+        message_identifier=factories.make_message_identifier(),
+    ))
 
     # All three channels have been used
     routes = []
