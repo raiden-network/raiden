@@ -267,6 +267,7 @@ def setup_testchain(eth_client: EthClient, print_step: Callable) -> ContextManag
         rpc_port=rpc_port,
         p2p_port=p2p_port,
         miner=True,
+        extra_config={},
         blockchain_type=eth_client.value,
     )
 

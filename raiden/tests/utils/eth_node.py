@@ -34,6 +34,7 @@ class EthNodeDescription(NamedTuple):
     rpc_port: int
     p2p_port: int
     miner: bool
+    extra_config: Dict[str, Any]
     blockchain_type: str = 'geth'
 
 
@@ -138,6 +139,7 @@ def parity_to_cmd(
         'password': 'password',
         'port': 'port',
         'rpcport': 'jsonrpc-port',
+        'pruning': 'pruning-history',
     }
 
     cmd = ['parity']
@@ -347,11 +349,17 @@ def eth_check_balance(web3: Web3, accounts_addresses: List[bytes], retries: int 
         raise ValueError(f'Account(s) {", ".join(addresses)} have no balance')
 
 
-def eth_node_config(miner_pkey: bytes, p2p_port: int, rpc_port: int) -> Dict[str, Any]:
+def eth_node_config(
+        miner_pkey: bytes,
+        p2p_port: int,
+        rpc_port: int,
+        **extra_config: Dict[str, Any],
+) -> Dict[str, Any]:
     address = privatekey_to_address(miner_pkey)
     pub = privatekey_to_publickey(miner_pkey).hex()
 
-    config = {
+    config = extra_config.copy()
+    config.update({
         'nodekey': miner_pkey,
         'nodekeyhex': remove_0x_prefix(encode_hex(miner_pkey)),
         'pub': pub,
@@ -359,7 +367,7 @@ def eth_node_config(miner_pkey: bytes, p2p_port: int, rpc_port: int) -> Dict[str
         'port': p2p_port,
         'rpcport': rpc_port,
         'enode': f'enode://{pub}@127.0.0.1:{p2p_port}',
-    }
+    })
 
     return config
 
@@ -521,6 +529,7 @@ def run_private_blockchain(
             node.private_key,
             node.p2p_port,
             node.rpc_port,
+            **node.extra_config,
         )
 
         if node.miner:
