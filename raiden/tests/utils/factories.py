@@ -243,67 +243,6 @@ def make_transfer_description(
     )
 
 
-def make_transfer(
-        amount: typing.TokenAmount = EMPTY,
-        initiator: typing.InitiatorAddress = EMPTY,
-        target: typing.TargetAddress = EMPTY,
-        expiration: typing.BlockExpiration = EMPTY,
-        secret: typing.Secret = EMPTY,
-        identifier: typing.PaymentID = EMPTY,
-        nonce: typing.Nonce = EMPTY,
-        transferred_amount: typing.TokenAmount = EMPTY,
-        locked_amount: typing.TokenAmount = EMPTY,
-        token_network_identifier: typing.TokenNetworkID = EMPTY,
-        channel_identifier: typing.ChannelID = EMPTY,
-        locksroot: typing.Locksroot = EMPTY,
-        token: typing.TargetAddress = EMPTY,
-) -> LockedTransferUnsignedState:
-    amount = if_empty(amount, UNIT_TRANSFER_AMOUNT)
-    initiator = if_empty(initiator, make_address())
-    target = if_empty(target, make_address())
-    expiration = if_empty(expiration, UNIT_REVEAL_TIMEOUT)
-    secret = if_empty(secret, make_secret())
-    identifier = if_empty(identifier, 1)
-    nonce = if_empty(nonce, 1)
-    transferred_amount = if_empty(transferred_amount, 0)
-    token_network_identifier = if_empty(token_network_identifier, UNIT_TOKEN_NETWORK_ADDRESS)
-    channel_identifier = if_empty(channel_identifier, UNIT_CHANNEL_ID)
-    token = if_empty(token, UNIT_TOKEN_ADDRESS)
-
-    secrethash = sha3(secret)
-    lock = HashTimeLockState(
-        amount=amount,
-        expiration=expiration,
-        secrethash=secrethash,
-    )
-
-    if locksroot is EMPTY:
-        locksroot = lock.lockhash
-        locked_amount = amount
-    else:
-        assert locked_amount
-
-    unsigned_balance_proof = BalanceProofUnsignedState(
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        locksroot=locksroot,
-        canonical_identifier=make_canonical_identifier(
-            token_network_address=token_network_identifier,
-            channel_identifier=channel_identifier,
-        ),
-    )
-
-    return LockedTransferUnsignedState(
-        payment_identifier=identifier,
-        token=token,
-        balance_proof=unsigned_balance_proof,
-        lock=lock,
-        initiator=initiator,
-        target=target,
-    )
-
-
 def make_signed_transfer(
         amount: typing.TokenAmount = EMPTY,
         initiator: typing.InitiatorAddress = EMPTY,
@@ -374,48 +313,6 @@ def make_signed_transfer(
     transfer.sign(signer)
     assert transfer.sender == sender
     return transfer
-
-
-def make_signed_transfer_state(
-        amount: typing.TokenAmount = EMPTY,
-        initiator: typing.InitiatorAddress = EMPTY,
-        target: typing.TargetAddress = EMPTY,
-        expiration: typing.BlockExpiration = EMPTY,
-        secret: typing.Secret = EMPTY,
-        payment_identifier: typing.PaymentID = EMPTY,
-        message_identifier: typing.MessageID = EMPTY,
-        nonce: typing.Nonce = EMPTY,
-        transferred_amount: typing.TokenAmount = EMPTY,
-        locked_amount: typing.TokenAmount = EMPTY,
-        locksroot: typing.Locksroot = EMPTY,
-        recipient: typing.Address = EMPTY,
-        channel_identifier: typing.ChannelID = EMPTY,
-        token_network_address: typing.TokenNetworkID = EMPTY,
-        token: typing.TargetAddress = EMPTY,
-        pkey: bytes = EMPTY,
-        sender: typing.Address = EMPTY,
-) -> LockedTransferSignedState:
-
-    transfer = make_signed_transfer(
-        amount=amount,
-        initiator=initiator,
-        target=target,
-        expiration=expiration,
-        secret=secret,
-        payment_identifier=payment_identifier,
-        message_identifier=message_identifier,
-        nonce=nonce,
-        transferred_amount=transferred_amount,
-        locked_amount=locked_amount,
-        locksroot=locksroot,
-        recipient=recipient,
-        channel_identifier=channel_identifier,
-        token_network_address=token_network_address,
-        token=token,
-        pkey=pkey,
-        sender=sender,
-    )
-    return lockedtransfersigned_from_message(transfer)
 
 
 # ALIASES
@@ -1054,17 +951,20 @@ def make_transfers_pair(
         payee_index = payer_index + 1
 
         receiver_channel = channels[payer_index]
-        received_transfer = make_signed_transfer_state(
-            amount=amount,
-            initiator=UNIT_TRANSFER_INITIATOR,
-            target=UNIT_TRANSFER_TARGET,
-            expiration=lock_expiration,
-            secret=UNIT_SECRET,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            channel_identifier=receiver_channel.identifier,
-            pkey=channels.partner_privatekeys[payer_index],
+        received_transfer = create(LockedTransferSignedStateProperties(
+            transfer=LockedTransferProperties(
+                amount=amount,
+                expiration=lock_expiration,
+                payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+                balance_proof=BalanceProofProperties(
+                    canonical_identifier=receiver_channel.canonical_identifier,
+                    transferred_amount=0,
+                    locked_amount=UNIT_TRANSFER_AMOUNT,
+                ),
+            ),
             sender=channels.partner_address(payer_index),
-        )
+            pkey=channels.partner_privatekeys[payer_index],
+        ))
 
         is_valid, _, msg = channel.handle_receive_lockedtransfer(
             receiver_channel,

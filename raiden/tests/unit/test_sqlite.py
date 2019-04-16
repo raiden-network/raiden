@@ -70,13 +70,13 @@ def make_balance_proof_from_counter(counter) -> BalanceProofUnsignedState:
 
 
 def make_transfer_from_counter(counter):
-    return factories.make_transfer(
+    return factories.create(factories.LockedTransferProperties(
         amount=next(counter),
         initiator=factories.make_address(),
         target=factories.make_address(),
         expiration=next(counter),
         secret=factories.make_secret(next(counter)),
-    )
+    ))
 
 
 def make_signed_transfer_from_counter(counter):
@@ -86,25 +86,30 @@ def make_signed_transfer_from_counter(counter):
         secrethash=sha3(factories.make_secret(next(counter))),
     )
 
-    signed_transfer = factories.make_signed_transfer_state(
-        amount=next(counter),
-        initiator=factories.make_address(),
-        target=factories.make_address(),
-        expiration=next(counter),
-        secret=factories.make_secret(next(counter)),
-        payment_identifier=next(counter),
-        message_identifier=next(counter),
-        nonce=next(counter),
-        transferred_amount=next(counter),
-        locked_amount=next(counter),
-        locksroot=sha3(lock.as_bytes),
+    signed_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+        transfer=factories.LockedTransferProperties(
+            amount=next(counter),
+            initiator=factories.make_address(),
+            target=factories.make_address(),
+            expiration=next(counter),
+            secret=factories.make_secret(next(counter)),
+            payment_identifier=next(counter),
+            token=factories.make_address(),
+            balance_proof=factories.BalanceProofProperties(
+                nonce=next(counter),
+                transferred_amount=next(counter),
+                locked_amount=next(counter),
+                locksroot=sha3(lock.as_bytes),
+                canonical_identifier=factories.make_canonical_identifier(
+                    token_network_address=factories.make_address(),
+                    channel_identifier=next(counter),
+                ),
+            ),
+        ),
         recipient=factories.make_address(),
-        channel_identifier=next(counter),
-        token_network_address=factories.make_address(),
-        token=factories.make_address(),
-        pkey=factories.HOP1_KEY,
         sender=factories.HOP1,
-    )
+        pkey=factories.HOP1_KEY,
+    ))
 
     return signed_transfer
 
