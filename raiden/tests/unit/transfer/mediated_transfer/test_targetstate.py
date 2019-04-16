@@ -178,8 +178,7 @@ def test_handle_inittarget():
             amount=channels[0].partner_state.contract_balance,
             expiration=channels[0].reveal_timeout + block_number + 1,
             balance_proof=BalanceProofProperties(
-                channel_identifier=channels[0].identifier,
-                token_network_identifier=channels[0].token_network_identifier,
+                canonical_identifier=channels[0].canonical_identifier,
                 transferred_amount=0,
                 locked_amount=channels[0].partner_state.contract_balance,
             ),
@@ -507,8 +506,10 @@ def test_state_transition():
             nonce=from_transfer.balance_proof.nonce + 1,
             transferred_amount=lock_amount,
             locked_amount=0,
-            token_network_identifier=channels[0].token_network_identifier,
-            channel_identifier=channels.get_route(0).channel_identifier,
+            canonical_identifier=factories.make_canonical_identifier(
+                token_network_address=channels[0].token_network_identifier,
+                channel_identifier=channels.get_route(0).channel_identifier,
+            ),
             locksroot=EMPTY_MERKLE_ROOT,
         ),
         message_hash=b'\x00' * 32,  # invalid
@@ -595,8 +596,7 @@ def test_target_receive_lock_expired():
             nonce=2,
             transferred_amount=from_transfer.balance_proof.transferred_amount,
             locked_amount=0,
-            token_network_identifier=from_transfer.balance_proof.token_network_identifier,
-            channel_identifier=channels[0].identifier,
+            canonical_identifier=channels[0].canonical_identifier,
         ),
         message_hash=from_transfer.lock.secrethash,
     ))

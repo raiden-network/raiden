@@ -493,6 +493,12 @@ UNIT_REGISTRY_IDENTIFIER = b'registryregistryregi'
 UNIT_TOKEN_ADDRESS = b'tokentokentokentoken'
 UNIT_TOKEN_NETWORK_ADDRESS = b'networknetworknetwor'
 UNIT_CHANNEL_ID = 1338
+UNIT_CHAIN_ID = 337
+UNIT_CANONICAL_ID = CanonicalIdentifier(
+    chain_identifier=UNIT_CHAIN_ID,
+    token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel_identifier=UNIT_CHANNEL_ID,
+)
 UNIT_PAYMENT_NETWORK_IDENTIFIER = b'paymentnetworkidentifier'
 UNIT_TRANSFER_IDENTIFIER = 37
 UNIT_TRANSFER_INITIATOR = b'initiatorinitiatorin'
@@ -512,7 +518,6 @@ HOP3 = privatekey_to_address(HOP3_KEY)
 HOP4 = privatekey_to_address(HOP4_KEY)
 HOP5 = privatekey_to_address(HOP5_KEY)
 HOP6 = privatekey_to_address(HOP6_KEY)
-UNIT_CHAIN_ID = 337
 ADDR = b'addraddraddraddraddr'
 UNIT_TRANSFER_DESCRIPTION = make_transfer_description(secret=UNIT_SECRET)
 
@@ -680,9 +685,7 @@ class BalanceProofProperties(NamedTuple):
     transferred_amount: typing.TokenAmount = EMPTY
     locked_amount: typing.TokenAmount = EMPTY
     locksroot: typing.Locksroot = EMPTY
-    token_network_identifier: typing.TokenNetworkID = EMPTY
-    channel_identifier: typing.ChannelID = EMPTY
-    chain_id: typing.ChainID = EMPTY
+    canonical_identifier: CanonicalIdentifier = EMPTY
 
 
 BALANCE_PROOF_DEFAULTS = BalanceProofProperties(
@@ -690,9 +693,7 @@ BALANCE_PROOF_DEFAULTS = BalanceProofProperties(
     transferred_amount=UNIT_TRANSFER_AMOUNT,
     locked_amount=0,
     locksroot=EMPTY_MERKLE_ROOT,
-    token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    channel_identifier=UNIT_CHANNEL_ID,
-    chain_id=UNIT_CHAIN_ID,
+    canonical_identifier=UNIT_CANONICAL_ID,
 )
 
 
@@ -731,17 +732,10 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
         keys = ('transferred_amount', 'locked_amount', 'locksroot')
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
-        canonical_identifier = make_canonical_identifier(
-            chain_identifier=params.pop('chain_id'),
-            token_network_address=params.pop('token_network_identifier'),
-            channel_identifier=params.pop('channel_identifier'),
-        )
-        params['canonical_identifier'] = canonical_identifier
-
         data_to_sign = balance_proof.pack_balance_proof(
             balance_hash=balance_hash,
             additional_hash=params['message_hash'],
-            canonical_identifier=canonical_identifier,
+            canonical_identifier=params['canonical_identifier'],
             nonce=params.get('nonce'),
         )
 
@@ -787,11 +781,6 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
     balance_proof_parameters = _properties_to_dict(
         parameters.pop('balance_proof'),
         defaults.balance_proof,
-    )
-    balance_proof_parameters['canonical_identifier'] = make_canonical_identifier(
-        chain_identifier=balance_proof_parameters.pop('chain_id'),
-        token_network_address=balance_proof_parameters.pop('token_network_identifier'),
-        channel_identifier=balance_proof_parameters.pop('channel_identifier'),
     )
     if balance_proof_parameters['locksroot'] == EMPTY_MERKLE_ROOT:
         balance_proof_parameters['locksroot'] = lock.lockhash
@@ -839,7 +828,10 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     sender = params.pop('sender')
     params.update(transfer_params)
     params.update(balance_proof_params)
-    params['token_network_address'] = params.pop('token_network_identifier')
+    canonical_identifier = params.pop('canonical_identifier')
+    params['chain_id'] = int(canonical_identifier.chain_identifier)
+    params['channel_identifier'] = int(canonical_identifier.channel_identifier)
+    params['token_network_address'] = canonical_identifier.token_network_address
     if params['locksroot'] == EMPTY_MERKLE_ROOT:
         params['locksroot'] = lock.lockhash
 
@@ -922,14 +914,14 @@ def make_signed_transfer_for(
     if only_transfer:
         balance_proof_properties = BalanceProofProperties(
             locksroot=locksroot,
-            channel_identifier=channel_state.identifier,
+            canonical_identifier=channel_state.canonical_identifier,
             transferred_amount=0,
             locked_amount=properties.transfer.amount,
         )
     else:
         balance_proof_properties = BalanceProofProperties(
             locksroot=locksroot,
-            channel_identifier=channel_state.identifier,
+            canonical_identifier=channel_state.canonical_identifier,
         )
     transfer = create(
         LockedTransferSignedStateProperties(

@@ -350,8 +350,7 @@ def test_events_for_refund():
             amount=amount,
             expiration=expiration,
             balance_proof=BalanceProofProperties(
-                channel_identifier=refund_channel.identifier,
-                token_network_identifier=refund_channel.token_network_identifier,
+                canonical_identifier=refund_channel.canonical_identifier,
                 transferred_amount=0,
                 locked_amount=10,
             ),
@@ -1150,7 +1149,9 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
                 initiator=HOP1,
                 target=target_attacker2,
                 balance_proof=BalanceProofProperties(
-                    token_network_identifier=bc_channel.token_network_identifier,
+                    canonical_identifier=factories.make_canonical_identifier(
+                        token_network_address=bc_channel.token_network_identifier,
+                    ),
                 ),
             ),
         ),
@@ -1403,7 +1404,9 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
                     balance_proof=BalanceProofProperties(
                         nonce=index,
                         locked_amount=index * UNIT_TRANSFER_AMOUNT,
-                        channel_identifier=2,
+                        canonical_identifier=factories.make_canonical_identifier(
+                            channel_identifier=2,
+                        ),
                         transferred_amount=0,
                     ),
                 ),
@@ -1612,8 +1615,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
         balance_proof=BalanceProofProperties(
             nonce=2,
             transferred_amount=transfer.balance_proof.transferred_amount,
-            token_network_identifier=transfer.balance_proof.token_network_identifier,
-            channel_identifier=channels[0].identifier,
+            canonical_identifier=channels[0].canonical_identifier,
         ),
         message_hash=transfer.lock.secrethash,
     )
@@ -1714,8 +1716,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
         balance_proof=BalanceProofProperties(
             nonce=2,
             transferred_amount=transfer.balance_proof.transferred_amount,
-            token_network_identifier=transfer.balance_proof.token_network_identifier,
-            channel_identifier=channels[0].identifier,
+            canonical_identifier=channels[0].canonical_identifier,
         ),
         message_hash=transfer.lock.secrethash,
     )
@@ -2028,8 +2029,7 @@ def test_backward_transfer_pair_with_fees_deducted():
             amount=amount + fee,
             expiration=10,
             balance_proof=BalanceProofProperties(
-                channel_identifier=refund_channel.identifier,
-                token_network_identifier=refund_channel.token_network_identifier,
+                canonical_identifier=refund_channel.canonical_identifier,
                 transferred_amount=0,
                 locked_amount=amount + fee,
             ),
