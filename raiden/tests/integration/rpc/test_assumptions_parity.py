@@ -18,22 +18,24 @@ STATE_PRUNNING = {
 
 
 @pytest.mark.parametrize('blockchain_extra_config', [STATE_PRUNNING])
-def test_request_prunned_data_raises_an_exception(deploy_client):
+def test_parity_request_prunned_data_raises_an_exception(deploy_client):
     """ Interacting with an old block identifier with a pruning client throws. """
     contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcWithStorageTest')
+    iterations = 1000
 
-    check_block = deploy_client.get_checking_block()
-    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, 'waste_storage'))
-    transaction = contract_proxy.transact('waste_storage', startgas)
-    deploy_client.poll(transaction)
-    first_receipt = deploy_client.get_transaction_receipt(transaction)
+    def send_transaction():
+        check_block = deploy_client.get_checking_block()
+        startgas = contract_proxy.estimate_gas(check_block, 'waste_storage', iterations)
+        startgas = safe_gas_limit(startgas)
+        transaction = contract_proxy.transact('waste_storage', startgas, iterations)
+        deploy_client.poll(transaction)
+        return deploy_client.get_transaction_receipt(transaction)
+
+    first_receipt = send_transaction()
     pruned_block_number = first_receipt['blockNumber']
 
     for _ in range(10):
-        check_block = deploy_client.get_checking_block()
-        startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, 'waste_storage'))
-        transaction = contract_proxy.transact('waste_storage', startgas)
-        deploy_client.poll(transaction)
+        send_transaction()
 
     with pytest.raises(ValueError):
         contract_proxy.contract.functions.const().call(block_identifier=pruned_block_number)

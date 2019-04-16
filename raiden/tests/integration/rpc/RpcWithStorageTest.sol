@@ -15,9 +15,9 @@ contract RpcWithStorageTest {
         return 1;
     }
 
-    function waste_storage() public {
+    function waste_storage(uint256 iterations) public {
         uint256 i;
-        for (i=0; i<1000; i++) {
+        for (i=0; i<iterations; i++) {
             data[data.length++] = i;
         }
         emit RpcEvent(i);
