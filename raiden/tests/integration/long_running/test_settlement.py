@@ -3,7 +3,7 @@ import random
 import gevent
 import pytest
 
-from raiden import message_handler, waiting
+from raiden import waiting
 from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
@@ -519,13 +519,17 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
     identifier = 1
 
     hold_event_handler = HoldOffChainSecretRequest()
+    message_handler = WaitForMessage()
+
     app1.raiden.raiden_event_handler = hold_event_handler
+    app1.raiden.message_handler = message_handler
 
     target = app1.raiden.address
     secret = sha3(target)
     secrethash = sha3(secret)
 
     hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
+    locked_transfer_received = message_handler.wait_for_message(LockedTransfer, {})
 
     app0.raiden.start_mediated_transfer_with_secret(
         token_network_identifier=token_network_identifier,
@@ -536,9 +540,11 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
         secret=secret,
     )
 
-    gevent.sleep(1)  # wait for the messages to be exchanged
+    # Wait for app1 to receive the locked transfer.
+    locked_transfer_received.wait()
 
-    # Stop app0 to avoid sending the unlock
+    # Stop app0 to avoid sending the unlock, this must be done after the locked
+    # transfer is sent.
     app0.raiden.transport.stop()
 
     reveal_secret = RevealSecret(
@@ -546,7 +552,7 @@ def test_automatic_secret_registration(raiden_chain, token_addresses):
         secret=secret,
     )
     app0.raiden.sign(reveal_secret)
-    message_handler.MessageHandler().on_message(app1.raiden, reveal_secret)
+    message_handler.on_message(app1.raiden, reveal_secret)
 
     chain_state = views.state_from_app(app1)
 
