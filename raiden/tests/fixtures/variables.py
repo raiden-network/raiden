@@ -375,3 +375,10 @@ def skip_if_not_parity(blockchain_type):
     """Skip the test if it is run with a Parity node"""
     if blockchain_type != 'parity':
         pytest.skip('This test works only with parity.')
+
+
+@pytest.fixture
+def skip_if_not_geth(blockchain_type):
+    """Skip the test if it is run with a Parity node"""
+    if blockchain_type != 'geth':
+        pytest.skip('This test works only with geth.')

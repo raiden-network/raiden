@@ -199,10 +199,12 @@ def check_address_has_code(
         else:
             formated_contract_name = ''
 
-        raise AddressWithoutCode('{}Address {} does not contain code'.format(
-            formated_contract_name,
-            to_checksum_address(address),
-        ))
+        raise AddressWithoutCode(
+            '{}Address {} does not contain code'.format(
+                formated_contract_name,
+                to_checksum_address(address),
+            ),
+        )
 
 
 def deploy_dependencies_symbols(all_contract):
@@ -550,6 +552,10 @@ class JSONRPCClient:
         """ Return the most recent block. """
         return self.web3.eth.blockNumber
 
+    def get_block(self, block_identifier: BlockSpecification) -> Dict:
+        """Given a block number, query the chain to get its corresponding block hash"""
+        return self.web3.eth.getBlock(block_identifier)
+
     def get_confirmed_blockhash(self):
         """ Gets the block CONFIRMATION_BLOCKS in the past and returns its block hash """
         confirmed_block_number = self.web3.eth.blockNumber - self.default_block_num_confirmations
@@ -560,7 +566,8 @@ class JSONRPCClient:
 
     def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
         """Given a block number, query the chain to get its corresponding block hash"""
-        return bytes(self.web3.eth.getBlock(block_number)['hash'])
+        block = self.get_block(block_number)
+        return bytes(block['hash'])
 
     def can_query_state_for_block(self, block_identifier: BlockSpecification) -> bool:
         """
