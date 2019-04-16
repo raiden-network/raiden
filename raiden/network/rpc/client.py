@@ -148,7 +148,7 @@ def parity_discover_next_available_nonce(
 ) -> Nonce:
     """Returns the next available nonce for `address`."""
     next_nonce_encoded = web3.manager.request_blocking('parity_nextNonce', [address])
-    return int(next_nonce_encoded, 16)
+    return Nonce(int(next_nonce_encoded, 16))
 
 
 def geth_discover_next_available_nonce(

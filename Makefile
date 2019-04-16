@@ -65,6 +65,7 @@ mypy:
 	grep BalanceProof mypy-out.txt; [ $$? -eq 1 ]
 	grep SendSecret mypy-out.txt; [ $$? -eq 1 ]
 	grep NetworkTimeout mypy-out.txt; [ $$? -eq 1 ]
+	grep Nonce mypy-out.txt; [ $$? -eq 1 ]
 
 isort:
 	isort $(ISORT_PARAMS)

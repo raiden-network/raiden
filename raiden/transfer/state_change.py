@@ -1207,7 +1207,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
                 channel_identifier=ChannelID(int(data['channel_identifier'])),
                 chain_identifier=CHAIN_ID_UNSPECIFIED,
             ),
-            nonce=int(data['nonce']),
+            nonce=Nonce(int(data['nonce'])),
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
         )

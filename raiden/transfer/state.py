@@ -778,7 +778,7 @@ class BalanceProofUnsignedState(State):
 
     def __init__(
             self,
-            nonce: int,
+            nonce: Nonce,
             transferred_amount: TokenAmount,
             locked_amount: TokenAmount,
             locksroot: Locksroot,
@@ -1079,7 +1079,7 @@ class BalanceProofSignedState(State):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'BalanceProofSignedState':
         restored = cls(
-            nonce=data['nonce'],
+            nonce=Nonce(data['nonce']),
             transferred_amount=TokenAmount(int(data['transferred_amount'])),
             locked_amount=TokenAmount(int(data['locked_amount'])),
             locksroot=Locksroot(serialization.deserialize_bytes(data['locksroot'])),
