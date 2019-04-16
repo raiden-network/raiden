@@ -122,7 +122,9 @@ def make_from_route_from_counter(counter):
             transfer=factories.LockedTransferProperties(
                 balance_proof=factories.BalanceProofProperties(
                     transferred_amount=0,
-                    token_network_identifier=from_channel.token_network_identifier,
+                    canonical_identifier=factories.make_canonical_identifier(
+                        token_network_address=from_channel.token_network_identifier,
+                    ),
                 ),
                 amount=1,
                 expiration=expiration,
