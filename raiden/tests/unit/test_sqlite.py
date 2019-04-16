@@ -36,17 +36,21 @@ def make_signed_balance_proof_from_counter(counter):
         expiration=next(counter),
         secrethash=sha3(factories.make_secret(next(counter))),
     )
-    lock_expired_balance_proof = factories.make_signed_balance_proof(
-        nonce=next(counter),
-        transferred_amount=next(counter),
-        locked_amount=next(counter),
-        token_network_address=factories.make_address(),
-        channel_identifier=next(counter),
-        locksroot=sha3(lock.as_bytes),
-        extra_hash=sha3(b''),
-        private_key=factories.HOP1_KEY,
-        sender_address=factories.HOP1,
-    )
+    lock_expired_balance_proof = factories.create(factories.BalanceProofSignedStateProperties(
+        balance_proof=factories.BalanceProofProperties(
+            nonce=next(counter),
+            transferred_amount=next(counter),
+            locked_amount=next(counter),
+            canonical_identifier=factories.make_canonical_identifier(
+                token_network_address=factories.make_address(),
+                channel_identifier=next(counter),
+            ),
+            locksroot=sha3(lock.as_bytes),
+        ),
+        message_hash=sha3(b''),
+        sender=factories.HOP1,
+        pkey=factories.HOP1_KEY,
+    ))
 
     return lock_expired_balance_proof
 
