@@ -8,4 +8,4 @@ readme-renderer==21.0
 pylint==2.1.1
 # Dependency of pylint, pinned until https://github.com/PyCQA/astroid/issues/651 is fixed
 astroid==2.1.0
-mypy==0.641
+mypy==0.700
