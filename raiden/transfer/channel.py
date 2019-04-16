@@ -918,9 +918,9 @@ def get_current_balanceproof(end_state: NettingChannelEndState) -> BalanceProofD
         locked_amount = get_amount_locked(end_state)
     else:
         locksroot = EMPTY_MERKLE_ROOT
-        nonce = 0
-        transferred_amount: TokenAmount = 0
-        locked_amount: TokenAmount = 0
+        nonce = Nonce(0)
+        transferred_amount = TokenAmount(0)
+        locked_amount = TokenAmount(0)
 
     return locksroot, nonce, transferred_amount, locked_amount
 
@@ -1026,10 +1026,10 @@ def lock_exists_in_either_channel_side(
 
 def get_next_nonce(end_state: NettingChannelEndState) -> Nonce:
     if end_state.balance_proof:
-        return end_state.balance_proof.nonce + 1
+        return Nonce(end_state.balance_proof.nonce + 1)
 
     # 0 must not be used since in the netting contract it represents null.
-    return 1
+    return Nonce(1)
 
 
 def _merkletree_width(merkletree: MerkleTreeState) -> int:
