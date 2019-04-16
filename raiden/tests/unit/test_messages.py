@@ -1,11 +1,7 @@
 import pytest
 
 from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof, UpdatePFS
-from raiden.tests.utils.factories import (
-    make_canonical_identifier,
-    make_channel_state,
-    make_privkey_address,
-)
+from raiden.tests.utils import factories
 from raiden.tests.utils.messages import (
     ADDRESS as PARTNER_ADDRESS,
     MEDIATED_TRANSFER_INVALID_VALUES,
@@ -23,7 +19,7 @@ from raiden.transfer.balance_proof import (
 )
 from raiden.utils.signer import LocalSigner, recover
 
-PRIVKEY, ADDRESS = make_privkey_address()
+PRIVKEY, ADDRESS = factories.make_privkey_address()
 signer = LocalSigner(PRIVKEY)
 
 
@@ -100,7 +96,7 @@ def test_request_monitoring():
 
     # test signature verification
     reward_proof_data = pack_reward_proof(
-        canonical_identifier=make_canonical_identifier(
+        canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=request_monitoring.balance_proof.chain_id,
             token_network_address=request_monitoring.balance_proof.token_network_address,
             channel_identifier=request_monitoring.balance_proof.channel_identifier,
@@ -115,7 +111,7 @@ def test_request_monitoring():
         nonce=request_monitoring.balance_proof.nonce,
         balance_hash=request_monitoring.balance_proof.balance_hash,
         additional_hash=request_monitoring.balance_proof.additional_hash,
-        canonical_identifier=make_canonical_identifier(
+        canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=request_monitoring.balance_proof.chain_id,
             token_network_address=request_monitoring.balance_proof.token_network_address,
             channel_identifier=request_monitoring.balance_proof.channel_identifier,
@@ -128,7 +124,7 @@ def test_request_monitoring():
         nonce=request_monitoring.balance_proof.nonce,
         balance_hash=request_monitoring.balance_proof.balance_hash,
         additional_hash=request_monitoring.balance_proof.additional_hash,
-        canonical_identifier=make_canonical_identifier(
+        canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=request_monitoring.balance_proof.chain_id,
             token_network_address=request_monitoring.balance_proof.token_network_address,
             channel_identifier=request_monitoring.balance_proof.channel_identifier,
@@ -144,14 +140,13 @@ def test_request_monitoring():
 
 def test_update_pfs():
     balance_proof = make_balance_proof(signer=signer, amount=1)
-
-    channel_state = make_channel_state()
+    channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof
     message = UpdatePFS.from_channel_state(channel_state=channel_state)
 
     assert message.signature == b''
-    privkey2, address2 = make_privkey_address()
+    privkey2, address2 = factories.make_privkey_address()
     signer2 = LocalSigner(privkey2)
     message.sign(signer2)
     assert recover(message._data_to_sign(), message.signature) == address2
@@ -181,7 +176,7 @@ def test_tamper_request_monitoring():
     exploited_signature = request_monitoring.reward_proof_signature
 
     reward_proof_data = pack_reward_proof(
-        canonical_identifier=make_canonical_identifier(
+        canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=request_monitoring.balance_proof.chain_id,
             token_network_address=request_monitoring.balance_proof.token_network_address,
             channel_identifier=request_monitoring.balance_proof.channel_identifier,
@@ -200,7 +195,7 @@ def test_tamper_request_monitoring():
 
     tampered_bp = tampered_balance_hash_request_monitoring.balance_proof
     tampered_balance_hash_reward_proof_data = pack_reward_proof(
-        canonical_identifier=make_canonical_identifier(
+        canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=tampered_bp.chain_id,
             token_network_address=tampered_bp.token_network_address,
             channel_identifier=tampered_bp.channel_identifier,
@@ -233,7 +228,7 @@ def test_tamper_request_monitoring():
 
     tampered_bp = tampered_additional_hash_request_monitoring.balance_proof
     tampered_additional_hash_reward_proof_data = pack_reward_proof(
-        canonical_identifier=make_canonical_identifier(
+        canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=tampered_bp.chain_id,
             token_network_address=tampered_bp.token_network_address,
             channel_identifier=tampered_bp.channel_identifier,
@@ -267,7 +262,7 @@ def test_tamper_request_monitoring():
 
     tampered_bp = tampered_non_closing_signature_request_monitoring.balance_proof
     tampered_non_closing_signature_reward_proof_data = pack_reward_proof(
-        canonical_identifier=make_canonical_identifier(
+        canonical_identifier=factories.make_canonical_identifier(
             chain_identifier=tampered_bp.chain_id,
             token_network_address=tampered_bp.token_network_address,
             channel_identifier=tampered_bp.channel_identifier,

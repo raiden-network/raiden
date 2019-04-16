@@ -80,12 +80,20 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         partner_privkey, partner_address = factories.make_privkey_address()
 
         self.address_to_privkey[partner_address] = partner_privkey
-        self.address_to_channel[partner_address] = factories.make_channel(
-            our_balance=1000,
-            partner_balance=1000,
-            token_network_identifier=self.token_network_id,
-            our_address=self.address,
-            partner_address=partner_address,
+        self.address_to_channel[partner_address] = factories.create(
+            factories.NettingChannelStateProperties(
+                our_state=factories.NettingChannelEndStateProperties(
+                    balance=1000,
+                    address=self.address,
+                ),
+                partner_state=factories.NettingChannelEndStateProperties(
+                    balance=1000,
+                    address=partner_address,
+                ),
+                canonical_identifier=factories.make_canonical_identifier(
+                    token_network_address=self.token_network_id,
+                ),
+            ),
         )
 
         return partner_address

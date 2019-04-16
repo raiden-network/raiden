@@ -23,7 +23,6 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_AMOUNT,
     UNIT_TRANSFER_FEE,
     UNIT_TRANSFER_IDENTIFIER,
-    UNIT_TRANSFER_PKEY,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
     BalanceProofProperties,
@@ -351,8 +350,6 @@ def test_events_for_refund():
             expiration=expiration,
             balance_proof=BalanceProofProperties(
                 canonical_identifier=refund_channel.canonical_identifier,
-                transferred_amount=0,
-                locked_amount=10,
             ),
         ),
     )
@@ -1909,8 +1906,6 @@ def test_node_change_network_state_reachable_node():
             expiration=lock_expiration,
             balance_proof=factories.BalanceProofProperties(
                 canonical_identifier=payer_channel.canonical_identifier,
-                transferred_amount=0,
-                locked_amount=UNIT_TRANSFER_AMOUNT,
             ),
         ),
     ))
@@ -2030,7 +2025,6 @@ def test_backward_transfer_pair_with_fees_deducted():
             expiration=10,
             balance_proof=BalanceProofProperties(
                 canonical_identifier=refund_channel.canonical_identifier,
-                transferred_amount=0,
                 locked_amount=amount + fee,
             ),
         ),

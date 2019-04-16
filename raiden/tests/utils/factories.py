@@ -27,7 +27,6 @@ from raiden.transfer.state import (
     MerkleTreeState,
     NettingChannelEndState,
     NettingChannelState,
-    PaymentNetworkState,
     RouteState,
     TokenNetworkState,
     TransactionExecutionStatus,
@@ -134,7 +133,7 @@ def make_signer(privatekey: bytes = EMPTY) -> Signer:
 
 
 def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
-    channel_state = if_empty(channel_state, make_channel_state())
+    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
     return RouteState(channel_state.partner_state.address, channel_state.identifier)
 
 
@@ -597,8 +596,17 @@ class LockedTransferProperties(NamedTuple):
     secret: typing.Secret = EMPTY
 
 
+LOCKED_TRANSFER_DEFAULTS_BALANCE_PROOF = BalanceProofProperties(
+    nonce=1,
+    locked_amount=UNIT_TRANSFER_AMOUNT,
+    transferred_amount=0,
+    locksroot=EMPTY_MERKLE_ROOT,
+    canonical_identifier=UNIT_CANONICAL_ID,
+)
+
+
 LOCKED_TRANSFER_DEFAULTS = LockedTransferProperties(
-    balance_proof=BALANCE_PROOF_DEFAULTS,
+    balance_proof=LOCKED_TRANSFER_DEFAULTS_BALANCE_PROOF,
     amount=UNIT_TRANSFER_AMOUNT,
     expiration=UNIT_REVEAL_TIMEOUT,
     initiator=UNIT_TRANSFER_INITIATOR,
@@ -757,7 +765,6 @@ def make_signed_transfer_for(
         balance_proof_properties = BalanceProofProperties(
             locksroot=locksroot,
             canonical_identifier=channel_state.canonical_identifier,
-            transferred_amount=0,
             locked_amount=properties.transfer.amount,
         )
     else:
@@ -958,8 +965,6 @@ def make_transfers_pair(
                 payment_identifier=UNIT_TRANSFER_IDENTIFIER,
                 balance_proof=BalanceProofProperties(
                     canonical_identifier=receiver_channel.canonical_identifier,
-                    transferred_amount=0,
-                    locked_amount=UNIT_TRANSFER_AMOUNT,
                 ),
             ),
             sender=channels.partner_address(payer_index),
