@@ -12,6 +12,14 @@ from raiden.utils.solc import compile_files_cwd
 # pylint: disable=unused-argument,protected-access
 
 
+def get_test_contract(name):
+    here = os.path.dirname(os.path.relpath(__file__))
+    contract_path = os.path.join(here, name)
+    contracts = compile_files_cwd([contract_path])
+
+    return contract_path, contracts
+
+
 def make_fixed_gas_price_strategy(gas_price):
     def fixed_gas_price_strategy(_web3, _transaction_params):
         return gas_price
@@ -30,10 +38,7 @@ def make_decreasing_gas_price_strategy(gas_price):
 
 
 def deploy_rpc_test_contract(deploy_client):
-    here = os.path.dirname(os.path.relpath(__file__))
-    contract_path = os.path.join(here, 'RpcTest.sol')
-    contracts = compile_files_cwd([contract_path])
-
+    contract_path, contracts = get_test_contract('RpcTest.sol')
     contract_proxy, _ = deploy_client.deploy_solidity_contract(
         'RpcTest',
         contracts,
@@ -90,6 +95,26 @@ def test_call_inexisting_address(deploy_client):
         'value': 0,
     }
     assert deploy_client.web3.eth.call(transaction) == b''
+
+
+def test_call_with_a_block_number_before_smart_contract_deployed(deploy_client):
+    """ A JSON RPC call using a block number where the smart contract was not
+    yet deployed should raise.
+    """
+    contract_path, contracts = get_test_contract('RpcTest.sol')
+    contract_proxy, receipt = deploy_client.deploy_solidity_contract(
+        'RpcTest',
+        contracts,
+        libraries=dict(),
+        constructor_parameters=None,
+        contract_path=contract_path,
+    )
+
+    deploy_block = receipt['blockNumber']
+    assert contract_proxy.contract.functions.ret().call(block_identifier=deploy_block) == 1
+
+    with pytest.raises(Exception):
+        contract_proxy.contract.functions.ret().call(block_identifier=deploy_block - 1)
 
 
 def test_call_throws(deploy_client):
