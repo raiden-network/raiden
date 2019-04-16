@@ -72,10 +72,9 @@ class Token:
             }
 
             with log_transaction(log, "approve", log_details):
-                checking_block = self.client.get_checking_block()
                 error_prefix = "Call to approve will fail"
                 gas_limit = self.proxy.estimate_gas(
-                    checking_block, "approve", to_checksum_address(allowed_address), allowance
+                    "pending", "approve", to_checksum_address(allowed_address), allowance
                 )
 
                 if gas_limit:
@@ -186,7 +185,7 @@ class Token:
             with log_transaction(log, "transfer", log_details):
                 checking_block = self.client.get_checking_block()
                 gas_limit = self.proxy.estimate_gas(
-                    checking_block, "transfer", to_checksum_address(to_address), amount
+                    "pending", "transfer", to_checksum_address(to_address), amount
                 )
                 failed_receipt = None
 

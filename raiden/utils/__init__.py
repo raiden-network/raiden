@@ -224,7 +224,12 @@ def safe_gas_limit(*estimates: int) -> int:
     """ Calculates a safe gas limit for a number of gas estimates
     including a security margin
     """
-    assert None not in estimates, "if estimateGas returned None it should not reach here"
+    msg = (
+        "estimateGas returns None when the transaction execution would fail. "
+        "This may happen either because a revert/assert is hit, or the required "
+        "startgas is larger then the current block gas limit."
+    )
+    assert None not in estimates, msg
     calculated_limit = max(estimates)
     return int(calculated_limit * constants.GAS_FACTOR)
 

@@ -98,8 +98,7 @@ def run_test_locksroot_loading_during_channel_settle_handling(
     iterations = 1000
 
     def send_transaction():
-        check_block = deploy_client.get_checking_block()
-        startgas = contract_proxy.estimate_gas(check_block, "waste_storage", iterations)
+        startgas = contract_proxy.estimate_gas("pending", "waste_storage", iterations)
         startgas = safe_gas_limit(startgas)
         transaction = contract_proxy.transact("waste_storage", startgas, iterations)
         deploy_client.poll(transaction)

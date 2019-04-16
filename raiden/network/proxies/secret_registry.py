@@ -156,9 +156,7 @@ class SecretRegistry:
         log_details: Dict[Any, Any],
     ) -> None:
         checking_block = self.client.get_checking_block()
-        gas_limit = self.proxy.estimate_gas(
-            checking_block, "registerSecretBatch", secrets_to_register
-        )
+        gas_limit = self.proxy.estimate_gas("pending", "registerSecretBatch", secrets_to_register)
         receipt = None
         transaction_hash = None
         msg = None

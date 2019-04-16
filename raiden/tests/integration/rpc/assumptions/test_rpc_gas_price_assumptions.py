@@ -40,8 +40,7 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
         contract_proxy.contract.abi, contract_proxy.contract_address
     )
 
-    check_block = deploy_client.get_checking_block()
-    gas_estimate = contract_proxy.estimate_gas(check_block, "ret")
+    gas_estimate = contract_proxy.estimate_gas("pending", "ret")
     assert gas_estimate, "Gas estimation should not fail here"
     startgas = safe_gas_limit(gas_estimate)
 
@@ -65,8 +64,7 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
         contract_proxy.contract.abi, contract_proxy.contract_address
     )
 
-    check_block = deploy_client.get_checking_block()
-    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, "ret"))
+    startgas = safe_gas_limit(contract_proxy.estimate_gas("pending", "ret"))
 
     with pytest.raises(ReplacementTransactionUnderpriced):
         second_proxy.transact("ret", startgas)

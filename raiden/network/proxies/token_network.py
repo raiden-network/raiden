@@ -289,9 +289,8 @@ class TokenNetwork:
     def _new_netting_channel(
         self, partner: Address, settle_timeout: int, log_details: Dict[Any, Any]
     ) -> ChannelID:
-        checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
-            checking_block,
+            "pending",
             "openChannel",
             participant1=self.node_address,
             participant2=partner,
@@ -849,7 +848,6 @@ class TokenNetwork:
         previous_total_deposit: TokenAmount,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
         # If there are channels being set up concurrently either the
@@ -873,7 +871,7 @@ class TokenNetwork:
         self.token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
         gas_limit = self.proxy.estimate_gas(
-            checking_block,
+            "pending",
             "setTotalDeposit",
             channel_identifier=channel_identifier,
             participant=self.node_address,
@@ -1300,10 +1298,8 @@ class TokenNetwork:
         participant_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
-
         gas_limit = self.proxy.estimate_gas(
-            checking_block,
+            "pending",
             "setTotalWithdraw",
             channel_identifier=channel_identifier,
             participant=participant,
@@ -1540,9 +1536,8 @@ class TokenNetwork:
         log_details: Dict[Any, Any],
     ) -> None:
         with self.channel_operations_lock[partner]:
-            checking_block = self.client.get_checking_block()
             gas_limit = self.proxy.estimate_gas(
-                checking_block,
+                "pending",
                 "closeChannel",
                 channel_identifier=channel_identifier,
                 partner=partner,
@@ -1794,9 +1789,8 @@ class TokenNetwork:
         non_closing_signature: Signature,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
-            checking_block,
+            "pending",
             "updateNonClosingBalanceProof",
             channel_identifier=channel_identifier,
             closing_participant=partner,
@@ -2067,10 +2061,9 @@ class TokenNetwork:
         given_block_identifier: BlockSpecification,
         log_details: Dict[Any, Any],
     ) -> None:
-        checking_block = self.client.get_checking_block()
         leaves_packed = b"".join(pending_locks.locks)
         gas_limit = self.proxy.estimate_gas(
-            checking_block,
+            "pending",
             "unlock",
             channel_identifier=channel_identifier,
             receiver=receiver,
@@ -2285,8 +2278,6 @@ class TokenNetwork:
         partner_locksroot: Locksroot,
         log_details: Dict[Any, Any],
     ):
-        checking_block = self.client.get_checking_block()
-
         # The second participant transferred + locked amount must be higher
         our_maximum = transferred_amount + locked_amount
         partner_maximum = partner_transferred_amount + partner_locked_amount
@@ -2315,7 +2306,7 @@ class TokenNetwork:
             }
 
         gas_limit = self.proxy.estimate_gas(
-            checking_block, "settleChannel", channel_identifier=channel_identifier, **kwargs
+            "pending", "settleChannel", channel_identifier=channel_identifier, **kwargs
         )
 
         if gas_limit:

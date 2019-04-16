@@ -146,13 +146,12 @@ class TokenNetworkRegistry:
         }
 
         with log_transaction(log, "add_token", log_details):
-            checking_block = self.client.get_checking_block()
             error_prefix = "Call to createERC20TokenNetwork will fail"
 
             kwarguments = {"_token_address": token_address}
             kwarguments.update(additional_arguments)
             gas_limit = self.proxy.estimate_gas(
-                checking_block, "createERC20TokenNetwork", **kwarguments
+                "pending", "createERC20TokenNetwork", **kwarguments
             )
 
             if gas_limit:
@@ -174,7 +173,7 @@ class TokenNetworkRegistry:
                 if transaction_executed:
                     block = receipt_or_none["blockNumber"]
                 else:
-                    block = checking_block
+                    block = self.client.get_checking_block()
 
                 required_gas = (
                     gas_limit

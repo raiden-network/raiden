@@ -12,8 +12,7 @@ def test_estimate_gas_fail(deploy_client):
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    check_block = deploy_client.get_checking_block()
-    assert not contract_proxy.estimate_gas(check_block, "fail")
+    assert not contract_proxy.estimate_gas("pending", "fail")
 
 
 def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
@@ -36,7 +35,5 @@ def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
     # block_identifier for eth_estimateGas. The test should not be flaky
     # because number_iterations is order of magnitudes larger then it needs to
     # be
-    block_identifier = None
-
-    startgas = contract_proxy.estimate_gas(block_identifier, "waste_storage", number_iterations)
+    startgas = contract_proxy.estimate_gas("pending", "waste_storage", number_iterations)
     assert startgas is None, "estimate_gas must return empty if sending the transaction would fail"

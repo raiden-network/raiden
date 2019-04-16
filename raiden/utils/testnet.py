@@ -62,7 +62,7 @@ def call_minting_method(
     """
     method = contract_method.value
 
-    gas_limit = proxy.estimate_gas("latest", method, *args)
+    gas_limit = proxy.estimate_gas("pending", method, *args)
     if gas_limit is None:
         raise MintFailed(
             f"Gas estimation failed. Make sure the token has a "

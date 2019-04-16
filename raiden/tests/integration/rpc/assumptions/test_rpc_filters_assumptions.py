@@ -6,9 +6,8 @@ def test_filter_start_block_inclusive(deploy_client):
     """ A filter includes events from the block given in from_block """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    check_block = deploy_client.get_checking_block()
     # call the create event function twice and wait for confirmation each time
-    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, "createEvent", 1))
+    startgas = safe_gas_limit(contract_proxy.estimate_gas("pending", "createEvent", 1))
     transaction_1 = contract_proxy.transact("createEvent", startgas, 1)
     deploy_client.poll(transaction_1)
     transaction_2 = contract_proxy.transact("createEvent", startgas, 2)
@@ -37,9 +36,8 @@ def test_filter_end_block_inclusive(deploy_client):
     until and including end_block. """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    check_block = deploy_client.get_checking_block()
     # call the create event function twice and wait for confirmation each time
-    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, "createEvent", 1))
+    startgas = safe_gas_limit(contract_proxy.estimate_gas("pending", "createEvent", 1))
     transaction_1 = contract_proxy.transact("createEvent", startgas, 1)
     deploy_client.poll(transaction_1)
     transaction_2 = contract_proxy.transact("createEvent", startgas, 2)

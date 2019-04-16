@@ -93,7 +93,7 @@ class ServiceRegistry:
             raise BrokenPreconditionError(msg)
 
         with log_transaction(log, "set_url", log_details):
-            gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
+            gas_limit = self.proxy.estimate_gas("pending", "setURL", url)
             if not gas_limit:
                 msg = f"URL {url} is invalid"
                 raise RaidenUnrecoverableError(msg)

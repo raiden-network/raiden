@@ -6,7 +6,6 @@ from eth_utils import decode_hex, to_canonical_address, to_checksum_address
 from web3.contract import Contract
 from web3.utils.contracts import encode_transaction_data, find_matching_fn_abi
 
-from raiden import constants
 from raiden.constants import EthClient
 from raiden.exceptions import (
     InsufficientFunds,
@@ -152,22 +151,29 @@ class ContractProxy:
         """Returns a gas estimate for the function with the given arguments or
         None if the function call will fail due to Insufficient funds or
         the logic in the called function."""
+
+        msg = (
+            "Unfortunately geth does not follow the ethereum JSON-RPC spec and "
+            "does not accept a block identifier argument for eth_estimateGas, "
+            "parity and py-evm (trinity) do. "
+            "\n"
+            "Geth only runs estimateGas on the pending block and that's why we "
+            "should also enforce parity, py-evm and others to do the same since "
+            "we can't customize geth. "
+            "\n"
+            "Spec: https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_estimategas "
+            "Geth Issue: https://github.com/ethereum/go-ethereum/issues/2586 "
+            "Relevant web3 PR: https://github.com/ethereum/web3.py/pull/1046 "
+        )
+        assert block_identifier == "pending", msg
+
         fn = getattr(self.contract.functions, function)
         address = to_checksum_address(self.jsonrpc_client.address)
-        if self.jsonrpc_client.eth_node is constants.EthClient.GETH:
-            # Unfortunately geth does not follow the ethereum JSON-RPC spec and
-            # does not accept a block identifier argument for eth_estimateGas
-            # parity and py-evm (trinity) do.
-            #
-            # Geth only runs estimateGas on the pending block and that's why we
-            # should also enforce parity, py-evm and others to do the same since
-            # we can't customize geth.
-            #
-            # Spec: https://github.com/ethereum/wiki/wiki/JSON-RPC#eth_estimategas
-            # Geth Issue: https://github.com/ethereum/go-ethereum/issues/2586
-            # Relevant web3 PR: https://github.com/ethereum/web3.py/pull/1046
-            block_identifier = None
+
         try:
+            if self.jsonrpc_client.eth_node is EthClient.GETH:
+                return fn(*args, **kwargs).estimateGas(transaction={"from": address})
+
             return fn(*args, **kwargs).estimateGas(
                 transaction={"from": address}, block_identifier=block_identifier
             )

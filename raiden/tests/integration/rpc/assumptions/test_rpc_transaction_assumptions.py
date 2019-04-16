@@ -15,8 +15,7 @@ def test_transact_opcode(deploy_client):
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
-    check_block = deploy_client.get_checking_block()
-    startgas = contract_proxy.estimate_gas(check_block, "ret") * 2
+    startgas = contract_proxy.estimate_gas("pending", "ret") * 2
 
     transaction = contract_proxy.transact("ret", startgas)
     deploy_client.poll(transaction)
@@ -48,8 +47,7 @@ def test_transact_opcode_oog(deploy_client):
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
     # divide the estimate by 2 to run into out-of-gas
-    check_block = deploy_client.get_checking_block()
-    startgas = safe_gas_limit(contract_proxy.estimate_gas(check_block, "loop", 1000)) // 2
+    startgas = safe_gas_limit(contract_proxy.estimate_gas("pending", "loop", 1000)) // 2
 
     transaction = contract_proxy.transact("loop", startgas, 1000)
     deploy_client.poll(transaction)
@@ -64,9 +62,7 @@ def test_transact_fail_if_the_account_does_not_have_enough_eth_to_pay_for_thegas
     """
     contract_proxy, _ = deploy_rpc_test_contract(deploy_client, "RpcTest")
 
-    check_block = deploy_client.get_checking_block()
-
-    startgas = contract_proxy.estimate_gas(check_block, "loop", 1000)
+    startgas = contract_proxy.estimate_gas("pending", "loop", 1000)
     assert startgas, "The gas estimation should not have failed."
 
     burn_eth(deploy_client, amount_to_leave=startgas // 2)

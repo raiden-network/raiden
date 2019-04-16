@@ -207,9 +207,8 @@ class UserDeposit:
     ):
         token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
-        checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
-            checking_block, "deposit", to_checksum_address(beneficiary), total_deposit
+            "pending", "deposit", to_checksum_address(beneficiary), total_deposit
         )
 
         if not gas_limit:
