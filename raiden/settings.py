@@ -1,6 +1,7 @@
 from eth_utils import denoms, to_hex
 
 from raiden.constants import Environment
+from raiden.utils.typing import NetworkTimeout
 
 INITIAL_PORT = 38647
 
@@ -28,7 +29,7 @@ DEFAULT_MATRIX_KNOWN_SERVERS = {
 
 DEFAULT_REVEAL_TIMEOUT = 50
 DEFAULT_SETTLE_TIMEOUT = 500
-DEFAULT_RETRY_TIMEOUT = 0.5
+DEFAULT_RETRY_TIMEOUT = NetworkTimeout(0.5)
 DEFAULT_JOINABLE_FUNDS_TARGET = 0.4
 DEFAULT_INITIAL_CHANNEL_TARGET = 3
 DEFAULT_WAIT_FOR_SETTLE = True
