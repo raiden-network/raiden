@@ -10,6 +10,7 @@ from raiden.utils import safe_gas_limit
 from raiden.utils.solc import compile_files_cwd
 
 # pylint: disable=unused-argument,protected-access
+SSTORE_COST = 20000
 
 
 def get_test_contract(name):
@@ -307,3 +308,30 @@ def test_filter_end_block_inclusive(deploy_client):
         to_block=block_number_event_2,
     )
     assert get_list_of_block_numbers(result_3) == block_number_events
+
+
+def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
+        deploy_client,
+        skip_if_not_geth,  # pylint: disable=unused-argument
+):
+    """ Gas estimatation fails if the transaction execution requires more gas
+    then the block's gas limit.
+    """
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcWithStorageTest')
+
+    latest_block_hash = deploy_client.blockhash_from_blocknumber('latest')
+    current_gas_limit = deploy_client.get_block(latest_block_hash)['gasLimit']
+
+    # This number of iterations is an over estimation to accomodate for races,
+    # this cannot be significantly large because on parity it is a blocking
+    # call.
+    number_iterations = current_gas_limit // SSTORE_COST
+
+    # This race condition cannot be fixed because geth does not support
+    # block_identifier for eth_estimateGas, the test should not be flaky
+    # because number_iterations is order of magnitudes larger then it needs to
+    # be
+    block_identifier = None
+
+    startgas = contract_proxy.estimate_gas(block_identifier, 'waste_storage', number_iterations)
+    assert startgas is None, 'estimate_gas must return empty if sending the transaction would fail'
