@@ -1903,17 +1903,17 @@ def test_node_change_network_state_reachable_node():
     ]
 
     lock_expiration = UNIT_REVEAL_TIMEOUT * 2
-    received_transfer = factories.make_signed_transfer_state(
-        amount=1,
-        initiator=UNIT_TRANSFER_SENDER,
-        target=UNIT_TRANSFER_TARGET,
-        expiration=lock_expiration,
-        secret=UNIT_SECRET,
-        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-        channel_identifier=payer_channel.identifier,
-        pkey=UNIT_TRANSFER_PKEY,
-        sender=UNIT_TRANSFER_SENDER,
-    )
+    received_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+        transfer=factories.LockedTransferProperties(
+            amount=1,
+            expiration=lock_expiration,
+            balance_proof=factories.BalanceProofProperties(
+                canonical_identifier=payer_channel.canonical_identifier,
+                transferred_amount=0,
+                locked_amount=UNIT_TRANSFER_AMOUNT,
+            ),
+        ),
+    ))
 
     mediator_state = MediatorTransferState(
         secrethash=UNIT_SECRETHASH,

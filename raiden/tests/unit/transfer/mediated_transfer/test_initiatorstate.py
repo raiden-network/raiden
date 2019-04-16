@@ -538,17 +538,23 @@ def test_refund_transfer_next_route():
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
-    refund_transfer = factories.make_signed_transfer_state(
-        amount,
-        our_address,
-        original_transfer.target,
-        original_transfer.lock.expiration,
-        UNIT_SECRET,
-        payment_identifier=original_transfer.payment_identifier,
-        channel_identifier=channel1.identifier,
-        pkey=refund_pkey,
+    refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+        transfer=factories.LockedTransferProperties(
+            amount=amount,
+            initiator=our_address,
+            target=original_transfer.target,
+            expiration=original_transfer.lock.expiration,
+            payment_identifier=original_transfer.payment_identifier,
+            balance_proof=factories.BalanceProofProperties(
+                canonical_identifier=channel1.canonical_identifier,
+                transferred_amount=0,
+                locked_amount=UNIT_TRANSFER_AMOUNT,
+            ),
+        ),
         sender=refund_address,
-    )
+        pkey=refund_pkey,
+    ))
+
     assert channel1.partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
@@ -590,17 +596,23 @@ def test_refund_transfer_no_more_routes():
 
     initiator_state = get_transfer_at_index(setup.current_state, 0)
     original_transfer = initiator_state.transfer
-    refund_transfer = factories.make_signed_transfer_state(
-        amount,
-        original_transfer.initiator,
-        original_transfer.target,
-        original_transfer.lock.expiration,
-        UNIT_SECRET,
-        payment_identifier=original_transfer.payment_identifier,
-        channel_identifier=setup.channel.identifier,
-        pkey=refund_pkey,
+    refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+        transfer=factories.LockedTransferProperties(
+            amount=amount,
+            initiator=original_transfer.initiator,
+            target=original_transfer.target,
+            expiration=original_transfer.lock.expiration,
+            payment_identifier=original_transfer.payment_identifier,
+            balance_proof=factories.BalanceProofProperties(
+                canonical_identifier=setup.channel.canonical_identifier,
+                transferred_amount=0,
+                locked_amount=UNIT_TRANSFER_AMOUNT,
+            ),
+        ),
         sender=refund_address,
-    )
+        pkey=refund_pkey,
+        message_identifier=factories.make_message_identifier(),
+    ))
 
     state_change = ReceiveTransferRefundCancelRoute(
         routes=setup.available_routes,
@@ -1358,17 +1370,22 @@ def test_secret_reveal_cancel_other_transfers():
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
-    refund_transfer = factories.make_signed_transfer_state(
-        amount,
-        our_address,
-        original_transfer.target,
-        original_transfer.lock.expiration,
-        UNIT_SECRET,
-        payment_identifier=original_transfer.payment_identifier,
-        channel_identifier=channel1.identifier,
-        pkey=refund_pkey,
+    refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+        transfer=factories.LockedTransferProperties(
+            amount=amount,
+            initiator=our_address,
+            target=original_transfer.target,
+            expiration=original_transfer.lock.expiration,
+            payment_identifier=original_transfer.payment_identifier,
+            balance_proof=factories.BalanceProofProperties(
+                canonical_identifier=channel1.canonical_identifier,
+                transferred_amount=0,
+                locked_amount=UNIT_TRANSFER_AMOUNT,
+            ),
+        ),
         sender=refund_address,
-    )
+        pkey=refund_pkey,
+    ))
     assert channel1.partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
@@ -1468,17 +1485,21 @@ def test_refund_after_secret_request():
     current_state = iteration.new_state
     assert current_state is not None
 
-    refund_transfer = factories.make_signed_transfer_state(
-        amount,
-        original_transfer.initiator,
-        original_transfer.target,
-        original_transfer.lock.expiration,
-        UNIT_SECRET,
-        payment_identifier=original_transfer.payment_identifier,
-        channel_identifier=setup.channel.identifier,
-        pkey=refund_pkey,
+    refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+        transfer=factories.LockedTransferProperties(
+            amount=amount,
+            initiator=original_transfer.initiator,
+            target=original_transfer.target,
+            payment_identifier=original_transfer.payment_identifier,
+            balance_proof=factories.BalanceProofProperties(
+                canonical_identifier=setup.channel.canonical_identifier,
+                transferred_amount=0,
+                locked_amount=UNIT_TRANSFER_AMOUNT,
+            ),
+        ),
         sender=refund_address,
-    )
+        pkey=refund_pkey,
+    ))
 
     state_change = ReceiveTransferRefundCancelRoute(
         routes=setup.available_routes,
@@ -1552,17 +1573,22 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
-    refund_transfer = factories.make_signed_transfer_state(
-        amount,
-        our_address,
-        original_transfer.target,
-        original_transfer.lock.expiration,
-        UNIT_SECRET,
-        payment_identifier=original_transfer.payment_identifier,
-        channel_identifier=channel1.identifier,
-        pkey=refund_pkey,
+    refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+        transfer=factories.LockedTransferProperties(
+            amount=amount,
+            initiator=our_address,
+            target=original_transfer.target,
+            expiration=original_transfer.lock.expiration,
+            payment_identifier=original_transfer.payment_identifier,
+            balance_proof=factories.BalanceProofProperties(
+                canonical_identifier=channel1.canonical_identifier,
+                transferred_amount=0,
+                locked_amount=UNIT_TRANSFER_AMOUNT,
+            ),
+        ),
         sender=refund_address,
-    )
+        pkey=refund_pkey,
+    ))
 
     state_change = ReceiveTransferRefundCancelRoute(
         routes=available_routes,
