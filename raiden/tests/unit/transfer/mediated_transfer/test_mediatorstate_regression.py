@@ -149,7 +149,6 @@ def test_regression_send_refund():
     mediator_state.transfers_pair = setup.transfers_pair
 
     last_pair = setup.transfers_pair[-1]
-    channel_identifier = last_pair.payee_transfer.balance_proof.channel_identifier
     canonical_identifier = last_pair.payee_transfer.balance_proof.canonical_identifier
     lock_expiration = last_pair.payee_transfer.lock.expiration
 
@@ -159,8 +158,6 @@ def test_regression_send_refund():
             payment_identifier=UNIT_TRANSFER_IDENTIFIER,
             balance_proof=factories.BalanceProofProperties(
                 canonical_identifier=canonical_identifier,
-                transferred_amount=0,
-                locked_amount=UNIT_TRANSFER_AMOUNT,
             ),
         ),
         sender=setup.channels.partner_address(2),

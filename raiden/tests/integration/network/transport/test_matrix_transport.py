@@ -22,14 +22,8 @@ from raiden.raiden_service import (
     update_monitoring_service_from_balance_proof,
     update_path_finding_service_from_balance_proof,
 )
+from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.factories import (
-    HOP1,
-    HOP1_KEY,
-    UNIT_SECRETHASH,
-    make_address,
-    make_channel_state,
-)
 from raiden.tests.utils.messages import make_balance_proof
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
@@ -102,7 +96,7 @@ def mock_matrix(
     transport = MatrixTransport(config)
     transport._raiden_service = MockRaidenService()
     transport._stop_event.clear()
-    transport._address_mgr.add_userid_for_address(HOP1, USERID1)
+    transport._address_mgr.add_userid_for_address(factories.HOP1, USERID1)
     transport._client.user_id = USERID0
 
     monkeypatch.setattr(MatrixTransport, '_get_user', mock_get_user)
@@ -173,7 +167,7 @@ def skip_userid_validation(monkeypatch):
     import raiden.network.transport.matrix.utils
 
     def mock_validate_userid_signature(user):  # pylint: disable=unused-argument
-        return HOP1
+        return factories.HOP1
 
     monkeypatch.setattr(
         raiden.network.transport.matrix,
@@ -198,11 +192,11 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
         message = SecretRequest(
             message_identifier=random.randint(0, UINT64_MAX),
             payment_identifier=1,
-            secrethash=UNIT_SECRETHASH,
+            secrethash=factories.UNIT_SECRETHASH,
             amount=1,
             expiration=10,
         )
-        message.sign(LocalSigner(HOP1_KEY))
+        message.sign(LocalSigner(factories.HOP1_KEY))
         data = message.encode()
         if convert_to_hex:
             data = '0x' + data.hex()
@@ -442,7 +436,7 @@ def test_matrix_message_retry(
     again but this won't work because the receiver is offline. Once
     the receiver comes back again, the message should be sent again.
     """
-    partner_address = make_address()
+    partner_address = factories.make_address()
 
     transport = MatrixTransport({
         'global_rooms': ['discovery'],
@@ -702,8 +696,8 @@ def test_monitoring_global_messages(
     raiden_service.transport = transport
     transport.log = MagicMock()
 
-    balance_proof = make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1)
-    channel_state = make_channel_state()
+    balance_proof = make_balance_proof(signer=LocalSigner(factories.HOP1_KEY), amount=1)
+    channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof
     monkeypatch.setattr(
@@ -771,9 +765,9 @@ def test_pfs_global_messages(
     raiden_service.transport = transport
     transport.log = MagicMock()
 
-    balance_proof = make_balance_proof(signer=LocalSigner(HOP1_KEY), amount=1)
+    balance_proof = make_balance_proof(signer=LocalSigner(factories.HOP1_KEY), amount=1)
 
-    channel_state = make_channel_state()
+    channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof
     monkeypatch.setattr(
