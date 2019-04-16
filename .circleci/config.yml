@@ -912,7 +912,10 @@ workflows:
       - deploy-pypi:
           context: "Raiden Context"
           requires:
-            - prepare-python-linux
+            - build-binary-linux-x86
+            - build-binary-linux-armv7l
+            - build-binary-linux-aarch64
+            - build-binary-macos
           filters:
             <<: *only-tagged-version-filter
 
