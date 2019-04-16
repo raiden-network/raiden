@@ -14,7 +14,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNREACHABLE,
 )
 from raiden.utils import pex
-from raiden.utils.typing import Address, Dict
+from raiden.utils.typing import Address, Dict, Nonce
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -38,7 +38,7 @@ def healthcheck(
         nat_keepalive_retries: int,
         nat_keepalive_timeout: int,
         nat_invitation_timeout: int,
-        ping_nonce: Dict[str, int],
+        ping_nonce: Dict[str, Nonce],
 ):
     """ Sends a periodical Ping to `recipient` to check its health. """
     # pylint: disable=too-many-branches
@@ -97,7 +97,7 @@ def healthcheck(
     while not stop_event.wait(sleep):
         sleep = nat_keepalive_timeout
 
-        ping_nonce['nonce'] += 1
+        ping_nonce['nonce'] = Nonce(ping_nonce['nonce'] + 1)
         messagedata = transport.get_ping(ping_nonce['nonce'])
         message_id = ('ping', ping_nonce['nonce'], recipient)
 

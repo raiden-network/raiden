@@ -1037,7 +1037,7 @@ class MatrixTransport(Runnable):
         member_ids = {member.user_id for member in room.get_joined_members(force_resync=True)}
         room_is_empty = not bool(peer_ids & member_ids)
         if room_is_empty:
-            last_ex: Optional[Exception] = False
+            last_ex: Optional[Exception] = None
             retry_interval = 0.1
             self.log.debug(
                 'Waiting for peer to join from invite',

@@ -3,7 +3,7 @@ from enum import Enum
 
 from eth_utils import keccak, to_checksum_address, to_hex
 
-from raiden.utils.typing import BlockNumber, Locksroot
+from raiden.utils.typing import BlockHash, BlockNumber, Locksroot, RaidenProtocolVersion, Signature
 
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
@@ -11,7 +11,7 @@ SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
 
 RAIDEN_DB_VERSION = 21
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = RaidenProtocolVersion(1)
 MIN_REQUIRED_SOLC = 'v0.4.23'
 
 INT64_MAX = 2 ** 63 - 1
@@ -32,9 +32,9 @@ NO_STATE_QUERY_AFTER_BLOCKS = STATE_PRUNING_AFTER_BLOCKS - STATE_PRUNING_SAFETY_
 NULL_ADDRESS_BYTES = bytes(20)
 NULL_ADDRESS = to_checksum_address(NULL_ADDRESS_BYTES)
 
-EMPTY_HASH = bytes(32)
+EMPTY_HASH = BlockHash(bytes(32))
 EMPTY_HASH_KECCAK = keccak(EMPTY_HASH)
-EMPTY_SIGNATURE = bytes(65)
+EMPTY_SIGNATURE = Signature(bytes(65))
 EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
 
 SECRET_HASH_HEXSTRING_LENGTH = len(to_hex(EMPTY_HASH))

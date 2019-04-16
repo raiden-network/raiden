@@ -32,6 +32,7 @@ from raiden.utils.typing import (
     Dict,
     List,
     MessageID,
+    Nonce,
     Tuple,
     UDPMessageID,
 )
@@ -642,7 +643,7 @@ class UDPTransport(Runnable):
                 message_id=message_id,
             )
 
-    def get_ping(self, nonce: int) -> Ping:
+    def get_ping(self, nonce: Nonce) -> bytes:
         """ Returns a signed Ping message.
 
         Note: Ping messages don't have an enforced ordering, so a Ping message
@@ -653,9 +654,7 @@ class UDPTransport(Runnable):
             current_protocol_version=constants.PROTOCOL_VERSION,
         )
         self.raiden.sign(message)
-        message_data = message.encode()
-
-        return message_data
+        return message.encode()
 
     def set_node_network_state(self, node_address: Address, node_state):
         state_change = ActionChangeNodeNetworkState(node_address, node_state)
