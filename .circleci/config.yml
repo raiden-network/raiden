@@ -758,6 +758,9 @@ workflows:
           requires:
             - smoketest-udp-production-geth-3.7
             - smoketest-udp-development-geth-3.7
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -770,8 +773,11 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
+            - smoketest-udp-production-geth-3.7
+            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -786,6 +792,9 @@ workflows:
           requires:
             - smoketest-udp-production-geth-3.7
             - smoketest-udp-development-geth-3.7
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -798,6 +807,8 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
+            - smoketest-udp-production-geth-3.7
+            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
@@ -1010,6 +1021,9 @@ workflows:
           requires:
             - smoketest-udp-production-geth-3.7
             - smoketest-udp-development-geth-3.7
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -1022,8 +1036,11 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
+            - smoketest-udp-production-geth-3.7
+            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -1038,6 +1055,9 @@ workflows:
           requires:
             - smoketest-udp-production-geth-3.7
             - smoketest-udp-development-geth-3.7
+            - smoketest-matrix-production-geth-3.7
+            - smoketest-matrix-development-geth-3.7
+            - smoketest-matrix-development-parity-3.7
             - test-unit-3.7
             - test-fuzz-3.7
 
@@ -1050,6 +1070,8 @@ workflows:
           transport-layer: "matrix"
           parallelism: 25
           requires:
+            - smoketest-udp-production-geth-3.7
+            - smoketest-udp-development-geth-3.7
             - smoketest-matrix-production-geth-3.7
             - smoketest-matrix-development-geth-3.7
             - smoketest-matrix-development-parity-3.7
