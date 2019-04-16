@@ -30,10 +30,12 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
+    Host,
     HostPort,
     Iterable,
     List,
     Optional,
+    Port,
     TokenAddress,
     TokenNetworkAddress,
     TokenNetworkID,
@@ -156,8 +158,8 @@ def split_endpoint(endpoint: str) -> HostPort:
     host, port = match.groups()
     returned_port = None
     if port:
-        returned_port = int(port)
-    return host, returned_port
+        returned_port = Port(int(port))
+    return Host(host), returned_port
 
 
 def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
