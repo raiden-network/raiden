@@ -45,6 +45,7 @@ def main():
             rpc_port=rpc_port,
             p2p_port=p2p_port,
             miner=is_miner,
+            extra_config={},
         )
 
         geth_nodes.append(description)

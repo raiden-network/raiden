@@ -104,8 +104,10 @@ def run_restapi_smoketests():
     assert response.status_code == HTTPStatus.OK
 
     response_json = response.json()
-    assert (response_json[0]['partner_address'] ==
-            to_checksum_address(ConnectionManager.BOOTSTRAP_ADDR))
+    assert (
+        response_json[0]['partner_address'] ==
+        to_checksum_address(ConnectionManager.BOOTSTRAP_ADDR)
+    )
     assert response_json[0]['state'] == 'opened'
     assert response_json[0]['balance'] > 0
 
@@ -264,6 +266,7 @@ def setup_testchain(eth_client: EthClient, print_step: Callable) -> ContextManag
         rpc_port=rpc_port,
         p2p_port=p2p_port,
         miner=True,
+        extra_config={},
         blockchain_type=eth_client.value,
     )
 
