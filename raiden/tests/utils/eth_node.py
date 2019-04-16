@@ -139,7 +139,13 @@ def parity_to_cmd(
         'password': 'password',
         'port': 'port',
         'rpcport': 'jsonrpc-port',
-        'pruning': 'pruning-history',
+        'pruning-history': 'pruning-history',
+        'pruning': 'pruning',
+        'pruning-memory': 'pruning-memory',
+        'cache-size-db': 'cache-size-db',
+        'cache-size-blocks': 'cache-size-blocks',
+        'cache-size-queue': 'cache-size-queue',
+        'cache-size': 'cache-size',
     }
 
     cmd = ['parity']

@@ -37,10 +37,10 @@ def make_decreasing_gas_price_strategy(gas_price):
     return increasing_gas_price_strategy
 
 
-def deploy_rpc_test_contract(deploy_client):
-    contract_path, contracts = get_test_contract('RpcTest.sol')
+def deploy_rpc_test_contract(deploy_client, name):
+    contract_path, contracts = get_test_contract(f'{name}.sol')
     contract_proxy, _ = deploy_client.deploy_solidity_contract(
-        'RpcTest',
+        name,
         contracts,
         libraries=dict(),
         constructor_parameters=None,
@@ -66,7 +66,7 @@ def test_call_invalid_selector(deploy_client):
     """ A JSON RPC call to a valid address but with an invalid selector returns
     the empty string.
     """
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
@@ -119,7 +119,7 @@ def test_call_with_a_block_number_before_smart_contract_deployed(deploy_client):
 
 def test_call_throws(deploy_client):
     """ A JSON RPC call to a function that throws/gets reverted returns the empty string. """
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -129,7 +129,7 @@ def test_call_throws(deploy_client):
 
 def test_estimate_gas_fail(deploy_client):
     """ A JSON RPC estimate gas call for a throwing transaction returns None"""
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -143,7 +143,7 @@ def test_duplicated_transaction_same_gas_price_raises(deploy_client):
     gas_price = 2000000000
     gas_price_strategy = make_fixed_gas_price_strategy(gas_price)
     deploy_client.web3.eth.setGasPriceStrategy(gas_price_strategy)
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -172,7 +172,7 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
     """ If the same transaction is sent twice a JSON RPC error is raised. """
     gas_price = 2000000000
     deploy_client.web3.eth.setGasPriceStrategy(make_decreasing_gas_price_strategy(gas_price))
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -197,7 +197,7 @@ def test_duplicated_transaction_different_gas_price_raises(deploy_client):
 
 def test_transact_opcode(deploy_client):
     """ The receipt status field of a transaction that did not throw is 0x1 """
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -213,7 +213,7 @@ def test_transact_opcode(deploy_client):
 
 def test_transact_throws_opcode(deploy_client):
     """ The receipt status field of a transaction that threw is 0x0 """
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -229,7 +229,7 @@ def test_transact_throws_opcode(deploy_client):
 
 def test_transact_opcode_oog(deploy_client):
     """ The receipt status field of a transaction that did NOT throw is 0x0. """
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     address = contract_proxy.contract_address
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
@@ -246,7 +246,7 @@ def test_transact_opcode_oog(deploy_client):
 
 def test_filter_start_block_inclusive(deploy_client):
     """ A filter includes events from the block given in from_block """
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     check_block = deploy_client.get_checking_block()
     # call the create event function twice and wait for confirmation each time
@@ -279,7 +279,7 @@ def test_filter_start_block_inclusive(deploy_client):
 def test_filter_end_block_inclusive(deploy_client):
     """ A filter includes events from the block given in from_block
     until and including end_block. """
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
+    contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcTest')
 
     check_block = deploy_client.get_checking_block()
     # call the create event function twice and wait for confirmation each time
