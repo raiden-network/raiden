@@ -205,7 +205,7 @@ class Message:
         packed = messages.wrap(data)
         return cls.unpack(packed)
 
-    def encode(self):
+    def encode(self) -> bytes:
         packed = self.packed()
         return bytes(packed.data)
 
