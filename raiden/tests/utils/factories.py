@@ -4,6 +4,8 @@ import string
 from functools import singledispatch
 from typing import NamedTuple
 
+from eth_utils import to_checksum_address
+
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer
 from raiden.transfer import balance_proof, channel
@@ -74,6 +76,10 @@ def make_20bytes() -> bytes:
 
 def make_address() -> typing.Address:
     return typing.Address(make_20bytes())
+
+
+def make_checksum_address() -> str:
+    return to_checksum_address(make_address())
 
 
 def make_32bytes() -> bytes:

@@ -396,10 +396,10 @@ def run_test_api_channel_events(raiden_chain, token_addresses):
     assert must_have_event(app0_events, {'event': ChannelEvent.DEPOSIT})
 
     app0_events = app0.raiden.wal.storage.get_events()
-    any(isinstance(event, EventPaymentSentSuccess) for event in app0_events)
+    assert any(isinstance(event, EventPaymentSentSuccess) for event in app0_events)
 
     app1_events = app1.raiden.wal.storage.get_events()
-    any(isinstance(event, EventPaymentReceivedSuccess) for event in app1_events)
+    assert any(isinstance(event, EventPaymentReceivedSuccess) for event in app1_events)
 
     app1_events = RaidenAPI(app1.raiden).get_blockchain_events_channel(
         token_address,

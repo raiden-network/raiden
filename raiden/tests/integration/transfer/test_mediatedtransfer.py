@@ -386,28 +386,33 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         )
         assert not patched.called
 
-        app0.raiden.config['services']['pathfinding_service_address'] = 'mock_address'
-        app0.raiden.start_mediated_transfer_with_secret(
-            token_network_identifier=token_network_id,
-            amount=11,
-            fee=0,
-            target=factories.HOP2,
-            identifier=2,
-            secret=b'2' * 32,
+        config_patch = dict(
+            pathfinding_service_address='mock-address',
+            pathfinding_eth_address=factories.make_checksum_address(),
         )
-        assert patched.call_count == 1
 
-        locked_transfer = factories.make_signed_transfer(
-            amount=5,
-            initiator=factories.HOP1,
-            target=factories.HOP2,
-            sender=factories.HOP1,
-            pkey=factories.HOP1_KEY,
-            token_network_address=token_network_id,
-            token=token_address,
-        )
-        app0.raiden.mediate_mediated_transfer(locked_transfer)
-        assert patched.call_count == 2
+        with patch.dict(app0.raiden.config['services'], config_patch):
+            app0.raiden.start_mediated_transfer_with_secret(
+                token_network_identifier=token_network_id,
+                amount=11,
+                fee=0,
+                target=factories.HOP2,
+                identifier=2,
+                secret=b'2' * 32,
+            )
+            assert patched.call_count == 1
+
+            locked_transfer = factories.make_signed_transfer(
+                amount=5,
+                initiator=factories.HOP1,
+                target=factories.HOP2,
+                sender=factories.HOP1,
+                pkey=factories.HOP1_KEY,
+                token_network_address=token_network_id,
+                token=token_address,
+            )
+            app0.raiden.mediate_mediated_transfer(locked_transfer)
+            assert patched.call_count == 2
 
 
 @pytest.mark.parametrize('channels_per_node', [CHAIN])

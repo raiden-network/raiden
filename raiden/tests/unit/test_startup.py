@@ -7,7 +7,7 @@ from gevent import server
 from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.network.transport import UDPTransport
-from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.factories import make_address, make_checksum_address
 from raiden.tests.utils.mocks import MockChain, patched_get_for_succesful_pfs_info
 from raiden.ui.startup import (
     setup_contracts_or_exit,
@@ -246,8 +246,8 @@ def test_setup_proxies_all_addresses_are_given(routing_mode):
             blockchain_service=blockchain_service,
             contracts=contracts,
             routing_mode=routing_mode,
-            pathfinding_service_address=make_address(),
-            pathfinding_eth_address=make_address(),
+            pathfinding_service_address='my-pfs',
+            pathfinding_eth_address=make_checksum_address(),
         )
     assert proxies
     assert proxies.token_network_registry
@@ -283,8 +283,8 @@ def test_setup_proxies_all_addresses_are_known(routing_mode):
             blockchain_service=blockchain_service,
             contracts=contracts,
             routing_mode=routing_mode,
-            pathfinding_service_address=make_address(),
-            pathfinding_eth_address=make_address(),
+            pathfinding_service_address='my-pfs',
+            pathfinding_eth_address=make_checksum_address(),
         )
     assert proxies
     assert proxies.token_network_registry
@@ -322,8 +322,8 @@ def test_setup_proxies_no_service_registry_but_pfs():
             blockchain_service=blockchain_service,
             contracts=contracts,
             routing_mode=RoutingMode.PFS,
-            pathfinding_service_address=make_address(),
-            pathfinding_eth_address=make_address(),
+            pathfinding_service_address='my-pfs',
+            pathfinding_eth_address=make_checksum_address(),
         )
     assert proxies
 
@@ -357,7 +357,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
                 contracts=contracts,
                 routing_mode=RoutingMode.PFS,
                 pathfinding_service_address=None,
-                pathfinding_eth_address=make_address(),
+                pathfinding_eth_address=None,
             )
 
 
