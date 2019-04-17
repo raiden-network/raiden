@@ -5,7 +5,7 @@ from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils import pex, sha3
-from raiden.utils.serialization import deserialize_bytes, deserialize_secret_hash, serialize_bytes
+from raiden.utils.serialization import deserialize_secret, deserialize_secret_hash, serialize_bytes
 from raiden.utils.typing import (
     Address,
     Any,
@@ -232,7 +232,7 @@ class SendSecretReveal(SendMessageEvent):
             recipient=to_canonical_address(data['recipient']),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
             message_identifier=MessageID(int(data['message_identifier'])),
-            secret=Secret(deserialize_bytes(data['secret'])),
+            secret=deserialize_secret(data['secret']),
         )
 
         return restored
@@ -324,7 +324,7 @@ class SendBalanceProof(SendMessageEvent):
             message_identifier=MessageID(int(data['message_identifier'])),
             payment_identifier=PaymentID(int(data['payment_identifier'])),
             token_address=to_canonical_address(data['token_address']),
-            secret=Secret(deserialize_bytes(data['secret'])),
+            secret=deserialize_secret(data['secret']),
             balance_proof=data['balance_proof'],
         )
 
@@ -404,7 +404,7 @@ class SendSecretRequest(SendMessageEvent):
             payment_identifier=PaymentID(int(data['payment_identifier'])),
             amount=PaymentWithFeeAmount(int(data['amount'])),
             expiration=BlockExpiration(int(data['expiration'])),
-            secrethash=SecretHash(deserialize_bytes(data['secrethash'])),
+            secrethash=deserialize_secret_hash(data['secrethash']),
         )
 
         return restored
