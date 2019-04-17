@@ -168,7 +168,7 @@ def create_square_network_topology(
 CONFIG = {
     'services': {
         'pathfinding_service_address': 'my-pfs',
-        'pathfinding_eth_address': to_checksum_address(factories.make_address()),
+        'pathfinding_eth_address': factories.make_checksum_address(),
         'pathfinding_max_paths': 3,
         'pathfinding_iou_timeout': 10,
         'pathfinding_max_fee': 50,
