@@ -20,6 +20,15 @@ from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
 
+pytest.register_assert_rewrite('raiden.tests.utils.eth_node')
+pytest.register_assert_rewrite('raiden.tests.utils.factories')
+pytest.register_assert_rewrite('raiden.tests.utils.messages')
+pytest.register_assert_rewrite('raiden.tests.utils.network')
+pytest.register_assert_rewrite('raiden.tests.utils.protocol')
+pytest.register_assert_rewrite('raiden.tests.utils.smartcontracts')
+pytest.register_assert_rewrite('raiden.tests.utils.smoketest')
+pytest.register_assert_rewrite('raiden.tests.utils.transfer')
+
 
 def pytest_addoption(parser):
     parser.addoption(
