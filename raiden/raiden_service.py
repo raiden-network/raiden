@@ -64,7 +64,6 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveNewPaymentNetwork,
 )
-from raiden.transfer.views import BalanceProofType, ChangedBalanceProof
 from raiden.utils import create_default_identifier, lpex, pex, random_secret, sha3, to_rdn
 from raiden.utils.runnable import Runnable
 from raiden.utils.signer import LocalSigner, Signer
@@ -219,19 +218,18 @@ class PaymentStatus(NamedTuple):
 def update_services_from_balance_proof(
         raiden: 'RaidenService',
         chain_state: 'ChainState',
-        changed_balance_proof: ChangedBalanceProof,
+        balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState],
 ) -> None:
     update_path_finding_service_from_balance_proof(
         raiden=raiden,
         chain_state=chain_state,
-        new_balance_proof=changed_balance_proof.balance_proof,
+        new_balance_proof=balance_proof,
     )
-    if changed_balance_proof.bp_type == BalanceProofType.PARTNER:
-        assert isinstance(changed_balance_proof.balance_proof, BalanceProofSignedState)
+    if isinstance(balance_proof, BalanceProofSignedState):
         update_monitoring_service_from_balance_proof(
             raiden=raiden,
             chain_state=chain_state,
-            new_balance_proof=changed_balance_proof.balance_proof,
+            new_balance_proof=balance_proof,
         )
 
 

@@ -10,11 +10,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
     TransactionExecutionStatus,
 )
-from raiden.transfer.views import (
-    BalanceProofType,
-    ChangedBalanceProof,
-    detect_balance_proof_change,
-)
+from raiden.transfer.views import detect_balance_proof_change
 
 
 def test_detect_balance_proof_change():
@@ -94,11 +90,7 @@ def test_detect_balance_proof_change():
 
     channel_copy.partner_state.balance_proof = object()
     assert len(diff()) == 1
-
-    assert diff() == [ChangedBalanceProof(
-        balance_proof=balance_proof,
-        bp_type=BalanceProofType.PARTNER,
-    )]
+    assert diff() == [balance_proof]
 
     # check our_state BP changes
     channel_copy.partner_state.balance_proof = balance_proof
@@ -107,10 +99,7 @@ def test_detect_balance_proof_change():
     channel.our_state.balance_proof = object()
     channel_copy.our_state = our_state_copy
     assert len(diff()) == 1
-    assert diff() == [ChangedBalanceProof(
-        balance_proof=channel.our_state.balance_proof,
-        bp_type=BalanceProofType.OUR,
-    )]
+    assert diff() == [channel.our_state.balance_proof]
 
     channel_copy.our_state.balance_proof = channel.our_state.balance_proof
     assert len(diff()) == 0
