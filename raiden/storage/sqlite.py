@@ -105,7 +105,6 @@ class SQLiteStorage(SerializationBase):
         self.conn = conn
         self.write_lock = threading.Lock()
         self.in_transaction = False
-        self.update_version()
 
     def update_version(self):
         cursor = self.conn.cursor()
