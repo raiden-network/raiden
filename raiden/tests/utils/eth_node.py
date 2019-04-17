@@ -454,7 +454,9 @@ def eth_run_nodes(
         executors = []
         for node_config, cmd in zip(nodes_configuration, cmds):
             log_path = eth_node_to_logpath(node_config, logdir)
-            logfile = stack.enter_context(open(log_path, 'w+'))
+            logfile = open(log_path, 'w+')
+
+            stack.enter_context(logfile)
 
             executor = JSONRPCExecutor(
                 command=cmd,
