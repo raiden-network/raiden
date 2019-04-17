@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-from enum import Enum
-
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, State
 from raiden.transfer.state import (
@@ -547,21 +544,10 @@ def filter_channels_by_status(
     return states
 
 
-class BalanceProofType(Enum):
-    OUR = 1
-    PARTNER = 2
-
-
-@dataclass
-class ChangedBalanceProof:
-    balance_proof: Union[BalanceProofSignedState, BalanceProofUnsignedState]
-    bp_type: BalanceProofType
-
-
 def detect_balance_proof_change(
         old_state: State,
         current_state: State,
-) -> Iterator[ChangedBalanceProof]:
+) -> Iterator[Union[BalanceProofSignedState, BalanceProofUnsignedState]]:
     """ Compare two states for any received balance_proofs that are not in `old_state`. """
     if old_state == current_state:
         return
@@ -615,10 +601,7 @@ def detect_balance_proof_change(
                     )
 
                     if partner_state_updated:
-                        yield ChangedBalanceProof(
-                            balance_proof=current_channel.partner_state.balance_proof,
-                            bp_type=BalanceProofType.PARTNER,
-                        )
+                        yield current_channel.partner_state.balance_proof
 
                     our_state_updated = (
                         current_channel.our_state.balance_proof is not None and
@@ -630,7 +613,4 @@ def detect_balance_proof_change(
                     )
 
                     if our_state_updated:
-                        yield ChangedBalanceProof(
-                            balance_proof=current_channel.our_state.balance_proof,
-                            bp_type=BalanceProofType.OUR,
-                        )
+                        yield current_channel.our_state.balance_proof
