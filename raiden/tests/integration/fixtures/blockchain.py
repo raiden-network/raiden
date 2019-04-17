@@ -49,7 +49,7 @@ def web3(
     if blockchain_type not in {client.value for client in EthClient}:
         raise ValueError(f'unknown blockchain_type {blockchain_type}')
 
-    host = '0.0.0.0'
+    host = '127.0.0.1'
     rpc_port = blockchain_rpc_ports[0]
     endpoint = f'http://{host}:{rpc_port}'
     web3 = Web3(HTTPProvider(endpoint))
