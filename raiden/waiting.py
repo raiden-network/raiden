@@ -149,6 +149,10 @@ def wait_for_channel_in_states(
 ) -> None:
     """Wait until all channels are in `target_states`.
 
+    Raises:
+        ValueError: If the token_address is not registered in the
+            payment_network.
+
     Note:
         This does not time out, use gevent.Timeout.
     """
@@ -159,13 +163,14 @@ def wait_for_channel_in_states(
         token_address=token_address,
     )
 
-    if not token_network:
+    if token_network is None:
         raise ValueError(
-            f'token {token_address} is not registered in {payment_network_id}',
+            f'The token {token_address} is not registered on the network {payment_network_id}.',
         )
+
     token_network_address = token_network.address
 
-    canonical_ids = [
+    list_cannonical_ids = [
         CanonicalIdentifier(
             chain_identifier=chain_state.chain_id,
             token_network_address=token_network_address,
@@ -174,13 +179,13 @@ def wait_for_channel_in_states(
         for channel_identifier in channel_ids
     ]
 
-    while canonical_ids:
-        canonical_identifier = canonical_ids[-1]
-
+    while list_cannonical_ids:
+        canonical_id = list_cannonical_ids[-1]
         chain_state = views.state_from_raiden(raiden)
+
         channel_state = views.get_channelstate_by_canonical_identifier(
             chain_state=chain_state,
-            canonical_identifier=canonical_identifier,
+            canonical_identifier=canonical_id,
         )
 
         channel_is_settled = (
@@ -189,7 +194,7 @@ def wait_for_channel_in_states(
         )
 
         if channel_is_settled:
-            canonical_ids.pop()
+            list_cannonical_ids.pop()
         else:
             gevent.sleep(retry_timeout)
 
