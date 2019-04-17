@@ -233,7 +233,7 @@ class UpgradeManager:
                         )
 
                     update_version(storage, RAIDEN_DB_VERSION)
-            except Exception as e:
+            except BaseException as e:
                 log.error(f'Failed to upgrade database: {e}')
                 raise
 
