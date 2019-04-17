@@ -573,7 +573,7 @@ class SQLiteStorage(SerializationBase):
             cursor.execute('BEGIN')
             yield
             cursor.execute('COMMIT')
-        except Exception:
+        except:  # noqa
             cursor.execute('ROLLBACK')
             raise
         finally:
