@@ -270,9 +270,23 @@ jobs:
       - run:
           name: Validate CircleCI Config
           command: python tools/check_circleci_config.py
+
+      # Do not compare across PRs, otherwise a PR that is fixing linting errors
+      # will make unrelated PRs fail.
+      - restore_cache:
+          key: lint-cache-v0-{{ .Branch }}-
+          key: lint-cache-v0-master-
       - run:
           name: Run Lint
           command: make lint
+      - run:
+          name: Decreasing linting errors
+          command: .circleci/enforce_decreasing_lint_errors.sh
+      # a new cache has to be generated on every run because they are immutable
+      - save_cache:
+          key: lint-cache-v0-{{ .Branch }}-{{ .BuildNum }}
+          paths:
+          - "~/lint-cache"
 
   smoketest:
     parameters:
