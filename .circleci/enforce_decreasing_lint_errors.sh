@@ -67,6 +67,8 @@ pylint \
 
 mypy raiden tools > ${new_report_mypy} || true
 
+exit_code=0
+
 if ! compare_reports "${new_report_pylint}" "${old_report_pylint}"; then
     exit_code=1
 fi
