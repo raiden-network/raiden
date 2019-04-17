@@ -152,24 +152,35 @@ def wait_for_channel_in_states(
     Note:
         This does not time out, use gevent.Timeout.
     """
-    channel_ids = list(channel_ids)
+    chain_state = views.state_from_raiden(raiden)
+    token_network = views.get_token_network_by_token_address(
+        chain_state=chain_state,
+        payment_network_id=payment_network_id,
+        token_address=token_address,
+    )
 
-    while channel_ids:
-        last_id = channel_ids[-1]
+    if not token_network:
+        raise ValueError(
+            f'token {token_address} is not registered in {payment_network_id}',
+        )
+    token_network_address = token_network.address
+
+    canonical_ids = [
+        CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=token_network_address,
+            channel_identifier=channel_identifier,
+        )
+        for channel_identifier in channel_ids
+    ]
+
+    while canonical_ids:
+        canonical_identifier = canonical_ids[-1]
+
         chain_state = views.state_from_raiden(raiden)
-        token_network_address = views.get_token_network_by_token_address(
-            chain_state=chain_state,
-            payment_network_id=payment_network_id,
-            token_address=token_address,
-        ).address
-        assert token_network_address
         channel_state = views.get_channelstate_by_canonical_identifier(
             chain_state=chain_state,
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=chain_state.chain_id,
-                token_network_address=token_network_address,
-                channel_identifier=last_id,
-            ),
+            canonical_identifier=canonical_identifier,
         )
 
         channel_is_settled = (
@@ -178,7 +189,7 @@ def wait_for_channel_in_states(
         )
 
         if channel_is_settled:
-            channel_ids.pop()
+            canonical_ids.pop()
         else:
             gevent.sleep(retry_timeout)
 
