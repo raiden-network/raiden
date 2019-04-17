@@ -2,7 +2,6 @@
 import random
 
 import gevent
-from gevent.timeout import Timeout
 
 from raiden.app import App
 from raiden.constants import UINT64_MAX

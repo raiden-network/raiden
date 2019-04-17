@@ -85,7 +85,6 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
         number_of_nodes=number_of_nodes,
         token_addresses=token_addresses,
         network_wait=network_wait,
-        user_deposit_address=user_deposit_address,
     )
 
 
@@ -94,7 +93,6 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
         number_of_nodes,
         token_addresses,
         network_wait,
-        user_deposit_address,
 ):
     app0, app1 = raiden_network
 
