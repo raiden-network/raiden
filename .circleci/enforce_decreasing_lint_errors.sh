@@ -59,11 +59,11 @@ CACHE_DIR="${HOME}/lint-cache"
 mkdir -p "${CACHE_DIR}"
 
 old_report_pylint="${CACHE_DIR}/pylint"
-old_report_mypy="${CACHE_DIR}/pylint"
+old_report_mypy="${CACHE_DIR}/mypy"
 new_report_pylint=$(mktemp)
 new_report_mypy=$(mktemp)
 
-pylint \
+pylint --jobs=0 \
     --load-plugins=tools.pylint.gevent_checker,tools.pylint.assert_checker \
     raiden/ tools/scenario-player/ > ${new_report_pylint} || true
 
