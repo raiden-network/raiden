@@ -864,10 +864,10 @@ class Lock:
             raise ValueError(f'amount {amount} is too large')
 
         if expiration < 0:
-            raise ValueError(f'expiration {amount} needs to be positive')
+            raise ValueError(f'expiration {expiration} needs to be positive')
 
         if expiration >= 2 ** 256:
-            raise ValueError(f'expiration {amount} is too large')
+            raise ValueError(f'expiration {expiration} is too large')
 
         if not ishash(secrethash):
             raise ValueError('secrethash {secrethash} is not a valid hash')
@@ -1539,7 +1539,7 @@ class SignedBlindedBalanceProof:
     ) -> 'SignedBlindedBalanceProof':
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError(
-                'balance_proof is not of an instance of the type BalanceProofSignedState',
+                'balance_proof is not an instance of the type BalanceProofSignedState',
             )
 
         return cls(
@@ -1645,7 +1645,7 @@ class RequestMonitoring(SignedMessage):
     ) -> 'RequestMonitoring':
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError(
-                'balance_proof is not of an instance of the type BalanceProofSignedState',
+                'balance_proof is not an instance of the type BalanceProofSignedState',
             )
 
         onchain_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
