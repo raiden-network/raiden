@@ -13,7 +13,7 @@ def reveal_secret_with_resolver(
         secret_request_event: SendSecretRequest,
 ) -> bool:
 
-    if raiden.config['resolver_endpoint'] is None:
+    if 'resolver_endpoint' not in raiden.config:
         return False
 
     request = {
