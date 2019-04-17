@@ -7,7 +7,7 @@ from gevent.timeout import Timeout
 from raiden.app import App
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, LockExpired, Unlock
+from raiden.messages import LockedTransfer, LockExpired, Message, Unlock
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
@@ -26,16 +26,38 @@ from raiden.transfer.state import (
 )
 from raiden.utils import sha3
 from raiden.utils.signer import LocalSigner, Signer
-from raiden.utils.typing import FeeAmount, PaymentAmount, PaymentID, TokenAddress
+from raiden.utils.typing import (
+    Balance,
+    Callable,
+    ChainID,
+    FeeAmount,
+    InitiatorAddress,
+    Keccak256,
+    List,
+    LockedAmount,
+    Nonce,
+    Optional,
+    PaymentAmount,
+    PaymentID,
+    Secret,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+    TokenNetworkID,
+)
 
 
-def sign_and_inject(message, signer: Signer, app):
+def sign_and_inject(message: Message, signer: Signer, app: App) -> None:
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(signer)
     MessageHandler().on_message(app.raiden, message)
 
 
-def get_channelstate(app0, app1, token_network_identifier) -> NettingChannelState:
+def get_channelstate(
+        app0: App,
+        app1: App,
+        token_network_identifier: TokenNetworkID,
+) -> NettingChannelState:
     channel_state = views.get_channelstate_by_token_network_and_partner(
         views.state_from_app(app0),
         token_network_identifier,
@@ -86,14 +108,14 @@ def transfer(
 
 
 def assert_synced_channel_state(
-        token_network_identifier,
-        app0,
-        balance0,
-        pending_locks0,
-        app1,
-        balance1,
-        pending_locks1,
-):
+        token_network_identifier: TokenNetworkID,
+        app0: App,
+        balance0: Balance,
+        pending_locks0: List[HashTimeLockState],
+        app1: App,
+        balance1: Balance,
+        pending_locks1: List[HashTimeLockState],
+) -> None:
     """ Assert the values of two synced channels.
 
     Note:
@@ -131,7 +153,7 @@ def assert_synced_channel_state(
     assert_mirror(channel1, channel0)
 
 
-def wait_assert(func, *args, **kwargs):
+def wait_assert(func: Callable, *args, **kwargs) -> None:
     """ Utility to re-run `func` if it raises an assert. Return once `func`
     doesn't hit a failed assert anymore.
 
@@ -149,7 +171,7 @@ def wait_assert(func, *args, **kwargs):
             break
 
 
-def assert_mirror(original, mirror):
+def assert_mirror(original: NettingChannelState, mirror: NettingChannelState) -> None:
     """ Assert that `mirror` has a correct `partner_state` to represent `original`."""
     original_locked_amount = channel.get_amount_locked(original.our_state)
     mirror_locked_amount = channel.get_amount_locked(mirror.partner_state)
@@ -168,7 +190,10 @@ def assert_mirror(original, mirror):
     assert distributable0 == distributable1
 
 
-def assert_locked(from_channel, pending_locks):
+def assert_locked(
+        from_channel: NettingChannelState,
+        pending_locks: List[HashTimeLockState],
+) -> None:
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
@@ -186,7 +211,11 @@ def assert_locked(from_channel, pending_locks):
         assert pending or unclaimed
 
 
-def assert_balance(from_channel, balance, locked):
+def assert_balance(
+        from_channel: NettingChannelState,
+        balance: Balance,
+        locked: LockedAmount,
+) -> None:
     """ Assert the from_channel overall token values. """
     assert balance >= 0
     assert locked >= 0
@@ -196,24 +225,37 @@ def assert_balance(from_channel, balance, locked):
         from_channel.our_state,
         from_channel.partner_state,
     )
+    channel_balance = channel.get_balance(from_channel.our_state, from_channel.partner_state)
+    channel_locked_amount = channel.get_amount_locked(from_channel.our_state)
 
-    assert channel.get_balance(from_channel.our_state, from_channel.partner_state) == balance
-    assert channel_distributable == distributable
-    assert channel.get_amount_locked(from_channel.our_state) == locked
+    msg = f'channel balance does not match. Expected: {balance} got: {channel_balance}'
+    assert channel_balance == balance, msg
 
-    amount_locked = channel.get_amount_locked(from_channel.our_state)
-    assert balance == amount_locked + distributable
+    msg = (
+        f'channel distributable amount does not match. '
+        f'Expected: {distributable} got: {channel_distributable}'
+    )
+    assert channel_distributable == distributable, msg
+
+    msg = f'channel locked amount does not match. Expected: {locked} got: {channel_locked_amount}'
+    assert channel_locked_amount == locked, msg
+
+    msg = (
+        f'locked_amount ({locked}) + distributable ({distributable}) '
+        f'did not equal the balance ({balance})'
+    )
+    assert balance == locked + distributable, msg
 
 
 def make_mediated_transfer(
-        from_channel,
-        partner_channel,
-        initiator,
-        target,
-        lock,
-        pkey,
-        secret=None,
-):
+        from_channel: NettingChannelState,
+        partner_channel: NettingChannelState,
+        initiator: InitiatorAddress,
+        target: TargetAddress,
+        lock: HashTimeLockState,
+        pkey: bytes,
+        secret: Optional[Secret] = None,
+) -> LockedTransfer:
     """ Helper to create and register a mediated transfer from `from_channel` to
     `partner_channel`."""
     payment_identifier = channel.get_next_nonce(from_channel.our_state)
@@ -256,15 +298,15 @@ def make_mediated_transfer(
 
 
 def make_receive_transfer_mediated(
-        channel_state,
-        privkey,
-        nonce,
-        transferred_amount,
-        lock,
-        merkletree_leaves=None,
-        locked_amount=None,
-        chain_id=None,
-):
+        channel_state: NettingChannelState,
+        privkey: bytes,
+        nonce: Nonce,
+        transferred_amount: TokenAmount,
+        lock: HashTimeLockState,
+        merkletree_leaves: List[Keccak256] = None,
+        locked_amount: Optional[LockedAmount] = None,
+        chain_id: Optional[ChainID] = None,
+) -> LockedTransferSignedState:
 
     if not isinstance(lock, HashTimeLockState):
         raise ValueError('lock must be of type HashTimeLockState')
@@ -325,15 +367,15 @@ def make_receive_transfer_mediated(
 
 
 def make_receive_expired_lock(
-        channel_state,
-        privkey,
-        nonce,
-        transferred_amount,
-        lock,
-        merkletree_leaves=None,
-        locked_amount=None,
-        chain_id=None,
-):
+        channel_state: NettingChannelState,
+        privkey: bytes,
+        nonce: Nonce,
+        transferred_amount: TokenAmount,
+        lock: HashTimeLockState,
+        merkletree_leaves: List[Keccak256] = None,
+        locked_amount: LockedAmount = None,
+        chain_id: ChainID = None,
+) -> ReceiveLockExpired:
 
     if not isinstance(lock, HashTimeLockState):
         raise ValueError('lock must be of type HashTimeLockState')
