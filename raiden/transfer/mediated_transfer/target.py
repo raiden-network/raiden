@@ -40,13 +40,13 @@ def sanity_check(
     is_running = new_state is not None
     is_cleared = was_running and not is_running
 
-    if is_cleared:
+    if old_state and is_cleared:
         lock = channel.get_lock(
             end_state=channel_state.partner_state,
             secrethash=old_state.transfer.lock.secrethash,
         )
         assert lock is None, 'The lock must be cleared once the task exists'
-    elif is_running:
+    elif new_state and is_running:
         # old_state can be None if the task is starting
         lock = channel.get_lock(
             end_state=channel_state.partner_state,

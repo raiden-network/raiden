@@ -413,6 +413,8 @@ class RaidenAPI:
             partner_address=partner_address,
         )
 
+        assert channel_state, f'channel {channel_state} is gone'
+
         return channel_state.identifier
 
     def set_total_channel_deposit(
@@ -948,14 +950,16 @@ class RaidenAPI:
         )
         returned_events = []
         for channel in channel_list:
-            returned_events.extend(blockchain_events.get_all_netting_channel_events(
-                chain=self.raiden.chain,
-                token_network_address=token_network_address,
-                netting_channel_identifier=channel.identifier,
-                contract_manager=self.raiden.contract_manager,
-                from_block=from_block,
-                to_block=to_block,
-            ))
+            returned_events.extend(
+                blockchain_events.get_all_netting_channel_events(
+                    chain=self.raiden.chain,
+                    token_network_address=token_network_address,
+                    netting_channel_identifier=channel.identifier,
+                    contract_manager=self.raiden.contract_manager,
+                    from_block=from_block,
+                    to_block=to_block,
+                ),
+            )
         returned_events.sort(key=lambda evt: evt.get('block_number'), reverse=True)
         return returned_events
 

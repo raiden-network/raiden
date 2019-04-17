@@ -24,11 +24,16 @@ def channel_state_until_state_change(
     assert wal.state_manager.current_state is not None, msg
 
     chain_state = wal.state_manager.current_state
-    token_network_address = views.get_token_network_by_token_address(
+    token_network = views.get_token_network_by_token_address(
         chain_state=chain_state,
         payment_network_id=payment_network_identifier,
         token_address=token_address,
-    ).address
+    )
+
+    if not token_network:
+        return None
+
+    token_network_address = token_network.address
 
     canonical_identifier = CanonicalIdentifier(
         chain_identifier=chain_state.chain_id,

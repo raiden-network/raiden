@@ -1,5 +1,6 @@
-from dataclasses import dataclass
 from enum import Enum
+
+from dataclasses import dataclass
 
 from raiden.transfer import channel
 from raiden.transfer.architecture import ContractSendEvent, State
@@ -248,8 +249,8 @@ def get_token_network_by_token_address(
     if payment_network is not None:
         token_network_id = payment_network.tokenaddresses_to_tokenidentifiers.get(token_address)
 
-    if token_network_id:
-        return payment_network.tokenidentifiers_to_tokennetworks.get(token_network_id)
+        if token_network_id:
+            return payment_network.tokenidentifiers_to_tokennetworks.get(token_network_id)
 
     return None
 
@@ -360,9 +361,13 @@ def get_channelstate_filter(
     )
 
     result = []
+    if not token_network:
+        return result
+
     for channel_state in token_network.channelidentifiers_to_channels.values():
         if filter_fn(channel_state):
             result.append(channel_state)
+
     return result
 
 
@@ -506,6 +511,9 @@ def filter_channels_by_partneraddress(
     )
 
     result = []
+    if not token_network:
+        return result
+
     for partner in partner_addresses:
         channels = [
             token_network.channelidentifiers_to_channels[channel_id]
