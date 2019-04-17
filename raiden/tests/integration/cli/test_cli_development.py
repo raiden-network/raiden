@@ -12,10 +12,12 @@ pytestmark = pytest.mark.parametrize(
 )
 
 
-@pytest.mark.timeout(65)
-@pytest.mark.parametrize('changed_args', [{
-    'environment_type': Environment.DEVELOPMENT.value,
-}])
+@pytest.mark.timeout(80)
+@pytest.mark.parametrize(
+    'changed_args', [{
+        'environment_type': Environment.DEVELOPMENT.value,
+    }],
+)
 def test_cli_change_environment_type(cli_args, raiden_spawner):
     child = raiden_spawner(cli_args)
     try:
