@@ -262,12 +262,12 @@ def get_secret(
         secrethash: SecretHash,
 ) -> Optional[Secret]:
     """Returns `secret` if the `secrethash` is for a lock with a known secret."""
-    if is_secret_known(end_state, secrethash):
-        partial_unlock_proof = end_state.secrethashes_to_unlockedlocks.get(secrethash)
+    partial_unlock_proof = end_state.secrethashes_to_unlockedlocks.get(secrethash)
 
-        if partial_unlock_proof is None:
-            partial_unlock_proof = end_state.secrethashes_to_onchain_unlockedlocks.get(secrethash)
+    if partial_unlock_proof is None:
+        partial_unlock_proof = end_state.secrethashes_to_onchain_unlockedlocks.get(secrethash)
 
+    if partial_unlock_proof is not None:
         return partial_unlock_proof.secret
 
     return None
@@ -1805,6 +1805,9 @@ def handle_block(
     events = list()
 
     if get_status(channel_state) == CHANNEL_STATE_CLOSED:
+        msg = 'channel get_status is STATE_CLOSED, but close_transaction is not set'
+        assert channel_state.close_transaction, msg
+
         closed_block_number = channel_state.close_transaction.finished_block_number
         settlement_end = closed_block_number + channel_state.settle_timeout
 

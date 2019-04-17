@@ -92,10 +92,10 @@ def get_networks(
             token_address,
         )
 
-    if token_network_id:
-        token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
-            token_network_id,
-        )
+        if token_network_id:
+            token_network_state = payment_network_state.tokenidentifiers_to_tokennetworks.get(
+                token_network_id,
+            )
 
     return payment_network_state, token_network_state
 
@@ -206,7 +206,6 @@ def subdispatch_to_paymenttask(
     block_hash = chain_state.block_hash
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
     events: List[Event] = list()
-    sub_iteration = None
 
     if sub_task:
         pseudo_random_generator = chain_state.pseudo_random_generator
@@ -227,6 +226,9 @@ def subdispatch_to_paymenttask(
                 )
                 events = sub_iteration.events
 
+                if sub_iteration.new_state is None:
+                    del chain_state.payment_mapping.secrethashes_to_task[secrethash]
+
         elif isinstance(sub_task, MediatorTask):
             token_network_identifier = sub_task.token_network_identifier
             token_network_state = get_token_network_by_address(
@@ -246,6 +248,9 @@ def subdispatch_to_paymenttask(
                     block_hash=block_hash,
                 )
                 events = sub_iteration.events
+
+                if sub_iteration.new_state is None:
+                    del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
         elif isinstance(sub_task, TargetTask):
             token_network_identifier = sub_task.token_network_identifier
@@ -270,8 +275,8 @@ def subdispatch_to_paymenttask(
                 )
                 events = sub_iteration.events
 
-        if sub_iteration and sub_iteration.new_state is None:
-            del chain_state.payment_mapping.secrethashes_to_task[secrethash]
+                if sub_iteration.new_state is None:
+                    del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(chain_state, events)
 
@@ -306,23 +311,25 @@ def subdispatch_initiatortask(
             chain_state,
             token_network_identifier,
         )
-        iteration = initiator_manager.state_transition(
-            manager_state,
-            state_change,
-            token_network_state.channelidentifiers_to_channels,
-            pseudo_random_generator,
-            block_number,
-        )
-        events = iteration.events
 
-        if iteration.new_state:
-            sub_task = InitiatorTask(
-                token_network_identifier,
-                iteration.new_state,
+        if token_network_state:
+            iteration = initiator_manager.state_transition(
+                manager_state,
+                state_change,
+                token_network_state.channelidentifiers_to_channels,
+                pseudo_random_generator,
+                block_number,
             )
-            chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
-        elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
-            del chain_state.payment_mapping.secrethashes_to_task[secrethash]
+            events = iteration.events
+
+            if iteration.new_state:
+                sub_task = InitiatorTask(
+                    token_network_identifier,
+                    iteration.new_state,
+                )
+                chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+            elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
+                del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(chain_state, events)
 
@@ -357,26 +364,27 @@ def subdispatch_mediatortask(
             token_network_identifier,
         )
 
-        pseudo_random_generator = chain_state.pseudo_random_generator
-        iteration = mediator.state_transition(
-            mediator_state=mediator_state,
-            state_change=state_change,
-            channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
-            nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
-            pseudo_random_generator=pseudo_random_generator,
-            block_number=block_number,
-            block_hash=block_hash,
-        )
-        events = iteration.events
-
-        if iteration.new_state:
-            sub_task = MediatorTask(
-                token_network_identifier,
-                iteration.new_state,
+        if token_network_state:
+            pseudo_random_generator = chain_state.pseudo_random_generator
+            iteration = mediator.state_transition(
+                mediator_state=mediator_state,
+                state_change=state_change,
+                channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
+                nodeaddresses_to_networkstates=chain_state.nodeaddresses_to_networkstates,
+                pseudo_random_generator=pseudo_random_generator,
+                block_number=block_number,
+                block_hash=block_hash,
             )
-            chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
-        elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
-            del chain_state.payment_mapping.secrethashes_to_task[secrethash]
+            events = iteration.events
+
+            if iteration.new_state:
+                sub_task = MediatorTask(
+                    token_network_identifier,
+                    iteration.new_state,
+                )
+                chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+            elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
+                del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
     return TransitionResult(chain_state, events)
 
@@ -1298,9 +1306,11 @@ def _get_channels_close_events(
             [channel.CHANNEL_STATE_UNUSABLE],
         )
         for channel_state in filtered_channel_states:
-            events.extend(channel.events_for_close(
-                channel_state=channel_state,
-                block_number=chain_state.block_number,
-                block_hash=chain_state.block_hash,
-            ))
+            events.extend(
+                channel.events_for_close(
+                    channel_state=channel_state,
+                    block_number=chain_state.block_number,
+                    block_hash=chain_state.block_hash,
+                ),
+            )
     return events
