@@ -447,6 +447,7 @@ class RaidenService(Runnable):
             database_path=self.database_path,
             serializer=serialize.JSONSerializer(),
         )
+        storage.update_version()
         storage.log_run()
         self.wal = wal.restore_to_state_change(
             transition_function=node.state_transition,
