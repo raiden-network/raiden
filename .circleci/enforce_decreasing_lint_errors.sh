@@ -18,8 +18,8 @@ function compare_reports() {
     fi
 
     if [[ -e "${old}" ]]; then
-        new_error_count=$(wc -l "${new}")
-        previous_error_count=$(wc -l "${old}")
+        new_error_count=$(wc -l "${new}" | cut '-d ' -f1)
+        previous_error_count=$(wc -l "${old}" | cut '-d ' -f1)
 
         if [[ $new_error_count -gt $previous_error_count ]]; then
             diff ${old} ${new}
