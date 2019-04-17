@@ -90,7 +90,7 @@ def geth_to_cmd(
         '--nodiscover',
         '--rpc',
         '--rpcapi', 'eth,net,web3,personal,txpool',
-        '--rpcaddr', '0.0.0.0',
+        '--rpcaddr', '127.0.0.1',
         '--networkid', str(chain_id),
         '--verbosity', str(_GETH_VERBOSITY_LEVEL[verbosity]),
         '--datadir', datadir,
@@ -127,7 +127,7 @@ def parity_to_cmd(
 
     cmd.extend([
         '--jsonrpc-apis=eth,net,web3,parity,personal',
-        '--jsonrpc-interface=0.0.0.0',
+        '--jsonrpc-interface=127.0.0.1',
         '--no-discovery',
         '--no-ws',
         '--no-ipc',  # Disable IPC to prevent 'path too long' errors on macOS
