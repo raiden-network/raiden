@@ -414,7 +414,8 @@ class Processed(SignedRetrieableMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         processed = cls(
             message_identifier=data['message_identifier'],
         )
@@ -459,7 +460,8 @@ class Delivered(SignedMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         delivered = cls(
             delivered_message_identifier=data['delivered_message_identifier'],
         )
@@ -593,7 +595,8 @@ class SecretRequest(SignedRetrieableMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         secret_request = cls(
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
@@ -745,7 +748,8 @@ class Unlock(EnvelopeMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == 'Secret', 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         message = cls(
             chain_id=data['chain_id'],
             message_identifier=data['message_identifier'],
@@ -820,7 +824,8 @@ class RevealSecret(SignedRetrieableMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         reveal_secret = cls(
             message_identifier=data['message_identifier'],
             secret=decode_hex(data['secret']),
@@ -915,7 +920,8 @@ class Lock:
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         return cls(
             amount=data['amount'],
             expiration=data['expiration'],
@@ -1479,7 +1485,8 @@ class LockExpired(EnvelopeMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         expired_lock = cls(
             chain_id=data['chain_id'],
             nonce=data['nonce'],
@@ -1588,7 +1595,8 @@ class SignedBlindedBalanceProof:
             cls,
             data: typing.Dict,
     ) -> 'SignedBlindedBalanceProof':
-        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         return cls(
             channel_identifier=data['channel_identifier'],
             token_network_address=decode_hex(data['token_network_address']),
@@ -1657,7 +1665,8 @@ class RequestMonitoring(SignedMessage):
             cls,
             data: typing.Dict,
     ) -> 'RequestMonitoring':
-        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
 
         onchain_balance_proof = SignedBlindedBalanceProof.from_dict(
             data['onchain_balance_proof'],
