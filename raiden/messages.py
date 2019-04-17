@@ -414,7 +414,7 @@ class Processed(SignedRetrieableMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__
+        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
         processed = cls(
             message_identifier=data['message_identifier'],
         )
@@ -459,7 +459,7 @@ class Delivered(SignedMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__
+        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
         delivered = cls(
             delivered_message_identifier=data['delivered_message_identifier'],
         )
@@ -593,7 +593,7 @@ class SecretRequest(SignedRetrieableMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__
+        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
         secret_request = cls(
             message_identifier=data['message_identifier'],
             payment_identifier=data['payment_identifier'],
@@ -745,7 +745,7 @@ class Unlock(EnvelopeMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == 'Secret'
+        assert data['type'] == 'Secret', 'Cannot decode data, the type field does not match'
         message = cls(
             chain_id=data['chain_id'],
             message_identifier=data['message_identifier'],
@@ -820,7 +820,7 @@ class RevealSecret(SignedRetrieableMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__
+        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
         reveal_secret = cls(
             message_identifier=data['message_identifier'],
             secret=decode_hex(data['secret']),
@@ -853,18 +853,20 @@ class Lock:
         # guarantee that `amount` can be serialized using the available bytes
         # in the fixed length format
         if amount < 0:
-            raise ValueError('amount {} needs to be positive'.format(amount))
+            raise ValueError(f'amount {amount} needs to be positive')
 
         if amount >= 2 ** 256:
-            raise ValueError('amount {} is too large'.format(amount))
+            raise ValueError(f'amount {amount} is too large')
 
         if expiration < 0:
-            raise ValueError('expiration {} needs to be positive'.format(amount))
+            raise ValueError(f'expiration {amount} needs to be positive')
 
         if expiration >= 2 ** 256:
-            raise ValueError('expiration {} is too large'.format(amount))
+            raise ValueError(f'expiration {amount} is too large')
 
-        assert ishash(secrethash)
+        if not ishash(secrethash):
+            raise ValueError('secrethash {secrethash} is not a valid hash')
+
         self.amount = amount
         self.expiration = expiration
         self.secrethash = secrethash
@@ -913,7 +915,7 @@ class Lock:
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__
+        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
         return cls(
             amount=data['amount'],
             expiration=data['expiration'],
@@ -1477,7 +1479,7 @@ class LockExpired(EnvelopeMessage):
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__
+        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
         expired_lock = cls(
             chain_id=data['chain_id'],
             nonce=data['nonce'],
@@ -1510,6 +1512,8 @@ class SignedBlindedBalanceProof:
             balance_hash: typing.BalanceHash,
             **kwargs,
     ):
+        if not signature:
+            raise ValueError('balance proof is not signed')
 
         super().__init__(**kwargs)
         self.channel_identifier = channel_identifier
@@ -1519,8 +1523,6 @@ class SignedBlindedBalanceProof:
         self.chain_id = chain_id
         self.balance_hash = balance_hash
         self.signature = signature
-        if not signature:
-            raise ValueError('balance proof is not signed')
         self.non_closing_signature = None
 
     @classmethod
@@ -1528,7 +1530,11 @@ class SignedBlindedBalanceProof:
             cls,
             balance_proof: BalanceProofSignedState,
     ) -> 'SignedBlindedBalanceProof':
-        assert isinstance(balance_proof, BalanceProofSignedState)
+        if not isinstance(balance_proof, BalanceProofSignedState):
+            raise ValueError(
+                'balance_proof is not of an instance of the type BalanceProofSignedState',
+            )
+
         return cls(
             channel_identifier=balance_proof.channel_identifier,
             token_network_address=typing.TokenNetworkID(balance_proof.token_network_identifier),
@@ -1582,7 +1588,7 @@ class SignedBlindedBalanceProof:
             cls,
             data: typing.Dict,
     ) -> 'SignedBlindedBalanceProof':
-        assert data['type'] == cls.__name__
+        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
         return cls(
             channel_identifier=data['channel_identifier'],
             token_network_address=decode_hex(data['token_network_address']),
@@ -1606,23 +1612,22 @@ class RequestMonitoring(SignedMessage):
             *,
             onchain_balance_proof: SignedBlindedBalanceProof,
             reward_amount: typing.TokenAmount,
-            non_closing_signature: typing.Signature = b'',
-            reward_proof_signature: typing.Signature = b'',
+            non_closing_signature: typing.Optional[typing.Signature] = None,
+            reward_proof_signature: typing.Optional[typing.Signature] = None,
             **kwargs,
     ):
-        super().__init__(**kwargs)
         if onchain_balance_proof is None:
             raise ValueError('no balance proof given')
+
+        if not isinstance(onchain_balance_proof, SignedBlindedBalanceProof):
+            raise ValueError('onchain_balance_proof is not a SignedBlindedBalanceProof')
+
+        super().__init__(**kwargs)
+
         self.balance_proof = onchain_balance_proof
         self.reward_amount = reward_amount
-        if non_closing_signature:
-            self.non_closing_signature = non_closing_signature
-        else:
-            self.non_closing_signature = None
-        if reward_proof_signature:
-            self.signature = reward_proof_signature
-        else:
-            self.signature = None
+        self.non_closing_signature = non_closing_signature
+        self.signature = reward_proof_signature
 
     @classmethod
     def from_balance_proof_signed_state(
@@ -1630,7 +1635,11 @@ class RequestMonitoring(SignedMessage):
             balance_proof: BalanceProofSignedState,
             reward_amount: typing.TokenAmount,
     ) -> 'RequestMonitoring':
-        assert isinstance(balance_proof, BalanceProofSignedState)
+        if not isinstance(balance_proof, BalanceProofSignedState):
+            raise ValueError(
+                'balance_proof is not of an instance of the type BalanceProofSignedState',
+            )
+
         onchain_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
             balance_proof=balance_proof,
         )
@@ -1648,11 +1657,12 @@ class RequestMonitoring(SignedMessage):
             cls,
             data: typing.Dict,
     ) -> 'RequestMonitoring':
-        assert data['type'] == cls.__name__
+        assert data['type'] == cls.__name__, 'Cannot decode data, the type field does not match'
+
         onchain_balance_proof = SignedBlindedBalanceProof.from_dict(
             data['onchain_balance_proof'],
         )
-        assert isinstance(onchain_balance_proof, SignedBlindedBalanceProof)
+
         return cls(
             onchain_balance_proof=onchain_balance_proof,
             reward_amount=int(data['reward_amount']),
@@ -1725,7 +1735,6 @@ class RequestMonitoring(SignedMessage):
             cls,
             packed: bytes,
     ) -> 'RequestMonitoring':
-        assert packed.balance_hash
         onchain_balance_proof = SignedBlindedBalanceProof(
             nonce=packed.nonce,
             chain_id=packed.chain_id,
