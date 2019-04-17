@@ -274,8 +274,9 @@ jobs:
       # Do not compare across PRs, otherwise a PR that is fixing linting errors
       # will make unrelated PRs fail.
       - restore_cache:
-          key: lint-cache-v0-{{ .Branch }}-
-          key: lint-cache-v0-master-
+          keys:
+            - lint-cache-v0-{{ .Branch }}-
+            - lint-cache-v0-master-
       - run:
           name: Run Lint
           command: make lint
