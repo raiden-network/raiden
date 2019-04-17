@@ -64,7 +64,7 @@ new_report_pylint=$(mktemp)
 new_report_mypy=$(mktemp)
 
 pylint \
-    --load-plugins=tools.pylint.gevent_checker,assert_checker \
+    --load-plugins=tools.pylint.gevent_checker,tools.pylint.assert_checker \
     raiden/ tools/scenario-player/ > ${new_report_pylint} || true
 
 mypy raiden tools > ${new_report_mypy} || true
