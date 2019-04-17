@@ -1,6 +1,7 @@
 import json
 import random
 import sys
+from datetime import datetime
 from enum import IntEnum, unique
 from typing import Optional, Tuple
 
@@ -8,13 +9,14 @@ import click
 import requests
 import structlog
 from eth_utils import to_checksum_address, to_hex
+from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.utils import typing
 from raiden.utils.typing import BlockSpecification
-from raiden_contracts.utils.proofs import sign_one_to_n_iou
+from raiden_contracts.utils.proofs import eth_sign_hash_message, sign_one_to_n_iou
 
 log = structlog.get_logger(__name__)
 
@@ -183,6 +185,28 @@ def get_pfs_iou(
         raise ServiceRequestFailed(str(e))
 
 
+def request_last_iou(
+        url: str,
+        token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
+        sender: typing.Address,
+        receiver: typing.Address,
+) -> typing.Optional[typing.Dict]:
+
+    timestamp = datetime.utcnow().isoformat(timespec='seconds')
+    signature = to_hex(eth_sign_hash_message(
+        Web3.toBytes(hexstr=sender) + Web3.toBytes(hexstr=receiver) + bytes(timestamp, 'utf-8'),
+    ))
+
+    return get_pfs_iou(
+        url=url,
+        token_network_address=token_network_address,
+        sender=sender,
+        receiver=receiver,
+        timestamp=timestamp,
+        signature=signature,
+    )
+
+
 def make_iou(
         config: typing.Dict[str, typing.Any],
         our_address: typing.Address,
@@ -256,7 +280,12 @@ def create_current_iou(
 
     latest_iou = None
     if not scrap_existing_iou:
-        latest_iou = get_pfs_iou(url, token_network_address)
+        latest_iou = request_last_iou(
+            url=url,
+            token_network_address=token_network_address,
+            sender=our_address,
+            receiver=config['pathfinding_eth_address'],
+        )
 
     if latest_iou is None:
         return make_iou(
