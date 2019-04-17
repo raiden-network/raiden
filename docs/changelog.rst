@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :release:`0.100.3-rc4 <2019-04-17>`
 * :release:`0.100.3-rc3 <2019-04-15>`
 * :feature:`-` Add support for Görli testnet in Raiden.
 * :release:`0.100.3-rc2 <2019-04-11>`
