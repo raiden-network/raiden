@@ -456,7 +456,7 @@ def eth_run_nodes(
             log_path = eth_node_to_logpath(node_config, logdir)
             logfile = stack.enter_context(open(log_path, 'w+'))
 
-            executor = JSONRPCExecutor(
+            kwargs = dict(
                 command=cmd,
                 url=f'http://127.0.0.1:{node_config["rpcport"]}',
                 timeout=10,
@@ -465,6 +465,8 @@ def eth_run_nodes(
                 result_validator=_validate_jsonrpc_result,
                 io=(subprocess.DEVNULL, logfile, subprocess.STDOUT),
             )
+            log.info('Starting JSONRPCExecutor with', kwargs=kwargs, env=os.environ)
+            executor = JSONRPCExecutor(**kwargs)
 
             stack.enter_context(executor)
             executors.append(executor)

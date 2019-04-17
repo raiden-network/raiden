@@ -128,6 +128,8 @@ class HTTPExecutor(MiHTTPExecutor):
                 output_file_names = {io.name for io in (stdout, stderr) if hasattr(io, 'name')}
                 if output_file_names:
                     log.warning('Process output file(s)', output_files=output_file_names)
+                listening_processes = subprocess.check_output('netstat -tulpen')
+                log.warning('Listening processes', netstat=listening_processes)
             raise
         return self
 
