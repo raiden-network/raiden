@@ -12,7 +12,9 @@ from raiden.utils.typing import (
     Dict,
     Keccak256,
     List,
+    Locksroot,
     SecretHash,
+    TransactionHash,
     Tuple,
     TypeVar,
 )
@@ -68,6 +70,14 @@ def deserialize_secret_hash(data: str) -> SecretHash:
 
 def deserialize_keccak(data: str) -> Keccak256:
     return Keccak256(deserialize_bytes(data))
+
+
+def deserialize_locksroot(data: str) -> Locksroot:
+    return Locksroot(deserialize_bytes(data))
+
+
+def deserialize_transactionhash(data: str) -> TransactionHash:
+    return TransactionHash(deserialize_bytes(data))
 
 
 def serialize_networkx_graph(graph: networkx.Graph) -> str:

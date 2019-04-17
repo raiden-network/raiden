@@ -24,7 +24,12 @@ from raiden.utils import (
     pex,
     sha3,
 )
-from raiden.utils.serialization import deserialize_bytes, serialize_bytes
+from raiden.utils.serialization import (
+    deserialize_bytes,
+    deserialize_locksroot,
+    deserialize_transactionhash,
+    serialize_bytes,
+)
 from raiden.utils.typing import (
     Address,
     Any,
@@ -344,7 +349,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelNew':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             channel_state=data['channel_state'],
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
@@ -405,7 +410,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelClosed':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             transaction_from=to_canonical_address(data['transaction_from']),
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=CHAIN_ID_UNSPECIFIED,
@@ -583,7 +588,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelNewBalance':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=CHAIN_ID_UNSPECIFIED,
                 token_network_address=to_canonical_address(data['token_network_identifier']),
@@ -649,23 +654,15 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelSettled':
-        our_onchain_locksroot = None
-        partner_onchain_locksroot = None
-        if data['our_onchain_locksroot']:
-            our_onchain_locksroot = deserialize_bytes(data['our_onchain_locksroot'])
-
-        if data['partner_onchain_locksroot']:
-            partner_onchain_locksroot = deserialize_bytes(data['partner_onchain_locksroot'])
-
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=CHAIN_ID_UNSPECIFIED,
                 token_network_address=to_canonical_address(data['token_network_identifier']),
                 channel_identifier=ChannelID(int(data['channel_identifier'])),
             ),
-            our_onchain_locksroot=our_onchain_locksroot,
-            partner_onchain_locksroot=partner_onchain_locksroot,
+            our_onchain_locksroot=deserialize_locksroot(data['our_onchain_locksroot']),
+            partner_onchain_locksroot=deserialize_locksroot(data['partner_onchain_locksroot']),
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
         )
@@ -778,7 +775,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveNewPaymentNetwork':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             payment_network=data['payment_network'],
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
@@ -836,7 +833,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveNewTokenNetwork':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network=data['token_network'],
             block_number=BlockNumber(int(data['block_number'])),
@@ -906,7 +903,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveSecretReveal':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             secret_registry_address=to_canonical_address(data['secret_registry_address']),
             secrethash=deserialize_bytes(data['secrethash']),
             secret=deserialize_bytes(data['secret']),
@@ -1005,7 +1002,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveChannelBatchUnlock':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=CHAIN_ID_UNSPECIFIED,
                 token_network_address=to_canonical_address(data['token_network_identifier']),
@@ -1013,7 +1010,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             ),
             participant=to_canonical_address(data['participant']),
             partner=to_canonical_address(data['partner']),
-            locksroot=deserialize_bytes(data['locksroot']),
+            locksroot=deserialize_locksroot(data['locksroot']),
             unlocked_amount=int(data['unlocked_amount']),
             returned_tokens=int(data['returned_tokens']),
             block_number=BlockNumber(int(data['block_number'])),
@@ -1087,7 +1084,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveRouteNew':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=CHAIN_ID_UNSPECIFIED,
                 token_network_address=to_canonical_address(data['token_network_identifier']),
@@ -1145,7 +1142,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveRouteClosed':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=CHAIN_ID_UNSPECIFIED,
                 token_network_address=to_canonical_address(data['token_network_identifier']),
@@ -1201,7 +1198,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ContractReceiveUpdateTransfer':
         return cls(
-            transaction_hash=deserialize_bytes(data['transaction_hash']),
+            transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             canonical_identifier=CanonicalIdentifier(
                 token_network_address=to_canonical_address(data['token_network_identifier']),
                 channel_identifier=ChannelID(int(data['channel_identifier'])),
