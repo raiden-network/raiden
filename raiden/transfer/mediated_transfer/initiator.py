@@ -315,6 +315,10 @@ def handle_secretrequest(
         initiator_state.transfer_description.secrethash,
     )
 
+    # This should not ever happen. This task clears itself when the lock is
+    # removed.
+    assert lock is not None, "channel is does not have the transfer's lock"
+
     already_received_secret_request = initiator_state.received_secret_request
 
     # lock.amount includes the fees, transfer_description.amount is the actual

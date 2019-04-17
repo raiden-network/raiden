@@ -974,15 +974,22 @@ def events_for_onchain_secretreveal_if_closed(
 
             if not transaction_sent:
                 partner_state = payer_channel.partner_state
+
                 lock = channel.get_lock(partner_state, secrethash)
-                reveal_events = secret_registry.events_for_onchain_secretreveal(
-                    channel_state=payer_channel,
-                    secret=secret,
-                    expiration=lock.expiration,
-                    block_hash=block_hash,
-                )
-                events.extend(reveal_events)
-                transaction_sent = True
+
+                # The mediator task lives as long as there are any pending
+                # locks, it may be the case that some of the transfer_pairs got
+                # resolved off-chain, but others didn't. For this reason we
+                # must check if the lock is still part of the channel
+                if lock:
+                    reveal_events = secret_registry.events_for_onchain_secretreveal(
+                        channel_state=payer_channel,
+                        secret=secret,
+                        expiration=lock.expiration,
+                        block_hash=block_hash,
+                    )
+                    events.extend(reveal_events)
+                    transaction_sent = True
 
     return events
 
