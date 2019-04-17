@@ -3,7 +3,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from eth_utils import encode_hex, is_checksum_address, to_checksum_address
+from eth_utils import (
+    encode_hex,
+    is_checksum_address,
+    is_hex,
+    is_hex_address,
+    to_checksum_address,
+    to_hex,
+)
 
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.pathfinding import (
@@ -179,11 +186,23 @@ def get_best_routes_with_iou_request_mocked(
         amount,
         iou_json_data=None,
 ):
-    iou_response = Mock()
-    iou_response.configure_mock(status_code=200)
-    iou_response.json = Mock(return_value=iou_json_data or {})
 
-    with patch.object(requests, 'get', return_value=iou_response) as patched:
+    def iou_side_effect(*_, **kwargs):
+        assert 'data' in kwargs
+        body = kwargs['data']
+
+        assert is_hex_address(body['sender'])
+        assert is_hex_address(body['receiver'])
+        assert 'timestamp' in body
+        assert is_hex(body['signature'])
+        assert len(body['signature']) == 66
+
+        return Mock(
+            json=Mock(return_value=iou_json_data or {}),
+            status_code=200,
+        )
+
+    with patch.object(requests, 'get', side_effect=iou_side_effect) as patched:
         best_routes = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
@@ -756,7 +775,7 @@ def query_paths_args(token_network_state, our_address, pfs_max_fee):
     )
     return dict(
         service_config=service_config,
-        our_address=our_address,
+        our_address=to_hex(our_address),
         privkey=PRIVKEY,
         current_block_number=10,
         token_network_address=token_network_state.address,
