@@ -748,8 +748,8 @@ class Unlock(EnvelopeMessage):
 
     @classmethod
     def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data['type'] == cls.__name__, msg
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected Secret'
+        assert data['type'] == 'Secret', msg
         message = cls(
             chain_id=data['chain_id'],
             message_identifier=data['message_identifier'],
