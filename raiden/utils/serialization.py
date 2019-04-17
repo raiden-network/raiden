@@ -7,12 +7,14 @@ from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_he
 from raiden.transfer.merkle_tree import LEAVES, compute_layers
 from raiden.utils.typing import (
     Address,
+    BlockHash,
     Callable,
     ChannelID,
     Dict,
     Keccak256,
     List,
     Locksroot,
+    Secret,
     SecretHash,
     TransactionHash,
     Tuple,
@@ -64,6 +66,9 @@ def deserialize_bytes(data: str) -> bytes:
     return to_bytes(hexstr=data)
 
 
+def deserialize_secret(data: str) -> Secret:
+    return Secret(deserialize_bytes(data))
+
 def deserialize_secret_hash(data: str) -> SecretHash:
     return SecretHash(deserialize_bytes(data))
 
@@ -78,6 +83,10 @@ def deserialize_locksroot(data: str) -> Locksroot:
 
 def deserialize_transactionhash(data: str) -> TransactionHash:
     return TransactionHash(deserialize_bytes(data))
+
+
+def deserialize_blockhash(data: str) -> BlockHash:
+    return BlockHash(deserialize_bytes(data))
 
 
 def serialize_networkx_graph(graph: networkx.Graph) -> str:
