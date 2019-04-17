@@ -69,6 +69,7 @@ def deserialize_bytes(data: str) -> bytes:
 def deserialize_secret(data: str) -> Secret:
     return Secret(deserialize_bytes(data))
 
+
 def deserialize_secret_hash(data: str) -> SecretHash:
     return SecretHash(deserialize_bytes(data))
 
