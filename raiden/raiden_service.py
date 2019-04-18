@@ -125,10 +125,10 @@ def initiator_init(
         transfer_identifier: PaymentID,
         transfer_amount: PaymentAmount,
         transfer_secret: Secret,
+        transfer_secret_hash: SecretHash,
         transfer_fee: FeeAmount,
         token_network_identifier: TokenNetworkID,
         target_address: TargetAddress,
-        transfer_secret_hash: SecretHash = None,
 ):
     assert transfer_secret != constants.EMPTY_HASH, f'Empty secret node:{raiden!r}'
 
@@ -1167,11 +1167,11 @@ class RaidenService(Runnable):
             raiden=self,
             transfer_identifier=identifier,
             transfer_amount=amount,
-            transfer_fee=fee,
             transfer_secret=secret,
+            transfer_secret_hash=secret_hash,
+            transfer_fee=fee,
             token_network_identifier=token_network_identifier,
             target_address=target,
-            transfer_secret_hash=secret_hash,
         )
 
         # Dispatch the state change even if there are no routes to create the
