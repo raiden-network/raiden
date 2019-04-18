@@ -25,6 +25,9 @@ if TYPE_CHECKING:
 def balanceproof_from_envelope(
         envelope_message: 'EnvelopeMessage',
 ) -> Optional['BalanceProofSignedState']:
+    if not envelope_message.sender:
+        return None
+
     balance_proof = BalanceProofSignedState(
         nonce=envelope_message.nonce,
         transferred_amount=envelope_message.transferred_amount,
