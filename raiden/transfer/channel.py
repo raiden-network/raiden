@@ -761,6 +761,10 @@ def is_valid_unlock(
         return (False, msg, None)
 
     merkletree = compute_merkletree_without(sender_state.merkletree, lock.lockhash)
+    if not merkletree:
+        msg = f'Invalid unlock message. The lockhash is unknown {encode_hex(lock.lockhash)}'
+        return (False, msg, None)
+
     locksroot_without_lock = merkleroot(merkletree)
 
     _, _, current_transferred_amount, current_locked_amount = current_balance_proof
@@ -1174,7 +1178,7 @@ def compute_merkletree_without(
         merkletree: MerkleTreeState,
         lockhash: LockHash,
 ) -> Optional[MerkleTreeState]:
-    # Use None to inform the caller the lockshash is unknown
+    # Use None to inform the caller the lockhash is unknown
     result = None
 
     leaves = merkletree.layers[LEAVES]
