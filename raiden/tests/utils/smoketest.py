@@ -45,6 +45,7 @@ from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEVELOPMENT_C
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
     EthNodeDescription,
+    GenesisDescription,
     eth_node_config,
     eth_node_to_datadir,
     eth_run_nodes,
@@ -104,8 +105,10 @@ def run_restapi_smoketests():
     assert response.status_code == HTTPStatus.OK
 
     response_json = response.json()
-    assert (response_json[0]['partner_address'] ==
-            to_checksum_address(ConnectionManager.BOOTSTRAP_ADDR))
+    assert (
+        response_json[0]['partner_address'] ==
+        to_checksum_address(ConnectionManager.BOOTSTRAP_ADDR)
+    )
     assert response_json[0]['state'] == 'opened'
     assert response_json[0]['balance'] > 0
 
@@ -291,24 +294,26 @@ def setup_testchain(eth_client: EthClient, print_step: Callable) -> ContextManag
     seal_account = privatekey_to_address(description.private_key)
     accounts_to_fund = [TEST_ACCOUNT_ADDRESS, TEST_PARTNER_ADDRESS]
 
+    genesis_description = GenesisDescription(
+        prefunded_accounts=accounts_to_fund,
+        random_marker=random_marker,
+        chain_id=NETWORKNAME_TO_ID['smoketest'],
+    )
+
     if eth_client is EthClient.GETH:
         keystore = os.path.join(eth_node_to_datadir(config, base_datadir), 'keystore')
         genesis_path = os.path.join(base_datadir, 'custom_genesis.json')
         geth_generate_poa_genesis(
             genesis_path=genesis_path,
-            accounts_addresses=accounts_to_fund,
-            seal_address=seal_account,
-            random_marker=random_marker,
-            chain_id=NETWORKNAME_TO_ID['smoketest'],
+            genesis_description=genesis_description,
+            seal_account=seal_account,
         )
     elif eth_client is EthClient.PARITY:
         genesis_path = f'{base_datadir}/chainspec.json'
         parity_generate_chain_spec(
-            spec_path=genesis_path,
-            accounts_addresses=accounts_to_fund,
+            genesis_path=genesis_path,
+            genesis_description=genesis_description,
             seal_account=seal_account,
-            random_marker=random_marker,
-            chain_id=NETWORKNAME_TO_ID['smoketest'],
         )
         keystore = parity_create_account(nodes_configuration[0], base_datadir, genesis_path)
     else:
