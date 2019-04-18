@@ -81,7 +81,7 @@ def get_networks(
         chain_state: ChainState,
         payment_network_identifier: PaymentNetworkID,
         token_address: TokenAddress,
-) -> Tuple[PaymentNetworkState, TokenNetworkState]:
+) -> Tuple[Optional[PaymentNetworkState], Optional[TokenNetworkState]]:
     token_network_state = None
     payment_network_state = chain_state.identifiers_to_paymentnetworks.get(
         payment_network_identifier,
@@ -98,20 +98,6 @@ def get_networks(
             )
 
     return payment_network_state, token_network_state
-
-
-def get_token_network_by_token_address(
-        chain_state: ChainState,
-        payment_network_identifier: PaymentNetworkID,
-        token_address: TokenAddress,
-) -> TokenNetworkState:
-    _, token_network_state = get_networks(
-        chain_state,
-        payment_network_identifier,
-        token_address,
-    )
-
-    return token_network_state
 
 
 def get_token_network_by_address(
@@ -480,7 +466,8 @@ def maybe_add_tokennetwork(
         addresses_to_ids[token_address] = token_network_identifier
 
         mapping = chain_state.tokennetworkaddresses_to_paymentnetworkaddresses
-        mapping[token_network_identifier] = payment_network_identifier
+        # FIXME: Remove cast once TokenNetworkAddress or TokenNetworkID are removed
+        mapping[TokenNetworkAddress(token_network_identifier)] = payment_network_identifier
 
 
 def sanity_check(iteration: TransitionResult[ChainState]) -> None:
