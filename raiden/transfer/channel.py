@@ -39,7 +39,6 @@ from raiden.transfer.mediated_transfer.state import (
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
-    ReceiveTransferRefundCancelRoute,
 )
 from raiden.transfer.merkle_tree import LEAVES, compute_layers, compute_merkleproof_for, merkleroot
 from raiden.transfer.state import (
@@ -1783,7 +1782,7 @@ def handle_receive_lockedtransfer(
 
 def handle_receive_refundtransfercancelroute(
         channel_state: NettingChannelState,
-        refund_transfer: ReceiveTransferRefundCancelRoute,
+        refund_transfer: LockedTransferSignedState,
 ) -> EventsOrError:
     return handle_receive_lockedtransfer(channel_state, refund_transfer)
 
