@@ -43,7 +43,7 @@ matrix-synapse==0.33.9
 mccabe==0.6.1
 more-itertools==4.3.0
 msgpack-python==0.5.6
-mypy==0.641
+mypy==0.700
 netaddr==0.7.19
 pdbpp==0.9.2
 phonenumbers==8.10.2

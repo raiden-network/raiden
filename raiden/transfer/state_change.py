@@ -25,8 +25,11 @@ from raiden.utils import (
     sha3,
 )
 from raiden.utils.serialization import (
+    deserialize_blockhash,
     deserialize_bytes,
     deserialize_locksroot,
+    deserialize_secret,
+    deserialize_secret_hash,
     deserialize_transactionhash,
     serialize_bytes,
 )
@@ -112,7 +115,7 @@ class Block(StateChange):
         return cls(
             block_number=BlockNumber(int(data['block_number'])),
             gas_limit=data['gas_limit'],
-            block_hash=deserialize_bytes(data['block_hash']),
+            block_hash=deserialize_blockhash(data['block_hash']),
         )
 
 
@@ -131,13 +134,13 @@ class ActionUpdateTransportAuthData(StateChange):
             self.auth_data,
         )
 
-    def __eq__(self, other: 'ActionUpdateTransportAuthData') -> bool:
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ActionUpdateTransportAuthData) and
             self.auth_data == other.auth_data
         )
 
-    def __ne__(self, other: 'ActionUpdateTransportAuthData') -> bool:
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -183,7 +186,7 @@ class ActionCancelPayment(StateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ActionCancelPayment':
         return cls(
-            payment_identifier=int(data['payment_identifier']),
+            payment_identifier=PaymentID(int(data['payment_identifier'])),
         )
 
 
@@ -257,7 +260,7 @@ class ActionChannelSetFee(StateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ActionChannelSetFee':
         return cls(
             canonical_identifier=data['canonical_identifier'],
-            mediation_fee=int(data['mediation_fee']),
+            mediation_fee=FeeAmount(int(data['mediation_fee'])),
         )
 
     @property
@@ -482,7 +485,7 @@ class ActionInitChain(StateChange):
         return cls(
             pseudo_random_generator=pseudo_random_generator,
             block_number=BlockNumber(int(data['block_number'])),
-            block_hash=deserialize_bytes(data['block_hash']),
+            block_hash=deserialize_blockhash(data['block_hash']),
             our_address=to_canonical_address(data['our_address']),
             chain_id=data['chain_id'],
         )
@@ -905,8 +908,8 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
         return cls(
             transaction_hash=deserialize_transactionhash(data['transaction_hash']),
             secret_registry_address=to_canonical_address(data['secret_registry_address']),
-            secrethash=deserialize_bytes(data['secrethash']),
-            secret=deserialize_bytes(data['secret']),
+            secrethash=deserialize_secret_hash(data['secrethash']),
+            secret=deserialize_secret(data['secret']),
             block_number=BlockNumber(int(data['block_number'])),
             block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
         )
@@ -1011,10 +1014,10 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
             participant=to_canonical_address(data['participant']),
             partner=to_canonical_address(data['partner']),
             locksroot=deserialize_locksroot(data['locksroot']),
-            unlocked_amount=int(data['unlocked_amount']),
-            returned_tokens=int(data['returned_tokens']),
+            unlocked_amount=TokenAmount(int(data['unlocked_amount'])),
+            returned_tokens=TokenAmount(int(data['returned_tokens'])),
             block_number=BlockNumber(int(data['block_number'])),
-            block_hash=BlockHash(deserialize_bytes(data['block_hash'])),
+            block_hash=deserialize_blockhash(data['block_hash']),
         )
 
 
@@ -1257,8 +1260,8 @@ class ReceiveUnlock(BalanceProofStateChange):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ReceiveUnlock':
         return cls(
-            message_identifier=int(data['message_identifier']),
-            secret=deserialize_bytes(data['secret']),
+            message_identifier=MessageID(int(data['message_identifier'])),
+            secret=deserialize_secret(data['secret']),
             balance_proof=data['balance_proof'],
         )
 
@@ -1295,7 +1298,7 @@ class ReceiveDelivered(AuthenticatedSenderStateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ReceiveDelivered':
         return cls(
             sender=to_canonical_address(data['sender']),
-            message_identifier=int(data['message_identifier']),
+            message_identifier=MessageID(int(data['message_identifier'])),
         )
 
 
@@ -1330,5 +1333,5 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
     def from_dict(cls, data: Dict[str, Any]) -> 'ReceiveProcessed':
         return cls(
             sender=to_canonical_address(data['sender']),
-            message_identifier=int(data['message_identifier']),
+            message_identifier=MessageID(int(data['message_identifier'])),
         )
