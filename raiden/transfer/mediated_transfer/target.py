@@ -331,6 +331,7 @@ def handle_lock_expired(
         state_change=state_change,
         block_number=block_number,
     )
+    assert result.new_state, 'handle_receive_lock_expired should not delete the task'
 
     if not channel.get_lock(result.new_state.partner_state, target_state.transfer.lock.secrethash):
         transfer = target_state.transfer
