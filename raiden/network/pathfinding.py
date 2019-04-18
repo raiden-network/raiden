@@ -15,6 +15,7 @@ from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.utils import typing
+from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import BlockSpecification
 from raiden_contracts.utils.proofs import eth_sign_hash_message, sign_one_to_n_iou
 
@@ -175,12 +176,14 @@ def get_last_iou(
         token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
         sender: typing.Address,
         receiver: typing.Address,
+        privkey: bytes,
 ) -> typing.Optional[typing.Dict]:
 
     timestamp = datetime.utcnow().isoformat(timespec='seconds')
-    signature = to_hex(eth_sign_hash_message(
+    signature_data = eth_sign_hash_message(
         Web3.toBytes(hexstr=sender) + Web3.toBytes(hexstr=receiver) + bytes(timestamp, 'utf-8'),
-    ))
+    )
+    signature = to_hex(LocalSigner(privkey).sign(signature_data))
 
     try:
         return requests.get(
@@ -270,6 +273,7 @@ def create_current_iou(
             token_network_address=token_network_address,
             sender=our_address,
             receiver=config['pathfinding_eth_address'],
+            privkey=privkey,
         )
 
     if latest_iou is None:

@@ -195,7 +195,7 @@ def get_best_routes_with_iou_request_mocked(
         assert is_hex_address(body['receiver'])
         assert 'timestamp' in body
         assert is_hex(body['signature'])
-        assert len(body['signature']) == 66
+        assert len(body['signature']) == 65 * 2 + 2  # 65 hex encoded bytes with 0x prefix
 
         return Mock(
             json=Mock(return_value=iou_json_data or {}),
@@ -600,6 +600,7 @@ def test_get_and_update_iou():
         token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS,
         sender=factories.make_checksum_address(),
         receiver=factories.make_checksum_address(),
+        privkey=PRIVKEY,
     )
     # RequestExceptions should be reraised as ServiceRequestFailed
     with pytest.raises(ServiceRequestFailed):
@@ -657,7 +658,9 @@ def test_get_pfs_iou():
     with patch('raiden.network.pathfinding.requests.get') as get_mock:
         # No previous IOU
         get_mock.return_value.json.return_value = {'last_iou': None}
-        assert get_last_iou('http://example.com', token_network_address, sender, receiver) is None
+        assert get_last_iou(
+            'http://example.com', token_network_address, sender, receiver, PRIVKEY,
+        ) is None
 
         # Previous IOU
         iou = dict(sender=sender, receiver=receiver, amount=10, expiration_block=1000)
@@ -669,7 +672,9 @@ def test_get_pfs_iou():
             expiration=iou['expiration_block'],
         )
         get_mock.return_value.json.return_value = {'last_iou': iou}
-        assert get_last_iou('http://example.com', token_network_address, sender, receiver) == iou
+        assert get_last_iou(
+            'http://example.com', token_network_address, sender, receiver, PRIVKEY,
+        ) == iou
 
 
 def test_make_iou():
