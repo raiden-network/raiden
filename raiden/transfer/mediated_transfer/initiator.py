@@ -1,6 +1,6 @@
 import random
 
-from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import EMPTY_SECRET, MAXIMUM_PENDING_TRANSFERS
 from raiden.settings import DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 from raiden.transfer import channel
 from raiden.transfer.architecture import Event, TransitionResult
@@ -328,7 +328,8 @@ def handle_secretrequest(
     is_valid_secretrequest = (
         state_change.amount <= lock.amount and
         state_change.amount >= initiator_state.transfer_description.amount and
-        state_change.expiration == lock.expiration
+        state_change.expiration == lock.expiration and
+        initiator_state.transfer_description.secret != EMPTY_SECRET
     )
 
     if already_received_secret_request and is_message_from_target:
