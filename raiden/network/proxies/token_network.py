@@ -1240,7 +1240,7 @@ class TokenNetwork:
             channel_identifier: ChannelID,
             participant: Address,
             partner: Address,
-            merkle_tree_leaves: MerkleTreeLeaves,
+            merkle_tree_leaves: Optional[MerkleTreeLeaves],
     ):
         log_details = {
             'token_network': pex(self.address),

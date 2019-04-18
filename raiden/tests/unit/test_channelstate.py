@@ -1701,7 +1701,7 @@ def test_get_amount_locked():
 
 
 def test_valid_lock_expired_for_unlocked_lock():
-    """ This tests that locked and unlocked locks hehave the same when
+    """ This tests that locked and unlocked locks behave the same when
     they are checked with `is_valid_lock_expired`.
     This tests issue #2828
     """

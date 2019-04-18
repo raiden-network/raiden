@@ -217,7 +217,7 @@ class PaymentChannel:
 
     def unlock(
             self,
-            merkle_tree_leaves: MerkleTreeLeaves,
+            merkle_tree_leaves: Optional[MerkleTreeLeaves],
             participant: Address,
             partner: Address,
     ):

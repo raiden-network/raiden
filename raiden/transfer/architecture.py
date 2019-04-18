@@ -333,7 +333,7 @@ class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
         'events',
     )
 
-    def __init__(self, new_state: ST, events: List[Event]) -> None:
+    def __init__(self, new_state: Optional[ST], events: List[Event]) -> None:
         self.new_state = new_state
         self.events = events
 
