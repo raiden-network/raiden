@@ -6,8 +6,8 @@ from eth_tester import EthereumTester, PyEVMBackend
 from eth_utils import encode_hex
 from web3 import EthereumTesterProvider, Web3
 
+from raiden.balance_proof import pack_balance_proof
 from raiden.constants import TRANSACTION_GAS_LIMIT
-from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.signer import LocalSigner
 from raiden_contracts.contract_manager import CONTRACTS_SOURCE_DIRS, ContractManager

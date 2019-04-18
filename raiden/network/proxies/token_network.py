@@ -12,6 +12,7 @@ from eth_utils import (
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
 
+from raiden.balance_proof import pack_balance_proof
 from raiden.constants import GENESIS_BLOCK_NUMBER, UNLOCK_TX_GAS_LIMIT
 from raiden.exceptions import (
     ChannelOutdatedError,
@@ -30,7 +31,7 @@ from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.utils import pex, safe_gas_limit
+from raiden.utils import CanonicalIdentifier, pex, safe_gas_limit
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     AdditionalHash,

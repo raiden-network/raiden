@@ -3,7 +3,6 @@ import random
 from collections import defaultdict
 from functools import total_ordering
 from random import Random
-from typing import TYPE_CHECKING, Tuple
 
 import networkx
 from eth_utils import encode_hex, to_canonical_address, to_checksum_address
@@ -18,6 +17,7 @@ from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_fro
 from raiden.utils import lpex, pex, serialization, sha3
 from raiden.utils.serialization import map_dict, map_list, serialize_bytes
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     AdditionalHash,
     Address,
     Any,
@@ -58,12 +58,12 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
+    Tuple,
     Union,
 )
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from messages import EnvelopeMessage
     from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
     from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 
@@ -105,25 +105,6 @@ CHANNEL_AFTER_CLOSE_STATES = (
 NODE_NETWORK_UNKNOWN = 'unknown'
 NODE_NETWORK_UNREACHABLE = 'unreachable'
 NODE_NETWORK_REACHABLE = 'reachable'
-
-
-def balanceproof_from_envelope(
-        envelope_message: 'EnvelopeMessage',
-) -> 'BalanceProofSignedState':
-    return BalanceProofSignedState(
-        nonce=envelope_message.nonce,
-        transferred_amount=envelope_message.transferred_amount,
-        locked_amount=envelope_message.locked_amount,
-        locksroot=envelope_message.locksroot,
-        message_hash=envelope_message.message_hash,
-        signature=envelope_message.signature,
-        sender=envelope_message.sender,
-        canonical_identifier=CanonicalIdentifier(
-            chain_identifier=envelope_message.chain_id,
-            token_network_address=envelope_message.token_network_address,
-            channel_identifier=envelope_message.channel_identifier,
-        ),
-    )
 
 
 def make_empty_merkle_tree() -> 'MerkleTreeState':

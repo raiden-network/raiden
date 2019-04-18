@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import BalanceProofSignedState
 from raiden.transfer.utils import hash_balance_data
@@ -8,11 +10,44 @@ from raiden.utils.typing import (
     Address,
     BalanceHash,
     Nonce,
+    Optional,
     Signature,
     SuccessOrError,
     TokenAmount,
 )
 from raiden_contracts.constants import MessageTypeId
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.messages import EnvelopeMessage
+
+
+def balanceproof_from_envelope(
+        envelope_message: 'EnvelopeMessage',
+) -> Optional['BalanceProofSignedState']:
+    balance_proof = BalanceProofSignedState(
+        nonce=envelope_message.nonce,
+        transferred_amount=envelope_message.transferred_amount,
+        locked_amount=envelope_message.locked_amount,
+        locksroot=envelope_message.locksroot,
+        message_hash=envelope_message.message_hash,
+        signature=envelope_message.signature,
+        sender=envelope_message.sender,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=envelope_message.chain_id,
+            token_network_address=envelope_message.token_network_address,
+            channel_identifier=envelope_message.channel_identifier,
+        ),
+    )
+
+    signature_is_valid = is_valid_signature(
+        balance_proof=balance_proof,
+        sender_address=envelope_message.sender,
+    )
+
+    if signature_is_valid:
+        return balance_proof
+    return None
 
 
 def is_valid_signature(

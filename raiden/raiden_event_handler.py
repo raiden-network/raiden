@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 import structlog
 from eth_utils import to_checksum_address, to_hex
 
+from raiden.balance_proof import pack_balance_proof_update
 from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_MESSAGE_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
@@ -11,7 +12,6 @@ from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.transfer.architecture import Event
-from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,

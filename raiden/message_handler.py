@@ -1,5 +1,6 @@
 import structlog
 
+from raiden.balance_proof import balanceproof_from_envelope
 from raiden.constants import EMPTY_SECRET
 from raiden.messages import (
     Delivered,
@@ -11,12 +12,12 @@ from raiden.messages import (
     RevealSecret,
     SecretRequest,
     Unlock,
+    lockedtransfersigned_from_message,
 )
 from raiden.raiden_service import RaidenService
 from raiden.routing import get_best_routes
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
-from raiden.transfer.mediated_transfer.state import lockedtransfersigned_from_message
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveSecretRequest,
@@ -24,7 +25,6 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils import pex, random_secret
 from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, PaymentAmount, TokenNetworkID
@@ -93,6 +93,10 @@ class MessageHandler:
     @staticmethod
     def handle_message_unlock(raiden: RaidenService, message: Unlock):
         balance_proof = balanceproof_from_envelope(message)
+
+        if not balance_proof:
+            return
+
         state_change = ReceiveUnlock(
             message_identifier=message.message_identifier,
             secret=message.secret,
@@ -103,60 +107,64 @@ class MessageHandler:
     @staticmethod
     def handle_message_lockexpired(raiden: RaidenService, message: LockExpired):
         balance_proof = balanceproof_from_envelope(message)
-        state_change = ReceiveLockExpired(
-            balance_proof=balance_proof,
-            secrethash=message.secrethash,
-            message_identifier=message.message_identifier,
-        )
-        raiden.handle_and_track_state_change(state_change)
+
+        if balance_proof:
+            state_change = ReceiveLockExpired(
+                balance_proof=balance_proof,
+                secrethash=message.secrethash,
+                message_identifier=message.message_identifier,
+            )
+            raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
     def handle_message_refundtransfer(raiden: RaidenService, message: RefundTransfer):
         token_network_address = message.token_network_address
         from_transfer = lockedtransfersigned_from_message(message)
-        chain_state = views.state_from_raiden(raiden)
 
-        routes = get_best_routes(
-            chain_state=chain_state,
-            token_network_id=TokenNetworkID(token_network_address),
-            from_address=InitiatorAddress(raiden.address),
-            to_address=from_transfer.target,
-            amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated by #3863
-            previous_address=message.sender,
-            config=raiden.config,
-            privkey=raiden.privkey,
-        )
+        if from_transfer:
+            chain_state = views.state_from_raiden(raiden)
 
-        role = views.get_transfer_role(
-            chain_state=chain_state,
-            secrethash=from_transfer.lock.secrethash,
-        )
-
-        state_change: StateChange
-        if role == 'initiator':
-            old_secret = views.get_transfer_secret(
-                chain_state,
-                from_transfer.lock.secrethash,
-            )
-            # We currently don't allow multi routes if the initiator does not
-            # hold the secret. In such case we remove all other possible routes
-            # which allow the API call to return with with an error message.
-            if old_secret == EMPTY_SECRET:
-                routes = list()
-
-            secret = random_secret()
-            state_change = ReceiveTransferRefundCancelRoute(
-                routes=routes,
-                transfer=from_transfer,
-                secret=secret,
-            )
-        else:
-            state_change = ReceiveTransferRefund(
-                transfer=from_transfer,
-                routes=routes,
+            routes = get_best_routes(
+                chain_state=chain_state,
+                token_network_id=TokenNetworkID(token_network_address),
+                from_address=InitiatorAddress(raiden.address),
+                to_address=from_transfer.target,
+                amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; #3863
+                previous_address=message.sender,
+                config=raiden.config,
+                privkey=raiden.privkey,
             )
 
-        raiden.handle_and_track_state_change(state_change)
+            role = views.get_transfer_role(
+                chain_state=chain_state,
+                secrethash=from_transfer.lock.secrethash,
+            )
+
+            state_change: StateChange
+            if role == 'initiator':
+                old_secret = views.get_transfer_secret(
+                    chain_state,
+                    from_transfer.lock.secrethash,
+                )
+                # We currently don't allow multi routes if the initiator does not
+                # hold the secret. In such case we remove all other possible routes
+                # which allow the API call to return with with an error message.
+                if old_secret == EMPTY_SECRET:
+                    routes = list()
+
+                secret = random_secret()
+                state_change = ReceiveTransferRefundCancelRoute(
+                    routes=routes,
+                    transfer=from_transfer,
+                    secret=secret,
+                )
+            else:
+                state_change = ReceiveTransferRefund(
+                    transfer=from_transfer,
+                    routes=routes,
+                )
+
+            raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
     def handle_message_lockedtransfer(raiden: RaidenService, message: LockedTransfer):

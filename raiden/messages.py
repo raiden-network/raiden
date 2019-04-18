@@ -9,17 +9,18 @@ from eth_utils import (
     to_normalized_address,
 )
 
+from raiden.balance_proof import (
+    balanceproof_from_envelope,
+    pack_balance_proof,
+    pack_balance_proof_update,
+    pack_reward_proof,
+)
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
 from raiden.transfer import channel
 from raiden.transfer.architecture import SendMessageEvent
-from raiden.transfer.balance_proof import (
-    pack_balance_proof,
-    pack_balance_proof_update,
-    pack_reward_proof,
-)
 from raiden.transfer.events import SendProcessed
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
@@ -30,7 +31,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
+from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
+from raiden.transfer.state import BalanceProofSignedState, HashTimeLockState, NettingChannelState
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3
 from raiden.utils.signer import Signer, recover
@@ -165,6 +167,34 @@ def from_dict(data: dict) -> 'Message':
                 'Invalid message data. Can not find the data type',
             ) from None
     return klass.from_dict(data)
+
+
+def lockedtransfersigned_from_message(
+        message: 'LockedTransfer',
+) -> Optional['LockedTransferSignedState']:
+    """ Create LockedTransferSignedState from a LockedTransfer message. """
+    balance_proof = balanceproof_from_envelope(message)
+
+    if not balance_proof:
+        return None
+
+    lock = HashTimeLockState(
+        message.lock.amount,
+        message.lock.expiration,
+        message.lock.secrethash,
+    )
+
+    transfer_state = LockedTransferSignedState(
+        message.message_identifier,
+        message.payment_identifier,
+        message.token,
+        balance_proof,
+        lock,
+        message.initiator,
+        message.target,
+    )
+
+    return transfer_state
 
 
 def message_from_sendevent(send_event: SendMessageEvent) -> 'Message':

@@ -9,7 +9,6 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
-    balanceproof_from_envelope,
 )
 from raiden.utils import pex, sha3
 from raiden.utils.serialization import (
@@ -43,32 +42,8 @@ from raiden.utils.typing import (
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from raiden.messages import LockedTransfer
     from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa: F401
     from raiden.transfer.state import RouteState
-
-
-def lockedtransfersigned_from_message(message: 'LockedTransfer') -> 'LockedTransferSignedState':
-    """ Create LockedTransferSignedState from a LockedTransfer message. """
-    balance_proof = balanceproof_from_envelope(message)
-
-    lock = HashTimeLockState(
-        message.lock.amount,
-        message.lock.expiration,
-        message.lock.secrethash,
-    )
-
-    transfer_state = LockedTransferSignedState(
-        message.message_identifier,
-        message.payment_identifier,
-        message.token,
-        balance_proof,
-        lock,
-        message.initiator,
-        message.target,
-    )
-
-    return transfer_state
 
 
 class InitiatorPaymentState(State):

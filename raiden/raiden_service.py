@@ -34,6 +34,7 @@ from raiden.messages import (
     RequestMonitoring,
     SignedMessage,
     UpdatePFS,
+    lockedtransfersigned_from_message,
     message_from_sendevent,
 )
 from raiden.network.blockchain_service import BlockChainService
@@ -46,10 +47,7 @@ from raiden.tasks import AlarmTask
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event as RaidenEvent, StateChange
 from raiden.transfer.mediated_transfer.events import SendLockedTransfer
-from raiden.transfer.mediated_transfer.state import (
-    TransferDescriptionWithSecretState,
-    lockedtransfersigned_from_message,
-)
+from raiden.transfer.mediated_transfer.state import TransferDescriptionWithSecretState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
@@ -163,6 +161,10 @@ def initiator_init(
 
 def mediator_init(raiden, transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
+
+    if not from_transfer:
+        return None
+
     routes = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         token_network_id=TokenNetworkID(from_transfer.balance_proof.token_network_identifier),
@@ -187,6 +189,10 @@ def mediator_init(raiden, transfer: LockedTransfer):
 
 def target_init(transfer: LockedTransfer):
     from_transfer = lockedtransfersigned_from_message(transfer)
+
+    if not from_transfer:
+        return None
+
     from_route = RouteState(
         transfer.sender,
         from_transfer.balance_proof.channel_identifier,
