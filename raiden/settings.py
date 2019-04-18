@@ -1,7 +1,7 @@
 from eth_utils import denoms, to_hex
 
 from raiden.constants import Environment
-from raiden.utils.typing import NetworkTimeout
+from raiden.utils.typing import NetworkTimeout, TokenAmount
 
 INITIAL_PORT = 38647
 
@@ -55,7 +55,7 @@ DEVELOPMENT_CONTRACT_VERSION = '0.11.1'
 
 MIN_REI_THRESHOLD = 100
 
-MONITORING_REWARD = 1
-MONITORING_MIN_CAPACITY = 100
+MONITORING_REWARD = TokenAmount(1)
+MONITORING_MIN_CAPACITY = TokenAmount(100)
 
 MEDIATION_FEE = 0

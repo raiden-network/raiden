@@ -13,6 +13,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     ChannelID,
     Locksroot,
+    MerkleTreeLeaves,
     Nonce,
     Signature,
     TokenAmount,
@@ -48,8 +49,8 @@ class PaymentChannel:
             self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
             events[-1],
         )
-        participant1 = decode_hex(event['args']['participant1'])
-        participant2 = decode_hex(event['args']['participant2'])
+        participant1 = Address(decode_hex(event['args']['participant1']))
+        participant2 = Address(decode_hex(event['args']['participant2']))
 
         if token_network.node_address not in (participant1, participant2):
             raise ValueError('One participant must be the node address')
@@ -216,7 +217,7 @@ class PaymentChannel:
 
     def unlock(
             self,
-            merkle_tree_leaves: bytes,
+            merkle_tree_leaves: MerkleTreeLeaves,
             participant: Address,
             partner: Address,
     ):
@@ -229,11 +230,11 @@ class PaymentChannel:
 
     def settle(
             self,
-            transferred_amount: int,
-            locked_amount: int,
+            transferred_amount: TokenAmount,
+            locked_amount: TokenAmount,
             locksroot: Locksroot,
-            partner_transferred_amount: int,
-            partner_locked_amount: int,
+            partner_transferred_amount: TokenAmount,
+            partner_locked_amount: TokenAmount,
             partner_locksroot: Locksroot,
             block_identifier: BlockSpecification,
     ):

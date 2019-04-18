@@ -730,7 +730,7 @@ class TokenNetwork:
                 partner=partner,
                 block_identifier=given_block_identifier,
             ).deposit
-            amount_to_deposit = total_deposit - previous_total_deposit
+            amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
             log_details = {
                 'token_network': pex(self.address),
                 'channel_identifier': channel_identifier,
