@@ -1,7 +1,70 @@
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.state import BalanceProofSignedState
+from raiden.transfer.utils import hash_balance_data
+from raiden.utils.signer import recover
 from raiden.utils.signing import pack_data
-from raiden.utils.typing import AdditionalHash, BalanceHash, Nonce, Signature, TokenAmount
+from raiden.utils.typing import (
+    AdditionalHash,
+    Address,
+    BalanceHash,
+    Nonce,
+    Signature,
+    SuccessOrError,
+    TokenAmount,
+)
 from raiden_contracts.constants import MessageTypeId
+
+
+def is_valid_signature(
+        balance_proof: BalanceProofSignedState,
+        sender_address: Address,
+) -> SuccessOrError:
+    balance_hash = hash_balance_data(
+        balance_proof.transferred_amount,
+        balance_proof.locked_amount,
+        balance_proof.locksroot,
+    )
+
+    # The balance proof must be tied to a single channel instance, through the
+    # chain_id, token_network_identifier, and channel_identifier, otherwise the
+    # on-chain contract would be susceptible to replay attacks across channels.
+    #
+    # The balance proof must also authenticate the offchain balance (blinded in
+    # the balance_hash field), and authenticate the rest of message data
+    # (blinded in additional_hash).
+    data_that_was_signed = pack_balance_proof(
+        nonce=balance_proof.nonce,
+        balance_hash=balance_hash,
+        additional_hash=balance_proof.message_hash,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=balance_proof.chain_id,
+            token_network_address=balance_proof.token_network_identifier,
+            channel_identifier=balance_proof.channel_identifier,
+        ),
+    )
+
+    try:
+        signer_address = recover(
+            data=data_that_was_signed,
+            signature=balance_proof.signature,
+        )
+        # InvalidSignature is raised by raiden.utils.signer.recover if signature
+        # is not bytes or has the incorrect length
+        #
+        # ValueError is raised if the PublicKey instantiation failed, let it
+        # propagate because it's a memory pressure problem.
+        #
+        # Exception is raised if the public key recovery failed.
+    except Exception:  # pylint: disable=broad-except
+        msg = 'Signature invalid, could not be recovered.'
+        return (False, msg)
+
+    is_correct_sender = sender_address == signer_address
+    if is_correct_sender:
+        return (True, None)
+
+    msg = 'Signature was valid but the expected address does not match.'
+    return (False, msg)
 
 
 def pack_balance_proof(
