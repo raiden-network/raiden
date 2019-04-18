@@ -445,7 +445,7 @@ class PaymentNetworkState(State):
 
     def __init__(
             self,
-            address: Address,
+            address: PaymentNetworkID,
             token_network_list: List['TokenNetworkState'],
     ) -> None:
         if not isinstance(address, T_Address):
