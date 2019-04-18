@@ -16,8 +16,8 @@ from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.pathfinding import (
     MAX_PATHS_QUERY_ATTEMPTS,
     PFSError,
+    get_last_iou,
     get_pfs_info,
-    get_pfs_iou,
     make_iou,
     query_paths,
     update_iou,
@@ -595,10 +595,16 @@ def test_routing_mocked_pfs_unavailable_peer(
 
 def test_get_and_update_iou():
 
+    request_args = dict(
+        url='url',
+        token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS,
+        sender=factories.make_checksum_address(),
+        receiver=factories.make_checksum_address(),
+    )
     # RequestExceptions should be reraised as ServiceRequestFailed
     with pytest.raises(ServiceRequestFailed):
         with patch.object(requests, 'get', side_effect=requests.RequestException):
-            get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
+            get_last_iou(**request_args)
 
     # invalid JSON should raise a ServiceRequestFailed
     response = Mock()
@@ -606,13 +612,13 @@ def test_get_and_update_iou():
     response.json = Mock(side_effect=ValueError)
     with pytest.raises(ServiceRequestFailed):
         with patch.object(requests, 'get', return_value=response):
-            get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
+            get_last_iou(**request_args)
 
     response = Mock()
     response.configure_mock(status_code=200)
     response.json = Mock(return_value={'other_key': 'other_value'})
     with patch.object(requests, 'get', return_value=response):
-        iou = get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
+        iou = get_last_iou(**request_args)
     assert iou is None, 'get_pfs_iou should return None if pfs returns no iou.'
 
     response = Mock()
@@ -629,7 +635,7 @@ def test_get_and_update_iou():
     )
     response.json = Mock(return_value=dict(last_iou=last_iou))
     with patch.object(requests, 'get', return_value=response):
-        iou = get_pfs_iou('url', factories.UNIT_TOKEN_NETWORK_ADDRESS)
+        iou = get_last_iou(**request_args)
     assert iou == last_iou
 
     new_iou_1 = update_iou(iou.copy(), PRIVKEY, added_amount=10)
@@ -646,29 +652,24 @@ def test_get_and_update_iou():
 def test_get_pfs_iou():
     token_network_address = TokenNetworkAddress(bytes([1] * 20))
     privkey = bytes([2] * 32)
-    sender = Address(privatekey_to_address(privkey))
-    receiver = Address(bytes([1] * 20))
+    sender = to_checksum_address(privatekey_to_address(privkey))
+    receiver = factories.make_checksum_address()
     with patch('raiden.network.pathfinding.requests.get') as get_mock:
         # No previous IOU
         get_mock.return_value.json.return_value = {'last_iou': None}
-        assert get_pfs_iou('http://example.com', token_network_address) is None
+        assert get_last_iou('http://example.com', token_network_address, sender, receiver) is None
 
         # Previous IOU
-        iou = {
-            'sender': encode_hex(sender),
-            'receiver': encode_hex(receiver),
-            'amount': 10,
-            'expiration_block': 1000,
-        }
+        iou = dict(sender=sender, receiver=receiver, amount=10, expiration_block=1000)
         iou['signature'] = sign_one_to_n_iou(
             privatekey=encode_hex(privkey),
-            sender=iou['sender'],
-            receiver=iou['receiver'],
+            sender=sender,
+            receiver=receiver,
             amount=iou['amount'],
             expiration=iou['expiration_block'],
         )
         get_mock.return_value.json.return_value = {'last_iou': iou}
-        assert get_pfs_iou('http://example.com', token_network_address) == iou
+        assert get_last_iou('http://example.com', token_network_address, sender, receiver) == iou
 
 
 def test_make_iou():

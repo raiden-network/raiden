@@ -170,22 +170,7 @@ def configure_pfs(
     )
 
 
-def get_pfs_iou(
-        url: str,
-        token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
-        **kwargs,
-) -> typing.Optional[typing.Dict]:
-    try:
-        return requests.get(
-            f'{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou',
-            data=kwargs,
-            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
-        ).json().get('last_iou')
-    except (requests.exceptions.RequestException, ValueError) as e:
-        raise ServiceRequestFailed(str(e))
-
-
-def request_last_iou(
+def get_last_iou(
         url: str,
         token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
         sender: typing.Address,
@@ -197,14 +182,14 @@ def request_last_iou(
         Web3.toBytes(hexstr=sender) + Web3.toBytes(hexstr=receiver) + bytes(timestamp, 'utf-8'),
     ))
 
-    return get_pfs_iou(
-        url=url,
-        token_network_address=token_network_address,
-        sender=sender,
-        receiver=receiver,
-        timestamp=timestamp,
-        signature=signature,
-    )
+    try:
+        return requests.get(
+            f'{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou',
+            data=dict(sender=sender, receiver=receiver, timestamp=timestamp, signature=signature),
+            timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
+        ).json().get('last_iou')
+    except (requests.exceptions.RequestException, ValueError) as e:
+        raise ServiceRequestFailed(str(e))
 
 
 def make_iou(
@@ -280,7 +265,7 @@ def create_current_iou(
 
     latest_iou = None
     if not scrap_existing_iou:
-        latest_iou = request_last_iou(
+        latest_iou = get_last_iou(
             url=url,
             token_network_address=token_network_address,
             sender=our_address,
