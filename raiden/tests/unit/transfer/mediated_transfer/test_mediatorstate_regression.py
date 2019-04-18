@@ -1,6 +1,7 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 import random
 
+from raiden.balance_proof import balanceproof_from_envelope
 from raiden.messages import message_from_sendevent
 from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
@@ -32,11 +33,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
-from raiden.transfer.state import (
-    NODE_NETWORK_UNREACHABLE,
-    balanceproof_from_envelope,
-    message_identifier_from_prng,
-)
+from raiden.transfer.state import NODE_NETWORK_UNREACHABLE, message_identifier_from_prng
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils.signer import LocalSigner
 

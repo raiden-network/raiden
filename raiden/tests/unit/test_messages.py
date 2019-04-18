@@ -1,5 +1,6 @@
 import pytest
 
+from raiden.balance_proof import pack_balance_proof, pack_balance_proof_update, pack_reward_proof
 from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof, UpdatePFS
 from raiden.tests.utils import factories
 from raiden.tests.utils.messages import (
@@ -11,11 +12,6 @@ from raiden.tests.utils.messages import (
     make_lock,
     make_mediated_transfer,
     make_refund_transfer,
-)
-from raiden.transfer.balance_proof import (
-    pack_balance_proof,
-    pack_balance_proof_update,
-    pack_reward_proof,
 )
 from raiden.utils.signer import LocalSigner, recover
 

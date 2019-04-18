@@ -7,9 +7,10 @@ from typing import Any, ClassVar, Dict, List, NamedTuple, Optional, Tuple, Type
 
 from eth_utils import to_checksum_address
 
+from raiden.balance_proof import pack_balance_proof
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
-from raiden.messages import Lock, LockedTransfer
-from raiden.transfer import balance_proof, channel, token_network
+from raiden.messages import Lock, LockedTransfer, lockedtransfersigned_from_message
+from raiden.transfer import channel, token_network
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
@@ -18,7 +19,6 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferUnsignedState,
     MediationPairState,
     TransferDescriptionWithSecretState,
-    lockedtransfersigned_from_message,
 )
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
 from raiden.transfer.merkle_tree import compute_layers, merkleroot
@@ -579,11 +579,18 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
         keys = ('transferred_amount', 'locked_amount', 'locksroot')
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
-        data_to_sign = balance_proof.pack_balance_proof(
+        canonical_identifier = make_canonical_identifier(
+            chain_identifier=params.pop('chain_id'),
+            token_network_address=params.pop('token_network_identifier'),
+            channel_identifier=params.pop('channel_identifier'),
+        )
+        params['canonical_identifier'] = canonical_identifier
+
+        data_to_sign = pack_balance_proof(
+            nonce=params.get('nonce'),
             balance_hash=balance_hash,
             additional_hash=params['message_hash'],
             canonical_identifier=params['canonical_identifier'],
-            nonce=params.get('nonce'),
         )
 
         params['signature'] = signer.sign(data=data_to_sign)

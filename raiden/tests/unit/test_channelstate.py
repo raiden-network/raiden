@@ -6,6 +6,7 @@ from itertools import cycle
 
 import pytest
 
+from raiden.balance_proof import balanceproof_from_envelope
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX
 from raiden.messages import Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
@@ -45,7 +46,6 @@ from raiden.transfer.state import (
     TransactionChannelNewBalance,
     TransactionExecutionStatus,
     UnlockPartialProofState,
-    balanceproof_from_envelope,
     make_empty_merkle_tree,
 )
 from raiden.transfer.state_change import (

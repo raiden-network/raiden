@@ -5,16 +5,20 @@ import gevent
 from gevent.timeout import Timeout
 
 from raiden.app import App
+from raiden.balance_proof import balanceproof_from_envelope
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import LockedTransfer, LockExpired, Message, Unlock
+from raiden.messages import (
+    LockedTransfer,
+    LockExpired,
+    Message,
+    Unlock,
+    lockedtransfersigned_from_message,
+)
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
-from raiden.transfer.mediated_transfer.state import (
-    LockedTransferSignedState,
-    lockedtransfersigned_from_message,
-)
+from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
@@ -22,7 +26,6 @@ from raiden.transfer.state import (
     HashTimeLockState,
     MerkleTreeState,
     NettingChannelState,
-    balanceproof_from_envelope,
     make_empty_merkle_tree,
 )
 from raiden.utils import lpex, pex, random_secret, sha3
