@@ -6,7 +6,11 @@ import tempfile
 from eth_utils import remove_0x_prefix
 from web3 import HTTPProvider, Web3
 
-from raiden.tests.utils.eth_node import EthNodeDescription, run_private_blockchain
+from raiden.tests.utils.eth_node import (
+    EthNodeDescription,
+    GenesisDescription,
+    run_private_blockchain,
+)
 from raiden.utils import privatekey_to_address, sha3
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
@@ -54,19 +58,23 @@ def main():
 
     verbosity = 0
     random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
-    geth_processes = run_private_blockchain(  # NOQA
+    genesis_description = GenesisDescription(
+        prefunded_accounts=DEFAULT_ACCOUNTS,
+        random_marker=random_marker,
+        chain_id=NETWORKNAME_TO_ID['smoketest'],
+    )
+    private_chain = run_private_blockchain(  # NOQA
         web3=web3,
-        accounts_to_fund=DEFAULT_ACCOUNTS,
         eth_nodes=geth_nodes,
         base_datadir=tmpdir,
         log_dir=tmpdir,
-        chain_id=NETWORKNAME_TO_ID['smoketest'],
         verbosity=verbosity,
-        random_marker=random_marker,
+        genesis_description=genesis_description,
     )
 
-    from IPython import embed
-    embed()
+    with private_chain:
+        from IPython import embed
+        embed()
 
 
 def shutdown_handler(_signo, _stackframe):
