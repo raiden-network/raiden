@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import time
 from contextlib import ExitStack, contextmanager
-from typing import ContextManager, Union
+from typing import ContextManager
 
 import gevent
 import structlog
@@ -37,7 +37,24 @@ class EthNodeDescription(NamedTuple):
     blockchain_type: str = 'geth'
 
 
-def clique_extradata(extra_vanity, extra_seal):
+class GenesisDescription(NamedTuple):
+    """Genesis configuration for a geth PoA private chain.
+
+    Args:
+        prefunded_accounts: iterable list of privatekeys whose
+            corresponding accounts will have a premined balance available.
+        seal_address: Address of the ethereum account that can seal
+            blocks in the PoA chain.
+        random_marker: A unique used to preventing interacting with the wrong
+            chain.
+        chain_id: The id of the private chain.
+    """
+    prefunded_accounts: List[bytes]
+    random_marker: str
+    chain_id: int
+
+
+def geth_clique_extradata(extra_vanity, extra_seal):
     if len(extra_vanity) > 64:
         raise ValueError('extra_vanity length must be smaller-or-equal to 64')
 
@@ -49,6 +66,10 @@ def clique_extradata(extra_vanity, extra_seal):
         extra_vanity,
         extra_seal,
     )
+
+
+def parity_extradata(random_marker):
+    return f'0x{random_marker:0<64}'
 
 
 def geth_to_cmd(
@@ -180,59 +201,56 @@ def geth_create_account(datadir: str, privkey: bytes):
 
 
 def parity_generate_chain_spec(
-        spec_path: str,
-        accounts_addresses: List[bytes],
-        seal_account: Union[str, bytes],
-        random_marker: str,
-        chain_id: int,
+        genesis_path: str,
+        genesis_description: GenesisDescription,
+        seal_account: bytes,
 ):
-    chain_spec = PARITY_CHAIN_SPEC_STUB.copy()
-    chain_spec['params']['networkID'] = chain_id
-    chain_spec['accounts'].update({
+    alloc = {
         to_checksum_address(address): {'balance': 1000000000000000000}
-        for address in accounts_addresses
-    })
-    chain_spec['engine']['authorityRound']['params']['validators'] = {
-        'list': [to_checksum_address(seal_account)],
+        for address in genesis_description.prefunded_accounts
     }
-    chain_spec['genesis']['extraData'] = f'0x{random_marker:0<64}'
-    with open(spec_path, "w") as spec_file:
+    validators = {
+        'list': [
+            to_checksum_address(seal_account),
+        ],
+    }
+    extra_data = parity_extradata(genesis_description.random_marker)
+
+    chain_spec = PARITY_CHAIN_SPEC_STUB.copy()
+    chain_spec['params']['networkID'] = genesis_description.chain_id
+    chain_spec['accounts'].update(alloc)
+    chain_spec['engine']['authorityRound']['params']['validators'] = validators
+    chain_spec['genesis']['extraData'] = extra_data
+    with open(genesis_path, "w") as spec_file:
         json.dump(chain_spec, spec_file)
 
 
 def geth_generate_poa_genesis(
         genesis_path: str,
-        accounts_addresses: List[Union[str, bytes]],
-        seal_address: Union[str, bytes],
-        random_marker: str,
-        chain_id: int,
-):
-    """Writes a bare genesis to `genesis_path`.
-
-    Args:
-        genesis_path: the path in which the genesis block is written.
-        accounts_addresses: iterable list of privatekeys whose
-            corresponding accounts will have a premined balance available.
-        seal_address: Address of the ethereum account that can seal
-            blocks in the PoA chain
-    """
+        genesis_description: GenesisDescription,
+        seal_account: bytes,
+) -> None:
+    """Writes a bare genesis to `genesis_path`."""
 
     alloc = {
         to_normalized_address(address): {
             'balance': DEFAULT_BALANCE_BIN,
         }
-        for address in accounts_addresses
+        for address in genesis_description.prefunded_accounts
     }
+    seal_address_normalized = remove_0x_prefix(
+        to_normalized_address(seal_account),
+    )
+    extra_data = geth_clique_extradata(
+        genesis_description.random_marker,
+        seal_address_normalized,
+    )
+
     genesis = GENESIS_STUB.copy()
     genesis['alloc'].update(alloc)
-
-    genesis['config']['ChainID'] = chain_id
+    genesis['config']['ChainID'] = genesis_description.chain_id
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
-
-    genesis['extraData'] = clique_extradata(
-        random_marker,
-        remove_0x_prefix(to_normalized_address(seal_address)),
-    )
+    genesis['extraData'] = extra_data
 
     with open(genesis_path, 'w') as handler:
         json.dump(genesis, handler)
@@ -475,13 +493,11 @@ def eth_run_nodes(
 @contextmanager
 def run_private_blockchain(
         web3: Web3,
-        accounts_to_fund: List[bytes],
         eth_nodes: List[EthNodeDescription],
         base_datadir: str,
         log_dir: str,
-        chain_id: int,
         verbosity: str,
-        random_marker: str,
+        genesis_description: GenesisDescription,
 ):
     """ Starts a private network with private_keys accounts funded.
 
@@ -515,6 +531,9 @@ def run_private_blockchain(
         nodes_configuration.append(config)
 
     blockchain_type = eth_nodes[0].blockchain_type
+
+    # This is not be configurable because it must be one of the running eth
+    # nodes.
     seal_account = privatekey_to_address(eth_nodes[0].private_key)
 
     if blockchain_type == 'geth':
@@ -523,20 +542,16 @@ def run_private_blockchain(
         genesis_path = os.path.join(base_datadir, 'custom_genesis.json')
         geth_generate_poa_genesis(
             genesis_path=genesis_path,
-            accounts_addresses=accounts_to_fund,
-            seal_address=seal_account,
-            random_marker=random_marker,
-            chain_id=chain_id,
+            genesis_description=genesis_description,
+            seal_account=seal_account,
         )
 
     elif blockchain_type == 'parity':
-        genesis_path = f'{base_datadir}/chainspec.json'
+        genesis_path = os.path.join(base_datadir, 'chainspec.json')
         parity_generate_chain_spec(
-            spec_path=genesis_path,
-            accounts_addresses=accounts_to_fund,
+            genesis_path=genesis_path,
+            genesis_description=genesis_description,
             seal_account=seal_account,
-            random_marker=random_marker,
-            chain_id=chain_id,
         )
         parity_create_account(nodes_configuration[0], base_datadir, genesis_path)
 
@@ -548,11 +563,11 @@ def run_private_blockchain(
         nodes_configuration=nodes_configuration,
         base_datadir=base_datadir,
         genesis_file=genesis_path,
-        chain_id=chain_id,
-        random_marker=random_marker,
+        chain_id=genesis_description.chain_id,
+        random_marker=genesis_description.random_marker,
         verbosity=verbosity,
         logdir=log_dir,
     )
     with runner as executors:
-        eth_check_balance(web3, accounts_to_fund)
+        eth_check_balance(web3, genesis_description.prefunded_accounts)
         yield executors

@@ -8,7 +8,11 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
-from raiden.tests.utils.eth_node import EthNodeDescription, run_private_blockchain
+from raiden.tests.utils.eth_node import (
+    EthNodeDescription,
+    GenesisDescription,
+    run_private_blockchain,
+)
 from raiden.tests.utils.network import jsonrpc_services
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.utils import privatekey_to_address
@@ -65,11 +69,13 @@ def web3(
             miner=(pos == 0),
             blockchain_type=blockchain_type,
         )
-        for pos, (key, rpc, p2p) in enumerate(zip(
-            blockchain_private_keys,
-            blockchain_rpc_ports,
-            blockchain_p2p_ports,
-        ))
+        for pos, (key, rpc, p2p) in enumerate(
+            zip(
+                blockchain_private_keys,
+                blockchain_rpc_ports,
+                blockchain_p2p_ports,
+            ),
+        )
     ]
 
     accounts_to_fund = [
@@ -84,15 +90,18 @@ def web3(
     else:
         base_logdir = os.path.join(base_datadir, 'logs')
 
+    genesis_description = GenesisDescription(
+        prefunded_accounts=accounts_to_fund,
+        chain_id=chain_id,
+        random_marker=random_marker,
+    )
     eth_node_runner = run_private_blockchain(
         web3=web3,
-        accounts_to_fund=accounts_to_fund,
         eth_nodes=eth_nodes,
         base_datadir=base_datadir,
         log_dir=base_logdir,
-        chain_id=chain_id,
         verbosity='info',
-        random_marker=random_marker,
+        genesis_description=genesis_description,
     )
     with eth_node_runner:
         yield web3
