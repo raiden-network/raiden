@@ -22,7 +22,7 @@ def reveal_secret_with_resolver(
         'payment_identifier': secret_request_event.payment_identifier,
         'payment_sender': to_hex(secret_request_event.recipient),
         'expiration': secret_request_event.expiration,
-        'payment_recipient': to_hex(raiden.address)[2:],
+        'payment_recipient': to_hex(raiden.address),
         'reveal_timeout': raiden.config['reveal_timeout'],
         'settle_timeout': raiden.config['settle_timeout'],
     }
