@@ -58,7 +58,7 @@ def unlock_account_with_passwordfile(
     password = password_file.read().strip('\r\n')
 
     try:
-        return account_manager.get_privkey(address_hex, password)
+        return account_manager.get_privkey(address_hex, password.strip())
     except ValueError:
         click.secho(
             f'Incorrect password for {address_hex} in file. Aborting ...',
