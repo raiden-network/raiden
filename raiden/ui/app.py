@@ -159,14 +159,14 @@ def run_app(
 
     if password_file:
         privatekey_bin = unlock_account_with_passwordfile(
-            account_manager,
-            address_hex,
-            password_file,
+            account_manager=account_manager,
+            address_hex=address_hex,
+            password_file=password_file,
         )
     else:
         privatekey_bin = unlock_account_with_passwordprompt(
-            account_manager,
-            address_hex,
+            account_manager=account_manager,
+            address_hex=address_hex,
         )
 
     address = to_canonical_address(address_hex)
