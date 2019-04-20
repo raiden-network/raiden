@@ -55,7 +55,7 @@ def unlock_account_with_passwordfile(
         address_hex: AddressHex,
         password_file: io.RawIOBase,
 ) -> PrivateKey:
-    password = password_file.read()
+    password = password_file.read().splitlines()[0]
 
     try:
         return account_manager.get_privkey(address_hex, password)
