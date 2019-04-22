@@ -74,8 +74,9 @@ def test_request_monitoring():
     request_monitoring.sign(signer)
     as_dict = request_monitoring.to_dict()
     assert RequestMonitoring.from_dict(as_dict) == request_monitoring
-    packed = request_monitoring.pack(request_monitoring.packed())
-    assert RequestMonitoring.unpack(packed) == request_monitoring
+    request_monitoring_packed = request_monitoring.packed()
+    request_monitoring.pack(request_monitoring_packed)
+    assert RequestMonitoring.unpack(request_monitoring_packed) == request_monitoring
     # RequestMonitoring can be created directly from BalanceProofSignedState
     direct_created = RequestMonitoring.from_balance_proof_signed_state(
         balance_proof,
