@@ -6,7 +6,7 @@ from eth_keys.exceptions import BadSignature
 from eth_utils import keccak, to_checksum_address
 
 from raiden.exceptions import InvalidSignature
-from raiden.utils.typing import Address, AddressHex
+from raiden.utils.typing import Address, AddressHex, Signature
 
 
 def eth_sign_sha3(data: bytes) -> bytes:
@@ -22,7 +22,7 @@ def eth_sign_sha3(data: bytes) -> bytes:
 
 def recover(
         data: bytes,
-        signature: bytes,
+        signature: Signature,
         hasher: Callable[[bytes], bytes] = eth_sign_sha3,
 ) -> Address:
     """ eth_recover address from data hash and signature """
@@ -31,7 +31,7 @@ def recover(
     # ecdsa_recover accepts only standard [0,1] v's so we add support also for [27,28] here
     # anything else will raise BadSignature
     if signature[-1] >= 27:  # support (0,1,27,28) v values
-        signature = signature[:-1] + bytes([signature[-1] - 27])
+        signature = Signature(signature[:-1] + bytes([signature[-1] - 27]))
 
     try:
         sig = keys.Signature(signature_bytes=signature)
@@ -47,7 +47,7 @@ class Signer(ABC):
     address: Address
 
     @abstractmethod
-    def sign(self, data: bytes, v: int = 27) -> bytes:
+    def sign(self, data: bytes, v: int = 27) -> Signature:
         """ Sign data hash (as of EIP191) with this Signer's account """
         pass
 
@@ -80,7 +80,7 @@ class LocalSigner(Signer):
         self.private_key = keys.PrivateKey(private_key)
         self.address = self.private_key.public_key.to_canonical_address()
 
-    def sign(self, data: bytes, v: int = 27) -> bytes:
+    def sign(self, data: bytes, v: int = 27) -> Signature:
         """ Sign data hash with local private key """
         assert v in (0, 27), 'Raiden is only signing messages with v in (0, 27)'
         _hash = eth_sign_sha3(data)
