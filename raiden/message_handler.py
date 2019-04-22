@@ -127,8 +127,8 @@ class MessageHandler:
         )
 
         role = views.get_transfer_role(
-            chain_state,
-            from_transfer.lock.secrethash,
+            chain_state=chain_state,
+            secrethash=from_transfer.lock.secrethash,
         )
 
         state_change: StateChange
