@@ -38,10 +38,10 @@ from raiden.utils.typing import (
     List,
     MessageID,
     Optional,
+    PaymentAmount,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
-    TokenAmount,
     TokenNetworkID,
 )
 
@@ -88,7 +88,7 @@ def handle_block(
         state_change: Block,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-) -> TransitionResult[Optional[InitiatorTransferState]]:
+) -> TransitionResult[InitiatorTransferState]:
     """ Checks if the lock has expired, and if it has sends a remove expired
     lock and emits the failing events.
     """
@@ -177,7 +177,7 @@ def get_initial_lock_expiration(
 def next_channel_from_routes(
         available_routes: List[RouteState],
         channelidentifiers_to_channels: ChannelMap,
-        transfer_amount: TokenAmount,
+        transfer_amount: PaymentAmount,
 ) -> Optional[NettingChannelState]:
     """ Returns the first channel that can be used to start the transfer.
     The routing service can race with local changes, so the recommended routes
@@ -216,12 +216,12 @@ def try_new_route(
         transfer_description: TransferDescriptionWithSecretState,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult[Optional[InitiatorTransferState]]:
+) -> TransitionResult[InitiatorTransferState]:
 
     channel_state = next_channel_from_routes(
-        available_routes,
-        channelidentifiers_to_channels,
-        transfer_description.amount,
+        available_routes=available_routes,
+        channelidentifiers_to_channels=channelidentifiers_to_channels,
+        transfer_amount=transfer_description.amount,
     )
 
     events: List[Event] = list()
@@ -371,7 +371,7 @@ def handle_offchain_secretreveal(
         state_change: ReceiveSecretReveal,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-) -> TransitionResult[Optional[InitiatorTransferState]]:
+) -> TransitionResult[InitiatorTransferState]:
     """ Once the next hop proves it knows the secret, the initiator can unlock
     the mediated transfer.
 
@@ -379,6 +379,7 @@ def handle_offchain_secretreveal(
     the next hop with the current lock removed from the merkle tree and the
     transferred amount updated.
     """
+    iteration: TransitionResult[InitiatorTransferState]
     valid_reveal = is_valid_secret_reveal(
         state_change=state_change,
         transfer_secrethash=initiator_state.transfer_description.secrethash,
@@ -408,7 +409,7 @@ def handle_onchain_secretreveal(
         state_change: ContractReceiveSecretReveal,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-) -> TransitionResult[Optional[InitiatorTransferState]]:
+) -> TransitionResult[InitiatorTransferState]:
     """ When a secret is revealed on-chain all nodes learn the secret.
 
     This check the on-chain secret corresponds to the one used by the
@@ -416,6 +417,7 @@ def handle_onchain_secretreveal(
     the current lock removed from the merkle tree and the transferred amount
     updated.
     """
+    iteration: TransitionResult[InitiatorTransferState]
     secret = state_change.secret
     secrethash = initiator_state.transfer_description.secrethash
     is_valid_secret = is_valid_secret_reveal(
@@ -460,7 +462,7 @@ def state_transition(
         state_change: StateChange,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
-) -> TransitionResult[Optional[InitiatorTransferState]]:
+) -> TransitionResult[InitiatorTransferState]:
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(

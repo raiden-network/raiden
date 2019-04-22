@@ -97,6 +97,7 @@ from raiden.utils.typing import (
     NamedTuple,
     Nonce,
     Optional,
+    PaymentAmount,
     PaymentID,
     PaymentWithFeeAmount,
     Secret,
@@ -106,6 +107,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkID,
     Tuple,
+    Union,
     cast,
 )
 
@@ -291,7 +293,7 @@ def is_balance_proof_safe_for_onchain_operations(
 
 def is_valid_amount(
         end_state: NettingChannelEndState,
-        amount: TokenAmount,
+        amount: Union[TokenAmount, PaymentAmount],
 ) -> bool:
     (
         _,

@@ -21,6 +21,7 @@ from raiden.utils.typing import (
     InitiatorAddress,
     MessageID,
     Optional,
+    PaymentAmount,
     PaymentID,
     PaymentNetworkID,
     Secret,
@@ -385,7 +386,7 @@ class EventPaymentSentSuccess(Event):
             payment_network_identifier: PaymentNetworkID,
             token_network_identifier: TokenNetworkID,
             identifier: PaymentID,
-            amount: TokenAmount,
+            amount: PaymentAmount,
             target: TargetAddress,
     ) -> None:
         self.payment_network_identifier = payment_network_identifier
@@ -440,7 +441,7 @@ class EventPaymentSentSuccess(Event):
             payment_network_identifier=to_canonical_address(data['payment_network_identifier']),
             token_network_identifier=to_canonical_address(data['token_network_identifier']),
             identifier=PaymentID(int(data['identifier'])),
-            amount=TokenAmount(int(data['amount'])),
+            amount=PaymentAmount(int(data['amount'])),
             target=to_canonical_address(data['target']),
         )
 
