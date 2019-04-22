@@ -1,5 +1,5 @@
 from raiden.transfer import channel
-from raiden.transfer.architecture import StateChange, TransitionResult
+from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.state import TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChannelClose,
@@ -13,12 +13,23 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveUpdateTransfer,
 )
-from raiden.utils.typing import MYPY_ANNOTATION, BlockHash, BlockNumber
+from raiden.utils.typing import MYPY_ANNOTATION, BlockHash, BlockNumber, List, Union
+
+# TODO: The proper solution would be to introduce a marker for state changes
+# that contains channel IDs and other specific channel attributes
+StateChangeWithChannelID = Union[
+    ActionChannelClose,
+    ActionChannelSetFee,
+    ContractReceiveChannelClosed,
+    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelSettled,
+    ContractReceiveUpdateTransfer,
+]
 
 
 def subdispatch_to_channel_by_id(
         token_network_state: TokenNetworkState,
-        state_change: StateChange,
+        state_change: StateChangeWithChannelID,
         block_number: BlockNumber,
         block_hash: BlockHash,
 ) -> TransitionResult:
@@ -70,7 +81,7 @@ def handle_channelnew(
         token_network_state: TokenNetworkState,
         state_change: ContractReceiveChannelNew,
 ) -> TransitionResult:
-    events = list()
+    events: List[Event] = list()
 
     channel_state = state_change.channel_state
     channel_identifier = channel_state.identifier
@@ -220,7 +231,7 @@ def handle_newroute(
         token_network_state: TokenNetworkState,
         state_change: ContractReceiveRouteNew,
 ) -> TransitionResult:
-    events = list()
+    events: List[Event] = list()
 
     token_network_state.network_graph.network.add_edge(
         state_change.participant1,
@@ -237,7 +248,7 @@ def handle_closeroute(
         token_network_state: TokenNetworkState,
         state_change: ContractReceiveRouteClosed,
 ) -> TransitionResult:
-    events = list()
+    events: List[Event] = list()
 
     network_graph_state = token_network_state.network_graph
 
