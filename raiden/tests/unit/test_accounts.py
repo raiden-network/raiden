@@ -6,6 +6,7 @@ import pytest
 from eth_utils import encode_hex
 
 from raiden.accounts import AccountManager
+from raiden.ui.prompt import unlock_account_with_passwordfile
 from raiden.utils import get_project_root
 
 KEYFILE_INACCESSIBLE = 'UTC--2017-06-20T16-33-00.000000000Z--inaccessible'
@@ -123,3 +124,15 @@ def test_account_manager_invalid_directory(caplog):
                 break
         else:
             assert False, "'{}' not in log messages".format(msg)
+
+
+def test_unlock_account_with_passwordfile(keystore_mock):
+    account_manager = AccountManager(keystore_mock)
+    password_file_path = os.path.join(keystore_mock, 'passwordfile.txt')
+
+    privkey = unlock_account_with_passwordfile(
+        account_manager=account_manager,
+        address_hex='0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645',
+        password_file=open(password_file_path, 'r'),
+    )
+    assert privkey

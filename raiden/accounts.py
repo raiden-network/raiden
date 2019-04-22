@@ -13,6 +13,11 @@ from raiden.utils.typing import AddressHex, PrivateKey, PublicKey
 log = structlog.get_logger(__name__)
 
 
+class InvalidAccountFile(Exception):
+    """ Thrown when a file is not a valid keystore account file """
+    pass
+
+
 def _find_datadir() -> str:
     home = os.path.expanduser('~')
     if home == '~':  # Could not expand user path
@@ -96,6 +101,10 @@ class AccountManager:
                     try:
                         with open(fullpath) as data_file:
                             data = json.load(data_file)
+                            if not isinstance(data, dict) or 'address' not in data:
+                                # we expect a dict in specific format.
+                                # Anything else is not a keyfile
+                                raise InvalidAccountFile(f'Invalid keystore file {fullpath}')
                             address = add_0x_prefix(str(data['address']).lower())
                             self.accounts[address] = str(fullpath)
                     except OSError as ex:
@@ -105,6 +114,7 @@ class AccountManager:
                             json.JSONDecodeError,
                             KeyError,
                             UnicodeDecodeError,
+                            InvalidAccountFile,
                     ) as ex:
                         # Invalid file - skip
                         if f.startswith('UTC--'):
