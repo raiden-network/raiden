@@ -12,7 +12,7 @@ from eth_utils import (
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
 
-from raiden.constants import EMPTY_HASH, GENESIS_BLOCK_NUMBER, UNLOCK_TX_GAS_LIMIT
+from raiden.constants import EMPTY_HASH, GENESIS_BLOCK_NUMBER, UINT256_MAX, UNLOCK_TX_GAS_LIMIT
 from raiden.exceptions import (
     ChannelOutdatedError,
     DepositMismatch,
@@ -396,6 +396,8 @@ class TokenNetwork:
             )
         elif not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be of type T_ChannelID')
+        elif channel_identifier <= 0 or channel_identifier > UINT256_MAX:
+            raise ValueError('channel_identifier must be larger then 0 and smaller then uint256')
 
         channel_data = self._call_and_check_result(
             block_identifier,
@@ -438,6 +440,8 @@ class TokenNetwork:
             )
         elif not isinstance(channel_identifier, T_ChannelID):
             raise ValueError('channel_identifier must be of type T_ChannelID')
+        elif channel_identifier <= 0 or channel_identifier > UINT256_MAX:
+            raise ValueError('channel_identifier must be larger then 0 and smaller then uint256')
 
         our_data = self._detail_participant(
             channel_identifier=channel_identifier,
@@ -1067,6 +1071,9 @@ class TokenNetwork:
 
         if balance_hash is EMPTY_HASH:
             raise RaidenUnrecoverableError('update_transfer called with an empty balance_hash')
+
+        if nonce <= 0 or nonce > UINT256_MAX:
+            raise RaidenUnrecoverableError('update_transfer called with an invalid nonce')
 
         data_that_was_signed = pack_balance_proof(
             nonce=nonce,
