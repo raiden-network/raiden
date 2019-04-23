@@ -1110,16 +1110,19 @@ class TokenNetwork:
                 )
                 raise RaidenRecoverableError(msg)
 
-            error_type, msg = self._check_channel_state_for_update(
+            closer_details = self._detail_participant(
                 channel_identifier=channel_identifier,
-                closer=partner,
-                update_nonce=nonce,
+                participant=partner,
+                partner=self.node_address,
                 block_identifier=given_block_identifier,
             )
-            if error_type:
-                raise error_type(msg)
+            if closer_details.nonce == nonce:
+                msg = (
+                    'updateNonClosingBalanceProof transaction has already '
+                    'been mined and updated the channel succesfully.'
+                )
+                raise RaidenRecoverableError(msg)
 
-        error_prefix = 'updateNonClosingBalanceProof call will fail'
         checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
             checking_block,
@@ -1135,7 +1138,6 @@ class TokenNetwork:
         )
 
         if gas_limit:
-            error_prefix = 'updateNonClosingBalanceProof call failed'
             transaction_hash = self.proxy.transact(
                 'updateNonClosingBalanceProof',
                 safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF),
@@ -1175,42 +1177,37 @@ class TokenNetwork:
             msg: Optional[str]
             error_type: ErrorType
             if detail.settle_block_number < to_compare_block:
-                error_type = RaidenRecoverableError
                 msg = (
                     'updateNonClosingBalanceProof transaction '
                     'was mined after settlement finished'
                 )
-            else:
-                msg = self._check_channel_state_for_update(
-                    channel_identifier=channel_identifier,
-                    closer=partner,
-                    update_nonce=nonce,
-                    block_identifier=block,
-                )
-                if msg is None:
-                    # This should never happen if the settlement window and gas price
-                    # estimation is done properly
-                    channel_settled = self.channel_is_settled(
-                        participant1=self.node_address,
-                        participant2=partner,
-                        block_identifier=block,
-                        channel_identifier=channel_identifier,
-                    )
-                    if channel_settled is True:
-                        error_type = RaidenUnrecoverableError
-                        msg = 'Channel is settled'
-                    else:
-                        error_type = RaidenUnrecoverableError
-                        msg = ''
-                else:
-                    error_type = RaidenRecoverableError
+                raise RaidenRecoverableError(msg)
 
-            error_msg = f'{error_prefix}. {msg}'
-            if error_type == RaidenRecoverableError:
-                log.warning(error_msg, **log_details)
-            else:
-                log.critical(error_msg, **log_details)
-            raise error_type(error_msg)
+            closer_details = self._detail_participant(
+                channel_identifier=channel_identifier,
+                participant=partner,
+                partner=self.node_address,
+                block_identifier=block,
+            )
+            if closer_details.nonce == nonce:
+                msg = (
+                    'updateNonClosingBalanceProof transaction has already '
+                    'been mined and updated the channel succesfully.'
+                )
+                raise RaidenRecoverableError(msg)
+
+            # This should never happen if the settlement window and gas price
+            # estimation is done properly
+            channel_settled = self.channel_is_settled(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=block,
+                channel_identifier=channel_identifier,
+            )
+            if channel_settled is True:
+                raise RaidenUnrecoverableError('Channel is settled')
+
+            raise RaidenUnrecoverableError('')
 
         log.info('updateNonClosingBalanceProof successful', **log_details)
 
@@ -1593,34 +1590,4 @@ class TokenNetwork:
                 "Settling this channel failed although the channel's current state "
                 "is closed."
             )
-        return msg
-
-    def _check_channel_state_for_update(
-            self,
-            channel_identifier: ChannelID,
-            closer: Address,
-            update_nonce: Nonce,
-            block_identifier: BlockSpecification,
-    ) -> Optional[str]:
-        """Check the channel state on chain to see if it has been updated.
-
-        Compare the nonce, we are about to update the contract with, with the
-        updated nonce in the onchain state and, if it's the same, return a
-        message with which the caller should raise a RaidenRecoverableError.
-
-        If all is okay return None.
-        """
-        msg = None
-        closer_details = self._detail_participant(
-            channel_identifier=channel_identifier,
-            participant=closer,
-            partner=self.node_address,
-            block_identifier=block_identifier,
-        )
-        if closer_details.nonce == update_nonce:
-            msg = (
-                'updateNonClosingBalanceProof transaction has already '
-                'been mined and updated the channel succesfully.'
-            )
-
         return msg
