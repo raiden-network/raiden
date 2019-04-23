@@ -149,15 +149,6 @@ class PaymentChannel:
             channel_identifier=self.channel_identifier,
         )
 
-    def closing_address(self, block_identifier: BlockSpecification) -> Optional[Address]:
-        """ Returns the address of the closer of the channel. """
-        return self.token_network.closing_address(
-            participant1=self.participant1,
-            participant2=self.participant2,
-            block_identifier=block_identifier,
-            channel_identifier=self.channel_identifier,
-        )
-
     def can_transfer(self, block_identifier: BlockSpecification) -> bool:
         """ Returns True if the channel is opened and the node has deposit in it. """
         return self.token_network.can_transfer(

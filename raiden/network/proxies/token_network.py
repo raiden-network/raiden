@@ -562,35 +562,47 @@ class TokenNetwork:
             participant1: Address,
             participant2: Address,
             block_identifier: BlockSpecification,
-            channel_identifier: ChannelID = None,
+            channel_identifier: ChannelID,
     ) -> Optional[Address]:
         """ Returns the address of the closer, if the channel is closed and not settled. None
         otherwise. """
+        if not isinstance(channel_identifier, T_ChannelID):
+            raise ValueError('channel_identifier must be of type T_ChannelID')
 
-        try:
-            channel_data = self._detail_channel(
-                participant1=participant1,
-                participant2=participant2,
-                block_identifier=block_identifier,
-                channel_identifier=channel_identifier,
-            )
-        except RaidenRecoverableError:
+        if channel_identifier <= 0:
+            raise ValueError('channel_identifier must be larger then 0')
+
+        channel_data = self._call_and_check_result(
+            block_identifier,
+            'getChannelInfo',
+            channel_identifier=channel_identifier,
+            participant1=to_checksum_address(participant1),
+            participant2=to_checksum_address(participant2),
+        )
+        state = channel_data[ChannelInfoIndex.STATE]
+
+        if state != ChannelState.CLOSED:
             return None
 
-        if channel_data.state >= ChannelState.SETTLED:
-            return None
-
-        participants_data = self.detail_participants(
-            participant1=participant1,
-            participant2=participant2,
+        our_details = self._detail_participant(
+            channel_identifier=channel_identifier,
+            participant=participant1,
+            partner=participant2,
             block_identifier=block_identifier,
-            channel_identifier=channel_data.channel_identifier,
         )
 
-        if participants_data.our_details.is_closer:
-            return participants_data.our_details.address
-        elif participants_data.partner_details.is_closer:
-            return participants_data.partner_details.address
+        if our_details.is_closer:
+            return our_details.address
+
+        partner_details = self._detail_participant(
+            channel_identifier=channel_identifier,
+            participant=participant2,
+            partner=participant1,
+            block_identifier=block_identifier,
+        )
+
+        if partner_details.is_closer:
+            return partner_details.address
 
         return None
 
