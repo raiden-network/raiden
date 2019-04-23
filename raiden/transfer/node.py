@@ -1171,7 +1171,11 @@ def is_transaction_effect_satisfied(
                 TokenNetworkID(state_change.token_network_identifier),
                 partner_address,
             )
-
+            # If the channel was cleared, that means that both
+            # sides of the channel were successfully unlocked.
+            # In this case, we only clear the batch unlock
+            # transaction from the queue only in case there
+            # were no more locked funds to unlock.
             if channel_state is None:
                 return True
 
