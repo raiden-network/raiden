@@ -617,10 +617,9 @@ def test_query_pruned_state(
     block = c1_client.web3.eth.getBlock('latest')
     block_number = int(block['number'])
     block_hash = bytes(block['hash'])
-    channel_id = c1_token_network_proxy._inspect_channel_identifier(
+    channel_id = c1_token_network_proxy.get_channel_identifier(
         participant1=c1_client.address,
         participant2=c2_client.address,
-        called_by_fn='test',
         block_identifier=block_hash,
     )
     assert channel_id == channel_identifier
