@@ -370,8 +370,8 @@ class RaidenEventHandler:
         if not channel_state:
             # channel was cleaned up already due to an unlock
             raise RaidenUnrecoverableError(
-                f'Failed to find channel state with partner '
-                f'{participant}, token_network:pex(token_network_identifier)',
+                f'Failed to find channel state with partner:'
+                f'{to_checksum_address(participant)}, token_network:pex(token_network_identifier)',
             )
 
         our_address = channel_state.our_state.address
