@@ -350,7 +350,7 @@ def handle_lock_expired(
 
 
 def state_transition(
-        target_state: TargetTransferState,
+        target_state: Optional[TargetTransferState],
         state_change: StateChange,
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
@@ -372,6 +372,7 @@ def state_transition(
     elif type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
         assert state_change.block_number == block_number
+        assert target_state, 'Block state changes should be accompanied by a valid target state'
 
         iteration = handle_block(
             target_state=target_state,
@@ -381,6 +382,7 @@ def state_transition(
         )
     elif type(state_change) == ReceiveSecretReveal:
         assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
+        assert target_state, 'ReceiveSecretReveal should be accompanied by a valid target state'
         iteration = handle_offchain_secretreveal(
             target_state=target_state,
             state_change=state_change,
@@ -390,6 +392,8 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveSecretReveal:
         assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
+        msg = 'ContractReceiveSecretReveal should be accompanied by a valid target state'
+        assert target_state, msg
         iteration = handle_onchain_secretreveal(
             target_state,
             state_change,
@@ -397,18 +401,20 @@ def state_transition(
         )
     elif type(state_change) == ReceiveUnlock:
         assert isinstance(state_change, ReceiveUnlock), MYPY_ANNOTATION
+        assert target_state, 'ReceiveUnlock should be accompanied by a valid target state'
         iteration = handle_unlock(
-            target_state,
-            state_change,
-            channel_state,
+            target_state=target_state,
+            state_change=state_change,
+            channel_state=channel_state,
         )
     elif type(state_change) == ReceiveLockExpired:
         assert isinstance(state_change, ReceiveLockExpired), MYPY_ANNOTATION
+        assert target_state, 'ReceiveLockExpired should be accompanied by a valid target state'
         iteration = handle_lock_expired(
-            target_state,
-            state_change,
-            channel_state,
-            block_number,
+            target_state=target_state,
+            state_change=state_change,
+            channel_state=channel_state,
+            block_number=block_number,
         )
 
     sanity_check(

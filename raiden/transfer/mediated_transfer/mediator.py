@@ -35,7 +35,6 @@ from raiden.transfer.state import (
     NODE_NETWORK_UNREACHABLE,
     NettingChannelState,
     RouteState,
-    UnlockPartialProofState,
     message_identifier_from_prng,
 )
 from raiden.transfer.state_change import (
@@ -61,7 +60,6 @@ from raiden.utils.typing import (
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
-    Sequence,
     SuccessOrError,
     Tuple,
     Union,
@@ -1567,7 +1565,7 @@ def handle_node_change_network_state(
 
 
 def state_transition(
-        mediator_state: MediatorTransferState,
+        mediator_state: Optional[MediatorTransferState],
         state_change: StateChange,
         channelidentifiers_to_channels: ChannelMap,
         nodeaddresses_to_networkstates: NodeNetworkStateMap,
@@ -1589,35 +1587,40 @@ def state_transition(
         assert isinstance(state_change, ActionInitMediator), MYPY_ANNOTATION
         if mediator_state is None:
             iteration = handle_init(
-                state_change,
-                channelidentifiers_to_channels,
-                nodeaddresses_to_networkstates,
-                pseudo_random_generator,
-                block_number,
+                state_change=state_change,
+                channelidentifiers_to_channels=channelidentifiers_to_channels,
+                nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+                pseudo_random_generator=pseudo_random_generator,
+                block_number=block_number,
             )
 
     elif type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
+        assert mediator_state, 'Block should be accompanied by a valid mediator state'
         iteration = handle_block(
-            mediator_state,
-            state_change,
-            channelidentifiers_to_channels,
-            pseudo_random_generator,
+            mediator_state=mediator_state,
+            state_change=state_change,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            pseudo_random_generator=pseudo_random_generator,
         )
 
     elif type(state_change) == ReceiveTransferRefund:
         assert isinstance(state_change, ReceiveTransferRefund), MYPY_ANNOTATION
+        msg = 'ReceiveTransferRefund should be accompanied by a valid mediator state'
+        assert mediator_state, msg
         iteration = handle_refundtransfer(
-            mediator_state,
-            state_change,
-            channelidentifiers_to_channels,
-            nodeaddresses_to_networkstates,
-            pseudo_random_generator,
-            block_number,
+            mediator_state=mediator_state,
+            mediator_state_change=state_change,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
 
     elif type(state_change) == ReceiveSecretReveal:
         assert isinstance(state_change, ReceiveSecretReveal), MYPY_ANNOTATION
+        msg = 'ReceiveSecretReveal should be accompanied by a valid mediator state'
+        assert mediator_state, msg
         iteration = handle_offchain_secretreveal(
             mediator_state=mediator_state,
             mediator_state_change=state_change,
@@ -1629,38 +1632,44 @@ def state_transition(
 
     elif type(state_change) == ContractReceiveSecretReveal:
         assert isinstance(state_change, ContractReceiveSecretReveal), MYPY_ANNOTATION
+        msg = 'ContractReceiveSecretReveal should be accompanied by a valid mediator state'
+        assert mediator_state, msg
         iteration = handle_onchain_secretreveal(
-            mediator_state,
-            state_change,
-            channelidentifiers_to_channels,
-            pseudo_random_generator,
-            block_number,
+            mediator_state=mediator_state,
+            onchain_secret_reveal=state_change,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
 
     elif type(state_change) == ReceiveUnlock:
         assert isinstance(state_change, ReceiveUnlock), MYPY_ANNOTATION
+        assert mediator_state, 'ReceiveUnlock should be accompanied by a valid mediator state'
         iteration = handle_unlock(
-            mediator_state,
-            state_change,
-            channelidentifiers_to_channels,
+            mediator_state=mediator_state,
+            state_change=state_change,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
         )
 
     elif type(state_change) == ReceiveLockExpired:
         assert isinstance(state_change, ReceiveLockExpired), MYPY_ANNOTATION
+        assert mediator_state, 'ReceiveLockExpired should be accompanied by a valid mediator state'
         iteration = handle_lock_expired(
-            mediator_state,
-            state_change,
-            channelidentifiers_to_channels,
-            block_number,
+            mediator_state=mediator_state,
+            state_change=state_change,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            block_number=block_number,
         )
     elif type(state_change) == ActionChangeNodeNetworkState:
         assert isinstance(state_change, ActionChangeNodeNetworkState), MYPY_ANNOTATION
+        msg = 'ActionChangeNodeNetworkState should be accompanied by a valid mediator state'
+        assert mediator_state, msg
         iteration = handle_node_change_network_state(
-            mediator_state,
-            state_change,
-            channelidentifiers_to_channels,
-            pseudo_random_generator,
-            block_number,
+            mediator_state=mediator_state,
+            state_change=state_change,
+            channelidentifiers_to_channels=channelidentifiers_to_channels,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
 
     # this is the place for paranoia
