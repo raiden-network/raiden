@@ -24,7 +24,6 @@ from raiden.utils.typing import (
     BlockNumber,
     ChannelMap,
     List,
-    Optional,
     SecretHash,
     TokenNetworkID,
     cast,
@@ -33,7 +32,7 @@ from raiden.utils.typing import (
 
 def clear_if_finalized(
         iteration: TransitionResult,
-) -> TransitionResult[Optional[InitiatorPaymentState]]:
+) -> TransitionResult[InitiatorPaymentState]:
     """ Clear the initiator payment task if all transfers have been finalized
     or expired. """
     state = cast(InitiatorPaymentState, iteration.new_state)
@@ -80,7 +79,7 @@ def events_for_cancel_current_route(
 
 def cancel_current_route(
         payment_state: InitiatorPaymentState,
-        initiator_state: InitiatorPaymentState,
+        initiator_state: InitiatorTransferState,
 ) -> List[Event]:
     """ Cancel current route.
 
@@ -141,7 +140,7 @@ def subdispatch_to_initiatortransfer(
         state_change: StateChange,
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
-) -> TransitionResult[InitiatorPaymentState]:
+) -> TransitionResult[InitiatorTransferState]:
     channel_identifier = initiator_state.channel_identifier
     channel_state = channelidentifiers_to_channels.get(channel_identifier)
     if not channel_state:
@@ -204,7 +203,7 @@ def handle_init(
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult[Optional[InitiatorPaymentState]]:
+) -> TransitionResult[InitiatorPaymentState]:
     events: List[Event]
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
@@ -472,7 +471,7 @@ def state_transition(
         channelidentifiers_to_channels: ChannelMap,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult[Optional[InitiatorPaymentState]]:
+) -> TransitionResult[InitiatorPaymentState]:
     # pylint: disable=unidiomatic-typecheck
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
