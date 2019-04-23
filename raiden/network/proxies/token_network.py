@@ -12,7 +12,7 @@ from eth_utils import (
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
 
-from raiden.constants import GENESIS_BLOCK_NUMBER, UNLOCK_TX_GAS_LIMIT
+from raiden.constants import EMPTY_HASH, GENESIS_BLOCK_NUMBER, UNLOCK_TX_GAS_LIMIT
 from raiden.exceptions import (
     ChannelOutdatedError,
     DepositMismatch,
@@ -1053,6 +1053,9 @@ class TokenNetwork:
         }
         log.debug('updateNonClosingBalanceProof called', **log_details)
 
+        if balance_hash is EMPTY_HASH:
+            raise RaidenUnrecoverableError('update_transfer called with an empty balance_hash')
+
         data_that_was_signed = pack_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
@@ -1083,43 +1086,55 @@ class TokenNetwork:
         if signer_address != partner:
             raise RaidenUnrecoverableError('Invalid balance proof signature')
 
-        # If `given_block_identifier` is a pruned block skip the checks bellow.
-        # Estimate gas will stop us from sending a transaction that will fail.
-        if self.client.can_query_state_for_block(given_block_identifier):
-            detail = self._detail_channel(
+        # Check the preconditions for calling updateNonClosingBalanceProof at
+        # the time the event was emitted.
+        try:
+            onchain_detail = self._detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
                 block_identifier=given_block_identifier,
                 channel_identifier=channel_identifier,
             )
-
-            if detail.channel_identifier != channel_identifier:
-                raise ChannelOutdatedError(
-                    'Current channel identifier is outdated. '
-                    f'current={channel_identifier}, '
-                    f'new={detail.channel_identifier}',
-                )
-
-            if detail.state != ChannelState.CLOSED:
-                raise RaidenUnrecoverableError('Channel is not in a closed state')
-
-            if detail.settle_block_number < self.client.block_number():
-                msg = (
-                    'updateNonClosingBalanceProof cannot be called '
-                    'because the settlement period is over'
-                )
-                raise RaidenRecoverableError(msg)
-
             closer_details = self._detail_participant(
                 channel_identifier=channel_identifier,
                 participant=partner,
                 partner=self.node_address,
                 block_identifier=given_block_identifier,
             )
+        except ValueError:
+            # If `given_block_identifier` has been pruned the checks cannot be
+            # performed.
+            pass
+        else:
+            if onchain_detail.channel_identifier != channel_identifier:
+                msg = (
+                    f'The provided channel identifier does not match the value '
+                    f'on-chain at the provided block ({given_block_identifier}). '
+                    f'This call should never have been attempted. '
+                    f'provided_channel_identifier={channel_identifier}, '
+                    f'onchain_channel_identifier={onchain_detail.channel_identifier}'
+                )
+                raise RaidenUnrecoverableError(msg)
+
+            if onchain_detail.state != ChannelState.CLOSED:
+                msg = (
+                    f'The channel was not closed at the provided block '
+                    f'({given_block_identifier}). This call should never have '
+                    f'been attempted.'
+                )
+                raise RaidenUnrecoverableError(msg)
+
+            if onchain_detail.settle_block_number < self.client.block_number():
+                msg = (
+                    'update transfer cannot be called after the settlement '
+                    'period, this call should never have been attempted.'
+                )
+                raise RaidenUnrecoverableError(msg)
+
             if closer_details.nonce == nonce:
                 msg = (
-                    'updateNonClosingBalanceProof transaction has already '
-                    'been mined and updated the channel succesfully.'
+                    'update transfer was already done, this call should never '
+                    'have been attempted.'
                 )
                 raise RaidenRecoverableError(msg)
 
