@@ -142,6 +142,8 @@ def to_comparable_graph(network: networkx.Graph) -> List[List[Any]]:
 
 
 class TransferTask(State):
+    # TODO: When we turn these into dataclasses it would be a good time to move common attributes
+    # of all transfer tasks like the `token_network_identifier` into the common subclass
     pass
 
 
