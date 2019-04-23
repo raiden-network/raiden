@@ -5,17 +5,22 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
+from raiden.app import App
 from raiden.constants import UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
+from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret
+from raiden.network.transport import MatrixTransport
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.events import search_for_item, wait_for_state_change
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
+from raiden.transfer.mediated_transfer.state_change import ActionInitTarget
 from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
@@ -830,3 +835,209 @@ def run_test_automatic_dispute(raiden_network, deposit, token_addresses):
     expected_balance1 = initial_balance1 + deposit + total0 - total1
     assert token_proxy.balance_of(app0.raiden.address) == expected_balance0
     assert token_proxy.balance_of(app1.raiden.address) == expected_balance1
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_batch_unlock_after_restart(
+        raiden_network,
+        token_addresses,
+        secret_registry_address,
+        deposit,
+        blockchain_type,
+        retry_timeout,
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_batch_unlock_after_restart,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        secret_registry_address=secret_registry_address,
+        deposit=deposit,
+        blockchain_type=blockchain_type,
+        retry_timeout=retry_timeout,
+    )
+
+
+def run_test_batch_unlock_after_restart(
+        raiden_network,
+        token_addresses,
+        secret_registry_address,
+        deposit,
+        blockchain_type,
+        retry_timeout,
+):
+    """Simulate the case where:
+    - A sends B a transfer
+    - B sends A a transfer
+    - Secrets were never revealed
+    - B closes channel
+    - Wait for settle
+    - A crashes
+    - Wait for unlock from B
+    - Restart A
+    At this point, the current unlock logic will try to unlock according
+    iff the node gains from unlocking. Which means that the node will try to unlock
+    either side. In the above scenario, each noded will unlock it's side.
+    This test makes sure that we do NOT invalidate A's unlock transaction based
+    on the ContractReceiveChannelBatchUnlock caused by B's unlock.
+    """
+    alice_app, bob_app = raiden_network
+    registry_address = alice_app.raiden.default_registry.address
+    token_address = token_addresses[0]
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        views.state_from_app(alice_app),
+        alice_app.raiden.default_registry.address,
+        token_address,
+    )
+
+    hold_event_handler = HoldOffChainSecretRequest()
+    bob_app.raiden.raiden_event_handler = hold_event_handler
+    alice_app.raiden.raiden_event_handler = hold_event_handler
+
+    token_network = views.get_token_network_by_identifier(
+        views.state_from_app(alice_app),
+        token_network_identifier,
+    )
+
+    channel_identifier = get_channelstate(alice_app, bob_app, token_network_identifier).identifier
+
+    assert channel_identifier in token_network.partneraddresses_to_channelidentifiers[
+        bob_app.raiden.address
+    ]
+
+    alice_to_bob_amount = 10
+    identifier = 1
+
+    alice_transfer_secret = sha3(alice_app.raiden.address)
+    alice_transfer_secrethash = sha3(alice_transfer_secret)
+
+    bob_transfer_secret = sha3(bob_app.raiden.address)
+    bob_transfer_secrethash = sha3(bob_transfer_secret)
+
+    hold_event_handler.hold_secretrequest_for(
+        secrethash=alice_transfer_secrethash,
+    )
+    hold_event_handler.hold_secretrequest_for(
+        secrethash=bob_transfer_secrethash,
+    )
+
+    alice_app.raiden.start_mediated_transfer_with_secret(
+        token_network_identifier=token_network_identifier,
+        amount=alice_to_bob_amount,
+        fee=0,
+        target=bob_app.raiden.address,
+        identifier=identifier,
+        secret=alice_transfer_secret,
+    )
+
+    bob_app.raiden.start_mediated_transfer_with_secret(
+        token_network_identifier=token_network_identifier,
+        amount=alice_to_bob_amount,
+        fee=0,
+        target=alice_app.raiden.address,
+        identifier=identifier + 1,
+        secret=bob_transfer_secret,
+    )
+
+    wait_for_state_change(
+        alice_app.raiden,
+        ActionInitTarget,
+        {},
+        retry_timeout,
+    )
+
+    wait_for_state_change(
+        bob_app.raiden,
+        ActionInitTarget,
+        {},
+        retry_timeout,
+    )
+
+    alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
+    alice_lock = channel.get_lock(alice_bob_channel_state.our_state, alice_transfer_secrethash)
+    bob_lock = channel.get_lock(alice_bob_channel_state.partner_state, bob_transfer_secrethash)
+
+    # This is the current state of protocol:
+    #
+    #    A -> B LockedTransfer
+    #    B -> A SecretRequest
+    #    - protocol didn't continue
+    assert_synced_channel_state(
+        token_network_identifier,
+        alice_app, deposit, [alice_lock],
+        bob_app, deposit, [bob_lock],
+    )
+
+    # A ChannelClose event will be generated, this will be polled by both apps
+    # and each must start a task for calling settle
+    RaidenAPI(bob_app.raiden).channel_close(
+        registry_address,
+        token_address,
+        alice_app.raiden.address,
+    )
+
+    secret_registry_proxy = alice_app.raiden.chain.secret_registry(
+        secret_registry_address,
+    )
+    secret_registry_proxy.register_secret(
+        secret=alice_transfer_secret,
+        given_block_identifier='latest',
+    )
+    secret_registry_proxy = bob_app.raiden.chain.secret_registry(
+        secret_registry_address,
+    )
+    secret_registry_proxy.register_secret(
+        secret=bob_transfer_secret,
+        given_block_identifier='latest',
+    )
+
+    waiting.wait_for_settle(
+        alice_app.raiden,
+        registry_address,
+        token_address,
+        [alice_bob_channel_state.identifier],
+        alice_app.raiden.alarm.sleep_time,
+    )
+
+    alice_app.stop()
+
+    # wait for the node to call batch unlock
+    timeout = 30 if blockchain_type == 'parity' else 10
+    with gevent.Timeout(timeout):
+        wait_for_batch_unlock(
+            bob_app,
+            token_network_identifier,
+            alice_bob_channel_state.partner_state.address,
+            alice_bob_channel_state.our_state.address,
+        )
+
+    alice_app.raiden.stop()
+
+    transport = MatrixTransport(alice_app.config['transport']['matrix'])
+    raiden_event_handler = RaidenEventHandler()
+    message_handler = MessageHandler()
+
+    alice_app_restart = App(
+        config=alice_app.config,
+        chain=alice_app.raiden.chain,
+        query_start_block=0,
+        default_registry=alice_app.raiden.default_registry,
+        default_secret_registry=alice_app.raiden.default_secret_registry,
+        default_service_registry=alice_app.raiden.default_service_registry,
+        transport=transport,
+        raiden_event_handler=raiden_event_handler,
+        message_handler=message_handler,
+        discovery=alice_app.raiden.discovery,
+    )
+
+    del alice_app  # from here on the app0_restart should be used
+
+    alice_app_restart.start()
+
+    with gevent.Timeout(timeout):
+        wait_for_batch_unlock(
+            alice_app_restart,
+            token_network_identifier,
+            alice_bob_channel_state.partner_state.address,
+            alice_bob_channel_state.our_state.address,
+        )
