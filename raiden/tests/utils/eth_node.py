@@ -87,6 +87,7 @@ def geth_to_cmd(
 
     # dont use the '--dev' flag
     cmd.extend([
+        '--nat', 'none',
         '--nodiscover',
         '--rpc',
         '--rpcapi', 'eth,net,web3,personal,txpool',
@@ -126,6 +127,7 @@ def parity_to_cmd(
             cmd.append(f'--{option}={node[config]}')
 
     cmd.extend([
+        '--interface=127.0.0.1',
         '--jsonrpc-apis=eth,net,web3,parity,personal',
         '--jsonrpc-interface=127.0.0.1',
         '--no-discovery',
