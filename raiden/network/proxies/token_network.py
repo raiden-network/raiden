@@ -170,11 +170,13 @@ class TokenNetwork:
             settle_timeout > self.settlement_timeout_max()
         )
         if invalid_timeout:
-            raise InvalidSettleTimeout('settle_timeout must be in range [{}, {}], is {}'.format(
-                self.settlement_timeout_min(),
-                self.settlement_timeout_max(),
-                settle_timeout,
-            ))
+            raise InvalidSettleTimeout(
+                'settle_timeout must be in range [{}, {}], is {}'.format(
+                    self.settlement_timeout_min(),
+                    self.settlement_timeout_max(),
+                    settle_timeout,
+                ),
+            )
 
         if self.node_address == partner:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
@@ -1032,7 +1034,7 @@ class TokenNetwork:
 
         log.info('closeChannel successful', **log_details)
 
-    def _update_preconditions(
+    def update_transfer(
             self,
             channel_identifier: ChannelID,
             partner: Address,
@@ -1040,10 +1042,22 @@ class TokenNetwork:
             nonce: Nonce,
             additional_hash: AdditionalHash,
             closing_signature: Signature,
-            block_identifier: BlockSpecification,
-    ) -> None:
-        if not self.client.can_query_state_for_block(block_identifier):
-            raise NoStateForBlockIdentifier()
+            non_closing_signature: Signature,
+            given_block_identifier: BlockSpecification,
+    ):
+        log_details = {
+            'token_network': pex(self.address),
+            'node': pex(self.node_address),
+            'partner': pex(partner),
+            'nonce': nonce,
+            'balance_hash': encode_hex(balance_hash),
+            'additional_hash': encode_hex(additional_hash),
+            'closing_signature': encode_hex(closing_signature),
+            'non_closing_signature': encode_hex(non_closing_signature),
+        }
+        log.debug('updateNonClosingBalanceProof called', **log_details)
+
+        checking_block = self.client.get_checking_block()
 
         data_that_was_signed = pack_balance_proof(
             nonce=nonce,
@@ -1075,76 +1089,39 @@ class TokenNetwork:
         if signer_address != partner:
             raise RaidenUnrecoverableError('Invalid balance proof signature')
 
-        self._check_for_outdated_channel(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
-
-        msg: Optional[str]
-        detail = self._detail_channel(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
-        if detail.state != ChannelState.CLOSED:
-            raise RaidenUnrecoverableError('Channel is not in a closed state')
-        elif detail.settle_block_number < self.client.block_number():
-            msg = (
-                'updateNonClosingBalanceProof cannot be called '
-                'because the settlement period is over'
-            )
-            raise RaidenRecoverableError(msg)
-        else:
-            msg = self._check_channel_state_for_update(
-                channel_identifier=channel_identifier,
-                closer=partner,
-                update_nonce=nonce,
-                block_identifier=block_identifier,
-            )
-            if msg:
-                raise RaidenRecoverableError(msg)
-
-    def update_transfer(
-            self,
-            channel_identifier: ChannelID,
-            partner: Address,
-            balance_hash: BalanceHash,
-            nonce: Nonce,
-            additional_hash: AdditionalHash,
-            closing_signature: Signature,
-            non_closing_signature: Signature,
-            given_block_identifier: BlockSpecification,
-    ):
-        log_details = {
-            'token_network': pex(self.address),
-            'node': pex(self.node_address),
-            'partner': pex(partner),
-            'nonce': nonce,
-            'balance_hash': encode_hex(balance_hash),
-            'additional_hash': encode_hex(additional_hash),
-            'closing_signature': encode_hex(closing_signature),
-            'non_closing_signature': encode_hex(non_closing_signature),
-        }
-        log.debug('updateNonClosingBalanceProof called', **log_details)
-
-        checking_block = self.client.get_checking_block()
-        try:
-            self._update_preconditions(
-                channel_identifier=channel_identifier,
-                partner=partner,
-                balance_hash=balance_hash,
-                nonce=nonce,
-                additional_hash=additional_hash,
-                closing_signature=closing_signature,
+        # If preconditions end up being on pruned state skip them. Estimate gas
+        # will stop us from sending a transaction that will fail
+        if self.client.can_query_state_for_block(given_block_identifier):
+            self._check_for_outdated_channel(
+                participant1=self.node_address,
+                participant2=partner,
                 block_identifier=given_block_identifier,
+                channel_identifier=channel_identifier,
             )
-        except NoStateForBlockIdentifier:
-            # If preconditions end up being on pruned state skip them. Estimate
-            # gas will stop us from sending a transaction that will fail
-            pass
+
+            detail = self._detail_channel(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=given_block_identifier,
+                channel_identifier=channel_identifier,
+            )
+            if detail.state != ChannelState.CLOSED:
+                raise RaidenUnrecoverableError('Channel is not in a closed state')
+            elif detail.settle_block_number < self.client.block_number():
+                msg = (
+                    'updateNonClosingBalanceProof cannot be called '
+                    'because the settlement period is over'
+                )
+                raise RaidenRecoverableError(msg)
+            else:
+                error_type, msg = self._check_channel_state_for_update(
+                    channel_identifier=channel_identifier,
+                    closer=partner,
+                    update_nonce=nonce,
+                    block_identifier=given_block_identifier,
+                )
+                if error_type:
+                    raise error_type(msg)
 
         error_prefix = 'updateNonClosingBalanceProof call will fail'
         gas_limit = self.proxy.estimate_gas(
