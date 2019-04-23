@@ -1073,11 +1073,11 @@ def is_transaction_effect_satisfied(
     anymore and therefore are not dispatched.
 
     On the number of state changes: Accepting a transaction from another
-    address removes the need for clearing state changes, e.g. when our the
+    address removes the need for clearing state changes, e.g. when our
     node's close transaction fails but its partner's close transaction
     succeeds.
     """
-    # These transactions are not made atomic through the WAL, they are sent
+    # These transactions are not made atomic through the WAL. They are sent
     # exclusively through the external APIs.
     #
     #  - ContractReceiveChannelNew
@@ -1105,7 +1105,7 @@ def is_transaction_effect_satisfied(
     #   proof
     # - A larger raiden state change nonce is impossible.
     #   That would require the partner node to produce an invalid balance proof,
-    # and this node to accept the invalid balance proof and sign it
+    #   and this node to accept the invalid balance proof and sign it
     is_valid_update_transfer = (
         isinstance(state_change, ContractReceiveUpdateTransfer) and
         isinstance(transaction, ContractSendChannelUpdateTransfer) and
