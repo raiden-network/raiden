@@ -304,30 +304,24 @@ class TokenNetwork:
 
         return channel_identifier
 
-    def _inspect_channel_identifier(
+    def get_channel_identifier(
             self,
             participant1: Address,
             participant2: Address,
-            called_by_fn: str,
             block_identifier: BlockSpecification,
-            channel_identifier: ChannelID = None,
     ) -> ChannelID:
-        if not channel_identifier:
-            channel_identifier = self.proxy.contract.functions.getChannelIdentifier(
-                participant=to_checksum_address(participant1),
-                partner=to_checksum_address(participant2),
-            ).call(block_identifier=block_identifier)
-
-        if not isinstance(channel_identifier, T_ChannelID):
-            raise ValueError('channel_identifier must be of type T_ChannelID')
+        channel_identifier = self.proxy.contract.functions.getChannelIdentifier(
+            participant=to_checksum_address(participant1),
+            partner=to_checksum_address(participant2),
+        ).call(block_identifier=block_identifier)
 
         if channel_identifier == 0:
-            raise RaidenRecoverableError(
-                f'When calling {called_by_fn} either 0 value was given for the '
-                'channel_identifier or getChannelIdentifier returned 0, meaning '
+            msg = (
+                f'getChannelIdentifier returned 0, meaning '
                 f'no channel currently exists between {pex(participant1)} and '
-                f'{pex(participant2)}',
+                f'{pex(participant2)}'
             )
+            raise RaidenRecoverableError(msg)
 
         return channel_identifier
 
@@ -394,13 +388,14 @@ class TokenNetwork:
         is a currently open channel and uses that identifier.
 
         """
-        channel_identifier = self._inspect_channel_identifier(
-            participant1=participant1,
-            participant2=participant2,
-            called_by_fn='_detail_channel(',
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
+        if channel_identifier is None:
+            channel_identifier = self.get_channel_identifier(
+                participant1=participant1,
+                participant2=participant2,
+                block_identifier=block_identifier,
+            )
+        elif not isinstance(channel_identifier, T_ChannelID):
+            raise ValueError('channel_identifier must be of type T_ChannelID')
 
         channel_data = self._call_and_check_result(
             block_identifier,
@@ -435,13 +430,14 @@ class TokenNetwork:
         if self.node_address == participant2:
             participant1, participant2 = participant2, participant1
 
-        channel_identifier = self._inspect_channel_identifier(
-            participant1=participant1,
-            participant2=participant2,
-            called_by_fn='details_participants',
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
+        if channel_identifier is None:
+            channel_identifier = self.get_channel_identifier(
+                participant1=participant1,
+                participant2=participant2,
+                block_identifier=block_identifier,
+            )
+        elif not isinstance(channel_identifier, T_ChannelID):
+            raise ValueError('channel_identifier must be of type T_ChannelID')
 
         our_data = self._detail_participant(
             channel_identifier=channel_identifier,
