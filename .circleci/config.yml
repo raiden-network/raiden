@@ -274,24 +274,6 @@ jobs:
           name: Run Lint
           command: make lint
 
-  mypy:
-    parameters:
-      py-version:
-        <<: *py-version-template
-
-    executor:
-      name: docker
-      py-version: << parameters.py-version >>
-
-    steps:
-      - attach-and-link:
-          py-version: << parameters.py-version >>
-      - conditional-skip
-      - config-path
-      - run:
-          name: mypy test
-          command: make mypy
-
   smoketest:
     parameters:
       <<: *parameter-templates
@@ -679,12 +661,6 @@ workflows:
           requires:
             - prepare-python-linux-3.7
 
-      - mypy:
-          name: mypy-3.7
-          py-version: "3.7"
-          requires:
-            - prepare-python-linux-3.7
-
       - smoketest:
           name: smoketest-udp-production-geth-3.7
           py-version: "3.7"
@@ -693,7 +669,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - smoketest:
           name: smoketest-udp-development-geth-3.7
@@ -703,7 +678,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-production-geth-3.7
@@ -713,7 +687,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-development-geth-3.7
@@ -723,7 +696,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-development-parity-3.7
@@ -733,7 +705,6 @@ workflows:
           blockchain-type: "parity"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - test:
           name: test-unit-3.7
@@ -742,7 +713,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -752,7 +722,6 @@ workflows:
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - test:
           name: test-integration-udp-geth-3.7
@@ -950,12 +919,6 @@ workflows:
           requires:
           - prepare-python-linux-3.7
 
-      - mypy:
-          name: mypy-3.7
-          py-version: "3.7"
-          requires:
-          - prepare-python-linux-3.7
-
       - smoketest:
           name: smoketest-udp-production-geth-3.7
           py-version: "3.7"
@@ -964,7 +927,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - smoketest:
           name: smoketest-udp-development-geth-3.7
@@ -974,7 +936,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-production-geth-3.7
@@ -984,7 +945,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-development-geth-3.7
@@ -994,7 +954,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - smoketest:
           name: smoketest-matrix-development-parity-3.7
@@ -1004,7 +963,6 @@ workflows:
           blockchain-type: "parity"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - test:
           name: test-unit-3.7
@@ -1013,7 +971,6 @@ workflows:
           blockchain-type: "geth"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - test:
           name: test-fuzz-3.7
@@ -1023,7 +980,6 @@ workflows:
           additional-args: "--hypothesis-show-statistics"
           requires:
             - lint-3.7
-            - mypy-3.7
 
       - test:
           name: test-integration-udp-geth-3.7
