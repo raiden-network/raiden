@@ -27,6 +27,7 @@ from raiden.utils.typing import (
     BlockNumber,
     List,
     Optional,
+    TokenAmount,
     TokenNetworkID,
 )
 
@@ -86,6 +87,7 @@ def events_for_onchain_secretreveal(
             channel_state.partner_state,
             transfer.lock.secrethash,
         )
+        assert secret, 'secret should be known at this point'
         return secret_registry.events_for_onchain_secretreveal(
             channel_state=channel_state,
             secret=secret,
@@ -101,7 +103,7 @@ def handle_inittarget(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult[Optional[TargetTransferState]]:
+) -> TransitionResult[TargetTransferState]:
     """ Handles an ActionInitTarget state change. """
     transfer = state_change.transfer
     route = state_change.route
@@ -240,7 +242,7 @@ def handle_unlock(
         target_state: TargetTransferState,
         state_change: ReceiveUnlock,
         channel_state: NettingChannelState,
-) -> TransitionResult[Optional[TargetTransferState]]:
+) -> TransitionResult[TargetTransferState]:
     """ Handles a ReceiveUnlock state change. """
     balance_proof_sender = state_change.balance_proof.sender
 
@@ -248,6 +250,7 @@ def handle_unlock(
         channel_state,
         state_change,
     )
+    next_target_state: Optional[TargetTransferState] = target_state
 
     if is_valid:
         transfer = target_state.transfer
@@ -255,7 +258,7 @@ def handle_unlock(
             payment_network_identifier=channel_state.payment_network_identifier,
             token_network_identifier=TokenNetworkID(channel_state.token_network_identifier),
             identifier=transfer.payment_identifier,
-            amount=transfer.lock.amount,
+            amount=TokenAmount(transfer.lock.amount),
             initiator=transfer.initiator,
         )
 
@@ -271,9 +274,9 @@ def handle_unlock(
         )
 
         events.extend([payment_received_success, unlock_success, send_processed])
-        target_state = None
+        next_target_state = None
 
-    return TransitionResult(target_state, events)
+    return TransitionResult(next_target_state, events)
 
 
 def handle_block(
@@ -286,7 +289,7 @@ def handle_block(
     handle expiration of the hash time lock.
     """
     transfer = target_state.transfer
-    events = list()
+    events: List[Event] = list()
     lock = transfer.lock
 
     secret_known = channel.is_secret_known(
@@ -324,7 +327,7 @@ def handle_lock_expired(
         state_change: ReceiveLockExpired,
         channel_state: NettingChannelState,
         block_number: BlockNumber,
-) -> TransitionResult[Optional[TargetTransferState]]:
+) -> TransitionResult[TargetTransferState]:
     """Remove expired locks from channel states."""
     result = channel.handle_receive_lock_expired(
         channel_state=channel_state,
@@ -352,7 +355,7 @@ def state_transition(
         channel_state: NettingChannelState,
         pseudo_random_generator: random.Random,
         block_number: BlockNumber,
-) -> TransitionResult[Optional[TargetTransferState]]:
+) -> TransitionResult[TargetTransferState]:
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
