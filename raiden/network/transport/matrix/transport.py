@@ -28,7 +28,6 @@ from raiden.messages import (
     Pong,
     Processed,
     RetrieableMessage,
-    SignedMessage,
     SignedRetrieableMessage,
     decode as message_from_bytes,
     from_dict as message_from_dict,
@@ -36,6 +35,7 @@ from raiden.messages import (
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
     JOIN_RETRIES,
+    decode_string_messages,
     join_global_room,
     login_or_register,
     make_client,
@@ -854,46 +854,13 @@ class MatrixTransport(Runnable):
                 return False
             else:
                 messages.append(message)
-
         else:
-            for line in data.splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    message_dict = json.loads(line)
-                    message = message_from_dict(message_dict)
-                except (UnicodeDecodeError, json.JSONDecodeError) as ex:
-                    self.log.warning(
-                        "Can't parse message data JSON",
-                        message_data=line,
-                        peer_address=pex(peer_address),
-                        _exc=ex,
-                    )
-                    continue
-                except InvalidProtocolMessage as ex:
-                    self.log.warning(
-                        "Message data JSON are not a valid message",
-                        message_data=line,
-                        peer_address=pex(peer_address),
-                        _exc=ex,
-                    )
-                    continue
-                if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
-                    self.log.warning(
-                        'Received invalid message',
-                        message=message,
-                    )
-                    continue
-                elif message.sender != peer_address:
-                    self.log.warning(
-                        'Message not signed by sender!',
-                        message=message,
-                        signer=message.sender,
-                        peer_address=peer_address,
-                    )
-                    continue
-                messages.append(message)
+            messages.extend(decode_string_messages(
+                logger=self.log,
+                data=data,
+                peer_address=peer_address,
+                message_deserializer=message_from_dict,
+            ))
 
         if not messages:
             return False

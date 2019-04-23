@@ -3,7 +3,7 @@ import re
 from binascii import Error as DecodeError
 from operator import attrgetter, itemgetter
 from random import Random
-from typing import List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urlparse
 
 import gevent
@@ -12,10 +12,13 @@ from cachetools import LRUCache, cached
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
 from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
+from structlog import BoundLogger
 
-from raiden.exceptions import InvalidSignature, TransportError
+from raiden.exceptions import InvalidProtocolMessage, InvalidSignature, TransportError
+from raiden.messages import Message, SignedMessage, SignedRetrieableMessage
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
+from raiden.utils import pex
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID
 from raiden_contracts.constants import ID_TO_NETWORKNAME
@@ -324,3 +327,56 @@ def make_room_alias(chain_id: ChainID, *suffixes: str) -> str:
     """
     network_name = ID_TO_NETWORKNAME.get(chain_id, str(chain_id))
     return ROOM_NAME_SEPARATOR.join([ROOM_NAME_PREFIX, network_name, *suffixes])
+
+
+def decode_string_messages(
+        logger: BoundLogger,
+        data: str,
+        peer_address: Address,
+        message_deserializer: Callable[[Dict], Message],
+) -> List[Message]:
+    """ Decodes one or more messages into raiden Message instances. """
+    messages: List[Message] = list()
+
+    for line in data.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        try:
+            message_dict = json.loads(line)
+            message = message_deserializer(message_dict)
+        except (UnicodeDecodeError, json.JSONDecodeError) as ex:
+            logger.warning(
+                "Can't parse message data JSON",
+                message_data=line,
+                peer_address=pex(peer_address),
+                _exc=ex,
+            )
+            continue
+        except (InvalidProtocolMessage, KeyError) as ex:
+            logger.warning(
+                "Message data JSON are not a valid message",
+                message_data=line,
+                peer_address=pex(peer_address),
+                _exc=ex,
+            )
+            continue
+
+        if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
+            logger.warning(
+                'Received invalid message',
+                message=message,
+            )
+            continue
+        elif message.sender != peer_address:
+            logger.warning(
+                'Message not signed by sender!',
+                message=message,
+                signer=message.sender,
+                peer_address=peer_address,
+            )
+            continue
+        messages.append(message)
+
+    return messages
