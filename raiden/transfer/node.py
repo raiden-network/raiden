@@ -16,6 +16,11 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+from raiden.transfer.mediated_transfer.state import (
+    InitiatorPaymentState,
+    MediatorTransferState,
+    TargetTransferState,
+)
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
@@ -29,13 +34,10 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     ChainState,
-    InitiatorPaymentState,
     InitiatorTask,
     MediatorTask,
-    MediatorTransferState,
     PaymentNetworkState,
     TargetTask,
-    TargetTransferState,
     TokenNetworkState,
 )
 from raiden.transfer.state_change import (

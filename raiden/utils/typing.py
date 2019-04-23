@@ -168,4 +168,4 @@ Host = NewType('Host', str)
 Port = NewType('Port', int)
 HostPort = Tuple[Host, Optional[Port]]
 
-LockType = Union[HashTimeLockState, UnlockPartialProofState]
+LockType = Union['HashTimeLockState', 'UnlockPartialProofState']
