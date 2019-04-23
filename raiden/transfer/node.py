@@ -29,10 +29,13 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     ChainState,
+    InitiatorPaymentState,
     InitiatorTask,
     MediatorTask,
+    MediatorTransferState,
     PaymentNetworkState,
     TargetTask,
+    TargetTransferState,
     TokenNetworkState,
 )
 from raiden.transfer.state_change import (
@@ -195,6 +198,11 @@ def subdispatch_to_paymenttask(
 
     if sub_task:
         pseudo_random_generator = chain_state.pseudo_random_generator
+        sub_iteration: Union[
+            TransitionResult[InitiatorPaymentState],
+            TransitionResult[MediatorTransferState],
+            TransitionResult[TargetTransferState],
+        ]
 
         if isinstance(sub_task, InitiatorTask):
             token_network_identifier = sub_task.token_network_identifier
@@ -289,7 +297,7 @@ def subdispatch_initiatortask(
     else:
         is_valid_subtask = False
 
-    events = list()
+    events: List[Event] = list()
     if is_valid_subtask:
         pseudo_random_generator = chain_state.pseudo_random_generator
 
@@ -300,11 +308,11 @@ def subdispatch_initiatortask(
 
         if token_network_state:
             iteration = initiator_manager.state_transition(
-                manager_state,
-                state_change,
-                token_network_state.channelidentifiers_to_channels,
-                pseudo_random_generator,
-                block_number,
+                payment_state=manager_state,
+                state_change=state_change,
+                channelidentifiers_to_channels=token_network_state.channelidentifiers_to_channels,
+                pseudo_random_generator=pseudo_random_generator,
+                block_number=block_number,
             )
             events = iteration.events
 
@@ -398,7 +406,7 @@ def subdispatch_targettask(
     else:
         is_valid_subtask = False
 
-    events = list()
+    events: List[Event] = list()
     channel_state = None
     if is_valid_subtask:
         channel_state = views.get_channelstate_by_canonical_identifier(
@@ -414,11 +422,11 @@ def subdispatch_targettask(
         pseudo_random_generator = chain_state.pseudo_random_generator
 
         iteration = target.state_transition(
-            target_state,
-            state_change,
-            channel_state,
-            pseudo_random_generator,
-            block_number,
+            target_state=target_state,
+            state_change=state_change,
+            channel_state=channel_state,
+            pseudo_random_generator=pseudo_random_generator,
+            block_number=block_number,
         )
         events = iteration.events
 
@@ -476,7 +484,7 @@ def sanity_check(iteration: TransitionResult[ChainState]) -> None:
 
 def inplace_delete_message_queue(
         chain_state: ChainState,
-        state_change: StateChange,
+        state_change: Union[ReceiveDelivered, ReceiveProcessed],
         queueid: QueueIdentifier,
 ) -> None:
     """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
@@ -485,8 +493,8 @@ def inplace_delete_message_queue(
         return
 
     inplace_delete_message(
-        queue,
-        state_change,
+        message_queue=queue,
+        state_change=state_change,
     )
 
     if len(queue) == 0:
@@ -497,7 +505,7 @@ def inplace_delete_message_queue(
 
 def inplace_delete_message(
         message_queue: List[SendMessageEvent],
-        state_change: StateChange,
+        state_change: Union[ReceiveDelivered, ReceiveProcessed],
 ) -> None:
     """ Check if the message exists in queue with ID `queueid` and exclude if found."""
     for message in list(message_queue):
@@ -548,9 +556,23 @@ def handle_chain_init(
     return TransitionResult(chain_state, events)
 
 
+# All State changes that are subdispatched as token network actions
+TokenNetworkStateChange = Union[
+    ActionChannelClose,
+    ContractReceiveChannelBatchUnlock,
+    ContractReceiveChannelNew,
+    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelSettled,
+    ContractReceiveRouteNew,
+    ContractReceiveRouteClosed,
+    ContractReceiveUpdateTransfer,
+    ContractReceiveChannelClosed,
+]
+
+
 def handle_token_network_action(
         chain_state: ChainState,
-        state_change: StateChange,
+        state_change: TokenNetworkStateChange,
 ) -> TransitionResult[ChainState]:
     token_network_state = get_token_network_by_address(
         chain_state,
@@ -634,6 +656,9 @@ def handle_node_change_network_state(
     chain_state.nodeaddresses_to_networkstates[node_address] = network_state
 
     for secrethash, subtask in chain_state.payment_mapping.secrethashes_to_task.items():
+        # This assert would not have been needed if token_network_identifier, a common attribute
+        # for all TransferTasks was part of the TransferTasks superclass.
+        assert isinstance(subtask, (InitiatorTask, MediatorTask, TargetTask))
         result = subdispatch_mediatortask(
             chain_state=chain_state,
             state_change=state_change,
@@ -841,6 +866,7 @@ def handle_state_change(
             chain_state,
             state_change,
         )
+        assert iteration.new_state, 'The iteration should have created a new state'
         chain_state = iteration.new_state
     elif type(state_change) == ActionNewTokenNetwork:
         assert isinstance(state_change, ActionNewTokenNetwork), MYPY_ANNOTATION
