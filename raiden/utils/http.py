@@ -8,6 +8,7 @@ import time
 from http.client import HTTPSConnection
 from json import JSONDecodeError
 from os import PathLike
+from subprocess import TimeoutExpired
 from typing import IO, Any, Callable, List, Optional, Tuple, Union
 from urllib.parse import urlunparse
 
@@ -128,8 +129,11 @@ class HTTPExecutor(MiHTTPExecutor):
                 output_file_names = {io.name for io in (stdout, stderr) if hasattr(io, 'name')}
                 if output_file_names:
                     log.warning('Process output file(s)', output_files=output_file_names)
-                listening_processes = subprocess.check_output('netstat -tulpen')
-                log.warning('Listening processes', netstat=listening_processes)
+                try:
+                    listening_processes = subprocess.check_output('netstat -tulpen', timeout=10)
+                    log.warning('Listening processes', netstat=listening_processes)
+                except TimeoutExpired as ex:
+                    log.error('Timeout calling netstat', err=ex.__dict__)
             raise
         return self
 

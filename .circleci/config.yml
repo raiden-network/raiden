@@ -375,6 +375,7 @@ jobs:
       - run:
           name: Run tests
           command: |
+            netstat -tulpen
             mkdir -p test-reports/test-<< parameters.test-type >>-<< parameters.transport-layer >>-<< parameters.py-version >>
             coverage run \
               --include="~/raiden/**/*" \
@@ -390,6 +391,7 @@ jobs:
               --select-fail-on-missing \
               --select-from-file selected-tests.txt \
               << parameters.additional-args >>
+            netstat -tulpen
 
       - run:
           name: Store coverage
