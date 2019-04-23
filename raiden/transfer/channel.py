@@ -92,6 +92,7 @@ from raiden.utils.typing import (
     List,
     LockHash,
     Locksroot,
+    LockType,
     MerkleTreeLeaves,
     MessageID,
     NamedTuple,
@@ -128,7 +129,7 @@ class UnlockGain(NamedTuple):
     from_partner_locks: TokenAmount
 
 
-def get_sender_expiration_threshold(lock: HashTimeLockState) -> BlockNumber:
+def get_sender_expiration_threshold(lock: LockType) -> BlockNumber:
     """ Returns the block number at which the sender can send the remove expired lock.
 
     The remove lock expired message will be rejected if the expiration block
@@ -191,7 +192,7 @@ def is_lock_locked(
 
 def is_lock_expired(
         end_state: NettingChannelEndState,
-        lock: HashTimeLockState,
+        lock: LockType,
         block_number: BlockNumber,
         lock_expiration_threshold: BlockNumber,
 ) -> SuccessOrError:
@@ -293,7 +294,7 @@ def is_balance_proof_safe_for_onchain_operations(
 
 def is_valid_amount(
         end_state: NettingChannelEndState,
-        amount: Union[TokenAmount, PaymentAmount],
+        amount: Union[TokenAmount, PaymentAmount, PaymentWithFeeAmount],
 ) -> bool:
     (
         _,
@@ -1463,7 +1464,7 @@ def events_for_close(
 
 def create_sendexpiredlock(
         sender_end_state: NettingChannelEndState,
-        locked_lock: HashTimeLockState,
+        locked_lock: LockType,
         pseudo_random_generator: random.Random,
         chain_id: ChainID,
         token_network_identifier: TokenNetworkID,
@@ -1509,7 +1510,7 @@ def create_sendexpiredlock(
 
 def events_for_expired_lock(
         channel_state: NettingChannelState,
-        locked_lock: HashTimeLockState,
+        locked_lock: LockType,
         pseudo_random_generator: random.Random,
 ) -> List[SendLockExpired]:
     msg = 'caller must make sure the channel is open'
