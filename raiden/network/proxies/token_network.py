@@ -1057,8 +1057,6 @@ class TokenNetwork:
         }
         log.debug('updateNonClosingBalanceProof called', **log_details)
 
-        checking_block = self.client.get_checking_block()
-
         data_that_was_signed = pack_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
@@ -1089,41 +1087,44 @@ class TokenNetwork:
         if signer_address != partner:
             raise RaidenUnrecoverableError('Invalid balance proof signature')
 
-        # If preconditions end up being on pruned state skip them. Estimate gas
-        # will stop us from sending a transaction that will fail
+        # If `given_block_identifier` is a pruned block skip the checks bellow.
+        # Estimate gas will stop us from sending a transaction that will fail.
         if self.client.can_query_state_for_block(given_block_identifier):
-            self._check_for_outdated_channel(
-                participant1=self.node_address,
-                participant2=partner,
-                block_identifier=given_block_identifier,
-                channel_identifier=channel_identifier,
-            )
-
             detail = self._detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
                 block_identifier=given_block_identifier,
                 channel_identifier=channel_identifier,
             )
+
+            if detail.channel_identifier != channel_identifier:
+                raise ChannelOutdatedError(
+                    'Current channel identifier is outdated. '
+                    f'current={channel_identifier}, '
+                    f'new={detail.channel_identifier}',
+                )
+
             if detail.state != ChannelState.CLOSED:
                 raise RaidenUnrecoverableError('Channel is not in a closed state')
-            elif detail.settle_block_number < self.client.block_number():
+
+            if detail.settle_block_number < self.client.block_number():
                 msg = (
                     'updateNonClosingBalanceProof cannot be called '
                     'because the settlement period is over'
                 )
                 raise RaidenRecoverableError(msg)
-            else:
-                error_type, msg = self._check_channel_state_for_update(
-                    channel_identifier=channel_identifier,
-                    closer=partner,
-                    update_nonce=nonce,
-                    block_identifier=given_block_identifier,
-                )
-                if error_type:
-                    raise error_type(msg)
+
+            error_type, msg = self._check_channel_state_for_update(
+                channel_identifier=channel_identifier,
+                closer=partner,
+                update_nonce=nonce,
+                block_identifier=given_block_identifier,
+            )
+            if error_type:
+                raise error_type(msg)
 
         error_prefix = 'updateNonClosingBalanceProof call will fail'
+        checking_block = self.client.get_checking_block()
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             'updateNonClosingBalanceProof',
