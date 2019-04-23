@@ -49,7 +49,6 @@ lint:
 	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc $(LINT_PATHS)
 	python setup.py check --restructuredtext --strict
 
-mypy:
 	# We are starting small with a few files and directories here,
 	# but mypy should run on the whole codebase soon.
 	mypy raiden/transfer raiden/api raiden/messages.py raiden/blockchain \
