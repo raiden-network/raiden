@@ -102,6 +102,9 @@ PublicKey = NewType('PublicKey', T_PublicKey)
 T_FeeAmount = int
 FeeAmount = NewType('FeeAmount', T_FeeAmount)
 
+T_LockedAmount = int
+LockedAmount = NewType('LockedAmount', T_LockedAmount)
+
 T_PaymentWithFeeAmount = int
 PaymentWithFeeAmount = NewType('PaymentWithFeeAmount', T_FeeAmount)
 
