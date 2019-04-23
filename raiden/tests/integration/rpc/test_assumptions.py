@@ -314,7 +314,7 @@ def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
         deploy_client,
         skip_if_not_geth,  # pylint: disable=unused-argument
 ):
-    """ Gas estimatation fails if the transaction execution requires more gas
+    """ Gas estimation fails if the transaction execution requires more gas
     then the block's gas limit.
     """
     contract_proxy = deploy_rpc_test_contract(deploy_client, 'RpcWithStorageTest')
@@ -328,7 +328,7 @@ def test_estimate_gas_fails_if_startgas_is_higher_than_blockgaslimit(
     number_iterations = current_gas_limit // SSTORE_COST
 
     # This race condition cannot be fixed because geth does not support
-    # block_identifier for eth_estimateGas, the test should not be flaky
+    # block_identifier for eth_estimateGas. The test should not be flaky
     # because number_iterations is order of magnitudes larger then it needs to
     # be
     block_identifier = None
