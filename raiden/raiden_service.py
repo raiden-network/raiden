@@ -891,12 +891,13 @@ class RaidenService(Runnable):
                 # sufficient.
                 initiator = next(iter(task.manager_state.initiator_transfers.values()))
                 transfer = initiator.transfer
+                transfer_description = initiator.transfer_description
                 target = transfer.target
                 identifier = transfer.payment_identifier
                 balance_proof = transfer.balance_proof
                 self.targets_to_identifiers_to_statuses[target][identifier] = PaymentStatus(
                     payment_identifier=identifier,
-                    amount=transfer.lock.amount,
+                    amount=transfer_description.amount,
                     token_network_identifier=TokenNetworkID(
                         balance_proof.token_network_identifier,
                     ),
