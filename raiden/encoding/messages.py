@@ -275,7 +275,7 @@ ToDevice = namedbuffer(
     [
         cmdid(TODEVICE),
         pad(3),
-        nonce,
+        message_identifier,
         signature,
     ],
 )

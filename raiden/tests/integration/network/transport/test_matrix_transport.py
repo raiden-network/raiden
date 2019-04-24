@@ -14,7 +14,7 @@ from raiden.constants import (
     UINT64_MAX,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages import Processed, SecretRequest
+from raiden.messages import Processed, SecretRequest, ToDevice
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
@@ -1211,24 +1211,15 @@ def test_send_to_device(matrix_transports):
 
     raiden_service0 = MockRaidenService(message_handler0)
     raiden_service1 = MockRaidenService(message_handler1)
+    transport1._receive_to_device = MagicMock()
 
     transport0.start(raiden_service0, message_handler0, '')
     transport1.start(raiden_service1, message_handler1, '')
 
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
-    message = Processed(message_identifier=1)
+    message = ToDevice(message_identifier=1)
     transport0._raiden_service.sign(message)
     transport0.send_to_device(raiden_service1.address, message)
-
-    with Timeout(20):
-        all_messages_received = False
-        while not all_messages_received:
-            all_messages_received = (
-                len(received_messages0) == 1 and
-                len(received_messages1) == 1
-            )
-            gevent.sleep(.1)
-
-    assert len(received_messages1) == 1
-    assert len(received_messages0) == 1
+    gevent.sleep(.5)
+    transport1._receive_to_device.assert_called()
