@@ -875,9 +875,9 @@ def run_test_batch_unlock_after_restart(
     - A crashes
     - Wait for unlock from B
     - Restart A
-    At this point, the current unlock logic will try to unlock according
+    At this point, the current unlock logic will try to unlock
     iff the node gains from unlocking. Which means that the node will try to unlock
-    either side. In the above scenario, each noded will unlock it's side.
+    either side. In the above scenario, each node will unlock its side.
     This test makes sure that we do NOT invalidate A's unlock transaction based
     on the ContractReceiveChannelBatchUnlock caused by B's unlock.
     """
@@ -885,9 +885,9 @@ def run_test_batch_unlock_after_restart(
     registry_address = alice_app.raiden.default_registry.address
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(alice_app),
-        alice_app.raiden.default_registry.address,
-        token_address,
+        chain_state=views.state_from_app(alice_app),
+        payment_network_id=alice_app.raiden.default_registry.address,
+        token_address=token_address,
     )
 
     hold_event_handler = HoldOffChainSecretRequest()
@@ -895,8 +895,8 @@ def run_test_batch_unlock_after_restart(
     alice_app.raiden.raiden_event_handler = hold_event_handler
 
     token_network = views.get_token_network_by_identifier(
-        views.state_from_app(alice_app),
-        token_network_identifier,
+        chain_state=views.state_from_app(alice_app),
+        token_network_id=token_network_identifier,
     )
 
     channel_identifier = get_channelstate(alice_app, bob_app, token_network_identifier).identifier
@@ -940,17 +940,17 @@ def run_test_batch_unlock_after_restart(
     )
 
     wait_for_state_change(
-        alice_app.raiden,
-        ActionInitTarget,
-        {},
-        retry_timeout,
+        raiden=alice_app.raiden,
+        item_type=ActionInitTarget,
+        attributes={},
+        retry_timeout=retry_timeout,
     )
 
     wait_for_state_change(
-        bob_app.raiden,
-        ActionInitTarget,
-        {},
-        retry_timeout,
+        raiden=bob_app.raiden,
+        item_type=ActionInitTarget,
+        attributes={},
+        retry_timeout=retry_timeout,
     )
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
@@ -963,17 +963,21 @@ def run_test_batch_unlock_after_restart(
     #    B -> A SecretRequest
     #    - protocol didn't continue
     assert_synced_channel_state(
-        token_network_identifier,
-        alice_app, deposit, [alice_lock],
-        bob_app, deposit, [bob_lock],
+        token_network_identifier=token_network_identifier,
+        app0=alice_app,
+        balance0=deposit,
+        pending_locks0=[alice_lock],
+        app1=bob_app,
+        balance1=deposit,
+        pending_locks1=[bob_lock],
     )
 
     # A ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
     RaidenAPI(bob_app.raiden).channel_close(
-        registry_address,
-        token_address,
-        alice_app.raiden.address,
+        registry_address=registry_address,
+        token_address=token_address,
+        partner_address=alice_app.raiden.address,
     )
 
     secret_registry_proxy = alice_app.raiden.chain.secret_registry(
@@ -992,11 +996,11 @@ def run_test_batch_unlock_after_restart(
     )
 
     waiting.wait_for_settle(
-        alice_app.raiden,
-        registry_address,
-        token_address,
-        [alice_bob_channel_state.identifier],
-        alice_app.raiden.alarm.sleep_time,
+        raiden=alice_app.raiden,
+        payment_network_id=registry_address,
+        token_address=token_address,
+        channel_ids=[alice_bob_channel_state.identifier],
+        retry_timeout=alice_app.raiden.alarm.sleep_time,
     )
 
     alice_app.stop()
@@ -1005,10 +1009,10 @@ def run_test_batch_unlock_after_restart(
     timeout = 30 if blockchain_type == 'parity' else 10
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
-            bob_app,
-            token_network_identifier,
-            alice_bob_channel_state.partner_state.address,
-            alice_bob_channel_state.our_state.address,
+            app=bob_app,
+            token_network_id=token_network_identifier,
+            participant=alice_bob_channel_state.partner_state.address,
+            partner=alice_bob_channel_state.our_state.address,
         )
 
     alice_app.raiden.stop()
@@ -1036,8 +1040,8 @@ def run_test_batch_unlock_after_restart(
 
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
-            alice_app_restart,
-            token_network_identifier,
-            alice_bob_channel_state.partner_state.address,
-            alice_bob_channel_state.our_state.address,
+            app=alice_app_restart,
+            token_network_id=token_network_identifier,
+            participant=alice_bob_channel_state.partner_state.address,
+            partner=alice_bob_channel_state.our_state.address,
         )
