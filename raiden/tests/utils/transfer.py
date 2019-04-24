@@ -24,7 +24,7 @@ from raiden.transfer.state import (
     balanceproof_from_envelope,
     make_empty_merkle_tree,
 )
-from raiden.utils import sha3
+from raiden.utils import pex, sha3
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Balance,
@@ -104,7 +104,11 @@ def transfer(
 
     with Timeout(seconds=timeout):
         wait_for_unlock.get()
-        payment_status.payment_done.wait()
+        msg = (
+            f'transfer from {pex(initiator_app.raiden.address)} '
+            f'to {pex(target_app.raiden.address)} failed.'
+        )
+        assert payment_status.payment_done.get(), msg
 
 
 def assert_synced_channel_state(
