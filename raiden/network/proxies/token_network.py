@@ -1186,10 +1186,15 @@ class TokenNetwork:
                     channel_identifier=channel_identifier,
                 )
 
-                if channel_data.channel_identifier != channel_identifier:
-                    # This is not a problem, the channel identifier can be set
-                    # to 0 if the channel is settled, or it could have a higher
-                    # value if a new channel was opened
+                # The channel identifier can be set to 0 if the channel is
+                # settled, or it could have a higher value if a new channel was
+                # opened. A lower value is an unrecoverable error.
+                was_channel_gone = (
+                    channel_data.channel_identifier == 0 or
+                    channel_data.channel_identifier > channel_identifier
+                )
+
+                if was_channel_gone:
                     msg = (
                         f'The provided channel identifier does not match the value '
                         f'on-chain at the block the update transfer was mined ({mining_block}). '
