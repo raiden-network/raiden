@@ -37,16 +37,14 @@ def make_signed_balance_proof_from_counter(counter):
         secrethash=sha3(factories.make_secret(next(counter))),
     )
     lock_expired_balance_proof = factories.create(factories.BalanceProofSignedStateProperties(
-        balance_proof=factories.BalanceProofProperties(
-            nonce=next(counter),
-            transferred_amount=next(counter),
-            locked_amount=next(counter),
-            canonical_identifier=factories.make_canonical_identifier(
-                token_network_address=factories.make_address(),
-                channel_identifier=next(counter),
-            ),
-            locksroot=sha3(lock.as_bytes),
+        nonce=next(counter),
+        transferred_amount=next(counter),
+        locked_amount=next(counter),
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=factories.make_address(),
+            channel_identifier=next(counter),
         ),
+        locksroot=sha3(lock.as_bytes),
         message_hash=sha3(b''),
         sender=factories.HOP1,
         pkey=factories.HOP1_KEY,
@@ -87,24 +85,20 @@ def make_signed_transfer_from_counter(counter):
     )
 
     signed_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            amount=next(counter),
-            initiator=factories.make_address(),
-            target=factories.make_address(),
-            expiration=next(counter),
-            secret=factories.make_secret(next(counter)),
-            payment_identifier=next(counter),
-            token=factories.make_address(),
-            balance_proof=factories.BalanceProofProperties(
-                nonce=next(counter),
-                transferred_amount=next(counter),
-                locked_amount=next(counter),
-                locksroot=sha3(lock.as_bytes),
-                canonical_identifier=factories.make_canonical_identifier(
-                    token_network_address=factories.make_address(),
-                    channel_identifier=next(counter),
-                ),
-            ),
+        amount=next(counter),
+        initiator=factories.make_address(),
+        target=factories.make_address(),
+        expiration=next(counter),
+        secret=factories.make_secret(next(counter)),
+        payment_identifier=next(counter),
+        token=factories.make_address(),
+        nonce=next(counter),
+        transferred_amount=next(counter),
+        locked_amount=next(counter),
+        locksroot=sha3(lock.as_bytes),
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=factories.make_address(),
+            channel_identifier=next(counter),
         ),
         recipient=factories.make_address(),
         sender=factories.HOP1,
@@ -130,20 +124,16 @@ def make_from_route_from_counter(counter):
     from_transfer = factories.make_signed_transfer_for(
         from_channel,
         factories.LockedTransferSignedStateProperties(
-            transfer=factories.LockedTransferProperties(
-                balance_proof=factories.BalanceProofProperties(
-                    transferred_amount=0,
-                    canonical_identifier=factories.make_canonical_identifier(
-                        token_network_address=from_channel.token_network_identifier,
-                    ),
-                ),
-                amount=1,
-                expiration=expiration,
-                secret=sha3(factories.make_secret(next(counter))),
-                initiator=factories.make_address(),
-                target=factories.make_address(),
-                payment_identifier=next(counter),
+            transferred_amount=0,
+            canonical_identifier=factories.make_canonical_identifier(
+                token_network_address=from_channel.token_network_identifier,
             ),
+            amount=1,
+            expiration=expiration,
+            secret=sha3(factories.make_secret(next(counter))),
+            initiator=factories.make_address(),
+            target=factories.make_address(),
+            payment_identifier=next(counter),
             sender=factories.HOP1,
             pkey=factories.HOP1_KEY,
         ),

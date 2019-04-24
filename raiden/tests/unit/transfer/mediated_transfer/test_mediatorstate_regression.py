@@ -40,9 +40,9 @@ from raiden.transfer.state import (
 from raiden.transfer.state_change import Block, ContractReceiveSecretReveal
 from raiden.utils.signer import LocalSigner
 
-LONG_EXPIRATION = factories.create_properties(factories.LockedTransferSignedStateProperties(
-    transfer=factories.LockedTransferProperties(expiration=30),
-))
+LONG_EXPIRATION = factories.create_properties(
+    factories.LockedTransferSignedStateProperties(expiration=30),
+)
 
 
 def test_payer_enter_danger_zone_with_transfer_payed():
@@ -152,13 +152,9 @@ def test_regression_send_refund():
     lock_expiration = last_pair.payee_transfer.lock.expiration
 
     received_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            expiration=lock_expiration,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            balance_proof=factories.BalanceProofProperties(
-                canonical_identifier=canonical_identifier,
-            ),
-        ),
+        expiration=lock_expiration,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        canonical_identifier=canonical_identifier,
         sender=setup.channels.partner_address(2),
         pkey=setup.channels.partner_privatekeys[2],
         message_identifier=factories.make_message_identifier(),
@@ -318,7 +314,7 @@ def test_regression_mediator_task_no_routes():
         factories.LockedTransferSignedStateProperties(
             sender=HOP2,
             pkey=HOP2_KEY,
-            transfer=factories.LockedTransferProperties(expiration=30),
+            expiration=30,
         ),
     )
 
