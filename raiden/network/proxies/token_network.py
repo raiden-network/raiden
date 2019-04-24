@@ -1168,7 +1168,7 @@ class TokenNetwork:
 
                 # These checks do not have problems with race conditions because
                 # `poll`ing waits for the transaction to be confirmed.
-                mining_block = receipt_or_none['blockNumber']
+                mining_block = int(receipt_or_none['blockNumber'])
 
                 if receipt_or_none['cumulativeGasUsed'] == gas_limit:
                     msg = (
@@ -1260,7 +1260,7 @@ class TokenNetwork:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
             failed_at = self.proxy.jsonrpc_client.get_block('latest')
-            failed_at_blockhash = bytes(failed_at['hash'])
+            failed_at_blockhash = str(failed_at['hash'])
 
             # This check contains a race condition, it could be the case that a
             # new block is mined changing the account's balance.
