@@ -18,13 +18,14 @@ from raiden.transfer.mediated_transfer.state import (
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
     HashTimeLockState,
     MerkleTreeState,
     NettingChannelState,
     balanceproof_from_envelope,
     make_empty_merkle_tree,
 )
-from raiden.utils import pex, sha3
+from raiden.utils import lpex, pex, random_secret, sha3
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     Balance,
@@ -75,10 +76,10 @@ def transfer(
         fee: FeeAmount = 0,
         timeout: float = 10,
 ) -> None:
-    """ Nice to read shortcut to make a transfer.
+    """ Nice to read shortcut to make successful LockedTransfer.
 
-    The transfer is a LockedTransfer and we make sure, all apps are synched.
-    The secret will also be revealed.
+    Note:
+        Only the initiator and target are synched.
     """
     assert identifier is not None, 'The identifier must be provided'
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
@@ -107,6 +108,116 @@ def transfer(
         msg = (
             f'transfer from {pex(initiator_app.raiden.address)} '
             f'to {pex(target_app.raiden.address)} failed.'
+        )
+        assert payment_status.payment_done.get(), msg
+
+
+def transfer_and_assert_path(
+        path: List[App],
+        token_address: TokenAddress,
+        amount: PaymentAmount,
+        identifier: PaymentID,
+        fee: FeeAmount = 0,
+        timeout: float = 10,
+) -> None:
+    """ Nice to read shortcut to make successful LockedTransfer.
+
+    Note:
+        This utility *does not enforce the path*, however it does check the
+        provided path is used in totality. It's the responsability of the
+        caller to ensure the path will be used. All nodes in `path` are
+        synched.
+    """
+    assert identifier is not None, 'The identifier must be provided'
+    secret = random_secret()
+
+    first_app = path[0]
+    payment_network_identifier = first_app.raiden.default_registry.address
+    token_network_address = views.get_token_network_identifier_by_token_address(
+        chain_state=views.state_from_app(first_app),
+        payment_network_id=payment_network_identifier,
+        token_address=token_address,
+    )
+
+    for app in path:
+        assert isinstance(app.raiden.message_handler, WaitForMessage)
+
+        msg = (
+            'The apps must be on the same payment network'
+        )
+        assert app.raiden.default_registry.address == payment_network_identifier, msg
+
+        app_token_network_address = views.get_token_network_identifier_by_token_address(
+            chain_state=views.state_from_app(app),
+            payment_network_id=payment_network_identifier,
+            token_address=token_address,
+        )
+
+        msg = (
+            'The apps must be synchronized with the blockchain'
+        )
+        assert token_network_address == app_token_network_address, msg
+
+    pairs = zip(path[:-1], path[1:])
+    receiving = list()
+    for from_app, to_app in pairs:
+        from_channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state=views.state_from_app(from_app),
+            token_network_id=token_network_address,
+            partner_address=to_app.raiden.address,
+        )
+        to_channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state=views.state_from_app(to_app),
+            token_network_id=token_network_address,
+            partner_address=from_app.raiden.address,
+        )
+
+        msg = (
+            f'{pex(from_app.raiden.address)} does not have a channel with '
+            f'{pex(to_app.raiden.address)} needed to transfer through the '
+            f'path {lpex(app.raiden.address for app in path)}.'
+        )
+        assert from_channel_state, msg
+        assert to_channel_state, msg
+
+        msg = (
+            f'channel among {pex(from_app.raiden.address)} and '
+            f'{pex(to_app.raiden.address)} must be open to be used for a '
+            f'transfer'
+        )
+        assert channel.get_status(from_channel_state) == CHANNEL_STATE_OPENED, msg
+        assert channel.get_status(to_channel_state) == CHANNEL_STATE_OPENED, msg
+
+        receiving.append((to_app, to_channel_state.identifier))
+
+    results = [
+        app.raiden.message_handler.wait_for_message(
+            Unlock,
+            {
+                'channel_identifier': channel_identifier,
+                'token_network_address': token_network_address,
+                'payment_identifier': identifier,
+                'secret': secret,
+            },
+        )
+        for app, channel_identifier in receiving
+    ]
+
+    last_app = path[-1]
+    payment_status = first_app.raiden.start_mediated_transfer_with_secret(
+        token_network_identifier=token_network_address,
+        amount=amount,
+        fee=fee,
+        target=last_app.raiden.address,
+        identifier=identifier,
+        secret=secret,
+    )
+
+    with Timeout(seconds=timeout):
+        gevent.wait(results)
+        msg = (
+            f'transfer from {pex(first_app.raiden.address)} '
+            f'to {pex(last_app.raiden.address)} failed.'
         )
         assert payment_status.payment_done.get(), msg
 
