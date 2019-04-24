@@ -161,7 +161,7 @@ def mediator_init(raiden, transfer: LockedTransfer):
         token_network_id=TokenNetworkID(from_transfer.balance_proof.token_network_identifier),
         from_address=raiden.address,
         to_address=from_transfer.target,
-        amount=from_transfer.lock.amount,
+        amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated through #3863
         previous_address=transfer.sender,
         config=raiden.config,
         privkey=raiden.privkey,
