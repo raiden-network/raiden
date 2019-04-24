@@ -643,11 +643,13 @@ def test_get_and_update_iou():
     assert new_iou_1['amount'] == last_iou['amount'] + 10
     assert all(new_iou_1[k] == iou[k] for k in ('expiration_block', 'sender', 'receiver'))
     assert 'signature' in new_iou_1
+    assert is_hex(new_iou_1['signature'])
 
     new_iou_2 = update_iou(iou, PRIVKEY, expiration_block=45)
     assert new_iou_2['expiration_block'] == 45
     assert all(new_iou_2[k] == iou[k] for k in ('amount', 'sender', 'receiver'))
     assert 'signature' in new_iou_2
+    assert is_hex(new_iou_2['signature'])
 
 
 def test_get_pfs_iou():
