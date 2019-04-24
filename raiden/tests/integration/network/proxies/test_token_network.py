@@ -117,18 +117,24 @@ def test_token_network_proxy_basics(
         to_checksum_address(c1_client.address),
         to_checksum_address(c2_client.address),
     )
-    assert c1_token_network_proxy.channel_is_opened(
-        participant1=c1_client.address,
-        participant2=c2_client.address,
-        block_identifier='latest',
-        channel_identifier=channel_identifier,
-    ) is False
-    assert c1_token_network_proxy.channel_is_closed(
-        participant1=c1_client.address,
-        participant2=c2_client.address,
-        block_identifier='latest',
-        channel_identifier=channel_identifier,
-    ) is False
+    assert channel_identifier == 0
+
+    with pytest.raises(ValueError):
+        assert c1_token_network_proxy.channel_is_opened(
+            participant1=c1_client.address,
+            participant2=c2_client.address,
+            block_identifier='latest',
+            channel_identifier=0,
+        )
+
+    with pytest.raises(ValueError):
+        assert c1_token_network_proxy.channel_is_closed(
+            participant1=c1_client.address,
+            participant2=c2_client.address,
+            block_identifier='latest',
+            channel_identifier=0,
+        )
+
     # test timeout limits
     with pytest.raises(InvalidSettleTimeout):
         c1_token_network_proxy.new_netting_channel(
@@ -568,10 +574,14 @@ def test_token_network_proxy_update_transfer(
         partner_locksroot=EMPTY_HASH,
         given_block_identifier='latest',
     )
-    assert (token_proxy.balance_of(c2_client.address) ==
-            (initial_balance_c2 + transferred_amount_c1 - transferred_amount_c2))
-    assert (token_proxy.balance_of(c1_client.address) ==
-            (initial_balance_c1 + transferred_amount_c2 - transferred_amount_c1))
+    assert (
+        token_proxy.balance_of(c2_client.address) ==
+        (initial_balance_c2 + transferred_amount_c1 - transferred_amount_c2)
+    )
+    assert (
+        token_proxy.balance_of(c1_client.address) ==
+        (initial_balance_c1 + transferred_amount_c2 - transferred_amount_c1)
+    )
 
     # Already settled
     with pytest.raises(RaidenUnrecoverableError) as exc:
@@ -667,7 +677,7 @@ def test_token_network_actions_at_pruned_blocks(
     initial_balance_c2 = token_proxy.balance_of(c2_client.address)
     assert initial_balance_c2 == initial_token_balance
     # create a channel
-    settle_timeout = 6
+    settle_timeout = STATE_PRUNING_AFTER_BLOCKS + 10
     channel_identifier = c1_token_network_proxy.new_netting_channel(
         partner=c2_client.address,
         settle_timeout=settle_timeout,
@@ -725,6 +735,8 @@ def test_token_network_actions_at_pruned_blocks(
         signature=EMPTY_HASH,
         given_block_identifier=pruned_number,
     )
+    close_pruned_number = c1_chain.block_number()
+
     assert c1_token_network_proxy.channel_is_closed(
         participant1=c1_client.address,
         participant2=c2_client.address,
@@ -738,6 +750,8 @@ def test_token_network_actions_at_pruned_blocks(
         block_identifier='latest',
     ) is True
 
+    c1_chain.wait_until_block(target_block_number=close_pruned_number + STATE_PRUNING_AFTER_BLOCKS)
+
     # update transfer with given block being pruned
     c2_token_network_proxy.update_transfer(
         channel_identifier=channel_identifier,
@@ -747,7 +761,7 @@ def test_token_network_actions_at_pruned_blocks(
         additional_hash=decode_hex(balance_proof_c1.additional_hash),
         closing_signature=decode_hex(balance_proof_c1.signature),
         non_closing_signature=non_closing_signature,
-        given_block_identifier=pruned_number,
+        given_block_identifier=close_pruned_number,
     )
 
     # update transfer
@@ -765,9 +779,13 @@ def test_token_network_actions_at_pruned_blocks(
         partner_transferred_amount=0,
         partner_locked_amount=0,
         partner_locksroot=EMPTY_HASH,
-        given_block_identifier=pruned_number,
+        given_block_identifier=close_pruned_number,
     )
-    assert (token_proxy.balance_of(c2_client.address) ==
-            (initial_balance_c2 + transferred_amount_c1 - 0))
-    assert (token_proxy.balance_of(c1_client.address) ==
-            (initial_balance_c1 + 0 - transferred_amount_c1))
+    assert (
+        token_proxy.balance_of(c2_client.address) ==
+        (initial_balance_c2 + transferred_amount_c1 - 0)
+    )
+    assert (
+        token_proxy.balance_of(c1_client.address) ==
+        (initial_balance_c1 + 0 - transferred_amount_c1)
+    )

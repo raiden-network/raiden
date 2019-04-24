@@ -1089,6 +1089,7 @@ class TokenNetwork:
                 partner=self.node_address,
                 block_identifier=given_block_identifier,
             )
+            given_block_number = self.client.get_block(given_block_identifier)['number']
         except ValueError:
             # If `given_block_identifier` has been pruned the checks cannot be
             # performed.
@@ -1112,7 +1113,7 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-            if channel_onchain_detail.settle_block_number < self.client.block_number():
+            if channel_onchain_detail.settle_block_number < given_block_number:
                 msg = (
                     'update transfer cannot be called after the settlement '
                     'period, this call should never have been attempted.'
@@ -1260,7 +1261,8 @@ class TokenNetwork:
             # The latest block can not be used reliably because of reorgs,
             # therefore every call using this block has to handle pruned data.
             failed_at = self.proxy.jsonrpc_client.get_block('latest')
-            failed_at_blockhash = str(failed_at['hash'])
+            failed_at_blockhash = encode_hex(failed_at['hash'])
+            failed_at_blocknumber = failed_at['number']
 
             # This check contains a race condition, it could be the case that a
             # new block is mined changing the account's balance.
@@ -1269,7 +1271,7 @@ class TokenNetwork:
                 transaction_name='updateNonClosingBalanceProof',
                 transaction_executed=False,
                 required_gas=GAS_REQUIRED_FOR_UPDATE_BALANCE_PROOF,
-                block_identifier=failed_at_blockhash,
+                block_identifier=failed_at_blocknumber,
             )
 
             detail = self._detail_channel(
@@ -1293,7 +1295,7 @@ class TokenNetwork:
                 )
                 raise RaidenRecoverableError(msg)
 
-            if detail.settle_block_number < failed_at['blockNumber']:
+            if detail.settle_block_number < failed_at_blocknumber:
                 raise RaidenRecoverableError(
                     'update_transfer transation sent after settlement window',
                 )

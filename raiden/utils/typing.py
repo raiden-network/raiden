@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from raiden.messages import RequestMonitoring  # noqa: F401
     from raiden.exceptions import RaidenUnrecoverableError, RaidenRecoverableError  # noqa: F401
 
+
 MYPY_ANNOTATION = (
     'This assert is used to tell mypy what is the type of the variable'
 )
