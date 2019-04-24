@@ -130,9 +130,10 @@ def test_unlock_account_with_passwordfile(keystore_mock):
     account_manager = AccountManager(keystore_mock)
     password_file_path = os.path.join(keystore_mock, 'passwordfile.txt')
 
-    privkey = unlock_account_with_passwordfile(
-        account_manager=account_manager,
-        address_hex='0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645',
-        password_file=open(password_file_path, 'r'),
-    )
+    with open(password_file_path, 'r') as password_file:
+        privkey = unlock_account_with_passwordfile(
+            account_manager=account_manager,
+            address_hex='0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645',
+            password_file=password_file,
+        )
     assert privkey

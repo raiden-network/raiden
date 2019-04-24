@@ -1,6 +1,6 @@
 import getpass
-import io
 import sys
+from typing import TextIO
 
 import click
 from eth_utils import to_checksum_address
@@ -53,9 +53,9 @@ def prompt_account(account_manager: AccountManager) -> AddressHex:
 def unlock_account_with_passwordfile(
         account_manager: AccountManager,
         address_hex: AddressHex,
-        password_file: io.RawIOBase,
+        password_file: TextIO,
 ) -> PrivateKey:
-    password = password_file.read().splitlines()[0]
+    password = password_file.read().strip('\r\n')
 
     try:
         return account_manager.get_privkey(address_hex, password)
