@@ -1,7 +1,7 @@
 # pylint: disable=too-many-arguments
 import random
 import string
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 from typing import NamedTuple
 
@@ -42,6 +42,10 @@ EMPTY = 'empty'
 GENERATE = 'generate'
 
 
+def _partial_dict(full_dict: typing.Dict, *args) -> typing.Dict:
+    return {key: full_dict[key] for key in args}
+
+
 class Properties:
     """ Base class for all properties classes. """
     DEFAULTS: typing.ClassVar['Properties'] = None
@@ -51,9 +55,31 @@ class Properties:
     def kwargs(self):
         return {key: value for key, value in self.__dict__.items() if value is not EMPTY}
 
+    def extract(self, subset_type: typing.Type) -> 'Properties':
+        field_names = [field.name for field in fields(subset_type)]
+        return subset_type(**_partial_dict(self.__dict__, *field_names))
+
+    def partial_dict(self, *args) -> typing.Dict[str, typing.Any]:
+        return _partial_dict(self.__dict__, *args)
+
 
 def if_empty(value, default):
     return value if value is not EMPTY else default
+
+
+def _replace_properties(properties, defaults):
+    replacements = {
+        k: create_properties(v, defaults.__dict__[k]) if isinstance(v, Properties) else v
+        for k, v in properties.kwargs.items()
+    }
+    return replace(defaults, **replacements)
+
+
+def create_properties(properties: Properties, defaults: Properties = None) -> Properties:
+    full_defaults = type(properties).DEFAULTS
+    if defaults is not None:
+        full_defaults = _replace_properties(defaults, full_defaults)
+    return _replace_properties(properties, full_defaults)
 
 
 def make_uint256() -> int:
@@ -417,20 +443,9 @@ def create(properties, defaults=None):
     return properties
 
 
-def _properties_to_dict(properties: Properties, defaults: Properties) -> typing.Dict:
-    return create_properties(properties, defaults).__dict__
-
-
-def _dict_to_kwargs(properties_dict: typing.Dict) -> typing.Dict:
-    return {key: create(value) for key, value in properties_dict.items()}
-
-
 def _properties_to_kwargs(properties: Properties, defaults: Properties) -> typing.Dict:
-    return _dict_to_kwargs(_properties_to_dict(properties, defaults or properties.DEFAULTS))
-
-
-def _partial_dict(full_dict: typing.Dict, *args) -> typing.Dict:
-    return {key: full_dict[key] for key in args}
+    properties = create_properties(properties, defaults or properties.DEFAULTS)
+    return {key: create(value) for key, value in properties.__dict__.items()}
 
 
 @dataclass(frozen=True)
@@ -510,9 +525,9 @@ NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     mediation_fee=0,
-    our_state=(NettingChannelEndStateProperties.DEFAULTS),
-    partner_state=(NettingChannelEndStateProperties.DEFAULTS),
-    open_transaction=(TransactionExecutionStatusProperties.DEFAULTS),
+    our_state=NettingChannelEndStateProperties.DEFAULTS,
+    partner_state=NettingChannelEndStateProperties.DEFAULTS,
+    open_transaction=TransactionExecutionStatusProperties.DEFAULTS,
     close_transaction=None,
     settle_transaction=None,
 )
@@ -538,8 +553,7 @@ BalanceProofProperties.DEFAULTS = BalanceProofProperties(
 
 
 @dataclass(frozen=True)
-class BalanceProofSignedStateProperties(Properties):
-    balance_proof: BalanceProofProperties = EMPTY
+class BalanceProofSignedStateProperties(BalanceProofProperties):
     message_hash: typing.AdditionalHash = EMPTY
     signature: typing.Signature = GENERATE
     sender: typing.Address = EMPTY
@@ -548,7 +562,7 @@ class BalanceProofSignedStateProperties(Properties):
 
 
 BalanceProofSignedStateProperties.DEFAULTS = BalanceProofSignedStateProperties(
-    balance_proof=(BalanceProofProperties.DEFAULTS),
+    **BalanceProofProperties.DEFAULTS.__dict__,
     sender=UNIT_TRANSFER_SENDER,
     pkey=UNIT_TRANSFER_PKEY,
 )
@@ -557,10 +571,7 @@ BalanceProofSignedStateProperties.DEFAULTS = BalanceProofSignedStateProperties(
 @create.register(BalanceProofSignedStateProperties)  # noqa: F811
 def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalanceProofSignedState:
     defaults = defaults or BalanceProofSignedStateProperties.DEFAULTS
-    params = _properties_to_dict(properties, defaults)
-    params.update(
-        _properties_to_dict(params.pop('balance_proof'), defaults.balance_proof),
-    )
+    params = create_properties(properties, defaults).__dict__
     signer = LocalSigner(params.pop('pkey'))
 
     if params['signature'] is GENERATE:
@@ -580,8 +591,7 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
 
 
 @dataclass(frozen=True)
-class LockedTransferProperties(Properties):
-    balance_proof: BalanceProofProperties = EMPTY
+class LockedTransferProperties(BalanceProofProperties):
     amount: typing.TokenAmount = EMPTY
     expiration: typing.BlockExpiration = EMPTY
     initiator: typing.InitiatorAddress = EMPTY
@@ -591,18 +601,15 @@ class LockedTransferProperties(Properties):
     secret: typing.Secret = EMPTY
     TARGET_TYPE = LockedTransferUnsignedState
 
-
-LOCKED_TRANSFER_DEFAULTS_BALANCE_PROOF = BalanceProofProperties(
-    nonce=1,
-    locked_amount=UNIT_TRANSFER_AMOUNT,
-    transferred_amount=0,
-    locksroot=EMPTY_MERKLE_ROOT,
-    canonical_identifier=UNIT_CANONICAL_ID,
-)
+    @property
+    def balance_proof(self):
+        return self.extract(BalanceProofProperties)
 
 
 LockedTransferProperties.DEFAULTS = LockedTransferProperties(
-    balance_proof=LOCKED_TRANSFER_DEFAULTS_BALANCE_PROOF,
+    **create_properties(
+        BalanceProofProperties(locked_amount=UNIT_TRANSFER_AMOUNT, transferred_amount=0),
+    ).__dict__,
     amount=UNIT_TRANSFER_AMOUNT,
     expiration=UNIT_REVEAL_TIMEOUT,
     initiator=UNIT_TRANSFER_INITIATOR,
@@ -615,38 +622,37 @@ LockedTransferProperties.DEFAULTS = LockedTransferProperties(
 
 @create.register(LockedTransferProperties)  # noqa: F811
 def _(properties, defaults=None) -> LockedTransferUnsignedState:
-    defaults = defaults or LockedTransferProperties.DEFAULTS
-    parameters = _properties_to_dict(properties, defaults)
-
+    transfer: LockedTransferProperties = create_properties(properties, defaults)
     lock = HashTimeLockState(
-        amount=parameters.pop('amount'),
-        expiration=parameters.pop('expiration'),
-        secrethash=sha3(parameters.pop('secret')),
+        amount=transfer.amount,
+        expiration=transfer.expiration,
+        secrethash=sha3(transfer.secret),
     )
+    if transfer.locksroot == EMPTY_MERKLE_ROOT:
+        transfer = replace(transfer, locksroot=lock.lockhash)
 
-    balance_proof_parameters = _properties_to_dict(
-        parameters.pop('balance_proof'),
-        defaults.balance_proof,
+    return LockedTransferUnsignedState(
+        balance_proof=create(transfer.balance_proof),
+        lock=lock,
+        **transfer.partial_dict('initiator', 'target', 'payment_identifier', 'token'),
     )
-    if balance_proof_parameters['locksroot'] == EMPTY_MERKLE_ROOT:
-        balance_proof_parameters['locksroot'] = lock.lockhash
-    balance_proof = BalanceProofUnsignedState(**balance_proof_parameters)
-
-    return LockedTransferUnsignedState(balance_proof=balance_proof, lock=lock, **parameters)
 
 
 @dataclass(frozen=True)
-class LockedTransferSignedStateProperties(Properties):
-    transfer: LockedTransferProperties = EMPTY
+class LockedTransferSignedStateProperties(LockedTransferProperties):
     sender: typing.Address = EMPTY
     recipient: typing.Address = EMPTY
     pkey: bytes = EMPTY
     message_identifier: typing.MessageID = EMPTY
     TARGET_TYPE = LockedTransferSignedState
 
+    @property
+    def transfer(self):
+        return self.extract(LockedTransferProperties)
+
 
 LockedTransferSignedStateProperties.DEFAULTS = LockedTransferSignedStateProperties(
-    transfer=(LockedTransferProperties.DEFAULTS),
+    **LockedTransferProperties.DEFAULTS.__dict__,
     sender=UNIT_TRANSFER_SENDER,
     recipient=UNIT_TRANSFER_TARGET,
     pkey=UNIT_TRANSFER_PKEY,
@@ -656,26 +662,18 @@ LockedTransferSignedStateProperties.DEFAULTS = LockedTransferSignedStateProperti
 
 @create.register(LockedTransferSignedStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> LockedTransferSignedState:
-    defaults = defaults or LockedTransferSignedStateProperties.DEFAULTS
-    params = _properties_to_dict(properties, defaults)
-
-    transfer_params = _properties_to_dict(params.pop('transfer'), defaults.transfer)
-    balance_proof_params = _properties_to_dict(
-        transfer_params.pop('balance_proof'),
-        defaults.transfer.balance_proof,
-    )
+    transfer: LockedTransferSignedStateProperties = create_properties(properties, defaults)
+    params = {key: value for key, value in transfer.__dict__.items()}
 
     lock = Lock(
-        amount=transfer_params.pop('amount'),
-        expiration=transfer_params.pop('expiration'),
-        secrethash=sha3(transfer_params.pop('secret')),
+        amount=transfer.amount,
+        expiration=transfer.expiration,
+        secrethash=sha3(transfer.secret),
     )
 
     pkey = params.pop('pkey')
     signer = LocalSigner(pkey)
     sender = params.pop('sender')
-    params.update(transfer_params)
-    params.update(balance_proof_params)
     canonical_identifier = params.pop('canonical_identifier')
     params['chain_id'] = int(canonical_identifier.chain_identifier)
     params['channel_identifier'] = int(canonical_identifier.channel_identifier)
@@ -691,24 +689,9 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     return lockedtransfersigned_from_message(locked_transfer)
 
 
-def _replace_properties(properties, defaults):
-    replacements = {
-        k: create_properties(v, defaults.__dict__[k]) if isinstance(v, Properties) else v
-        for k, v in properties.kwargs.items()
-    }
-    return replace(defaults, **replacements)
-
-
-def create_properties(properties: Properties, defaults: Properties = None) -> Properties:
-    full_defaults = type(properties).DEFAULTS
-    if defaults is not None:
-        full_defaults = _replace_properties(defaults, full_defaults)
-    return _replace_properties(properties, full_defaults)
-
-
-SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(LockedTransferSignedStateProperties(
-    transfer=LockedTransferProperties(expiration=UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT),
-))
+SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(
+    LockedTransferSignedStateProperties(expiration=UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT),
+)
 
 
 def make_signed_transfer_for(
@@ -754,23 +737,18 @@ def make_signed_transfer_for(
         locksroot = properties.transfer.balance_proof.locksroot
 
     if only_transfer:
-        balance_proof_properties = BalanceProofProperties(
+        transfer_properties = LockedTransferProperties(
             locksroot=locksroot,
             canonical_identifier=channel_state.canonical_identifier,
             locked_amount=properties.transfer.amount,
         )
     else:
-        balance_proof_properties = BalanceProofProperties(
+        transfer_properties = LockedTransferProperties(
             locksroot=locksroot,
             canonical_identifier=channel_state.canonical_identifier,
         )
     transfer = create(
-        LockedTransferSignedStateProperties(
-            recipient=recipient,
-            transfer=LockedTransferProperties(
-                balance_proof=balance_proof_properties,
-            ),
-        ),
+        LockedTransferSignedStateProperties(recipient=recipient, **transfer_properties.__dict__),
         defaults=properties,
     )
 
@@ -949,14 +927,10 @@ def make_transfers_pair(
 
         receiver_channel = channels[payer_index]
         received_transfer = create(LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(
-                amount=amount,
-                expiration=lock_expiration,
-                payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-                balance_proof=BalanceProofProperties(
-                    canonical_identifier=receiver_channel.canonical_identifier,
-                ),
-            ),
+            amount=amount,
+            expiration=lock_expiration,
+            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+            canonical_identifier=receiver_channel.canonical_identifier,
             sender=channels.partner_address(payer_index),
             pkey=channels.partner_privatekeys[payer_index],
         ))

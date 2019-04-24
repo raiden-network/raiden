@@ -539,16 +539,12 @@ def test_refund_transfer_next_route():
     original_transfer = initiator_state.transfer
 
     refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            amount=amount,
-            initiator=our_address,
-            target=original_transfer.target,
-            expiration=original_transfer.lock.expiration,
-            payment_identifier=original_transfer.payment_identifier,
-            balance_proof=factories.BalanceProofProperties(
-                canonical_identifier=channel1.canonical_identifier,
-            ),
-        ),
+        amount=amount,
+        initiator=our_address,
+        target=original_transfer.target,
+        expiration=original_transfer.lock.expiration,
+        payment_identifier=original_transfer.payment_identifier,
+        canonical_identifier=channel1.canonical_identifier,
         sender=refund_address,
         pkey=refund_pkey,
     ))
@@ -595,16 +591,12 @@ def test_refund_transfer_no_more_routes():
     initiator_state = get_transfer_at_index(setup.current_state, 0)
     original_transfer = initiator_state.transfer
     refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            amount=amount,
-            initiator=original_transfer.initiator,
-            target=original_transfer.target,
-            expiration=original_transfer.lock.expiration,
-            payment_identifier=original_transfer.payment_identifier,
-            balance_proof=factories.BalanceProofProperties(
-                canonical_identifier=setup.channel.canonical_identifier,
-            ),
-        ),
+        amount=amount,
+        initiator=original_transfer.initiator,
+        target=original_transfer.target,
+        expiration=original_transfer.lock.expiration,
+        payment_identifier=original_transfer.payment_identifier,
+        canonical_identifier=setup.channel.canonical_identifier,
         sender=refund_address,
         pkey=refund_pkey,
         message_identifier=factories.make_message_identifier(),
@@ -637,11 +629,9 @@ def test_refund_transfer_no_more_routes():
     assert sent_failed
 
     missing_pkey = factories.create_properties(factories.BalanceProofSignedStateProperties(
-        balance_proof=factories.BalanceProofProperties(
-            nonce=2,
-            transferred_amount=original_transfer.balance_proof.transferred_amount,
-            canonical_identifier=setup.channel.canonical_identifier,
-        ),
+        nonce=2,
+        transferred_amount=original_transfer.balance_proof.transferred_amount,
+        canonical_identifier=setup.channel.canonical_identifier,
         message_hash=original_transfer.lock.secrethash,
         sender=refund_address,
     ))
@@ -1367,16 +1357,12 @@ def test_secret_reveal_cancel_other_transfers():
     original_transfer = initiator_state.transfer
 
     refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            amount=amount,
-            initiator=our_address,
-            target=original_transfer.target,
-            expiration=original_transfer.lock.expiration,
-            payment_identifier=original_transfer.payment_identifier,
-            balance_proof=factories.BalanceProofProperties(
-                canonical_identifier=channel1.canonical_identifier,
-            ),
-        ),
+        amount=amount,
+        initiator=our_address,
+        target=original_transfer.target,
+        expiration=original_transfer.lock.expiration,
+        payment_identifier=original_transfer.payment_identifier,
+        canonical_identifier=channel1.canonical_identifier,
         sender=refund_address,
         pkey=refund_pkey,
     ))
@@ -1480,15 +1466,11 @@ def test_refund_after_secret_request():
     assert current_state is not None
 
     refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            amount=amount,
-            initiator=original_transfer.initiator,
-            target=original_transfer.target,
-            payment_identifier=original_transfer.payment_identifier,
-            balance_proof=factories.BalanceProofProperties(
-                canonical_identifier=setup.channel.canonical_identifier,
-            ),
-        ),
+        amount=amount,
+        initiator=original_transfer.initiator,
+        target=original_transfer.target,
+        payment_identifier=original_transfer.payment_identifier,
+        canonical_identifier=setup.channel.canonical_identifier,
         sender=refund_address,
         pkey=refund_pkey,
     ))
@@ -1566,16 +1548,12 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     original_transfer = initiator_state.transfer
 
     refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            amount=amount,
-            initiator=our_address,
-            target=original_transfer.target,
-            expiration=original_transfer.lock.expiration,
-            payment_identifier=original_transfer.payment_identifier,
-            balance_proof=factories.BalanceProofProperties(
-                canonical_identifier=channel1.canonical_identifier,
-            ),
-        ),
+        amount=amount,
+        initiator=our_address,
+        target=original_transfer.target,
+        expiration=original_transfer.lock.expiration,
+        payment_identifier=original_transfer.payment_identifier,
+        canonical_identifier=channel1.canonical_identifier,
         sender=refund_address,
         pkey=refund_pkey,
     ))
@@ -1610,11 +1588,9 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     # Expire both locks of the initial transfer and it's refund
     ##
     balance_proof = factories.create(factories.BalanceProofSignedStateProperties(
-        balance_proof=factories.BalanceProofProperties(
-            nonce=2,
-            transferred_amount=initial_transfer.balance_proof.transferred_amount,
-            canonical_identifier=channel1.canonical_identifier,
-        ),
+        nonce=2,
+        transferred_amount=initial_transfer.balance_proof.transferred_amount,
+        canonical_identifier=channel1.canonical_identifier,
         message_hash=initial_transfer.lock.secrethash,
         sender=refund_address,
         pkey=refund_pkey,
