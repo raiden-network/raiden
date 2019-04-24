@@ -243,13 +243,13 @@ def update_iou(
     if expiration_block:
         iou['expiration_block'] = expiration_block
 
-    iou['signature'] = sign_one_to_n_iou(
+    iou['signature'] = to_hex(sign_one_to_n_iou(
         privatekey=to_hex(privkey),
         expiration=iou['expiration_block'],
         sender=iou['sender'],
         receiver=iou['receiver'],
         amount=iou['amount'],
-    )
+    ))
 
     return iou
 
