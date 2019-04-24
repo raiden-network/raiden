@@ -561,55 +561,6 @@ class TokenNetwork:
             return False
         return channel_state >= ChannelState.SETTLED
 
-    def closing_address(
-            self,
-            participant1: Address,
-            participant2: Address,
-            block_identifier: BlockSpecification,
-            channel_identifier: ChannelID,
-    ) -> Optional[Address]:
-        """ Returns the address of the closer, if the channel is closed and not settled. None
-        otherwise. """
-        if not isinstance(channel_identifier, T_ChannelID):
-            raise ValueError('channel_identifier must be of type T_ChannelID')
-
-        if channel_identifier <= 0:
-            raise ValueError('channel_identifier must be larger then 0')
-
-        channel_data = self._call_and_check_result(
-            block_identifier,
-            'getChannelInfo',
-            channel_identifier=channel_identifier,
-            participant1=to_checksum_address(participant1),
-            participant2=to_checksum_address(participant2),
-        )
-        state = channel_data[ChannelInfoIndex.STATE]
-
-        if state != ChannelState.CLOSED:
-            return None
-
-        our_details = self._detail_participant(
-            channel_identifier=channel_identifier,
-            participant=participant1,
-            partner=participant2,
-            block_identifier=block_identifier,
-        )
-
-        if our_details.is_closer:
-            return our_details.address
-
-        partner_details = self._detail_participant(
-            channel_identifier=channel_identifier,
-            participant=participant2,
-            partner=participant1,
-            block_identifier=block_identifier,
-        )
-
-        if partner_details.is_closer:
-            return partner_details.address
-
-        return None
-
     def can_transfer(
             self,
             participant1: Address,
