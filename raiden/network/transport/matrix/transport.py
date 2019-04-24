@@ -30,6 +30,7 @@ from raiden.messages import (
     RetrieableMessage,
     SignedMessage,
     SignedRetrieableMessage,
+    ToDevice,
     decode as message_from_bytes,
     from_dict as message_from_dict,
 )
@@ -950,6 +951,13 @@ class MatrixTransport(Runnable):
             self.log.warning('Exception while processing message', exc_info=True)
             return
 
+    def _receive_to_device(self, to_device: ToDevice):
+        self.log.debug(
+            'ToDevice message received',
+            sender=pex(to_device.sender),
+            message=to_device,
+        )
+
     def _get_retrier(self, receiver: Address) -> _RetryQueue:
         """ Construct and return a _RetryQueue for receiver """
         if receiver not in self._address_to_retrier:
@@ -1400,10 +1408,10 @@ class MatrixTransport(Runnable):
 
     def _handle_to_device_message(self, event):
         """
-        Handles to_device_messages sent to us.
+        Handles to_device_message sent to us.
         - validates peer_whitelisted
         - validates userid_signature
-        Treats a to_device_message like a message sent to a room were listening to.
+        Todo: Currently doesnt do anything but logging when a to device message is received.
         """
         sender_id = event['sender']
 
@@ -1428,7 +1436,7 @@ class MatrixTransport(Runnable):
         if peer_address not in self._address_to_userids:
             # user not start_health_check'ed
             self.log.debug(
-                'toDevice Message from non-whitelisted peer - ignoring',
+                'ToDevice Message from non-whitelisted peer - ignoring',
                 sender=user,
                 sender_address=pex(peer_address),
             )
@@ -1445,7 +1453,7 @@ class MatrixTransport(Runnable):
         data = event['content']
         if not isinstance(data, str):
             self.log.warning(
-                'Received toDevice Message body not a string',
+                'Received ToDevice Message body not a string',
                 peer_user=user.user_id,
                 peer_address=to_checksum_address(peer_address),
             )
@@ -1460,7 +1468,7 @@ class MatrixTransport(Runnable):
                     raise InvalidProtocolMessage
             except (DecodeError, AssertionError) as ex:
                 self.log.warning(
-                    "Can't parse toDevice Message binary data",
+                    "Can't parse ToDevice Message binary data",
                     message_data=data,
                     peer_address=pex(peer_address),
                     _exc=ex,
@@ -1468,7 +1476,7 @@ class MatrixTransport(Runnable):
                 return False
             except InvalidProtocolMessage as ex:
                 self.log.warning(
-                    'Received toDevice Message binary data is not a valid message',
+                    'Received ToDevice Message binary data is not a valid message',
                     message_data=data,
                     peer_address=pex(peer_address),
                     _exc=ex,
@@ -1487,7 +1495,7 @@ class MatrixTransport(Runnable):
                     message = message_from_dict(message_dict)
                 except (UnicodeDecodeError, json.JSONDecodeError) as ex:
                     self.log.warning(
-                        "Can't parse toDevice Message data JSON",
+                        "Can't parse ToDevice Message data JSON",
                         message_data=line,
                         peer_address=pex(peer_address),
                         _exc=ex,
@@ -1495,7 +1503,7 @@ class MatrixTransport(Runnable):
                     continue
                 except InvalidProtocolMessage as ex:
                     self.log.warning(
-                        "toDevice Message data JSON are not a valid toDevice Message",
+                        "ToDevice Message data JSON are not a valid ToDevice Message",
                         message_data=line,
                         peer_address=pex(peer_address),
                         _exc=ex,
@@ -1503,14 +1511,14 @@ class MatrixTransport(Runnable):
                     continue
                 if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
                     self.log.warning(
-                        'Received invalid toDevice Message',
+                        'Received invalid ToDevice Message',
                         message=message,
                         peer_address=peer_address,
                     )
                     continue
                 elif message.sender != peer_address:
                     self.log.warning(
-                        'toDevice Message not signed by sender!',
+                        'ToDevice Message not signed by sender!',
                         message=message,
                         signer=message.sender,
                         peer_address=peer_address,
@@ -1522,19 +1530,13 @@ class MatrixTransport(Runnable):
             return False
 
         self.log.debug(
-            'Incoming toDevice Messages',
+            'Incoming ToDevice Messages',
             messages=messages,
             sender=pex(peer_address),
             sender_user=user,
         )
 
         for message in messages:
-            if isinstance(message, Delivered):
-                self._receive_delivered(message)
-            elif isinstance(message, Processed):
-                self._receive_message(message)
-            else:
-                assert isinstance(message, SignedRetrieableMessage)
-                self._receive_message(message)
-
+            if isinstance(message, ToDevice):
+                self._receive_to_device(message)
         return True

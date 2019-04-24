@@ -452,41 +452,41 @@ class ToDevice(SignedMessage):
     """
     cmdid = messages.TODEVICE
 
-    def __init__(self, *, nonce: typing.Nonce, **kwargs):
+    def __init__(self, *, message_identifier: MessageID, **kwargs):
         super().__init__(**kwargs)
-        self.nonce = nonce
+        self.message_identifier = message_identifier
 
     @classmethod
     def unpack(cls, packed):
         to_device = cls(
-            nonce=packed.nonce,
+            message_identifier=packed.message_identifier,
         )
         to_device.signature = packed.signature
         return to_device
 
-    def pack(self, packed):
-        packed.nonce = self.nonce
+    def pack(self, packed) -> None:
+        packed.message_identifier = self.message_identifier
         packed.signature = self.signature
 
     def __repr__(self):
-        return '<{} [nonce:{}]>'.format(
+        return '<{} [message_identifier:{}]>'.format(
             self.__class__.__name__,
-            self.nonce,
-            self.signature,
+            self.message_identifier,
         )
 
     def to_dict(self):
         return {
             'type': self.__class__.__name__,
-            'nonce': self.nonce,
+            'message_identifier': self.message_identifier,
             'signature': encode_hex(self.signature),
         }
 
     @classmethod
     def from_dict(cls, data):
-        assert data['type'] == cls.__name__
+        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
+        assert data['type'] == cls.__name__, msg
         to_device = cls(
-            nonce=data['nonce'],
+            message_identifier=data['message_identifier'],
         )
         to_device.signature = decode_hex(data['signature'])
         return to_device
