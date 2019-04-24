@@ -87,6 +87,20 @@ class CanonicalIdentifier:
             channel_identifier=ChannelID(int(data['channel_identifier'])),
         )
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CanonicalIdentifier):
+            return NotImplemented
+        return (
+            self.chain_identifier == other.chain_identifier and
+            self.token_network_address == other.token_network_address and
+            self.channel_identifier == other.channel_identifier
+        )
+
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, CanonicalIdentifier):
+            return True
+        return not self.__eq__(other)
+
 
 def random_secret():
     """ Return a random 32 byte secret except the 0 secret since it's not accepted in the contracts
