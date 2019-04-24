@@ -1,7 +1,7 @@
 # pylint: disable=too-many-arguments
 import random
 import string
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import singledispatch
 from typing import NamedTuple
 
@@ -44,6 +44,12 @@ GENERATE = 'generate'
 
 class Properties:
     """ Base class for all properties classes. """
+    DEFAULTS: typing.ClassVar['Properties'] = None
+    TARGET_TYPE: typing.ClassVar[typing.Type] = None
+
+    @property
+    def kwargs(self):
+        return {key: value for key, value in self.__dict__.items() if value is not EMPTY}
 
 
 def if_empty(value, default):
@@ -399,32 +405,28 @@ def make_merkletree_leaves(width: int) -> typing.List[typing.Secret]:
 
 
 @singledispatch
-def create(properties, defaults=None):  # pylint: disable=unused-argument
+def create(properties, defaults=None):
     """Create objects from their associated property class.
 
     E. g. a NettingChannelState from NettingChannelStateProperties. For any field in
     properties set to EMPTY a default will be used. The default values can be changed
     by giving another object of the same property type as the defaults argument.
     """
-    return None
+    if isinstance(properties, Properties):
+        return properties.TARGET_TYPE(**_properties_to_kwargs(properties, defaults))
+    return properties
 
 
-# the default implementation of create() must return None to not confuse pylint.
-def _create_or_echo(properties, defaults=None):
-    created = create(properties, defaults)
-    return created if created is not None else properties
-
-
-def _properties_to_dict(properties, defaults) -> typing.Dict:  # TODO type hint
+def _properties_to_dict(properties: Properties, defaults: Properties) -> typing.Dict:
     return create_properties(properties, defaults).__dict__
 
 
 def _dict_to_kwargs(properties_dict: typing.Dict) -> typing.Dict:
-    return {key: _create_or_echo(value) for key, value in properties_dict.items()}
+    return {key: create(value) for key, value in properties_dict.items()}
 
 
-def _properties_to_kwargs(properties: NamedTuple, defaults: NamedTuple) -> typing.Dict:
-    return _dict_to_kwargs(_properties_to_dict(properties, defaults))
+def _properties_to_kwargs(properties: Properties, defaults: Properties) -> typing.Dict:
+    return _dict_to_kwargs(_properties_to_dict(properties, defaults or properties.DEFAULTS))
 
 
 def _partial_dict(full_dict: typing.Dict, *args) -> typing.Dict:
@@ -436,20 +438,14 @@ class TransactionExecutionStatusProperties(Properties):
     started_block_number: typing.BlockNumber = EMPTY
     finished_block_number: typing.BlockNumber = EMPTY
     result: str = EMPTY
+    TARGET_TYPE = TransactionExecutionStatus
 
 
-TRANSACTION_EXECUTION_STATUS_DEFAULTS = TransactionExecutionStatusProperties(
+TransactionExecutionStatusProperties.DEFAULTS = TransactionExecutionStatusProperties(
     started_block_number=None,
     finished_block_number=None,
     result=TransactionExecutionStatus.SUCCESS,
 )
-
-
-@create.register(TransactionExecutionStatusProperties)  # noqa: F811
-def _(properties, defaults=None) -> TransactionExecutionStatus:
-    return TransactionExecutionStatus(
-        **_properties_to_kwargs(properties, defaults or TRANSACTION_EXECUTION_STATUS_DEFAULTS),
-    )
 
 
 @dataclass(frozen=True)
@@ -459,9 +455,10 @@ class NettingChannelEndStateProperties(Properties):
     balance: typing.TokenAmount = EMPTY
     merkletree_leaves: typing.MerkleTreeLeaves = EMPTY
     merkletree_width: int = EMPTY
+    TARGET_TYPE = NettingChannelEndState
 
 
-NETTING_CHANNEL_END_STATE_DEFAULTS = NettingChannelEndStateProperties(
+NettingChannelEndStateProperties.DEFAULTS = NettingChannelEndStateProperties(
     address=None,
     privatekey=None,
     balance=100,
@@ -472,7 +469,7 @@ NETTING_CHANNEL_END_STATE_DEFAULTS = NettingChannelEndStateProperties(
 
 @create.register(NettingChannelEndStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> NettingChannelEndState:
-    args = _properties_to_kwargs(properties, defaults or NETTING_CHANNEL_END_STATE_DEFAULTS)
+    args = _properties_to_kwargs(properties, defaults or NettingChannelEndStateProperties.DEFAULTS)
     state = NettingChannelEndState(args['address'] or make_address(), args['balance'])
 
     merkletree_leaves = (
@@ -503,27 +500,22 @@ class NettingChannelStateProperties(Properties):
     close_transaction: TransactionExecutionStatusProperties = EMPTY
     settle_transaction: TransactionExecutionStatusProperties = EMPTY
 
+    TARGET_TYPE = NettingChannelState
 
-NETTING_CHANNEL_STATE_DEFAULTS = NettingChannelStateProperties(
+
+NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
     canonical_identifier=make_canonical_identifier(),
     token_address=UNIT_TOKEN_ADDRESS,
     payment_network_identifier=UNIT_PAYMENT_NETWORK_IDENTIFIER,
     reveal_timeout=UNIT_REVEAL_TIMEOUT,
     settle_timeout=UNIT_SETTLE_TIMEOUT,
     mediation_fee=0,
-    our_state=NETTING_CHANNEL_END_STATE_DEFAULTS,
-    partner_state=NETTING_CHANNEL_END_STATE_DEFAULTS,
-    open_transaction=TRANSACTION_EXECUTION_STATUS_DEFAULTS,
+    our_state=(NettingChannelEndStateProperties.DEFAULTS),
+    partner_state=(NettingChannelEndStateProperties.DEFAULTS),
+    open_transaction=(TransactionExecutionStatusProperties.DEFAULTS),
     close_transaction=None,
     settle_transaction=None,
 )
-
-
-@create.register(NettingChannelStateProperties)  # noqa: F811
-def _(properties, defaults=None) -> NettingChannelState:
-    return NettingChannelState(
-        **_properties_to_kwargs(properties, defaults or NETTING_CHANNEL_STATE_DEFAULTS),
-    )
 
 
 @dataclass(frozen=True)
@@ -533,22 +525,16 @@ class BalanceProofProperties(Properties):
     locked_amount: typing.TokenAmount = EMPTY
     locksroot: typing.Locksroot = EMPTY
     canonical_identifier: CanonicalIdentifier = EMPTY
+    TARGET_TYPE = BalanceProofUnsignedState
 
 
-BALANCE_PROOF_DEFAULTS = BalanceProofProperties(
+BalanceProofProperties.DEFAULTS = BalanceProofProperties(
     nonce=1,
     transferred_amount=UNIT_TRANSFER_AMOUNT,
     locked_amount=0,
     locksroot=EMPTY_MERKLE_ROOT,
     canonical_identifier=UNIT_CANONICAL_ID,
 )
-
-
-@create.register(BalanceProofProperties)  # noqa: F811
-def _(properties, defaults=None) -> BalanceProofUnsignedState:
-    return BalanceProofUnsignedState(
-        **_properties_to_kwargs(properties, defaults or BALANCE_PROOF_DEFAULTS),
-    )
 
 
 @dataclass(frozen=True)
@@ -558,10 +544,11 @@ class BalanceProofSignedStateProperties(Properties):
     signature: typing.Signature = GENERATE
     sender: typing.Address = EMPTY
     pkey: bytes = EMPTY
+    TARGET_TYPE = BalanceProofSignedState
 
 
-BALANCE_PROOF_SIGNED_STATE_DEFAULTS = BalanceProofSignedStateProperties(
-    balance_proof=BALANCE_PROOF_DEFAULTS,
+BalanceProofSignedStateProperties.DEFAULTS = BalanceProofSignedStateProperties(
+    balance_proof=(BalanceProofProperties.DEFAULTS),
     sender=UNIT_TRANSFER_SENDER,
     pkey=UNIT_TRANSFER_PKEY,
 )
@@ -569,7 +556,7 @@ BALANCE_PROOF_SIGNED_STATE_DEFAULTS = BalanceProofSignedStateProperties(
 
 @create.register(BalanceProofSignedStateProperties)  # noqa: F811
 def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalanceProofSignedState:
-    defaults = defaults or BALANCE_PROOF_SIGNED_STATE_DEFAULTS
+    defaults = defaults or BalanceProofSignedStateProperties.DEFAULTS
     params = _properties_to_dict(properties, defaults)
     params.update(
         _properties_to_dict(params.pop('balance_proof'), defaults.balance_proof),
@@ -602,6 +589,7 @@ class LockedTransferProperties(Properties):
     payment_identifier: typing.PaymentID = EMPTY
     token: typing.TokenAddress = EMPTY
     secret: typing.Secret = EMPTY
+    TARGET_TYPE = LockedTransferUnsignedState
 
 
 LOCKED_TRANSFER_DEFAULTS_BALANCE_PROOF = BalanceProofProperties(
@@ -613,7 +601,7 @@ LOCKED_TRANSFER_DEFAULTS_BALANCE_PROOF = BalanceProofProperties(
 )
 
 
-LOCKED_TRANSFER_DEFAULTS = LockedTransferProperties(
+LockedTransferProperties.DEFAULTS = LockedTransferProperties(
     balance_proof=LOCKED_TRANSFER_DEFAULTS_BALANCE_PROOF,
     amount=UNIT_TRANSFER_AMOUNT,
     expiration=UNIT_REVEAL_TIMEOUT,
@@ -627,7 +615,7 @@ LOCKED_TRANSFER_DEFAULTS = LockedTransferProperties(
 
 @create.register(LockedTransferProperties)  # noqa: F811
 def _(properties, defaults=None) -> LockedTransferUnsignedState:
-    defaults = defaults or LOCKED_TRANSFER_DEFAULTS
+    defaults = defaults or LockedTransferProperties.DEFAULTS
     parameters = _properties_to_dict(properties, defaults)
 
     lock = HashTimeLockState(
@@ -654,10 +642,11 @@ class LockedTransferSignedStateProperties(Properties):
     recipient: typing.Address = EMPTY
     pkey: bytes = EMPTY
     message_identifier: typing.MessageID = EMPTY
+    TARGET_TYPE = LockedTransferSignedState
 
 
-LOCKED_TRANSFER_SIGNED_STATE_DEFAULTS = LockedTransferSignedStateProperties(
-    transfer=LOCKED_TRANSFER_DEFAULTS,
+LockedTransferSignedStateProperties.DEFAULTS = LockedTransferSignedStateProperties(
+    transfer=(LockedTransferProperties.DEFAULTS),
     sender=UNIT_TRANSFER_SENDER,
     recipient=UNIT_TRANSFER_TARGET,
     pkey=UNIT_TRANSFER_PKEY,
@@ -667,7 +656,7 @@ LOCKED_TRANSFER_SIGNED_STATE_DEFAULTS = LockedTransferSignedStateProperties(
 
 @create.register(LockedTransferSignedStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> LockedTransferSignedState:
-    defaults = defaults or LOCKED_TRANSFER_SIGNED_STATE_DEFAULTS
+    defaults = defaults or LockedTransferSignedStateProperties.DEFAULTS
     params = _properties_to_dict(properties, defaults)
 
     transfer_params = _properties_to_dict(params.pop('transfer'), defaults.transfer)
@@ -702,33 +691,19 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     return lockedtransfersigned_from_message(locked_transfer)
 
 
-DEFAULTS_BY_TYPE = {
-    TransactionExecutionStatusProperties: TRANSACTION_EXECUTION_STATUS_DEFAULTS,
-    NettingChannelEndStateProperties: NETTING_CHANNEL_END_STATE_DEFAULTS,
-    NettingChannelStateProperties: NETTING_CHANNEL_STATE_DEFAULTS,
-    BalanceProofProperties: BALANCE_PROOF_DEFAULTS,
-    BalanceProofSignedStateProperties: BALANCE_PROOF_SIGNED_STATE_DEFAULTS,
-    LockedTransferProperties: LOCKED_TRANSFER_DEFAULTS,
-    LockedTransferSignedStateProperties: LOCKED_TRANSFER_SIGNED_STATE_DEFAULTS,
-}
-
-
-def create_properties(properties, defaults=None):  # TODO type hint args, return value
-    assert defaults is None or type(defaults) == type(properties)
-    defaults_dict = DEFAULTS_BY_TYPE[type(properties)].__dict__
-    if defaults is not None:
-        defaults_dict = {
-            key: if_empty(defaults.__dict__[key], value)
-            for key, value in defaults_dict.items()
-        }
-    arguments = {
-        key: create_properties(value, defaults_dict[key]) if isinstance(value, Properties) else if_empty(value, defaults_dict[key])
-        for key, value in properties.__dict__.items()
+def _replace_properties(properties, defaults):
+    replacements = {
+        k: create_properties(v, defaults.__dict__[k]) if isinstance(v, Properties) else v
+        for k, v in properties.kwargs.items()
     }
-    result = type(properties)(**arguments)
-    for key, value in result.__dict__.items():
-        assert value is not EMPTY, f'{key} attribute in {type(result)} not set.'
-    return result
+    return replace(defaults, **replacements)
+
+
+def create_properties(properties: Properties, defaults: Properties = None) -> Properties:
+    full_defaults = type(properties).DEFAULTS
+    if defaults is not None:
+        full_defaults = _replace_properties(defaults, full_defaults)
+    return _replace_properties(properties, full_defaults)
 
 
 SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(LockedTransferSignedStateProperties(
@@ -813,9 +788,8 @@ def make_signed_transfer_for(
 
 def pkeys_from_channel_state(
         properties: NettingChannelStateProperties,
-        defaults: NettingChannelStateProperties = NETTING_CHANNEL_STATE_DEFAULTS,
+        defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
 ) -> typing.Tuple[typing.Optional[bytes], typing.Optional[bytes]]:
-
     our_key = None
     if properties.our_state is not EMPTY:
         our_key = properties.our_state.privatekey
@@ -875,10 +849,9 @@ class ChannelSet:
 
 def make_channel_set(
         properties: typing.List[NettingChannelStateProperties] = None,
-        defaults: NettingChannelStateProperties = NETTING_CHANNEL_STATE_DEFAULTS,
+        defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
         number_of_channels: int = None,
 ) -> ChannelSet:
-
     if number_of_channels is None:
         number_of_channels = len(properties)
 
