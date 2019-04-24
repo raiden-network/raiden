@@ -10,3 +10,4 @@ Contents
   :maxdepth: 1
 
   0002-testing-strategy
+  0003-git-workflow

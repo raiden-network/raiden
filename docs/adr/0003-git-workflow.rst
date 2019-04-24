@@ -1,11 +1,13 @@
-# Raiden Team - Git Workflow
+Raiden Team - Git Workflow
+==========================
 
-* Status: proposed
-* Deciders: @lefterisjp, @hackaugusto, @konradkonrad, @rakanalh
-* Date: 2019-04-15
+* **Status**: proposed
+* **Deciders**: @lefterisjp, @hackaugusto, @konradkonrad, @rakanalh
+* **Date**: 2019-04-15
 
 
-## Context and Problem Statement
+Context and Problem Statement
+-----------------------------
 
 The current workflow team members in the Raiden team currently use is as simple as pick issues, create a respective branch for that issue and present a PR once the bug/feature is fixed/implemented.
 
@@ -24,16 +26,20 @@ The set of problems that the team finds in this approach is:
 2. Large issues are broken into smaller, self-contained PRs which move Raiden forward towards resolving the issue collectively but not individually. The justification for this is to have smaller PRs to review which is a huge advantange. However, this could potentially leave us with a state where the master branch is broken.
 
 
-## Decision Drivers
+Decision Drivers
+----------------
 
 * Increase the velocity of progress
 * Pave the way for faster mainnet release cycles
 * Have certain recent checkpoints in the project's codebase where new features / functionalities are known to be stable.
 
 
-## Considered Options
+Considered Options
+------------------
 
-### Original proposal
+Original proposal
+~~~~~~~~~~~~~~~~~
+
 After discussing this with @hackaugusto, @LefterisJP and @konradkonrad, we realized that we need to come up with a better way to separate our workflow for bug fixing from the ones for introducing new features and refactoring of the code base.
 
 So, we seem to agree on using parts of the git-workflow where:
@@ -46,20 +52,25 @@ So, we seem to agree on using parts of the git-workflow where:
 The Pros of this new workflow:
 1. Resolving bugs, merging them to master and instantly creating a release which contains the new bug fix(es)
 2. Removing the worry about a broken `master` branch because the `develop` branch is going to contain all the potential breaking changes whose issues will be resolved separately.
+3. Enable separate test configurations where the `master` would run tests on CI with `production` settings while `develop` runs with `development` configurations.
 
 The Cons of this approach:
 1. Rebasing `develop` should some how be automated as soon as any changes are merged into master, or otherwise if both branches diverge alot from each other, this could be a pain to resolve all the conflicts and get the develop branch back in shape.
 2. It's a new workflow so team members have to get used to this and map what they're working on to the destination branch on which their implementation will land.
 
-### "Successful branching model"
+"Successful branching model"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It was suggested to follow [The successful git branching model](https://nvie.com/posts/a-successful-git-branching-model/) which is quite similar to the original proposal.
+It was suggested to follow `The Successful git branching model`_ which is quite similar to the original proposal.
 
-## Decision Outcome
+.. _The successful Git branching model: https://nvie.com/posts/a-successful-git-branching-model/
+
+Decision Outcome
+----------------
 
 It was decided to follow the "Successful git branching model" option which is conveyed by the following:
 
-![git branching mode](https://user-images.githubusercontent.com/44281/56030116-5cdd8680-5d1c-11e9-8de8-d3fb61ad7d8e.png)
+.. image:: https://user-images.githubusercontent.com/44281/56030116-5cdd8680-5d1c-11e9-8de8-d3fb61ad7d8e.png
 
 Where:
 
@@ -69,5 +80,6 @@ Where:
 - Bug fixes are merged into both `develop` and `master`.
 - Nightly builds are created on latest `develop`.
 - If a certain nightly is to be released, a release branch is created to include changes required for creating that release such as bumpversion.
-Bug fixes specific to a certain release would be merged into that release branch.
+  Bug fixes specific to a certain release would be merged into that release branch.
 - Once a mainnet release is out, develop is merged into master and the process is restarted.
+- Provided we follow the sematic versioning scheme, every bug fix should be rolled out with a new **minor** version.
