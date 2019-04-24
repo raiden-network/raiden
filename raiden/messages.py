@@ -61,6 +61,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
+    Type,
 )
 
 __all__ = (
@@ -1946,7 +1947,7 @@ class UpdatePFS(SignedMessage):
         )
 
 
-CMDID_TO_CLASS: Dict[int, Any] = {
+CMDID_TO_CLASS: Dict[int, Type[Message]] = {
     messages.DELIVERED: Delivered,
     messages.LOCKEDTRANSFER: LockedTransfer,
     messages.PING: Ping,

@@ -81,6 +81,19 @@ from raiden.utils.typing import (
     Union,
 )
 
+# All State changes that are subdispatched as token network actions
+TokenNetworkStateChange = Union[
+    ActionChannelClose,
+    ContractReceiveChannelBatchUnlock,
+    ContractReceiveChannelNew,
+    ContractReceiveChannelNewBalance,
+    ContractReceiveChannelSettled,
+    ContractReceiveRouteNew,
+    ContractReceiveRouteClosed,
+    ContractReceiveUpdateTransfer,
+    ContractReceiveChannelClosed,
+]
+
 
 def get_networks(
         chain_state: ChainState,
@@ -556,20 +569,6 @@ def handle_chain_init(
         )
     events: List[Event] = list()
     return TransitionResult(chain_state, events)
-
-
-# All State changes that are subdispatched as token network actions
-TokenNetworkStateChange = Union[
-    ActionChannelClose,
-    ContractReceiveChannelBatchUnlock,
-    ContractReceiveChannelNew,
-    ContractReceiveChannelNewBalance,
-    ContractReceiveChannelSettled,
-    ContractReceiveRouteNew,
-    ContractReceiveRouteClosed,
-    ContractReceiveUpdateTransfer,
-    ContractReceiveChannelClosed,
-]
 
 
 def handle_token_network_action(
