@@ -74,7 +74,7 @@ def saturated_count(connection_managers, registry_address, token_address):
 #   raiden_network fixture.
 @pytest.mark.parametrize('number_of_nodes', [6])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('settle_timeout', [6])
+@pytest.mark.parametrize('settle_timeout', [10])
 @pytest.mark.parametrize('reveal_timeout', [3])
 def test_participant_selection(raiden_network, token_addresses):
     raise_on_failure(
