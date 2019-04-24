@@ -17,7 +17,7 @@ from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.utils import typing
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import BlockSpecification
-from raiden_contracts.utils.proofs import eth_sign_hash_message, sign_one_to_n_iou
+from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 log = structlog.get_logger(__name__)
 
@@ -180,15 +180,20 @@ def get_last_iou(
 ) -> typing.Optional[typing.Dict]:
 
     timestamp = datetime.utcnow().isoformat(timespec='seconds')
-    signature_data = eth_sign_hash_message(
-        Web3.toBytes(hexstr=sender) + Web3.toBytes(hexstr=receiver) + bytes(timestamp, 'utf-8'),
+    signature_data = (
+        Web3.toBytes(hexstr=sender) + Web3.toBytes(hexstr=receiver) + Web3.toBytes(text=timestamp)
     )
     signature = to_hex(LocalSigner(privkey).sign(signature_data))
 
     try:
         return requests.get(
             f'{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou',
-            data=dict(sender=sender, receiver=receiver, timestamp=timestamp, signature=signature),
+            params=dict(
+                sender=sender,
+                receiver=receiver,
+                timestamp=timestamp,
+                signature=signature,
+            ),
             timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
         ).json().get('last_iou')
     except (requests.exceptions.RequestException, ValueError) as e:
