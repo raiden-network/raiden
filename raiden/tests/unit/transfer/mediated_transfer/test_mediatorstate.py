@@ -25,9 +25,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
-    BalanceProofProperties,
     BalanceProofSignedStateProperties,
-    LockedTransferProperties,
     LockedTransferSignedStateProperties,
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
@@ -222,12 +220,10 @@ def test_next_transfer_pair():
     pseudo_random_generator = random.Random()
 
     payer_transfer = create(LockedTransferSignedStateProperties(
-        transfer=LockedTransferProperties(
-            amount=balance,
-            initiator=HOP1,
-            target=ADDR,
-            expiration=50,
-        ),
+        amount=balance,
+        initiator=HOP1,
+        target=ADDR,
+        expiration=50,
     ))
 
     channels = make_channel_set([
@@ -345,13 +341,9 @@ def test_events_for_refund():
     )
 
     transfer_data = LockedTransferSignedStateProperties(
-        transfer=LockedTransferProperties(
-            amount=amount,
-            expiration=expiration,
-            balance_proof=BalanceProofProperties(
-                canonical_identifier=refund_channel.canonical_identifier,
-            ),
-        ),
+        amount=amount,
+        expiration=expiration,
+        canonical_identifier=refund_channel.canonical_identifier,
     )
     received_transfer = create(transfer_data)
 
@@ -846,7 +838,7 @@ def test_mediate_transfer():
     channels = mediator_make_channel_pair()
     payer_transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(transfer=LockedTransferProperties(expiration=30)),
+        LockedTransferSignedStateProperties(expiration=30),
     )
 
     mediator_state = MediatorTransferState(
@@ -911,9 +903,7 @@ def test_mediator_reject_keccak_empty_hash():
     channels = mediator_make_channel_pair()
     from_transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(initiator=HOP1, secret=EMPTY_HASH),
-        ),
+        LockedTransferSignedStateProperties(initiator=HOP1, secret=EMPTY_HASH),
         allow_invalid=True,
     )
 
@@ -936,7 +926,7 @@ def test_mediator_secret_reveal_empty_hash():
     channels = mediator_make_channel_pair()
     from_transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(transfer=LockedTransferProperties(initiator=HOP1)),
+        LockedTransferSignedStateProperties(initiator=HOP1),
     )
 
     block_number = 1
@@ -1008,7 +998,7 @@ def test_no_valid_routes():
     ])
     from_transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(transfer=LockedTransferProperties(initiator=HOP1)),
+        LockedTransferSignedStateProperties(initiator=HOP1),
     )
 
     iteration = mediator.state_transition(
@@ -1069,9 +1059,7 @@ def test_lock_timeout_larger_than_settlement_period_must_be_ignored():
     channels = mediator_make_channel_pair(defaults=channel_defaults)
     from_transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(initiator=HOP1, expiration=high_expiration),
-        ),
+        LockedTransferSignedStateProperties(initiator=HOP1, expiration=high_expiration),
         allow_invalid=True,
     )
 
@@ -1142,14 +1130,10 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     from_transfer = factories.make_signed_transfer_for(
         bc_channel,
         LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(
-                initiator=HOP1,
-                target=target_attacker2,
-                balance_proof=BalanceProofProperties(
-                    canonical_identifier=factories.make_canonical_identifier(
-                        token_network_address=bc_channel.token_network_identifier,
-                    ),
-                ),
+            initiator=HOP1,
+            target=target_attacker2,
+            canonical_identifier=factories.make_canonical_identifier(
+                token_network_address=bc_channel.token_network_identifier,
             ),
         ),
     )
@@ -1300,9 +1284,7 @@ def test_payee_timeout_must_be_equal_to_payer_timeout():
     channels = mediator_make_channel_pair()
     payer_transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(expiration=30),
-        ),
+        LockedTransferSignedStateProperties(expiration=30),
     )
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
@@ -1393,20 +1375,14 @@ def test_mediate_transfer_with_maximum_pending_transfers_exceeded():
         from_transfer = factories.make_signed_transfer_for(
             channels[0],
             LockedTransferSignedStateProperties(
-                transfer=LockedTransferProperties(
-                    initiator=HOP1,
-                    expiration=UNIT_SETTLE_TIMEOUT,
-                    secret=random_secret(),
-                    payment_identifier=index,
-                    balance_proof=BalanceProofProperties(
-                        nonce=index,
-                        locked_amount=index * UNIT_TRANSFER_AMOUNT,
-                        canonical_identifier=factories.make_canonical_identifier(
-                            channel_identifier=2,
-                        ),
-                        transferred_amount=0,
-                    ),
-                ),
+                initiator=HOP1,
+                expiration=UNIT_SETTLE_TIMEOUT,
+                secret=random_secret(),
+                payment_identifier=index,
+                nonce=index,
+                locked_amount=index * UNIT_TRANSFER_AMOUNT,
+                canonical_identifier=factories.make_canonical_identifier(channel_identifier=2),
+                transferred_amount=0,
                 message_identifier=index,
             ),
             compute_locksroot=True,
@@ -1446,12 +1422,7 @@ def test_mediator_lock_expired_with_new_block():
 
     payer_transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(
-                initiator=HOP1,
-                expiration=30,
-            ),
-        ),
+        LockedTransferSignedStateProperties(initiator=HOP1, expiration=30),
     )
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
@@ -1510,12 +1481,7 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
 
     payer_transfer = factories.make_signed_transfer_for(
         payer_channel_state,
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(
-                initiator=HOP1,
-                expiration=30,
-            ),
-        ),
+        LockedTransferSignedStateProperties(initiator=HOP1, expiration=30),
     )
 
     mediator_state = MediatorTransferState(UNIT_SECRETHASH, channels.get_routes())
@@ -1577,9 +1543,8 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     channels = mediator_make_channel_pair()
     transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(expiration=expiration),
-        ))
+        LockedTransferSignedStateProperties(expiration=expiration),
+    )
 
     iteration = mediator.state_transition(
         mediator_state=None,
@@ -1609,11 +1574,9 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     })
 
     balance_proof_data = BalanceProofSignedStateProperties(
-        balance_proof=BalanceProofProperties(
-            nonce=2,
-            transferred_amount=transfer.balance_proof.transferred_amount,
-            canonical_identifier=channels[0].canonical_identifier,
-        ),
+        nonce=2,
+        transferred_amount=transfer.balance_proof.transferred_amount,
+        canonical_identifier=channels[0].canonical_identifier,
         message_hash=transfer.lock.secrethash,
     )
     balance_proof = create(balance_proof_data)
@@ -1671,9 +1634,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     channels = mediator_make_channel_pair()
     transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(expiration=expiration),
-        ),
+        LockedTransferSignedStateProperties(expiration=expiration),
     )
 
     iteration = mediator.state_transition(
@@ -1710,11 +1671,9 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     assert secrethash in channels[0].partner_state.secrethashes_to_unlockedlocks
 
     balance_proof_properties = BalanceProofSignedStateProperties(
-        balance_proof=BalanceProofProperties(
-            nonce=2,
-            transferred_amount=transfer.balance_proof.transferred_amount,
-            canonical_identifier=channels[0].canonical_identifier,
-        ),
+        nonce=2,
+        transferred_amount=transfer.balance_proof.transferred_amount,
+        canonical_identifier=channels[0].canonical_identifier,
         message_hash=transfer.lock.secrethash,
     )
     balance_proof = create(balance_proof_properties)
@@ -1758,9 +1717,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     channels = mediator_make_channel_pair()
     transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(expiration=30),
-        ),
+        LockedTransferSignedStateProperties(expiration=30),
     )
 
     iteration = mediator.state_transition(
@@ -1901,13 +1858,9 @@ def test_node_change_network_state_reachable_node():
 
     lock_expiration = UNIT_REVEAL_TIMEOUT * 2
     received_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            amount=1,
-            expiration=lock_expiration,
-            balance_proof=factories.BalanceProofProperties(
-                canonical_identifier=payer_channel.canonical_identifier,
-            ),
-        ),
+        amount=1,
+        expiration=lock_expiration,
+        canonical_identifier=payer_channel.canonical_identifier,
     ))
 
     mediator_state = MediatorTransferState(
@@ -1975,12 +1928,10 @@ def test_next_transfer_pair_with_fees_deducted():
     fee = 5
 
     payer_transfer = create(LockedTransferSignedStateProperties(
-        transfer=LockedTransferProperties(
-            amount=balance + fee,
-            initiator=HOP1,
-            target=ADDR,
-            expiration=50,
-        ),
+        amount=balance + fee,
+        initiator=HOP1,
+        target=ADDR,
+        expiration=50,
     ))
 
     channels = make_channel_set([
@@ -2020,14 +1971,10 @@ def test_backward_transfer_pair_with_fees_deducted():
     refund_channel.mediation_fee = fee
 
     transfer_data = LockedTransferSignedStateProperties(
-        transfer=LockedTransferProperties(
-            amount=amount + fee,
-            expiration=10,
-            balance_proof=BalanceProofProperties(
-                canonical_identifier=refund_channel.canonical_identifier,
-                locked_amount=amount + fee,
-            ),
-        ),
+        amount=amount + fee,
+        expiration=10,
+        canonical_identifier=refund_channel.canonical_identifier,
+        locked_amount=amount + fee,
     )
     received_transfer = create(transfer_data)
 
@@ -2076,14 +2023,10 @@ def test_sanity_check_for_refund_transfer_with_fees():
             our_state=NettingChannelEndStateProperties(balance=0),
         ),
     ])
+    from_transfer_amount = UNIT_TRANSFER_AMOUNT + UNIT_TRANSFER_FEE
     from_transfer = factories.make_signed_transfer_for(
         channels[0],
-        LockedTransferSignedStateProperties(
-            transfer=LockedTransferProperties(
-                initiator=HOP1,
-                amount=UNIT_TRANSFER_AMOUNT + UNIT_TRANSFER_FEE,
-            ),
-        ),
+        LockedTransferSignedStateProperties(initiator=HOP1, amount=from_transfer_amount),
     )
 
     iteration = mediator.state_transition(

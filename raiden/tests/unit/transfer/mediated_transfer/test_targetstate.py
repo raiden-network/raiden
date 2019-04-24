@@ -14,9 +14,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_SENDER,
     UNIT_TRANSFER_TARGET,
-    BalanceProofProperties,
     BalanceProofSignedStateProperties,
-    LockedTransferProperties,
     LockedTransferSignedStateProperties,
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
@@ -47,12 +45,10 @@ def make_target_transfer(channel, amount=None, expiration=None, initiator=None, 
     return factories.make_signed_transfer_for(
         channel,
         factories.LockedTransferSignedStateProperties(
-            transfer=factories.LockedTransferProperties(
-                amount=amount or channel.partner_state.contract_balance,
-                expiration=expiration or default_expiration,
-                initiator=initiator or UNIT_TRANSFER_INITIATOR,
-                target=channel.our_state.address,
-            ),
+            amount=amount or channel.partner_state.contract_balance,
+            expiration=expiration or default_expiration,
+            initiator=initiator or UNIT_TRANSFER_INITIATOR,
+            target=channel.our_state.address,
         ),
     )
 
@@ -174,15 +170,11 @@ def test_handle_inittarget():
     channels = make_channel_set([channel_properties])
 
     transfer_properties = LockedTransferSignedStateProperties(
-        transfer=LockedTransferProperties(
-            amount=channels[0].partner_state.contract_balance,
-            expiration=channels[0].reveal_timeout + block_number + 1,
-            balance_proof=BalanceProofProperties(
-                canonical_identifier=channels[0].canonical_identifier,
-                transferred_amount=0,
-                locked_amount=channels[0].partner_state.contract_balance,
-            ),
-        ),
+        amount=channels[0].partner_state.contract_balance,
+        expiration=channels[0].reveal_timeout + block_number + 1,
+        canonical_identifier=channels[0].canonical_identifier,
+        transferred_amount=0,
+        locked_amount=channels[0].partner_state.contract_balance,
     )
     from_transfer = create(transfer_properties)
 
@@ -502,16 +494,14 @@ def test_state_transition():
     assert not iteration.events
 
     balance_proof = create(BalanceProofSignedStateProperties(
-        balance_proof=BalanceProofProperties(
-            nonce=from_transfer.balance_proof.nonce + 1,
-            transferred_amount=lock_amount,
-            locked_amount=0,
-            canonical_identifier=factories.make_canonical_identifier(
-                token_network_address=channels[0].token_network_identifier,
-                channel_identifier=channels.get_route(0).channel_identifier,
-            ),
-            locksroot=EMPTY_MERKLE_ROOT,
+        nonce=from_transfer.balance_proof.nonce + 1,
+        transferred_amount=lock_amount,
+        locked_amount=0,
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=channels[0].token_network_identifier,
+            channel_identifier=channels.get_route(0).channel_identifier,
         ),
+        locksroot=EMPTY_MERKLE_ROOT,
         message_hash=b'\x00' * 32,  # invalid
     ))
 
@@ -542,12 +532,10 @@ def test_target_reject_keccak_empty_hash():
     from_transfer = factories.make_signed_transfer_for(
         channels[0],
         factories.LockedTransferSignedStateProperties(
-            transfer=factories.LockedTransferProperties(
-                amount=lock_amount,
-                target=channels.our_address(0),
-                expiration=expiration,
-                secret=EMPTY_HASH,
-            ),
+            amount=lock_amount,
+            target=channels.our_address(0),
+            expiration=expiration,
+            secret=EMPTY_HASH,
         ),
         allow_invalid=True,
     )
@@ -592,12 +580,10 @@ def test_target_receive_lock_expired():
     assert init_transition.new_state.transfer == from_transfer
 
     balance_proof = create(BalanceProofSignedStateProperties(
-        balance_proof=BalanceProofProperties(
-            nonce=2,
-            transferred_amount=from_transfer.balance_proof.transferred_amount,
-            locked_amount=0,
-            canonical_identifier=channels[0].canonical_identifier,
-        ),
+        nonce=2,
+        transferred_amount=from_transfer.balance_proof.transferred_amount,
+        locked_amount=0,
+        canonical_identifier=channels[0].canonical_identifier,
         message_hash=from_transfer.lock.secrethash,
     ))
 

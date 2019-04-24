@@ -76,13 +76,9 @@ def test_mediator_task_view():
     locked_amount1 = 11
     payee_transfer = factories.create(factories.LockedTransferProperties(secret=secret1))
     payer_transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            secret=secret1,
-            payment_identifier=1,
-            balance_proof=factories.BalanceProofProperties(
-                locked_amount=locked_amount1,
-            ),
-        ),
+        secret=secret1,
+        payment_identifier=1,
+        locked_amount=locked_amount1,
     ))
     secrethash1 = payee_transfer.lock.secrethash
     initiator = payee_transfer.initiator
@@ -104,13 +100,9 @@ def test_mediator_task_view():
     secret2 = factories.make_secret(2)
     locked_amount2 = 13
     transfer2 = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(
-            secret=secret2,
-            payment_identifier=2,
-            balance_proof=factories.BalanceProofProperties(
-                locked_amount=locked_amount2,
-            ),
-        ),
+        secret=secret2,
+        payment_identifier=2,
+        locked_amount=locked_amount2,
     ))
     secrethash2 = transfer2.lock.secrethash
     transfer_state2 = MediatorTransferState(secrethash=secrethash2, routes=routes)
@@ -139,9 +131,7 @@ def test_mediator_task_view():
 def test_target_task_view():
     """Same as above for target tasks."""
     secret = factories.make_secret()
-    transfer = factories.create(factories.LockedTransferSignedStateProperties(
-        transfer=factories.LockedTransferProperties(secret=secret),
-    ))
+    transfer = factories.create(factories.LockedTransferSignedStateProperties(secret=secret))
     secrethash = transfer.lock.secrethash
     mediator = factories.make_address()
     mediator_channel = factories.create(factories.NettingChannelStateProperties(
