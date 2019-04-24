@@ -365,7 +365,7 @@ class RaidenService(Runnable):
 
         self.stop_event = Event()
         self.stop_event.set()  # inits as stopped
-        self.greenlets = list()
+        self.greenlets: List[Greenlet] = list()
 
         self.wal: Optional[wal.WriteAheadLog] = None
         self.snapshot_group = 0
