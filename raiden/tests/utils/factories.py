@@ -1,6 +1,7 @@
 # pylint: disable=too-many-arguments
 import random
 import string
+from dataclasses import dataclass
 from functools import singledispatch
 from typing import NamedTuple
 
@@ -37,7 +38,12 @@ from raiden.transfer.utils import hash_balance_data
 from raiden.utils import CanonicalIdentifier, privatekey_to_address, random_secret, sha3, typing
 from raiden.utils.signer import LocalSigner, Signer
 
-EMPTY = object()
+EMPTY = 'empty'
+GENERATE = 'generate'
+
+
+class Properties:
+    """ Base class for all properties classes. """
 
 
 def if_empty(value, default):
@@ -409,12 +415,8 @@ def _create_or_echo(properties, defaults=None):
     return created if created is not None else properties
 
 
-def _properties_to_dict(properties: NamedTuple, defaults: NamedTuple) -> typing.Dict:
-    defaults_dict = defaults._asdict()
-    return {
-        key: if_empty(value, defaults_dict[key])
-        for key, value in properties._asdict().items()
-    }
+def _properties_to_dict(properties, defaults) -> typing.Dict:  # TODO type hint
+    return create_properties(properties, defaults).__dict__
 
 
 def _dict_to_kwargs(properties_dict: typing.Dict) -> typing.Dict:
@@ -429,7 +431,8 @@ def _partial_dict(full_dict: typing.Dict, *args) -> typing.Dict:
     return {key: full_dict[key] for key in args}
 
 
-class TransactionExecutionStatusProperties(NamedTuple):
+@dataclass(frozen=True)
+class TransactionExecutionStatusProperties(Properties):
     started_block_number: typing.BlockNumber = EMPTY
     finished_block_number: typing.BlockNumber = EMPTY
     result: str = EMPTY
@@ -449,7 +452,8 @@ def _(properties, defaults=None) -> TransactionExecutionStatus:
     )
 
 
-class NettingChannelEndStateProperties(NamedTuple):
+@dataclass(frozen=True)
+class NettingChannelEndStateProperties(Properties):
     address: typing.Address = EMPTY
     privatekey: bytes = EMPTY
     balance: typing.TokenAmount = EMPTY
@@ -482,7 +486,8 @@ def _(properties, defaults=None) -> NettingChannelEndState:
     return state
 
 
-class NettingChannelStateProperties(NamedTuple):
+@dataclass(frozen=True)
+class NettingChannelStateProperties(Properties):
     canonical_identifier: CanonicalIdentifier = EMPTY
     token_address: typing.TokenAddress = EMPTY
     payment_network_identifier: typing.PaymentNetworkID = EMPTY
@@ -521,7 +526,8 @@ def _(properties, defaults=None) -> NettingChannelState:
     )
 
 
-class BalanceProofProperties(NamedTuple):
+@dataclass(frozen=True)
+class BalanceProofProperties(Properties):
     nonce: typing.Nonce = EMPTY
     transferred_amount: typing.TokenAmount = EMPTY
     locked_amount: typing.TokenAmount = EMPTY
@@ -545,10 +551,11 @@ def _(properties, defaults=None) -> BalanceProofUnsignedState:
     )
 
 
-class BalanceProofSignedStateProperties(NamedTuple):
+@dataclass(frozen=True)
+class BalanceProofSignedStateProperties(Properties):
     balance_proof: BalanceProofProperties = EMPTY
     message_hash: typing.AdditionalHash = EMPTY
-    signature: typing.Signature = EMPTY
+    signature: typing.Signature = GENERATE
     sender: typing.Address = EMPTY
     pkey: bytes = EMPTY
 
@@ -569,7 +576,7 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
     )
     signer = LocalSigner(params.pop('pkey'))
 
-    if params['signature'] is EMPTY:
+    if params['signature'] is GENERATE:
         keys = ('transferred_amount', 'locked_amount', 'locksroot')
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
@@ -585,7 +592,8 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
     return BalanceProofSignedState(**params)
 
 
-class LockedTransferProperties(NamedTuple):
+@dataclass(frozen=True)
+class LockedTransferProperties(Properties):
     balance_proof: BalanceProofProperties = EMPTY
     amount: typing.TokenAmount = EMPTY
     expiration: typing.BlockExpiration = EMPTY
@@ -639,7 +647,8 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
     return LockedTransferUnsignedState(balance_proof=balance_proof, lock=lock, **parameters)
 
 
-class LockedTransferSignedStateProperties(NamedTuple):
+@dataclass(frozen=True)
+class LockedTransferSignedStateProperties(Properties):
     transfer: LockedTransferProperties = EMPTY
     sender: typing.Address = EMPTY
     recipient: typing.Address = EMPTY
@@ -704,14 +713,22 @@ DEFAULTS_BY_TYPE = {
 }
 
 
-def create_properties(properties: NamedTuple, defaults: NamedTuple = None) -> NamedTuple:
-    parameters = (defaults or DEFAULTS_BY_TYPE[type(properties)])._asdict()
-    for key, value in properties._asdict().items():
-        if type(value) in DEFAULTS_BY_TYPE.keys():
-            parameters[key] = create_properties(value, parameters[key])
-        elif value is not EMPTY:
-            parameters[key] = value
-    return type(properties)(**parameters)
+def create_properties(properties, defaults=None):  # TODO type hint args, return value
+    assert defaults is None or type(defaults) == type(properties)
+    defaults_dict = DEFAULTS_BY_TYPE[type(properties)].__dict__
+    if defaults is not None:
+        defaults_dict = {
+            key: if_empty(defaults.__dict__[key], value)
+            for key, value in defaults_dict.items()
+        }
+    arguments = {
+        key: create_properties(value, defaults_dict[key]) if isinstance(value, Properties) else if_empty(value, defaults_dict[key])
+        for key, value in properties.__dict__.items()
+    }
+    result = type(properties)(**arguments)
+    for key, value in result.__dict__.items():
+        assert value is not EMPTY, f'{key} attribute in {type(result)} not set.'
+    return result
 
 
 SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(LockedTransferSignedStateProperties(
@@ -1021,7 +1038,8 @@ def make_node_availability_map(nodes):
     }
 
 
-class RouteProperties(NamedTuple):
+@dataclass(frozen=True)
+class RouteProperties(Properties):
     address1: typing.Address
     address2: typing.Address
     capacity1to2: typing.TokenAmount
