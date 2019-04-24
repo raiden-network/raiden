@@ -188,8 +188,8 @@ def get_best_routes_with_iou_request_mocked(
 ):
 
     def iou_side_effect(*_, **kwargs):
-        assert 'data' in kwargs
-        body = kwargs['data']
+        assert 'params' in kwargs
+        body = kwargs['params']
 
         assert is_hex_address(body['sender'])
         assert is_hex_address(body['receiver'])
