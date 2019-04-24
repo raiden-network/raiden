@@ -1541,8 +1541,6 @@ def handle_node_change_network_state(
     payer_channel = channelidentifiers_to_channels.get(payer_channel_identifier)
     payee_channel = channelidentifiers_to_channels.get(route.channel_identifier)
 
-    # TODO: Is this state transition correct here? payer_channel was not checked for None
-    # but later down the call stack it's assumed to not be None.
     if not payee_channel or not payer_channel:
         return TransitionResult(mediator_state, list())
 
