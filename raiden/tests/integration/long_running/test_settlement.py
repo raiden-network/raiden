@@ -5,22 +5,17 @@ import pytest
 
 from raiden import waiting
 from raiden.api.python import RaidenAPI
-from raiden.app import App
 from raiden.constants import UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
-from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret
-from raiden.network.transport import MatrixTransport
-from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import search_for_item, wait_for_state_change
+from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
-from raiden.transfer.mediated_transfer.state_change import ActionInitTarget
 from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
@@ -841,38 +836,29 @@ def run_test_automatic_dispute(raiden_network, deposit, token_addresses):
 def test_batch_unlock_after_restart(
         raiden_network,
         token_addresses,
-        secret_registry_address,
         deposit,
-        blockchain_type,
-        retry_timeout,
 ):
     raise_on_failure(
         raiden_network,
         run_test_batch_unlock_after_restart,
         raiden_network=raiden_network,
         token_addresses=token_addresses,
-        secret_registry_address=secret_registry_address,
         deposit=deposit,
-        blockchain_type=blockchain_type,
-        retry_timeout=retry_timeout,
     )
 
 
 def run_test_batch_unlock_after_restart(
         raiden_network,
         token_addresses,
-        secret_registry_address,
         deposit,
-        blockchain_type,
-        retry_timeout,
 ):
     """Simulate the case where:
     - A sends B a transfer
     - B sends A a transfer
     - Secrets were never revealed
     - B closes channel
-    - Wait for settle
     - A crashes
+    - Wait for settle
     - Wait for unlock from B
     - Restart A
     At this point, the current unlock logic will try to unlock
@@ -914,10 +900,10 @@ def run_test_batch_unlock_after_restart(
     bob_transfer_secret = sha3(bob_app.raiden.address)
     bob_transfer_secrethash = sha3(bob_transfer_secret)
 
-    hold_event_handler.hold_secretrequest_for(
+    alice_transfer_hold = hold_event_handler.hold_secretrequest_for(
         secrethash=alice_transfer_secrethash,
     )
-    hold_event_handler.hold_secretrequest_for(
+    bob_transfer_hold = hold_event_handler.hold_secretrequest_for(
         secrethash=bob_transfer_secrethash,
     )
 
@@ -939,19 +925,8 @@ def run_test_batch_unlock_after_restart(
         secret=bob_transfer_secret,
     )
 
-    wait_for_state_change(
-        raiden=alice_app.raiden,
-        item_type=ActionInitTarget,
-        attributes={},
-        retry_timeout=retry_timeout,
-    )
-
-    wait_for_state_change(
-        raiden=bob_app.raiden,
-        item_type=ActionInitTarget,
-        attributes={},
-        retry_timeout=retry_timeout,
-    )
+    alice_transfer_hold.wait()
+    bob_transfer_hold.wait()
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     alice_lock = channel.get_lock(alice_bob_channel_state.our_state, alice_transfer_secrethash)
@@ -960,7 +935,6 @@ def run_test_batch_unlock_after_restart(
     # This is the current state of protocol:
     #
     #    A -> B LockedTransfer
-    #    B -> A SecretRequest
     #    - protocol didn't continue
     assert_synced_channel_state(
         token_network_identifier=token_network_identifier,
@@ -980,20 +954,7 @@ def run_test_batch_unlock_after_restart(
         partner_address=alice_app.raiden.address,
     )
 
-    secret_registry_proxy = alice_app.raiden.chain.secret_registry(
-        secret_registry_address,
-    )
-    secret_registry_proxy.register_secret(
-        secret=alice_transfer_secret,
-        given_block_identifier='latest',
-    )
-    secret_registry_proxy = bob_app.raiden.chain.secret_registry(
-        secret_registry_address,
-    )
-    secret_registry_proxy.register_secret(
-        secret=bob_transfer_secret,
-        given_block_identifier='latest',
-    )
+    alice_app.stop()
 
     waiting.wait_for_settle(
         raiden=alice_app.raiden,
@@ -1003,10 +964,8 @@ def run_test_batch_unlock_after_restart(
         retry_timeout=alice_app.raiden.alarm.sleep_time,
     )
 
-    alice_app.stop()
-
     # wait for the node to call batch unlock
-    timeout = 30 if blockchain_type == 'parity' else 10
+    timeout = 10
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
             app=bob_app,
@@ -1015,32 +974,11 @@ def run_test_batch_unlock_after_restart(
             partner=alice_bob_channel_state.our_state.address,
         )
 
-    alice_app.raiden.stop()
-
-    transport = MatrixTransport(alice_app.config['transport']['matrix'])
-    raiden_event_handler = RaidenEventHandler()
-    message_handler = MessageHandler()
-
-    alice_app_restart = App(
-        config=alice_app.config,
-        chain=alice_app.raiden.chain,
-        query_start_block=0,
-        default_registry=alice_app.raiden.default_registry,
-        default_secret_registry=alice_app.raiden.default_secret_registry,
-        default_service_registry=alice_app.raiden.default_service_registry,
-        transport=transport,
-        raiden_event_handler=raiden_event_handler,
-        message_handler=message_handler,
-        discovery=alice_app.raiden.discovery,
-    )
-
-    del alice_app  # from here on the app0_restart should be used
-
-    alice_app_restart.start()
+    alice_app.start()
 
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
-            app=alice_app_restart,
+            app=alice_app,
             token_network_id=token_network_identifier,
             participant=alice_bob_channel_state.partner_state.address,
             partner=alice_bob_channel_state.our_state.address,
