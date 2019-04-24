@@ -82,6 +82,7 @@ __all__ = (
     'SecretRequest',
     'SignedBlindedBalanceProof',
     'SignedMessage',
+    'ToDevice',
     'Unlock',
     'UpdatePFS',
     'decode',
@@ -441,6 +442,54 @@ class Processed(SignedRetrieableMessage):
         )
         processed.signature = decode_hex(data['signature'])
         return processed
+
+
+class ToDevice(SignedMessage):
+    """
+    Message, which can be directly sent to all devices of a node known by matrix,
+    no room required. Messages which are supposed to be sent via transport.sent_to_device must
+    subclass.
+    """
+    cmdid = messages.TODEVICE
+
+    def __init__(self, *, nonce: typing.Nonce, **kwargs):
+        super().__init__(**kwargs)
+        self.nonce = nonce
+
+    @classmethod
+    def unpack(cls, packed):
+        to_device = cls(
+            nonce=packed.nonce,
+        )
+        to_device.signature = packed.signature
+        return to_device
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.signature = self.signature
+
+    def __repr__(self):
+        return '<{} [nonce:{}]>'.format(
+            self.__class__.__name__,
+            self.nonce,
+            self.signature,
+        )
+
+    def to_dict(self):
+        return {
+            'type': self.__class__.__name__,
+            'nonce': self.nonce,
+            'signature': encode_hex(self.signature),
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        assert data['type'] == cls.__name__
+        to_device = cls(
+            nonce=data['nonce'],
+        )
+        to_device.signature = decode_hex(data['signature'])
+        return to_device
 
 
 class Delivered(SignedMessage):
@@ -1959,6 +2008,7 @@ CMDID_TO_CLASS: Dict[int, Type[Message]] = {
     messages.UNLOCK: Unlock,
     messages.SECRETREQUEST: SecretRequest,
     messages.LOCKEXPIRED: LockExpired,
+    messages.TODEVICE: ToDevice,
 }
 
 CLASSNAME_TO_CLASS = {klass.__name__: klass for klass in CMDID_TO_CLASS.values()}

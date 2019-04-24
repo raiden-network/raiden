@@ -19,6 +19,7 @@ REFUNDTRANSFER = 8
 REVEALSECRET = 11
 DELIVERED = 12
 LOCKEXPIRED = 13
+TODEVICE = 14
 
 
 # pylint: disable=invalid-name
@@ -269,6 +270,16 @@ UpdatePFS = namedbuffer(
     ],
 )
 
+ToDevice = namedbuffer(
+    'to_device',
+    [
+        cmdid(TODEVICE),
+        pad(3),
+        nonce,
+        signature,
+    ],
+)
+
 CMDID_MESSAGE = {
     PROCESSED: Processed,
     PING: Ping,
@@ -280,6 +291,7 @@ CMDID_MESSAGE = {
     REFUNDTRANSFER: RefundTransfer,
     DELIVERED: Delivered,
     LOCKEXPIRED: LockExpired,
+    TODEVICE: ToDevice,
 }
 
 
