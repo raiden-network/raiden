@@ -46,6 +46,7 @@ def test_is_transaction_effect_satisfied(
 
     # ContractSendChannelBatchUnlock would only be satisfied if both sides are unlocked
     # and if the channel was cleared
+    assert not is_transaction_effect_satisfied(chain_state, transaction, state_change)
 
     channel_settled = ContractReceiveChannelSettled(
         transaction_hash=bytes(32),
