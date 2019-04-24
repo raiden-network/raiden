@@ -11,7 +11,11 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
-from raiden.tests.utils.transfer import assert_synced_channel_state, transfer
+from raiden.tests.utils.transfer import (
+    assert_synced_channel_state,
+    transfer,
+    transfer_and_assert_path,
+)
 from raiden.transfer import views
 from raiden.transfer.state_change import (
     ContractReceiveChannelClosed,
@@ -34,9 +38,6 @@ def test_recovery_happy_case(
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
 
-    app2_wait_for = WaitForMessage()
-    app2.raiden.message_handler = app2_wait_for
-
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
@@ -50,9 +51,8 @@ def test_recovery_happy_case(
     spent_amount = deposit - 2
     identifier = 0
     for identifier in range(spent_amount):
-        transfer(
-            initiator_app=app0,
-            target_app=app2,
+        transfer_and_assert_path(
+            path=raiden_network,
             token_address=token_address,
             amount=amount,
             identifier=identifier,
