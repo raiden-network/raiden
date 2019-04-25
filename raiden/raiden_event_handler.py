@@ -429,6 +429,7 @@ class RaidenEventHandler:
                 channel_identifier=channel_identifier,
                 state_change_identifier=state_change_identifier,
             )
+            assert restored_channel_state is not None
 
             gain = get_batch_unlock_gain(
                 restored_channel_state,
@@ -475,6 +476,7 @@ class RaidenEventHandler:
                 channel_identifier=canonical_identifier.channel_identifier,
                 state_change_identifier=state_change_identifier,
             )
+            assert restored_channel_state is not None
 
             gain = get_batch_unlock_gain(
                 restored_channel_state,
