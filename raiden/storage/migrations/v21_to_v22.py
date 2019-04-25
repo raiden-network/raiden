@@ -372,6 +372,7 @@ def _add_canonical_identifier_to_statechanges(
 
     for state_change_batch in storage.batch_query_state_changes(batch_size=500):
         updated_state_changes = list()
+        delete_state_changes = list()
 
         for state_change in state_change_batch:
             state_change_obj = json.loads(state_change.data)
@@ -386,16 +387,7 @@ def _add_canonical_identifier_to_statechanges(
                     ):
                         # delete it, we're not part of it
                         assert obj == state_change_obj
-                        del obj
-                        del state_change_obj
-                        state_change_obj = None
-                        conn = storage.conn.cursor()
-                        conn.execute(
-                            'DELETE from state_changes WHERE identifier = ?',
-                            state_change.state_change_identifier,
-                        )
-                        conn.commit()
-                        conn.close()
+                        delete_state_changes.append(state_change.state_change_identifier)
                     else:
                         channel_id = resolve_channel_id_for_unlock(
                             storage,
@@ -404,8 +396,7 @@ def _add_canonical_identifier_to_statechanges(
                         )
 
                         assert channel_id is not None
-                        if channel_id is not None:
-                            upgrade_object(obj, chain_id, channel_id=channel_id)
+                        upgrade_object(obj, chain_id, channel_id=channel_id)
                 else:
                     upgrade_object(obj, chain_id)
 
@@ -419,6 +410,7 @@ def _add_canonical_identifier_to_statechanges(
             ))
 
         storage.update_state_changes(updated_state_changes)
+        storage.delete_state_changes(delete_state_changes)
 
 
 def resolve_channel_id_for_unlock(
@@ -467,7 +459,7 @@ def resolve_channel_id_for_unlock(
             return balance_proof['canonical_identifier']['channel_identifier']
         elif 'channel_identifier' in balance_proof:
             return balance_proof['channel_identifier']
-    raise RuntimeError('channel identifier could not be found during migration.')
+    return None
 
 
 def _add_canonical_identifier_to_events(
