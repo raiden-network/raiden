@@ -1,7 +1,11 @@
+import pytest
 from eth_utils import decode_hex, to_canonical_address
 
-from raiden.utils import privatekey_to_publickey, sha3
+from raiden.constants import EMPTY_HASH
+from raiden.tests.utils.mocks import MockWeb3
+from raiden.utils import block_specification_to_number, privatekey_to_publickey, sha3
 from raiden.utils.signer import LocalSigner, Signer, recover
+from raiden.utils.typing import BlockNumber
 
 
 def test_privatekey_to_publickey():
@@ -36,3 +40,18 @@ def test_recover():
     )
 
     assert recover(data=message, signature=signature) == account
+
+
+def test_block_speficiation_to_number():
+    web3 = MockWeb3(1)
+    assert block_specification_to_number('latest', web3) == BlockNumber(42)
+    assert block_specification_to_number('pending', web3) == BlockNumber(42)
+
+    with pytest.raises(AssertionError):
+        block_specification_to_number('whatever', web3)
+
+    assert block_specification_to_number(EMPTY_HASH, web3) == BlockNumber(42)
+    assert block_specification_to_number(BlockNumber(56), web3) == BlockNumber(56)
+
+    with pytest.raises(AssertionError):
+        block_specification_to_number([1, 2], web3)
