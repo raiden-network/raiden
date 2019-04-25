@@ -10,10 +10,9 @@ from raiden.storage import serialize
 from raiden.storage.migrations.v21_to_v22 import (
     SOURCE_VERSION,
     TARGET_VERSION,
-    check_constraint,
     constraint_has_canonical_identifier_or_values_removed,
     upgrade_v21_to_v22,
-    yield_objects,
+    walk_dicts,
 )
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils.mocks import MockRaidenService
@@ -89,24 +88,21 @@ def test_upgrade_v21_to_v22(tmp_path):
         storage = SerializedSQLiteStorage(str(db_path), serialize.JSONSerializer())
         for batch in storage.batch_query_event_records(batch_size=500):
             for event in batch:
-                for obj in yield_objects(event.data):
-                    check_constraint(
-                        obj,
-                        constraint=constraint_has_canonical_identifier_or_values_removed,
-                    )
+                walk_dicts(
+                    event,
+                    constraint_has_canonical_identifier_or_values_removed,
+                )
         for batch in storage.batch_query_state_changes(batch_size=500):
             for state_change in batch:
-                for obj in yield_objects(state_change.data):
-                    check_constraint(
-                        obj,
-                        constraint=constraint_has_canonical_identifier_or_values_removed,
-                    )
-        for snapshot in storage.get_snapshots():
-            for obj in yield_objects(snapshot.data):
-                check_constraint(
-                    obj,
-                    constraint=constraint_has_canonical_identifier_or_values_removed,
+                walk_dicts(
+                    state_change,
+                    constraint_has_canonical_identifier_or_values_removed,
                 )
+        for snapshot in storage.get_snapshots():
+            walk_dicts(
+                snapshot,
+                constraint_has_canonical_identifier_or_values_removed,
+            )
 
         assert os.path.isfile(str(db_path))
         assert os.path.isfile(str(old_db_filename))
