@@ -2,7 +2,6 @@ import random
 
 from raiden.constants import EMPTY_HASH
 from raiden.tests.utils import factories
-from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.transfer import node, state, state_change
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.mediated_transfer import events
@@ -95,12 +94,16 @@ def test_channel_closed_must_clear_ordered_messages(
     # Regression test:
     # The code delivered_message handler worked only with a queue of one
     # element
-    message = make_mediated_transfer(
-        message_identifier=message_identifier,
-        token=token_network_state.token_address,
-        channel_identifier=channel_identifier,
-        transferred_amount=amount,
-        recipient=recipient,
+    message = factories.create(
+        factories.LockedTransferProperties(
+            message_identifier=message_identifier,
+            token=token_network_state.token_address,
+            canonical_identifier=factories.make_canonical_identifier(
+                channel_identifier=channel_identifier
+            ),
+            transferred_amount=amount,
+            recipient=recipient,
+        )
     )
 
     chain_state.queueids_to_queues[queue_identifier] = [message]

@@ -187,7 +187,7 @@ def test_channel_data_removed_after_unlock(
         channel_state=channel_state, privkey=pkey, nonce=1, transferred_amount=0, lock=lock
     )
 
-    from_route = factories.route_from_channel(channel_state)
+    from_route = factories.make_route_from_channel(channel_state)
     init_target = ActionInitTarget(from_route, mediated_transfer)
 
     node.state_transition(chain_state, init_target)
@@ -293,7 +293,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         channel_state=channel_state, privkey=pkey, nonce=1, transferred_amount=0, lock=lock
     )
 
-    from_route = factories.route_from_channel(channel_state)
+    from_route = factories.make_route_from_channel(channel_state)
     init_mediator = ActionInitMediator(
         routes=[from_route], from_route=from_route, from_transfer=mediated_transfer
     )
@@ -405,7 +405,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         channel_state=channel_state, privkey=pkey, nonce=1, transferred_amount=0, lock=lock
     )
 
-    from_route = factories.route_from_channel(channel_state)
+    from_route = factories.make_route_from_channel(channel_state)
     init_target = ActionInitTarget(from_route, mediated_transfer)
 
     node.state_transition(chain_state, init_target)
@@ -645,11 +645,17 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     #  v                    |
     # (2)  ----- 100 --->  (3)
 
-    channel_state1 = factories.make_channel(
-        our_balance=50, our_address=our_address, partner_balance=0, partner_address=address1
+    channel_state1 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=50, address=our_address),
+            partner_state=factories.NettingChannelEndStateProperties(balance=0, address=address1),
+        )
     )
-    channel_state2 = factories.make_channel(
-        our_balance=100, our_address=our_address, partner_balance=0, partner_address=address2
+    channel_state2 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=100, address=our_address),
+            partner_state=factories.NettingChannelEndStateProperties(balance=0, address=address2),
+        )
     )
 
     # create new channels as participant
@@ -881,11 +887,17 @@ def test_routing_priority(chain_state, token_network_state, our_address):
     #  v                    v
     # (4)                  (4)
 
-    channel_state1 = factories.make_channel(
-        our_balance=1, our_address=our_address, partner_balance=1, partner_address=address1
+    channel_state1 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=1, address=our_address),
+            partner_state=factories.NettingChannelEndStateProperties(balance=1, address=address1),
+        )
     )
-    channel_state2 = factories.make_channel(
-        our_balance=2, our_address=our_address, partner_balance=0, partner_address=address2
+    channel_state2 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=2, address=our_address),
+            partner_state=factories.NettingChannelEndStateProperties(balance=0, address=address2),
+        )
     )
 
     # create new channels as participant

@@ -5,12 +5,11 @@ import pytest
 from raiden import constants
 from raiden.exceptions import InvalidSignature
 from raiden.messages import Ping, Processed, decode
-from raiden.tests.utils.factories import make_privkey_address
-from raiden.tests.utils.messages import make_mediated_transfer, make_refund_transfer
+from raiden.tests.utils import factories
 from raiden.utils import sha3
 from raiden.utils.signer import LocalSigner, recover
 
-PRIVKEY, ADDRESS = make_privkey_address()
+PRIVKEY, ADDRESS = factories.make_privkey_address()
 signer = LocalSigner(PRIVKEY)
 
 
@@ -84,16 +83,15 @@ def test_processed():
 @pytest.mark.parametrize("transferred_amount", [0, constants.UINT256_MAX])
 @pytest.mark.parametrize("fee", [0, constants.UINT256_MAX])
 def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, transferred_amount):
-    mediated_transfer = make_mediated_transfer(
-        amount=amount,
-        payment_identifier=payment_identifier,
-        nonce=nonce,
-        fee=fee,
-        transferred_amount=transferred_amount,
+    mediated_transfer = factories.create(
+        factories.LockedTransferProperties(
+            amount=amount,
+            payment_identifier=payment_identifier,
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            fee=fee,
+        )
     )
-
-    mediated_transfer.sign(signer)
-    assert mediated_transfer.sender == ADDRESS
     assert decode(mediated_transfer.encode()) == mediated_transfer
 
 
@@ -102,13 +100,12 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
 @pytest.mark.parametrize("nonce", [1, constants.UINT64_MAX])
 @pytest.mark.parametrize("transferred_amount", [0, constants.UINT256_MAX])
 def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_amount):
-    refund_transfer = make_refund_transfer(
-        amount=amount,
-        payment_identifier=payment_identifier,
-        nonce=nonce,
-        transferred_amount=transferred_amount,
+    refund_transfer = factories.create(
+        factories.RefundTransferProperties(
+            amount=amount,
+            payment_identifier=payment_identifier,
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+        )
     )
-
-    refund_transfer.sign(signer)
-    assert refund_transfer.sender == ADDRESS
     assert decode(refund_transfer.encode()) == refund_transfer
