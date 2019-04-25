@@ -367,7 +367,6 @@ class RaidenService(Runnable):
         self.stop_event.set()  # inits as stopped
         self.greenlets: List[Greenlet] = list()
 
-        self.wal: Optional[wal.WriteAheadLog] = None
         self.snapshot_group = 0
 
         self.contract_manager = ContractManager(config['contracts_path'])
