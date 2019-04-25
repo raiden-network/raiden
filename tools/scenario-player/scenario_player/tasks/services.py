@@ -1,7 +1,11 @@
+from typing import Any
 import structlog
 
 from scenario_player.exceptions import ScenarioAssertionError, ScenarioError
+from scenario_player.runner import ScenarioRunner
 from scenario_player.tasks.api_base import RESTAPIActionTask
+
+from .base import Task
 
 log = structlog.get_logger(__name__)
 
@@ -81,17 +85,17 @@ class AssertPFSHistoryTask(RESTAPIActionTask):
 
     Example usages:
 
-        # 4 requests where made from source node 0
+        # 4 requests were made from source node 0
         assert_pfs_history: {source: 0, request_count: 4}
 
-        # 4 requests where made from source node 0 to target node 1
+        # 4 requests were made from source node 0 to target node 1
         assert_pfs_history: {source: 0, target: 1, request_count: 4}
 
-        # 4 requests where made from source node 0 to target node 1 and 3 routes each have been
+        # 4 requests were made from source node 0 to target node 1 and 3 routes each have been
         # returned
         assert_pfs_history: {source: 0, target: 1, request_count: 4, routes_count: 3}
 
-        # 4 requests where made from source node 0 to target node 1 and the specified number of
+        # 4 requests were made from source node 0 to target node 1 and the specified number of
         # routes have been returned
         assert_pfs_history: {source: 0, target: 1, request_count: 4, routes_count: [3, 2, 1, 2]}
 
@@ -205,3 +209,82 @@ class AssertPFSHistoryTask(RESTAPIActionTask):
                     raise ScenarioAssertionError(
                         f'Expected route {exp_route} but got {actual_route} at index {i}',
                     )
+
+
+class AssertPFSIoUTask(RESTAPIActionTask):
+    """
+    Assert PFS IoU task
+
+    Example usages:
+
+        # IoUs of node 0 is stored at pfs with current amount 111
+        assert_pfs_iou: {source: 0, amount: 111}
+
+        # IoUs of node 0 is not stored in the pfs
+        assert_pfs_iou: {source: 0, iou_exists: false}
+
+    Expected response from PFS iou debug endpoint:
+            {
+                "sender": <address>,
+                "amount": <int>,
+                "exp_block": <int>,
+            },
+
+    """
+    _name = 'assert_pfs_iou'
+    _url_template = (
+        "{pfs_url}/api/v1/_debug/ious/{source_address}"
+    )
+
+    def __init__(
+            self,
+            runner: ScenarioRunner,
+            config: Any,
+            parent: Task = None,
+            abort_on_fail: bool = True,
+    ) -> None:
+        super().__init__(runner, config, parent, abort_on_fail)
+
+        if 'source' not in config:
+            raise ScenarioError(
+                'Not all required keys provided. Required: source ',
+            )
+
+        if not any(k in config for k in ['iou_exists', 'amount']):
+            raise ScenarioError(
+                f'Expected either iou_exists or amount.',
+            )
+
+    @property
+    def _url_params(self):
+        pfs_url = self._runner.scenario.services.get('pfs', {}).get('url')
+        if not pfs_url:
+            raise ScenarioError('PFS tasks require settings.services.pfs.url to be set.')
+
+        source = self._config['source']
+        if isinstance(source, str) and len(source) == 42:
+            source_address = source
+        else:
+            source_address = self._runner.get_node_address(source)
+
+        params = dict(
+            pfs_url=pfs_url,
+            source_address=source_address,
+        )
+        return params
+
+    def _process_response(self, response_dict: dict):
+
+        if self._config.get('iou_exists', True) is False:
+            if response_dict:
+                raise ScenarioAssertionError(
+                    f'Expected no IOU but got {response_dict}.',
+                )
+
+        if 'amount' in self._config and 'amount' in response_dict:
+            exp_iou_amount = int(self._config['amount'])
+            actual_iou_amount = int(response_dict['amount'])
+            if actual_iou_amount != exp_iou_amount:
+                raise ScenarioAssertionError(
+                    f'Expected amount of {exp_iou_amount} but got {actual_iou_amount}.',
+                )

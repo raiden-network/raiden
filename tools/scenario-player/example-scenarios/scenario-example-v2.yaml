@@ -94,7 +94,7 @@ nodes:
 ## - assert_ms_claim
 ## - assert_pfs_routes
 ## - assert_pfs_history
-
+## - assert_pfs_iou
 scenario:
   serial:
     tasks:
@@ -226,6 +226,12 @@ scenario:
 #          expected_routes:
 #            - ['0x00[...]01', '0x00[...]04']
 #            - ['0x00[...]01', '0x00[...]02', '0x00[...]04']
+#      ## We can also assert whether the pfs received an IOU an if so, what the current amount is
+#            here no iou exists for node 0 at the pfs
+#            - assert_pfs_iou: {source: 0, iou_exists: false}
+#            here there exists an IOU for node 0 at the pfs with the current amount of 10
+#            - assert_pfs_iou: {source: 0, amount: 10}
+
 
 
 # Status code matching (int or regex):
