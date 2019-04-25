@@ -454,6 +454,20 @@ class SQLiteStorage(SerializationBase):
 
         return cursor.fetchall()
 
+    def _query_state_changes(self, limit: int = None, offset: int = None):
+        limit, offset = _sanitize_limit_and_offset(limit, offset)
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+            '''
+            SELECT data, log_time FROM state_changes
+                ORDER BY identifier ASC LIMIT ? OFFSET ?
+            ''',
+            (limit, offset),
+        )
+
+        return cursor.fetchall()
+
     def _get_event_records(
             self,
             limit: int = None,
@@ -528,6 +542,10 @@ class SQLiteStorage(SerializationBase):
 
     def get_events(self, limit: int = None, offset: int = None):
         entries = self._query_events(limit, offset)
+        return [entry[0] for entry in entries]
+
+    def get_state_changes(self, limit: int = None, offset: int = None):
+        entries = self._query_state_changes(limit, offset)
         return [entry[0] for entry in entries]
 
     def get_snapshots(self):
