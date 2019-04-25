@@ -371,6 +371,8 @@ def _add_canonical_identifier_to_statechanges(
     our_address = to_checksum_address(raiden.address)
 
     for state_change_batch in storage.batch_query_state_changes(batch_size=500):
+        updated_state_changes = list()
+
         for state_change in state_change_batch:
             state_change_obj = json.loads(state_change.data)
             for _type, obj, _path in scanner(state_change_obj):
@@ -406,17 +408,17 @@ def _add_canonical_identifier_to_statechanges(
                             upgrade_object(obj, chain_id, channel_id=channel_id)
                 else:
                     upgrade_object(obj, chain_id)
+
             check_constraint(
                 state_change_obj,
                 constraint=constraint_has_canonical_identifier_or_values_removed,
             )
-            conn = storage.conn.cursor()
-            conn.execute(
-                'UPDATE state_changes SET data = ? WHERE identifier = ?',
-                (state_change[0], json.dumps(state_change[1])),
-            )
-            conn.connection.commit()
-            conn.close()
+            updated_state_changes.append((
+                json.dumps(state_change[1]),
+                state_change.state_change_identifier,
+            ))
+
+        storage.update_state_changes(updated_state_changes)
 
 
 def resolve_channel_id_for_unlock(
