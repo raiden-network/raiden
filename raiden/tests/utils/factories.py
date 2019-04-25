@@ -3,7 +3,7 @@ import random
 import string
 from dataclasses import dataclass, fields, replace
 from functools import singledispatch
-from typing import NamedTuple
+from typing import Any, ClassVar, Dict, List, NamedTuple, Optional, Tuple, Type
 
 from eth_utils import to_checksum_address
 
@@ -42,24 +42,24 @@ EMPTY = 'empty'
 GENERATE = 'generate'
 
 
-def _partial_dict(full_dict: typing.Dict, *args) -> typing.Dict:
+def _partial_dict(full_dict: Dict, *args) -> Dict:
     return {key: full_dict[key] for key in args}
 
 
 class Properties:
     """ Base class for all properties classes. """
-    DEFAULTS: typing.ClassVar['Properties'] = None
-    TARGET_TYPE: typing.ClassVar[typing.Type] = None
+    DEFAULTS: ClassVar['Properties'] = None
+    TARGET_TYPE: ClassVar[Type] = None
 
     @property
     def kwargs(self):
         return {key: value for key, value in self.__dict__.items() if value is not EMPTY}
 
-    def extract(self, subset_type: typing.Type) -> 'Properties':
+    def extract(self, subset_type: Type) -> 'Properties':
         field_names = [field.name for field in fields(subset_type)]
         return subset_type(**_partial_dict(self.__dict__, *field_names))
 
-    def partial_dict(self, *args) -> typing.Dict[str, typing.Any]:
+    def partial_dict(self, *args) -> Dict[str, Any]:
         return _partial_dict(self.__dict__, *args)
 
 
@@ -159,7 +159,7 @@ def make_privatekey(privatekey_bin: bytes = EMPTY) -> bytes:
 
 def make_privatekey_address(
         privatekey: bytes = EMPTY,
-) -> typing.Tuple[bytes, typing.Address]:
+) -> Tuple[bytes, typing.Address]:
     privatekey = if_empty(privatekey, make_privatekey())
     address = privatekey_to_address(privatekey)
     return privatekey, address
@@ -426,12 +426,12 @@ def make_canonical_identifier(
     )
 
 
-def make_merkletree_leaves(width: int) -> typing.List[typing.Secret]:
+def make_merkletree_leaves(width: int) -> List[typing.Secret]:
     return [make_secret() for _ in range(width)]
 
 
 @singledispatch
-def create(properties, defaults=None):
+def create(properties: Any, defaults: Optional[Properties] = None) -> Any:
     """Create objects from their associated property class.
 
     E. g. a NettingChannelState from NettingChannelStateProperties. For any field in
@@ -443,7 +443,7 @@ def create(properties, defaults=None):
     return properties
 
 
-def _properties_to_kwargs(properties: Properties, defaults: Properties) -> typing.Dict:
+def _properties_to_kwargs(properties: Properties, defaults: Properties) -> Dict:
     properties = create_properties(properties, defaults or properties.DEFAULTS)
     return {key: create(value) for key, value in properties.__dict__.items()}
 
@@ -767,7 +767,7 @@ def make_signed_transfer_for(
 def pkeys_from_channel_state(
         properties: NettingChannelStateProperties,
         defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
-) -> typing.Tuple[typing.Optional[bytes], typing.Optional[bytes]]:
+) -> Tuple[Optional[bytes], Optional[bytes]]:
     our_key = None
     if properties.our_state is not EMPTY:
         our_key = properties.our_state.privatekey
@@ -790,9 +790,9 @@ class ChannelSet:
 
     def __init__(
             self,
-            channels: typing.List[NettingChannelState],
-            our_privatekeys: typing.List[bytes],
-            partner_privatekeys: typing.List[bytes],
+            channels: List[NettingChannelState],
+            our_privatekeys: List[bytes],
+            partner_privatekeys: List[bytes],
     ):
         self.channels = channels
         self.our_privatekeys = our_privatekeys
@@ -818,7 +818,7 @@ class ChannelSet:
     def get_route(self, channel_index: int) -> RouteState:
         return route_from_channel(self.channels[channel_index])
 
-    def get_routes(self, *args) -> typing.List[RouteState]:
+    def get_routes(self, *args) -> List[RouteState]:
         return [self.get_route(channel_index) for channel_index in args]
 
     def __getitem__(self, item: int) -> NettingChannelState:
@@ -826,7 +826,7 @@ class ChannelSet:
 
 
 def make_channel_set(
-        properties: typing.List[NettingChannelStateProperties] = None,
+        properties: List[NettingChannelStateProperties] = None,
         defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
         number_of_channels: int = None,
 ) -> ChannelSet:
@@ -880,7 +880,7 @@ def mediator_make_init_action(
 
 class MediatorTransfersPair(NamedTuple):
     channels: ChannelSet
-    transfers_pair: typing.List[MediationPairState]
+    transfers_pair: List[MediationPairState]
     amount: int
     block_number: typing.BlockNumber
     block_hash: typing.BlockHash
@@ -1011,14 +1011,14 @@ def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
 def create_network(
         token_network_state: TokenNetworkState,
         our_address: typing.Address,
-        routes: typing.List[RouteProperties],
+        routes: List[RouteProperties],
         block_number: 1,
         block_hash: typing.BlockHash = None,
-) -> typing.Tuple[typing.Any, typing.List[NettingChannelState]]:
+) -> Tuple[Any, List[NettingChannelState]]:
     """Creates a network from route properties.
 
     If the address in the route is our_address, create a channel also.
-    Returns a list of created cannels and the new state.
+    Returns a list of created channels and the new state.
     """
 
     block_hash = block_hash or make_block_hash()
