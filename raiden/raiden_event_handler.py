@@ -49,7 +49,7 @@ from raiden.transfer.utils import (
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils import CanonicalIdentifier, pex
-from raiden.utils.typing import Address, Nonce
+from raiden.utils.typing import Address, Nonce, TokenNetworkID
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -374,7 +374,7 @@ class RaidenEventHandler:
 
         channel_state = get_channelstate_by_token_network_and_partner(
             chain_state=state_from_raiden(raiden),
-            token_network_id=token_network_identifier,
+            token_network_id=TokenNetworkID(token_network_identifier),
             partner_address=participant,
         )
 
