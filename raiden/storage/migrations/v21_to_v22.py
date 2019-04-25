@@ -165,49 +165,26 @@ ALL_REMOVE_MIGRATIONS = by_removal_channel_id_token_network_identifier.union(
 
 
 def constraint_removed_duplicated_values(obj: Dict[str, Any]) -> None:
-    if obj['_type'] in ALL_REMOVE_MIGRATIONS:
+    if obj.get('_type') in ALL_REMOVE_MIGRATIONS:
         for key in SPELLING_VARS_CHANNEL:
             assert key not in obj
         for key in SPELLING_VARS_TOKEN_NETWORK:
             assert key not in obj
 
 
-def contraint_has_canonical_identifier(obj: Dict[str, Any], keys: List[str]) -> None:
-    if obj['_type'] not in ALL_REMOVE_MIGRATIONS:
+def contraint_has_canonical_identifier(obj: Dict[str, Any]) -> None:
+    _type = obj.get('_type')
+    if _type in ALL_MIGRATING and _type not in ALL_REMOVE_MIGRATIONS:
         canonical_identifier = obj.get('canonical_identifier')
-        assert canonical_identifier is not None, (keys, obj)
-        assert canonical_identifier['chain_identifier'] is not None, (keys, obj)
-        assert canonical_identifier['token_network_address'] is not None, (keys, obj)
-        assert canonical_identifier['channel_identifier'] is not None, (keys, obj)
+        assert canonical_identifier is not None
+        assert canonical_identifier['chain_identifier'] is not None
+        assert canonical_identifier['token_network_address'] is not None
+        assert canonical_identifier['channel_identifier'] is not None
 
 
-def constraint_has_canonical_identifier_or_values_removed(
-        obj: Dict[str, Any],
-        keys: List[str],
-) -> None:
+def constraint_has_canonical_identifier_or_values_removed(obj: Dict[str, Any]) -> None:
     constraint_removed_duplicated_values(obj)
-    contraint_has_canonical_identifier(obj, keys)
-
-
-def check_constraint(obj: Dict[str, Any], constraint: Callable) -> None:
-    for _type, data, keys in scanner(obj):
-        constraint(data, keys)
-
-
-def scanner(obj: Union[List, Dict[str, Any], int, str], keys: List[str] = None) -> Any:
-    if keys is None:
-        keys = []
-    if isinstance(obj, dict):
-        if obj.get('_type') in ALL_MIGRATING:
-            yield (obj.get('_type'), obj, keys)
-        for key, value in obj.items():
-            yield from scanner(value, keys=keys + [key])
-    elif isinstance(obj, list):
-        for num, item in enumerate(obj):
-            yield from scanner(item, keys=keys + [f'[{num}]'])
-    else:
-        if obj is not None:
-            assert isinstance(obj, (int, str))
+    contraint_has_canonical_identifier(obj)
 
 
 def walk_dicts(obj: Union[List, Dict], callback: Callable) -> None:
@@ -227,7 +204,7 @@ def upgrade_object(
         chain_id: ChainID,
         channel_id: int = None,
 ) -> None:
-    _type = obj['_type']
+    _type = obj.get('_type')
 
     if _type in by_contraction:
         _contract(obj)
@@ -252,11 +229,13 @@ def _add_canonical_identifier_to_snapshot(storage: SQLiteStorage, chain_id: Chai
     for snapshot_record in storage.get_snapshots():
         snapshot_obj = json.loads(snapshot_record.data)
 
-        walk_dicts(snapshot_obj, lambda obj: upgrade_object(obj, chain_id))
-
-        check_constraint(
+        walk_dicts(
             snapshot_obj,
-            constraint=constraint_has_canonical_identifier_or_values_removed,
+            lambda obj: upgrade_object(obj, chain_id),
+        )
+        walk_dicts(
+            snapshot_obj,
+            constraint_has_canonical_identifier_or_values_removed,
         )
         updated_snapshots_data.append((
             json.dumps(snapshot_obj),
@@ -303,9 +282,9 @@ def _add_canonical_identifier_to_statechanges(
                     lambda obj, channel_id=channel_id: upgrade_object(obj, chain_id, channel_id),
                 )
 
-            check_constraint(
+            walk_dicts(
                 state_change_obj,
-                constraint=constraint_has_canonical_identifier_or_values_removed,
+                constraint_has_canonical_identifier_or_values_removed,
             )
             updated_state_changes.append((
                 json.dumps(state_change_obj),
@@ -373,9 +352,9 @@ def _add_canonical_identifier_to_events(storage: SQLiteStorage, chain_id: ChainI
                 event_obj,
                 lambda obj: upgrade_object(obj, chain_id),
             )
-            check_constraint(
+            walk_dicts(
                 event_obj,
-                constraint=constraint_has_canonical_identifier_or_values_removed,
+                constraint_has_canonical_identifier_or_values_removed,
             )
             updated_events.append((
                 json.dumps(event_obj),
