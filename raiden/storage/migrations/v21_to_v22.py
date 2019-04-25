@@ -1,4 +1,5 @@
 import json
+import collections.abc
 from typing import TypeVar
 
 from eth_utils import to_checksum_address
@@ -155,19 +156,31 @@ ALL_MIGRATING = by_contraction.union(
     by_removal_token_network_identifier,
 )
 
+ALL_REMOVE_MIGRATIONS = by_removal_channel_id_token_network_identifier.union(
+    by_removal_token_network_identifier,
+)
 
-def constraint_has_canonical_identifier_or_values_removed(obj: Dict[str, Any], keys: List[str]):
-    if obj['_type'] in by_removal_channel_id_token_network_identifier.union(
-            by_removal_token_network_identifier,
-    ):
-        for key in SPELLING_VARS_CHANNEL + SPELLING_VARS_TOKEN_NETWORK:
+
+def constraint_removed_duplicated_values(obj: Dict[str, Any]):
+    if obj['_type'] in ALL_REMOVE_MIGRATIONS:
+        for key in SPELLING_VARS_CHANNEL:
             assert key not in obj
-    else:
+        for key in SPELLING_VARS_TOKEN_NETWORK:
+            assert key not in obj
+
+
+def contraint_has_canonical_identifier(obj: Dict[str, Any], keys: List[str]):
+    if obj['_type'] not in ALL_REMOVE_MIGRATIONS:
         canonical_identifier = obj.get('canonical_identifier')
         assert canonical_identifier is not None, (keys, obj)
         assert canonical_identifier['chain_identifier'] is not None, (keys, obj)
         assert canonical_identifier['token_network_address'] is not None, (keys, obj)
         assert canonical_identifier['channel_identifier'] is not None, (keys, obj)
+
+
+def constraint_has_canonical_identifier_or_values_removed(obj: Dict[str, Any], keys: List[str]):
+    constraint_removed_duplicated_values(obj)
+    contraint_has_canonical_identifier(obj, keys)
 
 
 def check_constraint(obj: Dict[str, Any], constraint: Callable):
@@ -178,14 +191,12 @@ def check_constraint(obj: Dict[str, Any], constraint: Callable):
 def yield_objects(obj: Union[List, Dict[str, Any], int, str]):
     if isinstance(obj, dict):
         yield obj
-        for _key, value in obj.items():
-            yield from yield_objects(value)
-    elif isinstance(obj, list):
+        yield from yield_objects(obj.values())
+    elif collections.abc.Iterable:
         for item in obj:
             yield from yield_objects(item)
-    else:
-        if obj is not None:
-            assert isinstance(obj, (int, str))
+    elif obj is not None:
+        assert isinstance(obj, (int, str))
 
 
 def scanner(obj: Union[List, Dict[str, Any], int, str], keys: List[str] = None):
