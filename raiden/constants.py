@@ -3,7 +3,15 @@ from enum import Enum
 
 from eth_utils import keccak, to_checksum_address, to_hex
 
-from raiden.utils.typing import BlockHash, BlockNumber, Locksroot, RaidenProtocolVersion, Signature
+from raiden.utils.typing import (
+    AdditionalHash,
+    BalanceHash,
+    BlockHash,
+    BlockNumber,
+    Locksroot,
+    RaidenProtocolVersion,
+    Signature,
+)
 
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
 RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
@@ -33,6 +41,8 @@ NULL_ADDRESS_BYTES = bytes(20)
 NULL_ADDRESS = to_checksum_address(NULL_ADDRESS_BYTES)
 
 EMPTY_HASH = BlockHash(bytes(32))
+EMPTY_BALANCE_HASH = BalanceHash(bytes(32))
+EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
 EMPTY_HASH_KECCAK = keccak(EMPTY_HASH)
 EMPTY_SIGNATURE = Signature(bytes(65))
 EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
