@@ -459,7 +459,7 @@ def test_state_transition():
         block_number=first_new_block.block_number,
     )
 
-    secret_reveal = ReceiveSecretReveal(factories.UNIT_SECRET, initiator)
+    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, initiator)
     reveal_iteration = target.state_transition(
         target_state=first_block_iteration.new_state,
         state_change=secret_reveal,

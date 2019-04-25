@@ -136,8 +136,13 @@ def run_test_locked_transfer_secret_registered_onchain(
 
     # Test that receiving a transfer with a secret already registered on chain fails
     expiration = 9999
-    locked_transfer = factories.make_signed_transfer(
-        amount, factories.UNIT_TRANSFER_INITIATOR, app0.raiden.address, expiration, transfer_secret
+    locked_transfer = factories.create(
+        factories.LockedTransferProperties(
+            amount=amount,
+            target=app0.raiden.address,
+            expiration=expiration,
+            secret=transfer_secret,
+        )
     )
 
     message_handler = MessageHandler()
@@ -365,14 +370,18 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
             )
             assert patched.call_count == 1
 
-            locked_transfer = factories.make_signed_transfer(
-                amount=5,
-                initiator=factories.HOP1,
-                target=factories.HOP2,
-                sender=factories.HOP1,
-                pkey=factories.HOP1_KEY,
-                token_network_address=token_network_id,
-                token=token_address,
+            locked_transfer = factories.create(
+                factories.LockedTransferProperties(
+                    amount=5,
+                    initiator=factories.HOP1,
+                    target=factories.HOP2,
+                    sender=factories.HOP1,
+                    pkey=factories.HOP1_KEY,
+                    token=token_address,
+                    canonical_identifier=factories.make_canonical_identifier(
+                        token_network_address=token_network_id
+                    ),
+                )
             )
             app0.raiden.mediate_mediated_transfer(locked_transfer)
             assert patched.call_count == 2

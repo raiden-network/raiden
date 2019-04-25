@@ -113,7 +113,7 @@ class MockChainState:
 class MockRaidenService:
     def __init__(self, message_handler=None, state_transition=None):
         self.chain = MockChain(network_id=17, node_address=factories.make_address())
-        self.private_key, self.address = factories.make_privatekey_address()
+        self.private_key, self.address = factories.make_privkey_address()
         self.signer = LocalSigner(self.private_key)
 
         self.chain.node_address = self.address

@@ -24,7 +24,6 @@ from raiden.raiden_service import (
 )
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
-from raiden.tests.utils.messages import make_balance_proof
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
 from raiden.transfer.identifiers import QueueIdentifier
@@ -36,6 +35,7 @@ from raiden.utils.typing import Address, List, Optional, Union
 
 USERID0 = "@Arthur:RestaurantAtTheEndOfTheUniverse"
 USERID1 = "@Alice:Wonderland"
+HOP1_BALANCE_PROOF = factories.BalanceProofSignedStateProperties(pkey=factories.HOP1_KEY)
 
 
 # All tests in this module require matrix
@@ -628,7 +628,7 @@ def test_monitoring_global_messages(
     raiden_service.transport = transport
     transport.log = MagicMock()
 
-    balance_proof = make_balance_proof(signer=LocalSigner(factories.HOP1_KEY), amount=1)
+    balance_proof = factories.create(HOP1_BALANCE_PROOF)
     channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof
@@ -685,8 +685,7 @@ def test_pfs_global_messages(
     raiden_service.transport = transport
     transport.log = MagicMock()
 
-    balance_proof = make_balance_proof(signer=LocalSigner(factories.HOP1_KEY), amount=1)
-
+    balance_proof = factories.create(HOP1_BALANCE_PROOF)
     channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof

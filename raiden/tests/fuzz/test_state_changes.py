@@ -250,7 +250,7 @@ class InitiatorMixin:
         channel = self.address_to_channel[transfer.target]
         if transfer.secrethash not in self.expected_expiry:
             self.expected_expiry[transfer.secrethash] = self.block_number + 10
-        return ActionInitInitiator(transfer, [factories.route_from_channel(channel)])
+        return ActionInitInitiator(transfer, [factories.make_route_from_channel(channel)])
 
     def _receive_secret_request(self, transfer: TransferDescriptionWithSecretState):
         secrethash = sha3(transfer.secret)

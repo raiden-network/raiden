@@ -18,7 +18,6 @@ from raiden.tests.utils.factories import (
     UNIT_SECRET,
     UNIT_SECRETHASH,
     UNIT_SETTLE_TIMEOUT,
-    UNIT_TOKEN_ADDRESS,
     UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
     UNIT_TRANSFER_FEE,
@@ -312,18 +311,17 @@ def test_events_for_expired_pairs():
 
 def test_events_for_refund():
     amount = 10
-    expiration = 30
     block_number = 1
     pseudo_random_generator = random.Random()
 
-    refund_channel = factories.make_channel(
-        our_balance=amount, partner_balance=amount, partner_address=UNIT_TRANSFER_SENDER
+    our_state = factories.NettingChannelEndStateProperties(balance=amount)
+    partner_state = factories.replace(our_state, address=UNIT_TRANSFER_SENDER)
+    refund_channel = factories.create(
+        factories.NettingChannelStateProperties(our_state=our_state, partner_state=partner_state)
     )
 
     transfer_data = LockedTransferSignedStateProperties(
-        amount=amount,
-        expiration=expiration,
-        canonical_identifier=refund_channel.canonical_identifier,
+        amount=amount, expiration=30, canonical_identifier=refund_channel.canonical_identifier
     )
     received_transfer = create(transfer_data)
 
@@ -1074,16 +1072,18 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     pseudo_random_generator = random.Random()
 
     # C's channel with the Attacker node A2
-    attacked_channel = factories.make_channel(our_balance=amount, token_address=UNIT_TOKEN_ADDRESS)
+    our_state = factories.NettingChannelEndStateProperties(balance=amount)
+    partner_state = factories.replace(our_state, address=UNIT_TRANSFER_SENDER)
+
+    attacked_channel = factories.create(
+        factories.NettingChannelStateProperties(our_state=our_state)
+    )
     target_attacker2 = attacked_channel.partner_state.address
 
-    bc_channel = factories.make_channel(
-        our_balance=amount,
-        partner_balance=amount,
-        partner_address=UNIT_TRANSFER_SENDER,
-        token_address=UNIT_TOKEN_ADDRESS,
+    bc_channel = factories.create(
+        factories.NettingChannelStateProperties(our_state=our_state, partner_state=partner_state)
     )
-    from_route = factories.route_from_channel(bc_channel)
+    from_route = factories.make_route_from_channel(bc_channel)
 
     from_transfer = factories.make_signed_transfer_for(
         bc_channel,
@@ -1096,7 +1096,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         ),
     )
 
-    available_routes = [factories.route_from_channel(attacked_channel)]
+    available_routes = [factories.make_route_from_channel(attacked_channel)]
     channel_map = {
         bc_channel.identifier: bc_channel,
         attacked_channel.identifier: attacked_channel,
@@ -1472,14 +1472,28 @@ def test_mediator_must_not_send_lock_expired_when_channel_is_closed():
     assert search_for_item(iteration.events, SendLockExpired, {}) is None
 
 
-def test_mediator_lock_expired_with_receive_lock_expired():
+def setup():
+    channels = mediator_make_channel_pair()
     expiration = 30
+    transfer_properties = LockedTransferSignedStateProperties(expiration=expiration)
+    transfer = factories.make_signed_transfer_for(channels[0], transfer_properties)
+
+    balance_proof = create(
+        BalanceProofSignedStateProperties(
+            nonce=2,
+            transferred_amount=transfer.balance_proof.transferred_amount,
+            canonical_identifier=channels[0].canonical_identifier,
+            message_hash=transfer.lock.secrethash,
+        )
+    )
+
+    return channels, transfer, balance_proof, expiration
+
+
+def test_mediator_lock_expired_with_receive_lock_expired():
     pseudo_random_generator = random.Random()
 
-    channels = mediator_make_channel_pair()
-    transfer = factories.make_signed_transfer_for(
-        channels[0], LockedTransferSignedStateProperties(expiration=expiration)
-    )
+    channels, transfer, balance_proof, expiration = setup()
 
     iteration = mediator.state_transition(
         mediator_state=None,
@@ -1511,14 +1525,6 @@ def test_mediator_lock_expired_with_receive_lock_expired():
             },
         },
     )
-
-    balance_proof_data = BalanceProofSignedStateProperties(
-        nonce=2,
-        transferred_amount=transfer.balance_proof.transferred_amount,
-        canonical_identifier=channels[0].canonical_identifier,
-        message_hash=transfer.lock.secrethash,
-    )
-    balance_proof = create(balance_proof_data)
 
     lock_expired_state_change = ReceiveLockExpired(
         balance_proof=balance_proof, secrethash=transfer.lock.secrethash, message_identifier=1
@@ -1565,13 +1571,8 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     - M should remove the lock from both secrethashes_to_lockedlocks
       and secrethashes_to_unlocklocks.
     """
-    expiration = 30
     pseudo_random_generator = random.Random()
-
-    channels = mediator_make_channel_pair()
-    transfer = factories.make_signed_transfer_for(
-        channels[0], LockedTransferSignedStateProperties(expiration=expiration)
-    )
+    channels, transfer, balance_proof, expiration = setup()
 
     iteration = mediator.state_transition(
         mediator_state=None,
@@ -1605,14 +1606,6 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     # Make sure the lock was moved
     assert secrethash not in channels[0].partner_state.secrethashes_to_lockedlocks
     assert secrethash in channels[0].partner_state.secrethashes_to_unlockedlocks
-
-    balance_proof_properties = BalanceProofSignedStateProperties(
-        nonce=2,
-        transferred_amount=transfer.balance_proof.transferred_amount,
-        canonical_identifier=channels[0].canonical_identifier,
-        message_hash=transfer.lock.secrethash,
-    )
-    balance_proof = create(balance_proof_properties)
 
     lock_expired_state_change = ReceiveLockExpired(
         balance_proof=balance_proof, secrethash=transfer.lock.secrethash, message_identifier=1
@@ -1719,11 +1712,14 @@ def test_filter_reachable_routes():
     was unreachable and became reachable before the locked transfer expired.
     Expected result is to route the transfer through this node.
     """
-    channel1 = factories.make_channel(partner_address=HOP1)
-    channel2 = factories.make_channel(partner_address=HOP2)
+    partner1 = factories.NettingChannelEndStateProperties(address=HOP1)
+    partner2 = factories.replace(partner1, address=HOP2)
+    channel1 = factories.create(factories.NettingChannelStateProperties(partner_state=partner1))
+    channel2 = factories.create(factories.NettingChannelStateProperties(partner_state=partner2))
+
     possible_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
+        factories.make_route_from_channel(channel1),
+        factories.make_route_from_channel(channel2),
     ]
 
     # Both nodes are online
@@ -1767,11 +1763,14 @@ def test_node_change_network_state_reachable_node():
     setup = factories.make_transfers_pair(2)
 
     # Also add transfer sender channel
-    payer_channel = factories.make_channel(partner_address=UNIT_TRANSFER_SENDER)
+    partner_state = factories.NettingChannelEndStateProperties(address=UNIT_TRANSFER_SENDER)
+    payer_channel = factories.create(
+        factories.NettingChannelStateProperties(partner_state=partner_state)
+    )
     setup.channels.channels.append(payer_channel)
 
     possible_routes = [
-        factories.route_from_channel(channel) for channel in setup.channel_map.values()
+        factories.make_route_from_channel(channel) for channel in setup.channel_map.values()
     ]
 
     lock_expiration = UNIT_REVEAL_TIMEOUT * 2
@@ -1871,10 +1870,10 @@ def test_backward_transfer_pair_with_fees_deducted():
     amount = 10
     fee = 5
 
-    refund_channel = factories.make_channel(
-        our_balance=amount + fee,
-        partner_balance=amount + fee,
-        partner_address=UNIT_TRANSFER_SENDER,
+    end_state = factories.NettingChannelEndStateProperties(balance=amount + fee)
+    partner_state = factories.replace(end_state, address=UNIT_TRANSFER_SENDER)
+    refund_channel = factories.create(
+        factories.NettingChannelStateProperties(our_state=end_state, partner_state=partner_state)
     )
 
     refund_channel.mediation_fee = fee

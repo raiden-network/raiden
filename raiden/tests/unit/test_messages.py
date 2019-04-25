@@ -1,24 +1,18 @@
 import pytest
 
+from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof, UpdatePFS
 from raiden.tests.utils import factories
-from raiden.tests.utils.messages import (
-    ADDRESS as PARTNER_ADDRESS,
-    MEDIATED_TRANSFER_INVALID_VALUES,
-    PRIVKEY as PARTNER_PRIVKEY,
-    REFUND_TRANSFER_INVALID_VALUES,
-    make_balance_proof,
-    make_lock,
-    make_mediated_transfer,
-    make_refund_transfer,
-)
+from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.transfer.balance_proof import (
     pack_balance_proof,
     pack_balance_proof_update,
     pack_reward_proof,
 )
+from raiden.utils import sha3
 from raiden.utils.signer import LocalSigner, recover
 
+PARTNER_PRIVKEY, PARTNER_ADDRESS = factories.make_privkey_address()
 PRIVKEY, ADDRESS = factories.make_privkey_address()
 signer = LocalSigner(PRIVKEY)
 
@@ -29,28 +23,9 @@ def test_signature():
     assert ping.sender == ADDRESS
 
 
-def test_mediated_transfer_out_of_bounds_values():
-    for args in MEDIATED_TRANSFER_INVALID_VALUES:
-        with pytest.raises(ValueError):
-            make_mediated_transfer(**args)
-
-
-def test_refund_transfer_out_of_bounds_values():
-    for args in REFUND_TRANSFER_INVALID_VALUES:
-        with pytest.raises(ValueError):
-            make_refund_transfer(**args)
-
-
-@pytest.mark.parametrize("amount", [-1, 2 ** 256])
-@pytest.mark.parametrize("make", [make_lock, make_mediated_transfer])
-def test_amount_out_of_bounds(amount, make):
-    with pytest.raises(ValueError):
-        make(amount=amount)
-
-
 def test_request_monitoring():
-    partner_signer = LocalSigner(PARTNER_PRIVKEY)
-    balance_proof = make_balance_proof(signer=partner_signer, amount=1)
+    properties = factories.BalanceProofSignedStateProperties(pkey=PARTNER_PRIVKEY)
+    balance_proof = factories.create(properties)
     partner_signed_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
         balance_proof
     )
@@ -77,7 +52,7 @@ def test_request_monitoring():
     direct_created.sign(signer)
     # Instances created from same balance proof are equal
     assert direct_created == request_monitoring
-    other_balance_proof = make_balance_proof(signer=partner_signer, amount=2)
+    other_balance_proof = factories.create(factories.replace(properties, message_hash=sha3(b"2")))
     other_instance = RequestMonitoring.from_balance_proof_signed_state(
         other_balance_proof, reward_amount=55
     )
@@ -129,7 +104,8 @@ def test_request_monitoring():
 
 
 def test_update_pfs():
-    balance_proof = make_balance_proof(signer=signer, amount=1)
+    properties = factories.BalanceProofSignedStateProperties(pkey=PRIVKEY)
+    balance_proof = factories.create(properties)
     channel_state = factories.create(factories.NettingChannelStateProperties())
     channel_state.our_state.balance_proof = balance_proof
     channel_state.partner_state.balance_proof = balance_proof
@@ -148,9 +124,9 @@ def test_tamper_request_monitoring():
     """ This test shows ways, how the current implementation of the RequestMonitoring's
     signature scheme might be used by an attacker to tamper with the BalanceProof that is
     incorporated in the RequestMonitoring message, if not all three signatures are verified."""
-    partner_signer = LocalSigner(PARTNER_PRIVKEY)
+    properties = factories.BalanceProofSignedStateProperties(pkey=PARTNER_PRIVKEY)
+    balance_proof = factories.create(properties)
 
-    balance_proof = make_balance_proof(signer=partner_signer, amount=1)
     partner_signed_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
         balance_proof
     )
@@ -265,3 +241,33 @@ def test_tamper_request_monitoring():
     assert not tampered_non_closing_signature_request_monitoring.verify_request_monitoring(
         PARTNER_ADDRESS, ADDRESS
     )
+
+
+@pytest.fixture
+def invalid_values():
+    invalid_addresses = [b" ", b" " * 19, b" " * 21]
+    # zero is used to indicate novalue in solidity, that is why it's an invalid nonce value
+    return fixture_all_combinations(
+        {
+            "nonce": [0, -1, UINT64_MAX + 1],
+            "payment_identifier": [-1, UINT64_MAX + 1],
+            "token": invalid_addresses,
+            "recipient": invalid_addresses,
+            "transferred_amount": [-1, UINT256_MAX + 1],
+            "target": invalid_addresses,
+            "initiator": invalid_addresses,
+            "fee": [UINT256_MAX + 1],
+        }
+    )
+
+
+def test_mediated_transfer_invalid_values(invalid_values):
+    for invalid_value in invalid_values:
+        with pytest.raises(ValueError):
+            factories.create(factories.LockedTransferProperties(**invalid_value))
+
+
+def test_refund_transfer_invalid_values(invalid_values):
+    for invalid_value in invalid_values:
+        with pytest.raises(ValueError):
+            factories.create(factories.RefundTransferProperties(**invalid_value))

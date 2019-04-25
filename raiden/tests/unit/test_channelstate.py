@@ -1285,11 +1285,11 @@ def test_channelstate_unlock_unlocked_onchain():
 
 def test_refund_transfer_matches_received():
     same = factories.LockedTransferSignedStateProperties(amount=30, expiration=50)
-    lower = factories.LockedTransferSignedStateProperties(amount=30, expiration=49)
+    lower = factories.replace(same, expiration=49)
 
     refund_lower_expiration = factories.create(lower)
     refund_same_expiration = factories.create(same)
-    transfer = create(same.extract(factories.LockedTransferProperties))
+    transfer = create(same.extract(factories.LockedTransferUnsignedStateProperties))
 
     assert channel.refund_transfer_matches_received(refund_lower_expiration, transfer) is False
     assert channel.refund_transfer_matches_received(refund_same_expiration, transfer) is True
@@ -1300,7 +1300,9 @@ def test_refund_transfer_does_not_match_received():
     expiration = 50
     target = UNIT_TRANSFER_SENDER
     transfer = factories.create(
-        factories.LockedTransferProperties(amount=amount, target=target, expiration=expiration)
+        factories.LockedTransferUnsignedStateProperties(
+            amount=amount, target=target, expiration=expiration
+        )
     )
 
     refund_from_target = factories.create(

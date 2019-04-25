@@ -210,7 +210,8 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, our_address):
     # Check for iou arguments in request payload
     iou = patched.call_args[1]["json"]["iou"]
     config = CONFIG["services"]
-    assert all(k in iou for k in ("amount", "expiration_block", "signature", "sender", "receiver"))
+    for key in ("amount", "expiration_block", "signature", "sender", "receiver"):
+        assert key in iou
     assert iou["amount"] <= config["pathfinding_max_fee"]
     latest_expected_expiration = config["pathfinding_iou_timeout"] + chain_state.block_number
     assert iou["expiration_block"] <= latest_expected_expiration
@@ -255,9 +256,8 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(happy_path_fixture, our_
     config = CONFIG["services"]
     old_amount = last_iou["amount"]
     assert old_amount < payload["iou"]["amount"] <= config["pathfinding_max_fee"] + old_amount
-    assert all(
-        payload["iou"][k] == last_iou[k] for k in ("expiration_block", "sender", "receiver")
-    )
+    for key in ("expiration_block", "sender", "receiver"):
+        assert payload["iou"][key] == last_iou[key]
     assert "signature" in payload["iou"]
 
 
@@ -486,14 +486,15 @@ def test_get_and_update_iou():
 
     new_iou_1 = update_iou(iou.copy(), PRIVKEY, added_amount=10)
     assert new_iou_1["amount"] == last_iou["amount"] + 10
-    assert all(new_iou_1[k] == iou[k] for k in ("expiration_block", "sender", "receiver"))
-    assert "signature" in new_iou_1
+    for key in ("expiration_block", "sender", "receiver"):
+        assert new_iou_1[key] == iou[key]
     assert is_hex(new_iou_1["signature"])
 
     new_iou_2 = update_iou(iou, PRIVKEY, expiration_block=45)
     assert new_iou_2["expiration_block"] == 45
+    for key in ("amount", "sender", "receiver"):
+        assert new_iou_2[key] == iou[key]
     assert all(new_iou_2[k] == iou[k] for k in ("amount", "sender", "receiver"))
-    assert "signature" in new_iou_2
     assert is_hex(new_iou_2["signature"])
 
 

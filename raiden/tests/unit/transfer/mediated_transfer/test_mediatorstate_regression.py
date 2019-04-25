@@ -383,10 +383,10 @@ def test_regression_mediator_not_update_payer_state_twice():
 
     pair = factories.mediator_make_channel_pair()
     payer_channel, payee_channel = pair.channels
-    payer_route = factories.route_from_channel(payer_channel)
+    payer_route = factories.make_route_from_channel(payer_channel)
     payer_transfer = factories.make_signed_transfer_for(payer_channel, LONG_EXPIRATION)
 
-    available_routes = [factories.route_from_channel(payee_channel)]
+    available_routes = [factories.make_route_from_channel(payee_channel)]
     init_state_change = ActionInitMediator(
         routes=available_routes, from_route=payer_route, from_transfer=payer_transfer
     )

@@ -11,13 +11,10 @@ from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
     EMPTY,
     UNIT_SECRET,
-    UNIT_TOKEN_ADDRESS,
-    UNIT_TOKEN_NETWORK_ADDRESS,
     UNIT_TRANSFER_AMOUNT,
     UNIT_TRANSFER_IDENTIFIER,
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
-    make_transfer_description,
 )
 from raiden.transfer import channel
 from raiden.transfer.architecture import State
@@ -104,18 +101,20 @@ def setup_initiator_tests(
 
     allocated_fee = factories.if_empty(allocated_fee, 0)
 
-    channel1 = factories.make_channel(
-        our_balance=amount + allocated_fee,
-        partner_balance=partner_balance,
-        our_address=our_address,
-        partner_address=partner_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel1 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(
+                balance=amount + allocated_fee, address=our_address
+            ),
+            partner_state=factories.NettingChannelEndStateProperties(
+                balance=partner_balance, address=partner_address
+            ),
+        )
     )
     channel_map = {channel1.identifier: channel1}
-    available_routes = [factories.route_from_channel(channel1)]
-    transfer_description = factories.make_transfer_description(
-        secret=UNIT_SECRET, allocated_fee=allocated_fee
+    available_routes = [factories.make_route_from_channel(channel1)]
+    transfer_description = factories.create(
+        factories.TransferDescriptionProperties(secret=UNIT_SECRET, allocated_fee=allocated_fee)
     )
     current_state = make_initiator_manager_state(
         available_routes, transfer_description, channel_map, prng, block_number
@@ -137,20 +136,20 @@ def setup_initiator_tests(
 
 def test_next_route():
     amount = UNIT_TRANSFER_AMOUNT
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel1 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=amount)
+        )
     )
-    channel2 = factories.make_channel(
-        our_balance=0,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel2 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=0)
+        )
     )
-    channel3 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel3 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=amount)
+        )
     )
     pseudo_random_generator = random.Random()
 
@@ -161,9 +160,9 @@ def test_next_route():
     }
 
     available_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
-        factories.route_from_channel(channel3),
+        factories.make_route_from_channel(channel1),
+        factories.make_route_from_channel(channel2),
+        factories.make_route_from_channel(channel3),
     ]
 
     block_number = 10
@@ -195,13 +194,13 @@ def test_next_route():
 
 
 def test_init_with_usable_routes():
-    channel1 = factories.make_channel(
-        our_balance=UNIT_TRANSFER_AMOUNT,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel1 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=UNIT_TRANSFER_AMOUNT)
+        )
     )
     channel_map = {channel1.identifier: channel1}
-    available_routes = [factories.route_from_channel(channel1)]
+    available_routes = [factories.make_route_from_channel(channel1)]
     pseudo_random_generator = random.Random()
 
     init_state_change = ActionInitInitiator(factories.UNIT_TRANSFER_DESCRIPTION, available_routes)
@@ -417,32 +416,27 @@ def test_state_wait_unlock_invalid():
     assert iteration.new_state == before_state
 
 
+def channels_setup(amount, our_address, refund_address):
+    funded = factories.NettingChannelEndStateProperties(balance=amount, address=our_address)
+    broke = factories.replace(funded, balance=0)
+    funded_partner = factories.replace(funded, address=refund_address)
+
+    channel1 = factories.create(
+        factories.NettingChannelStateProperties(our_state=funded, partner_state=funded_partner)
+    )
+    channel2 = factories.create(factories.NettingChannelStateProperties(our_state=broke))
+    channel3 = factories.create(factories.NettingChannelStateProperties(our_state=funded))
+
+    return channel1, channel2, channel3
+
+
 def test_refund_transfer_next_route():
     amount = UNIT_TRANSFER_AMOUNT
     our_address = factories.ADDR
     refund_pkey, refund_address = factories.make_privkey_address()
     pseudo_random_generator = random.Random()
 
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        partner_balance=amount,
-        our_address=our_address,
-        partner_address=refund_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    )
-    channel2 = factories.make_channel(
-        our_balance=0,
-        our_address=our_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    )
-    channel3 = factories.make_channel(
-        our_balance=amount,
-        our_address=our_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    )
+    channel1, channel2, channel3 = channels_setup(amount, our_address, refund_address)
 
     channel_map = {
         channel1.identifier: channel1,
@@ -451,9 +445,9 @@ def test_refund_transfer_next_route():
     }
 
     available_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
-        factories.route_from_channel(channel3),
+        factories.make_route_from_channel(channel1),
+        factories.make_route_from_channel(channel2),
+        factories.make_route_from_channel(channel3),
     ]
 
     block_number = 10
@@ -730,19 +724,22 @@ def test_invalid_cancelpayment():
 
 
 def test_init_with_maximum_pending_transfers_exceeded():
-    channel1 = factories.make_channel(
-        our_balance=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel1 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(
+                balance=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT
+            )
+        )
     )
     channel_map = {channel1.identifier: channel1}
-    available_routes = [factories.route_from_channel(channel1)]
+    available_routes = [factories.make_route_from_channel(channel1)]
     pseudo_random_generator = random.Random()
 
     transitions = list()
     block_number = 1
     for _ in range(MAXIMUM_PENDING_TRANSFERS + 1):
-        init_state_change = ActionInitInitiator(make_transfer_description(), available_routes)
+        transfer_description = factories.create(factories.TransferDescriptionProperties())
+        init_state_change = ActionInitInitiator(transfer_description, available_routes)
         transitions.append(
             initiator_manager.state_transition(
                 None, init_state_change, channel_map, pseudo_random_generator, block_number
@@ -805,28 +802,30 @@ def test_handle_offchain_emptyhash_secret():
 def test_initiator_lock_expired():
     amount = UNIT_TRANSFER_AMOUNT * 2
 
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel1 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=amount)
+        )
     )
-    channel2 = factories.make_channel(
-        our_balance=0,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel2 = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(balance=0)
+        )
     )
     pseudo_random_generator = random.Random()
 
     channel_map = {channel1.identifier: channel1, channel2.identifier: channel2}
 
     available_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
+        factories.make_route_from_channel(channel1),
+        factories.make_route_from_channel(channel2),
     ]
 
     block_number = 10
-    transfer_description = factories.make_transfer_description(
-        secret=UNIT_SECRET, payment_network_identifier=channel1.payment_network_identifier
+    transfer_description = factories.create(
+        factories.TransferDescriptionProperties(
+            secret=UNIT_SECRET, payment_network_identifier=channel1.payment_network_identifier
+        )
     )
     current_state = make_initiator_manager_state(
         available_routes, transfer_description, channel_map, pseudo_random_generator, block_number
@@ -882,7 +881,7 @@ def test_initiator_lock_expired():
     # Create 2 other transfers
     transfer2_state = make_initiator_manager_state(
         available_routes,
-        make_transfer_description("transfer2"),
+        factories.create(factories.TransferDescriptionProperties(payment_identifier="transfer2")),
         channel_map,
         pseudo_random_generator,
         30,
@@ -892,7 +891,7 @@ def test_initiator_lock_expired():
 
     transfer3_state = make_initiator_manager_state(
         available_routes,
-        make_transfer_description("transfer3"),
+        factories.create(factories.TransferDescriptionProperties(payment_identifier="transfer3")),
         channel_map,
         pseudo_random_generator,
         32,
@@ -1154,26 +1153,7 @@ def test_secret_reveal_cancel_other_transfers():
     refund_pkey, refund_address = factories.make_privkey_address()
     pseudo_random_generator = random.Random()
 
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        partner_balance=amount,
-        our_address=our_address,
-        partner_address=refund_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    )
-    channel2 = factories.make_channel(
-        our_balance=0,
-        our_address=our_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    )
-    channel3 = factories.make_channel(
-        our_balance=amount,
-        our_address=our_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    )
+    channel1, channel2, channel3 = channels_setup(amount, our_address, refund_address)
 
     channel_map = {
         channel1.identifier: channel1,
@@ -1182,9 +1162,9 @@ def test_secret_reveal_cancel_other_transfers():
     }
 
     available_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
-        factories.route_from_channel(channel3),
+        factories.make_route_from_channel(channel1),
+        factories.make_route_from_channel(channel2),
+        factories.make_route_from_channel(channel3),
     ]
 
     block_number = 10
@@ -1345,26 +1325,19 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     refund_pkey, refund_address = factories.make_privkey_address()
     pseudo_random_generator = random.Random()
 
-    channel1 = factories.make_channel(
-        our_balance=amount,
-        partner_balance=amount,
-        our_address=our_address,
-        partner_address=refund_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
+    our_state = factories.NettingChannelEndStateProperties(balance=amount, address=our_address)
+    partner_state = factories.replace(our_state, address=refund_address)
+
+    channel1 = factories.create(
+        factories.NettingChannelStateProperties(our_state=our_state, partner_state=partner_state)
     )
-    channel2 = factories.make_channel(
-        our_balance=amount,
-        our_address=our_address,
-        token_address=UNIT_TOKEN_ADDRESS,
-        token_network_identifier=UNIT_TOKEN_NETWORK_ADDRESS,
-    )
+    channel2 = factories.create(factories.NettingChannelStateProperties(our_state=our_state))
 
     channel_map = {channel1.identifier: channel1, channel2.identifier: channel2}
 
     available_routes = [
-        factories.route_from_channel(channel1),
-        factories.route_from_channel(channel2),
+        factories.make_route_from_channel(channel1),
+        factories.make_route_from_channel(channel2),
     ]
 
     block_number = 10
