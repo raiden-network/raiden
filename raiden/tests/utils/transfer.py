@@ -11,10 +11,7 @@ from raiden.messages import LockedTransfer, LockExpired, Message, Unlock
 from raiden.tests.utils.factories import make_address
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
-from raiden.transfer.mediated_transfer.state import (
-    LockedTransferSignedState,
-    lockedtransfersigned_from_message,
-)
+from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
@@ -32,7 +29,6 @@ from raiden.utils.typing import (
     Callable,
     ChainID,
     FeeAmount,
-    InitiatorAddress,
     Keccak256,
     List,
     LockedAmount,
@@ -40,8 +36,6 @@ from raiden.utils.typing import (
     Optional,
     PaymentAmount,
     PaymentID,
-    Secret,
-    TargetAddress,
     TokenAddress,
     TokenAmount,
     TokenNetworkID,
@@ -347,53 +341,6 @@ def assert_balance(
         f"did not equal the balance ({balance})"
     )
     assert balance == locked + distributable, msg
-
-
-def make_mediated_transfer(
-    from_channel: NettingChannelState,
-    partner_channel: NettingChannelState,
-    initiator: InitiatorAddress,
-    target: TargetAddress,
-    lock: HashTimeLockState,
-    pkey: bytes,
-    secret: Optional[Secret] = None,
-) -> LockedTransfer:
-    """ Helper to create and register a mediated transfer from `from_channel` to
-    `partner_channel`."""
-    payment_identifier = channel.get_next_nonce(from_channel.our_state)
-    message_identifier = random.randint(0, UINT64_MAX)
-
-    lockedtransfer = channel.send_lockedtransfer(
-        from_channel,
-        initiator,
-        target,
-        lock.amount,
-        message_identifier,
-        payment_identifier,
-        lock.expiration,
-        lock.secrethash,
-    )
-    mediated_transfer_msg = LockedTransfer.from_event(lockedtransfer)
-
-    mediated_transfer_msg.sign(LocalSigner(pkey))
-
-    # compute the signature
-    balance_proof = balanceproof_from_envelope(mediated_transfer_msg)
-    lockedtransfer.balance_proof = balance_proof
-
-    # if this fails it's not the right key for the current `from_channel`
-    assert mediated_transfer_msg.sender == from_channel.our_state.address
-    receive_lockedtransfer = lockedtransfersigned_from_message(mediated_transfer_msg)
-
-    channel.handle_receive_lockedtransfer(partner_channel, receive_lockedtransfer)
-
-    if secret is not None:
-        secrethash = sha3(secret)
-
-        channel.register_offchain_secret(from_channel, secret, secrethash)
-        channel.register_offchain_secret(partner_channel, secret, secrethash)
-
-    return mediated_transfer_msg
 
 
 def make_receive_transfer_mediated(

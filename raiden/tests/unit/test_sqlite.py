@@ -70,7 +70,7 @@ def make_balance_proof_from_counter(counter) -> BalanceProofUnsignedState:
 
 def make_transfer_from_counter(counter):
     return factories.create(
-        factories.LockedTransferProperties(
+        factories.LockedTransferUnsignedStateProperties(
             amount=next(counter),
             initiator=factories.make_address(),
             target=factories.make_address(),
@@ -122,7 +122,7 @@ def make_from_route_from_counter(counter):
             ),
         )
     )
-    from_route = factories.route_from_channel(from_channel)
+    from_route = factories.make_route_from_channel(from_channel)
 
     expiration = factories.UNIT_REVEAL_TIMEOUT + 1
 

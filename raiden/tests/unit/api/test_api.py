@@ -28,7 +28,7 @@ def test_initiator_task_view():
     """
     channel_id = factories.UNIT_CHANNEL_ID
     secret = factories.make_secret()
-    transfer = factories.create(factories.LockedTransferProperties(secret=secret))
+    transfer = factories.create(factories.LockedTransferUnsignedStateProperties(secret=secret))
     secrethash = transfer.lock.secrethash
     transfer_description = TransferDescriptionWithSecretState(
         payment_network_identifier=factories.UNIT_PAYMENT_NETWORK_IDENTIFIER,
@@ -67,7 +67,9 @@ def test_mediator_task_view():
     """Same as above for mediator tasks."""
     secret1 = factories.make_secret(1)
     locked_amount1 = 11
-    payee_transfer = factories.create(factories.LockedTransferProperties(secret=secret1))
+    payee_transfer = factories.create(
+        factories.LockedTransferUnsignedStateProperties(secret=secret1)
+    )
     payer_transfer = factories.create(
         factories.LockedTransferSignedStateProperties(
             secret=secret1, payment_identifier=1, locked_amount=locked_amount1
@@ -82,7 +84,7 @@ def test_mediator_task_view():
             )
         )
     )
-    routes = [factories.route_from_channel(initiator_channel)]
+    routes = [factories.make_route_from_channel(initiator_channel)]
     transfer_state1 = MediatorTransferState(secrethash=secrethash1, routes=routes)
     transfer_state1.transfers_pair.append(
         MediationPairState(
