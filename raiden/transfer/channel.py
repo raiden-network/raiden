@@ -24,6 +24,7 @@ from raiden.transfer.events import (
     EventInvalidReceivedUnlock,
     SendProcessed,
 )
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     SendBalanceProof,

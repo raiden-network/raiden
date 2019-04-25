@@ -9,6 +9,11 @@ from raiden.connection_manager import ConnectionManager
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
+from raiden.transfer.identifiers import (
+    CHAIN_ID_UNSPECIFIED,
+    CHANNEL_ID_UNSPECIFIED,
+    CanonicalIdentifier,
+)
 from raiden.transfer.state import TokenNetworkState, TransactionChannelNewBalance
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
@@ -26,7 +31,7 @@ from raiden.transfer.utils import (
     get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_locksroot,
 )
-from raiden.utils import CanonicalIdentifier, pex, typing
+from raiden.utils import pex, typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
     EVENT_TOKEN_NETWORK_CREATED,

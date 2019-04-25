@@ -2,7 +2,7 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
-from raiden.transfer.queue_identifier import QueueIdentifier
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
     Address,
     Any,
