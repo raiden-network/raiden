@@ -16,6 +16,7 @@ from raiden.utils.typing import (
     Address,
     BlockHash,
     BlockNumber,
+    ChainID,
     ChannelID,
     Dict,
     PaymentNetworkID,
@@ -50,7 +51,7 @@ class BlockChainService:
         self.contract_manager = contract_manager
 
         # Ask for the network id only once and store it here
-        self.network_id = int(self.client.web3.version.network)
+        self.network_id = ChainID(int(self.client.web3.version.network))
 
         self._token_creation_lock = Semaphore()
         self._discovery_creation_lock = Semaphore()
