@@ -8,7 +8,7 @@ from raiden.app import App
 from raiden.constants import Environment, RoutingMode
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.factories import make_address, make_checksum_address
-from raiden.tests.utils.mocks import MockChain, patched_get_for_succesful_pfs_info
+from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succesful_pfs_info
 from raiden.ui.startup import (
     setup_contracts_or_exit,
     setup_environment,
@@ -23,18 +23,6 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
 )
-
-
-class MockWeb3Version():
-
-    def __init__(self, netid):
-        self.network = netid
-
-
-class MockWeb3():
-
-    def __init__(self, netid):
-        self.version = MockWeb3Version(netid)
 
 
 def test_setup_network_id():
