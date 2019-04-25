@@ -117,6 +117,7 @@ class BlockChainService:
     def next_block(self) -> int:
         target_block_number = self.block_number() + 1
         self.wait_until_block(target_block_number=target_block_number)
+        return target_block_number
 
     def wait_until_block(self, target_block_number):
         current_block = self.block_number()
