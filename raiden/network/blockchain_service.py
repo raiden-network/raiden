@@ -16,9 +16,12 @@ from raiden.utils.typing import (
     Address,
     BlockHash,
     BlockNumber,
+    ChannelID,
+    Dict,
     PaymentNetworkID,
     T_ChannelID,
     TokenNetworkAddress,
+    Tuple,
 )
 from raiden_contracts.contract_manager import ContractManager
 
@@ -32,14 +35,16 @@ class BlockChainService:
             jsonrpc_client: JSONRPCClient,
             contract_manager: ContractManager,
     ):
-        self.address_to_discovery = dict()
-        self.address_to_secret_registry = dict()
-        self.address_to_token = dict()
-        self.address_to_token_network = dict()
-        self.address_to_token_network_registry = dict()
-        self.address_to_user_deposit = dict()
-        self.address_to_service_registry = dict()
-        self.identifier_to_payment_channel = dict()
+        self.address_to_discovery: Dict[Address, Discovery] = dict()
+        self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
+        self.address_to_token: Dict[Address, Token] = dict()
+        self.address_to_token_network: Dict[TokenNetworkAddress, TokenNetwork] = dict()
+        self.address_to_token_network_registry: Dict[Address, TokenNetworkRegistry] = dict()
+        self.address_to_user_deposit: Dict[Address, UserDeposit] = dict()
+        self.address_to_service_registry: Dict[Address, ServiceRegistry] = dict()
+        self.identifier_to_payment_channel: Dict[
+            Tuple[TokenNetworkAddress, ChannelID], PaymentChannel,
+        ] = dict()
 
         self.client = jsonrpc_client
         self.contract_manager = contract_manager
