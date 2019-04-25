@@ -9,6 +9,11 @@ from raiden.transfer.architecture import (
     ContractReceiveStateChange,
     StateChange,
 )
+from raiden.transfer.identifiers import (
+    CHAIN_ID_UNSPECIFIED,
+    CHANNEL_ID_UNSPECIFIED,
+    CanonicalIdentifier,
+)
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
@@ -17,7 +22,7 @@ from raiden.transfer.state import (
     TransactionChannelNewBalance,
 )
 from raiden.transfer.utils import pseudo_random_generator_from_json
-from raiden.utils import CanonicalIdentifier, pex, sha3
+from raiden.utils import pex, sha3
 from raiden.utils.serialization import (
     deserialize_blockhash,
     deserialize_bytes,

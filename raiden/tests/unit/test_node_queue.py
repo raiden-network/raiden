@@ -4,8 +4,8 @@ from raiden.constants import EMPTY_HASH
 from raiden.tests.utils import factories
 from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.transfer import node, state, state_change
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.mediated_transfer import events
-from raiden.transfer.queue_identifier import QueueIdentifier
 
 
 def test_delivered_message_must_clean_unordered_messages(chain_id):
