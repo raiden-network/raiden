@@ -1,7 +1,8 @@
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.transfer import node, views
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import NettingChannelState
-from raiden.utils import CanonicalIdentifier, typing
+from raiden.utils import typing
 
 from .wal import restore_to_state_change
 

@@ -10,6 +10,7 @@ from eth_utils import to_checksum_address
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer
 from raiden.transfer import balance_proof, channel, token_network
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
     HashTimeLockState,
@@ -35,7 +36,7 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveRouteNew
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import CanonicalIdentifier, privatekey_to_address, random_secret, sha3, typing
+from raiden.utils import privatekey_to_address, random_secret, sha3, typing
 from raiden.utils.signer import LocalSigner, Signer
 
 EMPTY = 'empty'

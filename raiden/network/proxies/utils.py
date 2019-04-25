@@ -5,7 +5,7 @@ from web3.exceptions import BadFunctionCallOutput
 
 from raiden.exceptions import AddressWrongContract, ContractVersionMismatch
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.utils import CanonicalIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import Address, BlockSpecification, Locksroot, Tuple
 
 if TYPE_CHECKING:

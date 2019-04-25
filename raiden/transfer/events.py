@@ -9,7 +9,8 @@ from raiden.transfer.architecture import (
     Event,
     SendMessageEvent,
 )
-from raiden.utils import CanonicalIdentifier, pex, serialization, sha3
+from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.utils import pex, serialization, sha3
 from raiden.utils.serialization import deserialize_bytes, serialize_bytes
 from raiden.utils.typing import (
     Address,
