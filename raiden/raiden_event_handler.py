@@ -9,7 +9,6 @@ from raiden.messages import message_from_sendevent
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.storage.restore import channel_state_until_state_change
-from raiden.storage.sqlite import SQLiteStorage
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
@@ -66,12 +65,6 @@ UNEVENTFUL_EVENTS = (
     EventInvalidReceivedTransferRefund,
     EventInvalidReceivedUnlock,
 )
-
-
-def storage(raiden) -> SQLiteStorage:
-    if raiden.wal is not None:
-        return raiden.wal.storage
-    raise RaidenUnrecoverableError('Trying to access storage from uninitialized WAL.')
 
 
 def unlock(
@@ -421,7 +414,7 @@ class RaidenEventHandler:
 
         if search_state_changes:
             state_change_record = get_state_change_with_balance_proof_by_locksroot(
-                storage=storage(raiden),
+                storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
                 locksroot=partner_locksroot,
                 sender=partner_address,
@@ -468,7 +461,7 @@ class RaidenEventHandler:
 
         if search_events:
             event_record = get_event_with_balance_proof_by_locksroot(
-                storage=storage(raiden),
+                storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
                 locksroot=our_locksroot,
                 recipient=partner_address,
@@ -573,7 +566,7 @@ class RaidenEventHandler:
 
         if our_details.balance_hash != EMPTY_HASH:
             event_record = get_event_with_balance_proof_by_balance_hash(
-                storage=storage(raiden),
+                storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
                 balance_hash=our_details.balance_hash,
             )
@@ -598,7 +591,7 @@ class RaidenEventHandler:
 
         if partner_details.balance_hash != EMPTY_HASH:
             state_change_record = get_state_change_with_balance_proof_by_balance_hash(
-                storage=storage(raiden),
+                storage=raiden.wal.storage,
                 canonical_identifier=canonical_identifier,
                 balance_hash=partner_details.balance_hash,
                 sender=participants_details.partner_details.address,
