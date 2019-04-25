@@ -1,10 +1,11 @@
 from raiden.settings import MEDIATION_FEE
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import (
     NettingChannelEndState,
     NettingChannelState,
     TransactionExecutionStatus,
 )
-from raiden.utils import CanonicalIdentifier
+from raiden.utils import pex
 from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,

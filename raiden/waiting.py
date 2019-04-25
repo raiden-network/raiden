@@ -5,12 +5,12 @@ import structlog
 
 from raiden.transfer import channel, views
 from raiden.transfer.events import EventPaymentReceivedSuccess
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import (
     CHANNEL_AFTER_CLOSE_STATES,
     CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
 )
-from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
     BlockNumber,

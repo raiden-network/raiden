@@ -12,10 +12,11 @@ from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import ContractSendEvent, SendMessageEvent, State
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.utils import hash_balance_data, pseudo_random_generator_from_json
-from raiden.utils import CanonicalIdentifier, lpex, pex, serialization, sha3
+from raiden.utils import lpex, pex, serialization, sha3
 from raiden.utils.serialization import map_dict, map_list, serialize_bytes
 from raiden.utils.typing import (
     AdditionalHash,

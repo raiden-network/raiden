@@ -28,6 +28,7 @@ from raiden.transfer.events import (
     EventPaymentSentSuccess,
     SendProcessed,
 )
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     EventUnlockClaimFailed,
     EventUnlockClaimSuccess,
@@ -48,7 +49,7 @@ from raiden.transfer.utils import (
     get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
-from raiden.utils import CanonicalIdentifier, pex
+from raiden.utils import pex
 from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce, TokenNetworkID
 
 if TYPE_CHECKING:
