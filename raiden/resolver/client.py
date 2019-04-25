@@ -1,4 +1,3 @@
-import json
 from http import HTTPStatus
 import requests
 from eth_utils import to_bytes, to_hex
@@ -28,9 +27,7 @@ def reveal_secret_with_resolver(
     }
 
     try:
-
         response = requests.post(raiden.config['resolver_endpoint'], json=request)
-
     except requests.exceptions.RequestException:
         return False
 
@@ -38,7 +35,7 @@ def reveal_secret_with_resolver(
         return False
 
     state_change = ReceiveSecretReveal(
-        to_bytes(hexstr=json.loads(response.text)['secret']),
+        to_bytes(hexstr=response.json()['secret']),
         secret_request_event.recipient,
     )
     raiden.handle_and_track_state_change(state_change)

@@ -770,8 +770,8 @@ class RaidenAPI:
                 raise InvalidSecretOrSecretHash('secret_hash is not an hexadecimal string.')
             secret_hash = to_bytes(hexstr=secret_hash)
 
-        # if both secret and secret_hash provided we check that sha3(secret)
-        # is giving the secert_hash. Note that it is valid to provide a secert_hash
+        # if both secret and secret_hash were provided we check that sha3(secret)
+        # matches the secert_hash. Note that it is valid to provide a secert_hash
         # without providing a secret
         if secret is not None and secret_hash is not None and secret_hash != sha3(secret):
             raise InvalidSecretOrSecretHash('provided secret and secret_hash do not match.')
