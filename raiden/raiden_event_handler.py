@@ -49,7 +49,7 @@ from raiden.transfer.utils import (
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils import CanonicalIdentifier, pex
-from raiden.utils.typing import Address, Nonce, TokenNetworkID
+from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce, TokenNetworkID
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -101,34 +101,49 @@ class RaidenEventHandler:
     def on_raiden_event(self, raiden: 'RaidenService', event: Event):
         # pylint: disable=too-many-branches
         if type(event) == SendLockExpired:
+            assert isinstance(event, SendLockExpired), MYPY_ANNOTATION
             self.handle_send_lockexpired(raiden, event)
         elif type(event) == SendLockedTransfer:
+            assert isinstance(event, SendLockedTransfer), MYPY_ANNOTATION
             self.handle_send_lockedtransfer(raiden, event)
         elif type(event) == SendSecretReveal:
+            assert isinstance(event, SendSecretReveal), MYPY_ANNOTATION
             self.handle_send_secretreveal(raiden, event)
         elif type(event) == SendBalanceProof:
+            assert isinstance(event, SendBalanceProof), MYPY_ANNOTATION
             self.handle_send_balanceproof(raiden, event)
         elif type(event) == SendSecretRequest:
+            assert isinstance(event, SendSecretRequest), MYPY_ANNOTATION
             self.handle_send_secretrequest(raiden, event)
         elif type(event) == SendRefundTransfer:
+            assert isinstance(event, SendRefundTransfer), MYPY_ANNOTATION
             self.handle_send_refundtransfer(raiden, event)
         elif type(event) == SendProcessed:
+            assert isinstance(event, SendProcessed), MYPY_ANNOTATION
             self.handle_send_processed(raiden, event)
         elif type(event) == EventPaymentSentSuccess:
+            assert isinstance(event, EventPaymentSentSuccess), MYPY_ANNOTATION
             self.handle_paymentsentsuccess(raiden, event)
         elif type(event) == EventPaymentSentFailed:
+            assert isinstance(event, EventPaymentSentFailed), MYPY_ANNOTATION
             self.handle_paymentsentfailed(raiden, event)
         elif type(event) == EventUnlockFailed:
+            assert isinstance(event, EventUnlockFailed), MYPY_ANNOTATION
             self.handle_unlockfailed(raiden, event)
         elif type(event) == ContractSendSecretReveal:
+            assert isinstance(event, ContractSendSecretReveal), MYPY_ANNOTATION
             self.handle_contract_send_secretreveal(raiden, event)
         elif type(event) == ContractSendChannelClose:
+            assert isinstance(event, ContractSendChannelClose), MYPY_ANNOTATION
             self.handle_contract_send_channelclose(raiden, event)
         elif type(event) == ContractSendChannelUpdateTransfer:
+            assert isinstance(event, ContractSendChannelUpdateTransfer), MYPY_ANNOTATION
             self.handle_contract_send_channelupdate(raiden, event)
         elif type(event) == ContractSendChannelBatchUnlock:
+            assert isinstance(event, ContractSendChannelBatchUnlock), MYPY_ANNOTATION
             self.handle_contract_send_channelunlock(raiden, event)
         elif type(event) == ContractSendChannelSettle:
+            assert isinstance(event, ContractSendChannelSettle), MYPY_ANNOTATION
             self.handle_contract_send_channelsettle(raiden, event)
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
