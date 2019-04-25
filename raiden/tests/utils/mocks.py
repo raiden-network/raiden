@@ -12,7 +12,14 @@ from raiden.transfer.architecture import StateManager
 from raiden.transfer.state_change import ActionInitChain
 from raiden.utils import CanonicalIdentifier
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import Address, ChannelID, PaymentNetworkID, TokenNetworkID
+from raiden.utils.typing import (
+    Address,
+    BlockSpecification,
+    ChannelID,
+    Dict,
+    PaymentNetworkID,
+    TokenNetworkID,
+)
 
 
 class MockJSONRPCClient:
@@ -205,3 +212,28 @@ def patched_get_for_succesful_pfs_info():
     response.configure_mock(status_code=200)
     response.json = Mock(return_value=json_data)
     return patch.object(requests, 'get', return_value=response)
+
+
+class MockEth():
+
+    def getBlock(  # pylint: disable=unused-argument, no-self-use
+            self,
+            block_identifier: BlockSpecification,
+    ) -> Dict:
+        return {
+            'number': 42,
+            'hash': '0x8cb5f5fb0d888c03ec4d13f69d4eb8d604678508a1fa7c1a8f0437d0065b9b67',
+        }
+
+
+class MockWeb3Version():
+
+    def __init__(self, netid):
+        self.network = netid
+
+
+class MockWeb3():
+
+    def __init__(self, netid):
+        self.version = MockWeb3Version(netid)
+        self.eth = MockEth()
