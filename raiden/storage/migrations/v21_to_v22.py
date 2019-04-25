@@ -1,16 +1,18 @@
 import json
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from eth_utils import to_checksum_address
 
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.utils.typing import Any, Callable, ChainID, Dict, List, Optional, Union
 
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.raiden_service import RaidenService
+
 SOURCE_VERSION = 21
 TARGET_VERSION = 22
 T = TypeVar('T')
-
-RaidenService = 'RaidenService'
 
 SPELLING_VARS_TOKEN_NETWORK = (
     'token_network_address',
@@ -48,7 +50,7 @@ def pop_first_key(obj: Dict[str, T], keys: List[str]) -> T:
     return next(obj.pop(k) for k in keys if k in obj)
 
 
-def _add_chain_id_then_contract(obj: Dict[str, Any], chain_id: ChainID):
+def _add_chain_id_then_contract(obj: Dict[str, Any], chain_id: ChainID) -> None:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_adding_chain_id_then_contraction
 
@@ -69,7 +71,7 @@ def _add_chain_id_channel_id_then_contract(
         obj: Dict[str, Any],
         chain_id: ChainID,
         channel_id: int,
-) -> Dict[str, Any]:
+) -> None:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_adding_chain_id_channel_id_then_contraction
 
@@ -90,7 +92,7 @@ by_adding_chain_id_removing_token_address = {
 def _remove_token_address_add_chain_id_then_contract(
         obj: Dict[str, Any],
         chain_id: ChainID,
-) -> Dict[str, Any]:
+) -> None:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_adding_chain_id_removing_token_address
 
@@ -110,7 +112,7 @@ by_contraction = {
 }
 
 
-def _contract(obj: Dict[str, Any]) -> Dict[str, Any]:
+def _contract(obj: Dict[str, Any]) -> None:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_contraction
 
@@ -127,7 +129,7 @@ by_removal_channel_id_token_network_identifier = {
 }
 
 
-def _remove_channel_id_token_network_identifier(obj):
+def _remove_channel_id_token_network_identifier(obj) -> None:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_removal_channel_id_token_network_identifier
 
@@ -140,7 +142,7 @@ by_removal_token_network_identifier = {
 }
 
 
-def _remove_token_network_identifier(obj):
+def _remove_token_network_identifier(obj) -> None:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_removal_token_network_identifier
 
@@ -160,7 +162,7 @@ ALL_REMOVE_MIGRATIONS = by_removal_channel_id_token_network_identifier.union(
 )
 
 
-def constraint_removed_duplicated_values(obj: Dict[str, Any]):
+def constraint_removed_duplicated_values(obj: Dict[str, Any]) -> None:
     if obj['_type'] in ALL_REMOVE_MIGRATIONS:
         for key in SPELLING_VARS_CHANNEL:
             assert key not in obj
@@ -168,7 +170,7 @@ def constraint_removed_duplicated_values(obj: Dict[str, Any]):
             assert key not in obj
 
 
-def contraint_has_canonical_identifier(obj: Dict[str, Any], keys: List[str]):
+def contraint_has_canonical_identifier(obj: Dict[str, Any], keys: List[str]) -> None:
     if obj['_type'] not in ALL_REMOVE_MIGRATIONS:
         canonical_identifier = obj.get('canonical_identifier')
         assert canonical_identifier is not None, (keys, obj)
@@ -177,17 +179,20 @@ def contraint_has_canonical_identifier(obj: Dict[str, Any], keys: List[str]):
         assert canonical_identifier['channel_identifier'] is not None, (keys, obj)
 
 
-def constraint_has_canonical_identifier_or_values_removed(obj: Dict[str, Any], keys: List[str]):
+def constraint_has_canonical_identifier_or_values_removed(
+        obj: Dict[str, Any],
+        keys: List[str],
+) -> None:
     constraint_removed_duplicated_values(obj)
     contraint_has_canonical_identifier(obj, keys)
 
 
-def check_constraint(obj: Dict[str, Any], constraint: Callable):
+def check_constraint(obj: Dict[str, Any], constraint: Callable) -> None:
     for _type, data, keys in scanner(obj):
         constraint(data, keys)
 
 
-def scanner(obj: Union[List, Dict[str, Any], int, str], keys: List[str] = None):
+def scanner(obj: Union[List, Dict[str, Any], int, str], keys: List[str] = None) -> Any:
     if keys is None:
         keys = []
     if isinstance(obj, dict):
@@ -207,38 +212,35 @@ def upgrade_object(
         obj: Dict[str, Any],
         chain_id: ChainID,
         channel_id: int = None,
-) -> Dict[str, Any]:
+) -> None:
     if obj is None:
         return
+
     _type = obj['_type']
-    if _type not in ALL_MIGRATING:
-        return
+
     if _type in by_contraction:
         _contract(obj)
-        return
-    if _type in by_removal_token_network_identifier:
+    elif _type in by_removal_token_network_identifier:
         _remove_token_network_identifier(obj)
-        return
-    if _type in by_removal_channel_id_token_network_identifier:
+    elif _type in by_removal_channel_id_token_network_identifier:
         _remove_channel_id_token_network_identifier(obj)
-        return
-    if _type in by_adding_chain_id_removing_token_address:
+    elif _type in by_adding_chain_id_removing_token_address:
         _remove_token_address_add_chain_id_then_contract(obj, chain_id)
-        return
-    if _type in by_adding_chain_id_then_contraction:
+    elif _type in by_adding_chain_id_then_contraction:
         _add_chain_id_then_contract(obj, chain_id)
-        return
-    if _type in by_adding_chain_id_channel_id_then_contraction:
+    elif _type in by_adding_chain_id_channel_id_then_contraction:
         assert channel_id is not None
         _add_chain_id_channel_id_then_contract(obj, chain_id, channel_id)
-        return
-    assert False
+    elif _type in ALL_MIGRATING:
+        assert False
+
+    return
 
 
 def snapshot_upgrade_pending_transactions(
         snapshot: Dict[str, Any],
         chain_id: ChainID,
-):
+) -> None:
     for tx in snapshot['pending_transactions']:
         upgrade_object(tx, chain_id)
         if isinstance(tx, dict) and 'balance_proof' in tx:
@@ -248,7 +250,7 @@ def snapshot_upgrade_pending_transactions(
 def snapshot_upgrade_queues(
         snapshot: Dict[str, Any],
         chain_id: ChainID,
-):
+) -> None:
     for _id, data in snapshot['queueids_to_queues'].values():
         for item in data:
             if isinstance(item, dict) and 'balance_proof' in item:
@@ -261,7 +263,7 @@ def snapshot_upgrade_queues(
 def snapshot_upgrade_channels(
         snapshot: Dict[str, Any],
         chain_id: ChainID,
-):
+) -> None:
     for network in snapshot['identifiers_to_paymentnetworks'].values():
         for token_network in network['tokennetworks']:
             for channel in token_network['channelidentifiers_to_channels'].values():
@@ -283,7 +285,7 @@ def snapshot_upgrade_channels(
 def snapshot_upgrade_payment_mappings(
         snapshot: Dict[str, Any],
         chain_id: ChainID,
-):
+) -> None:
     for task in snapshot['payment_mapping']['secrethashes_to_task'].values():
         upgrade_object(task, chain_id)
         if isinstance(task, dict) and 'manager_state' in task:
@@ -334,7 +336,7 @@ def snapshot_upgrade_payment_mappings(
 def _add_canonical_identifier_to_snapshot(
         raiden: 'RaidenService',
         storage: SQLiteStorage,
-):
+) -> None:
     assert raiden
 
     for snapshot_record in storage.get_snapshots():
@@ -364,7 +366,7 @@ def _add_canonical_identifier_to_statechanges(
         raiden: 'RaidenService',
         storage: SQLiteStorage,
         chain_id: ChainID,
-):
+) -> None:
     assert raiden
     assert chain_id is not None
 
@@ -472,7 +474,7 @@ def _add_canonical_identifier_to_events(
         raiden: 'RaidenService',
         storage: SQLiteStorage,
         chain_id: ChainID,
-):
+) -> None:
     assert raiden
     assert chain_id is not None
     for events_batch in storage.batch_query_event_records(batch_size=500):
