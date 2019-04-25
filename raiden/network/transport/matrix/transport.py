@@ -48,8 +48,8 @@ from raiden.network.transport.matrix.utils import (
 from raiden.network.transport.udp import udp_utils
 from raiden.raiden_service import RaidenService
 from raiden.transfer import views
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
-from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,

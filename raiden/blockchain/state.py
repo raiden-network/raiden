@@ -5,7 +5,6 @@ from raiden.transfer.state import (
     NettingChannelState,
     TransactionExecutionStatus,
 )
-from raiden.utils import pex
 from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,

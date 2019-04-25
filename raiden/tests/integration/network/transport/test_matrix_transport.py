@@ -27,8 +27,8 @@ from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.messages import make_balance_proof
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.transfer import views
+from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
-from raiden.transfer.queue_identifier import QueueIdentifier
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
 from raiden.utils import pex
 from raiden.utils.signer import LocalSigner
