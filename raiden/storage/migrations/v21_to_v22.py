@@ -339,6 +339,8 @@ def _add_canonical_identifier_to_snapshot(
 ) -> None:
     assert raiden
 
+    updated_snapshots_data = []
+
     for snapshot_record in storage.get_snapshots():
         snapshot = json.loads(snapshot_record.data)
         assert isinstance(snapshot, (dict, list))
@@ -353,13 +355,9 @@ def _add_canonical_identifier_to_snapshot(
             snapshot,
             constraint=constraint_has_canonical_identifier_or_values_removed,
         )
-        conn = storage.conn.cursor()
-        conn.execute(
-            'UPDATE state_snapshot SET data = ? WHERE identifier = ?',
-            (snapshot_record.identifier, json.dumps(snapshot)),
-        )
-        conn.connection.commit()
-        conn.close()
+        updated_snapshots_data.append((snapshot, snapshot.identifier))
+
+    storage.update_snapshots(updated_snapshots_data)
 
 
 def _add_canonical_identifier_to_statechanges(
