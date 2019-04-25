@@ -1,4 +1,5 @@
 import json
+from typing import TypeVar
 
 from eth_utils import to_checksum_address
 
@@ -7,6 +8,7 @@ from raiden.utils.typing import Any, Callable, ChainID, Dict, List, Optional, Un
 
 SOURCE_VERSION = 21
 TARGET_VERSION = 22
+T = TypeVar('T')
 
 RaidenService = 'RaidenService'
 
@@ -42,27 +44,18 @@ by_adding_chain_id_then_contraction = {
 }
 
 
-def _add_chain_id_then_contract(obj: Dict[str, Any], chain_id: ChainID, verify_type=True):
+def pop_first_key(obj: Dict[str, T], keys: List[str]) -> T:
+    return next(obj.pop(k) for k in keys if k in obj)
+
+
+def _add_chain_id_then_contract(obj: Dict[str, Any], chain_id: ChainID):
     assert isinstance(obj, dict)
-    if verify_type:
-        assert obj['_type'] in by_adding_chain_id_then_contraction
-    token_network_key = None
-    channel_identifier_key = None
-    keys = obj.keys()
-    for spelling in SPELLING_VARS_TOKEN_NETWORK:
-        if spelling in keys:
-            token_network_key = spelling
-            break
-    assert token_network_key is not None
-    for spelling in SPELLING_VARS_CHANNEL:
-        if spelling in keys:
-            channel_identifier_key = spelling
-            break
-    assert channel_identifier_key is not None
+    assert obj['_type'] in by_adding_chain_id_then_contraction
+
     obj['canonical_identifier'] = {
         'chain_identifier': chain_id,
-        'token_network_address': obj.pop(token_network_key),
-        'channel_identifier': obj.pop(channel_identifier_key),
+        'token_network_address': pop_first_key(obj, SPELLING_VARS_TOKEN_NETWORK),
+        'channel_identifier': pop_first_key(obj, SPELLING_VARS_CHANNEL),
     }
 
 
@@ -79,16 +72,10 @@ def _add_chain_id_channel_id_then_contract(
 ) -> Dict[str, Any]:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_adding_chain_id_channel_id_then_contraction
-    token_network_key = None
-    keys = obj.keys()
-    for spelling in SPELLING_VARS_TOKEN_NETWORK:
-        if spelling in keys:
-            token_network_key = spelling
-            break
-    assert token_network_key is not None
+
     obj['canonical_identifier'] = {
         'chain_identifier': chain_id,
-        'token_network_address': obj.pop(token_network_key),
+        'token_network_address': pop_first_key(obj, SPELLING_VARS_TOKEN_NETWORK),
         'channel_identifier': channel_id,
     }
 
@@ -106,9 +93,13 @@ def _remove_token_address_add_chain_id_then_contract(
 ) -> Dict[str, Any]:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_adding_chain_id_removing_token_address
-    assert 'token_address' in obj.keys()
+
     obj.pop('token_address')
-    _add_chain_id_then_contract(obj, chain_id, verify_type=False)
+    obj['canonical_identifier'] = {
+        'chain_identifier': chain_id,
+        'token_network_address': pop_first_key(obj, SPELLING_VARS_TOKEN_NETWORK),
+        'channel_identifier': pop_first_key(obj, SPELLING_VARS_CHANNEL),
+    }
 
 
 # these have all three fields already
@@ -122,28 +113,11 @@ by_contraction = {
 def _contract(obj: Dict[str, Any]) -> Dict[str, Any]:
     assert isinstance(obj, dict)
     assert obj['_type'] in by_contraction
-    chain_identifier_key = None
-    token_network_key = None
-    channel_identifier_key = None
-    keys = obj.keys()
-    for spelling in SPELLING_VARS_CHAIN:
-        if spelling in keys:
-            chain_identifier_key = spelling
-            break
-    for spelling in SPELLING_VARS_TOKEN_NETWORK:
-        if spelling in keys:
-            token_network_key = spelling
-            break
-    assert token_network_key is not None
-    for spelling in SPELLING_VARS_CHANNEL:
-        if spelling in keys:
-            channel_identifier_key = spelling
-            break
-    assert channel_identifier_key is not None
+
     obj['canonical_identifier'] = {
-        'chain_identifier': obj.pop(chain_identifier_key),
-        'token_network_address': obj.pop(token_network_key),
-        'channel_identifier': obj.pop(channel_identifier_key),
+        'chain_identifier': pop_first_key(obj, SPELLING_VARS_CHAIN),
+        'token_network_address': pop_first_key(obj, SPELLING_VARS_TOKEN_NETWORK),
+        'channel_identifier': pop_first_key(obj, SPELLING_VARS_CHANNEL),
     }
 
 
@@ -156,21 +130,9 @@ by_removal_channel_id_token_network_identifier = {
 def _remove_channel_id_token_network_identifier(obj):
     assert isinstance(obj, dict)
     assert obj['_type'] in by_removal_channel_id_token_network_identifier
-    token_network_key = None
-    channel_identifier_key = None
-    keys = obj.keys()
-    for spelling in SPELLING_VARS_TOKEN_NETWORK:
-        if spelling in keys:
-            token_network_key = spelling
-            break
-    assert token_network_key is not None
-    for spelling in SPELLING_VARS_CHANNEL:
-        if spelling in keys:
-            channel_identifier_key = spelling
-            break
-    assert channel_identifier_key is not None
-    obj.pop(token_network_key)
-    obj.pop(channel_identifier_key)
+
+    pop_first_key(obj, SPELLING_VARS_TOKEN_NETWORK)
+    pop_first_key(obj, SPELLING_VARS_CHANNEL)
 
 
 by_removal_token_network_identifier = {
@@ -181,14 +143,8 @@ by_removal_token_network_identifier = {
 def _remove_token_network_identifier(obj):
     assert isinstance(obj, dict)
     assert obj['_type'] in by_removal_token_network_identifier
-    token_network_key = None
-    keys = obj.keys()
-    for spelling in SPELLING_VARS_TOKEN_NETWORK:
-        if spelling in keys:
-            token_network_key = spelling
-            break
-    assert token_network_key is not None
-    obj.pop(token_network_key)
+
+    pop_first_key(obj, SPELLING_VARS_TOKEN_NETWORK)
 
 
 ALL_MIGRATING = by_contraction.union(
