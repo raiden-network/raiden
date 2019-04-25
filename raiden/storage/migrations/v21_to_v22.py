@@ -1,5 +1,4 @@
 import json
-import collections.abc
 from typing import TypeVar
 
 from eth_utils import to_checksum_address
@@ -186,17 +185,6 @@ def constraint_has_canonical_identifier_or_values_removed(obj: Dict[str, Any], k
 def check_constraint(obj: Dict[str, Any], constraint: Callable):
     for _type, data, keys in scanner(obj):
         constraint(data, keys)
-
-
-def yield_objects(obj: Union[List, Dict[str, Any], int, str]):
-    if isinstance(obj, dict):
-        yield obj
-        yield from yield_objects(obj.values())
-    elif collections.abc.Iterable:
-        for item in obj:
-            yield from yield_objects(item)
-    elif obj is not None:
-        assert isinstance(obj, (int, str))
 
 
 def scanner(obj: Union[List, Dict[str, Any], int, str], keys: List[str] = None):
@@ -507,39 +495,12 @@ def _add_canonical_identifier_to_events(
 
 def recover_chain_id(storage: SQLiteStorage) -> ChainID:
     """We can reasonably assume, that any database has only one value for `chain_id` at this point
-    in time. Hence I will go through all DB data and try to find a value for it.
+    in time.
     """
-    for snapshot_record in storage.get_snapshots():
-        # simplest case: a snapshot exists and has a chain_id
-        snapshot = json.loads(snapshot_record.data)
-        assert isinstance(snapshot, (dict, list))
-        if 'chain_id' in snapshot:
-            return snapshot['chain_id']
+    action_init_chain = json.loads(storage.get_state_changes(limit=1, offset=0)[0])
 
-    for events_batch in storage.batch_query_event_records(batch_size=500):
-        for event in events_batch:
-            has_chain = any(f'"{spelling}"' in event.data for spelling in SPELLING_VARS_CHAIN)
-            if has_chain:
-                event_obj = json.loads(event.data)
-                for obj in yield_objects(event_obj):
-                    for spelling in SPELLING_VARS_CHAIN:
-                        if spelling in obj:
-                            chain_id = obj[spelling]
-                            return chain_id
-
-    for state_change_batch in storage.batch_query_state_changes(batch_size=500):
-        for state_change in state_change_batch:
-            has_chain = any(
-                f'"{spelling}"' in state_change.data for spelling in SPELLING_VARS_CHAIN
-            )
-            if has_chain:
-                state_change_obj = json.loads(state_change.data)
-                for obj in yield_objects(state_change_obj):
-                    for spelling in SPELLING_VARS_CHAIN:
-                        if spelling in obj:
-                            chain_id = obj[spelling]
-                            return chain_id
-    return None
+    assert action_init_chain['_type'] == 'raiden.transfer.state_change.ActionInitChain'
+    return action_init_chain['chain_id']
 
 
 def upgrade_v21_to_v22(
@@ -553,11 +514,6 @@ def upgrade_v21_to_v22(
     assert not len(kwargs)
     if old_version == SOURCE_VERSION:
         chain_id = recover_chain_id(storage)
-        if chain_id is None:
-            raise RuntimeError(
-                f"Could not figure out 'chain_id' for the db version v{old_version}"
-                f' while upgrading to v{current_version}.',
-            )
         _add_canonical_identifier_to_snapshot(raiden, storage)
         _add_canonical_identifier_to_events(raiden, storage, chain_id)
         _add_canonical_identifier_to_statechanges(raiden, storage, chain_id)
