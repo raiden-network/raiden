@@ -504,10 +504,9 @@ def upgrade_v21_to_v22(
         old_version: int,
         current_version: int,
         raiden: 'RaidenService',
-        **kwargs,
+        **kwargs,  # pylint: disable=unused-argument
 ) -> int:
     assert current_version == TARGET_VERSION
-    assert not len(kwargs)
     if old_version == SOURCE_VERSION:
         chain_id = recover_chain_id(storage)
         _add_canonical_identifier_to_snapshot(raiden, storage)
