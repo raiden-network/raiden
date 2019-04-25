@@ -14,6 +14,8 @@ SOURCE_VERSION = 21
 TARGET_VERSION = 22
 T = TypeVar('T')
 
+BATCH_UNLOCK = 'raiden.transfer.state_change.ContractReceiveChannelBatchUnlock'
+
 SPELLING_VARS_TOKEN_NETWORK = (
     'token_network_address',
     'token_network_id',
@@ -63,7 +65,7 @@ def _add_chain_id_then_contract(obj: Dict[str, Any], chain_id: ChainID) -> None:
 
 # these are missing chain-id and channel-id
 by_adding_chain_id_channel_id_then_contraction = {
-    'raiden.transfer.state_change.ContractReceiveChannelBatchUnlock',
+    BATCH_UNLOCK,
 }
 
 
@@ -372,48 +374,45 @@ def _add_canonical_identifier_to_statechanges(
         storage: SQLiteStorage,
         chain_id: ChainID,
 ) -> None:
-    assert raiden
-    assert chain_id is not None
-
-    our_address = to_checksum_address(raiden.address)
+    our_address = str(to_checksum_address(raiden.address)).lower()
 
     for state_change_batch in storage.batch_query_state_changes(batch_size=500):
         updated_state_changes = list()
         delete_state_changes = list()
 
-        for state_change in state_change_batch:
-            state_change_obj = json.loads(state_change.data)
-            for _type, obj, _path in scanner(state_change_obj):
-                if (
-                        obj['_type'] ==
-                        'raiden.transfer.state_change.ContractReceiveChannelBatchUnlock'
-                ):
-                    if our_address.lower() not in (
-                            obj['partner'].lower(),
-                            obj['participant'].lower(),
-                    ):
-                        # delete it, we're not part of it
-                        assert obj == state_change_obj
-                        delete_state_changes.append(state_change.state_change_identifier)
-                    else:
-                        channel_id = resolve_channel_id_for_unlock(
-                            storage,
-                            obj,
-                            our_address,
-                        )
+        for state_change_record in state_change_batch:
+            state_change_obj = json.loads(state_change_record.data)
+            is_unlock = state_change_obj['_type'] == BATCH_UNLOCK
+            should_delete = (  # Delete unecessary unlock events
+                is_unlock and
+                our_address not in (
+                    state_change_obj['partner'].lower(),
+                    state_change_obj['participant'].lower(),
+                )
+            )
 
-                        assert channel_id is not None
-                        upgrade_object(obj, chain_id, channel_id=channel_id)
-                else:
-                    upgrade_object(obj, chain_id)
+            if should_delete:
+                delete_state_changes.append(state_change_record.identifier)
+            else:
+                channel_id = None
+                if is_unlock:
+                    channel_id = resolve_channel_id_for_unlock(
+                        storage,
+                        state_change_obj,
+                        our_address,
+                    )
+                walk_dicts(
+                    state_change_obj,
+                    lambda obj, channel_id=channel_id: upgrade_object(obj, chain_id, channel_id),
+                )
 
             check_constraint(
                 state_change_obj,
                 constraint=constraint_has_canonical_identifier_or_values_removed,
             )
             updated_state_changes.append((
-                json.dumps(state_change[1]),
-                state_change.state_change_identifier,
+                json.dumps(state_change_obj),
+                state_change_record.state_change_identifier,
             ))
 
         storage.update_state_changes(updated_state_changes)
@@ -425,8 +424,7 @@ def resolve_channel_id_for_unlock(
         obj: Dict[str, Any],
         our_address: str,
 ) -> Optional[int]:
-
-    assert obj['_type'] == 'raiden.transfer.state_change.ContractReceiveChannelBatchUnlock'
+    assert obj['_type'] == BATCH_UNLOCK
 
     locksroot = obj['locksroot']
     _participant = obj['participant']
