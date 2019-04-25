@@ -208,14 +208,23 @@ def scanner(obj: Union[List, Dict[str, Any], int, str], keys: List[str] = None) 
             assert isinstance(obj, (int, str))
 
 
+def walk_dicts(obj: Union[List, Dict], callback: Callable) -> None:
+    stack = [obj]
+
+    while stack:
+        obj = stack.pop()
+        if isinstance(obj, dict):
+            callback(obj)
+            stack.extend(obj.values())
+        elif isinstance(obj, list):
+            stack.extend(obj)
+
+
 def upgrade_object(
         obj: Dict[str, Any],
         chain_id: ChainID,
         channel_id: int = None,
 ) -> None:
-    if obj is None:
-        return
-
     _type = obj['_type']
 
     if _type in by_contraction:
@@ -233,8 +242,6 @@ def upgrade_object(
         _add_chain_id_channel_id_then_contract(obj, chain_id, channel_id)
     elif _type in ALL_MIGRATING:
         assert False
-
-    return
 
 
 def snapshot_upgrade_pending_transactions(
@@ -462,26 +469,22 @@ def resolve_channel_id_for_unlock(
     return None
 
 
-def _add_canonical_identifier_to_events(
-        raiden: 'RaidenService',
-        storage: SQLiteStorage,
-        chain_id: ChainID,
-) -> None:
-    assert raiden
-    assert chain_id is not None
+def _add_canonical_identifier_to_events(storage: SQLiteStorage, chain_id: ChainID) -> None:
     for events_batch in storage.batch_query_event_records(batch_size=500):
         updated_events = []
-        for event in events_batch:
-            event_obj = json.loads(event.data)
-            for _type, obj, _path in scanner(event_obj):
-                upgrade_object(obj, chain_id)
+        for event_record in events_batch:
+            event_obj = json.loads(event_record.data)
+            walk_dicts(
+                event_obj,
+                lambda obj: upgrade_object(obj, chain_id),
+            )
             check_constraint(
                 event_obj,
                 constraint=constraint_has_canonical_identifier_or_values_removed,
             )
             updated_events.append((
                 json.dumps(event_obj),
-                event.event_identifier,
+                event_record.event_identifier,
             ))
         storage.update_events(updated_events)
 
@@ -508,7 +511,7 @@ def upgrade_v21_to_v22(
     if old_version == SOURCE_VERSION:
         chain_id = recover_chain_id(storage)
         _add_canonical_identifier_to_snapshot(raiden, storage)
-        _add_canonical_identifier_to_events(raiden, storage, chain_id)
+        _add_canonical_identifier_to_events(storage, chain_id)
         _add_canonical_identifier_to_statechanges(raiden, storage, chain_id)
 
     return TARGET_VERSION
