@@ -15,7 +15,6 @@ from eth_utils import (
     is_0x_prefixed,
     is_checksum_address,
     remove_0x_prefix,
-    to_bytes,
     to_checksum_address,
 )
 from web3 import Web3
@@ -45,83 +44,9 @@ from raiden.utils.typing import (
     T_ChainID,
     T_ChannelID,
     TokenAddress,
-    TokenNetworkAddress,
-    TokenNetworkID,
     Tuple,
     Union,
 )
-
-# Placeholder chain ID for refactoring in scope of #3493
-CHAIN_ID_UNSPECIFIED = ChainID(-1)
-
-
-class CanonicalIdentifier:
-    def __init__(
-            self,
-            chain_identifier: ChainID,
-            # introducing the type as Union, to avoid casting for now.
-            # Should be only `..Address` later
-            token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
-            channel_identifier: ChannelID,
-    ):
-        self.chain_identifier = chain_identifier
-        self.token_network_address = token_network_address
-        self.channel_identifier = channel_identifier
-
-    def __str__(self):
-        return (
-            f'<CanonicalIdentifier '
-            f'chain_id:{self.chain_identifier} '
-            f'token_network_address:{pex(self.token_network_address)} '
-            f'channel_id:{self.channel_identifier}>'
-        )
-
-    def validate(self):
-        if not isinstance(self.token_network_address, T_Address):
-            raise ValueError('token_network_identifier must be an address instance')
-
-        if not isinstance(self.channel_identifier, T_ChannelID):
-            raise ValueError('channel_identifier must be an ChannelID instance')
-
-        if not isinstance(self.chain_identifier, T_ChainID):
-            raise ValueError('chain_id must be a ChainID instance')
-
-        if (
-                self.channel_identifier < 0 or
-                self.channel_identifier > constants.UINT256_MAX
-        ):
-            raise ValueError('channel id is invalid')
-
-    def to_dict(self) -> Dict[str, Any]:
-        return dict(
-            chain_identifier=str(self.chain_identifier),
-            token_network_address=to_checksum_address(self.token_network_address),
-            channel_identifier=str(self.channel_identifier),
-        )
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'CanonicalIdentifier':
-        return cls(
-            chain_identifier=ChainID(int(data['chain_identifier'])),
-            token_network_address=TokenNetworkAddress(
-                to_bytes(hexstr=data['token_network_address']),
-            ),
-            channel_identifier=ChannelID(int(data['channel_identifier'])),
-        )
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, CanonicalIdentifier):
-            return NotImplemented
-        return (
-            self.chain_identifier == other.chain_identifier and
-            self.token_network_address == other.token_network_address and
-            self.channel_identifier == other.channel_identifier
-        )
-
-    def __ne__(self, other: object) -> bool:
-        if not isinstance(other, CanonicalIdentifier):
-            return True
-        return not self.__eq__(other)
 
 
 def random_secret() -> Secret:
