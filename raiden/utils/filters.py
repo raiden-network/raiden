@@ -7,7 +7,16 @@ from web3.utils.events import get_event_data
 from web3.utils.filters import LogFilter, construct_event_filter_params
 
 from raiden.constants import GENESIS_BLOCK_NUMBER
-from raiden.utils.typing import BlockSpecification, ChannelID, Dict, TokenNetworkAddress
+from raiden.utils import block_specification_to_number
+from raiden.utils.typing import (
+    Any,
+    BlockNumber,
+    BlockSpecification,
+    ChannelID,
+    Dict,
+    List,
+    TokenNetworkAddress,
+)
 from raiden_contracts.constants import CONTRACT_TOKEN_NETWORK, ChannelEvent
 from raiden_contracts.contract_manager import ContractManager
 
@@ -108,8 +117,8 @@ class StatelessFilter(LogFilter):
 
     def __init__(self, web3: Web3, filter_params: dict):
         super().__init__(web3, filter_id=None)
-        self.filter_params = filter_params
-        self._last_block: int = -1
+        self.filter_params: Dict[str, BlockSpecification] = filter_params
+        self._last_block: BlockNumber = BlockNumber(-1)
         self._lock = Semaphore()
 
     def _do_get_new_entries(self, from_block: BlockSpecification, to_block: BlockSpecification):
@@ -123,40 +132,33 @@ class StatelessFilter(LogFilter):
             to_block=to_block,
         )
         result = self.web3.eth.getLogs(filter_params)
-        self._last_block = to_block
+        self._last_block = block_specification_to_number(block=to_block, web3=self.web3)
         return result
 
-    def get_new_entries(self, target_block_number: BlockSpecification):
-        latest_block_number = self.web3.eth.blockNumber
+    def get_new_entries(self, target_block_number: BlockNumber) -> List[Dict[str, Any]]:
         with self._lock:
-            result = []
-            from_block = max(
-                self.filter_params.get('fromBlock', GENESIS_BLOCK_NUMBER),
-                self._last_block + 1,
+            result: List[Dict[str, Any]] = []
+            filter_from_number = block_specification_to_number(
+                block=self.filter_params.get('fromBlock', GENESIS_BLOCK_NUMBER),
+                web3=self.web3,
             )
-            to_block = self.filter_params.get('toBlock')
-            if to_block in (None, 'latest', 'pending'):
-                if not isinstance(target_block_number, int):
-                    target_block_number = latest_block_number
-
-            else:
-                target_block_number = to_block
+            from_block_number = max(filter_from_number, self._last_block + 1)
 
             # Batch the filter queries in ranges of FILTER_MAX_BLOCK_RANGE
             # to avoid timeout problems
-            while from_block <= target_block_number:
+            while from_block_number <= target_block_number:
                 to_block = min(
-                    from_block + FILTER_MAX_BLOCK_RANGE,
+                    from_block_number + FILTER_MAX_BLOCK_RANGE,
                     target_block_number,
                 )
                 result.extend(
-                    self._do_get_new_entries(from_block=from_block, to_block=to_block),
+                    self._do_get_new_entries(from_block=from_block_number, to_block=to_block),
                 )
-                from_block += FILTER_MAX_BLOCK_RANGE
+                from_block_number += FILTER_MAX_BLOCK_RANGE
 
             return result
 
-    def get_all_entries(self, block_number: BlockSpecification = None):
+    def get_all_entries(self, block_number: BlockNumber = None):
         with self._lock:
             filter_params = self.filter_params.copy()
             block_number = block_number or self.web3.eth.blockNumber
@@ -165,6 +167,13 @@ class StatelessFilter(LogFilter):
                 filter_params['toBlock'] = block_number
 
             result = self.web3.eth.getLogs(filter_params)
-            self._last_block = filter_params.get('toBlock') or block_number
+            to_block = filter_params.get('toBlock')
+            if to_block:
+                self._last_block = block_specification_to_number(
+                    block=to_block,
+                    web3=self.web3,
+                )
+            else:
+                self._last_block = block_number
 
             return result
