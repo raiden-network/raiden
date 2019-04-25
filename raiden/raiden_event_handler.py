@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import structlog
 from eth_utils import to_checksum_address, to_hex
@@ -94,35 +94,39 @@ class RaidenEventHandler:
     def on_raiden_event(self, raiden: 'RaidenService', event: Event):
         # pylint: disable=too-many-branches
         if type(event) == SendLockExpired:
-            self.handle_send_lockexpired(raiden, event)
+            self.handle_send_lockexpired(raiden, cast(SendLockExpired, event))
         elif type(event) == SendLockedTransfer:
-            self.handle_send_lockedtransfer(raiden, event)
+            self.handle_send_lockedtransfer(raiden, cast(SendLockedTransfer, event))
         elif type(event) == SendSecretReveal:
-            self.handle_send_secretreveal(raiden, event)
+            self.handle_send_secretreveal(raiden, cast(SendSecretReveal, event))
         elif type(event) == SendBalanceProof:
-            self.handle_send_balanceproof(raiden, event)
+            self.handle_send_balanceproof(raiden, cast(SendBalanceProof, event))
         elif type(event) == SendSecretRequest:
-            self.handle_send_secretrequest(raiden, event)
+            self.handle_send_secretrequest(raiden, cast(SendSecretRequest, event))
         elif type(event) == SendRefundTransfer:
-            self.handle_send_refundtransfer(raiden, event)
+            self.handle_send_refundtransfer(raiden, cast(SendRefundTransfer, event))
         elif type(event) == SendProcessed:
-            self.handle_send_processed(raiden, event)
+            self.handle_send_processed(raiden, cast(SendProcessed, event))
         elif type(event) == EventPaymentSentSuccess:
-            self.handle_paymentsentsuccess(raiden, event)
+            self.handle_paymentsentsuccess(raiden, cast(EventPaymentSentSuccess, event))
         elif type(event) == EventPaymentSentFailed:
-            self.handle_paymentsentfailed(raiden, event)
+            self.handle_paymentsentfailed(raiden, cast(EventPaymentSentFailed, event))
         elif type(event) == EventUnlockFailed:
-            self.handle_unlockfailed(raiden, event)
+            self.handle_unlockfailed(raiden, cast(EventUnlockFailed, event))
         elif type(event) == ContractSendSecretReveal:
-            self.handle_contract_send_secretreveal(raiden, event)
+            self.handle_contract_send_secretreveal(raiden, cast(ContractSendSecretReveal, event))
         elif type(event) == ContractSendChannelClose:
-            self.handle_contract_send_channelclose(raiden, event)
+            self.handle_contract_send_channelclose(raiden, cast(ContractSendChannelClose, event))
         elif type(event) == ContractSendChannelUpdateTransfer:
-            self.handle_contract_send_channelupdate(raiden, event)
+            self.handle_contract_send_channelupdate(
+                raiden, cast(ContractSendChannelUpdateTransfer, event),
+            )
         elif type(event) == ContractSendChannelBatchUnlock:
-            self.handle_contract_send_channelunlock(raiden, event)
+            self.handle_contract_send_channelunlock(
+                raiden, cast(ContractSendChannelBatchUnlock, event),
+            )
         elif type(event) == ContractSendChannelSettle:
-            self.handle_contract_send_channelsettle(raiden, event)
+            self.handle_contract_send_channelsettle(raiden, cast(ContractSendChannelSettle, event))
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
