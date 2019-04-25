@@ -7,7 +7,7 @@ from web3 import Web3
 
 from raiden.constants import EMPTY_HASH
 from raiden.storage import sqlite
-from raiden.utils import CanonicalIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.serialization import serialize_bytes
 from raiden.utils.typing import (
     Address,

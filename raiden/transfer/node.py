@@ -64,7 +64,6 @@ from raiden.transfer.state_change import (
     ReceiveProcessed,
     ReceiveUnlock,
 )
-from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     BlockHash,

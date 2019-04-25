@@ -1,4 +1,4 @@
-from raiden.utils import CanonicalIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.signing import pack_data
 from raiden.utils.typing import AdditionalHash, BalanceHash, Nonce, Signature, TokenAmount
 from raiden_contracts.constants import MessageTypeId

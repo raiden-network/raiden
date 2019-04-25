@@ -75,7 +75,7 @@ from raiden.transfer.state_change import (
     ReceiveUnlock,
 )
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import CanonicalIdentifier, pex
+from raiden.utils import pex
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,

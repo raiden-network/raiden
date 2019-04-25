@@ -8,7 +8,7 @@ from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.sqlite import SQLiteStorage, StateChangeRecord
-from raiden.utils import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier
+from raiden.transfer.identifiers import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier
 from raiden.utils.serialization import serialize_bytes
 from raiden.utils.typing import Any, Dict, Locksroot, Tuple
 

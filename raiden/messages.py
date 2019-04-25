@@ -21,6 +21,7 @@ from raiden.transfer.balance_proof import (
     pack_reward_proof,
 )
 from raiden.transfer.events import SendProcessed
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
     SendLockedTransfer,
@@ -31,7 +32,7 @@ from raiden.transfer.mediated_transfer.events import (
 )
 from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import CanonicalIdentifier, ishash, pex, sha3
+from raiden.utils import ishash, pex, sha3
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,

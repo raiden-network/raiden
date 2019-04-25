@@ -11,7 +11,7 @@ from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.rpc.client import JSONRPCClient
-from raiden.utils import CanonicalIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.typing import (
     Address,
     BlockHash,

@@ -20,7 +20,7 @@ from raiden.transfer.state import (
     TokenNetworkState,
     TransferTask,
 )
-from raiden.utils import CanonicalIdentifier
+from raiden.transfer.state_change import ActionInitChain
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
