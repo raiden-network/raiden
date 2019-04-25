@@ -156,7 +156,7 @@ TransactionHash = NewType('TransactionHash', T_TransactionHash)
 # This should be changed to `Optional[str]`
 SuccessOrError = Tuple[bool, Optional[str]]
 
-BlockSpecification = Union[str, T_BlockNumber]
+BlockSpecification = Union[str, T_BlockNumber, T_BlockHash]
 
 ChannelMap = Dict[ChannelID, 'NettingChannelState']
 
