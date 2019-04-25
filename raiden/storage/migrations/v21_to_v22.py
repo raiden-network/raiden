@@ -246,125 +246,22 @@ def upgrade_object(
         assert False
 
 
-def snapshot_upgrade_pending_transactions(
-        snapshot: Dict[str, Any],
-        chain_id: ChainID,
-) -> None:
-    for tx in snapshot['pending_transactions']:
-        upgrade_object(tx, chain_id)
-        if isinstance(tx, dict) and 'balance_proof' in tx:
-            upgrade_object(tx['balance_proof'], chain_id)
-
-
-def snapshot_upgrade_queues(
-        snapshot: Dict[str, Any],
-        chain_id: ChainID,
-) -> None:
-    for _id, data in snapshot['queueids_to_queues'].values():
-        for item in data:
-            if isinstance(item, dict) and 'balance_proof' in item:
-                upgrade_object(item['balance_proof'], chain_id)
-            if isinstance(item, dict) and 'transfer' in item:
-                if isinstance(item['transfer'], dict) and 'balance_proof' in item['transfer']:
-                    upgrade_object(item['transfer']['balance_proof'], chain_id)
-
-
-def snapshot_upgrade_channels(
-        snapshot: Dict[str, Any],
-        chain_id: ChainID,
-) -> None:
-    for network in snapshot['identifiers_to_paymentnetworks'].values():
-        for token_network in network['tokennetworks']:
-            for channel in token_network['channelidentifiers_to_channels'].values():
-                upgrade_object(channel, chain_id)
-                if (
-                        'our_state' in channel and
-                        isinstance(channel['our_state'], dict) and
-                        'balance_proof' in channel['our_state']
-                ):
-                    upgrade_object(channel['our_state']['balance_proof'], chain_id)
-                if (
-                        'partner_state' in channel and
-                        isinstance(channel['partner_state'], dict) and
-                        'balance_proof' in channel['partner_state']
-                ):
-                    upgrade_object(channel['partner_state']['balance_proof'], chain_id)
-
-
-def snapshot_upgrade_payment_mappings(
-        snapshot: Dict[str, Any],
-        chain_id: ChainID,
-) -> None:
-    for task in snapshot['payment_mapping']['secrethashes_to_task'].values():
-        upgrade_object(task, chain_id)
-        if isinstance(task, dict) and 'manager_state' in task:
-            if (
-                    isinstance(task['manager_state'], dict) and
-                    'initiator_transfers' in task['manager_state']
-            ):
-                for transfer in task['manager_state']['initiator_transfers'].values():
-                    if (
-                            isinstance(transfer, dict) and
-                            'transfer' in transfer and
-                            isinstance(transfer['transfer'], dict) and
-                            'balance_proof' in transfer['transfer']
-                    ):
-                        upgrade_object(transfer['transfer']['balance_proof'], chain_id)
-        if (
-                isinstance(task, dict) and
-                'mediator_state' in task and
-                isinstance(task['mediator_state'], dict) and
-                'transfers_pair' in task['mediator_state']
-        ):
-            for transfer in task['mediator_state']['transfers_pair']:
-                if (
-                        isinstance(transfer, dict) and
-                        'payer_transfer' in transfer and
-                        isinstance(transfer['payer_transfer'], dict) and
-                        'balance_proof' in transfer['payer_transfer']
-                ):
-                    upgrade_object(transfer['payer_transfer']['balance_proof'], chain_id)
-                if (
-                        isinstance(transfer, dict) and
-                        'payee_transfer' in transfer and
-                        isinstance(transfer['payee_transfer'], dict) and
-                        'balance_proof' in transfer['payee_transfer']
-                ):
-                    upgrade_object(transfer['payee_transfer']['balance_proof'], chain_id)
-        if (
-                isinstance(task, dict) and
-                'target_state' in task and
-                isinstance(task['target_state'], dict) and
-                'transfer' in task['target_state'] and
-                isinstance(task['target_state']['transfer'], dict) and
-                'balance_proof' in task['target_state']['transfer']
-        ):
-            upgrade_object(task['target_state']['transfer']['balance_proof'], chain_id)
-
-
-def _add_canonical_identifier_to_snapshot(
-        raiden: 'RaidenService',
-        storage: SQLiteStorage,
-) -> None:
-    assert raiden
-
+def _add_canonical_identifier_to_snapshot(storage: SQLiteStorage, chain_id: ChainID) -> None:
     updated_snapshots_data = []
 
     for snapshot_record in storage.get_snapshots():
-        snapshot = json.loads(snapshot_record.data)
-        assert isinstance(snapshot, (dict, list))
+        snapshot_obj = json.loads(snapshot_record.data)
 
-        chain_id = snapshot['chain_id']
+        walk_dicts(snapshot_obj, lambda obj: upgrade_object(obj, chain_id))
 
-        snapshot_upgrade_pending_transactions(snapshot, chain_id)
-        snapshot_upgrade_channels(snapshot, chain_id)
-        snapshot_upgrade_queues(snapshot, chain_id)
-        snapshot_upgrade_payment_mappings(snapshot, chain_id)
         check_constraint(
-            snapshot,
+            snapshot_obj,
             constraint=constraint_has_canonical_identifier_or_values_removed,
         )
-        updated_snapshots_data.append((snapshot, snapshot.identifier))
+        updated_snapshots_data.append((
+            json.dumps(snapshot_obj),
+            snapshot_record.identifier,
+        ))
 
     storage.update_snapshots(updated_snapshots_data)
 
@@ -507,7 +404,7 @@ def upgrade_v21_to_v22(
     assert current_version == TARGET_VERSION
     if old_version == SOURCE_VERSION:
         chain_id = recover_chain_id(storage)
-        _add_canonical_identifier_to_snapshot(raiden, storage)
+        _add_canonical_identifier_to_snapshot(storage, chain_id)
         _add_canonical_identifier_to_events(storage, chain_id)
         _add_canonical_identifier_to_statechanges(raiden, storage, chain_id)
 
