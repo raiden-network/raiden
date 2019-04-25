@@ -16,9 +16,7 @@ class Runnable:
     args: Sequence = tuple()  # args for _run()
     kwargs: dict = dict()  # kwargs for _run()
 
-    def __init__(self, run=None, *args, **kwargs):
-        if run is not None:
-            self._run = run
+    def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
 
