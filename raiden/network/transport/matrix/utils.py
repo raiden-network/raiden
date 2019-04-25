@@ -1,15 +1,30 @@
 import json
 import re
 from binascii import Error as DecodeError
+from collections import defaultdict
+from enum import Enum
 from operator import attrgetter, itemgetter
 from random import Random
-from typing import List, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    KeysView,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 from urllib.parse import urlparse
 
 import gevent
 import structlog
 from cachetools import LRUCache, cached
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_normalized_address
+from gevent.event import Event
 from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 
@@ -26,6 +41,214 @@ JOIN_RETRIES = 10
 USERID_RE = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
 ROOM_NAME_SEPARATOR = '_'
 ROOM_NAME_PREFIX = 'raiden'
+
+
+class UserPresence(Enum):
+    ONLINE = 'online'
+    UNAVAILABLE = 'unavailable'
+    OFFLINE = 'offline'
+    UNKNOWN = 'unknown'
+
+
+class AddressReachability(Enum):
+    REACHABLE = 1
+    UNREACHABLE = 2
+    UNKNOWN = 3
+
+
+USER_PRESENCE_REACHABLE_STATES = {UserPresence.ONLINE, UserPresence.UNAVAILABLE}
+USER_PRESENCE_TO_ADDRESS_REACHABILITY = {
+    UserPresence.ONLINE: AddressReachability.REACHABLE,
+    UserPresence.UNAVAILABLE: AddressReachability.REACHABLE,
+    UserPresence.OFFLINE: AddressReachability.UNREACHABLE,
+    UserPresence.UNKNOWN: AddressReachability.UNKNOWN,
+}
+
+
+class UserAddressManager:
+    """ Matrix user <-> eth address mapping and user / address reachability helper.
+
+    In Raiden the smallest unit of addressability is a node with an associated Ethereum address.
+    In Matrix it's a user. Matrix users are (at the moment) bound to a specific homeserver.
+    Since we want to provide resiliency against unavailable homeservers a single Raiden node with
+    a single Ethereum address can be in control over multiple Matrix users on multiple homeservers.
+
+    Therefore we need to perform a many-to-one mapping of Matrix users to Ethereum addresses.
+    Each Matrix user has a presence state (ONLINE, OFFLINE).
+    One of the preconditions of running a Raiden node is that there can always only be one node
+    online for a particular address at a time.
+    That means we can synthesize the reachability of an address from the user presence states.
+
+    This helper internally tracks both the user presence and address reachability for addresses
+    that have been marked as being 'interesting' (by calling the `.add_address()` method).
+    Additionally it provides the option of passing callbacks that will be notified when
+    presence / reachability change.
+    """
+
+    def __init__(
+            self,
+            client: GMatrixClient,
+            get_user_callable: Callable[[Union[User, str]], User],
+            address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
+            user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
+            stop_event: Optional[Event] = None,
+    ):
+        self._client = client
+        self._get_user = get_user_callable
+        self._address_reachability_changed_callback = address_reachability_changed_callback
+        self._user_presence_changed_callback = user_presence_changed_callback
+        self._stop_event = stop_event if stop_event else Event()
+
+        self._address_to_userids: Dict[Address, Set[str]] = defaultdict(set)
+        self._address_to_reachability: Dict[Address, AddressReachability] = dict()
+        self._userid_to_presence: Dict[str, UserPresence] = dict()
+
+        self._client.add_presence_listener(self._presence_listener)
+
+    @property
+    def known_addresses(self) -> KeysView[Address]:
+        """ Return all addresses we keep track of """
+        return self._address_to_userids.keys()
+
+    def is_address_known(self, address: Address) -> bool:
+        """ Is the given ``address`` reachability being monitored? """
+        return address in self._address_to_userids
+
+    def add_address(self, address: Address):
+        """ Add ``address`` to the known addresses that are being observed for reachability. """
+        # Since _address_to_userids is a defaultdict accessing the key creates the entry
+        _ = self._address_to_userids[address]
+
+    def add_userid_for_address(self, address: Address, user_id: str):
+        """ Add a ``user_id`` for the given ``address``.
+
+        Implicitly adds the address if it was unknown before.
+        """
+        self._address_to_userids[address].add(user_id)
+
+    def add_userids_for_address(self, address: Address, user_ids: Iterable[str]):
+        """ Add multiple ``user_ids`` for the given ``address``.
+
+        Implicitly adds any addresses if they were unknown before.
+        """
+        self._address_to_userids[address].update(user_ids)
+
+    def get_userids_for_address(self, address: Address) -> Set[str]:
+        """ Return all known user ids for the given ``address``. """
+        if not self.is_address_known(address):
+            return set()
+        return self._address_to_userids[address]
+
+    def get_userid_presence(self, user_id: str) -> UserPresence:
+        """ Return the current presence state of ``user_id``. """
+        return self._userid_to_presence.get(user_id, UserPresence.UNKNOWN)
+
+    def get_address_reachability(self, address: Address) -> AddressReachability:
+        """ Return the current reachability state for ``address``. """
+        return self._address_to_reachability.get(address, AddressReachability.UNKNOWN)
+
+    def force_user_presence(self, user: User, presence: UserPresence):
+        """ Forcibly set the ``user`` presence to ``presence``.
+
+        This method is only provided to cover an edge case in our use of the Matrix protocol and
+        should **not** generally be used.
+        """
+        self._userid_to_presence[user.user_id] = presence
+
+    def refresh_address_presence(self, address):
+        """
+        Update synthesized address presence state from cached user presence states.
+
+        Triggers callback (if any) in case the state has changed.
+
+        This method is only provided to cover an edge case in our use of the Matrix protocol and
+        should **not** generally be used.
+        """
+        composite_presence = {
+            self._fetch_user_presence(uid)
+            for uid
+            in self._address_to_userids[address]
+        }
+
+        # Iterate over UserPresence in definition order (most to least online) and pick
+        # first matching state
+        new_presence = UserPresence.UNKNOWN
+        for presence in UserPresence.__members__.values():
+            if presence in composite_presence:
+                new_presence = presence
+                break
+
+        new_address_reachability = USER_PRESENCE_TO_ADDRESS_REACHABILITY[new_presence]
+
+        if new_address_reachability == self._address_to_reachability.get(address):
+            # Cached address reachability matches new state, do nothing
+            return
+        log.debug(
+            'Changing address presence state',
+            current_user=self._user_id,
+            address=to_normalized_address(address),
+            prev_state=self._address_to_reachability.get(address),
+            state=new_address_reachability,
+        )
+        self._address_to_reachability[address] = new_address_reachability
+        self._address_reachability_changed_callback(address, new_address_reachability)
+
+    def _presence_listener(self, event: Dict[str, Any]):
+        """
+        Update cached user presence state from Matrix presence events.
+
+        Due to the possibility of nodes using accounts on multiple homeservers a composite
+        address state is synthesised from the cached individual user presence states.
+        """
+        if self._stop_event.ready():
+            return
+        user_id = event['sender']
+        if event['type'] != 'm.presence' or user_id == self._user_id:
+            return
+
+        user = self._get_user(user_id)
+        user.displayname = event['content'].get('displayname') or user.displayname
+        address = self._validate_userid_signature(user)
+        if not address:
+            # Malformed address - skip
+            return
+
+        # not a user we've whitelisted, skip
+        if not self.is_address_known(address):
+            return
+        self.add_userid_for_address(address, user_id)
+
+        new_state = UserPresence(event['content']['presence'])
+        if new_state == self._userid_to_presence.get(user_id):
+            # Cached presence state matches, no action required
+            return
+
+        self._userid_to_presence[user_id] = new_state
+        self.refresh_address_presence(address)
+
+        if self._user_presence_changed_callback:
+            self._user_presence_changed_callback(user, new_state)
+
+    @property
+    def _user_id(self) -> str:
+        user_id = getattr(self._client, 'user_id', None)
+        assert user_id, f'{self.__class__.__name__}._user_id accessed before client login'
+        return user_id
+
+    def _fetch_user_presence(self, user_id: str) -> UserPresence:
+        if user_id not in self._userid_to_presence:
+            try:
+                presence = UserPresence(
+                    self._client.get_user_presence(user_id),
+                )
+            except MatrixRequestError:
+                presence = UserPresence.UNKNOWN
+            self._userid_to_presence[user_id] = presence
+        return self._userid_to_presence[user_id]
+
+    @staticmethod
+    def _validate_userid_signature(user: User) -> Optional[Address]:
+        return validate_userid_signature(user)
 
 
 def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = ()) -> Room:
