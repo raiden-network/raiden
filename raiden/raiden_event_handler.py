@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, cast
 import structlog
 from eth_utils import to_checksum_address, to_hex
 
-from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE
+from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_MESSAGE_HASH, EMPTY_SIGNATURE
 from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.proxies.payment_channel import PaymentChannel
@@ -48,7 +48,7 @@ from raiden.transfer.utils import (
 )
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
 from raiden.utils import CanonicalIdentifier, pex
-from raiden.utils.typing import Address
+from raiden.utils.typing import Address, Nonce
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -288,10 +288,10 @@ class RaidenEventHandler:
             message_hash = balance_proof.message_hash
 
         else:
-            nonce = 0
-            balance_hash = EMPTY_HASH
+            nonce = Nonce(0)
+            balance_hash = EMPTY_BALANCE_HASH
             signature = EMPTY_SIGNATURE
-            message_hash = EMPTY_HASH
+            message_hash = EMPTY_MESSAGE_HASH
 
         channel_proxy = raiden.chain.payment_channel(
             canonical_identifier=CanonicalIdentifier(
