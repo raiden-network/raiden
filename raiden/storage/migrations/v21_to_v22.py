@@ -478,6 +478,7 @@ def _add_canonical_identifier_to_events(
     assert raiden
     assert chain_id is not None
     for events_batch in storage.batch_query_event_records(batch_size=500):
+        updated_events = []
         for event in events_batch:
             event_obj = json.loads(event.data)
             for _type, obj, _path in scanner(event_obj):
@@ -486,13 +487,11 @@ def _add_canonical_identifier_to_events(
                 event_obj,
                 constraint=constraint_has_canonical_identifier_or_values_removed,
             )
-            conn = storage.conn.cursor()
-            conn.execute(
-                'UPDATE state_events SET data = ? WHERE identifier = ?',
-                (event.event_identifier, json.dumps(event_obj)),
-            )
-            conn.connection.commit()
-            conn.close()
+            updated_events.append((
+                json.dumps(event_obj),
+                event.event_identifier,
+            ))
+        storage.update_events(updated_events)
 
 
 def recover_chain_id(storage: SQLiteStorage) -> ChainID:
