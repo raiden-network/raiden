@@ -12,6 +12,7 @@ from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
 from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
+from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -288,7 +289,7 @@ def create_apps(
         raiden_udp_ports,
         reveal_timeout,
         settle_timeout,
-        database_paths,
+        database_basedir,
         retry_interval,
         retries_before_backoff,
         throttle_capacity,
@@ -310,6 +311,10 @@ def create_apps(
         address = blockchain.client.address
 
         host = '127.0.0.1'
+        database_path = database_from_privatekey(
+            base_dir=database_basedir,
+            app_number=idx,
+        )
 
         config = {
             'chain_id': chain_id,
@@ -318,7 +323,7 @@ def create_apps(
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
             'contracts_path': contracts_path,
-            'database_path': database_paths[idx],
+            'database_path': database_path,
             'blockchain': {
                 'confirmation_blocks': DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
             },
