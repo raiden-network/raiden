@@ -74,14 +74,8 @@ class Runnable:
 
     # redirect missing members to underlying greenlet for compatibility
     # but better use greenlet directly for now, to make use of the c extension optimizations
-    def __getattribute__(self, name):
-        try:
-            return super().__getattribute__(name)
-        except AttributeError as ex:
-            try:
-                return getattr(self.greenlet, name)
-            except AttributeError:
-                raise ex from None
+    def __getattr__(self, item):
+        return getattr(self.greenlet, item)
 
     def __bool__(self):
         return bool(self.greenlet)

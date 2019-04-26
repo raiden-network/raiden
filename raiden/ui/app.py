@@ -9,7 +9,11 @@ from eth_utils import to_canonical_address, to_normalized_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
-from raiden.constants import MONITORING_BROADCASTING_ROOM, RAIDEN_DB_VERSION
+from raiden.constants import (
+    MONITORING_BROADCASTING_ROOM,
+    PATH_FINDING_BROADCASTING_ROOM,
+    RAIDEN_DB_VERSION,
+)
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
@@ -54,6 +58,10 @@ def _setup_matrix(config):
         available_servers = get_matrix_servers(available_servers_url)
         log.debug("Fetching available matrix servers", available_servers=available_servers)
         config["transport"]["matrix"]["available_servers"] = available_servers
+
+    # Add PFS broadcast room if enabled
+    if config['services']['pathfinding_service_address'] is not None:
+        config['transport']['matrix']['global_rooms'].append(PATH_FINDING_BROADCASTING_ROOM)
 
     # Add monitoring service broadcast room if enabled
     if config["services"]["monitoring_enabled"] is True:
