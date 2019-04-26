@@ -39,6 +39,7 @@ from raiden.utils.typing import (
     BlockSpecification,
     ChainID,
     ChannelID,
+    ErrorType,
     Locksroot,
     MerkleTreeLeaves,
     Nonce,
@@ -47,6 +48,7 @@ from raiden.utils.typing import (
     T_ChannelState,
     TokenAmount,
     TokenNetworkAddress,
+    Type,
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -88,7 +90,7 @@ class ParticipantsDetails(NamedTuple):
 
 class ChannelDetails(NamedTuple):
     chain_id: ChainID
-    channel_data: int
+    channel_data: ChannelData
     participants_data: ParticipantsDetails
 
 
@@ -125,10 +127,10 @@ class TokenNetwork:
         self.proxy = proxy
         self.client = jsonrpc_client
         self.node_address = self.client.address
-        self.open_channel_transactions = dict()
+        self.open_channel_transactions: Dict[Address, AsyncResult] = dict()
 
         # Forbids concurrent operations on the same channel
-        self.channel_operations_lock = defaultdict(RLock)
+        self.channel_operations_lock: Dict[Address, RLock] = defaultdict(RLock)
 
         # Serializes concurent deposits on this token network. This must be an
         # exclusive lock, since we need to coordinate the approve and
@@ -843,11 +845,8 @@ class TokenNetwork:
             total_deposit: TokenAmount,
             transaction_executed: bool,
             block_identifier: BlockSpecification,
-    ) -> Tuple[
-        Union[RaidenRecoverableError, RaidenUnrecoverableError],
-        str,
-    ]:
-        error_type = RaidenUnrecoverableError
+    ) -> Tuple[ErrorType, str]:
+        error_type: ErrorType = RaidenUnrecoverableError
         msg = ''
         latest_deposit = self._detail_participant(
             channel_identifier=channel_identifier,
@@ -887,7 +886,7 @@ class TokenNetwork:
             if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
                 msg = (
                     f'Channel between participant {self.node_address} '
-                    f'and {partner} does not exist',
+                    f'and {partner} does not exist'
                 )
             # Deposit was prohibited because the channel is settled
             elif channel_state == ChannelState.SETTLED:
@@ -1019,13 +1018,14 @@ class TokenNetwork:
                     block_identifier=block,
                     channel_identifier=channel_identifier,
                 )
+                if not error_type:
+                    # error_type can also be None above in which case it's
+                    # unknown reason why we would fail.
+                    error_type = RaidenUnrecoverableError
                 error_msg = f'{error_prefix}. {msg}'
                 if error_type == RaidenRecoverableError:
                     log.warning(error_msg, **log_details)
                 else:
-                    # error_type can also be None above in which case it's
-                    # unknown reason why we would fail.
-                    error_type = RaidenUnrecoverableError
                     log.critical(error_msg, **log_details)
 
                 raise error_type(error_msg)
@@ -1082,6 +1082,7 @@ class TokenNetwork:
             channel_identifier=channel_identifier,
         )
 
+        msg: Optional[str]
         detail = self._detail_channel(
             participant1=self.node_address,
             participant2=partner,
@@ -1097,14 +1098,14 @@ class TokenNetwork:
             )
             raise RaidenRecoverableError(msg)
         else:
-            error_type, msg = self._check_channel_state_for_update(
+            msg = self._check_channel_state_for_update(
                 channel_identifier=channel_identifier,
                 closer=partner,
                 update_nonce=nonce,
                 block_identifier=block_identifier,
             )
-            if error_type:
-                raise error_type(msg)
+            if msg:
+                raise RaidenRecoverableError(msg)
 
     def update_transfer(
             self,
@@ -1197,6 +1198,8 @@ class TokenNetwork:
                 block_identifier=block,
                 channel_identifier=channel_identifier,
             )
+            msg: Optional[str]
+            error_type: ErrorType
             if detail.settle_block_number < to_compare_block:
                 error_type = RaidenRecoverableError
                 msg = (
@@ -1204,13 +1207,13 @@ class TokenNetwork:
                     'was mined after settlement finished'
                 )
             else:
-                error_type, msg = self._check_channel_state_for_update(
+                msg = self._check_channel_state_for_update(
                     channel_identifier=channel_identifier,
                     closer=partner,
                     update_nonce=nonce,
                     block_identifier=block,
                 )
-                if error_type is None:
+                if msg is None:
                     # This should never happen if the settlement window and gas price
                     # estimation is done properly
                     channel_settled = self.channel_is_settled(
@@ -1225,6 +1228,8 @@ class TokenNetwork:
                     else:
                         error_type = RaidenUnrecoverableError
                         msg = ''
+                else:
+                    error_type = RaidenRecoverableError
 
             error_msg = f'{error_prefix}. {msg}'
             if error_type == RaidenRecoverableError:
@@ -1536,11 +1541,8 @@ class TokenNetwork:
             participant2: Address,
             block_identifier: BlockSpecification,
             channel_identifier: ChannelID,
-    ) -> Tuple[
-        Optional[Union[RaidenRecoverableError, RaidenUnrecoverableError]],
-        str,
-    ]:
-        error_type = None
+    ) -> Tuple[Optional[ErrorType], str]:
+        error_type: Optional[ErrorType] = None
         msg = ''
         channel_state = self._get_channel_state(
             participant1=participant1,
@@ -1553,7 +1555,7 @@ class TokenNetwork:
             error_type = RaidenUnrecoverableError
             msg = (
                 f'Channel between participant {participant1} '
-                f'and {participant2} does not exist',
+                f'and {participant2} does not exist'
             )
         elif channel_state == ChannelState.SETTLED:
             error_type = RaidenUnrecoverableError
@@ -1615,7 +1617,7 @@ class TokenNetwork:
         if channel_data.state == ChannelState.CLOSED:
             msg = (
                 "Settling this channel failed although the channel's current state "
-                "is closed.",
+                "is closed."
             )
         return msg
 
@@ -1625,14 +1627,16 @@ class TokenNetwork:
             closer: Address,
             update_nonce: Nonce,
             block_identifier: BlockSpecification,
-    ) -> Tuple[Optional[RaidenRecoverableError], str]:
+    ) -> Optional[str]:
         """Check the channel state on chain to see if it has been updated.
 
         Compare the nonce we are about to update the contract with the
-        updated nonce in the onchain state and if it's the same raise a
-        RaidenRecoverableError"""
-        error_type = None
-        msg = ''
+        updated nonce in the onchain state and if it's the same return a
+        message with which the caller should raise a RaidenRecoverableError.
+
+        If all is okay return None
+        """
+        msg = None
         closer_details = self._detail_participant(
             channel_identifier=channel_identifier,
             participant=closer,
@@ -1640,10 +1644,9 @@ class TokenNetwork:
             block_identifier=block_identifier,
         )
         if closer_details.nonce == update_nonce:
-            error_type = RaidenRecoverableError
             msg = (
                 'updateNonClosingBalanceProof transaction has already '
                 'been mined and updated the channel succesfully.'
             )
 
-        return error_type, msg
+        return msg
