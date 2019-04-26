@@ -407,7 +407,7 @@ class RaidenEventHandler:
                 'Onchain unlock already mined',
                 canonical_identifier=canonical_identifier,
                 channel_identifier=canonical_identifier.channel_identifier,
-                participant=participant,
+                participant=to_checksum_address(participant),
             )
             return
 
