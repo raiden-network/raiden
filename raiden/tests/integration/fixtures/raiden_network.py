@@ -34,7 +34,6 @@ def raiden_chain(
         endpoint_discovery_services,
         raiden_udp_ports,
         reveal_timeout,
-        database_paths,
         retry_interval,
         retries_before_backoff,
         throttle_capacity,
@@ -49,6 +48,7 @@ def raiden_chain(
         blockchain_type,
         contracts_path,
         user_deposit_address,
+        tmpdir,
 ):
 
     if len(token_addresses) != 1:
@@ -73,7 +73,7 @@ def raiden_chain(
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
-        database_paths=database_paths,
+        database_basedir=tmpdir.strpath,
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,
         throttle_capacity=throttle_capacity,
@@ -147,7 +147,6 @@ def raiden_network(
         endpoint_discovery_services,
         raiden_udp_ports,
         reveal_timeout,
-        database_paths,
         retry_interval,
         retries_before_backoff,
         throttle_capacity,
@@ -162,10 +161,12 @@ def raiden_network(
         blockchain_type,
         contracts_path,
         user_deposit_address,
+        tmpdir,
 ):
     service_registry_address = None
     if blockchain_services.service_registry:
         service_registry_address = blockchain_services.service_registry.address
+
     raiden_apps = create_apps(
         chain_id=chain_id,
         contracts_path=contracts_path,
@@ -178,7 +179,7 @@ def raiden_network(
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
-        database_paths=database_paths,
+        database_basedir=tmpdir.strpath,
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,
         throttle_capacity=throttle_capacity,

@@ -1,12 +1,11 @@
 # pylint: disable=redefined-outer-name
-import os
 import random
 from enum import Enum
 
 import pytest
-from eth_utils import remove_0x_prefix, to_normalized_address
+from eth_utils import remove_0x_prefix
 
-from raiden.constants import RAIDEN_DB_VERSION, RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT, Environment
+from raiden.constants import RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT, Environment
 from raiden.network.utils import get_free_port
 from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
@@ -15,7 +14,7 @@ from raiden.settings import (
     DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
 )
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import sha3
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 # we need to use fixture for the default values otherwise
@@ -306,22 +305,6 @@ def raiden_udp_ports(number_of_nodes, port_generator):
 def rest_api_port_number(port_generator):
     """ Unique port for the REST API server. """
     return next(port_generator)
-
-
-@pytest.fixture
-def database_paths(tmpdir, private_keys):
-    """ Sqlite database paths for each app. """
-    database_paths = list()
-    for pkey in private_keys:
-        app_dir = os.path.join(
-            tmpdir.strpath,
-            to_normalized_address(privatekey_to_address(pkey))[2:8],
-        )
-        if not os.path.exists(app_dir):
-            os.makedirs(app_dir)
-        database_paths.append(os.path.join(app_dir, f'v{RAIDEN_DB_VERSION}_log.db'))
-
-    return database_paths
 
 
 @pytest.fixture
