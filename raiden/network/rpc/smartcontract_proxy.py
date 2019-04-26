@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from eth_utils import decode_hex, to_canonical_address, to_checksum_address
 from web3.contract import Contract
@@ -83,8 +83,8 @@ class ContractProxy:
             **kargs,
     ) -> typing.TransactionHash:
         data = ContractProxy.get_transaction_data(
-            self.contract.abi,
-            function_name,
+            abi=self.contract.abi,
+            function_name=function_name,
             args=args,
             kwargs=kargs,
         )
@@ -140,8 +140,8 @@ class ContractProxy:
     def get_transaction_data(
             abi: Dict,
             function_name: str,
-            args: List = None,
-            kwargs: Dict = None,
+            args: Any = None,
+            kwargs: Any = None,
     ):
         """Get encoded transaction data"""
         args = args or list()
