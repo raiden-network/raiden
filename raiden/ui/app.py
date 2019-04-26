@@ -203,7 +203,7 @@ def run_app(
 
     setup_environment(config, environment_type)
 
-    contracts, contract_addresses_known = setup_contracts_or_exit(config, node_network_id)
+    contracts = setup_contracts_or_exit(config, node_network_id)
 
     rpc_client = JSONRPCClient(
         web3,
@@ -228,7 +228,6 @@ def run_app(
         endpoint_registry_contract_address=endpoint_registry_contract_address,
         user_deposit_contract_address=user_deposit_contract_address,
         service_registry_contract_address=service_registry_contract_address,
-        contract_addresses_known=contract_addresses_known,
         blockchain_service=blockchain_service,
         contracts=contracts,
         routing_mode=routing_mode,

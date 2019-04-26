@@ -94,7 +94,7 @@ def setup_environment(config: Dict[str, Any], environment_type: Environment) -> 
 def setup_contracts_or_exit(
         config: Dict[str, Any],
         network_id: int,
-) -> Tuple[Dict[str, Any], bool]:
+) -> Dict[str, Any]:
     """Sets the contract deployment data depending on the network id and environment type
 
     If an invalid combination of network id and environment type is provided, exits
@@ -117,7 +117,6 @@ def setup_contracts_or_exit(
         sys.exit(1)
 
     contracts = dict()
-    contract_addresses_known = False
     contracts_version = environment_type_to_contracts_version(environment_type)
 
     config['contracts_path'] = contracts_precompiled_path(contracts_version)
@@ -132,9 +131,8 @@ def setup_contracts_or_exit(
             return contracts, False
 
         contracts = deployment_data['contracts']
-        contract_addresses_known = True
 
-    return contracts, contract_addresses_known
+    return contracts
 
 
 def handle_contract_version_mismatch(mismatch_exception: ContractVersionMismatch) -> None:
@@ -175,7 +173,6 @@ def setup_proxies_or_exit(
         endpoint_registry_contract_address: str,
         user_deposit_contract_address: str,
         service_registry_contract_address: str,
-        contract_addresses_known: bool,
         blockchain_service: BlockChainService,
         contracts: Dict[str, Any],
         routing_mode: RoutingMode,
@@ -200,7 +197,7 @@ def setup_proxies_or_exit(
         endpoint_registry_contract_address is not None
     )
 
-    if not contract_addresses_given and not contract_addresses_known:
+    if not contract_addresses_given and not bool(contracts):
         click.secho(
             f"There are no known contract addresses for network id '{node_network_id}'. and "
             f"environment type {environment_type}. Please provide them on the command line or "

@@ -92,9 +92,8 @@ def service_contracts_in_data(contracts: Dict[str, Any]) -> bool:
 def test_setup_contracts():
     # Mainnet production
     config = {'environment_type': Environment.PRODUCTION}
-    contracts, addresses_known = setup_contracts_or_exit(config, 1)
+    contracts = setup_contracts_or_exit(config, 1)
     assert 'contracts_path' in config
-    assert addresses_known
     assert raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
@@ -105,81 +104,71 @@ def test_setup_contracts():
 
     # Ropsten production
     config = {'environment_type': Environment.PRODUCTION}
-    contracts, addresses_known = setup_contracts_or_exit(config, 3)
+    contracts = setup_contracts_or_exit(config, 3)
     assert 'contracts_path' in config
-    assert addresses_known
     assert raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
     # Ropsten development
     config = {'environment_type': Environment.DEVELOPMENT}
-    contracts, addresses_known = setup_contracts_or_exit(config, 3)
+    contracts = setup_contracts_or_exit(config, 3)
     assert 'contracts_path' in config
-    assert addresses_known
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Rinkeby production
     config = {'environment_type': Environment.PRODUCTION}
-    contracts, addresses_known = setup_contracts_or_exit(config, 4)
+    contracts = setup_contracts_or_exit(config, 4)
     assert 'contracts_path' in config
-    assert addresses_known
     assert raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
     # Rinkeby development
     config = {'environment_type': Environment.DEVELOPMENT}
-    contracts, addresses_known = setup_contracts_or_exit(config, 4)
+    contracts = setup_contracts_or_exit(config, 4)
     assert 'contracts_path' in config
-    assert addresses_known
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Goerli production TODO: Uncomment when production contracts are deployed in Goerli
     # config = {'environment_type': Environment.PRODUCTION}
-    # contracts, addresses_known = setup_contracts_or_exit(config, 5)
+    # contracts = setup_contracts_or_exit(config, 5)
     # assert 'contracts_path' in config
-    # assert addresses_known
     # assert raiden_contracts_in_data(contracts)
     # assert not service_contracts_in_data(contracts)
 
     # Goerli development
     config = {'environment_type': Environment.DEVELOPMENT}
-    contracts, addresses_known = setup_contracts_or_exit(config, 5)
+    contracts = setup_contracts_or_exit(config, 5)
     assert 'contracts_path' in config
-    assert addresses_known
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # Kovan production
     config = {'environment_type': Environment.PRODUCTION}
-    contracts, addresses_known = setup_contracts_or_exit(config, 42)
+    contracts = setup_contracts_or_exit(config, 42)
     assert 'contracts_path' in config
-    assert addresses_known
     assert raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
     # Kovan development
     config = {'environment_type': Environment.DEVELOPMENT}
-    contracts, addresses_known = setup_contracts_or_exit(config, 42)
+    contracts = setup_contracts_or_exit(config, 42)
     assert 'contracts_path' in config
-    assert addresses_known
     assert raiden_contracts_in_data(contracts)
     assert service_contracts_in_data(contracts)
 
     # random private network production
     config = {'environment_type': Environment.PRODUCTION}
-    contracts, addresses_known = setup_contracts_or_exit(config, 5257)
+    contracts = setup_contracts_or_exit(config, 5257)
     assert 'contracts_path' in config
-    assert not addresses_known
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
     # random private network development
     config = {'environment_type': Environment.DEVELOPMENT}
-    contracts, addresses_known = setup_contracts_or_exit(config, 5257)
+    contracts = setup_contracts_or_exit(config, 5257)
     assert 'contracts_path' in config
-    assert not addresses_known
     assert not raiden_contracts_in_data(contracts)
     assert not service_contracts_in_data(contracts)
 
@@ -205,7 +194,6 @@ def test_setup_proxies_raiden_addresses_are_given():
         endpoint_registry_contract_address=make_address(),
         user_deposit_contract_address=None,
         service_registry_contract_address=None,
-        contract_addresses_known=False,
         blockchain_service=blockchain_service,
         contracts=contracts,
         routing_mode=RoutingMode.BASIC,
@@ -242,7 +230,6 @@ def test_setup_proxies_all_addresses_are_given(routing_mode):
             endpoint_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
             service_registry_contract_address=make_address(),
-            contract_addresses_known=False,
             blockchain_service=blockchain_service,
             contracts=contracts,
             routing_mode=routing_mode,
@@ -268,7 +255,7 @@ def test_setup_proxies_all_addresses_are_known(routing_mode):
         'chain_id': network_id,
         'services': {},
     }
-    contracts, contract_addresses_known = setup_contracts_or_exit(config, network_id)
+    contracts = setup_contracts_or_exit(config, network_id)
     blockchain_service = MockChain(network_id=network_id, node_address=make_address())
 
     with patched_get_for_succesful_pfs_info():
@@ -279,7 +266,6 @@ def test_setup_proxies_all_addresses_are_known(routing_mode):
             endpoint_registry_contract_address=None,
             user_deposit_contract_address=None,
             service_registry_contract_address=None,
-            contract_addresses_known=contract_addresses_known,
             blockchain_service=blockchain_service,
             contracts=contracts,
             routing_mode=routing_mode,
@@ -318,7 +304,6 @@ def test_setup_proxies_no_service_registry_but_pfs():
             endpoint_registry_contract_address=make_address(),
             user_deposit_contract_address=make_address(),
             service_registry_contract_address=None,
-            contract_addresses_known=False,
             blockchain_service=blockchain_service,
             contracts=contracts,
             routing_mode=RoutingMode.PFS,
@@ -352,7 +337,6 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
                 endpoint_registry_contract_address=make_address(),
                 user_deposit_contract_address=make_address(),
                 service_registry_contract_address=None,
-                contract_addresses_known=False,
                 blockchain_service=blockchain_service,
                 contracts=contracts,
                 routing_mode=RoutingMode.PFS,
