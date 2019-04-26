@@ -63,15 +63,15 @@ def update_version(storage: SQLiteStorage, version: int):
     )
 
 
-def get_file_version(db_path: str) -> int:
+def get_file_version(db_path: Path) -> int:
     match = VERSION_RE.match(os.path.basename(db_path))
     assert match, f'Database name "{db_path}" does not match our format'
     file_version = int(match.group(1))
     return file_version
 
 
-def get_db_version(db_filename: Path) -> Optional[int]:
-    """Return the version value stored in the db or None."""
+def get_db_version(db_filename: Path) -> int:
+    """Return the version value stored in the db"""
 
     assert os.path.exists(db_filename)
 
@@ -115,7 +115,7 @@ def _copy(old_db_filename, current_db_filename):
         old_conn.backup(current_conn)
 
 
-def delete_dbs_with_failed_migrations(valid_db_names: List[str]) -> None:
+def delete_dbs_with_failed_migrations(valid_db_names: List[Path]) -> None:
     for db_path in valid_db_names:
         file_version = get_file_version(db_path)
 
@@ -162,7 +162,7 @@ class UpgradeManager:
         assert match, f'Database name "{base_name}" does not match our format'
 
         self._current_db_filename = Path(db_filename)
-        self._current_version = get_file_version(db_filename)
+        self._current_version = get_file_version(self._current_db_filename)
         self._kwargs = kwargs
 
     def run(self):
@@ -209,7 +209,7 @@ class UpgradeManager:
             from_version=file_version,
         )
 
-    def _upgrade(self, target_file: str, from_file: str, from_version: int):
+    def _upgrade(self, target_file: Path, from_file: Path, from_version: int):
         with get_file_lock(from_file), get_file_lock(target_file):
             _copy(from_file, target_file)
 
