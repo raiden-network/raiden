@@ -59,9 +59,11 @@ def _setup_matrix(config):
         log.debug("Fetching available matrix servers", available_servers=available_servers)
         config["transport"]["matrix"]["available_servers"] = available_servers
 
+    # TODO: This needs to be adjusted once #3735 gets implemented
     # Add PFS broadcast room if enabled
-    if config['services']['pathfinding_service_address'] is not None:
-        config['transport']['matrix']['global_rooms'].append(PATH_FINDING_BROADCASTING_ROOM)
+    if config["services"]["pathfinding_service_address"] is not None:
+        if PATH_FINDING_BROADCASTING_ROOM not in config["transport"]["matrix"]["global_rooms"]:
+            config["transport"]["matrix"]["global_rooms"].append(PATH_FINDING_BROADCASTING_ROOM)
 
     # Add monitoring service broadcast room if enabled
     if config["services"]["monitoring_enabled"] is True:

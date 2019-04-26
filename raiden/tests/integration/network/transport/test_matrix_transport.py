@@ -52,7 +52,12 @@ class MessageHandler:
 
 @pytest.fixture
 def mock_matrix(
-    monkeypatch, retry_interval, retries_before_backoff, local_matrix_servers, private_rooms
+    monkeypatch,
+    retry_interval,
+    retries_before_backoff,
+    local_matrix_servers,
+    private_rooms,
+    global_rooms,
 ):
 
     from raiden.network.transport.matrix.client import User
@@ -82,7 +87,7 @@ def mock_matrix(
         server=local_matrix_servers[0],
         server_name=local_matrix_servers[0].netloc,
         available_servers=[],
-        global_rooms=["discovery"],
+        global_rooms=global_rooms,
         private_rooms=private_rooms,
     )
 
@@ -377,7 +382,7 @@ def test_matrix_tx_error_handling(  # pylint: disable=unused-argument
 
 
 def test_matrix_message_retry(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff
+    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, global_rooms
 ):
     """ Test the retry mechanism implemented into the matrix client.
     The test creates a transport and sends a message. Given that the
@@ -391,7 +396,7 @@ def test_matrix_message_retry(
 
     transport = MatrixTransport(
         {
-            "global_rooms": ["discovery"],
+            "global_rooms": global_rooms,
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -460,7 +465,7 @@ def test_matrix_message_retry(
 
 
 def test_join_invalid_discovery(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff
+    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, global_rooms
 ):
     """join_global_room tries to join on all servers on available_servers config
 
@@ -470,7 +475,7 @@ def test_join_invalid_discovery(
     """
     transport = MatrixTransport(
         {
-            "global_rooms": ["discovery"],
+            "global_rooms": global_rooms,
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -530,12 +535,12 @@ def test_matrix_cross_server_with_load_balance(matrix_transports):
 
 
 def test_matrix_discovery_room_offline_server(
-    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms
+    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, global_rooms
 ):
 
     transport = MatrixTransport(
         {
-            "global_rooms": ["discovery"],
+            "global_rooms": global_rooms,
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -555,11 +560,11 @@ def test_matrix_discovery_room_offline_server(
 
 
 def test_matrix_send_global(
-    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms
+    local_matrix_servers, retries_before_backoff, retry_interval, private_rooms, global_rooms
 ):
     transport = MatrixTransport(
         {
-            "global_rooms": ["discovery", MONITORING_BROADCASTING_ROOM],
+            "global_rooms": global_rooms + [MONITORING_BROADCASTING_ROOM],
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -596,7 +601,12 @@ def test_matrix_send_global(
 
 
 def test_monitoring_global_messages(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, monkeypatch
+    local_matrix_servers,
+    private_rooms,
+    retry_interval,
+    retries_before_backoff,
+    monkeypatch,
+    global_rooms,
 ):
     """
     Test that RaidenService sends RequestMonitoring messages to global
@@ -604,7 +614,7 @@ def test_monitoring_global_messages(
     """
     transport = MatrixTransport(
         {
-            "global_rooms": ["discovery", MONITORING_BROADCASTING_ROOM],
+            "global_rooms": global_rooms + [MONITORING_BROADCASTING_ROOM],
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
@@ -653,7 +663,12 @@ def test_monitoring_global_messages(
 
 @pytest.mark.parametrize("matrix_server_count", [1])
 def test_pfs_global_messages(
-    local_matrix_servers, private_rooms, retry_interval, retries_before_backoff, monkeypatch
+    local_matrix_servers,
+    private_rooms,
+    retry_interval,
+    retries_before_backoff,
+    monkeypatch,
+    global_rooms,
 ):
     """
     Test that RaidenService sends UpdatePFS messages to global
@@ -661,7 +676,7 @@ def test_pfs_global_messages(
     """
     transport = MatrixTransport(
         {
-            "global_rooms": ["discovery", PATH_FINDING_BROADCASTING_ROOM],
+            "global_rooms": global_rooms,  # FIXME: #3735
             "retries_before_backoff": retries_before_backoff,
             "retry_interval": retry_interval,
             "server": local_matrix_servers[0],
