@@ -1,7 +1,7 @@
 import structlog
 from eth_utils import to_checksum_address
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM
 from raiden.exceptions import InvalidSettleTimeout
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.proxies.discovery import Discovery
@@ -61,7 +61,10 @@ class App:  # pylint: disable=too-few-public-methods
             "matrix": {
                 # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
                 "available_servers": None,
-                "global_rooms": [DISCOVERY_DEFAULT_ROOM],
+                # TODO: Remove `PATH_FINDING_BROADCASTING_ROOM` when implementing #3735
+                #       and fix the conditional in `raiden.ui.app:_setup_matrix`
+                #       as well as the tests
+                "global_rooms": [DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM],
                 "retries_before_backoff": DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
                 "retry_interval": DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
                 "server": "auto",
@@ -146,10 +149,6 @@ class App:  # pylint: disable=too-few-public-methods
             self.raiden.start()
 
     def stop(self):
-        """ Stop the raiden app.
-
-        Args:
-            leave_channels: if True, also close and settle all channels before stopping
-        """
+        """ Stop the raiden app. """
         if not self.raiden.stop_event.is_set():
             self.raiden.stop()
