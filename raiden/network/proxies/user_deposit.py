@@ -180,7 +180,7 @@ class UserDeposit:
             address=beneficiary,
             block_identifier=block_identifier,
         )
-        amount_to_deposit = total_deposit - previous_total_deposit
+        amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
         log_details = {
             'user_deposit_address': pex(self.address),
@@ -224,11 +224,7 @@ class UserDeposit:
             amount_to_deposit: TokenAmount,
             total_deposit: TokenAmount,
             block_identifier: BlockSpecification,
-    ) -> Tuple[
-        Union[RaidenRecoverableError, RaidenUnrecoverableError],
-        str,
-    ]:
-        error_type = RaidenUnrecoverableError
+    ) -> str:
         msg = ''
         latest_deposit = self.get_total_deposit(
             address=self.node_address,
@@ -252,4 +248,4 @@ class UserDeposit:
         else:
             msg = 'Deposit failed of unknown reason'
 
-        return error_type, msg
+        return msg
