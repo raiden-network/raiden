@@ -452,7 +452,7 @@ def role_from_transfer_task(transfer_task: TransferTask) -> str:
 
 def secret_from_transfer_task(
         transfer_task: InitiatorTask,
-        secrethash: SecretHash
+        secrethash: SecretHash,
 ) -> Optional[Secret]:
     """Return the secret for the transfer, None on EMPTY_SECRET."""
     transfer_state = transfer_task.manager_state.initiator_transfers[secrethash]
