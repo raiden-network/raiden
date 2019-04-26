@@ -17,9 +17,9 @@ from eth_utils import (
 )
 from gevent.lock import Semaphore
 from hexbytes import HexBytes
-from requests import ConnectTimeout
+from requests.exceptions import ConnectTimeout
 from web3 import Web3
-from web3.contract import ContractFunction
+from web3.contract import Contract, ContractFunction
 from web3.eth import Eth
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
@@ -567,7 +567,7 @@ class JSONRPCClient:
     def blockhash_from_blocknumber(self, block_number: BlockSpecification) -> BlockHash:
         """Given a block number, query the chain to get its corresponding block hash"""
         block = self.get_block(block_number)
-        return bytes(block['hash'])
+        return BlockHash(bytes(block['hash']))
 
     def can_query_state_for_block(self, block_identifier: BlockSpecification) -> bool:
         """
@@ -671,7 +671,7 @@ class JSONRPCClient:
         else:
             libraries = dict()
 
-        constructor_parameters = constructor_parameters or list()
+        ctor_parameters = constructor_parameters or ()
         all_contracts = copy.deepcopy(all_contracts)
 
         if contract_name in all_contracts:
@@ -749,11 +749,8 @@ class JSONRPCClient:
         if isinstance(contract['bin'], str):
             contract['bin'] = decode_hex(contract['bin'])
 
-        if not constructor_parameters:
-            constructor_parameters = ()
-
-        contract = self.web3.eth.contract(abi=contract['abi'], bytecode=contract['bin'])
-        contract_transaction = contract.constructor(*constructor_parameters).buildTransaction()
+        contract_object = self.web3.eth.contract(abi=contract['abi'], bytecode=contract['bin'])
+        contract_transaction = contract_object.constructor(*ctor_parameters).buildTransaction()
         transaction_hash = self.send_transaction(
             to=Address(b''),
             data=contract_transaction['data'],
