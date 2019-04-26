@@ -1,5 +1,6 @@
 import structlog
 
+from raiden.constants import EMPTY_SECRET
 from raiden.messages import (
     Delivered,
     LockedTransfer,
@@ -133,6 +134,16 @@ class MessageHandler:
 
         state_change: StateChange
         if role == 'initiator':
+            old_secret = views.get_transfer_secret(
+                chain_state,
+                from_transfer.lock.secrethash,
+            )
+            # We currently don't allow multi routes if the initiator does not
+            # hold the secret. In such case we remove all other possible routes
+            # which allow the API call to return with with an error message.
+            if old_secret == EMPTY_SECRET:
+                routes = list()
+
             secret = random_secret()
             state_change = ReceiveTransferRefundCancelRoute(
                 routes=routes,

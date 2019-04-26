@@ -31,6 +31,7 @@ from raiden.utils.typing import (
     List,
     Optional,
     PaymentNetworkID,
+    Secret,
     SecretHash,
     Set,
     TokenAddress,
@@ -449,6 +450,19 @@ def role_from_transfer_task(transfer_task: TransferTask) -> str:
     raise ValueError('Argument to role_from_transfer_task is not a TransferTask')
 
 
+def secret_from_transfer_task(
+        transfer_task: InitiatorTask,
+        secrethash: SecretHash
+) -> Optional[Secret]:
+    """Return the secret for the transfer, None on EMPTY_SECRET."""
+    transfer_state = transfer_task.manager_state.initiator_transfers[secrethash]
+
+    if transfer_state is None:
+        return None
+
+    return transfer_state.transfer_description.secret
+
+
 def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Optional[str]:
     """
     Returns 'initiator', 'mediator' or 'target' to signify the role the node has
@@ -459,6 +473,13 @@ def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Option
     if not task:
         return None
     return role_from_transfer_task(task)
+
+
+def get_transfer_secret(chain_state: ChainState, secrethash: SecretHash) -> str:
+    return secret_from_transfer_task(
+        chain_state.payment_mapping.secrethashes_to_task.get(secrethash),
+        secrethash,
+    )
 
 
 def get_transfer_task(chain_state: ChainState, secrethash: SecretHash):
