@@ -70,7 +70,7 @@ class HTTPExecutor(MiHTTPExecutor):
                 return True
 
         except (HTTPException, socket.timeout, socket.error) as ex:
-            log.warning('Executor process not healthy', command=self.command, error=ex)
+            log.debug('Executor process not healthy yet', command=self.command, error=ex)
             time.sleep(.05)
             return False
 
