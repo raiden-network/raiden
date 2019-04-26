@@ -15,7 +15,12 @@ def reveal_secret_with_resolver(
     if 'resolver_endpoint' not in raiden.config:
         return False
 
+    current_state = raiden.wal.state_manager.current_state
+    task = current_state.payment_mapping.secrethashes_to_task[secret_request_event.secrethash]
+    token = task.target_state.transfer.token
+
     request = {
+        'token': to_hex(token),
         'secret_hash': to_hex(secret_request_event.secrethash),
         'amount': secret_request_event.amount,
         'payment_identifier': secret_request_event.payment_identifier,
