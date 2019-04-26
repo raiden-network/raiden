@@ -20,7 +20,15 @@ from raiden.exceptions import (
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.utils import pex, safe_gas_limit, sha3
-from raiden.utils.typing import BlockNumber, BlockSpecification, Optional, Secret, SecretHash
+from raiden.utils.typing import (
+    BlockNumber,
+    BlockSpecification,
+    Dict,
+    Optional,
+    Secret,
+    SecretHash,
+    Union,
+)
 from raiden_contracts.constants import CONTRACT_SECRET_REGISTRY, EVENT_SECRET_REVEALED
 from raiden_contracts.contract_manager import ContractManager
 
@@ -62,7 +70,7 @@ class SecretRegistry:
         # The dictionary of open transactions is used to avoid sending a
         # transaction for the same secret more than once. This requires
         # synchronization for the local threads.
-        self.open_secret_transactions = dict()
+        self.open_secret_transactions: Dict[Secret, AsyncResult] = dict()
         self._open_secret_transactions_lock = Semaphore()
 
     def register_secret(self, secret: Secret, given_block_identifier: BlockSpecification):
@@ -188,6 +196,7 @@ class SecretRegistry:
             receipt['status'] == RECEIPT_FAILURE_CODE
         )
 
+        exception: Union[RaidenRecoverableError, RaidenUnrecoverableError]
         if unrecoverable_error:
             # If the transaction was sent it must not fail. If this happened
             # some of our assumptions is broken therefore the error is
