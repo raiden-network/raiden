@@ -64,12 +64,12 @@ def test_setup_network_id_known(netid):
 def test_setup_environment():
     # Test that setting development works
     config = deepcopy(App.DEFAULT_CONFIG)
-    assert Environment.DEVELOPMENT == setup_environment(config, Environment.DEVELOPMENT)
+    setup_environment(config, Environment.DEVELOPMENT)
     assert config['environment_type'] == Environment.DEVELOPMENT
 
     # Test that setting production sets private rooms for Matrix
     config = deepcopy(App.DEFAULT_CONFIG)
-    assert Environment.PRODUCTION == setup_environment(config, Environment.PRODUCTION)
+    setup_environment(config, Environment.PRODUCTION)
     assert config['environment_type'] == Environment.PRODUCTION
     assert config['transport']['matrix']['private_rooms'] is True
 

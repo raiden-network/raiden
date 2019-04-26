@@ -201,7 +201,7 @@ def run_app(
     web3 = _setup_web3(eth_rpc_endpoint)
     node_network_id, known_node_network_id = setup_network_id_or_exit(config, network_id, web3)
 
-    environment_type = setup_environment(config, environment_type)
+    setup_environment(config, environment_type)
 
     contracts, contract_addresses_known = setup_contracts_or_exit(config, node_network_id)
 
