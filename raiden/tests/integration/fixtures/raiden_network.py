@@ -1,3 +1,5 @@
+import os
+
 import gevent
 import pytest
 
@@ -14,6 +16,8 @@ from raiden.tests.utils.network import (
     wait_for_token_networks,
 )
 from raiden.tests.utils.tests import shutdown_apps_and_cleanup_tasks
+
+_ETH_LOGDIR = os.environ.get('RAIDEN_TESTS_ETH_LOGSDIR')
 
 
 def timeout(blockchain_type: str):
@@ -49,6 +53,7 @@ def raiden_chain(
         contracts_path,
         user_deposit_address,
         tmpdir,
+        request,
 ):
 
     if len(token_addresses) != 1:
@@ -58,6 +63,11 @@ def raiden_chain(
         'deployed_network uses create_sequential_network that can only work '
         'with 0, 1 or 2 channels'
     )
+
+    if _ETH_LOGDIR:
+        base_datadir = os.path.join(_ETH_LOGDIR, request.node.name, 'raiden_nodes')
+    else:
+        base_datadir = os.path.join(tmpdir.strpath, 'raiden_nodes')
 
     service_registry_address = None
     if blockchain_services.service_registry:
@@ -73,7 +83,7 @@ def raiden_chain(
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
-        database_basedir=tmpdir.strpath,
+        database_basedir=base_datadir,
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,
         throttle_capacity=throttle_capacity,
@@ -162,10 +172,16 @@ def raiden_network(
         contracts_path,
         user_deposit_address,
         tmpdir,
+        request,
 ):
     service_registry_address = None
     if blockchain_services.service_registry:
         service_registry_address = blockchain_services.service_registry.address
+
+    if _ETH_LOGDIR:
+        base_datadir = os.path.join(_ETH_LOGDIR, request.node.name, 'raiden_nodes')
+    else:
+        base_datadir = os.path.join(tmpdir.strpath, 'raiden_nodes')
 
     raiden_apps = create_apps(
         chain_id=chain_id,
@@ -179,7 +195,7 @@ def raiden_network(
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
         settle_timeout=settle_timeout,
-        database_basedir=tmpdir.strpath,
+        database_basedir=base_datadir,
         retry_interval=retry_interval,
         retries_before_backoff=retries_before_backoff,
         throttle_capacity=throttle_capacity,

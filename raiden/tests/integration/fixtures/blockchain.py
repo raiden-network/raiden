@@ -88,7 +88,7 @@ def web3(
     base_datadir = str(tmpdir)
 
     if _ETH_LOGDIR:
-        base_logdir = os.path.join(_ETH_LOGDIR, blockchain_type, request.node.name)
+        base_logdir = os.path.join(_ETH_LOGDIR, request.node.name, blockchain_type)
     else:
         base_logdir = os.path.join(base_datadir, 'logs')
 
