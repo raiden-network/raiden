@@ -1852,7 +1852,7 @@ class UpdatePFS(SignedMessage):
         self.reveal_timeout = reveal_timeout
         self.mediation_fee = mediation_fee
         if signature is None:
-            self.signature = b''
+            self.signature = Signature(b'')
         else:
             self.signature = signature
 
