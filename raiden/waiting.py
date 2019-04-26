@@ -19,7 +19,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def wait_for_block(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         block_number: typing.BlockNumber,
         retry_timeout: float,
 ) -> None:
@@ -28,7 +28,7 @@ def wait_for_block(
 
 
 def wait_for_newchannel(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
@@ -57,7 +57,7 @@ def wait_for_newchannel(
 
 
 def wait_for_participant_newbalance(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
@@ -95,7 +95,7 @@ def wait_for_participant_newbalance(
 
 
 def wait_for_payment_balance(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         partner_address: typing.Address,
@@ -140,7 +140,7 @@ def wait_for_payment_balance(
 
 
 def wait_for_channel_in_states(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         channel_ids: typing.List[typing.ChannelID],
@@ -200,7 +200,7 @@ def wait_for_channel_in_states(
 
 
 def wait_for_close(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         channel_ids: typing.List[typing.ChannelID],
@@ -222,7 +222,7 @@ def wait_for_close(
 
 
 def wait_for_payment_network(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         retry_timeout: float,
@@ -242,7 +242,7 @@ def wait_for_payment_network(
 
 
 def wait_for_settle(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         payment_network_id: typing.PaymentNetworkID,
         token_address: typing.TokenAddress,
         channel_ids: typing.List[typing.ChannelID],
@@ -264,7 +264,7 @@ def wait_for_settle(
 
 
 def wait_for_settle_all_channels(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         retry_timeout: float,
 ) -> None:
     """Wait until all channels are settled.
@@ -293,7 +293,7 @@ def wait_for_settle_all_channels(
 
 
 def wait_for_healthy(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         node_address: typing.Address,
         retry_timeout: float,
 ) -> None:
@@ -314,7 +314,7 @@ def wait_for_healthy(
 
 
 def wait_for_transfer_success(
-        raiden: RaidenService,
+        raiden: 'RaidenService',
         payment_identifier: typing.PaymentID,
         amount: typing.PaymentAmount,
         retry_timeout: float,
