@@ -79,4 +79,6 @@ def matrix_transports(
         transport.stop()
 
     for transport in transports:
-        transport.get()
+        # Calling `get()` on a never started Greenlet will block forever
+        if transport._started:
+            transport.get()

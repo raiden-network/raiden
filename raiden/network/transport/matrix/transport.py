@@ -310,6 +310,8 @@ class MatrixTransport(Runnable):
         self._global_rooms: Dict[str, Optional[Room]] = dict()
         self._global_send_queue: JoinableQueue[Tuple[str, Message]] = JoinableQueue()
 
+        self._started = False
+
         self._stop_event = Event()
         self._stop_event.set()
 
@@ -337,9 +339,9 @@ class MatrixTransport(Runnable):
         if self._raiden_service is not None:
             node = f" node:{pex(self._raiden_service.address)}"
         else:
-            node = f""
+            node = ""
 
-        return f"<{self.__class__.__name__}{node}>"
+        return f"<{self.__class__.__name__}{node} id:{id(self)}>"
 
     def start(  # type: ignore
         self, raiden_service: RaidenService, message_handler: MessageHandler, prev_auth_data: str
@@ -399,6 +401,7 @@ class MatrixTransport(Runnable):
 
         self.log.debug("Matrix started", config=self._config)
         super().start()  # start greenlet
+        self._started = True
 
     def _run(self):
         """ Runnable main method, perform wait on long-running subtasks """
@@ -609,7 +612,7 @@ class MatrixTransport(Runnable):
                 room_aliases.add(room.canonical_alias)
             room_alias_is_global = any(
                 global_alias in room_alias
-                for global_alias in self._global_rooms
+                for global_alias in self._config["global_rooms"]
                 for room_alias in room_aliases
             )
             if room_alias_is_global:
@@ -900,7 +903,16 @@ class MatrixTransport(Runnable):
         # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
         if room_ids:  # if we know any room for this user, use the first one
-            return self._client.rooms[room_ids[0]]
+            # This loop is used to ignore any global rooms that may have 'polluted' the
+            # user's room cache due to bug #3765
+            # Can be removed after the next upgrade that switches to a new TokenNetworkRegistry
+            while room_ids:
+                room_id = room_ids.pop(0)
+                room = self._client.rooms[room_id]
+                if not self._is_room_global(room):
+                    self.log.warning("Existing room", room=room, members=room.get_joined_members())
+                    return room
+                self.log.warning("Ignoring global room for peer", room=room, peer=address_hex)
 
         assert self._raiden_service is not None
         address_pair = sorted(
@@ -909,12 +921,12 @@ class MatrixTransport(Runnable):
         room_name = make_room_alias(self.network_id, *address_pair)
 
         # no room with expected name => create one and invite peer
-        candidates = [
+        peer_candidates = [
             self._get_user(user) for user in self._client.search_user_directory(address_hex)
         ]
 
-        # filter candidates
-        peers = [user for user in candidates if validate_userid_signature(user) == address]
+        # filter peer_candidates
+        peers = [user for user in peer_candidates if validate_userid_signature(user) == address]
         if not peers and not allow_missing_peers:
             self.log.error("No valid peer found", peer_address=address_hex)
             return None
@@ -962,6 +974,13 @@ class MatrixTransport(Runnable):
 
         self.log.debug("Channel room", peer_address=to_normalized_address(address), room=room)
         return room
+
+    def _is_room_global(self, room):
+        return any(
+            suffix in room_alias
+            for suffix in self._config["global_rooms"]
+            for room_alias in room.aliases
+        )
 
     def _get_private_room(self, invitees: List[User]):
         """ Create an anonymous, private room and invite peers """
