@@ -174,8 +174,11 @@ class _RetryQueue(Runnable):
         After composing the to-be-sent message, also message queue from messages that are not
         present in the respective SendMessageEvent queue anymore
         """
-        if self.transport._stop_event.ready() or not self.transport.greenlet:
-            self.log.error("Can't retry - stopped")
+        if not self.transport.greenlet:
+            self.log.warning("Can't retry", reason="Transport not yet started")
+            return
+        if self.transport._stop_event.ready():
+            self.log.warning("Can't retry", reason="Transport stopped")
             return
 
         if self.transport._prioritize_global_messages:
@@ -242,6 +245,8 @@ class _RetryQueue(Runnable):
             self.transport._send_raw(self.receiver, "\n".join(message_texts))
 
     def _run(self):
+        msg = f"_RetryQueue started before transport._raiden_service is set"
+        assert self.transport._raiden_service is not None, msg
         self.greenlet.name = (
             f"RetryQueue "
             f"node:{pex(self.transport._raiden_service.address)} "
@@ -538,6 +543,11 @@ class MatrixTransport(Runnable):
 
     def _global_send_worker(self):
         def _send_global(room_name, serialized_message):
+            if not any(suffix in room_name for suffix in self._config["global_rooms"]):
+                raise RuntimeError(
+                    f'Send global called on non-global room "{room_name}". '
+                    f'Known global rooms: {self._config["global_rooms"]}.'
+                )
             room_name = make_room_alias(self.network_id, room_name)
             if room_name not in self._global_rooms:
                 room = join_global_room(
@@ -605,7 +615,7 @@ class MatrixTransport(Runnable):
             if room_alias_is_global:
                 continue
             # we add listener for all valid rooms, _handle_message should ignore them
-            # if msg sender weren't start_health_check'ed yet
+            # if msg sender isn't whitelisted yet
             if not room.listeners:
                 room.add_listener(self._handle_message, "m.room.message")
             self.log.debug(
@@ -735,7 +745,7 @@ class MatrixTransport(Runnable):
 
         # don't proceed if user isn't whitelisted (yet)
         if not self._address_mgr.is_address_known(peer_address):
-            # user not start_health_check'ed
+            # user not whitelisted
             self.log.debug(
                 "Message from non-whitelisted peer - ignoring",
                 sender=user,
@@ -767,6 +777,9 @@ class MatrixTransport(Runnable):
         # TODO: With the condition in the TODO above restored this one won't have an effect, check
         #       if it can be removed after the above is solved
         if not room_ids or room.room_id != room_ids[0]:
+            if self._is_room_global(room):
+                # This must not happen. Nodes must not listen on global rooms.
+                raise RuntimeError(f"Received message in global room {room.aliases}.")
             self.log.debug(
                 "Received message triggered new comms room for peer",
                 peer_user=user.user_id,
