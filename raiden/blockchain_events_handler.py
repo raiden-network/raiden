@@ -22,6 +22,10 @@ from raiden.transfer.state_change import (
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
 )
+from raiden.transfer.utils import (
+    get_event_with_balance_proof_by_locksroot,
+    get_state_change_with_balance_proof_by_locksroot,
+)
 from raiden.utils import CanonicalIdentifier, pex, typing
 from raiden_contracts.constants import (
     EVENT_SECRET_REVEALED,
@@ -355,38 +359,67 @@ def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
     transaction_hash = data['transaction_hash']
     participant1 = args['participant']
     participant2 = args['partner']
+    locksroot = args['locksroot']
 
     chain_state = views.state_from_raiden(raiden)
     token_network_state = views.get_token_network_by_identifier(
         chain_state,
         token_network_identifier,
     )
-    netting_channel_state = None
     assert token_network_state is not None
-    for channel_state in list(token_network_state.channelidentifiers_to_channels.values()):
-        are_addresses_valid1 = (
-            channel_state.our_state.address == participant1 and
-            channel_state.partner_state.address == participant2
-        )
-        are_addresses_valid2 = (
-            channel_state.our_state.address == participant2 and
-            channel_state.partner_state.address == participant1
-        )
-        is_valid_locksroot = True
-        is_valid_channel = (
-            (are_addresses_valid1 or are_addresses_valid2) and
-            is_valid_locksroot
-        )
 
-        if is_valid_channel:
-            netting_channel_state = channel_state
+    if participant1 == raiden.address:
+        partner = participant2
+    elif participant2 == raiden.address:
+        partner = participant1
+    else:
+        log.debug(
+            "Discarding unlock event, we're not part of it",
+            participant1=pex(participant1),
+            participant2=pex(participant2),
+        )
+        return
+
+    channel_identifiers = token_network_state.partneraddresses_to_channelidentifiers[partner]
+    canonical_identifier = None
+
+    for channel_identifier in channel_identifiers:
+        state_change_record = get_state_change_with_balance_proof_by_locksroot(
+            storage=raiden.wal.storage,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=raiden.chain.network_id,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
+            locksroot=locksroot,
+            sender=partner,
+        )
+        if state_change_record.state_change_identifier:
+            canonical_identifier = state_change_record.data.balance_proof.canonical_identifier
+            break
+        event_record = get_event_with_balance_proof_by_locksroot(
+            storage=raiden.wal.storage,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=raiden.chain.network_id,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
+            locksroot=locksroot,
+            recipient=partner,
+        )
+        if event_record.event_identifier:
+            canonical_identifier = event_record.data.balance_proof.canonical_identifier
             break
 
-    if netting_channel_state is None:
-        return
+    msg = (
+        f'Can not resolve channel_id for unlock with locksroot {pex(locksroot)} and '
+        f'partner {pex(partner)}.'
+    )
+    assert canonical_identifier is not None, msg
+
     unlock_state_change = ContractReceiveChannelBatchUnlock(
         transaction_hash=transaction_hash,
-        canonical_identifier=netting_channel_state.canonical_identifier,
+        canonical_identifier=canonical_identifier,
         participant=args['participant'],
         partner=args['partner'],
         locksroot=args['locksroot'],
