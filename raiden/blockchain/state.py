@@ -8,6 +8,7 @@ from raiden.utils import CanonicalIdentifier
 from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
+    Optional,
     PaymentNetworkID,
     TokenAddress,
     TokenNetworkAddress,
@@ -51,14 +52,13 @@ def get_channel_state(
         TransactionExecutionStatus.SUCCESS,
     )
 
+    close_transaction: Optional[TransactionExecutionStatus] = None
     if closed_block_number:
         close_transaction = TransactionExecutionStatus(
             None,
             closed_block_number,
             TransactionExecutionStatus.SUCCESS,
         )
-    else:
-        close_transaction = None
 
     # For the current implementation the channel is a smart contract that
     # will be killed on settle.
