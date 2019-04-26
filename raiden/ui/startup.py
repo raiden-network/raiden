@@ -79,18 +79,16 @@ def setup_network_id_or_exit(
     return given_network_id, known_node_network_id
 
 
-def setup_environment(config: Dict[str, Any], environment_type: Environment) -> Environment:
+def setup_environment(config: Dict[str, Any], environment_type: Environment) -> None:
     """Sets the config depending on the environment type"""
     # interpret the provided string argument
     if environment_type == Environment.PRODUCTION:
         # Safe configuration: restrictions for mainnet apply and matrix rooms have to be private
-        config['environment_type'] = Environment.PRODUCTION
         config['transport']['matrix']['private_rooms'] = True
-    else:
-        config['environment_type'] = Environment.DEVELOPMENT
+
+    config['environment_type'] = environment_type
 
     print(f'Raiden is running in {environment_type.value.lower()} mode')
-    return environment_type
 
 
 def setup_contracts_or_exit(
