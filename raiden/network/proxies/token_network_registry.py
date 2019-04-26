@@ -180,7 +180,6 @@ class TokenNetworkRegistry:
 
         transaction_executed = gas_limit is not None
         if not transaction_executed or receipt_or_none:
-            error_type = RaidenUnrecoverableError
             if transaction_executed:
                 block = receipt_or_none['blockNumber']
             else:
@@ -194,17 +193,14 @@ class TokenNetworkRegistry:
                 block_identifier=block,
             )
 
-            msg = ''
             if self.get_token_network(token_address, block):
-                msg = 'Token already registered'
-                error_type = RaidenRecoverableError
-
-            error_msg = f'{error_prefix}. {msg}'
-            if error_type == RaidenRecoverableError:
+                error_msg = f'{error_prefix}. Token already registered'
                 log.warning(error_msg, **log_details)
-            else:
-                log.critical(error_msg, **log_details)
-            raise error_type(error_msg)
+                raise RaidenRecoverableError(error_msg)
+
+            error_msg = f'{error_prefix}'
+            log.critical(error_msg, **log_details)
+            raise RaidenUnrecoverableError(error_msg)
 
         token_network_address = self.get_token_network(token_address, 'latest')
         if token_network_address is None:
