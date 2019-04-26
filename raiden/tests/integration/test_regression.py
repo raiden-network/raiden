@@ -8,15 +8,45 @@ from raiden.messages import Lock, LockedTransfer, RevealSecret, Unlock
 from raiden.tests.fixtures.variables import TransportProtocol
 from raiden.tests.integration.fixtures.raiden_network import CHAIN, wait_for_channels
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
 from raiden.tests.utils.network import payment_channel_open_and_deposit
-from raiden.tests.utils.transfer import get_channelstate
+from raiden.tests.utils.transfer import get_channelstate, transfer
 from raiden.transfer import views
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
+from raiden.transfer.mediated_transfer.state_change import ReceiveTransferRefundCancelRoute
 from raiden.utils import sha3
 
 # pylint: disable=too-many-locals
+
+
+def open_and_wait_for_channels(
+        app_channels,
+        registry_address,
+        token,
+        deposit,
+        settle_timeout,
+):
+    greenlets = []
+    for first_app, second_app in app_channels:
+        greenlets.append(
+            gevent.spawn(
+                payment_channel_open_and_deposit,
+                first_app,
+                second_app,
+                token,
+                deposit,
+                settle_timeout,
+            ),
+        )
+    gevent.wait(greenlets)
+
+    wait_for_channels(
+        app_channels,
+        registry_address,
+        [token],
+        deposit,
+    )
 
 
 @pytest.mark.parametrize('number_of_nodes', [5])
@@ -66,38 +96,20 @@ def run_test_regression_unfiltered_routes(
         (app2, app4),
     ]
 
-    greenlets = []
-    for first_app, second_app in app_channels:
-        greenlets.append(gevent.spawn(
-            payment_channel_open_and_deposit,
-            first_app,
-            second_app,
-            token,
-            deposit,
-            settle_timeout,
-        ))
-    gevent.wait(greenlets)
-
-    wait_for_channels(
+    open_and_wait_for_channels(
         app_channels,
         registry_address,
-        [token],
-        deposit,
-    )
-
-    payment_network_identifier = app0.raiden.default_registry.address
-    token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        payment_network_identifier,
         token,
+        deposit,
+        settle_timeout,
     )
-    payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier=token_network_identifier,
+    transfer(
+        initiator_app=app0,
+        target_app=app4,
+        token_address=token,
         amount=1,
-        target=app4.raiden.address,
         identifier=1,
     )
-    assert payment_status.payment_done.wait()
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -314,3 +326,76 @@ def run_test_regression_register_secret_once(secret_registry_address, deploy_ser
     previous_nonce = deploy_service.client._available_nonce
     secret_registry.register_secret_batch(secrets=[secret], given_block_identifier='latest')
     assert previous_nonce == deploy_service.client._available_nonce
+
+
+@pytest.mark.parametrize('number_of_nodes', [5])
+def test_regression_payment_complete_after_refund_to_the_initiator(
+        raiden_network,
+        token_addresses,
+        settle_timeout,
+        deposit,
+):
+    raise_on_failure(
+        raiden_network,
+        run_test_regression_unfiltered_routes,
+        raiden_network=raiden_network,
+        token_addresses=token_addresses,
+        settle_timeout=settle_timeout,
+        deposit=deposit,
+    )
+
+
+def run_regression_payment_complete_after_refund_to_the_initiator(
+        raiden_network,
+        token_addresses,
+        settle_timeout,
+        deposit,
+):
+    app0, app1, app2, app3, app4 = raiden_network
+    token = token_addresses[0]
+    registry_address = app0.raiden.default_registry.address
+
+    # Topology:
+    #
+    #  0 -> 1 -> 2
+    #  v         ^
+    #  3 ------> 4
+    app_channels = [
+        (app0, app1),
+        (app1, app2),
+        (app0, app3),
+        (app3, app4),
+        (app4, app2),
+    ]
+
+    open_and_wait_for_channels(
+        app_channels,
+        registry_address,
+        token,
+        deposit,
+        settle_timeout,
+    )
+
+    # Use all deposit from app1->app2 to force a refund
+    transfer(
+        initiator_app=app1,
+        target_app=app2,
+        token_address=token,
+        amount=deposit,
+        identifier=1,
+    )
+
+    # Send a refund that will refund the initiator
+    transfer(
+        initiator_app=app0,
+        target_app=app2,
+        token_address=token,
+        amount=deposit,
+        identifier=1,
+    )
+
+    assert raiden_state_changes_search_for_item(
+        raiden=app0,
+        item_type=ReceiveTransferRefundCancelRoute,
+        attributes={},
+    )
