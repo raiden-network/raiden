@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import TYPE_CHECKING, List, cast
 
 import gevent
 import structlog
@@ -12,8 +12,8 @@ from raiden.transfer.state import (
 )
 from raiden.utils import CanonicalIdentifier, typing
 
-# type alias to avoid both circular dependencies and flake8 errors
-RaidenService = 'RaidenService'
+if TYPE_CHECKING:
+    from raiden.raiden_service import RaidenService
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
