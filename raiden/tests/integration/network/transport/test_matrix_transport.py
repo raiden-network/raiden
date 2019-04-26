@@ -121,7 +121,7 @@ def ping_pong_message_success(transport0, transport1):
     message = Processed(message_identifier=number_of_received_messages0)
     transport0._raiden_service.sign(message)
     transport0.send_async(queueid1, message)
-    with Timeout(20):
+    with Timeout(30):
         all_messages_received = False
         while not all_messages_received:
             all_messages_received = (
@@ -133,7 +133,7 @@ def ping_pong_message_success(transport0, transport1):
     transport1._raiden_service.sign(message)
     transport1.send_async(queueid0, message)
 
-    with Timeout(20):
+    with Timeout(30):
         all_messages_received = False
         while not all_messages_received:
             all_messages_received = (
