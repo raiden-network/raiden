@@ -24,6 +24,7 @@ from raiden.utils.typing import (
     List,
     NamedTuple,
     Optional,
+    PaymentAmount,
     TargetAddress,
     TokenAmount,
     TokenNetworkAddress,
@@ -366,7 +367,7 @@ def query_paths(
         token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
         route_from: InitiatorAddress,
         route_to: TargetAddress,
-        value: TokenAmount,
+        value: PaymentAmount,
 ) -> List[Dict[str, Any]]:
     """ Query paths from the PFS.
 
