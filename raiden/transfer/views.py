@@ -439,7 +439,7 @@ def get_channelstate_settled(
 
 
 def role_from_transfer_task(transfer_task: TransferTask) -> str:
-    """Return the role for the transfer. Throws an exception on error"""
+    """Return the role and type for the transfer. Throws an exception on error"""
     if isinstance(transfer_task, InitiatorTask):
         return 'initiator'
     if isinstance(transfer_task, MediatorTask):
@@ -474,7 +474,8 @@ def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Option
     task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
     if not task:
         return None
-    return role_from_transfer_task(task)
+    role, _ = role_from_transfer_task(task)
+    return role
 
 
 def get_transfer_secret(chain_state: ChainState, secrethash: SecretHash) -> Optional[Secret]:
