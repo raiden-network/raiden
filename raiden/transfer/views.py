@@ -474,8 +474,7 @@ def get_transfer_role(chain_state: ChainState, secrethash: SecretHash) -> Option
     task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
     if not task:
         return None
-    role, _ = role_from_transfer_task(task)
-    return role
+    return role_from_transfer_task(task)
 
 
 def get_transfer_secret(chain_state: ChainState, secrethash: SecretHash) -> Optional[Secret]:
