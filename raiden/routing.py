@@ -14,6 +14,7 @@ from raiden.utils.typing import (
     Address,
     ChannelID,
     InitiatorAddress,
+    NamedTuple,
     Optional,
     PaymentAmount,
     TargetAddress,
@@ -69,6 +70,13 @@ def get_best_routes(
     )
 
 
+class Neighbour(NamedTuple):
+    length: int
+    nonrefundable: bool
+    partner_address: Address
+    channelid: ChannelID
+
+
 def get_best_routes_internal(
         chain_state: ChainState,
         token_network_id: TokenNetworkID,
@@ -96,7 +104,7 @@ def get_best_routes_internal(
     if not token_network:
         return list()
 
-    neighbors_heap: List[Tuple[int, bool, Address, ChannelID]] = list()
+    neighbors_heap: List[Neighbour] = list()
     try:
         all_neighbors = networkx.all_neighbors(token_network.network_graph.network, from_address)
     except networkx.NetworkXError:
@@ -138,10 +146,13 @@ def get_best_routes_internal(
                 partner_address,
                 to_address,
             )
-            heappush(
-                neighbors_heap,
-                (length, nonrefundable, partner_address, channel_state.identifier),
+            neighbour = Neighbour(
+                length=length,
+                nonrefundable=nonrefundable,
+                partner_address=partner_address,
+                channelid=channel_state.identifier,
             )
+            heappush(neighbors_heap, neighbour)
         except (networkx.NetworkXNoPath, networkx.NodeNotFound):
             pass
 
@@ -154,8 +165,11 @@ def get_best_routes_internal(
         return list()
 
     while neighbors_heap:
-        *_, partner_address, channel_state_id = heappop(neighbors_heap)
-        route_state = RouteState(partner_address, channel_state_id)
+        neighbour = heappop(neighbors_heap)
+        route_state = RouteState(
+            node_address=neighbour.partner_address,
+            channel_identifier=neighbour.channelid,
+        )
         available_routes.append(route_state)
     return available_routes
 
