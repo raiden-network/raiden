@@ -3,7 +3,6 @@ import random
 import sys
 from datetime import datetime
 from enum import IntEnum, unique
-from typing import Optional, Tuple
 
 import click
 import requests
@@ -11,12 +10,27 @@ import structlog
 from eth_utils import to_checksum_address, to_hex
 from web3 import Web3
 
-from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, RoutingMode
+from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.proxies.service_registry import ServiceRegistry
-from raiden.utils import typing
 from raiden.utils.signer import LocalSigner
-from raiden.utils.typing import BlockSpecification
+from raiden.utils.typing import (
+    Address,
+    Any,
+    BlockNumber,
+    BlockSpecification,
+    Dict,
+    InitiatorAddress,
+    List,
+    NamedTuple,
+    Optional,
+    TargetAddress,
+    TokenAmount,
+    TokenNetworkAddress,
+    TokenNetworkID,
+    Tuple,
+    Union,
+)
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
 
 log = structlog.get_logger(__name__)
@@ -52,7 +66,7 @@ class PFSError(IntEnum):
 MAX_PATHS_QUERY_ATTEMPTS = 2
 
 
-def get_pfs_info(url: str) -> typing.Optional[typing.Dict]:
+def get_pfs_info(url: str) -> Optional[Dict]:
     try:
         response = requests.get(
             f'{url}/api/v1/info',
@@ -91,14 +105,14 @@ def get_random_service(
     return url, address
 
 
-class PFSConfiguration(typing.NamedTuple):
+class PFSConfiguration(NamedTuple):
     url: str
     eth_address: str
     fee: int
 
 
 def configure_pfs_message(
-        info: typing.Dict[str, typing.Any],
+        info: Dict[str, Any],
         url: str,
         eth_address: str,
 ) -> str:
@@ -114,7 +128,7 @@ def configure_pfs_message(
     )
 
 
-def configure_pfs(
+def configure_pfs_or_exit(
         pfs_address: Optional[str],
         pfs_eth_address: Optional[str],
         routing_mode: RoutingMode,
@@ -153,6 +167,7 @@ def configure_pfs(
             )
             sys.exit(1)
 
+    assert pfs_eth_address, "At this point pfs_eth_address can't be none"
     pathfinding_service_info = get_pfs_info(pfs_address)
     if not pathfinding_service_info:
         click.secho(
@@ -161,7 +176,12 @@ def configure_pfs(
         )
         sys.exit(1)
     else:
-        click.secho(configure_pfs_message(pathfinding_service_info, pfs_address, pfs_eth_address))
+        msg = configure_pfs_message(
+            info=pathfinding_service_info,
+            url=pfs_address,
+            eth_address=pfs_eth_address,
+        )
+        click.secho(msg)
         log.info('Using PFS', pfs_info=pathfinding_service_info)
 
     return PFSConfiguration(
@@ -173,11 +193,11 @@ def configure_pfs(
 
 def get_last_iou(
         url: str,
-        token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
-        sender: typing.Address,
-        receiver: typing.Address,
+        token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+        sender: Address,
+        receiver: Address,
         privkey: bytes,
-) -> typing.Optional[typing.Dict]:
+) -> Optional[Dict]:
 
     timestamp = datetime.utcnow().isoformat(timespec='seconds')
     signature_data = (
@@ -201,12 +221,12 @@ def get_last_iou(
 
 
 def make_iou(
-        config: typing.Dict[str, typing.Any],
-        our_address: typing.Address,
+        config: Dict[str, Any],
+        our_address: Address,
         privkey: bytes,
-        block_number: typing.BlockNumber,
-        offered_fee: typing.TokenAmount = None,
-) -> typing.Dict:
+        block_number: BlockNumber,
+        offered_fee: TokenAmount = None,
+) -> Dict:
     expiration = block_number + config['pathfinding_iou_timeout']
 
     iou = dict(
@@ -226,11 +246,11 @@ def make_iou(
 
 
 def update_iou(
-        iou: typing.Dict[str, typing.Any],
+        iou: Dict[str, Any],
         privkey: bytes,
-        added_amount: typing.TokenAmount = 0,
-        expiration_block: typing.Optional[typing.BlockNumber] = None,
-) -> typing.Dict[str, typing.Any]:
+        added_amount: TokenAmount = ZERO_TOKENS,
+        expiration_block: Optional[BlockNumber] = None,
+) -> Dict[str, Any]:
 
     expected_signature = to_hex(sign_one_to_n_iou(
         privatekey=to_hex(privkey),
@@ -260,14 +280,14 @@ def update_iou(
 
 
 def create_current_iou(
-        config: typing.Dict[str, typing.Any],
-        token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
-        our_address: typing.Address,
+        config: Dict[str, Any],
+        token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+        our_address: Address,
         privkey: bytes,
-        block_number: typing.BlockNumber,
-        offered_fee: int = None,
+        block_number: BlockNumber,
+        offered_fee: TokenAmount = None,
         scrap_existing_iou: bool = False,
-) -> typing.Dict[str, typing.Any]:
+) -> Dict[str, Any]:
 
     url = config['pathfinding_service_address']
 
@@ -339,15 +359,15 @@ def post_pfs_paths(url, token_network_address, payload):
 
 
 def query_paths(
-        service_config: typing.Dict[str, typing.Any],
-        our_address: typing.Address,
+        service_config: Dict[str, Any],
+        our_address: Address,
         privkey: bytes,
-        current_block_number: typing.BlockNumber,
-        token_network_address: typing.Union[typing.TokenNetworkAddress, typing.TokenNetworkID],
-        route_from: typing.InitiatorAddress,
-        route_to: typing.TargetAddress,
-        value: typing.TokenAmount,
-) -> typing.List[typing.Dict[str, typing.Any]]:
+        current_block_number: BlockNumber,
+        token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+        route_from: InitiatorAddress,
+        route_to: TargetAddress,
+        value: TokenAmount,
+) -> List[Dict[str, Any]]:
     """ Query paths from the PFS.
 
     Send a request to the /paths endpoint of the PFS specified in service_config, and
