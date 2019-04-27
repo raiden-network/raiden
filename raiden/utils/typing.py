@@ -8,7 +8,11 @@ if TYPE_CHECKING:
         NettingChannelState,
         UnlockPartialProofState,
     )
-    from raiden.transfer.mediated_transfer.state import InitiatorTransferState  # noqa: F401
+    from raiden.transfer.mediated_transfer.state import (  # noqa: F401
+        InitiatorTransferState,
+        LockedTransferSignedState,
+        LockedTransferUnsignedState,
+    )
     from raiden.messages import SignedBlindedBalanceProof  # noqa: F401
     from raiden.messages import RequestMonitoring  # noqa: F401
     from raiden.exceptions import RaidenUnrecoverableError, RaidenRecoverableError  # noqa: F401
@@ -171,3 +175,4 @@ HostPort = Tuple[Host, Optional[Port]]
 
 LockType = Union['HashTimeLockState', 'UnlockPartialProofState']
 ErrorType = Union[Type['RaidenRecoverableError'], Type['RaidenUnrecoverableError']]
+LockedTransferType = Union['LockedTransferUnsignedState', 'LockedTransferSignedState']
