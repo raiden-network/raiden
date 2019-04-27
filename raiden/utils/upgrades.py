@@ -15,7 +15,7 @@ from raiden.storage.migrations.v19_to_v20 import upgrade_v19_to_v20
 from raiden.storage.migrations.v20_to_v21 import upgrade_v20_to_v21
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.storage.versions import VERSION_RE, filter_db_names, latest_db_file
-from raiden.utils.typing import Callable, List, NamedTuple, Optional
+from raiden.utils.typing import Callable, List, NamedTuple
 
 
 class UpgradeRecord(NamedTuple):

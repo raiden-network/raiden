@@ -24,7 +24,7 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from raiden.raiden_service import RaidenService
+    from raiden.raiden_service import RaidenService  # pylint: disable=unused-import
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
