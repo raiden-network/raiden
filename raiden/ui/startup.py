@@ -9,7 +9,7 @@ from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.pathfinding import configure_pfs
+from raiden.network.pathfinding import configure_pfs_or_exit
 from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
@@ -296,7 +296,7 @@ def setup_proxies_or_exit(
             )
             sys.exit(1)
 
-        pfs_config = configure_pfs(
+        pfs_config = configure_pfs_or_exit(
             pfs_address=pathfinding_service_address,
             pfs_eth_address=pathfinding_eth_address,
             routing_mode=routing_mode,

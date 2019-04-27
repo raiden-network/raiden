@@ -5,7 +5,7 @@ import requests
 from eth_utils import is_checksum_address, to_checksum_address
 
 from raiden.constants import RoutingMode
-from raiden.network.pathfinding import configure_pfs, get_random_service
+from raiden.network.pathfinding import configure_pfs_or_exit, get_random_service
 from raiden.tests.utils.factories import HOP1
 from raiden.tests.utils.smartcontracts import deploy_service_registry_and_set_urls
 from raiden.utils import privatekey_to_address
@@ -74,7 +74,7 @@ def test_configure_pfs(
     response.json = Mock(return_value=json_data)
 
     # With basic routing configure pfs should return None
-    config = configure_pfs(
+    config = configure_pfs_or_exit(
         pfs_address=None,
         pfs_eth_address=None,
         routing_mode=RoutingMode.BASIC,
@@ -84,7 +84,7 @@ def test_configure_pfs(
 
     # Asking for auto address
     with patch.object(requests, 'get', return_value=response):
-        config = configure_pfs(
+        config = configure_pfs_or_exit(
             pfs_address='auto',
             pfs_eth_address=None,
             routing_mode=RoutingMode.PFS,
@@ -97,7 +97,7 @@ def test_configure_pfs(
     given_address = 'http://ourgivenaddress'
     given_eth_address = '0x22222222222222222222'
     with patch.object(requests, 'get', return_value=response):
-        config = configure_pfs(
+        config = configure_pfs_or_exit(
             pfs_address=given_address,
             pfs_eth_address=given_eth_address,
             routing_mode=RoutingMode.PFS,
@@ -115,7 +115,7 @@ def test_configure_pfs(
     with pytest.raises(SystemExit):
         with patch.object(requests, 'get', side_effect=requests.RequestException()):
             # Configuring a given address
-            config = configure_pfs(
+            config = configure_pfs_or_exit(
                 pfs_address=bad_address,
                 pfs_eth_address=pfs_eth_address,
                 routing_mode=RoutingMode.PFS,

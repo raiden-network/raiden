@@ -11,6 +11,7 @@ from raiden.utils.typing import (
     Locksroot,
     RaidenProtocolVersion,
     Signature,
+    TokenAmount,
 )
 
 LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
@@ -47,6 +48,7 @@ EMPTY_HASH_KECCAK = keccak(EMPTY_HASH)
 EMPTY_SIGNATURE = Signature(bytes(65))
 EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
 EMPTY_SECRET = b''
+ZERO_TOKENS = TokenAmount(0)
 
 SECRET_HASH_HEXSTRING_LENGTH = len(to_hex(EMPTY_HASH))
 SECRET_HEXSTRING_LENGTH = SECRET_HASH_HEXSTRING_LENGTH
