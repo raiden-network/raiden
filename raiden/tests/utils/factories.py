@@ -1012,7 +1012,7 @@ def create_network(
         token_network_state: TokenNetworkState,
         our_address: typing.Address,
         routes: List[RouteProperties],
-        block_number: 1,
+        block_number: typing.BlockNumber,
         block_hash: typing.BlockHash = None,
 ) -> Tuple[Any, List[NettingChannelState]]:
     """Creates a network from route properties.
