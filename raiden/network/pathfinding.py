@@ -415,3 +415,6 @@ def query_paths(
                 else:
                     raise
             log.info(f'PFS rejected our IOU, reason: {error}. Attempting again.')
+
+    # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
+    return list()
