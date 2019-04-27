@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 import structlog
 from eth_utils import (
@@ -48,7 +48,6 @@ from raiden.utils.typing import (
     T_ChannelState,
     TokenAmount,
     TokenNetworkAddress,
-    Type,
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,

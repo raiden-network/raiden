@@ -19,7 +19,7 @@ from gevent.lock import Semaphore
 from hexbytes import HexBytes
 from requests.exceptions import ConnectTimeout
 from web3 import Web3
-from web3.contract import Contract, ContractFunction
+from web3.contract import ContractFunction
 from web3.eth import Eth
 from web3.gas_strategies.rpc import rpc_gas_price_strategy
 from web3.middleware import geth_poa_middleware
