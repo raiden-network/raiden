@@ -17,6 +17,7 @@ from raiden.utils.typing import (
     Address,
     BlockSpecification,
     ChannelID,
+    Optional,
     PaymentNetworkID,
     TokenNetworkAddress,
 )
@@ -50,7 +51,7 @@ def get_contract_events(
         chain: BlockChainService,
         abi: Dict,
         contract_address: Address,
-        topics: List[str],
+        topics: Optional[List[str]],
         from_block: BlockSpecification,
         to_block: BlockSpecification,
 ) -> List[Dict]:
@@ -81,18 +82,18 @@ def get_token_network_registry_events(
         chain: BlockChainService,
         token_network_registry_address: PaymentNetworkID,
         contract_manager: ContractManager,
-        events: List[str] = ALL_EVENTS,
+        events: Optional[List[str]] = ALL_EVENTS,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:
     """ Helper to get all events of the Registry contract at `registry_address`. """
     return get_contract_events(
-        chain,
-        contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
-        Address(token_network_registry_address),
-        events,
-        from_block,
-        to_block,
+        chain=chain,
+        abi=contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK_REGISTRY),
+        contract_address=Address(token_network_registry_address),
+        topics=events,
+        from_block=from_block,
+        to_block=to_block,
     )
 
 
@@ -100,7 +101,7 @@ def get_token_network_events(
         chain: BlockChainService,
         token_network_address: Address,
         contract_manager: ContractManager,
-        events: List[str] = ALL_EVENTS,
+        events: Optional[List[str]] = ALL_EVENTS,
         from_block: BlockSpecification = GENESIS_BLOCK_NUMBER,
         to_block: BlockSpecification = 'latest',
 ) -> List[Dict]:

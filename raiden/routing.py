@@ -9,19 +9,27 @@ from raiden.exceptions import ServiceRequestFailed
 from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
-from raiden.utils import pex, typing
-from raiden.utils.typing import PaymentAmount, TokenAmount
+from raiden.utils import pex
+from raiden.utils.typing import (
+    Address,
+    ChannelID,
+    InitiatorAddress,
+    Optional,
+    PaymentAmount,
+    TargetAddress,
+    TokenNetworkID,
+)
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def get_best_routes(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
-        from_address: typing.InitiatorAddress,
-        to_address: typing.TargetAddress,
+        token_network_id: TokenNetworkID,
+        from_address: InitiatorAddress,
+        to_address: TargetAddress,
         amount: PaymentAmount,
-        previous_address: typing.Optional[typing.Address],
+        previous_address: Optional[Address],
         config: Dict[str, Any],
         privkey: bytes,
 ) -> List[RouteState]:
@@ -63,11 +71,11 @@ def get_best_routes(
 
 def get_best_routes_internal(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
-        from_address: typing.InitiatorAddress,
-        to_address: typing.TargetAddress,
+        token_network_id: TokenNetworkID,
+        from_address: InitiatorAddress,
+        to_address: TargetAddress,
         amount: int,
-        previous_address: typing.Optional[typing.Address],
+        previous_address: Optional[Address],
 ) -> List[RouteState]:
     """ Returns a list of channels that can be used to make a transfer.
 
@@ -88,7 +96,7 @@ def get_best_routes_internal(
     if not token_network:
         return list()
 
-    neighbors_heap = list()
+    neighbors_heap: List[Tuple[int, bool, Address, ChannelID]] = list()
     try:
         all_neighbors = networkx.all_neighbors(token_network.network_graph.network, from_address)
     except networkx.NetworkXError:
@@ -154,11 +162,11 @@ def get_best_routes_internal(
 
 def get_best_routes_pfs(
         chain_state: ChainState,
-        token_network_id: typing.TokenNetworkID,
-        from_address: typing.InitiatorAddress,
-        to_address: typing.TargetAddress,
-        amount: TokenAmount,
-        previous_address: typing.Optional[typing.Address],
+        token_network_id: TokenNetworkID,
+        from_address: InitiatorAddress,
+        to_address: TargetAddress,
+        amount: PaymentAmount,
+        previous_address: Optional[Address],
         config: Dict[str, Any],
         privkey: bytes,
 ) -> Tuple[bool, List[RouteState]]:
