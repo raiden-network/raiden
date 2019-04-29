@@ -983,7 +983,7 @@ def test_api_payments_secret_hash_errors(
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = factories.make_secret()
+    secret = to_hex(factories.make_secret())
     bad_secret = 'Not Hex String. 0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f33'
     bad_secret_hash = 'Not Hex String. 0x78c8d676e2f2399aa2a015f3433a2083c55003591a0f3f33'
     short_secret = '0x123'
@@ -1082,7 +1082,7 @@ def test_api_payments_with_secret_no_hash(
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = factories.make_secret()
+    secret = to_hex(factories.make_secret())
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
 
@@ -1125,7 +1125,7 @@ def test_api_payments_with_hash_no_secret(
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = factories.make_secret()
+    secret = to_hex(factories.make_secret())
     secret_hash = to_hex(sha3(to_bytes(hexstr=secret)))
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
@@ -1167,7 +1167,7 @@ def test_api_payments_with_secret_and_hash(
     identifier = 42
     token_address = token_addresses[0]
     target_address = app1.raiden.address
-    secret = factories.make_secret()
+    secret = to_hex(factories.make_secret())
     secret_hash = to_hex(sha3(to_bytes(hexstr=secret)))
 
     our_address = api_server_test_instance.rest_api.raiden_api.address
