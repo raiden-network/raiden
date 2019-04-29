@@ -3,7 +3,7 @@ from typing import Optional
 from eth_utils import decode_hex
 from web3.utils.filters import Filter
 
-from raiden.constants import UINT256_MAX
+from raiden.constants import GENESIS_BLOCK_NUMBER, UINT256_MAX
 from raiden.network.proxies.token_network import ChannelDetails, TokenNetwork
 from raiden.utils.filters import decode_event, get_filter_args_for_specific_event_from_channel
 from raiden.utils.typing import (
@@ -29,16 +29,24 @@ class PaymentChannel:
             channel_identifier: ChannelID,
             contract_manager: ContractManager,
     ):
+        if channel_identifier <= 0 or channel_identifier > UINT256_MAX:
+            raise ValueError(f'channel_identifier {channel_identifier} is not a uint256')
 
-        self.contract_manager = contract_manager
-        if channel_identifier < 0 or channel_identifier > UINT256_MAX:
-            raise ValueError('channel_identifier {} is not a uint256'.format(channel_identifier))
+        # FIXME: Issue #3958
+        from_block = GENESIS_BLOCK_NUMBER
+
+        # For this check it is perfectly fine to use a `latest` block number.
+        # If the channel happened to be closed, even if the chanel is already
+        # closed/settled.
+        to_block = 'latest'
 
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,
             channel_identifier=channel_identifier,
             event_name=ChannelEvent.OPENED,
-            contract_manager=self.contract_manager,
+            contract_manager=contract_manager,
+            from_block=from_block,
+            to_block=to_block,
         )
 
         events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
@@ -46,7 +54,7 @@ class PaymentChannel:
             raise ValueError('Channel is non-existing.')
 
         event = decode_event(
-            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
+            contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
             events[-1],
         )
         participant1 = Address(decode_hex(event['args']['participant1']))
@@ -62,7 +70,8 @@ class PaymentChannel:
         self.participant1 = participant1
         self.participant2 = participant2
         self.token_network = token_network
-        self.client = self.token_network.client
+        self.client = token_network.client
+        self.contract_manager = contract_manager
 
     def token_address(self) -> Address:
         """ Returns the address of the token for the channel. """
