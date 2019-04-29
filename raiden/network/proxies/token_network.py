@@ -12,7 +12,13 @@ from eth_utils import (
 from gevent.event import AsyncResult
 from gevent.lock import RLock, Semaphore
 
-from raiden.constants import EMPTY_HASH, GENESIS_BLOCK_NUMBER, UINT256_MAX, UNLOCK_TX_GAS_LIMIT
+from raiden.constants import (
+    EMPTY_HASH,
+    EMPTY_SIGNATURE,
+    GENESIS_BLOCK_NUMBER,
+    UINT256_MAX,
+    UNLOCK_TX_GAS_LIMIT,
+)
 from raiden.exceptions import (
     ChannelOutdatedError,
     DepositMismatch,
@@ -899,27 +905,70 @@ class TokenNetwork:
         }
         log.debug('closeChannel called', **log_details)
 
-        checking_block = self.client.get_checking_block()
-        try:
-            self._check_for_outdated_channel(
-                participant1=self.node_address,
-                participant2=partner,
-                block_identifier=given_block_identifier,
+        if signature != EMPTY_SIGNATURE:
+            canonical_identifier = CanonicalIdentifier(
+                chain_identifier=self.proxy.contract.functions.chain_id().call(),
+                token_network_address=self.address,
                 channel_identifier=channel_identifier,
             )
+            partner_signed_data = pack_balance_proof(
+                nonce=nonce,
+                balance_hash=balance_hash,
+                additional_hash=additional_hash,
+                canonical_identifier=canonical_identifier,
+            )
+            try:
+                partner_recovered_address = recover(
+                    data=partner_signed_data,
+                    signature=signature,
+                )
 
-            self._check_channel_state_for_close(
+                # InvalidSignature is raised by raiden.utils.signer.recover if signature
+                # is not bytes or has the incorrect length
+                #
+                # ValueError is raised if the PublicKey instantiation failed, let it
+                # propagate because it's a memory pressure problem.
+                #
+                # Exception is raised if the public key recovery failed.
+            except Exception:  # pylint: disable=broad-except
+                raise RaidenUnrecoverableError("Couldn't verify the balance proof signature")
+            else:
+                if partner_recovered_address != partner:
+                    raise RaidenUnrecoverableError('Invalid update transfer signature')
+
+        try:
+            channel_onchain_detail = self._detail_channel(
                 participant1=self.node_address,
                 participant2=partner,
                 block_identifier=given_block_identifier,
                 channel_identifier=channel_identifier,
             )
-        except NoStateForBlockIdentifier:
-            # If preconditions end up being on pruned state skip them. Estimate
-            # gas will stop us from sending a transaction that will fail
+        except ValueError:
+            # If `given_block_identifier` has been pruned the checks cannot be
+            # performed.
             pass
+        else:
+            onchain_channel_identifier = channel_onchain_detail.channel_identifier
+            if onchain_channel_identifier != channel_identifier:
+                msg = (
+                    f'The provided channel identifier does not match the value '
+                    f'on-chain at the provided block ({given_block_identifier}). '
+                    f'This call should never have been attempted. '
+                    f'provided_channel_identifier={channel_identifier}, '
+                    f'onchain_channel_identifier={channel_onchain_detail.channel_identifier}'
+                )
+                raise RaidenUnrecoverableError(msg)
+
+            if channel_onchain_detail.state != ChannelState.OPENED:
+                msg = (
+                    f'The channel was not open at the provided block '
+                    f'({given_block_identifier}). This call should never have '
+                    f'been attempted.'
+                )
+                raise RaidenUnrecoverableError(msg)
 
         error_prefix = 'closeChannel call will fail'
+        checking_block = self.client.get_checking_block()
         with self.channel_operations_lock[partner]:
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
