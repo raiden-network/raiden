@@ -234,11 +234,11 @@ def run_app(
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
-    try:
-        start_block = 0
-        if 'TokenNetworkRegistry' in contracts:
-            start_block = contracts['TokenNetworkRegistry']['block_number']
+    start_block = 0
+    if 'TokenNetworkRegistry' in contracts:
+        start_block = contracts['TokenNetworkRegistry']['block_number']
 
+    try:
         raiden_app = App(
             config=config,
             chain=blockchain_service,
