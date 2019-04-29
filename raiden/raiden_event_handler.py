@@ -285,10 +285,7 @@ class RaidenEventHandler:
             raiden: 'RaidenService',
             channel_reveal_secret_event: ContractSendSecretReveal,
     ):
-        raiden.default_secret_registry.register_secret(
-            secret=channel_reveal_secret_event.secret,
-            given_block_identifier=channel_reveal_secret_event.triggered_by_block_hash,
-        )
+        raiden.default_secret_registry.register_secret(secret=channel_reveal_secret_event.secret)
 
     @staticmethod
     def handle_contract_send_channelclose(

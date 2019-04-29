@@ -388,7 +388,7 @@ def run_test_batch_unlock(
     secret_registry_proxy = alice_app.raiden.chain.secret_registry(
         secret_registry_address,
     )
-    secret_registry_proxy.register_secret(secret=secret, given_block_identifier='latest')
+    secret_registry_proxy.register_secret(secret=secret)
 
     assert lock, 'the lock must still be part of the node state'
     msg = 'the secret must be registered before the lock expires'

@@ -73,13 +73,12 @@ class SecretRegistry:
         self.open_secret_transactions: Dict[Secret, AsyncResult] = dict()
         self._open_secret_transactions_lock = Semaphore()
 
-    def register_secret(self, secret: Secret, given_block_identifier: BlockSpecification):
-        self.register_secret_batch([secret], given_block_identifier)
+    def register_secret(self, secret: Secret):
+        self.register_secret_batch([secret])
 
     def register_secret_batch(
             self,
             secrets: List[Secret],
-            given_block_identifier: BlockSpecification,
     ):
         """Register a batch of secrets. Check if they are already registered at
         the given block identifier."""
@@ -89,7 +88,19 @@ class SecretRegistry:
         transaction_result = AsyncResult()
         wait_for = set()
 
+        # secret registration has no preconditions:
+        #
+        # - The action does not depend on any state, it's always valid to call
+        #   it.
+        # - This action is always susceptible to race conditions.
+        #
+        # Therefore this proxy only needs to detect if the secret is already
+        # registered, to avoid sending obviously unecessary transactions, and
+        # it has to handle race conditions.
+
         with self._open_secret_transactions_lock:
+            verification_block_hash = self.client.get_confirmed_blockhash()
+
             for secret in secrets:
                 secrethash = sha3(secret)
                 secrethash_hex = encode_hex(secrethash)
@@ -112,18 +123,10 @@ class SecretRegistry:
                 # error will be treated as a race-condition.
                 other_result = self.open_secret_transactions.get(secret)
 
-                # If we end up going in here with a pruned block identifier we have
-                # to check with latest hash since register_secret is a special call
-                # that never fails, so we can't rely on estimate gas to know if we
-                # need to send an on-chain transaction or not
-                to_check_identifier = given_block_identifier
-                if not self.client.can_query_state_for_block(given_block_identifier):
-                    to_check_identifier = self.client.blockhash_from_blocknumber('latest')
-
                 if other_result is not None:
                     wait_for.add(other_result)
                     secrethashes_not_sent.append(secrethash_hex)
-                elif not self.is_secret_registered(secrethash, to_check_identifier):
+                elif not self.is_secret_registered(secrethash, verification_block_hash):
                     secrets_to_register.append(secret)
                     secrethashes_to_register.append(secrethash_hex)
                     self.open_secret_transactions[secret] = transaction_result
