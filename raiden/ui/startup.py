@@ -1,9 +1,8 @@
 import sys
-from typing import Any, Dict, NamedTuple, Optional, Tuple
+from typing import Any, Dict, NamedTuple, Optional
 
 import click
 from eth_utils import to_canonical_address, to_checksum_address
-from web3 import Web3
 
 from raiden.constants import Environment, RoutingMode
 from raiden.exceptions import AddressWithoutCode, AddressWrongContract, ContractVersionMismatch
@@ -17,6 +16,12 @@ from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import UDPTransport
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
+from raiden.ui.checks import (
+    check_discovery_registration_gas,
+    check_pfs_configuration,
+    check_raiden_environment,
+    check_smart_contract_addresses,
+)
 from raiden.utils.typing import Address
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -31,8 +36,6 @@ from raiden_contracts.contract_manager import (
     get_contracts_deployment_info,
 )
 
-from .sync import check_discovery_registration_gas
-
 
 def environment_type_to_contracts_version(environment_type: Environment) -> str:
     if environment_type == Environment.DEVELOPMENT:
@@ -41,42 +44,6 @@ def environment_type_to_contracts_version(environment_type: Environment) -> str:
         contracts_version = RED_EYES_CONTRACT_VERSION
 
     return contracts_version
-
-
-def setup_network_id_or_exit(
-        config: Dict[str, Any],
-        given_network_id: int,
-        web3: Web3,
-) -> Tuple[int, bool]:
-    """
-    Takes the given network id and checks it against the connected network
-
-    If they don't match, exits the program with an error. If they do adds it
-    to the configuration and then returns it and whether it is a known network
-    """
-    node_network_id = int(web3.version.network)  # pylint: disable=no-member
-    known_given_network_id = given_network_id in ID_TO_NETWORKNAME
-    known_node_network_id = node_network_id in ID_TO_NETWORKNAME
-
-    if node_network_id != given_network_id:
-        if known_given_network_id and known_node_network_id:
-            click.secho(
-                f"The chosen ethereum network '{ID_TO_NETWORKNAME[given_network_id]}' "
-                f"differs from the ethereum client '{ID_TO_NETWORKNAME[node_network_id]}'. "
-                "Please update your settings.",
-                fg='red',
-            )
-        else:
-            click.secho(
-                f"The chosen ethereum network id '{given_network_id}' differs "
-                f"from the ethereum client '{node_network_id}'. "
-                "Please update your settings.",
-                fg='red',
-            )
-        sys.exit(1)
-
-    config['chain_id'] = given_network_id
-    return given_network_id, known_node_network_id
 
 
 def setup_environment(config: Dict[str, Any], environment_type: Environment) -> None:
@@ -102,19 +69,10 @@ def setup_contracts_or_exit(
     """
     environment_type = config['environment_type']
 
-    not_allowed = (  # for now we only disallow mainnet with test configuration
-        network_id == 1 and
-        environment_type == Environment.DEVELOPMENT
+    check_raiden_environment(
+        network_id,
+        environment_type,
     )
-    if not_allowed:
-        click.secho(
-            f'The chosen network ({ID_TO_NETWORKNAME[network_id]}) is not a testnet, '
-            f'but the "development" environment was selected.\n'
-            f'This is not allowed. Please start again with a safe environment setting '
-            f'(--environment production).',
-            fg='red',
-        )
-        sys.exit(1)
 
     contracts: Dict[str, Any] = dict()
     contracts_version = environment_type_to_contracts_version(environment_type)
@@ -191,21 +149,15 @@ def setup_proxies_or_exit(
     """
     node_network_id = config['chain_id']
     environment_type = config['environment_type']
-    contract_addresses_given = (
-        tokennetwork_registry_contract_address is not None and
-        secret_registry_contract_address is not None and
-        endpoint_registry_contract_address is not None
+
+    check_smart_contract_addresses(
+        environment_type,
+        node_network_id,
+        tokennetwork_registry_contract_address,
+        secret_registry_contract_address,
+        endpoint_registry_contract_address,
+        contracts,
     )
-
-    if not contract_addresses_given and not bool(contracts):
-        click.secho(
-            f"There are no known contract addresses for network id '{node_network_id}'. and "
-            f"environment type {environment_type}. Please provide them on the command line or "
-            f"in the configuration file.",
-            fg='red',
-        )
-        sys.exit(1)
-
     try:
         registered_address: Address
         if tokennetwork_registry_contract_address is not None:
@@ -282,22 +234,12 @@ def setup_proxies_or_exit(
             handle_contract_wrong_address('secret registry', service_registry_contract_address)
 
     if routing_mode == RoutingMode.PFS:
-        if environment_type == Environment.PRODUCTION:
-            click.secho(
-                'Requested production mode and PFS routing mode. This is not supported',
-                fg='red',
-            )
-            sys.exit(1)
-
-        if not service_registry and not pathfinding_service_address:
-            click.secho(
-                'Requested PFS routing mode but no service registry or no specific pathfinding '
-                ' service address is provided. Please provide it via either the '
-                '--service-registry-contract-address or the --pathfinding-service-address '
-                'argument',
-                fg='red',
-            )
-            sys.exit(1)
+        check_pfs_configuration(
+            routing_mode,
+            environment_type,
+            service_registry,
+            pathfinding_service_address,
+        )
 
         pfs_config = configure_pfs_or_exit(
             pfs_address=pathfinding_service_address,

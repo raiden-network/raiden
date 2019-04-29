@@ -6,16 +6,11 @@ import click
 import filelock
 import structlog
 from eth_utils import to_canonical_address, to_normalized_address
-from requests.exceptions import ConnectTimeout
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
-from raiden.constants import (
-    MONITORING_BROADCASTING_ROOM,
-    RAIDEN_DB_VERSION,
-    SQLITE_MIN_REQUIRED_VERSION,
-)
-from raiden.exceptions import EthNodeCommunicationError, EthNodeInterfaceError, RaidenError
+from raiden.constants import MONITORING_BROADCASTING_ROOM, RAIDEN_DB_VERSION
+from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
@@ -26,9 +21,14 @@ from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
-from raiden.storage.sqlite import assert_sqlite_version
-from raiden.ui.prompt import (
+from raiden.ui.checks import (
+    check_ethereum_version,
     check_has_accounts,
+    check_network_id,
+    check_sql_version,
+    check_synced,
+)
+from raiden.ui.prompt import (
     prompt_account,
     unlock_account_with_passwordfile,
     unlock_account_with_passwordprompt,
@@ -36,50 +36,15 @@ from raiden.ui.prompt import (
 from raiden.ui.startup import (
     setup_contracts_or_exit,
     setup_environment,
-    setup_network_id_or_exit,
     setup_proxies_or_exit,
     setup_udp_or_exit,
 )
-from raiden.ui.sync import check_synced
 from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
-from raiden.utils.ethereum_clients import is_supported_client
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
-
-
-def _assert_sql_version():
-    if not assert_sqlite_version():
-        log.error('SQLite3 should be at least version {}'.format(
-            '{}.{}.{}'.format(*SQLITE_MIN_REQUIRED_VERSION),
-        ))
-        sys.exit(1)
-
-
-def _setup_web3(eth_rpc_endpoint):
-    web3 = Web3(HTTPProvider(eth_rpc_endpoint))
-
-    try:
-        node_version = web3.version.node  # pylint: disable=no-member
-    except ConnectTimeout:
-        raise EthNodeCommunicationError("Couldn't connect to the ethereum node")
-    except ValueError:
-        raise EthNodeInterfaceError(
-            'The underlying ethereum node does not have the web3 rpc interface '
-            'enabled. Please run it with --rpcapi eth,net,web3,txpool for geth '
-            'and --jsonrpc-apis=eth,net,web3,parity for parity.',
-        )
-
-    supported, _ = is_supported_client(node_version)
-    if not supported:
-        click.secho(
-            'You need a Byzantium enabled ethereum node. Parity >= 1.7.6 or Geth >= 1.7.2',
-            fg='red',
-        )
-        sys.exit(1)
-    return web3
 
 
 def _setup_matrix(config):
@@ -142,7 +107,7 @@ def run_app(
 
     from raiden.app import App
 
-    _assert_sql_version()
+    check_sql_version()
 
     if transport == 'udp' and not mapped_socket:
         raise RuntimeError('Missing socket')
@@ -200,12 +165,14 @@ def run_app(
     if not parsed_eth_rpc_endpoint.scheme:
         eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
 
-    web3 = _setup_web3(eth_rpc_endpoint)
-    node_network_id, known_node_network_id = setup_network_id_or_exit(config, network_id, web3)
+    web3 = Web3(HTTPProvider(eth_rpc_endpoint))
+    check_ethereum_version(web3)
+    check_network_id(network_id, web3)
+    config['chain_id'] = network_id
 
     setup_environment(config, environment_type)
 
-    contracts = setup_contracts_or_exit(config, node_network_id)
+    contracts = setup_contracts_or_exit(config, network_id)
 
     rpc_client = JSONRPCClient(
         web3,
@@ -221,7 +188,7 @@ def run_app(
     )
 
     if sync_check:
-        check_synced(blockchain_service, known_node_network_id)
+        check_synced(blockchain_service, network_id)
 
     proxies = setup_proxies_or_exit(
         config=config,
@@ -240,7 +207,7 @@ def run_app(
     database_path = os.path.join(
         datadir,
         f'node_{pex(address)}',
-        f'netid_{node_network_id}',
+        f'netid_{network_id}',
         f'network_{pex(proxies.token_network_registry.address)}',
         f'v{RAIDEN_DB_VERSION}_log.db',
     )
@@ -248,7 +215,7 @@ def run_app(
 
     print(
         '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(node_network_id, node_network_id),
+            ID_TO_NETWORKNAME.get(network_id, network_id),
             database_path,
         ),
     )
@@ -299,7 +266,7 @@ def run_app(
         click.secho(f'FATAL: {e}', fg='red')
         sys.exit(1)
     except filelock.Timeout:
-        name_or_id = ID_TO_NETWORKNAME.get(node_network_id, node_network_id)
+        name_or_id = ID_TO_NETWORKNAME.get(network_id, network_id)
         click.secho(
             f'FATAL: Another Raiden instance already running for account {address_hex} on '
             f'network id {name_or_id}',
