@@ -9,10 +9,7 @@ from raiden.constants import Environment, RoutingMode
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.factories import make_address, make_checksum_address
 from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succesful_pfs_info
-from raiden.ui.checks import (
-    check_discovery_registration_gas,
-    check_ethereum_network_id,
-)
+from raiden.ui.checks import check_discovery_registration_gas, check_ethereum_network_id
 from raiden.ui.startup import (
     setup_contracts_or_exit,
     setup_environment,
