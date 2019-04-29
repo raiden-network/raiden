@@ -25,11 +25,8 @@ from raiden.exceptions import InvalidAddress
 from raiden.utils.signing import sha3  # noqa
 from raiden.utils.typing import (
     Address,
-    Any,
     BlockNumber,
     BlockSpecification,
-    ChainID,
-    ChannelID,
     Dict,
     Host,
     HostPort,
@@ -38,11 +35,8 @@ from raiden.utils.typing import (
     Optional,
     Port,
     Secret,
-    T_Address,
     T_BlockHash,
     T_BlockNumber,
-    T_ChainID,
-    T_ChannelID,
     TokenAddress,
     Tuple,
     Union,
