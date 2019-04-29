@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 from eth_utils import to_canonical_address
 
-from raiden.storage import serialize
 from raiden.storage.migrations.v21_to_v22 import (
     SOURCE_VERSION,
     TARGET_VERSION,
@@ -14,7 +13,7 @@ from raiden.storage.migrations.v21_to_v22 import (
     upgrade_v21_to_v22,
     walk_dicts,
 )
-from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
+from raiden.storage.sqlite import SQLiteStorage
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.utils.upgrades import UpgradeManager, UpgradeRecord
 
@@ -60,7 +59,7 @@ def setup_storage(db_path):
         )
     storage.conn.commit()
     storage.conn.close()
-    storage = SerializedSQLiteStorage(str(db_path), serialize.JSONSerializer())
+    storage = SQLiteStorage(str(db_path))
     return storage
 
 
@@ -85,7 +84,7 @@ def test_upgrade_v21_to_v22(tmp_path):
         ):
             manager.run()
 
-        storage = SerializedSQLiteStorage(str(db_path), serialize.JSONSerializer())
+        storage = SQLiteStorage(str(db_path))
         for batch in storage.batch_query_event_records(batch_size=500):
             for event in batch:
                 walk_dicts(
