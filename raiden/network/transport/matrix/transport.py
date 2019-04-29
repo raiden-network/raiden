@@ -700,7 +700,7 @@ class MatrixTransport(Runnable):
         # we join room and _set_room_id_for_address despite room privacy and requirements,
         # _get_room_ids_for_address will take care of returning only matching rooms and
         # _leave_unused_rooms will clear it in the future, if and when needed
-        room: Room = None
+        room: Optional[Room] = None
         last_ex: Optional[Exception] = None
         retry_interval = 0.1
         for _ in range(JOIN_RETRIES):
@@ -716,6 +716,8 @@ class MatrixTransport(Runnable):
         else:
             assert last_ex is not None
             raise last_ex  # re-raise if couldn't succeed in retries
+
+        assert room is not None, f'joining room {room} failed'
 
         if not room.listeners:
             room.add_listener(self._handle_message, 'm.room.message')
