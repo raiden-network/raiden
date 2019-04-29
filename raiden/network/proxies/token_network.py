@@ -937,7 +937,7 @@ class TokenNetwork:
                 raise RaidenUnrecoverableError("Couldn't verify the balance proof signature")
             else:
                 if partner_recovered_address != partner:
-                    raise RaidenUnrecoverableError('Invalid update transfer signature')
+                    raise RaidenUnrecoverableError('Invalid update balance proof signature')
 
         try:
             channel_onchain_detail = self._detail_channel(
