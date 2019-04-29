@@ -81,6 +81,10 @@ class NodeRunner:
         if self._options.get('extra_config', dict()):
             merge_dict(config, self._options['extra_config'])
             del self._options['extra_config']
+
+        if self._options['datadir'] is None:
+            self._options['datadir'] = settings.get_default_datadir()
+
         self._options['config'] = config
 
         if self._options['showconfig']:

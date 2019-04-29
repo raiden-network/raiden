@@ -92,13 +92,9 @@ def run_app(
         **kwargs,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
-
     from raiden.app import App
 
     check_sql_version()
-
-    if datadir is None:
-        datadir = os.path.join(os.path.expanduser('~'), '.raiden')
 
     account_manager = AccountManager(keystore_path)
     check_has_accounts(account_manager)

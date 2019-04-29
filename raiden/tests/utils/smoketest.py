@@ -41,7 +41,11 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
-from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEVELOPMENT_CONTRACT_VERSION
+from raiden.settings import (
+    DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+    DEVELOPMENT_CONTRACT_VERSION,
+    get_default_datadir,
+)
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
     EthNodeDescription,
@@ -458,6 +462,9 @@ def run_smoketest(
     # need to use the deployed service registry, register the
     # PFS service there and then change this argument.
     args['routing_mode'] = RoutingMode.BASIC
+
+    if args['datadir'] is None:
+        args['datadir'] = get_default_datadir()
 
     raiden_stdout = StringIO()
     maybe_redirect_stdout = contextlib.redirect_stdout(raiden_stdout)

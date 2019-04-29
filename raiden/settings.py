@@ -1,3 +1,5 @@
+import os
+
 from eth_utils import denoms, to_hex
 
 from raiden.constants import Environment
@@ -59,3 +61,7 @@ MONITORING_REWARD = TokenAmount(1)
 MONITORING_MIN_CAPACITY = TokenAmount(100)
 
 MEDIATION_FEE = FeeAmount(0)
+
+
+def get_default_datadir() -> str:
+    return os.path.join(os.path.expanduser('~'), '.raiden')
