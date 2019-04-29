@@ -331,7 +331,7 @@ class MatrixTransport(Runnable):
         self._getroom_lock = Semaphore()
         self._account_data_lock = Semaphore()
 
-        self._message_handler = None
+        self._message_handler: Optional[MessageHandler] = None
 
     def __repr__(self):
         if self._raiden_service is not None:
