@@ -11,7 +11,7 @@ from gevent.server import DatagramServer
 from raiden import constants
 from raiden.exceptions import InvalidAddress, InvalidProtocolMessage, UnknownAddress
 from raiden.message_handler import MessageHandler
-from raiden.messages import Delivered, Message, Ping, Pong, decode
+from raiden.messages import Delivered, Message, Ping, Pong, SignedRetrieableMessage, decode
 from raiden.network.transport.udp import healthcheck
 from raiden.network.transport.udp.udp_utils import (
     event_first_of,
@@ -406,7 +406,7 @@ class UDPTransport(Runnable):
     def send_async(
             self,
             queue_identifier: QueueIdentifier,
-            message: Message,
+            message: SignedRetrieableMessage,
     ):
         """ Send a new ordered message to recipient.
 
@@ -539,6 +539,7 @@ class UDPTransport(Runnable):
             assert isinstance(message, Delivered), MYPY_ANNOTATION
             self.receive_delivered(message)
         elif message is not None:
+            assert isinstance(message, SignedRetrieableMessage)
             self.receive_message(message)
         else:
             self.log.warning(
@@ -549,7 +550,7 @@ class UDPTransport(Runnable):
 
         return True
 
-    def receive_message(self, message: Message):
+    def receive_message(self, message: SignedRetrieableMessage):
         """ Handle a Raiden protocol message.
 
         The protocol requires durability of the messages. The UDP transport
