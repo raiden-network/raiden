@@ -890,8 +890,11 @@ class TokenNetwork:
             submitted on chain after closing
 
         Raises:
-            RaidenRecoverableError: If the channel is already closed.
-            RaidenUnrecoverableError: If the channel does not exist or is settled.
+            RaidenRecoverableError: If the close call failed but it is not
+                critical.
+            RaidenUnrecoverableError: If the operation was ilegal at the
+                `given_block_identifier` or if the channel changes in a way that
+                cannot be recovered.
         """
 
         log_details = {
@@ -967,9 +970,8 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-        error_prefix = 'closeChannel call will fail'
-        checking_block = self.client.get_checking_block()
         with self.channel_operations_lock[partner]:
+            checking_block = self.client.get_checking_block()
             gas_limit = self.proxy.estimate_gas(
                 checking_block,
                 'closeChannel',
@@ -982,7 +984,6 @@ class TokenNetwork:
             )
 
             if gas_limit:
-                error_prefix = 'closeChannel call failed'
                 transaction_hash = self.proxy.transact(
                     'closeChannel',
                     safe_gas_limit(gas_limit, GAS_REQUIRED_FOR_CLOSE_CHANNEL),
@@ -996,26 +997,82 @@ class TokenNetwork:
                 self.client.poll(transaction_hash)
                 receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-            transaction_executed = gas_limit is not None
-            if not transaction_executed or receipt_or_none:
-                if transaction_executed:
-                    block = receipt_or_none['blockNumber']
-                else:
-                    block = checking_block
+                if receipt_or_none:
+                    # Because the gas estimation succeeded it is known that:
+                    # - The channel existed.
+                    # - The channel was at the state open.
+                    # - The account had enough balance to pay for the gas
+                    #   (however there is a race condition for multiple
+                    #   transactions #3890)
+                    #
+                    # So the only reason for the transaction to fail is if our
+                    # partner closed it before (assuming exclusive usage of the
+                    # account and no compiler bugs)
+
+                    # These checks do not have problems with race conditions because
+                    # `poll`ing waits for the transaction to be confirmed.
+                    mining_block = int(receipt_or_none['blockNumber'])
+
+                    if receipt_or_none['cumulativeGasUsed'] == gas_limit:
+                        msg = (
+                            'update transfer failed and all gas was used. Estimate gas '
+                            'may have underestimated update transfer, or succeeded even '
+                            'though an assert is triggered, or the smart contract code '
+                            'has an conditional assert.'
+                        )
+                        raise RaidenUnrecoverableError(msg)
+
+                    partner_details = self._detail_participant(
+                        channel_identifier=channel_identifier,
+                        participant=partner,
+                        partner=self.node_address,
+                        block_identifier=mining_block,
+                    )
+
+                    if partner_details.is_closer:
+                        msg = 'Channel was already closed by channel partner first.'
+                        raise RaidenRecoverableError(msg)
+
+                    raise RaidenUnrecoverableError('closeChannel call failed')
+
+            else:
+                # The transaction would have failed if sent, figure out why.
+
+                # The latest block can not be used reliably because of reorgs,
+                # therefore every call using this block has to handle pruned data.
+                failed_at = self.proxy.jsonrpc_client.get_block('latest')
+                failed_at_blockhash = encode_hex(failed_at['hash'])
+                failed_at_blocknumber = failed_at['number']
 
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
                     transaction_name='closeChannel',
-                    transaction_executed=transaction_executed,
+                    transaction_executed=True,
                     required_gas=GAS_REQUIRED_FOR_CLOSE_CHANNEL,
-                    block_identifier=block,
+                    block_identifier=failed_at_blocknumber,
                 )
-                self._check_channel_state_for_close(
+
+                detail = self._detail_channel(
                     participant1=self.node_address,
                     participant2=partner,
-                    block_identifier=block,
+                    block_identifier=failed_at_blockhash,
                     channel_identifier=channel_identifier,
                 )
-                raise RaidenUnrecoverableError(error_prefix)
+
+                if detail.state < ChannelState.OPENED:
+                    msg = (
+                        f'cannot call close channel has not been opened yet. '
+                        f'current_state={detail.state}'
+                    )
+                    raise RaidenUnrecoverableError(msg)
+
+                if detail.state >= ChannelState.CLOSED:
+                    msg = (
+                        f'cannot call close on a channel that has been closed already. '
+                        f'current_state={detail.state}'
+                    )
+                    raise RaidenRecoverableError(msg)
+
+                raise RaidenUnrecoverableError('close channel failed for an unknown reason')
 
         log.info('closeChannel successful', **log_details)
 
@@ -1179,12 +1236,11 @@ class TokenNetwork:
 
             if receipt_or_none:
                 # Because the gas estimation succeeded it is known that:
-                # - The channel exists/existed.
+                # - The channel existed.
                 # - The channel was at the state closed.
                 # - The partner node was the closing address.
-                # - The account had enough balance to pay for the gas when estimate
-                #   gas was called (however there is a race condition for multiple
-                #   transactions #3890)
+                # - The account had enough balance to pay for the gas (however
+                #   there is a race condition for multiple transactions #3890)
 
                 # These checks do not have problems with race conditions because
                 # `poll`ing waits for the transaction to be confirmed.
@@ -1223,15 +1279,14 @@ class TokenNetwork:
                     )
                     raise RaidenRecoverableError(msg)
 
-                if channel_data.state > ChannelState.CLOSED:
+                if channel_data.state >= ChannelState.SETTLED:
                     # This should never happen if the settlement window and gas
                     # price estimation is done properly.
                     #
                     # This is a race condition that cannot be prevented,
                     # therefore it is a recoverable error.
-                    raise RaidenRecoverableError(
-                        'Channel was already settled when update transfer was mined.',
-                    )
+                    msg = 'Channel was already settled when update transfer was mined.'
+                    raise RaidenRecoverableError(msg)
 
                 if channel_data.settle_block_number < mining_block:
                     # The channel is cleared from the smart contract's storage
@@ -1283,9 +1338,6 @@ class TokenNetwork:
             failed_at_blockhash = encode_hex(failed_at['hash'])
             failed_at_blocknumber = failed_at['number']
 
-            # This check contains a race condition, it could be the case that a
-            # new block is mined changing the account's balance.
-            # https://github.com/raiden-network/raiden/issues/3890#issuecomment-485857726
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name='updateNonClosingBalanceProof',
                 transaction_executed=False,
@@ -1307,7 +1359,7 @@ class TokenNetwork:
                 )
                 raise RaidenUnrecoverableError(msg)
 
-            if detail.state > ChannelState.CLOSED:
+            if detail.state >= ChannelState.SETTLED:
                 msg = (
                     f'cannot call update_transfer channel has been settled already. '
                     f'current_state={detail.state}'
@@ -1631,31 +1683,6 @@ class TokenNetwork:
             raise ValueError('channel state must be of type ChannelState')
 
         return channel_data.state
-
-    def _check_channel_state_for_close(
-            self,
-            participant1: Address,
-            participant2: Address,
-            block_identifier: BlockSpecification,
-            channel_identifier: ChannelID,
-    ):
-        channel_state = self._get_channel_state(
-            participant1=participant1,
-            participant2=participant2,
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
-
-        if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-            msg = (
-                f'Channel between participant {participant1} '
-                f'and {participant2} does not exist'
-            )
-            raise RaidenUnrecoverableError(msg)
-        elif channel_state == ChannelState.SETTLED:
-            raise RaidenUnrecoverableError('A settled channel cannot be closed')
-        elif channel_state == ChannelState.CLOSED:
-            raise RaidenRecoverableError('Channel is already closed')
 
     def _check_channel_state_before_settle(
             self,
