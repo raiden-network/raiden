@@ -9,7 +9,10 @@ from raiden.constants import Environment, RoutingMode
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.factories import make_address, make_checksum_address
 from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succesful_pfs_info
-from raiden.ui.checks import check_discovery_registration_gas, check_network_id
+from raiden.ui.checks import (
+    check_discovery_registration_gas,
+    check_ethereum_network_id,
+)
 from raiden.ui.startup import (
     setup_contracts_or_exit,
     setup_environment,
@@ -26,16 +29,16 @@ from raiden_contracts.constants import (
 
 
 def test_check_network_id_raises_with_mismatching_ids():
-    check_network_id(68, MockWeb3(68))
+    check_ethereum_network_id(68, MockWeb3(68))
 
     with pytest.raises(SystemExit):
-        check_network_id(61, MockWeb3(68))
+        check_ethereum_network_id(61, MockWeb3(68))
 
 
 @pytest.mark.parametrize('netid', [1, 3, 4, 42, 5, 627])
 def test_setup_does_not_raise_with_matching_ids(netid):
     """Test that network setup works for the known network ids"""
-    check_network_id(netid, MockWeb3(netid))
+    check_ethereum_network_id(netid, MockWeb3(netid))
 
 
 def test_setup_environment():

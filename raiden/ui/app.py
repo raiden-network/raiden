@@ -28,9 +28,9 @@ from raiden.settings import (
 )
 from raiden.ui.checks import (
     check_discovery_registration_gas,
-    check_ethereum_version,
-    check_has_accounts,
-    check_network_id,
+    check_ethereum_client_is_supported,
+    check_ethereum_has_accounts,
+    check_ethereum_network_id,
     check_sql_version,
     check_synced,
 )
@@ -50,10 +50,45 @@ from raiden.ui.startup import (
 )
 from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
+from raiden.utils.typing import Address, AddressHex, Optional, PrivateKey, Tuple
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
 
 log = structlog.get_logger(__name__)
+
+
+def get_account_and_private_key(
+        account_manager: AccountManager,
+        address_hex: Optional[AddressHex],
+        password_file: Optional[str],
+) -> Tuple[Address, PrivateKey]:
+    if not address_hex:
+        address_hex = prompt_account(account_manager)
+    else:
+        address_hex = to_normalized_address(address_hex)
+
+    if password_file:
+        privatekey_bin = unlock_account_with_passwordfile(
+            account_manager=account_manager,
+            address_hex=address_hex,
+            password_file=password_file,
+        )
+    else:
+        privatekey_bin = unlock_account_with_passwordprompt(
+            account_manager=account_manager,
+            address_hex=address_hex,
+        )
+
+    return to_canonical_address(address_hex), privatekey_bin
+
+
+def rpc_normalized_endpoint(eth_rpc_endpoint):
+    parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
+
+    if parsed_eth_rpc_endpoint.scheme:
+        return eth_rpc_endpoint
+
+    return f'http://{eth_rpc_endpoint}'
 
 
 def run_app(
@@ -94,29 +129,19 @@ def run_app(
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
     from raiden.app import App
 
-    check_sql_version()
-
     account_manager = AccountManager(keystore_path)
-    check_has_accounts(account_manager)
+    web3 = Web3(HTTPProvider(rpc_normalized_endpoint(eth_rpc_endpoint)))
 
-    if not address:
-        address_hex = prompt_account(account_manager)
-    else:
-        address_hex = to_normalized_address(address)
+    check_sql_version()
+    check_ethereum_has_accounts(account_manager)
+    check_ethereum_client_is_supported(web3)
+    check_ethereum_network_id(network_id, web3)
 
-    if password_file:
-        privatekey_bin = unlock_account_with_passwordfile(
-            account_manager=account_manager,
-            address_hex=address_hex,
-            password_file=password_file,
-        )
-    else:
-        privatekey_bin = unlock_account_with_passwordprompt(
-            account_manager=account_manager,
-            address_hex=address_hex,
-        )
-
-    address = to_canonical_address(address_hex)
+    (address, privatekey_bin) = get_account_and_private_key(
+        account_manager,
+        address,
+        password_file,
+    )
 
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
@@ -126,8 +151,8 @@ def run_app(
         eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
 
     web3 = Web3(HTTPProvider(eth_rpc_endpoint))
-    check_ethereum_version(web3)
-    check_network_id(network_id, web3)
+    check_ethereum_client_is_supported(web3)
+    check_ethereum_network_id(network_id, web3)
 
     config['transport']['udp']['host'] = listen_host
     config['transport']['udp']['port'] = listen_port
@@ -176,6 +201,12 @@ def run_app(
         jsonrpc_client=rpc_client,
         contract_manager=ContractManager(config['contracts_path']),
     )
+
+    if transport == 'udp':
+        if not mapped_socket:
+            raise RuntimeError('Missing socket')
+
+        check_discovery_registration_gas(blockchain_service, address)
 
     if sync_check:
         check_synced(blockchain_service)
@@ -266,8 +297,8 @@ def run_app(
     except filelock.Timeout:
         name_or_id = ID_TO_NETWORKNAME.get(network_id, network_id)
         click.secho(
-            f'FATAL: Another Raiden instance already running for account {address_hex} on '
-            f'network id {name_or_id}',
+            f'FATAL: Another Raiden instance already running for account '
+            f'{to_normalized_address(address)} on network id {name_or_id}',
             fg='red',
         )
         sys.exit(1)
