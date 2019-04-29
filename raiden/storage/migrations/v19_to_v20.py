@@ -8,7 +8,7 @@ from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.storage.sqlite import SQLiteStorage, StateChangeRecord
-from raiden.transfer.identifiers import CHAIN_ID_UNSPECIFIED, CanonicalIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.utils.serialization import serialize_bytes
 from raiden.utils.typing import Any, Dict, Locksroot, Tuple
 
@@ -49,7 +49,7 @@ def _get_onchain_locksroots(
         )
 
     canonical_identifier = CanonicalIdentifier(
-        chain_identifier=CHAIN_ID_UNSPECIFIED,
+        chain_identifier=-1,
         token_network_address=to_canonical_address(token_network['address']),
         channel_identifier=int(channel['identifier']),
     )
@@ -142,7 +142,7 @@ def _add_onchain_locksroot_to_channel_settled_state_changes(
             new_channel_state = channel_state_data['channel_state']
 
             canonical_identifier = CanonicalIdentifier(
-                chain_identifier=CHAIN_ID_UNSPECIFIED,
+                chain_identifier=-1,
                 token_network_address=to_canonical_address(token_network_identifier),
                 channel_identifier=int(channel_identifier),
             )
