@@ -44,8 +44,9 @@ def get_state_change_with_balance_proof_by_balance_hash(
         'balance_proof.canonical_identifier.token_network_address': to_checksum_address(
             canonical_identifier.token_network_address,
         ),
-        'balance_proof.canonical_identifier.channel_identifier':
-        str(canonical_identifier.channel_identifier),
+        'balance_proof.canonical_identifier.channel_identifier': str(
+            canonical_identifier.channel_identifier,
+        ),
         'balance_proof.balance_hash': serialize_bytes(balance_hash),
         'balance_proof.sender': to_checksum_address(sender),
     })
@@ -65,13 +66,15 @@ def get_state_change_with_balance_proof_by_locksroot(
     balance proof.
     """
     return storage.get_latest_state_change_by_data_field({
-        'balance_proof.canonical_identifier.chain_identifier':
-        str(canonical_identifier.chain_identifier),
+        'balance_proof.canonical_identifier.chain_identifier': str(
+            canonical_identifier.chain_identifier,
+        ),
         'balance_proof.canonical_identifier.token_network_address': to_checksum_address(
             canonical_identifier.token_network_address,
         ),
-        'balance_proof.canonical_identifier.channel_identifier':
-        str(canonical_identifier.channel_identifier),
+        'balance_proof.canonical_identifier.channel_identifier': str(
+            canonical_identifier.channel_identifier,
+        ),
         'balance_proof.locksroot': serialize_bytes(locksroot),
         'balance_proof.sender': to_checksum_address(sender),
     })
@@ -89,13 +92,15 @@ def get_event_with_balance_proof_by_balance_hash(
     has the blinded balance proof data.
     """
     return storage.get_latest_event_by_data_field({
-        'balance_proof.canonical_identifier.chain_identifier':
-        str(canonical_identifier.chain_identifier),
+        'balance_proof.canonical_identifier.chain_identifier': str(
+            canonical_identifier.chain_identifier,
+        ),
         'balance_proof.canonical_identifier.token_network_address': to_checksum_address(
             canonical_identifier.token_network_address,
         ),
-        'balance_proof.canonical_identifier.channel_identifier':
-        str(canonical_identifier.channel_identifier),
+        'balance_proof.canonical_identifier.channel_identifier': str(
+            canonical_identifier.channel_identifier,
+        ),
         'balance_proof.balance_hash': serialize_bytes(balance_hash),
     })
 
@@ -113,13 +118,15 @@ def get_event_with_balance_proof_by_locksroot(
     balance proof.
     """
     return storage.get_latest_event_by_data_field({
-        'balance_proof.canonical_identifier.chain_identifier':
-        str(canonical_identifier.chain_identifier),
+        'balance_proof.canonical_identifier.chain_identifier': str(
+            canonical_identifier.chain_identifier,
+        ),
         'balance_proof.canonical_identifier.token_network_address': to_checksum_address(
             canonical_identifier.token_network_address,
         ),
-        'balance_proof.canonical_identifier.channel_identifier':
-        str(canonical_identifier.channel_identifier),
+        'balance_proof.canonical_identifier.channel_identifier': str(
+            canonical_identifier.channel_identifier,
+        ),
         'balance_proof.locksroot': serialize_bytes(locksroot),
         'recipient': to_checksum_address(recipient),
     })
