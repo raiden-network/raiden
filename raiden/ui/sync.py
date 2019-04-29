@@ -1,73 +1,12 @@
 import sys
 from itertools import count
 
-import click
 import gevent
 import requests
-from eth_utils import denoms, to_int
+from eth_utils import to_int
 from requests.exceptions import RequestException
 
-from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.blockchain_service import BlockChainService
-from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
-from raiden.utils import typing
-from raiden_contracts.constants import GAS_REQUIRED_FOR_ENDPOINT_REGISTER, ID_TO_NETWORKNAME
-
-
-def check_synced(blockchain_service: BlockChainService, network_id_is_known: bool) -> None:
-    net_id = blockchain_service.network_id
-    if not network_id_is_known:
-        click.secho(
-            f'Your ethereum client is connected to a non-recognized private \n'
-            f'network with network-ID {net_id}. Since we can not check if the client \n'
-            f'is synced please restart raiden with the --no-sync-check argument.'
-            f'\n',
-            fg='red',
-        )
-        sys.exit(1)
-
-    try:
-        network = ID_TO_NETWORKNAME[net_id]
-    except (EthNodeCommunicationError, RequestException):
-        click.secho(
-            'Could not determine the network the ethereum node is connected.\n'
-            'Because of this there is no way to determine the latest\n'
-            'block with an oracle, and the events from the ethereum\n'
-            'node cannot be trusted. Giving up.\n',
-            fg='red',
-        )
-        sys.exit(1)
-
-    url = ETHERSCAN_API.format(
-        network=network if net_id != 1 else 'api',
-        action='eth_blockNumber',
-    )
-    wait_for_sync(
-        blockchain_service,
-        url=url,
-        tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
-        sleep=3,
-    )
-
-
-def check_discovery_registration_gas(
-        blockchain_service: BlockChainService,
-        account_address: typing.Address,
-) -> None:
-    discovery_tx_cost = blockchain_service.client.gas_price() * GAS_REQUIRED_FOR_ENDPOINT_REGISTER
-    account_balance = blockchain_service.client.balance(account_address)
-
-    # pylint: disable=no-member
-    if discovery_tx_cost > account_balance:
-        click.secho(
-            'Account has insufficient funds for discovery registration.\n'
-            'Needed: {} ETH\n'
-            'Available: {} ETH.\n'
-            'Please deposit additional funds into this account.'
-            .format(discovery_tx_cost / denoms.ether, account_balance / denoms.ether),
-            fg='red',
-        )
-        sys.exit(1)
 
 
 def etherscan_query_with_retries(

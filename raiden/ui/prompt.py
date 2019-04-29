@@ -9,26 +9,6 @@ from raiden.accounts import AccountManager
 from raiden.utils.typing import AddressHex, PrivateKey
 
 
-def check_has_accounts(account_manager: AccountManager) -> None:
-    if not account_manager.accounts:
-        msg = (
-            f'No Ethereum accounts found in the provided keystore directory '
-            f'{account_manager.keystore_path}. Please provide a directory '
-            f'containing valid ethereum account files.'
-        )
-        click.secho(msg, fg='red')
-        sys.exit(1)
-
-
-def check_account(account_manager: AccountManager, address_hex: AddressHex) -> None:
-    if not account_manager.address_in_keystore(address_hex):
-        click.secho(
-            f"Account '{address_hex}' could not be found on the system. Aborting ...",
-            fg='red',
-        )
-        sys.exit(1)
-
-
 def prompt_account(account_manager: AccountManager) -> AddressHex:
     addresses = list(account_manager.accounts.keys())
     formatted_addresses = [

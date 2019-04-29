@@ -9,10 +9,10 @@ from raiden.constants import Environment, RoutingMode
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.factories import make_address, make_checksum_address
 from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succesful_pfs_info
+from raiden.ui.checks import check_network_id
 from raiden.ui.startup import (
     setup_contracts_or_exit,
     setup_environment,
-    setup_network_id_or_exit,
     setup_proxies_or_exit,
     setup_udp_or_exit,
 )
@@ -25,28 +25,17 @@ from raiden_contracts.constants import (
 )
 
 
-def test_setup_network_id():
-    config = {}
+def test_check_network_id_raises_with_mismatching_ids():
+    check_network_id(68, MockWeb3(68))
 
-    # Test a private chain network id (a network ID not known to Raiden)
-    netid, known = setup_network_id_or_exit(config, 68, MockWeb3(68))
-    assert netid == 68
-    assert not known
-    assert config['chain_id'] == netid
-
-    # Chain id different than the one in the ethereum client
     with pytest.raises(SystemExit):
-        setup_network_id_or_exit(config, 61, MockWeb3(68))
+        check_network_id(61, MockWeb3(68))
 
 
 @pytest.mark.parametrize('netid', [1, 3, 4, 42, 5, 627])
-def test_setup_network_id_known(netid):
+def test_setup_does_not_raise_with_matching_ids(netid):
     """Test that network setup works for the known network ids"""
-    config = {}
-    network_id, known = setup_network_id_or_exit(config, netid, MockWeb3(netid))
-    assert network_id == netid
-    assert known
-    assert config['chain_id'] == netid
+    check_network_id(netid, MockWeb3(netid))
 
 
 def test_setup_environment():
