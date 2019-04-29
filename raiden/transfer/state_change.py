@@ -9,11 +9,7 @@ from raiden.transfer.architecture import (
     ContractReceiveStateChange,
     StateChange,
 )
-from raiden.transfer.identifiers import (
-    CHAIN_ID_UNSPECIFIED,
-    CHANNEL_ID_UNSPECIFIED,
-    CanonicalIdentifier,
-)
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import (
     BalanceProofSignedState,
     NettingChannelState,
