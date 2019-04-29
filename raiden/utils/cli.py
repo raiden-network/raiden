@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 
 import click
 import requests
+import structlog
 from click import BadParameter, Choice
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
@@ -24,6 +25,8 @@ from raiden.utils import address_checksum_and_decode
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
 LOG_CONFIG_OPTION_NAME = 'log_config'
+
+log = structlog.get_logger(__name__)
 
 
 class HelpFormatter(click.HelpFormatter):
@@ -66,9 +69,11 @@ class HelpFormatter(click.HelpFormatter):
             if lines:
                 self.write(next(lines) + '\n')
                 for line in lines:
-                    self.write('%*s%s\n' % (
-                        first_col + self.current_indent, '', line,
-                    ))
+                    self.write(
+                        '%*s%s\n' % (
+                            first_col + self.current_indent, '', line,
+                        ),
+                    )
             else:
                 self.write('\n')
 
@@ -452,6 +457,8 @@ def get_matrix_servers(url: str) -> List[str]:
         if not line.startswith('http'):
             line = 'https://' + line  # default schema
         available_servers.append(line)
+
+    log.debug('Fetching available matrix servers', available_servers=available_servers)
     return available_servers
 
 

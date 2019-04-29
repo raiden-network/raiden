@@ -47,27 +47,6 @@ from raiden_contracts.contract_manager import ContractManager
 log = structlog.get_logger(__name__)
 
 
-def _setup_matrix(config):
-    if config['transport']['matrix'].get('available_servers') is None:
-        # fetch list of known servers from raiden-network/raiden-tranport repo
-        available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
-        available_servers = get_matrix_servers(available_servers_url)
-        log.debug('Fetching available matrix servers', available_servers=available_servers)
-        config['transport']['matrix']['available_servers'] = available_servers
-
-    # Add monitoring service broadcast room if enabled
-    if config['services']['monitoring_enabled'] is True:
-        config['transport']['matrix']['global_rooms'].append(MONITORING_BROADCASTING_ROOM)
-
-    try:
-        transport = MatrixTransport(config['transport']['matrix'])
-    except RaidenError as ex:
-        click.secho(f'FATAL: {ex}', fg='red')
-        sys.exit(1)
-
-    return transport
-
-
 def run_app(
         address,
         keystore_path,
@@ -230,7 +209,19 @@ def run_app(
             endpoint_registry_contract_address,
         )
     elif transport == 'matrix':
-        transport = _setup_matrix(config)
+        if config['transport']['matrix'].get('available_servers') is None:
+            available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
+            available_servers = get_matrix_servers(available_servers_url)
+            config['transport']['matrix']['available_servers'] = available_servers
+
+        if config['services']['monitoring_enabled'] is True:
+            config['transport']['matrix']['global_rooms'].append(MONITORING_BROADCASTING_ROOM)
+
+        try:
+            transport = MatrixTransport(config['transport']['matrix'])
+        except RaidenError as ex:
+            click.secho(f'FATAL: {ex}', fg='red')
+            sys.exit(1)
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
