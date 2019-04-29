@@ -865,31 +865,6 @@ class TokenNetwork:
 
         return error_type, msg
 
-    def _close_preconditions(
-            self,
-            channel_identifier: ChannelID,
-            partner: Address,
-            block_identifier: BlockSpecification,
-    ):
-        if not self.client.can_query_state_for_block(block_identifier):
-            raise NoStateForBlockIdentifier()
-
-        self._check_for_outdated_channel(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
-
-        error_type, msg = self._check_channel_state_for_close(
-            participant1=self.node_address,
-            participant2=partner,
-            block_identifier=block_identifier,
-            channel_identifier=channel_identifier,
-        )
-        if error_type:
-            raise error_type(msg)
-
     def close(
             self,
             channel_identifier: ChannelID,
@@ -926,11 +901,21 @@ class TokenNetwork:
 
         checking_block = self.client.get_checking_block()
         try:
-            self._close_preconditions(
-                channel_identifier,
-                partner=partner,
+            self._check_for_outdated_channel(
+                participant1=self.node_address,
+                participant2=partner,
                 block_identifier=given_block_identifier,
+                channel_identifier=channel_identifier,
             )
+
+            error_type, msg = self._check_channel_state_for_close(
+                participant1=self.node_address,
+                participant2=partner,
+                block_identifier=given_block_identifier,
+                channel_identifier=channel_identifier,
+            )
+            if error_type:
+                raise error_type(msg)
         except NoStateForBlockIdentifier:
             # If preconditions end up being on pruned state skip them. Estimate
             # gas will stop us from sending a transaction that will fail
