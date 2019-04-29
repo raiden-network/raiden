@@ -97,9 +97,6 @@ def run_app(
 
     check_sql_version()
 
-    if transport == 'udp' and not mapped_socket:
-        raise RuntimeError('Missing socket')
-
     if datadir is None:
         datadir = os.path.join(os.path.expanduser('~'), '.raiden')
 
@@ -219,8 +216,6 @@ def run_app(
 
     discovery = None
     if transport == 'udp':
-        check_discovery_registration_gas(blockchain_service, address)
-
         try:
             transport, discovery = setup_udp(
                 config,
