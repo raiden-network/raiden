@@ -9,11 +9,7 @@ from raiden.connection_manager import ConnectionManager
 from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
-from raiden.transfer.identifiers import (
-    CHAIN_ID_UNSPECIFIED,
-    CHANNEL_ID_UNSPECIFIED,
-    CanonicalIdentifier,
-)
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import TokenNetworkState, TransactionChannelNewBalance
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
