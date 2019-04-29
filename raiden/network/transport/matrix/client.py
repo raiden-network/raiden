@@ -516,7 +516,7 @@ class GMatrixClient(MatrixClient):
         self.user_id = user_id
         self.token = self.api.token = token
 
-    def set_sync_limit(self, limit: int) -> Optional[int]:
+    def set_sync_limit(self, limit: Optional[int]) -> Optional[int]:
         """ Sets the events limit per room for sync and return previous limit """
         try:
             prev_limit = json.loads(self.sync_filter)['room']['timeline']['limit']
