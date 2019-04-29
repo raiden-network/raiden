@@ -8,8 +8,8 @@ from raiden import waiting
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     RED_EYES_PER_TOKEN_NETWORK_LIMIT,
-    SECRET_HASH_HEXSTRING_LENGTH,
     SECRET_HEXSTRING_LENGTH,
+    SECRETHASH_HEXSTRING_LENGTH,
     UINT256_MAX,
     Environment,
 )
@@ -737,7 +737,7 @@ class RaidenAPI:
             identifier: PaymentID = None,
             transfer_timeout: int = None,
             secret: Secret = None,
-            secret_hash: SecretHash = None,
+            secrethash: SecretHash = None,
     ):
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
@@ -749,7 +749,7 @@ class RaidenAPI:
             target=target,
             identifier=identifier,
             secret=secret,
-            secret_hash=secret_hash,
+            secrethash=secrethash,
         )
         payment_status.payment_done.wait(timeout=transfer_timeout)
         return payment_status
@@ -762,7 +762,7 @@ class RaidenAPI:
             target: Address,
             identifier: PaymentID = None,
             secret: Secret = None,
-            secret_hash: SecretHash = None,
+            secrethash: SecretHash = None,
     ):
 
         if not isinstance(amount, int):
@@ -788,21 +788,21 @@ class RaidenAPI:
                 raise InvalidSecretOrSecretHash('provided secret is not an hexadecimal string.')
             secret = to_bytes(hexstr=secret)
 
-        if secret_hash is not None:
-            if len(secret_hash) != SECRET_HASH_HEXSTRING_LENGTH:
+        if secrethash is not None:
+            if len(secrethash) != SECRETHASH_HEXSTRING_LENGTH:
                 raise InvalidSecretOrSecretHash(
                     'secret_hash length should be ' +
-                    str(SECRET_HASH_HEXSTRING_LENGTH) +
+                    str(SECRETHASH_HEXSTRING_LENGTH) +
                     '.',
                 )
-            if not is_hex(secret_hash):
+            if not is_hex(secrethash):
                 raise InvalidSecretOrSecretHash('secret_hash is not an hexadecimal string.')
-            secret_hash = to_bytes(hexstr=secret_hash)
+            secrethash = to_bytes(hexstr=secrethash)
 
-        # if both secret and secret_hash were provided we check that sha3(secret)
-        # matches the secert_hash. Note that it is valid to provide a secert_hash
+        # if both secret and secrethash were provided we check that sha3(secret)
+        # matches the secerthash. Note that it is valid to provide a secert_hash
         # without providing a secret
-        if secret is not None and secret_hash is not None and secret_hash != sha3(secret):
+        if secret is not None and secrethash is not None and secrethash != sha3(secret):
             raise InvalidSecretOrSecretHash('provided secret and secret_hash do not match.')
 
         valid_tokens = views.get_token_identifiers(
@@ -833,7 +833,7 @@ class RaidenAPI:
             target=target,
             identifier=identifier,
             secret=secret,
-            secret_hash=secret_hash,
+            secrethash=secrethash,
         )
         return payment_status
 

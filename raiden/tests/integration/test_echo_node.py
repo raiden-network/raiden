@@ -62,7 +62,7 @@ def run_test_event_transfer_received_success(
             identifier=amount,
             target=target_address,
             secret=to_hex(secret),
-            secret_hash=to_hex(sha3(secret)),
+            secrethash=to_hex(sha3(secret)),
         )
 
     for wait, sender, amount in wait_for:

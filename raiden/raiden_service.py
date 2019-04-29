@@ -125,7 +125,7 @@ def initiator_init(
         transfer_identifier: PaymentID,
         transfer_amount: PaymentAmount,
         transfer_secret: Secret,
-        transfer_secret_hash: SecretHash,
+        transfer_secrethash: SecretHash,
         transfer_fee: FeeAmount,
         token_network_identifier: TokenNetworkID,
         target_address: TargetAddress,
@@ -141,7 +141,7 @@ def initiator_init(
         initiator=InitiatorAddress(raiden.address),
         target=target_address,
         secret=transfer_secret,
-        secret_hash=transfer_secret_hash,
+        secrethash=transfer_secrethash,
     )
     previous_address = None
     routes = routing.get_best_routes(
@@ -1073,7 +1073,7 @@ class RaidenService(Runnable):
             identifier: PaymentID,
             fee: FeeAmount = MEDIATION_FEE,
             secret: Secret = None,
-            secret_hash: SecretHash = None,
+            secrethash: SecretHash = None,
     ) -> PaymentStatus:
         """ Transfer `amount` between this node and `target`.
 
@@ -1086,7 +1086,7 @@ class RaidenService(Runnable):
               expire.
         """
         if secret is None:
-            if secret_hash is None:
+            if secrethash is None:
                 secret = random_secret()
             else:
                 secret = EMPTY_SECRET
@@ -1098,7 +1098,7 @@ class RaidenService(Runnable):
             target=target,
             identifier=identifier,
             secret=secret,
-            secret_hash=secret_hash,
+            secrethash=secrethash,
         )
 
         return payment_status
@@ -1111,11 +1111,11 @@ class RaidenService(Runnable):
             target: TargetAddress,
             identifier: PaymentID,
             secret: Secret,
-            secret_hash: SecretHash = None,
+            secrethash: SecretHash = None,
     ) -> PaymentStatus:
 
-        if secret_hash is None:
-            secret_hash = sha3(secret)
+        if secrethash is None:
+            secrethash = sha3(secret)
 
         # We must check if the secret was registered against the latest block,
         # even if the block is forked away and the transaction that registers
@@ -1127,12 +1127,12 @@ class RaidenService(Runnable):
         # having a specific block_hash, because it's preferable to know if the secret
         # was ever known, rather than having a consistent view of the blockchain.
         secret_registered = self.default_secret_registry.is_secret_registered(
-            secrethash=secret_hash,
+            secrethash=secrethash,
             block_identifier='latest',
         )
         if secret_registered:
             raise RaidenUnrecoverableError(
-                f'Attempted to initiate a locked transfer with secrethash {pex(secret_hash)}.'
+                f'Attempted to initiate a locked transfer with secrethash {pex(secrethash)}.'
                 f' That secret is already registered onchain.',
             )
 
@@ -1168,7 +1168,7 @@ class RaidenService(Runnable):
             transfer_identifier=identifier,
             transfer_amount=amount,
             transfer_secret=secret,
-            transfer_secret_hash=secret_hash,
+            transfer_secrethash=secrethash,
             transfer_fee=fee,
             token_network_identifier=token_network_identifier,
             target_address=target,

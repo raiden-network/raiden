@@ -160,7 +160,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_lockedtransfer(raiden: RaidenService, message: LockedTransfer):
-        secret_hash = message.lock.secrethash
+        secrethash = message.lock.secrethash
         # We must check if the secret was registered against the latest block,
         # even if the block is forked away and the transaction that registers
         # the secret is removed from the blockchain. The rationale here is that
@@ -171,12 +171,12 @@ class MessageHandler:
         # having a specific block_hash, because it's preferable to know if the secret
         # was ever known, rather than having a consistent view of the blockchain.
         registered = raiden.default_secret_registry.is_secret_registered(
-            secrethash=secret_hash,
+            secrethash=secrethash,
             block_identifier='latest',
         )
         if registered:
             log.warning(
-                f'Ignoring received locked transfer with secrethash {pex(secret_hash)} '
+                f'Ignoring received locked transfer with secrethash {pex(secrethash)} '
                 f'since it is already registered in the secret registry',
             )
             return
