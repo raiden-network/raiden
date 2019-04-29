@@ -140,6 +140,14 @@ def run_app(
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
 
+    parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
+    if not parsed_eth_rpc_endpoint.scheme:
+        eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
+
+    web3 = Web3(HTTPProvider(eth_rpc_endpoint))
+    check_ethereum_version(web3)
+    check_network_id(network_id, web3)
+
     config['transport']['udp']['host'] = listen_host
     config['transport']['udp']['port'] = listen_port
     config['console'] = console
@@ -160,14 +168,6 @@ def run_app(
     config['unrecoverable_error_should_crash'] = unrecoverable_error_should_crash
     config['services']['pathfinding_max_paths'] = pathfinding_max_paths
     config['services']['monitoring_enabled'] = enable_monitoring
-
-    parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
-    if not parsed_eth_rpc_endpoint.scheme:
-        eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
-
-    web3 = Web3(HTTPProvider(eth_rpc_endpoint))
-    check_ethereum_version(web3)
-    check_network_id(network_id, web3)
     config['chain_id'] = network_id
 
     setup_environment(config, environment_type)
