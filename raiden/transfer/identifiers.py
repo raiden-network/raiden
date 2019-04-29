@@ -1,5 +1,6 @@
-from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
+from eth_utils import to_bytes, to_canonical_address, to_checksum_address
 
+from raiden import constants
 from raiden.utils import pex
 from raiden.utils.typing import (
     Address,
@@ -7,15 +8,13 @@ from raiden.utils.typing import (
     ChainID,
     ChannelID,
     Dict,
+    T_Address,
+    T_ChainID,
+    T_ChannelID,
     TokenNetworkAddress,
     TokenNetworkID,
     Union,
 )
-
-# Placeholder chain ID for refactoring in scope of #3493
-CHAIN_ID_UNSPECIFIED = ChainID(-1)
-# Placeholder channel ID for refactoring in scope of #3493
-CHANNEL_ID_UNSPECIFIED = ChannelID(-2)
 
 
 class QueueIdentifier:
@@ -83,10 +82,26 @@ class CanonicalIdentifier:
             f'channel_id:{self.channel_identifier}>'
         )
 
+    def validate(self):
+        if not isinstance(self.token_network_address, T_Address):
+            raise ValueError('token_network_identifier must be an address instance')
+
+        if not isinstance(self.channel_identifier, T_ChannelID):
+            raise ValueError('channel_identifier must be an ChannelID instance')
+
+        if not isinstance(self.chain_identifier, T_ChainID):
+            raise ValueError('chain_id must be a ChainID instance')
+
+        if (
+                self.channel_identifier < 0 or
+                self.channel_identifier > constants.UINT256_MAX
+        ):
+            raise ValueError('channel id is invalid')
+
     def to_dict(self) -> Dict[str, Any]:
         return dict(
             chain_identifier=str(self.chain_identifier),
-            token_network_address=to_hex(self.token_network_address),
+            token_network_address=to_checksum_address(self.token_network_address),
             channel_identifier=str(self.channel_identifier),
         )
 
@@ -99,3 +114,17 @@ class CanonicalIdentifier:
             ),
             channel_identifier=ChannelID(int(data['channel_identifier'])),
         )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CanonicalIdentifier):
+            return NotImplemented
+        return (
+            self.chain_identifier == other.chain_identifier and
+            self.token_network_address == other.token_network_address and
+            self.channel_identifier == other.channel_identifier
+        )
+
+    def __ne__(self, other: object) -> bool:
+        if not isinstance(other, CanonicalIdentifier):
+            return True
+        return not self.__eq__(other)
