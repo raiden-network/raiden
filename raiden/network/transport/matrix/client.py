@@ -210,7 +210,7 @@ class GMatrixClient(MatrixClient):
         # dict of 'type': 'content' key/value pairs
         self.account_data: Dict[str, Dict[str, Any]] = dict()
         self._post_hook_func: Optional[Callable[[str], None]] = None
-        self.token = None
+        self.token: Optional[str] = None
 
         super().__init__(
             base_url,
@@ -512,7 +512,7 @@ class GMatrixClient(MatrixClient):
     def set_sync_token(self, sync_token: str) -> None:
         self.sync_token = sync_token
 
-    def set_access_token(self, user_id: str, token: str) -> None:
+    def set_access_token(self, user_id: str, token: Optional[str]) -> None:
         self.user_id = user_id
         self.token = self.api.token = token
 
