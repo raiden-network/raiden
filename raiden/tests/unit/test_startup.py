@@ -9,12 +9,12 @@ from raiden.constants import Environment, RoutingMode
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.factories import make_address, make_checksum_address
 from raiden.tests.utils.mocks import MockChain, MockWeb3, patched_get_for_succesful_pfs_info
-from raiden.ui.checks import check_network_id
+from raiden.ui.checks import check_discovery_registration_gas, check_network_id
 from raiden.ui.startup import (
     setup_contracts_or_exit,
     setup_environment,
     setup_proxies_or_exit,
-    setup_udp_or_exit,
+    setup_udp,
 )
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -322,7 +322,7 @@ def test_setup_proxies_no_service_registry_and_no_pfs_address_but_requesting_pfs
             )
 
 
-def test_setup_udp_or_exit(raiden_udp_ports):
+def test_setup_udp(raiden_udp_ports):
     network_id = 42
     config = deepcopy(App.DEFAULT_CONFIG)
     config['network_id'] = network_id
@@ -335,7 +335,7 @@ def test_setup_udp_or_exit(raiden_udp_ports):
     blockchain_service = MockChain(network_id=network_id, node_address=make_address())
     # set a big fake balance for us, to pass the test of sufficient gas for discovery transaction
     blockchain_service.client.balances_mapping[our_address] = 99999999999999999
-    transport, discovery = setup_udp_or_exit(
+    transport, discovery = setup_udp(
         config=config,
         blockchain_service=blockchain_service,
         address=our_address,
@@ -346,21 +346,14 @@ def test_setup_udp_or_exit(raiden_udp_ports):
     assert discovery
 
 
-def test_setup_udp_or_exit_insufficient_balance():
+def test_check_discovery_registration_gas():
     network_id = 42
-    config = deepcopy(App.DEFAULT_CONFIG)
-    config['network_id'] = network_id
-    config['environment_type'] = Environment.DEVELOPMENT
-    contracts = {}
     our_address = make_address()
     blockchain_service = MockChain(network_id=network_id, node_address=make_address())
     # we don't have sufficient balance, so client should exit with a message
     blockchain_service.client.balances_mapping[our_address] = 1
     with pytest.raises(SystemExit):
-        setup_udp_or_exit(
-            config=config,
+        check_discovery_registration_gas(
             blockchain_service=blockchain_service,
-            address=our_address,
-            contracts=contracts,
-            endpoint_registry_contract_address=make_address(),
+            account_address=our_address,
         )

@@ -10,7 +10,12 @@ from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
 from raiden.constants import MONITORING_BROADCASTING_ROOM, RAIDEN_DB_VERSION
-from raiden.exceptions import RaidenError
+from raiden.exceptions import (
+    AddressWithoutCode,
+    AddressWrongContract,
+    ContractVersionMismatch,
+    RaidenError,
+)
 from raiden.message_handler import MessageHandler
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
@@ -22,6 +27,7 @@ from raiden.settings import (
     DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
 )
 from raiden.ui.checks import (
+    check_discovery_registration_gas,
     check_ethereum_version,
     check_has_accounts,
     check_network_id,
@@ -34,10 +40,13 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordprompt,
 )
 from raiden.ui.startup import (
+    handle_contract_no_code,
+    handle_contract_version_mismatch,
+    handle_contract_wrong_address,
     setup_contracts_or_exit,
     setup_environment,
     setup_proxies_or_exit,
-    setup_udp_or_exit,
+    setup_udp,
 )
 from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
@@ -149,6 +158,15 @@ def run_app(
     config['services']['monitoring_enabled'] = enable_monitoring
     config['chain_id'] = network_id
 
+    if transport == 'matrix':
+        if config['transport']['matrix'].get('available_servers') is None:
+            available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
+            available_servers = get_matrix_servers(available_servers_url)
+            config['transport']['matrix']['available_servers'] = available_servers
+
+        if config['services']['monitoring_enabled'] is True:
+            config['transport']['matrix']['global_rooms'].append(MONITORING_BROADCASTING_ROOM)
+
     setup_environment(config, environment_type)
 
     contracts = setup_contracts_or_exit(config, network_id)
@@ -201,22 +219,24 @@ def run_app(
 
     discovery = None
     if transport == 'udp':
-        transport, discovery = setup_udp_or_exit(
-            config,
-            blockchain_service,
-            address,
-            contracts,
-            endpoint_registry_contract_address,
-        )
+        check_discovery_registration_gas(blockchain_service, address)
+
+        try:
+            transport, discovery = setup_udp(
+                config,
+                blockchain_service,
+                address,
+                contracts,
+                endpoint_registry_contract_address,
+            )
+        except ContractVersionMismatch as e:
+            handle_contract_version_mismatch(e)
+        except AddressWithoutCode:
+            handle_contract_no_code('Endpoint Registry', endpoint_registry_contract_address)
+        except AddressWrongContract:
+            handle_contract_wrong_address('Endpoint Registry', endpoint_registry_contract_address)
+
     elif transport == 'matrix':
-        if config['transport']['matrix'].get('available_servers') is None:
-            available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
-            available_servers = get_matrix_servers(available_servers_url)
-            config['transport']['matrix']['available_servers'] = available_servers
-
-        if config['services']['monitoring_enabled'] is True:
-            config['transport']['matrix']['global_rooms'].append(MONITORING_BROADCASTING_ROOM)
-
         try:
             transport = MatrixTransport(config['transport']['matrix'])
         except RaidenError as ex:

@@ -17,7 +17,6 @@ from raiden.network.throttle import TokenBucket
 from raiden.network.transport import UDPTransport
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
 from raiden.ui.checks import (
-    check_discovery_registration_gas,
     check_pfs_configuration,
     check_raiden_environment,
     check_smart_contract_addresses,
@@ -265,30 +264,22 @@ def setup_proxies_or_exit(
     return proxies
 
 
-def setup_udp_or_exit(
+def setup_udp(
         config,
         blockchain_service,
         address,
         contracts,
         endpoint_registry_contract_address,
 ):
-    check_discovery_registration_gas(blockchain_service, address)
-    try:
-        dicovery_proxy = blockchain_service.discovery(
-            endpoint_registry_contract_address or to_canonical_address(
-                contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
-            ),
-        )
-        discovery = ContractDiscovery(
-            blockchain_service.node_address,
-            dicovery_proxy,
-        )
-    except ContractVersionMismatch as e:
-        handle_contract_version_mismatch(e)
-    except AddressWithoutCode:
-        handle_contract_no_code('Endpoint Registry', endpoint_registry_contract_address)
-    except AddressWrongContract:
-        handle_contract_wrong_address('Endpoint Registry', endpoint_registry_contract_address)
+    dicovery_proxy = blockchain_service.discovery(
+        endpoint_registry_contract_address or to_canonical_address(
+            contracts[CONTRACT_ENDPOINT_REGISTRY]['address'],
+        ),
+    )
+    discovery = ContractDiscovery(
+        blockchain_service.node_address,
+        dicovery_proxy,
+    )
 
     throttle_policy = TokenBucket(
         config['transport']['udp']['throttle_capacity'],
