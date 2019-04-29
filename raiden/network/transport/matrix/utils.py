@@ -494,7 +494,7 @@ def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
     return sorted_servers
 
 
-def make_client(servers: Sequence[str], *args, **kwargs) -> GMatrixClient:
+def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
     """Given a list of possible servers, chooses the closest available and create a GMatrixClient
 
     Params:
@@ -519,7 +519,6 @@ def make_client(servers: Sequence[str], *args, **kwargs) -> GMatrixClient:
 
     last_ex = None
     for server_url in sorted_servers:
-        server_url: str = server_url
         client = GMatrixClient(server_url, *args, **kwargs)
         try:
             client.api._send('GET', '/versions', api_path='/_matrix/client')
