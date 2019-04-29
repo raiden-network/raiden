@@ -354,6 +354,7 @@ def login_or_register(
         prev_user_id or '',
     )
     if _match_user:  # same user as before
+        assert prev_user_id is not None
         log.debug('Trying previous user login', user_id=prev_user_id)
         client.set_access_token(user_id=prev_user_id, token=prev_access_token)
 
