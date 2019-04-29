@@ -921,7 +921,12 @@ class JSONRPCClient:
         """ After estimate gas failure checks if our address has enough balance.
 
         If the account did not have enough ETH balance to execute the,
-        transaction then it raises an `InsufficientFunds` error
+        transaction then it raises an `InsufficientFunds` error.
+
+        Note:
+            This check contains a race condition, it could be the case that a
+            new block is mined changing the account's balance.
+            https://github.com/raiden-network/raiden/issues/3890#issuecomment-485857726
         """
         if transaction_executed:
             return
