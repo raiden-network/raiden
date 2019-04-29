@@ -17,8 +17,8 @@ from raiden.api.v1.encoding import AddressField, HexAddressConverter
 from raiden.constants import (
     GENESIS_BLOCK_NUMBER,
     RED_EYES_PER_CHANNEL_PARTICIPANT_LIMIT,
-    SECRET_HASH_HEXSTRING_LENGTH,
     SECRET_HEXSTRING_LENGTH,
+    SECRETHASH_HEXSTRING_LENGTH,
     Environment,
 )
 from raiden.messages import LockedTransfer, Unlock
@@ -1208,7 +1208,7 @@ def assert_payment_secret_and_hash(response, payment):
     assert 'secret' in response
     assert 'secret_hash' in response
     assert len(response['secret']) == SECRET_HEXSTRING_LENGTH
-    assert len(response['secret_hash']) == SECRET_HASH_HEXSTRING_LENGTH
+    assert len(response['secret_hash']) == SECRETHASH_HEXSTRING_LENGTH
 
     generated_secret_hash = to_hex(sha3(to_bytes(hexstr=response['secret'])))
     assert generated_secret_hash == response['secret_hash']

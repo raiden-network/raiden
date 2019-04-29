@@ -21,7 +21,7 @@ def reveal_secret_with_resolver(
 
     request = {
         'token': to_hex(token),
-        'secret_hash': to_hex(secret_request_event.secrethash),
+        'secrethash': to_hex(secret_request_event.secrethash),
         'amount': secret_request_event.amount,
         'payment_identifier': secret_request_event.payment_identifier,
         'payment_sender': to_hex(secret_request_event.recipient),
