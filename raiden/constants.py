@@ -10,6 +10,7 @@ from raiden.utils.typing import (
     BlockNumber,
     Locksroot,
     RaidenProtocolVersion,
+    Secret,
     Signature,
     TokenAmount,
 )
@@ -47,7 +48,7 @@ EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
 EMPTY_HASH_KECCAK = keccak(EMPTY_HASH)
 EMPTY_SIGNATURE = Signature(bytes(65))
 EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
-EMPTY_SECRET = b''
+EMPTY_SECRET = Secret(b'')
 ZERO_TOKENS = TokenAmount(0)
 
 SECRET_HASH_HEXSTRING_LENGTH = len(to_hex(EMPTY_HASH))
