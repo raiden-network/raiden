@@ -1218,6 +1218,11 @@ def test_send_to_device(matrix_transports):
 
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
+    message = Processed(message_identifier=1)
+    transport0._raiden_service.sign(message)
+    transport0.send_to_device(raiden_service1.address, message)
+    gevent.sleep(.5)
+    transport1._receive_to_device.assert_not_called()
     message = ToDevice(message_identifier=1)
     transport0._raiden_service.sign(message)
     transport0.send_to_device(raiden_service1.address, message)

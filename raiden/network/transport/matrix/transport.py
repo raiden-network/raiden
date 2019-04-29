@@ -333,7 +333,6 @@ class MatrixTransport(Runnable):
         )
 
         self._client.add_invite_listener(self._handle_invite)
-        self._client.add_presence_listener(self._handle_presence_change)
         self._client.add_listener(self._handle_to_device_message, event_type='to_device')
 
         self._health_lock = Semaphore()
@@ -1397,7 +1396,7 @@ class MatrixTransport(Runnable):
 
     def send_to_device(self, address: Address, message: Message) -> None:
         """ Sends send-to-device events to a all known devices of a peer without retries. """
-        user_ids = self._address_to_userids[address]
+        user_ids = self._address_mgr.get_userids_for_address(address)
 
         data = {
             user_id:
@@ -1420,7 +1419,7 @@ class MatrixTransport(Runnable):
                 self._stop_event.ready() or
                 sender_id == self._user_id
         ):
-            # Ignore non-messages and  our own messages
+            # Ignore non-messages and our own messages
             return False
 
         user = self._get_user(sender_id)
@@ -1433,7 +1432,7 @@ class MatrixTransport(Runnable):
             return False
 
         # don't proceed if user isn't whitelisted (yet)
-        if peer_address not in self._address_to_userids:
+        if not self._address_mgr.is_address_known(peer_address):
             # user not start_health_check'ed
             self.log.debug(
                 'ToDevice Message from non-whitelisted peer - ignoring',
@@ -1442,13 +1441,14 @@ class MatrixTransport(Runnable):
             )
             return False
 
-        is_peer_reachable = (
-            self._userid_to_presence.get(sender_id) in _PRESENCE_REACHABLE_STATES and
-            self._address_to_presence.get(peer_address) in _PRESENCE_REACHABLE_STATES
+        is_peer_reachable = self._address_mgr.get_address_reachability(peer_address) is (
+            AddressReachability.REACHABLE
         )
+
         if not is_peer_reachable:
             self.log.debug('Forcing presence update', peer_address=peer_address, user_id=sender_id)
-            self._update_address_presence(peer_address)
+            self._address_mgr.force_user_presence(user, UserPresence.ONLINE)
+            self._address_mgr.refresh_address_presence(peer_address)
 
         data = event['content']
         if not isinstance(data, str):
@@ -1509,9 +1509,9 @@ class MatrixTransport(Runnable):
                         _exc=ex,
                     )
                     continue
-                if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
+                if not isinstance(message, ToDevice):
                     self.log.warning(
-                        'Received invalid ToDevice Message',
+                        'Received Message is not of type ToDevice, invalid',
                         message=message,
                         peer_address=peer_address,
                     )
@@ -1539,4 +1539,5 @@ class MatrixTransport(Runnable):
         for message in messages:
             if isinstance(message, ToDevice):
                 self._receive_to_device(message)
+
         return True
