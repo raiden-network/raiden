@@ -79,21 +79,21 @@ class ContractProxy:
             self,
             function_name: str,
             startgas: int,
-            *args,
-            **kargs,
+            *args: Any,
+            **kwargs: Any,
     ) -> typing.TransactionHash:
         data = ContractProxy.get_transaction_data(
             abi=self.contract.abi,
             function_name=function_name,
             args=args,
-            kwargs=kargs,
+            kwargs=kwargs,
         )
 
         try:
             txhash = self.jsonrpc_client.send_transaction(
                 to=self.contract.address,
                 startgas=startgas,
-                value=kargs.pop('value', 0),
+                value=kwargs.pop('value', 0),
                 data=decode_hex(data),
             )
         except ValueError as e:
