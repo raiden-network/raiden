@@ -125,7 +125,7 @@ def run_test_locked_transfer_secret_registered_onchain(
     secret_registry_proxy = app0.raiden.chain.secret_registry(
         secret_registry_address,
     )
-    secret_registry_proxy.register_secret(secret=transfer_secret, given_block_identifier='latest')
+    secret_registry_proxy.register_secret(secret=transfer_secret)
 
     # Wait until our node has processed the block that the secret registration was mined at
     block_number = app0.raiden.get_block_number()
