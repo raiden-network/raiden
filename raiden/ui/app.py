@@ -234,10 +234,6 @@ def run_app(
     else:
         raise RuntimeError(f'Unknown transport type "{transport}" given')
 
-    raiden_event_handler = RaidenEventHandler()
-
-    message_handler = MessageHandler()
-
     try:
         start_block = 0
         if 'TokenNetworkRegistry' in contracts:
@@ -251,8 +247,8 @@ def run_app(
             default_secret_registry=proxies.secret_registry,
             default_service_registry=proxies.service_registry,
             transport=transport,
-            raiden_event_handler=raiden_event_handler,
-            message_handler=message_handler,
+            raiden_event_handler=RaidenEventHandler(),
+            message_handler=MessageHandler(),
             discovery=discovery,
             user_deposit=proxies.user_deposit,
         )
