@@ -27,7 +27,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.state import balanceproof_from_envelope
 from raiden.transfer.state_change import ReceiveDelivered, ReceiveProcessed, ReceiveUnlock
 from raiden.utils import pex, random_secret
-from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, TokenNetworkID
+from raiden.utils.typing import MYPY_ANNOTATION, InitiatorAddress, PaymentAmount, TokenNetworkID
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -121,7 +121,7 @@ class MessageHandler:
             token_network_id=TokenNetworkID(token_network_address),
             from_address=InitiatorAddress(raiden.address),
             to_address=from_transfer.target,
-            amount=from_transfer.lock.amount,
+            amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated by #3863
             previous_address=message.sender,
             config=raiden.config,
             privkey=raiden.privkey,
