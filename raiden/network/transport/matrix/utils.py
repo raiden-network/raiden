@@ -340,8 +340,8 @@ def login_or_register(
     Params:
         client: GMatrixClient instance configured with desired homeserver
         signer: raiden.utils.signer.Signer instance for signing password and displayname
-        prev_user_id: (optional) previous persisted client.user_id. Must match signer's account
-        prev_access_token: (optional) previous persistend client.access_token for prev_user_id
+        prev_user_id: (optional) previously persisted client.user_id. Must match signer's account
+        prev_access_token: (optional) previously persisted client.access_token for prev_user_id
     Returns:
         Own matrix_client.User
     """
