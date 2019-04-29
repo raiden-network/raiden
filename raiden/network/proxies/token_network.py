@@ -908,14 +908,12 @@ class TokenNetwork:
                 channel_identifier=channel_identifier,
             )
 
-            error_type, msg = self._check_channel_state_for_close(
+            self._check_channel_state_for_close(
                 participant1=self.node_address,
                 participant2=partner,
                 block_identifier=given_block_identifier,
                 channel_identifier=channel_identifier,
             )
-            if error_type:
-                raise error_type(msg)
         except NoStateForBlockIdentifier:
             # If preconditions end up being on pruned state skip them. Estimate
             # gas will stop us from sending a transaction that will fail
@@ -962,23 +960,13 @@ class TokenNetwork:
                     required_gas=GAS_REQUIRED_FOR_CLOSE_CHANNEL,
                     block_identifier=block,
                 )
-                error_type, msg = self._check_channel_state_for_close(
+                self._check_channel_state_for_close(
                     participant1=self.node_address,
                     participant2=partner,
                     block_identifier=block,
                     channel_identifier=channel_identifier,
                 )
-                if not error_type:
-                    # error_type can also be None above in which case it's
-                    # unknown reason why we would fail.
-                    error_type = RaidenUnrecoverableError
-                error_msg = f'{error_prefix}. {msg}'
-                if error_type == RaidenRecoverableError:
-                    log.warning(error_msg, **log_details)
-                else:
-                    log.critical(error_msg, **log_details)
-
-                raise error_type(error_msg)
+                raise RaidenUnrecoverableError(error_prefix)
 
         log.info('closeChannel successful', **log_details)
 
@@ -1601,9 +1589,7 @@ class TokenNetwork:
             participant2: Address,
             block_identifier: BlockSpecification,
             channel_identifier: ChannelID,
-    ) -> Tuple[Optional[ErrorType], str]:
-        error_type: Optional[ErrorType] = None
-        msg = ''
+    ):
         channel_state = self._get_channel_state(
             participant1=participant1,
             participant2=participant2,
@@ -1612,19 +1598,15 @@ class TokenNetwork:
         )
 
         if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
-            error_type = RaidenUnrecoverableError
             msg = (
                 f'Channel between participant {participant1} '
                 f'and {participant2} does not exist'
             )
+            raise RaidenUnrecoverableError(msg)
         elif channel_state == ChannelState.SETTLED:
-            error_type = RaidenUnrecoverableError
-            msg = 'A settled channel cannot be closed'
+            raise RaidenUnrecoverableError('A settled channel cannot be closed')
         elif channel_state == ChannelState.CLOSED:
-            error_type = RaidenRecoverableError
-            msg = 'Channel is already closed'
-
-        return error_type, msg
+            raise RaidenRecoverableError('Channel is already closed')
 
     def _check_channel_state_before_settle(
             self,
