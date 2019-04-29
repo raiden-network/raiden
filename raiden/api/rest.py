@@ -1113,7 +1113,7 @@ class RestAPI:
                 amount=amount,
                 identifier=identifier,
                 secret=secret,
-                secret_hash=secret_hash,
+                secrethash=secret_hash,
             )
         except (
                 InvalidAmount,
