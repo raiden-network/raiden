@@ -32,7 +32,7 @@ def check_sql_version() -> None:
         sys.exit(1)
 
 
-def check_ethereum_version(web3: Web3) -> None:
+def check_ethereum_client_is_supported(web3: Web3) -> None:
     try:
         node_version = web3.version.node  # pylint: disable=no-member
     except ConnectTimeout:
@@ -53,7 +53,7 @@ def check_ethereum_version(web3: Web3) -> None:
         sys.exit(1)
 
 
-def check_has_accounts(account_manager: AccountManager) -> None:
+def check_ethereum_has_accounts(account_manager: AccountManager) -> None:
     if not account_manager.accounts:
         msg = (
             f"No Ethereum accounts found in the provided keystore directory "
@@ -72,7 +72,7 @@ def check_account(account_manager: AccountManager, address_hex: Address) -> None
         sys.exit(1)
 
 
-def check_network_id(given_network_id: int, web3: Web3) -> None:
+def check_ethereum_network_id(given_network_id: int, web3: Web3) -> None:
     """
     Takes the given network id and checks it against the connected network
 
