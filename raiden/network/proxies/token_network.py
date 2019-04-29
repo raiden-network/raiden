@@ -1629,11 +1629,11 @@ class TokenNetwork:
     ) -> Optional[str]:
         """Check the channel state on chain to see if it has been updated.
 
-        Compare the nonce we are about to update the contract with the
-        updated nonce in the onchain state and if it's the same return a
+        Compare the nonce, we are about to update the contract with, with the
+        updated nonce in the onchain state and, if it's the same, return a
         message with which the caller should raise a RaidenRecoverableError.
 
-        If all is okay return None
+        If all is okay return None.
         """
         msg = None
         closer_details = self._detail_participant(
