@@ -384,32 +384,34 @@ def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
     canonical_identifier = None
 
     for channel_identifier in channel_identifiers:
-        state_change_record = get_state_change_with_balance_proof_by_locksroot(
-            storage=raiden.wal.storage,
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=raiden.chain.network_id,
-                token_network_address=token_network_identifier,
-                channel_identifier=channel_identifier,
-            ),
-            locksroot=locksroot,
-            sender=partner,
-        )
-        if state_change_record.state_change_identifier:
-            canonical_identifier = state_change_record.data.balance_proof.canonical_identifier
-            break
-        event_record = get_event_with_balance_proof_by_locksroot(
-            storage=raiden.wal.storage,
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=raiden.chain.network_id,
-                token_network_address=token_network_identifier,
-                channel_identifier=channel_identifier,
-            ),
-            locksroot=locksroot,
-            recipient=partner,
-        )
-        if event_record.event_identifier:
-            canonical_identifier = event_record.data.balance_proof.canonical_identifier
-            break
+        if partner == args['partner']:
+            state_change_record = get_state_change_with_balance_proof_by_locksroot(
+                storage=raiden.wal.storage,
+                canonical_identifier=CanonicalIdentifier(
+                    chain_identifier=raiden.chain.network_id,
+                    token_network_address=token_network_identifier,
+                    channel_identifier=channel_identifier,
+                ),
+                locksroot=locksroot,
+                sender=partner,
+            )
+            if state_change_record.state_change_identifier:
+                canonical_identifier = state_change_record.data.balance_proof.canonical_identifier
+                break
+        elif partner == args['participant']:
+            event_record = get_event_with_balance_proof_by_locksroot(
+                storage=raiden.wal.storage,
+                canonical_identifier=CanonicalIdentifier(
+                    chain_identifier=raiden.chain.network_id,
+                    token_network_address=token_network_identifier,
+                    channel_identifier=channel_identifier,
+                ),
+                locksroot=locksroot,
+                recipient=partner,
+            )
+            if event_record.event_identifier:
+                canonical_identifier = event_record.data.balance_proof.canonical_identifier
+                break
 
     msg = (
         f'Can not resolve channel_id for unlock with locksroot {pex(locksroot)} and '
