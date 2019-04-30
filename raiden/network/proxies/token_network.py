@@ -1095,15 +1095,12 @@ class TokenNetwork:
             # performed.
             pass
         else:
-            if channel_onchain_detail.channel_identifier != channel_identifier:
-                msg = (
-                    f'The provided channel identifier does not match the value '
-                    f'on-chain at the provided block ({given_block_identifier}). '
-                    f'This call should never have been attempted. '
-                    f'provided_channel_identifier={channel_identifier}, '
-                    f'onchain_channel_identifier={channel_onchain_detail.channel_identifier}'
-                )
-                raise RaidenUnrecoverableError(msg)
+            # The latest channel is of no importance for the update transfer
+            # precondition checks, the only constraint that has to be satisfied
+            # is that the provided channel id provided is at the correct
+            # state. For this reason `getChannelIdentifier` is not called, as
+            # for version 0.4.0 that would return the identifier of the latest
+            # channel.
 
             if channel_onchain_detail.state != ChannelState.CLOSED:
                 msg = (
