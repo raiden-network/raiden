@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import structlog
 from eth_keyfile import decode_keyfile_json
@@ -18,7 +18,7 @@ class InvalidAccountFile(Exception):
     pass
 
 
-def _find_datadir() -> str:
+def _find_datadir() -> Optional[str]:
     home = os.path.expanduser('~')
     if home == '~':  # Could not expand user path
         return None
@@ -37,7 +37,7 @@ def _find_datadir() -> str:
     return datadir
 
 
-def _find_keystoredir() -> str:
+def _find_keystoredir() -> Optional[str]:
     datadir = _find_datadir()
     if datadir is None:
         # can't find a data directory in the system
@@ -83,7 +83,7 @@ def check_keystore_json(jsondata: Dict) -> bool:
 class AccountManager:
     def __init__(self, keystore_path: str = None):
         self.keystore_path = keystore_path
-        self.accounts = {}
+        self.accounts: Dict[str, Any] = {}
         if self.keystore_path is None:
             self.keystore_path = _find_keystoredir()
         if self.keystore_path is not None:
@@ -129,6 +129,7 @@ class AccountManager:
             return False
 
         address = add_0x_prefix(address)
+        assert isinstance(address, str)
 
         return address.lower() in self.accounts
 
@@ -152,6 +153,7 @@ class AccountManager:
             data = json.load(data_file)
 
         acc = Account(data, password, self.accounts[address])
+        assert acc.privkey is not None
         return acc.privkey
 
 
@@ -251,16 +253,17 @@ class Account:
             self._address = privatekey_to_address(self.privkey)
 
     @property
-    def privkey(self) -> PrivateKey:
+    def privkey(self) -> Optional[PrivateKey]:
         """The account's private key or `None` if the account is locked"""
         if not self.locked:
             return self._privkey
         return None
 
     @property
-    def pubkey(self) -> PublicKey:
+    def pubkey(self) -> Optional[PublicKey]:
         """The account's public key or `None` if the account is locked"""
         if not self.locked:
+            assert self.privkey is not None
             return privatekey_to_publickey(self.privkey)
 
         return None

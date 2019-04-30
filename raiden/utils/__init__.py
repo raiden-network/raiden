@@ -34,6 +34,8 @@ from raiden.utils.typing import (
     List,
     Optional,
     Port,
+    PrivateKey,
+    PublicKey,
     Secret,
     T_BlockHash,
     T_BlockNumber,
@@ -117,7 +119,7 @@ def split_endpoint(endpoint: str) -> HostPort:
     return Host(host), returned_port
 
 
-def privatekey_to_publickey(private_key_bin: bytes) -> bytes:
+def privatekey_to_publickey(private_key_bin: PrivateKey) -> PublicKey:
     """ Returns public key in bitcoins 'bin' encoding. """
     if not ishash(private_key_bin):
         raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
