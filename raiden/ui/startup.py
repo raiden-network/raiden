@@ -128,7 +128,7 @@ def setup_contracts_or_exit(
                 version=contracts_version,
             )
         except ValueError:
-            return contracts, False
+            return contracts
 
         contracts = deployment_data['contracts']
 
