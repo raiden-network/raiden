@@ -191,7 +191,7 @@ We use the address of this token to deploy service contracts.
 .. code:: bash
 
  (env) $ export SERVICE_TOKEN="0xC5e9F7407359d1492d515C303A3aeDB434D3f0e1"
- (env) $ python -m raiden_contracts.deploy services --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 60000000 --token-address $SERVICE_TOKEN --user-deposit-whole-limit $MAX_UINT256
+ (env) $ python -m raiden_contracts.deploy services --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-address $SERVICE_TOKEN --user-deposit-whole-limit $MAX_UINT256
 
 We deploy another Token contract that's going to be transferred on Raiden network.
 
@@ -207,7 +207,7 @@ We register this token to the TokenNetworkRegistry.
 .. code:: bash
 
  (env) $ export TOKEN="0x818cBB172D1a1b769acaA94e80e4c71ba40bdc79"
- (env) $ python -m raiden_contracts.deploy register --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 60000000 --token-address $TOKEN --token-network-registry-address $TokenNetworkRegistry --contracts-version $VERSION --channel-participant-deposit-limit 10000000 --token-network-deposit-limit 1000000000
+ (env) $ python -m raiden_contracts.deploy register --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 6000000 --token-address $TOKEN --token-network-registry-address $TokenNetworkRegistry --contracts-version $VERSION --channel-participant-deposit-limit 10000000 --token-network-deposit-limit 1000000000
 
 Start Raiden Client
 ===================
