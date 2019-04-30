@@ -368,7 +368,7 @@ def apply_config_file(
     }
 
     config_file_path = Path(cli_params[config_file_option_name])
-    config_file_values = dict()
+    config_file_values: Dict[str, Any] = dict()
     try:
         with config_file_path.open() as config_file:
             config_file_values = load(config_file)
