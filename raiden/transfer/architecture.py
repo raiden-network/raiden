@@ -1,7 +1,8 @@
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
-from typing import TYPE_CHECKING, Dict
+from dataclasses import field
 
+from raiden.storage.serialization import dataclass
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
     Address,
@@ -22,10 +23,6 @@ from raiden.utils.typing import (
     Tuple,
     TypeVar,
 )
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from raiden.transfer.state import BalanceProofSignedState
 
 # Quick overview
 # --------------
@@ -52,6 +49,7 @@ if TYPE_CHECKING:
 # outputs are separated under different class hierarquies (StateChange and Event).
 
 
+@dataclass
 class State:
     """ An isolated state, modified by StateChange messages.
 
@@ -64,10 +62,10 @@ class State:
           objects as immutable.
     - This class is used as a marker for states.
     """
+    pass
 
-    __slots__ = ()
 
-
+@dataclass
 class StateChange:
     """ Declare the transition to be applied in a state object.
 
@@ -84,13 +82,10 @@ class StateChange:
     - These objects don't have logic by design.
     - This class is used as a marker for state changes.
     """
-
-    __slots__ = ()
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {attr: value for attr, value in self.__dict__.items() if not attr.startswith("_")}
+    pass
 
 
+@dataclass
 class Event:
     """ Events produced by the execution of a state change.
 
@@ -105,10 +100,10 @@ class Event:
     - Separate events are preferred because there is a decoupling of what the
       upper layer will use the events for.
     """
+    pass
 
-    __slots__ = ()
 
-
+@dataclass
 class SendMessageEvent(Event):
     """ Marker used for events which represent off-chain protocol messages tied
     to a channel.
@@ -116,64 +111,30 @@ class SendMessageEvent(Event):
     Messages are sent only once, delivery is guaranteed by the transport and
     not by the state machine
     """
+    recipient: Address
+    channel_identifier: ChannelID
+    message_identifier: MessageID
+    queue_identifier: QueueIdentifier = field(init=False)
 
-    def __init__(
-        self, recipient: Address, channel_identifier: ChannelID, message_identifier: MessageID
-    ) -> None:
+    def __post_init__(self) -> None:
         # Note that here and only here channel identifier can also be 0 which stands
         # for the identifier of no channel (i.e. the global queue)
         if not isinstance(channel_identifier, T_ChannelID):
             raise ValueError("channel identifier must be of type T_ChannelIdentifier")
 
-        self.recipient = recipient
         self.queue_identifier = QueueIdentifier(
             recipient=recipient, channel_identifier=channel_identifier
         )
-        self.message_identifier = message_identifier
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, SendMessageEvent)
-            and self.recipient == other.recipient
-            and self.queue_identifier == other.queue_identifier
-            and self.message_identifier == other.message_identifier
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+        self.message_identifier = self.message_identifier
 
 
+@dataclass
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
-
-    def __init__(self, sender: Address) -> None:
-        self.sender = sender
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, AuthenticatedSenderStateChange) and self.sender == other.sender
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    sender: Address
 
 
-class BalanceProofStateChange(AuthenticatedSenderStateChange):
-    """ Marker used for state changes which contain a balance proof. """
-
-    def __init__(self, balance_proof: "BalanceProofSignedState") -> None:
-        super().__init__(sender=balance_proof.sender)
-        self.balance_proof = balance_proof
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, BalanceProofStateChange)
-            and super().__eq__(other)
-            and self.balance_proof == other.balance_proof
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-
+@dataclass
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
 
@@ -193,51 +154,26 @@ class ContractSendEvent(Event):
         return not self.__eq__(other)
 
 
+@dataclass
 class ContractSendExpirableEvent(ContractSendEvent):
     """ Marker used for events which represent on-chain transactions which are
     time dependent.
     """
-
-    def __init__(self, triggered_by_block_hash: BlockHash, expiration: BlockExpiration) -> None:
-        super().__init__(triggered_by_block_hash)
-        self.expiration = expiration
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            super().__eq__(other)
-            and isinstance(other, ContractSendExpirableEvent)
-            and self.expiration == other.expiration
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    epxiration: BlockExpiration
 
 
+@dataclass
 class ContractReceiveStateChange(StateChange):
     """ Marker used for state changes which represent on-chain logs. """
+    transaction_hash: TransactionHash
+    block_number: BlockNumber
+    block_hash: BlockHash
 
-    def __init__(
-        self, transaction_hash: TransactionHash, block_number: BlockNumber, block_hash: BlockHash
-    ) -> None:
-        if not isinstance(block_number, T_BlockNumber):
-            raise ValueError("block_number must be of type block_number")
-        if not isinstance(block_hash, T_BlockHash):
-            raise ValueError("block_hash must be of type block_hash")
-
-        self.transaction_hash = transaction_hash
-        self.block_number = block_number
-        self.block_hash = block_hash
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, ContractReceiveStateChange)
-            and self.transaction_hash == other.transaction_hash
-            and self.block_number == other.block_number
-            and self.block_hash == other.block_hash
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    def __post_init__(self):
+        if not isinstance(self.block_number, T_BlockNumber):
+            raise ValueError('block_number must be of type block_number')
+        if not isinstance(self.block_hash, T_BlockHash):
+            raise ValueError('block_hash must be of type block_hash')
 
 
 ST = TypeVar("ST", bound=State)
