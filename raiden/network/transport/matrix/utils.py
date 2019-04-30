@@ -157,7 +157,7 @@ class UserAddressManager:
         """
         self._userid_to_presence[user.user_id] = presence
 
-    def refresh_address_presence(self, address):
+    def refresh_address_presence(self, address: Address):
         """
         Update synthesized address presence state from cached user presence states.
 
