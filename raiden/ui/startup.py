@@ -168,11 +168,11 @@ class Proxies(NamedTuple):
 
 def setup_proxies_or_exit(
         config: Dict[str, Any],
-        tokennetwork_registry_contract_address: str,
-        secret_registry_contract_address: str,
-        endpoint_registry_contract_address: str,
-        user_deposit_contract_address: str,
-        service_registry_contract_address: str,
+        tokennetwork_registry_contract_address: Address,
+        secret_registry_contract_address: Address,
+        endpoint_registry_contract_address: Address,
+        user_deposit_contract_address: Address,
+        service_registry_contract_address: Address,
         blockchain_service: BlockChainService,
         contracts: Dict[str, Any],
         routing_mode: RoutingMode,
@@ -207,11 +207,14 @@ def setup_proxies_or_exit(
         sys.exit(1)
 
     try:
-        token_network_registry = blockchain_service.token_network_registry(
-            tokennetwork_registry_contract_address or to_canonical_address(
+        registered_address: Address
+        if tokennetwork_registry_contract_address is not None:
+            registered_address = Address(tokennetwork_registry_contract_address)
+        else:
+            registered_address = to_canonical_address(
                 contracts[CONTRACT_TOKEN_NETWORK_REGISTRY]['address'],
-            ),
-        )
+            )
+        token_network_registry = blockchain_service.token_network_registry(registered_address)
     except ContractVersionMismatch as e:
         handle_contract_version_mismatch(e)
     except AddressWithoutCode:
