@@ -1,7 +1,7 @@
 import pytest
 from eth_utils import decode_hex, encode_hex, to_canonical_address, to_checksum_address
 
-from raiden.constants import EMPTY_HASH, STATE_PRUNING_AFTER_BLOCKS
+from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, STATE_PRUNING_AFTER_BLOCKS
 from raiden.exceptions import (
     DepositMismatch,
     DuplicatedChannelError,
@@ -175,7 +175,7 @@ def test_token_network_proxy_basics(
             balance_hash=EMPTY_HASH,
             nonce=0,
             additional_hash=EMPTY_HASH,
-            signature=EMPTY_HASH,
+            signature=EMPTY_SIGNATURE,
             given_block_identifier='latest',
         )
 
@@ -732,7 +732,7 @@ def test_token_network_actions_at_pruned_blocks(
         balance_hash=EMPTY_HASH,
         nonce=0,
         additional_hash=EMPTY_HASH,
-        signature=EMPTY_HASH,
+        signature=EMPTY_SIGNATURE,
         given_block_identifier=pruned_number,
     )
     close_pruned_number = c1_chain.block_number()
