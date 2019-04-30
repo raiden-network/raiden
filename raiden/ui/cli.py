@@ -592,9 +592,12 @@ def smoketest(ctx, debug, eth_client):
         with open(report_file, 'a', encoding='UTF-8') as handler:
             handler.write(f'{f" {subject.upper()} ":=^80}{os.linesep}')
             if data is not None:
+                write_data: str
                 if isinstance(data, bytes):
-                    data = data.decode()
-                handler.writelines([data + os.linesep])
+                    write_data = data.decode()
+                else:
+                    write_data = data
+                handler.writelines([write_data + os.linesep])
 
     append_report('Raiden version', json.dumps(get_system_spec()))
     append_report('Raiden log')
