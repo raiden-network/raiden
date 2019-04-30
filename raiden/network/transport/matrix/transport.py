@@ -1,25 +1,18 @@
 import json
 import time
-from binascii import Error as DecodeError
 from collections import defaultdict
 from urllib.parse import urlparse
 
 import gevent
 import structlog
-from eth_utils import decode_hex, is_binary_address, to_checksum_address, to_normalized_address
+from eth_utils import is_binary_address, to_checksum_address, to_normalized_address
 from gevent.event import Event
 from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixRequestError
 
 from raiden.constants import DISCOVERY_DEFAULT_ROOM
-from raiden.exceptions import (
-    InvalidAddress,
-    InvalidProtocolMessage,
-    TransportError,
-    UnknownAddress,
-    UnknownTokenAddress,
-)
+from raiden.exceptions import InvalidAddress, TransportError, UnknownAddress, UnknownTokenAddress
 from raiden.message_handler import MessageHandler
 from raiden.messages import (
     Delivered,
@@ -31,8 +24,6 @@ from raiden.messages import (
     SignedMessage,
     SignedRetrieableMessage,
     ToDevice,
-    decode as message_from_bytes,
-    from_dict as message_from_dict,
 )
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.transport.matrix.utils import (
@@ -44,6 +35,7 @@ from raiden.network.transport.matrix.utils import (
     login_or_register,
     make_client,
     make_room_alias,
+    validate_and_parse_message,
     validate_userid_signature,
 )
 from raiden.network.transport.udp import udp_utils
@@ -817,81 +809,7 @@ class MatrixTransport(Runnable):
             self._address_mgr.force_user_presence(user, UserPresence.ONLINE)
             self._address_mgr.refresh_address_presence(peer_address)
 
-        data = event['content']['body']
-        if not isinstance(data, str):
-            self.log.warning(
-                'Received message body not a string',
-                peer_user=user.user_id,
-                peer_address=to_checksum_address(peer_address),
-                room=room,
-            )
-            return False
-
-        messages: List[Message] = list()
-
-        if data.startswith('0x'):
-            try:
-                message = message_from_bytes(decode_hex(data))
-                if not message:
-                    raise InvalidProtocolMessage
-            except (DecodeError, AssertionError) as ex:
-                self.log.warning(
-                    "Can't parse message binary data",
-                    message_data=data,
-                    peer_address=pex(peer_address),
-                    _exc=ex,
-                )
-                return False
-            except InvalidProtocolMessage as ex:
-                self.log.warning(
-                    'Received message binary data is not a valid message',
-                    message_data=data,
-                    peer_address=pex(peer_address),
-                    _exc=ex,
-                )
-                return False
-            else:
-                messages.append(message)
-
-        else:
-            for line in data.splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    message_dict = json.loads(line)
-                    message = message_from_dict(message_dict)
-                except (UnicodeDecodeError, json.JSONDecodeError) as ex:
-                    self.log.warning(
-                        "Can't parse message data JSON",
-                        message_data=line,
-                        peer_address=pex(peer_address),
-                        _exc=ex,
-                    )
-                    continue
-                except InvalidProtocolMessage as ex:
-                    self.log.warning(
-                        "Message data JSON are not a valid message",
-                        message_data=line,
-                        peer_address=pex(peer_address),
-                        _exc=ex,
-                    )
-                    continue
-                if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
-                    self.log.warning(
-                        'Received invalid message',
-                        message=message,
-                    )
-                    continue
-                elif message.sender != peer_address:
-                    self.log.warning(
-                        'Message not signed by sender!',
-                        message=message,
-                        signer=message.sender,
-                        peer_address=peer_address,
-                    )
-                    continue
-                messages.append(message)
+        messages = validate_and_parse_message(event['content']['body'], peer_address)
 
         if not messages:
             return False
@@ -905,6 +823,11 @@ class MatrixTransport(Runnable):
         )
 
         for message in messages:
+            if not isinstance(message, (SignedRetrieableMessage, SignedMessage)):
+                self.log.warning(
+                    'Received invalid message',
+                    message=message,
+                )
             if isinstance(message, Delivered):
                 self._receive_delivered(message)
             elif isinstance(message, Processed):
@@ -1450,81 +1373,7 @@ class MatrixTransport(Runnable):
             self._address_mgr.force_user_presence(user, UserPresence.ONLINE)
             self._address_mgr.refresh_address_presence(peer_address)
 
-        data = event['content']
-        if not isinstance(data, str):
-            self.log.warning(
-                'Received ToDevice Message body not a string',
-                peer_user=user.user_id,
-                peer_address=to_checksum_address(peer_address),
-            )
-            return False
-
-        messages: List[Message] = list()
-
-        if data.startswith('0x'):
-            try:
-                message = message_from_bytes(decode_hex(data))
-                if not message:
-                    raise InvalidProtocolMessage
-            except (DecodeError, AssertionError) as ex:
-                self.log.warning(
-                    "Can't parse ToDevice Message binary data",
-                    message_data=data,
-                    peer_address=pex(peer_address),
-                    _exc=ex,
-                )
-                return False
-            except InvalidProtocolMessage as ex:
-                self.log.warning(
-                    'Received ToDevice Message binary data is not a valid message',
-                    message_data=data,
-                    peer_address=pex(peer_address),
-                    _exc=ex,
-                )
-                return False
-            else:
-                messages.append(message)
-
-        else:
-            for line in data.splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    message_dict = json.loads(line)
-                    message = message_from_dict(message_dict)
-                except (UnicodeDecodeError, json.JSONDecodeError) as ex:
-                    self.log.warning(
-                        "Can't parse ToDevice Message data JSON",
-                        message_data=line,
-                        peer_address=pex(peer_address),
-                        _exc=ex,
-                    )
-                    continue
-                except InvalidProtocolMessage as ex:
-                    self.log.warning(
-                        "ToDevice Message data JSON are not a valid ToDevice Message",
-                        message_data=line,
-                        peer_address=pex(peer_address),
-                        _exc=ex,
-                    )
-                    continue
-                if not isinstance(message, ToDevice):
-                    self.log.warning(
-                        'Received Message is not of type ToDevice, invalid',
-                        message=message,
-                        peer_address=peer_address,
-                    )
-                    continue
-                elif message.sender != peer_address:
-                    self.log.warning(
-                        'ToDevice Message not signed by sender!',
-                        message=message,
-                        signer=message.sender,
-                        peer_address=peer_address,
-                    )
-                    continue
-                messages.append(message)
+        messages = validate_and_parse_message(event['content'], peer_address)
 
         if not messages:
             return False
@@ -1539,5 +1388,12 @@ class MatrixTransport(Runnable):
         for message in messages:
             if isinstance(message, ToDevice):
                 self._receive_to_device(message)
+            else:
+                log.warning(
+                    'Received Message is not of type ToDevice, invalid',
+                    message=message,
+                    peer_address=peer_address,
+                )
+                continue
 
         return True
