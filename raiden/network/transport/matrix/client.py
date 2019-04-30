@@ -45,11 +45,11 @@ class Room(MatrixRoom):
                         )
         return list(self._members.values())
 
-    def _mkmembers(self, member):
+    def _mkmembers(self, member: User):
         if member.user_id not in self._members:
             self._members[member.user_id] = member
 
-    def _rmmembers(self, user_id):
+    def _rmmembers(self, user_id: str):
         self._members.pop(user_id, None)
 
     def __repr__(self):
