@@ -376,7 +376,10 @@ def apply_config_file(
         # Silently ignore if 'file not found' and the config file path is the default
         config_file_param = paramname_to_param[config_file_option_name]
         config_file_default_path = Path(
-            config_file_param.type.expand_default(config_file_param.get_default(ctx), cli_params),
+            config_file_param.type.expand_default(  # type: ignore
+                config_file_param.get_default(ctx),
+                cli_params,
+            ),
         )
         default_config_missing = (
             ex.errno == errno.ENOENT and
