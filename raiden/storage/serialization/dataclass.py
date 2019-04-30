@@ -1,19 +1,23 @@
-import dataclasses
-
 from dataclasses_json import dataclass_json
+
+from dataclasses import field, replace, dataclass as stdlib_dataclass  # noqa # isort:skip
+
+import raiden.storage.serialization.types  # noqa # isort:skip
 
 
 def dataclass(
         _cls: type = None,
         *,
-        repr=True,
-        eq=True,
-        order=False,
-        unsafe_hash=False,
-        frozen=False,
+        init: bool = True,
+        repr: bool = True,
+        eq: bool = True,
+        order: bool = False,
+        unsafe_hash: bool = False,
+        frozen: bool = False,
 ) -> type:
-    cls = dataclasses.dataclass(
-        _cls,
+    cls = stdlib_dataclass(
+        _cls=_cls,
+        init=init,
         repr=repr,
         eq=eq,
         order=order,

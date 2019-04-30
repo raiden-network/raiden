@@ -1,13 +1,13 @@
 # pylint: disable=too-many-arguments
 import random
 import string
-from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 
 from eth_utils import to_checksum_address
 
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer, RefundTransfer
+from raiden.storage.serialization import dataclass, fields, replace
 from raiden.transfer import balance_proof, channel, token_network
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer import mediator
