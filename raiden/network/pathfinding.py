@@ -134,7 +134,7 @@ def configure_pfs_or_exit(
         pfs_eth_address: Optional[str],
         routing_mode: RoutingMode,
         service_registry,
-) -> Optional[PFSConfiguration]:
+) -> PFSConfiguration:
     """
     Take in the given pfs_address argument, the service registry and find out a
     pfs address to use.
@@ -146,11 +146,8 @@ def configure_pfs_or_exit(
     Returns a NamedTuple containing url, eth_address and fee (per paths request) of
     the selected PFS, or None if we use basic routing instead of a PFS.
     """
-    if routing_mode == RoutingMode.BASIC:
-        msg = 'Not using path finding services, falling back to basic routing.'
-        log.info(msg)
-        click.secho(msg)
-        return None
+    msg = 'Invalid code path; configure pfs needs routing mode PFS'
+    assert routing_mode == RoutingMode.PFS, msg
 
     msg = "With PFS routing mode we shouldn't get to configure pfs with pfs_address being None"
     assert pfs_address, msg
