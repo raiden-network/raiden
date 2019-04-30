@@ -116,7 +116,7 @@ def setup_contracts_or_exit(
         )
         sys.exit(1)
 
-    contracts = dict()
+    contracts: Dict[str, Any] = dict()
     contracts_version = environment_type_to_contracts_version(environment_type)
 
     config['contracts_path'] = contracts_precompiled_path(contracts_version)
