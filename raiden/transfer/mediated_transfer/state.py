@@ -1,29 +1,20 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from typing import TYPE_CHECKING
-
-from eth_utils import encode_hex, to_canonical_address, to_checksum_address
-
 from raiden.constants import EMPTY_MERKLE_ROOT
+from raiden.messages import LockedTransfer
+from raiden.storage.serialization import dataclass, field
 from raiden.transfer.architecture import State
+from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
+    RouteState,
     balanceproof_from_envelope,
 )
-from raiden.utils import pex, sha3
-from raiden.utils.serialization import (
-    deserialize_secret,
-    deserialize_secret_hash,
-    identity,
-    map_dict,
-    serialize_bytes,
-)
+from raiden.utils import sha3
 from raiden.utils.typing import (
     Address,
-    Any,
     ChannelID,
-    Dict,
     FeeAmount,
     InitiatorAddress,
     InitiatorTransfersMap,
@@ -40,12 +31,6 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenNetworkID,
 )
-
-if TYPE_CHECKING:
-    # pylint: disable=unused-import
-    from raiden.messages import LockedTransfer
-    from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa: F401
-    from raiden.transfer.state import RouteState
 
 
 def lockedtransfersigned_from_message(message: "LockedTransfer") -> "LockedTransferSignedState":
@@ -67,589 +52,144 @@ def lockedtransfersigned_from_message(message: "LockedTransfer") -> "LockedTrans
     return transfer_state
 
 
+@dataclass
+class LockedTransferState(State):
+    pass
+
+
+@dataclass
+class LockedTransferUnsignedState(LockedTransferState):
+    """ State for a transfer created by the local node which contains a hash
+    time lock and may be sent.
+    """
+    payment_identifier: PaymentID
+    token: TokenAddress
+    balance_proof: BalanceProofUnsignedState
+    lock: HashTimeLockState
+    initiator: InitiatorAddress
+    target: TargetAddress
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.lock, HashTimeLockState):
+            raise ValueError('lock must be a HashTimeLockState instance')
+
+        if not isinstance(self.balance_proof, BalanceProofUnsignedState):
+            raise ValueError('balance_proof must be a BalanceProofUnsignedState instance')
+
+        # At least the lock for this transfer must be in the locksroot, so it
+        # must not be empty
+        if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
+            raise ValueError('balance_proof must not be empty')
+
+
+@dataclass
+class LockedTransferSignedState(LockedTransferState):
+    """ State for a received transfer which contains a hash time lock and a
+    signed balance proof.
+    """
+    message_identifier: MessageID
+    payment_identifier: PaymentID
+    token: TokenAddress
+    balance_proof: BalanceProofSignedState = field(repr=False)
+    lock: HashTimeLockState
+    initiator: InitiatorAddress
+    target: TargetAddress
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.lock, HashTimeLockState):
+            raise ValueError('lock must be a HashTimeLockState instance')
+
+        if not isinstance(self.balance_proof, BalanceProofSignedState):
+            raise ValueError('balance_proof must be a BalanceProofSignedState instance')
+
+        # At least the lock for this transfer must be in the locksroot, so it
+        # must not be empty
+        if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
+            raise ValueError('balance_proof must not be empty')
+
+    @property
+    def payer_address(self) -> Address:
+        return self.balance_proof.sender
+
+
+@dataclass
 class InitiatorPaymentState(State):
     """ State of a payment for the initiator node.
     A single payment may have multiple transfers. E.g. because if one of the
     transfers fails or timeouts another transfer will be started with a
     different secrethash.
     """
-
-    __slots__ = ("cancelled_channels", "initiator_transfers")
-
-    def __init__(self, initiator_transfers: InitiatorTransfersMap) -> None:
-        self.initiator_transfers = initiator_transfers
-        self.cancelled_channels: List[ChannelID] = list()
-
-    def __repr__(self) -> str:
-        return "<InitiatorPaymentState transfers:{}>".format(self.initiator_transfers)
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, InitiatorPaymentState)
-            and self.initiator_transfers == other.initiator_transfers
-            and self.cancelled_channels == other.cancelled_channels
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "initiator_transfers": map_dict(serialize_bytes, identity, self.initiator_transfers),
-            "cancelled_channels": self.cancelled_channels,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "InitiatorPaymentState":
-        restored = cls(
-            initiator_transfers=map_dict(
-                deserialize_secret_hash, identity, data["initiator_transfers"]
-            )
-        )
-        restored.cancelled_channels = data["cancelled_channels"]
-
-        return restored
-
-
-class InitiatorTransferState(State):
-    """ State of a transfer for the initiator node. """
-
-    __slots__ = (
-        "transfer_description",
-        "channel_identifier",
-        "transfer",
-        "revealsecret",
-        "received_secret_request",
-        "transfer_state",
+    initiator_transfers: InitiatorTransfersMap
+    cancelled_channels: List[ChannelID] = field(
+        init=False,
+        repr=False,
+        default_factory=list,
     )
 
-    valid_transfer_states = ("transfer_pending", "transfer_cancelled", "transfer_expired")
 
-    def __init__(
-        self,
-        transfer_description: "TransferDescriptionWithSecretState",
-        channel_identifier: ChannelID,
-        transfer: "LockedTransferUnsignedState",
-        revealsecret: Optional["SendSecretReveal"],
-        received_secret_request: bool = False,
-    ) -> None:
-
-        if not isinstance(transfer_description, TransferDescriptionWithSecretState):
-            raise ValueError(
-                "transfer_description must be an instance of TransferDescriptionWithSecretState"
-            )
-
-        # This is the users description of the transfer. It does not contain a
-        # balance proof and it's not related to any channel.
-        self.transfer_description = transfer_description
-
-        # This is the channel used to satisfy the above transfer.
-        self.channel_identifier = channel_identifier
-        self.transfer = transfer
-        self.revealsecret = revealsecret
-        self.received_secret_request = received_secret_request
-        self.transfer_state = "transfer_pending"
-
-    def __repr__(self) -> str:
-        return "<InitiatorTransferState transfer:{} channel:{} state:{}>".format(
-            self.transfer, self.channel_identifier, self.transfer_state
-        )
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, InitiatorTransferState)
-            and self.transfer_description == other.transfer_description
-            and self.channel_identifier == other.channel_identifier
-            and self.transfer == other.transfer
-            and self.revealsecret == other.revealsecret
-            and self.received_secret_request == other.received_secret_request
-            and self.transfer_state == other.transfer_state
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {
-            "transfer_description": self.transfer_description,
-            "channel_identifier": str(self.channel_identifier),
-            "transfer": self.transfer,
-            "revealsecret": self.revealsecret,
-            "received_secret_request": self.received_secret_request,
-            "transfer_state": self.transfer_state,
-        }
-
-        return result
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "InitiatorTransferState":
-        restored = cls(
-            transfer_description=data["transfer_description"],
-            channel_identifier=ChannelID(int(data["channel_identifier"])),
-            transfer=data["transfer"],
-            revealsecret=data["revealsecret"],
-            received_secret_request=data["received_secret_request"],
-        )
-        restored.transfer_state = data["transfer_state"]
-
-        return restored
-
-
-class WaitingTransferState(State):
-    def __init__(self, transfer: "LockedTransferSignedState", state: str = "waiting") -> None:
-        self.transfer = transfer
-        self.state = state
-
-    def __repr__(self) -> str:
-        return f"<WaitingTransferState state:{self.state} transfer:{self.transfer}>"
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, WaitingTransferState)
-            and self.transfer == other.transfer
-            and self.state == other.state
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {"state": self.state, "transfer": self.transfer}
-
-        return result
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "WaitingTransferState":
-        restored = cls(transfer=data["transfer"], state=data["state"])
-
-        return restored
-
-
-class MediatorTransferState(State):
-    """ State of a transfer for the mediator node.
-    A mediator may manage multiple channels because of refunds, but all these
-    channels will be used for the same transfer (not for different payments).
-    Args:
-        secrethash: The secrethash used for this transfer.
-    """
-
-    __slots__ = ("secrethash", "secret", "transfers_pair", "waiting_transfer", "routes")
-
-    def __init__(self, secrethash: SecretHash, routes: List["RouteState"]) -> None:
-        self.secrethash = secrethash
-        self.secret: Optional[Secret] = None
-        self.transfers_pair: List[MediationPairState] = list()
-        self.waiting_transfer: Optional[WaitingTransferState] = None
-        self.routes = routes
-
-    def __repr__(self) -> str:
-        return "<MediatorTransferState secrethash:{} qtd_transfers:{}>".format(
-            pex(self.secrethash), len(self.transfers_pair)
-        )
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, MediatorTransferState)
-            and self.secrethash == other.secrethash
-            and self.secret == other.secret
-            and self.transfers_pair == other.transfers_pair
-            and self.waiting_transfer == other.waiting_transfer
-            and self.routes == other.routes
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {
-            "secrethash": serialize_bytes(self.secrethash),
-            "transfers_pair": self.transfers_pair,
-            "waiting_transfer": self.waiting_transfer,
-            "routes": self.routes,
-        }
-
-        if self.secret is not None:
-            result["secret"] = serialize_bytes(self.secret)
-
-        return result
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MediatorTransferState":
-        restored = cls(
-            secrethash=deserialize_secret_hash(data["secrethash"]), routes=data["routes"]
-        )
-        restored.transfers_pair = data["transfers_pair"]
-        restored.waiting_transfer = data["waiting_transfer"]
-
-        secret = data.get("secret")
-        if secret is not None:
-            restored.secret = deserialize_secret(secret)
-
-        return restored
-
-
-class TargetTransferState(State):
-    """ State of a transfer for the target node. """
-
-    __slots__ = ("route", "transfer", "secret", "state")
-
-    EXPIRED = "expired"
-    OFFCHAIN_SECRET_REVEAL = "reveal_secret"
-    ONCHAIN_SECRET_REVEAL = "onchain_secret_reveal"
-    ONCHAIN_UNLOCK = "onchain_unlock"
-    SECRET_REQUEST = "secret_request"
-
-    valid_states = (
-        EXPIRED,
-        OFFCHAIN_SECRET_REVEAL,
-        ONCHAIN_SECRET_REVEAL,
-        ONCHAIN_UNLOCK,
-        SECRET_REQUEST,
-    )
-
-    def __init__(
-        self, route: "RouteState", transfer: "LockedTransferSignedState", secret: Secret = None
-    ) -> None:
-        self.route = route
-        self.transfer = transfer
-
-        self.secret = secret
-        self.state = "secret_request"
-
-    def __repr__(self) -> str:
-        return "<TargetTransferState transfer:{} state:{}>".format(self.transfer, self.state)
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, TargetTransferState)
-            and self.route == other.route
-            and self.transfer == other.transfer
-            and self.secret == other.secret
-            and self.state == other.state
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        result = {"route": self.route, "transfer": self.transfer, "state": self.state}
-
-        if self.secret is not None:
-            result["secret"] = serialize_bytes(self.secret)
-
-        return result
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TargetTransferState":
-        restored = cls(route=data["route"], transfer=data["transfer"])
-        restored.state = data["state"]
-
-        secret = data.get("secret")
-        if secret is not None:
-            restored.secret = deserialize_secret(secret)
-
-        return restored
-
-
-class LockedTransferState(State):
-    pass
-
-
-class LockedTransferUnsignedState(LockedTransferState):
-    """ State for a transfer created by the local node which contains a hash
-    time lock and may be sent.
-    """
-
-    __slots__ = ("payment_identifier", "token", "balance_proof", "lock", "initiator", "target")
-
-    def __init__(
-        self,
-        payment_identifier: PaymentID,
-        token: TokenAddress,
-        balance_proof: BalanceProofUnsignedState,
-        lock: HashTimeLockState,
-        initiator: InitiatorAddress,
-        target: TargetAddress,
-    ) -> None:
-        if not isinstance(lock, HashTimeLockState):
-            raise ValueError("lock must be a HashTimeLockState instance")
-
-        if not isinstance(balance_proof, BalanceProofUnsignedState):
-            raise ValueError("balance_proof must be a BalanceProofUnsignedState instance")
-
-        # At least the lock for this transfer must be in the locksroot, so it
-        # must not be empty
-        if balance_proof.locksroot == EMPTY_MERKLE_ROOT:
-            raise ValueError("balance_proof must not be empty")
-
-        self.payment_identifier = payment_identifier
-        self.token = token
-        self.balance_proof = balance_proof
-        self.lock = lock
-        self.initiator = initiator
-        self.target = target
-
-    def __repr__(self) -> str:
-        return (
-            "<"
-            "LockedTransferUnsignedState id:{} token:{} balance_proof:{} "
-            "lock:{} target:{}"
-            ">"
-        ).format(
-            self.payment_identifier,
-            encode_hex(self.token),
-            self.balance_proof,
-            self.lock,
-            encode_hex(self.target),
-        )
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, LockedTransferUnsignedState)
-            and self.payment_identifier == other.payment_identifier
-            and self.token == other.token
-            and self.balance_proof == other.balance_proof
-            and self.lock == other.lock
-            and self.initiator == other.initiator
-            and self.target == other.target
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "payment_identifier": str(self.payment_identifier),
-            "token": to_checksum_address(self.token),
-            "balance_proof": self.balance_proof,
-            "lock": self.lock,
-            "initiator": to_checksum_address(self.initiator),
-            "target": to_checksum_address(self.target),
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "LockedTransferUnsignedState":
-        restored = cls(
-            payment_identifier=PaymentID(int(data["payment_identifier"])),
-            token=to_canonical_address(data["token"]),
-            balance_proof=data["balance_proof"],
-            lock=data["lock"],
-            initiator=to_canonical_address(data["initiator"]),
-            target=to_canonical_address(data["target"]),
-        )
-
-        return restored
-
-
-class LockedTransferSignedState(LockedTransferState):
-    """ State for a received transfer which contains a hash time lock and a
-    signed balance proof.
-    """
-
-    __slots__ = (
-        "message_identifier",
-        "payment_identifier",
-        "token",
-        "balance_proof",
-        "lock",
-        "initiator",
-        "target",
-    )
-
-    def __init__(
-        self,
-        message_identifier: MessageID,
-        payment_identifier: PaymentID,
-        token: TokenAddress,
-        balance_proof: BalanceProofSignedState,
-        lock: HashTimeLockState,
-        initiator: InitiatorAddress,
-        target: TargetAddress,
-    ) -> None:
-        if not isinstance(lock, HashTimeLockState):
-            raise ValueError("lock must be a HashTimeLockState instance")
-
-        if not isinstance(balance_proof, BalanceProofSignedState):
-            raise ValueError("balance_proof must be a BalanceProofSignedState instance")
-
-        # At least the lock for this transfer must be in the locksroot, so it
-        # must not be empty
-        if balance_proof.locksroot == EMPTY_MERKLE_ROOT:
-            raise ValueError("balance_proof must not be empty")
-
-        self.message_identifier = message_identifier
-        self.payment_identifier = payment_identifier
-        self.token = token
-        self.balance_proof = balance_proof
-        self.lock = lock
-        self.initiator = initiator
-        self.target = target
-
-    def __repr__(self) -> str:
-        return (
-            "<" "LockedTransferSignedState msgid:{} id:{} token:{} lock:{}" " target:{}" ">"
-        ).format(
-            self.message_identifier,
-            self.payment_identifier,
-            encode_hex(self.token),
-            self.lock,
-            encode_hex(self.target),
-        )
-
-    @property
-    def payer_address(self) -> Address:
-        return self.balance_proof.sender
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, LockedTransferSignedState)
-            and self.message_identifier == other.message_identifier
-            and self.payment_identifier == other.payment_identifier
-            and self.token == other.token
-            and self.balance_proof == other.balance_proof
-            and self.lock == other.lock
-            and self.initiator == other.initiator
-            and self.target == other.target
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "message_identifier": str(self.message_identifier),
-            "payment_identifier": str(self.payment_identifier),
-            "token": to_checksum_address(self.token),
-            "balance_proof": self.balance_proof,
-            "lock": self.lock,
-            "initiator": to_checksum_address(self.initiator),
-            "target": to_checksum_address(self.target),
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "LockedTransferSignedState":
-        restored = cls(
-            message_identifier=MessageID(int(data["message_identifier"])),
-            payment_identifier=PaymentID(int(data["payment_identifier"])),
-            token=to_canonical_address(data["token"]),
-            balance_proof=data["balance_proof"],
-            lock=data["lock"],
-            initiator=to_canonical_address(data["initiator"]),
-            target=to_canonical_address(data["target"]),
-        )
-
-        return restored
-
-
+@dataclass
 class TransferDescriptionWithSecretState(State):
     """ Describes a transfer (target, amount, and token) and contains an
     additional secret that can be used with a hash-time-lock.
     """
+    payment_network_identifier: PaymentNetworkID = field(repr=False)
+    payment_identifier: PaymentID = field(repr=False)
+    amount: PaymentAmount
+    allocated_fee: FeeAmount
+    token_network_identifier: TokenNetworkID
+    initiator: InitiatorAddress = field(repr=False)
+    target: TargetAddress
+    secret: Secret = field(repr=False)
+    secret_hash: SecretHash = None
 
-    __slots__ = (
-        "payment_network_identifier",
-        "payment_identifier",
-        "amount",
-        "allocated_fee",
-        "token_network_identifier",
-        "initiator",
-        "target",
-        "secret",
-        "secrethash",
+    def __post_init__(self) -> None:
+        if self.secret_hash is None:
+            self.secret_hash = sha3(self.secret)
+
+
+@dataclass
+class InitiatorTransferState(State):
+    """ State of a transfer for the initiator node. """
+    transfer_description: TransferDescriptionWithSecretState = field(repr=False)
+    channel_identifier: ChannelID
+    transfer: LockedTransferUnsignedState
+    revealsecret: Optional[SendSecretReveal] = field(repr=False)
+    received_secret_request: bool = field(default=False, repr=False)
+    transfer_state: str = field(
+        init=False,
+        default='transfer_pending',
     )
 
-    def __init__(
-        self,
-        payment_network_identifier: PaymentNetworkID,
-        payment_identifier: PaymentID,
-        amount: PaymentAmount,
-        allocated_fee: FeeAmount,
-        token_network_identifier: TokenNetworkID,
-        initiator: InitiatorAddress,
-        target: TargetAddress,
-        secret: Secret,
-        secrethash: SecretHash = None,
-    ) -> None:
-
-        if secrethash is None:
-            secrethash = sha3(secret)
-
-        self.payment_network_identifier = payment_network_identifier
-        self.payment_identifier = payment_identifier
-        self.amount = amount
-        self.allocated_fee = allocated_fee
-        self.token_network_identifier = token_network_identifier
-        self.initiator = initiator
-        self.target = target
-        self.secret = secret
-        self.secrethash = secrethash
-
-    def __repr__(self) -> str:
-        return (
-            f"<"
-            f"TransferDescriptionWithSecretState "
-            f"token_network:{pex(self.token_network_identifier)} "
-            f"amount:{self.amount} "
-            f"allocated_fee:{self.allocated_fee} "
-            f"target:{pex(self.target)} "
-            f"secrethash:{pex(self.secrethash)}"
-            f">"
+    valid_transfer_states = (
+        'transfer_pending',
+        'transfer_cancelled',
         )
 
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, TransferDescriptionWithSecretState)
-            and self.payment_network_identifier == other.payment_network_identifier
-            and self.payment_identifier == other.payment_identifier
-            and self.amount == other.amount
-            and self.allocated_fee == other.allocated_fee
-            and self.token_network_identifier == other.token_network_identifier
-            and self.initiator == other.initiator
-            and self.target == other.target
-            and self.secret == other.secret
-            and self.secrethash == other.secrethash
-        )
 
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "payment_network_identifier": to_checksum_address(self.payment_network_identifier),
-            "payment_identifier": str(self.payment_identifier),
-            "amount": str(self.amount),
-            "allocated_fee": str(self.allocated_fee),
-            "token_network_identifier": to_checksum_address(self.token_network_identifier),
-            "initiator": to_checksum_address(self.initiator),
-            "target": to_checksum_address(self.target),
-            "secret": serialize_bytes(self.secret),
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "TransferDescriptionWithSecretState":
-        restored = cls(
-            payment_network_identifier=to_canonical_address(data["payment_network_identifier"]),
-            payment_identifier=PaymentID(int(data["payment_identifier"])),
-            amount=PaymentAmount(int(data["amount"])),
-            allocated_fee=FeeAmount(int(data["allocated_fee"])),
-            token_network_identifier=to_canonical_address(data["token_network_identifier"]),
-            initiator=to_canonical_address(data["initiator"]),
-            target=to_canonical_address(data["target"]),
-            secret=deserialize_secret(data["secret"]),
-        )
-
-        return restored
+@dataclass
+class WaitingTransferState(State):
+    transfer: LockedTransferSignedState
+    state: str = field(default='waiting')
 
 
+@dataclass
 class MediationPairState(State):
     """ State for a mediated transfer.
     A mediator will pay payee node knowing that there is a payer node to cover
     the token expenses. This state keeps track of the routes and transfer for
     the payer and payee, and the current state of the payment.
     """
-
-    __slots__ = ("payee_address", "payee_transfer", "payee_state", "payer_transfer", "payer_state")
-
+    payer_transfer: LockedTransferSignedState
+    payee_address: Address
+    payee_transfer: LockedTransferUnsignedState
+    payer_state: str = field(
+        init=False,
+        default='payer_pending',
+    )
+    payee_state: str = field(
+        init=False,
+        default='payer_pending',
+    )
     # payee_pending:
     #   Initial state.
     #
@@ -683,69 +223,63 @@ class MediationPairState(State):
         "payer_expired",  # None of the above happened and the lock expired
     )
 
-    def __init__(
-        self,
-        payer_transfer: LockedTransferSignedState,
-        payee_address: Address,
-        payee_transfer: LockedTransferUnsignedState,
-    ) -> None:
-        if not isinstance(payer_transfer, LockedTransferSignedState):
-            raise ValueError("payer_transfer must be a LockedTransferSignedState instance")
+    def __post_init__(self) -> None:
+        if not isinstance(self.payer_transfer, LockedTransferSignedState):
+            raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
 
-        if not isinstance(payee_address, T_Address):
-            raise ValueError("payee_address must be an address")
+        if not isinstance(self.payee_address, T_Address):
+            raise ValueError('payee_address must be an address')
 
-        if not isinstance(payee_transfer, LockedTransferUnsignedState):
-            raise ValueError("payee_transfer must be a LockedTransferUnsignedState instance")
-
-        self.payer_transfer = payer_transfer
-        self.payee_address = payee_address
-        self.payee_transfer = payee_transfer
-
-        # these transfers are settled on different payment channels. These are
-        # the states of each mediated transfer in respect to each channel.
-        self.payer_state = "payer_pending"
-        self.payee_state = "payee_pending"
-
-    def __repr__(self) -> str:
-        return "<MediationPairState payee_address:{} payee_transfer:{} payer_transfer{}>".format(
-            pex(self.payee_address), self.payer_transfer, self.payee_transfer
-        )
+        if not isinstance(self.payee_transfer, LockedTransferUnsignedState):
+            raise ValueError('payee_transfer must be a LockedTransferUnsignedState instance')
 
     @property
     def payer_address(self) -> Address:
         return self.payer_transfer.payer_address
 
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, MediationPairState)
-            and self.payee_address == other.payee_address
-            and self.payee_transfer == other.payee_transfer
-            and self.payee_state == other.payee_state
-            and self.payer_transfer == other.payer_transfer
-            and self.payer_state == other.payer_state
+
+@dataclass
+class MediatorTransferState(State):
+    """ State of a transfer for the mediator node.
+    A mediator may manage multiple channels because of refunds, but all these
+    channels will be used for the same transfer (not for different payments).
+    Args:
+        secrethash: The secrethash used for this transfer.
+    """
+    secrethash: SecretHash
+    routes: List[RouteState]
+    secret: Optional[Secret] = field(
+        init=False,
+        default=None,
+    )
+    transfers_pair: List[MediationPairState] = field(
+        init=False,
+        default_factory=list,
+    )
+    waiting_transfer: Optional[WaitingTransferState] = field(
+        init=False,
+        default=None,
+    )
+
+
+@dataclass
+class TargetTransferState(State):
+    """ State of a transfer for the target node. """
+    EXPIRED = 'expired'
+    OFFCHAIN_SECRET_REVEAL = 'reveal_secret'
+    ONCHAIN_SECRET_REVEAL = 'onchain_secret_reveal'
+    ONCHAIN_UNLOCK = 'onchain_unlock'
+    SECRET_REQUEST = 'secret_request'
+
+    valid_states = (
+        EXPIRED,
+        OFFCHAIN_SECRET_REVEAL,
+        ONCHAIN_SECRET_REVEAL,
+        ONCHAIN_UNLOCK,
+        SECRET_REQUEST,
         )
 
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "payee_address": to_checksum_address(self.payee_address),
-            "payee_transfer": self.payee_transfer,
-            "payee_state": self.payee_state,
-            "payer_transfer": self.payer_transfer,
-            "payer_state": self.payer_state,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MediationPairState":
-        restored = cls(
-            payer_transfer=data["payer_transfer"],
-            payee_address=to_canonical_address(data["payee_address"]),
-            payee_transfer=data["payee_transfer"],
-        )
-        restored.payer_state = data["payer_state"]
-        restored.payee_state = data["payee_state"]
-
-        return restored
+    route: RouteState = field(repr=False)
+    transfer: LockedTransferSignedState
+    secret: Secret = field(repr=False, default=None)
+    state: str = field(init=False, default='secret_request')
