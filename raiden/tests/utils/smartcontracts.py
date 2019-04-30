@@ -1,3 +1,4 @@
+import os
 from typing import List, Tuple
 
 from raiden.network.blockchain_service import BlockChainService
@@ -7,6 +8,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.utils import typing
 from raiden.utils.smart_contracts import deploy_contract_web3
+from raiden.utils.solc import compile_files_cwd
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 from raiden_contracts.contract_manager import ContractManager
 
@@ -119,3 +121,42 @@ def deploy_service_registry_and_set_urls(
     c3_service_proxy.set_url(urls[2])
 
     return c1_service_proxy, urls
+
+
+def get_test_contract(name):
+    contract_path = os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            '..',
+            'smart_contracts',
+            name,
+        ),
+    )
+    contracts = compile_files_cwd([contract_path])
+
+    return contract_path, contracts
+
+
+def deploy_rpc_test_contract(deploy_client, name):
+    contract_path, contracts = get_test_contract(f'{name}.sol')
+    contract_proxy, _ = deploy_client.deploy_solidity_contract(
+        name,
+        contracts,
+        libraries=dict(),
+        constructor_parameters=None,
+        contract_path=contract_path,
+    )
+
+    return contract_proxy
+
+
+def get_list_of_block_numbers(item):
+    """ Creates a list of block numbers of the given list/single event"""
+    if isinstance(item, list):
+        return [element['blockNumber'] for element in item]
+
+    if isinstance(item, dict):
+        block_number = item['blockNumber']
+        return [block_number]
+
+    return list()
