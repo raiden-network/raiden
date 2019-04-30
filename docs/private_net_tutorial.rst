@@ -191,7 +191,7 @@ We use the address of this token to deploy service contracts.
 .. code:: bash
 
  (env) $ export SERVICE_TOKEN="0xC5e9F7407359d1492d515C303A3aeDB434D3f0e1"
- (env) $ python -m raiden_contracts.deploy register --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 60000000 --token-address $SERVICE_TOKEN --token-network-registry-address $TokenNetworkRegistry --channel-participant-deposit-limit $MAX_UINT256 --token-network-deposit-limit $MAX_UINT256 --contracts-version $VERSION
+ (env) $ python -m raiden_contracts.deploy services --rpc-provider $PROVIDER --private-key $PRIV_KEY --gas-price 10 --gas-limit 60000000 --token-address $SERVICE_TOKEN --user-deposit-whole-limit $MAX_UINT256
 
 We deploy another Token contract that's going to be transferred on Raiden network.
 
