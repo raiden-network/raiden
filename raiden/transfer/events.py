@@ -1,6 +1,5 @@
-from dataclasses import dataclass, field
-
 from raiden.constants import UINT256_MAX
+from raiden.storage.serialization import dataclass, field
 # from raiden.storage.serialization import dataclass
 from raiden.transfer.architecture import (
     ContractSendEvent,
