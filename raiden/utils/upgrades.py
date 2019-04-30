@@ -1,7 +1,7 @@
 import os
 import sqlite3
 from contextlib import closing
-from glob import glob
+from glob import escape, glob
 from pathlib import Path
 
 import filelock
@@ -178,13 +178,14 @@ class UpgradeManager:
         # the content of the database remains consistent, because the upgrades
         # are executed inside a migration, however making a second copy of the
         # database does no harm.
-        paths = glob(f'{self._current_db_filename.parent}/v*_log.db')
+        escaped_path = escape(str(self._current_db_filename.parent))
+        paths = glob(f'{escaped_path}/v*_log.db')
         valid_db_names = filter_db_names(paths)
         delete_dbs_with_failed_migrations(valid_db_names)
 
         # At this point we know every file version and db version match
         # (assuming there are no concurrent runs).
-        paths = glob(f'{self._current_db_filename.parent}/v*_log.db')
+        paths = glob(f'{escaped_path}/v*_log.db')
         valid_db_names = filter_db_names(paths)
         latest_db_path = latest_db_file(valid_db_names)
 
