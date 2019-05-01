@@ -2,9 +2,9 @@
 from copy import deepcopy
 from dataclasses import field
 
-from raiden.storage.serialization import dataclass
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     Any,
     BlockExpiration,
@@ -23,6 +23,11 @@ from raiden.utils.typing import (
     Tuple,
     TypeVar,
 )
+
+if TYPE_CHECKING:
+    from dataclasses import dataclass
+else:
+    from raiden.storage.serialization import dataclass
 
 # Quick overview
 # --------------
@@ -137,21 +142,11 @@ class AuthenticatedSenderStateChange(StateChange):
 @dataclass
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
+    triggered_by_block_hash: BlockHash
 
-    def __init__(self, triggered_by_block_hash: BlockHash) -> None:
-        if not isinstance(triggered_by_block_hash, T_BlockHash):
-            raise ValueError("triggered_by_block_hash must be of type block_hash")
-        # This is the blockhash for which the event was triggered
-        self.triggered_by_block_hash = triggered_by_block_hash
-
-    def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, ContractSendEvent)
-            and self.triggered_by_block_hash == other.triggered_by_block_hash
-        )
-
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    def __post_init__(self) -> None:
+        if not isinstance(self.triggered_by_block_hash, T_BlockHash):
+            raise ValueError('triggered_by_block_hash must be of type block_hash')
 
 
 @dataclass
@@ -159,7 +154,7 @@ class ContractSendExpirableEvent(ContractSendEvent):
     """ Marker used for events which represent on-chain transactions which are
     time dependent.
     """
-    epxiration: BlockExpiration
+    expiration: BlockExpiration
 
 
 @dataclass
@@ -169,7 +164,7 @@ class ContractReceiveStateChange(StateChange):
     block_number: BlockNumber
     block_hash: BlockHash
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not isinstance(self.block_number, T_BlockNumber):
             raise ValueError('block_number must be of type block_number')
         if not isinstance(self.block_hash, T_BlockHash):

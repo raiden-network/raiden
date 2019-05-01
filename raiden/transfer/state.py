@@ -9,7 +9,6 @@ import networkx
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
-from raiden.storage.serialization import dataclass, field
 from raiden.transfer.architecture import ContractSendEvent, SendMessageEvent, State
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
@@ -63,6 +62,10 @@ if TYPE_CHECKING:
     from messages import EnvelopeMessage
     from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
     from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
+    from dataclasses import dataclass, field
+else:
+    from raiden.storage.serialization import dataclass, field
+
 
 SecretHashToLock = Dict[SecretHash, "HashTimeLockState"]
 SecretHashToPartialUnlockProof = Dict[SecretHash, "UnlockPartialProofState"]
@@ -148,6 +151,14 @@ class MediatorTask(TransferTask):
 class TargetTask(TransferTask):
     canonical_identifier: CanonicalIdentifier
     target_state: TargetTransferState = field(repr=False)
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkID:
+        return TokenNetworkID(self.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
 
 
 @dataclass
@@ -305,7 +316,7 @@ class ChainState(State):
     ] = field(
         init=False,
         repr=False,
-        default=dict,
+        default_factory=dict,
     )
 
     def __post_init__(self) -> None:
@@ -590,7 +601,7 @@ class TransactionExecutionStatus(State):
 
     started_block_number: Optional[BlockNumber] = None
     finished_block_number: Optional[BlockNumber] = None
-    result: str = None
+    result: Optional[str] = None
 
     def __post_init__(self) -> None:
         is_valid_start = (
@@ -649,7 +660,7 @@ class TransactionOrder(State):
 class NettingChannelEndState(State):
     """ The state of one of the nodes in a two party netting channel. """
     address: Address
-    balance: Balance
+    contract_balance: Balance
 
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
@@ -685,7 +696,7 @@ class NettingChannelEndState(State):
         if not isinstance(self.address, T_Address):
             raise ValueError('address must be an address instance')
 
-        if not isinstance(self.balance, T_TokenAmount):
+        if not isinstance(self.contract_balance, T_TokenAmount):
             raise ValueError('balance must be a token_amount isinstance')
 
 
@@ -701,9 +712,9 @@ class NettingChannelState(State):
     our_state: NettingChannelEndState = field(repr=False)
     partner_state: NettingChannelEndState = field(repr=False)
     open_transaction: TransactionExecutionStatus
-    close_transaction: TransactionExecutionStatus = None
-    settle_transaction: TransactionExecutionStatus = None
-    update_transaction: TransactionExecutionStatus = None
+    close_transaction: Optional[TransactionExecutionStatus] = None
+    settle_transaction: Optional[TransactionExecutionStatus] = None
+    update_transaction: Optional[TransactionExecutionStatus] = None
     deposit_transaction_queue: List[TransactionOrder] = field(
         init=False,
         repr=False,

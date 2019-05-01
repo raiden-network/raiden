@@ -1,7 +1,6 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.messages import LockedTransfer
-from raiden.storage.serialization import dataclass, field
 from raiden.transfer.architecture import State
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.state import (
@@ -13,6 +12,7 @@ from raiden.transfer.state import (
 )
 from raiden.utils import sha3
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     ChannelID,
     FeeAmount,
@@ -31,6 +31,11 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenNetworkID,
 )
+
+if TYPE_CHECKING:
+    from dataclasses import dataclass, field
+else:
+    from raiden.storage.serialization import dataclass, field
 
 
 def lockedtransfersigned_from_message(message: "LockedTransfer") -> "LockedTransferSignedState":
@@ -140,11 +145,11 @@ class TransferDescriptionWithSecretState(State):
     initiator: InitiatorAddress = field(repr=False)
     target: TargetAddress
     secret: Secret = field(repr=False)
-    secret_hash: SecretHash = None
+    secrethash: SecretHash = field(init=False)
 
     def __post_init__(self) -> None:
-        if self.secret_hash is None:
-            self.secret_hash = sha3(self.secret)
+        if self.secrethash is None:
+            self.secrethash = sha3(self.secret)
 
 
 @dataclass
@@ -281,5 +286,5 @@ class TargetTransferState(State):
 
     route: RouteState = field(repr=False)
     transfer: LockedTransferSignedState
-    secret: Secret = field(repr=False, default=None)
+    secret: Optional[Secret] = field(repr=False, default=None)
     state: str = field(init=False, default='secret_request')
