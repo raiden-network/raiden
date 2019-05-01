@@ -1,6 +1,4 @@
 from raiden.constants import UINT256_MAX
-from raiden.storage.serialization import dataclass, field
-# from raiden.storage.serialization import dataclass
 from raiden.transfer.architecture import (
     ContractSendEvent,
     ContractSendExpirableEvent,
@@ -11,6 +9,7 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import BalanceProofSignedState
 from raiden.utils import pex, sha3
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     ChannelID,
     InitiatorAddress,
@@ -25,6 +24,11 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkID,
 )
+
+if TYPE_CHECKING:
+    from dataclasses import dataclass, field
+else:
+    from raiden.storage.serialization import dataclass, field
 
 # pylint: disable=too-many-arguments,too-few-public-methods
 
@@ -90,16 +94,16 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
         return self.canonical_identifier.channel_identifier
 
 
-@dataclass
+@dataclass(repr=False)
 class ContractSendSecretReveal(ContractSendExpirableEvent):
     """ Event emitted when the lock must be claimed on-chain. """
     secret: Secret = field(repr=False)
 
-    # def __repr__(self):
-    #     secrethash: SecretHash = SecretHash(sha3(self.secret))
-    #     return (
-    #         'ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})'
-    #     ).format(secrethash, pex(self.triggered_by_block_hash))
+    def __repr__(self):
+        secrethash: SecretHash = SecretHash(sha3(self.secret))
+        return (
+            'ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})'
+        ).format(secrethash, pex(self.triggered_by_block_hash))
 
 
 @dataclass
@@ -130,7 +134,7 @@ class EventPaymentSentSuccess(Event):
     identifier: PaymentID
     amount: PaymentAmount
     target: TargetAddress
-    secret: Secret = None
+    secret: Optional[Secret] = None
 
 
 @dataclass

@@ -1,18 +1,14 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-
-from raiden.storage.serialization import dataclass, field
-from raiden.transfer.architecture import (
-    AuthenticatedSenderStateChange,
-    BalanceProofStateChange,
-    StateChange,
-)
+from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
 )
 from raiden.transfer.state import BalanceProofSignedState, RouteState
+from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils import sha3
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     BlockExpiration,
     List,
@@ -23,10 +19,14 @@ from raiden.utils.typing import (
     SecretHash,
 )
 
+if TYPE_CHECKING:
+    from dataclasses import dataclass, field
+else:
+    from raiden.storage.serialization import dataclass, field
+
+
 # Note: The init states must contain all the required data for trying doing
 # useful work, ie. there must /not/ be an event for requesting new data.
-
-
 @dataclass
 class ActionInitInitiator(StateChange):
     """ Initial state of a new mediated transfer.
@@ -35,11 +35,11 @@ class ActionInitInitiator(StateChange):
         transfer_description: A state object containing the transfer details.
         routes: A list of possible routes provided by a routing service.
     """
-    transfer_description: TransferDescriptionWithSecretState
+    transfer: TransferDescriptionWithSecretState
     routes: List[RouteState]
 
     def __post_init__(self) -> None:
-        if not isinstance(self.transfer_description, TransferDescriptionWithSecretState):
+        if not isinstance(self.transfer, TransferDescriptionWithSecretState):
             raise ValueError('transfer must be an TransferDescriptionWithSecretState instance.')
 
 
@@ -69,7 +69,10 @@ class ActionInitMediator(BalanceProofStateChange):
         if not isinstance(from_transfer, LockedTransferSignedState):
             raise ValueError("from_transfer must be a LockedTransferSignedState instance")
 
-        super().__init__(from_transfer.balance_proof)
+        super().__init__(
+            sender=from_transfer.balance_proof.sender,
+            balance_proof=from_transfer.balance_proof,
+        )
         self.routes = routes
         self.from_route = from_route
         self.from_transfer = from_transfer
@@ -93,7 +96,10 @@ class ActionInitTarget(BalanceProofStateChange):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError("transfer must be a LockedTransferSignedState instance")
 
-        super().__init__(transfer.balance_proof)
+        super().__init__(
+            sender=transfer.balance_proof.sender,
+            balance_proof=transfer.balance_proof,
+        )
         self.route = route
         self.transfer = transfer
 
@@ -110,7 +116,10 @@ class ReceiveLockExpired(BalanceProofStateChange):
         secrethash: SecretHash,
         message_identifier: MessageID,
     ) -> None:
-        super().__init__(balance_proof)
+        super().__init__(
+            sender=balance_proof.sender,
+            balance_proof=balance_proof,
+        )
         self.secrethash = secrethash
         self.message_identifier = message_identifier
 
@@ -169,7 +178,10 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError("transfer must be an instance of LockedTransferSignedState")
 
-        super().__init__(transfer.balance_proof)
+        super().__init__(
+            sender=transfer.balance_proof.sender,
+            balance_proof=transfer.balance_proof,
+        )
 
         self.transfer = transfer
         self.routes = routes
@@ -187,6 +199,9 @@ class ReceiveTransferRefund(BalanceProofStateChange):
         if not isinstance(transfer, LockedTransferSignedState):
             raise ValueError("transfer must be an instance of LockedTransferSignedState")
 
-        super().__init__(transfer.balance_proof)
+        super().__init__(
+            sender=transfer.balance_proof.sender,
+            balance_proof=transfer.balance_proof,
+        )
         self.transfer = transfer
         self.routes = routes
