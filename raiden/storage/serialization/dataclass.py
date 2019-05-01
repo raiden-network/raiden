@@ -15,7 +15,7 @@ def dataclass(
         unsafe_hash: bool = False,
         frozen: bool = False,
 ) -> type:
-    cls = stdlib_dataclass(
+    cls = stdlib_dataclass(  # type: ignore
         _cls=_cls,
         init=init,
         repr=repr,

@@ -1,8 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from dataclasses import InitVar, field
+from dataclasses import InitVar
 from random import Random
 
-from raiden.storage.serialization import dataclass
 from raiden.transfer.architecture import (
     AuthenticatedSenderStateChange,
     ContractReceiveStateChange,
@@ -18,11 +17,13 @@ from raiden.transfer.state import (
 )
 from raiden.utils import sha3
 from raiden.utils.typing import (
+    TYPE_CHECKING,
     Address,
     BlockGasLimit,
     BlockHash,
     BlockNumber,
     ChainID,
+    ChannelID,
     FeeAmount,
     Locksroot,
     MessageID,
@@ -39,9 +40,15 @@ from raiden.utils.typing import (
     T_SecretHash,
     T_SecretRegistryAddress,
     TokenAmount,
+    TokenNetworkAddress,
     TokenNetworkID,
     TransferID,
 )
+
+if TYPE_CHECKING:
+    from dataclasses import dataclass
+else:
+    from raiden.storage.serialization import dataclass
 
 
 @dataclass
@@ -52,8 +59,6 @@ class BalanceProofStateChange(AuthenticatedSenderStateChange):
     def __post_init__(self):
         if not isinstance(self.balance_proof, BalanceProofSignedState):
             raise ValueError('balance_proof must be an instance of BalanceProofSignedState')
-
-        self.sender = self.balance_proof.sender
 
 
 @dataclass
@@ -95,6 +100,18 @@ class ActionChannelClose(StateChange):
     """ User is closing an existing channel. """
     canonical_identifier: CanonicalIdentifier
 
+    @property
+    def chain_identifier(self) -> ChainID:
+        return self.canonical_identifier.chain_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkID:
+        return TokenNetworkID(self.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
 
 @dataclass
 class ActionChannelSetFee(StateChange):
@@ -120,10 +137,14 @@ class ActionCancelTransfer(StateChange):
 class ContractReceiveChannelNew(ContractReceiveStateChange):
     """ A new channel was created and this node IS a participant. """
     channel_state: NettingChannelState
-    token_network_identifier: TokenNetworkID = field(init=False)
 
-    def __post_init__(self):
-        self.token_network_identifier = self.channel_state.token_network_identifier
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.channel_state.canonical_identifier.token_network_address)
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.channel_state.canonical_identifier.channel_identifier
 
 
 @dataclass
@@ -131,6 +152,14 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     """ A channel to which this node IS a participant was closed. """
     transaction_from: Address
     canonical_identifier: CanonicalIdentifier
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
 @dataclass
@@ -171,6 +200,14 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     canonical_identifier: CanonicalIdentifier
     deposit_transaction: TransactionChannelNewBalance
 
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+
 
 @dataclass
 class ContractReceiveChannelSettled(ContractReceiveStateChange):
@@ -178,6 +215,14 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     canonical_identifier: CanonicalIdentifier
     our_onchain_locksroot: Locksroot
     partner_onchain_locksroot: Locksroot
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
 @dataclass
@@ -261,6 +306,10 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
         if not isinstance(self.partner, T_Address):
             raise ValueError('partner must be of type address')
 
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+
 
 @dataclass
 class ContractReceiveRouteNew(ContractReceiveStateChange):
@@ -276,17 +325,41 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
         if not isinstance(self.participant2, T_Address):
             raise ValueError('participant2 must be of type address')
 
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+
 
 @dataclass
 class ContractReceiveRouteClosed(ContractReceiveStateChange):
     """ A channel was closed and this node is NOT a participant. """
     canonical_identifier: CanonicalIdentifier
 
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
+
 
 @dataclass
 class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     canonical_identifier: CanonicalIdentifier
     nonce: Nonce
+
+    @property
+    def channel_identifier(self) -> ChannelID:
+        return self.canonical_identifier.channel_identifier
+
+    @property
+    def token_network_identifier(self) -> TokenNetworkAddress:
+        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
 
 @dataclass
@@ -298,7 +371,7 @@ class ReceiveUnlock(BalanceProofStateChange):
     def __init__(
         self, message_identifier: MessageID, secret: Secret, balance_proof: BalanceProofSignedState
     ) -> None:
-        super().__init__(balance_proof)
+        super().__init__(balance_proof.sender, balance_proof)
         self.message_identifier = message_identifier
         self.secret = secret
         self.secrethash = SecretHash(sha3(self.secret))
