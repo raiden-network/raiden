@@ -560,7 +560,7 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
             message_data=data,
             peer_address=pex(peer_address),
         )
-        return False
+        return []
 
     if data.startswith('0x'):
         try:
@@ -574,7 +574,7 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
                 peer_address=pex(peer_address),
                 _exc=ex,
             )
-            return False
+            return []
         except InvalidProtocolMessage as ex:
             log.warning(
                 'Received ToDevice Message binary data is not a valid message',
@@ -582,7 +582,7 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
                 peer_address=pex(peer_address),
                 _exc=ex,
             )
-            return False
+            return []
         else:
             messages.append(message)
 
