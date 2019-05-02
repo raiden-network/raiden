@@ -12,8 +12,12 @@ from raiden.utils.typing import (
     BlockNumber,
     ChainID,
     ChannelID,
+    EncodedData,
     FeeAmount,
+    InitiatorAddress,
     LockedAmount,
+    LockHash,
+    Locksroot,
     MessageID,
     Nonce,
     PaymentAmount,
@@ -24,25 +28,44 @@ from raiden.utils.typing import (
     SecretHash,
     SecretRegistryAddress,
     Signature,
+    TargetAddress,
+    TokenAddress,
     TokenNetworkAddress,
     TokenNetworkID,
     TransactionHash,
     TransferID,
+    Union,
 )
+
+
+def determine_types(*args):
+    first_type = type(args[0])
+
+    for arg in args:
+        if type(arg) != first_type:
+            return None
+    return args[0]
+
 
 TYPES.update({
     # Addresses
     Address: AddressField,
+    InitiatorAddress: AddressField,
     PaymentNetworkID: AddressField,
     SecretRegistryAddress: AddressField,
+    TargetAddress: AddressField,
+    TokenAddress: AddressField,
     TokenNetworkAddress: AddressField,
     TokenNetworkID: AddressField,
 
     # Bytes
+    EncodedData: BytesField,
     AdditionalHash: BytesField,
     BalanceHash: BytesField,
     BlockGasLimit: BytesField,
     BlockHash: BytesField,
+    Locksroot: BytesField,
+    LockHash: BytesField,
     Secret: BytesField,
     SecretHash: BytesField,
     Signature: BytesField,
@@ -61,4 +84,7 @@ TYPES.update({
     PaymentID: fields.Int,
     PaymentWithFeeAmount: fields.Int,
     TransferID: fields.Int,
+
+    # Union
+    Union: determine_types,
 })
