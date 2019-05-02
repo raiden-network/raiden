@@ -341,7 +341,7 @@ class MatrixTransport(Runnable):
 
         return f'<{self.__class__.__name__}{node}>'
 
-    def start(
+    def start(  # type: ignore
             self,
             raiden_service: RaidenService,
             message_handler: MessageHandler,

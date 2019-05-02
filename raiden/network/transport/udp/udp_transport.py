@@ -212,7 +212,7 @@ class UDPTransport(Runnable):
             spawn=pool,
         )
 
-    def start(
+    def start(  # type: ignore
             self,
             raiden_service: RaidenService,
             message_handler: MessageHandler,
