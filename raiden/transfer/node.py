@@ -32,14 +32,8 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.state import (
-    ChainState,
-    InitiatorTask,
-    MediatorTask,
-    PaymentNetworkState,
-    TargetTask,
-    TokenNetworkState,
-)
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
 from raiden.transfer.state_change import (
     ActionChangeNodeNetworkState,
     ActionChannelClose,

@@ -9,7 +9,7 @@ from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     WaitingTransferState,
 )
-from raiden.transfer.state import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.views import list_channelstate_for_tokennetwork
 
 

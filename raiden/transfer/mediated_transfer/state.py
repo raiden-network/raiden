@@ -130,8 +130,7 @@ class TransferDescriptionWithSecretState(State):
     secrethash: Optional[SecretHash] = field(default=None)
 
     def __post_init__(self) -> None:
-        if self.secrethash is None:
-            self.secrethash = sha3(self.secret)
+        self.secrethash = sha3(self.secret)
 
 
 @dataclass
