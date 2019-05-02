@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import gevent
 import pytest
+from eth_utils import to_checksum_address
 from gevent import Timeout
 from matrix_client.errors import MatrixRequestError
 
@@ -30,7 +31,6 @@ from raiden.transfer import views
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.state_change import ActionChannelClose, ActionUpdateTransportAuthData
-from raiden.utils import pex
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import Address, List, Optional, Union
 
@@ -452,7 +452,7 @@ def test_matrix_message_retry(
 
     transport.log.debug.assert_called_with(
         "Partner not reachable. Skipping.",
-        partner=pex(partner_address),
+        partner=to_checksum_address(partner_address),
         status=AddressReachability.UNREACHABLE,
     )
 
