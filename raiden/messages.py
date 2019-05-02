@@ -1929,6 +1929,29 @@ class UpdatePFS(SignedMessage):
         )
 
 
+def lockedtransfersigned_from_message(message: LockedTransfer) -> 'LockedTransferSignedState':
+    """ Create LockedTransferSignedState from a LockedTransfer message. """
+    balance_proof = balanceproof_from_envelope(message)
+
+    lock = HashTimeLockState(
+        message.lock.amount,
+        message.lock.expiration,
+        message.lock.secrethash,
+    )
+
+    transfer_state = LockedTransferSignedState(
+        message.message_identifier,
+        message.payment_identifier,
+        message.token,
+        balance_proof,
+        lock,
+        message.initiator,
+        message.target,
+    )
+
+    return transfer_state
+
+
 CMDID_TO_CLASS: Dict[int, Type[Message]] = {
     messages.DELIVERED: Delivered,
     messages.LOCKEDTRANSFER: LockedTransfer,
