@@ -6,7 +6,7 @@ import structlog
 
 from raiden.exceptions import RaidenServicePortInUseError, STUNUnavailableException
 from raiden.network import stunsock, upnpsock
-from raiden.utils.typing import Host, Port
+from raiden.utils.typing import Any, Dict, Host, Port
 
 log = structlog.get_logger(__name__)
 
@@ -64,7 +64,7 @@ class SocketFactory:
         self.kwargs = kwargs
         self.method = None
         self.socket = None
-        self.storage = {}
+        self.storage: Dict[str, Any] = {}
 
     def __enter__(self):
         log.debug('Acquiring socket', strategy=self.strategy_description)
