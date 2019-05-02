@@ -3,7 +3,7 @@ import sys
 import click
 import structlog
 from eth_utils import denoms
-from requests.exceptions import ConnectTimeout, RequestException
+from requests.exceptions import ConnectTimeout
 from web3 import Web3
 
 from raiden.accounts import AccountManager
@@ -80,24 +80,20 @@ def check_network_id(given_network_id: int, web3: Web3) -> None:
     to the configuration and then returns it and whether it is a known network
     """
     node_network_id = int(web3.version.network)  # pylint: disable=no-member
-    known_given_network_id = given_network_id in ID_TO_NETWORKNAME
-    known_node_network_id = node_network_id in ID_TO_NETWORKNAME
 
     if node_network_id != given_network_id:
-        if known_given_network_id and known_node_network_id:
-            click.secho(
-                f"The chosen ethereum network '{ID_TO_NETWORKNAME[given_network_id]}' "
-                f"differs from the ethereum client '{ID_TO_NETWORKNAME[node_network_id]}'. "
-                "Please update your settings.",
-                fg='red',
-            )
-        else:
-            click.secho(
-                f"The chosen ethereum network id '{given_network_id}' differs "
-                f"from the ethereum client '{node_network_id}'. "
-                "Please update your settings.",
-                fg='red',
-            )
+        given_name = ID_TO_NETWORKNAME.get(given_network_id)
+        network_name = ID_TO_NETWORKNAME.get(node_network_id)
+
+        given_description = f'{given_name or "Unknown"} (id {given_network_id})'
+        network_description = f'{network_name or "Unknown"} (id {node_network_id})'
+
+        msg = (
+            f"The configured network {given_description} differs "
+            f"from the Ethereum client's network {network_description}. "
+            f"Please check your settings."
+        )
+        click.secho(msg, fg='red')
         sys.exit(1)
 
 
@@ -169,32 +165,22 @@ def check_pfs_configuration(
             sys.exit(1)
 
 
-def check_synced(blockchain_service: BlockChainService, network_id_is_known: bool) -> None:
-    net_id = blockchain_service.network_id
-    if not network_id_is_known:
-        click.secho(
-            f'Your ethereum client is connected to a non-recognized private \n'
-            f'network with network-ID {net_id}. Since we can not check if the client \n'
-            f'is synced please restart raiden with the --no-sync-check argument.'
-            f'\n',
-            fg='red',
-        )
-        sys.exit(1)
+def check_synced(blockchain_service: BlockChainService) -> None:
+    network_id = int(blockchain_service.client.web3.version.network)
+    network_name = ID_TO_NETWORKNAME.get(network_id)
 
-    try:
-        network = ID_TO_NETWORKNAME[net_id]
-    except (EthNodeCommunicationError, RequestException):
-        click.secho(
-            'Could not determine the network the ethereum node is connected.\n'
-            'Because of this there is no way to determine the latest\n'
-            'block with an oracle, and the events from the ethereum\n'
-            'node cannot be trusted. Giving up.\n',
-            fg='red',
+    if network_name is None:
+        msg = (
+            f'Your ethereum client is connected to a non-recognized private '
+            f'network with network-ID {network_id}. Since we can not check if the '
+            f'client is synced please restart raiden with the --no-sync-check '
+            f'argument.'
         )
+        click.secho(msg, fg='red')
         sys.exit(1)
 
     url = ETHERSCAN_API.format(
-        network=network if net_id != 1 else 'api',
+        network=network_name if network_id != 1 else 'api',
         action='eth_blockNumber',
     )
     wait_for_sync(
