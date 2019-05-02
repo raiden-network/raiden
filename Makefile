@@ -49,7 +49,7 @@ lint:
 	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc $(LINT_PATHS)
 	python setup.py check --restructuredtext --strict
 
-	mypy raiden/transfer raiden/messages.py raiden/encoding raiden/api --ignore-missing-imports
+	mypy raiden/transfer raiden/messages.py raiden/encoding raiden/api raiden/network --ignore-missing-imports
 
 	# We are starting small with a few files and directories here,
 	# but mypy should run on the whole codebase soon.
