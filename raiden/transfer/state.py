@@ -60,9 +60,8 @@ from raiden.utils.typing import (
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from messages import EnvelopeMessage
-    from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
-    from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
     from dataclasses import dataclass, field
+    from raiden.transfer.mediated_transfer.tasks import TransferTask
 else:
     from raiden.storage.serialization import dataclass, field
 
@@ -129,39 +128,6 @@ def to_comparable_graph(network: networkx.Graph) -> List[List[Any]]:
 
 
 @dataclass
-class TransferTask(State):
-    # TODO: When we turn these into dataclasses it would be a good time to move common attributes
-    # of all transfer tasks like the `token_network_identifier` into the common subclass
-    pass
-
-
-@dataclass
-class InitiatorTask(TransferTask):
-    token_network_identifier: TokenNetworkID
-    manager_state: InitiatorPaymentState = field(repr=False)
-
-
-@dataclass
-class MediatorTask(TransferTask):
-    token_network_identifier: TokenNetworkID
-    mediator_state: MediatorTransferState = field(repr=False)
-
-
-@dataclass
-class TargetTask(TransferTask):
-    canonical_identifier: CanonicalIdentifier
-    target_state: TargetTransferState = field(repr=False)
-
-    @property
-    def token_network_identifier(self) -> TokenNetworkID:
-        return TokenNetworkID(self.canonical_identifier.token_network_address)
-
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.canonical_identifier.channel_identifier
-
-
-@dataclass
 class PaymentMappingState(State):
     """ Global map from secrethash to a transfer task.
     This mapping is used to quickly dispatch state changes by secrethash, for
@@ -178,7 +144,7 @@ class PaymentMappingState(State):
     # Because token swaps span multiple token networks, the state of the
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
-    secrethashes_to_task: Dict[SecretHash, TransferTask] = field(
+    secrethashes_to_task: Dict[SecretHash, 'TransferTask'] = field(
         init=False,
         repr=False,
         default_factory=dict,
@@ -684,7 +650,7 @@ class NettingChannelEndState(State):
         repr=False,
         default_factory=dict,
         )
-    merkletree = field(
+    merkletree: MerkleTreeState = field(
         init=False,
         repr=False,
         default_factory=make_empty_merkle_tree,

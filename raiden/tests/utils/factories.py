@@ -6,7 +6,7 @@ from functools import singledispatch
 from eth_utils import to_checksum_address
 
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
-from raiden.messages import Lock, LockedTransfer, RefundTransfer
+from raiden.messages import Lock, LockedTransfer, RefundTransfer, lockedtransfersigned_from_message
 from raiden.storage.serialization import dataclass, fields, replace
 from raiden.transfer import balance_proof, channel, token_network
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -17,7 +17,6 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferUnsignedState,
     MediationPairState,
     TransferDescriptionWithSecretState,
-    lockedtransfersigned_from_message,
 )
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator
 from raiden.transfer.merkle_tree import compute_layers, merkleroot
