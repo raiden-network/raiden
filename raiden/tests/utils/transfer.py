@@ -1,5 +1,6 @@
 """ Utilities to make and assert transfers. """
 import random
+from enum import Enum
 
 import gevent
 from gevent.timeout import Timeout
@@ -8,10 +9,14 @@ from raiden.app import App
 from raiden.constants import UINT64_MAX
 from raiden.message_handler import MessageHandler
 from raiden.messages import LockedTransfer, LockExpired, Message, Unlock
-from raiden.tests.utils.factories import make_address
+from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
-from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
+from raiden.transfer.mediated_transfer.events import SendSecretRequest
+from raiden.transfer.mediated_transfer.state import (
+    LockedTransferSignedState,
+    lockedtransfersigned_from_message,
+)
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
@@ -42,6 +47,16 @@ from raiden.utils.typing import (
 )
 
 
+class TransferState(Enum):
+    """ Represents the target state of a transfer. """
+
+    UNLOCKED = "unlocked"
+    EXPIRED = "expired"
+    SECRET_NOT_REVEALED = "secret_not_revealed"
+    SECRET_NOT_REQUESTED = "secret_not_requested"
+    SECRET_REVEALED = "secret_revealed"
+
+
 def sign_and_inject(message: Message, signer: Signer, app: App) -> None:
     """Sign the message with key and inject it directly in the app transport layer."""
     message.sign(signer)
@@ -64,15 +79,62 @@ def transfer(
     amount: PaymentAmount,
     identifier: PaymentID,
     fee: FeeAmount = 0,
-    timeout: float = 10,
+    timeout: Optional[float] = None,
+    transfer_state: TransferState = TransferState.UNLOCKED,
 ) -> None:
-    """ Nice to read shortcut to make successful LockedTransfer.
+    """ Nice to read shortcut to make successful mediated transfer.
 
     Note:
         Only the initiator and target are synched.
     """
     assert identifier is not None, "The identifier must be provided"
+    if transfer_state is TransferState.UNLOCKED:
+        _transfer_unlocked(
+            initiator_app=initiator_app,
+            target_app=target_app,
+            token_address=token_address,
+            amount=amount,
+            identifier=identifier,
+            fee=fee,
+            timeout=timeout,
+        )
+    elif transfer_state is TransferState.EXPIRED:
+        _transfer_expired(
+            initiator_app=initiator_app,
+            target_app=target_app,
+            token_address=token_address,
+            amount=amount,
+            identifier=identifier,
+            fee=fee,
+            timeout=timeout,
+        )
+    elif transfer_state is TransferState.SECRET_NOT_REQUESTED:
+        _transfer_secret_not_requested(
+            initiator_app=initiator_app,
+            target_app=target_app,
+            token_address=token_address,
+            amount=amount,
+            identifier=identifier,
+            fee=fee,
+            timeout=timeout,
+        )
+    else:
+        raise RuntimeError("Type of transfer not implemented.")
+
+
+def _transfer_unlocked(
+    initiator_app: App,
+    target_app: App,
+    token_address: TokenAddress,
+    amount: PaymentAmount,
+    identifier: PaymentID,
+    fee: FeeAmount = 0,
+    timeout: Optional[float] = None,
+) -> None:
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
+
+    if timeout is None:
+        timeout = 10
 
     wait_for_unlock = target_app.raiden.message_handler.wait_for_message(
         Unlock, {"payment_identifier": identifier}
@@ -99,6 +161,98 @@ def transfer(
             f"to {pex(target_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
+
+
+def _transfer_expired(
+    initiator_app: App,
+    target_app: App,
+    token_address: TokenAddress,
+    amount: PaymentAmount,
+    identifier: PaymentID,
+    fee: FeeAmount = 0,
+    timeout: Optional[float] = None,
+) -> None:
+    assert identifier is not None, "The identifier must be provided"
+    assert isinstance(target_app.raiden.message_handler, WaitForMessage)
+
+    # This timeout has to be larger then the lock expiration. The lock
+    # expiration unit is block numbers, and its value is defined relative to
+    # the node's reveal timeout configuration. For the integration tests the
+    # reveal timeout is chosen proportionally to the number of nodes, 90
+    # seconds is a rough default that should work with the standard
+    # configuration.
+    if timeout is None:
+        timeout = 90
+
+    secret = make_secret()
+    secrethash = sha3(secret)
+
+    wait_for_remove_expired_lock = target_app.raiden.message_handler.wait_for_message(
+        LockExpired, {"secrethash": secrethash}
+    )
+
+    payment_network_identifier = initiator_app.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        chain_state=views.state_from_app(initiator_app),
+        payment_network_id=payment_network_identifier,
+        token_address=token_address,
+    )
+    payment_status = initiator_app.raiden.start_mediated_transfer_with_secret(
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=fee,
+        target=target_app.raiden.address,
+        identifier=identifier,
+        secret=secret,
+        secrethash=secrethash,
+    )
+
+    with Timeout(seconds=timeout):
+        wait_for_remove_expired_lock.get()
+        msg = (
+            f"transfer from {pex(initiator_app.raiden.address)} "
+            f"to {pex(target_app.raiden.address)} did not expire."
+        )
+        assert payment_status.payment_done.get() is False, msg
+
+
+def _transfer_secret_not_requested(
+    initiator_app: App,
+    target_app: App,
+    token_address: TokenAddress,
+    amount: PaymentAmount,
+    identifier: PaymentID,
+    fee: FeeAmount = 0,
+    timeout: Optional[float] = None,
+):
+    if timeout is None:
+        timeout = 10
+
+    secret = make_secret()
+    secret_hash = sha3(secret)
+
+    hold_secret_request = target_app.raiden.raiden_event_handler.hold(
+        SendSecretRequest, {"secrethash": secret_hash}
+    )
+
+    payment_network_identifier = initiator_app.raiden.default_registry.address
+    token_network_identifier = views.get_token_network_identifier_by_token_address(
+        chain_state=views.state_from_app(initiator_app),
+        payment_network_id=payment_network_identifier,
+        token_address=token_address,
+    )
+    initiator_app.raiden.start_mediated_transfer_with_secret(
+        token_network_identifier=token_network_identifier,
+        amount=amount,
+        fee=fee,
+        target=target_app.raiden.address,
+        identifier=identifier,
+        secret=secret,
+        secret_hash=secret_hash,
+    )
+
+    with Timeout(seconds=timeout):
+        hold_secret_request.get()
 
 
 def transfer_and_assert_path(
