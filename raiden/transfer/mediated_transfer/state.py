@@ -1,14 +1,11 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from raiden.constants import EMPTY_MERKLE_ROOT
-from raiden.messages import LockedTransfer
 from raiden.transfer.architecture import State
-from raiden.transfer.mediated_transfer.events import SendSecretReveal
 from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     HashTimeLockState,
     RouteState,
-    balanceproof_from_envelope,
 )
 from raiden.utils import sha3
 from raiden.utils.typing import (
@@ -33,28 +30,11 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
+    # pylint: disable=unused-import
     from dataclasses import dataclass, field
+    from raiden.transfer.mediated_transfer.events import SendSecretReveal
 else:
     from raiden.storage.serialization import dataclass, field
-
-
-def lockedtransfersigned_from_message(message: "LockedTransfer") -> "LockedTransferSignedState":
-    """ Create LockedTransferSignedState from a LockedTransfer message. """
-    balance_proof = balanceproof_from_envelope(message)
-
-    lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
-
-    transfer_state = LockedTransferSignedState(
-        message.message_identifier,
-        message.payment_identifier,
-        message.token,
-        balance_proof,
-        lock,
-        message.initiator,
-        message.target,
-    )
-
-    return transfer_state
 
 
 @dataclass
@@ -145,7 +125,7 @@ class TransferDescriptionWithSecretState(State):
     initiator: InitiatorAddress = field(repr=False)
     target: TargetAddress
     secret: Secret = field(repr=False)
-    secrethash: SecretHash = field(init=False)
+    secrethash: Optional[SecretHash] = field(default=None)
 
     def __post_init__(self) -> None:
         if self.secrethash is None:
@@ -158,7 +138,7 @@ class InitiatorTransferState(State):
     transfer_description: TransferDescriptionWithSecretState = field(repr=False)
     channel_identifier: ChannelID
     transfer: LockedTransferUnsignedState
-    revealsecret: Optional[SendSecretReveal] = field(repr=False)
+    revealsecret: Optional['SendSecretReveal'] = field(repr=False)
     received_secret_request: bool = field(default=False, repr=False)
     transfer_state: str = field(
         init=False,
