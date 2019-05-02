@@ -10,11 +10,10 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
-from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.tests.utils.protocol import WaitForMessage
+from raiden.tests.utils.protocol import HoldRaidenEvent, WaitForMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
 from raiden.utils import merge_dict, pex
@@ -371,7 +370,7 @@ def create_apps(
                 config["transport"]["udp"],
             )
 
-        raiden_event_handler = RaidenEventHandler()
+        raiden_event_handler = HoldRaidenEvent()
         message_handler = WaitForMessage()
 
         app = App(

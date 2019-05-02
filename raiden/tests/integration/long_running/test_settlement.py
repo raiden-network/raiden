@@ -153,10 +153,8 @@ def run_test_lock_expiry(raiden_network, token_addresses, deposit):
         views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
     )
 
-    hold_event_handler = HoldOffChainSecretRequest()
-    wait_message_handler = WaitForMessage()
-    bob_app.raiden.message_handler = wait_message_handler
-    bob_app.raiden.raiden_event_handler = hold_event_handler
+    hold_event_handler = bob_app.raiden.raiden_event_handler
+    wait_message_handler = bob_app.raiden.message_handler
 
     token_network = views.get_token_network_by_identifier(
         views.state_from_app(alice_app), token_network_identifier

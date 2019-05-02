@@ -295,43 +295,38 @@ def handle_channel_settled(raiden: "RaidenService", event: Event):
     if not channel_state:
         return
 
-    """
-    This is resolving a corner case where the current node view
-    of the channel state does not reflect what the blockchain
-    contains.
-    The corner case goes as follows in a setup of nodes:
-    A -> B:
-    - A sends out a LockedTransfer to B
-    - B sends a refund to A
-    - B goes offline
-    - A sends LockExpired to B
-      Here:
-      (1) the lock is removed from A's state
-      (2) B never received the message
-    - A closes the channel with B's refund
-    - B comes back online and calls updateNonClosingBalanceProof
-      with A's LockedTransfer (LockExpired was never processed).
-    - When channel is settled, B unlocks it's refund transfer lock
-      provided that it gains from doing so.
-    - A does NOT try to unlock its lock because its side
-      of the channel state is empty (lock expired and was removed).
-
-    The above is resolved by providing the state machine with the
-    onchain locksroots for both participants in the channel so that
-    the channel state is updated to store these locksroots.
-    In `raiden_event_handler:handle_contract_send_channelunlock`,
-    those values are used to restore the channel state back to where
-    the locksroots values existed and this channel state is used
-    to calculate the gain and potentially perform unlocks in case
-    there is value to be gained.
-    """
-    our_locksroot, partner_locksroot = get_onchain_locksroots(
-        chain=raiden.chain,
-        canonical_identifier=channel_state.canonical_identifier,
-        participant1=channel_state.our_state.address,
-        participant2=channel_state.partner_state.address,
-        block_identifier=block_hash,
-    )
+    # Recover the locksroot from the blockchain to fix data races. Check
+    # get_onchain_locksroots for details.
+    try:
+        # First try to query the unblinded state. This way the
+        # ContractReceiveChannelSettled's locksroots will  match the values
+        # provided during settle.
+        our_locksroot, partner_locksroot = get_onchain_locksroots(
+            chain=raiden.chain,
+            canonical_identifier=channel_state.canonical_identifier,
+            participant1=channel_state.our_state.address,
+            participant2=channel_state.partner_state.address,
+            block_identifier=block_hash,
+        )
+    except ValueError:
+        # State pruning handling. The block which generate the ChannelSettled
+        # event may have been pruned, because of this the RPC call will raises
+        # a ValueError.
+        #
+        # The solution is to query the channel's state from the latest block,
+        # this /may/ create a ContractReceiveChannelSettled with the wrong
+        # locksroot (i.e. not the locksroot used during the call to settle).
+        # However this is fine, because at this point the channel is settled,
+        # it is known that the locksroot can not be reverted without an unlock,
+        # and because the unlocks are fare it doesn't matter who called it,
+        # only if there are tokens locked in the settled channel.
+        our_locksroot, partner_locksroot = get_onchain_locksroots(
+            chain=raiden.chain,
+            canonical_identifier=channel_state.canonical_identifier,
+            participant1=channel_state.our_state.address,
+            participant2=channel_state.partner_state.address,
+            block_identifier="latest",
+        )
 
     channel_settled = ContractReceiveChannelSettled(
         transaction_hash=transaction_hash,
