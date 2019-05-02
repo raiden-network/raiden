@@ -2,7 +2,7 @@ import sys
 
 import click
 import structlog
-from eth_utils import denoms
+from eth_utils import denoms, to_checksum_address
 from requests.exceptions import ConnectTimeout
 from web3 import Web3
 
@@ -10,12 +10,13 @@ from raiden.accounts import AccountManager
 from raiden.constants import SQLITE_MIN_REQUIRED_VERSION, Environment, RoutingMode
 from raiden.exceptions import EthNodeCommunicationError, EthNodeInterfaceError
 from raiden.network.blockchain_service import BlockChainService
+from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.settings import ETHERSCAN_API, ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE
 from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils import typing
 from raiden.utils.ethereum_clients import is_supported_client
-from raiden.utils.typing import AddressHex, Dict
+from raiden.utils.typing import Address, Dict
 from raiden_contracts.constants import GAS_REQUIRED_FOR_ENDPOINT_REGISTER, ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -63,8 +64,8 @@ def check_has_accounts(account_manager: AccountManager) -> None:
         sys.exit(1)
 
 
-def check_account(account_manager: AccountManager, address_hex: AddressHex) -> None:
-    if not account_manager.address_in_keystore(address_hex):
+def check_account(account_manager: AccountManager, address_hex: Address) -> None:
+    if not account_manager.address_in_keystore(to_checksum_address(address_hex)):
         click.secho(
             f"Account '{address_hex}' could not be found on the system. Aborting ...",
             fg='red',
@@ -119,10 +120,10 @@ def check_raiden_environment(
 def check_smart_contract_addresses(
         environment_type: Environment,
         node_network_id: int,
-        tokennetwork_registry_contract_address: AddressHex,
-        secret_registry_contract_address: AddressHex,
-        endpoint_registry_contract_address: AddressHex,
-        contracts: Dict[str, AddressHex],
+        tokennetwork_registry_contract_address: Address,
+        secret_registry_contract_address: Address,
+        endpoint_registry_contract_address: Address,
+        contracts: Dict[str, Address],
 ) -> None:
     contract_addresses_given = (
         tokennetwork_registry_contract_address is not None and
@@ -143,8 +144,8 @@ def check_smart_contract_addresses(
 def check_pfs_configuration(
         routing_mode: RoutingMode,
         environment_type: Environment,
-        service_registry: AddressHex,
-        pathfinding_service_address: AddressHex,
+        service_registry: ServiceRegistry,
+        pathfinding_service_address: str,
 ) -> None:
     if routing_mode == RoutingMode.PFS:
         if environment_type == Environment.PRODUCTION:

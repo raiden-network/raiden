@@ -218,7 +218,6 @@ def setup_proxies_or_exit(
         except AddressWrongContract:
             handle_contract_wrong_address('user_deposit', user_deposit_contract_address)
 
-    service_registry = None
     if CONTRACT_SERVICE_REGISTRY in contracts or service_registry_contract_address:
         try:
             service_registry = blockchain_service.service_registry(
