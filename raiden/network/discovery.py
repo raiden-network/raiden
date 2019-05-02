@@ -72,25 +72,25 @@ class ContractDiscovery(Discovery):
 
         try:
             current_value = self.get(node_address)
+            if current_value == (host, port):
+                log.info(
+                    'endpoint already registered',
+                    node_address=pex(node_address),
+                    host=host,
+                    port=port,
+                )
+                return
         except UnknownAddress:
-            current_value = None
+            pass
 
-        if current_value == (host, port):
-            log.info(
-                'endpoint already registered',
-                node_address=pex(node_address),
-                host=host,
-                port=port,
-            )
-        else:
-            endpoint = host_port_to_endpoint(host, port)
-            self.discovery_proxy.register_endpoint(node_address, endpoint)
-            log.info(
-                'registered endpoint in discovery',
-                node_address=pex(node_address),
-                host=host,
-                port=port,
-            )
+        endpoint = host_port_to_endpoint(host, port)
+        self.discovery_proxy.register_endpoint(node_address, endpoint)
+        log.info(
+            'registered endpoint in discovery',
+            node_address=pex(node_address),
+            host=host,
+            port=port,
+        )
 
     def get(self, node_address: bytes) -> HostPort:
         endpoint = self.discovery_proxy.endpoint_by_address(node_address)
