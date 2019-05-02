@@ -111,6 +111,7 @@ def handle_channel_new(raiden: "RaidenService", event: Event):
         )
         raiden.handle_and_track_state_change(new_channel)
 
+        # pylint: disable=E1101
         partner_address = channel_state.partner_state.address
 
         if ConnectionManager.BOOTSTRAP_ADDR != partner_address:

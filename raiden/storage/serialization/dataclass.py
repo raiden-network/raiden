@@ -1,7 +1,9 @@
 from dataclasses_json import dataclass_json
+# pylint: disable=unused-import
 
 from dataclasses import field, replace, dataclass as stdlib_dataclass  # noqa # isort:skip
 
+# pylint: disable=unused-import
 import raiden.storage.serialization.types  # noqa # isort:skip
 
 
@@ -10,6 +12,7 @@ def dataclass(
         *,
         init: bool = True,
         repr: bool = True,
+        repr: bool = True,  # pylint: disable=redefined-builtin
         eq: bool = True,
         order: bool = False,
         unsafe_hash: bool = False,
