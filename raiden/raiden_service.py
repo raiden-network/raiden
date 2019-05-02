@@ -56,6 +56,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ActionInitTarget,
 )
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
