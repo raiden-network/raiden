@@ -1070,53 +1070,15 @@ class LockedTransfer(LockedTransferBase):
     `initiator` is the party that knows the secret to the `secrethash`
     """
 
-    cmdid = messages.LOCKEDTRANSFER
+    cmdid: ClassVar[Optional[int]] = messages.LOCKEDTRANSFER
 
-    def __init__(
-        self,
-        *,
-        chain_id: ChainID,
-        message_identifier: MessageID,
-        payment_identifier: PaymentID,
-        nonce: Nonce,
-        token_network_address: TokenNetworkAddress,
-        token: TokenAddress,
-        channel_identifier: ChannelID,
-        transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
-        recipient: Address,
-        locksroot: Locksroot,
-        lock: Lock,
-        target: TargetAddress,
-        initiator: InitiatorAddress,
-        fee: int = 0,
-        **kwargs,
-    ):
+    target: TargetAddress
+    initiator: InitiatorAddress
+    fee: int = 0
 
-        if len(target) != 20:
-            raise ValueError("target is an invalid address")
-
-        if len(initiator) != 20:
-            raise ValueError("initiator is an invalid address")
-
-        if fee > UINT256_MAX:
-            raise ValueError("fee is too large")
-
-        super().__init__(
-            chain_id=chain_id,
-            message_identifier=message_identifier,
-            payment_identifier=payment_identifier,
-            nonce=nonce,
-            token_network_address=token_network_address,
-            token=token,
-            channel_identifier=channel_identifier,
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount,
-            recipient=recipient,
-            locksroot=locksroot,
-            lock=lock,
-            **kwargs,
-        )
+    def __post_init__(self):
+        if len(self.target) != 20:
+            raise ValueError('target is an invalid address')
 
         self.target = target
         self.fee = fee
