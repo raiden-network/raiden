@@ -198,6 +198,7 @@ def test_init_with_usable_routes():
     assert transfer.lock.amount == factories.UNIT_TRANSFER_DESCRIPTION.amount
     assert transfer.lock.expiration == expiration
     assert transfer.lock.secrethash == factories.UNIT_TRANSFER_DESCRIPTION.secrethash
+    # pylint: disable=E1101
     assert send_mediated_transfer.recipient == channels[0].partner_state.address
 
 
@@ -429,6 +430,7 @@ def test_refund_transfer_next_route():
         )
     )
 
+    # pylint: disable=E1101
     assert channels[0].partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
@@ -775,6 +777,7 @@ def test_initiator_lock_expired():
     initiator_state = get_transfer_at_index(current_state, 0)
     transfer = initiator_state.transfer
 
+    # pylint: disable=E1101
     assert transfer.lock.secrethash in channels[0].our_state.secrethashes_to_lockedlocks
 
     # Trigger lock expiry
@@ -794,6 +797,7 @@ def test_initiator_lock_expired():
         {
             "balance_proof": {"nonce": 2, "transferred_amount": 0, "locked_amount": 0},
             "secrethash": transfer.lock.secrethash,
+            # pylint: disable=E1101
             "recipient": channels[0].partner_state.address,
         },
     )
@@ -916,6 +920,7 @@ def test_initiator_handle_contract_receive_secret_reveal():
 
     initiator_state = get_transfer_at_index(setup.current_state, 0)
     transfer = initiator_state.transfer
+    # pylint: disable=E1101
     assert transfer.lock.secrethash in setup.channel.our_state.secrethashes_to_lockedlocks
 
     state_change = ContractReceiveSecretReveal(
@@ -1110,8 +1115,7 @@ def test_secret_reveal_cancel_other_transfers():
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
-    refund_transfer = factories.create(
-        factories.LockedTransferSignedStateProperties(
+    refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
             amount=amount,
             initiator=our_address,
             target=original_transfer.target,
@@ -1122,6 +1126,7 @@ def test_secret_reveal_cancel_other_transfers():
             pkey=refund_pkey,
         )
     )
+    # pylint: disable=E1101
     assert channels[0].partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
@@ -1147,7 +1152,9 @@ def test_secret_reveal_cancel_other_transfers():
 
     # A secretreveal for a pending transfer should succeed
     secret_reveal = ReceiveSecretReveal(
-        secret=UNIT_SECRET, sender=channels[0].partner_state.address
+        secret=UNIT_SECRET,
+        # pylint: disable=E1101
+        sender=channels[0].partner_state.address
     )
 
     iteration = initiator_manager.state_transition(
@@ -1168,6 +1175,7 @@ def test_secret_reveal_cancel_other_transfers():
 
     secret_reveal = ReceiveSecretReveal(
         secret=rerouted_transfer.transfer_description.secret,
+        # pylint: disable=E1101
         sender=channels[0].partner_state.address,
     )
 

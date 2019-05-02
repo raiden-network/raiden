@@ -86,13 +86,12 @@ def test_mediator_task_view():
     )
     routes = [factories.make_route_from_channel(initiator_channel)]
     transfer_state1 = MediatorTransferState(secrethash=secrethash1, routes=routes)
-    transfer_state1.transfers_pair.append(
-        MediationPairState(
+    # pylint: disable=E1101
+    transfer_state1.transfers_pair.append(MediationPairState(
             payer_transfer=payer_transfer,
             payee_transfer=payee_transfer,
             payee_address=payee_transfer.target,
-        )
-    )
+    ))
     task1 = MediatorTask(
         token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS,
         mediator_state=transfer_state1,
