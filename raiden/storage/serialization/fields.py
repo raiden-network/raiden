@@ -14,7 +14,7 @@ class BytesField(marshmallow.fields.Field):
         return to_hex(value)
 
     def _deserialize(self, value: str, attr: Any, data: Any) -> bytes:
-        return to_bytes(value)
+        return to_bytes(hexstr=value)
 
 
 class AddressField(marshmallow.fields.Field):
