@@ -29,7 +29,12 @@ from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature, TransportError
-from raiden.messages import Message, decode as message_from_bytes, from_dict as message_from_dict
+from raiden.messages import (
+    Message,
+    SignedMessage,
+    decode as message_from_bytes,
+    from_dict as message_from_dict,
+)
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
 from raiden.utils import pex
@@ -608,6 +613,13 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
                     message_data=line,
                     peer_address=pex(peer_address),
                     _exc=ex,
+                )
+                continue
+            if not isinstance(message, SignedMessage):
+                log.warning(
+                    'ToDevice Message not a SignedMessage!',
+                    message=message,
+                    peer_address=pex(peer_address),
                 )
                 continue
             if message.sender != peer_address:
