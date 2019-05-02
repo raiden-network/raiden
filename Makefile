@@ -48,28 +48,9 @@ lint:
 	isort $(ISORT_PARAMS) --diff --check-only
 	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc $(LINT_PATHS)
 	python setup.py check --restructuredtext --strict
+	mypy raiden --ignore-missing-imports
 
-	mypy raiden/transfer raiden/messages.py raiden/encoding raiden/api raiden/network --ignore-missing-imports
-
-	# We are starting small with a few files and directories here,
-	# but mypy should run on the whole codebase soon.
-	mypy raiden/api raiden/blockchain raiden/storage raiden/network \
-	--ignore-missing-imports | grep error > mypy-out.txt || true
-	# Expecting status code 1 from `grep`, which indicates no match.
-	# Again, we are starting small, detecting only errors related to
-	# 'BlockNumber', 'Address', 'ChannelID' etc, but all mypy errors should be
-	# detected soon.
-	grep BlockNumber mypy-out.txt; [ $$? -eq 1 ]
-	grep Address mypy-out.txt; [ $$? -eq 1 ]
-	grep 'Item "None" of' mypy-out.txt; [ $$? -eq 1 ]
-	grep ChannelID mypy-out.txt; [ $$? -eq 1 ]
-	grep BalanceProof mypy-out.txt; [ $$? -eq 1 ]
-	grep SendSecret mypy-out.txt; [ $$? -eq 1 ]
-	grep NetworkTimeout mypy-out.txt; [ $$? -eq 1 ]
-	grep Nonce mypy-out.txt; [ $$? -eq 1 ]
-	grep Locksroot mypy-out.txt; [ $$? -eq 1 ]
-	grep TransactionHash mypy-out.txt; [ $$? -eq 1 ]
-	grep TokenNetwork mypy-out.txt; [ $$? -eq 1 ]
+	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
 
 isort:
 	isort $(ISORT_PARAMS)
