@@ -51,6 +51,8 @@ lint:
 	mypy raiden --ignore-missing-imports
 
 	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
+	# Remaining errors in tests:
+	mypy --config-file /dev/null raiden --ignore-missing-imports|grep error|wc -l
 
 isort:
 	isort $(ISORT_PARAMS)
