@@ -856,8 +856,8 @@ class TokenNetwork:
             # Check if deposit is being made on a nonexistent channel
             if channel_state in (ChannelState.NONEXISTENT, ChannelState.REMOVED):
                 msg = (
-                    f'Channel between participant {self.node_address} '
-                    f'and {partner} does not exist'
+                    f'Channel between participant {to_checksum_address(self.node_address)} '
+                    f'and {to_checksum_address(partner)} does not exist'
                 )
             # Deposit was prohibited because the channel is settled
             elif channel_state == ChannelState.SETTLED:
