@@ -934,10 +934,10 @@ class TokenNetwork:
                 #
                 # Exception is raised if the public key recovery failed.
             except Exception:  # pylint: disable=broad-except
-                raise RaidenUnrecoverableError("Couldn't verify the balance proof signature")
+                raise RaidenUnrecoverableError("Couldn't verify the close signature")
             else:
                 if partner_recovered_address != partner:
-                    raise RaidenUnrecoverableError('Invalid update balance proof signature')
+                    raise RaidenUnrecoverableError('Invalid close proof signature')
 
         try:
             channel_onchain_detail = self._detail_channel(
