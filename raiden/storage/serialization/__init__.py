@@ -1,1 +1,1 @@
-from raiden.storage.serialization.dataclass import dataclass, field, replace  # noqa
+from raiden.storage.serialization.dataclass import dataclass, field, fields, replace  # noqa

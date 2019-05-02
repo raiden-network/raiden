@@ -353,7 +353,9 @@ def test_events_for_refund():
             },
             "recipient": refund_channel.partner_state.address,
         },
-    )
+        # pylint: disable=E1101
+        'recipient': refund_channel.partner_state.address,
+    })
     assert transfer_pair.payer_transfer == received_transfer
 
 
@@ -1109,6 +1111,7 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
     attacked_channel = factories.create(
         factories.NettingChannelStateProperties(our_state=our_state)
     )
+    # pylint: disable=E1101
     target_attacker2 = attacked_channel.partner_state.address
 
     bc_channel = factories.create(
@@ -1940,7 +1943,9 @@ def test_backward_transfer_pair_with_fees_deducted():
             },
             "recipient": refund_channel.partner_state.address,
         },
-    )
+        # pylint: disable=E1101
+        'recipient': refund_channel.partner_state.address,
+    })
     assert transfer_pair.payer_transfer == received_transfer
 
 

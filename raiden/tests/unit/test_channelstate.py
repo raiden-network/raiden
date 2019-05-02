@@ -356,7 +356,9 @@ def test_deposit_must_wait_for_confirmation():
     )
     partner_model2 = partner_model1
 
+    # pylint: disable=E1101
     assert channel_state.our_state.contract_balance == 0
+    # pylint: disable=E1101
     assert channel_state.partner_state.contract_balance == 0
 
     deposit_transaction = TransactionChannelNewBalance(
@@ -926,6 +928,7 @@ def test_channel_never_expires_lock_with_secret_onchain():
         secrethash=lock_secrethash,
     )
 
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.our_state.secrethashes_to_lockedlocks
 
     channel.register_onchain_secret(
@@ -936,7 +939,9 @@ def test_channel_never_expires_lock_with_secret_onchain():
         delete_lock=True,
     )
 
+    # pylint: disable=E1101
     assert lock.secrethash not in channel_state.our_state.secrethashes_to_lockedlocks
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.our_state.secrethashes_to_onchain_unlockedlocks
 
 
@@ -973,11 +978,13 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     )
     assert is_valid, msg
 
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
 
     lock_expired = make_receive_expired_lock(
         channel_state,
         privkey2,
+        # pylint: disable=E1101
         receive_lockedtransfer.balance_proof.nonce + 1,
         transferred_amount,
         lock,
@@ -1040,6 +1047,7 @@ def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain()
     )
     assert is_valid, msg
 
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
 
     channel.register_onchain_secret(
@@ -1071,6 +1079,7 @@ def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain()
         channel_state=channel_state, state_change=lock_expired, block_number=block_number
     )
 
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
 
 
@@ -1159,6 +1168,7 @@ def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
     )
     assert is_valid, msg
 
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
 
     # If secret registration happens after the lock has expired, then NOOP
@@ -1170,6 +1180,7 @@ def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
         delete_lock=False,
     )
 
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
     assert {} == channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
 
@@ -1182,6 +1193,7 @@ def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
         delete_lock=True,
     )
 
+    # pylint: disable=E1101
     assert lock.secrethash not in channel_state.partner_state.secrethashes_to_lockedlocks
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks
 
@@ -1539,6 +1551,7 @@ def test_valid_lock_expired_for_unlocked_lock():
     )
     assert is_valid, msg
 
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_lockedlocks
 
     channel.register_offchain_secret(
@@ -1560,4 +1573,5 @@ def test_valid_lock_expired_for_unlocked_lock():
     )
 
     assert not is_valid
+    # pylint: disable=E1101
     assert lock.secrethash in channel_state.partner_state.secrethashes_to_unlockedlocks

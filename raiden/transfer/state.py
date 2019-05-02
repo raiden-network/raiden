@@ -58,9 +58,9 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
+    from dataclasses import dataclass, field
     # pylint: disable=unused-import
     from messages import EnvelopeMessage
-    from dataclasses import dataclass, field
     from raiden.transfer.mediated_transfer.tasks import TransferTask
 else:
     from raiden.storage.serialization import dataclass, field
@@ -302,7 +302,9 @@ class ChainState(State):
         ).format(
             self.block_number,
             pex(self.block_hash),
+            # pylint: disable=E1101
             lpex(self.identifiers_to_paymentnetworks.keys()),
+            # pylint: disable=E1101
             len(self.payment_mapping.secrethashes_to_task),
             self.chain_id,
         )
@@ -503,9 +505,6 @@ class HashTimeLockState(State):
 @dataclass
 class UnlockPartialProofState(State):
     """ Stores the lock along with its unlocking secret. """
-
-    __slots__ = ("lock", "secret", "amount", "expiration", "secrethash", "encoded", "lockhash")
-
     lock: HashTimeLockState
     secret: Secret = field(
         repr=False,
@@ -744,8 +743,10 @@ class NettingChannelState(State):
 
     @property
     def our_total_deposit(self) -> Balance:
+        # pylint: disable=E1101
         return self.our_state.contract_balance
 
     @property
     def partner_total_deposit(self) -> Balance:
+        # pylint: disable=E1101
         return self.partner_state.contract_balance

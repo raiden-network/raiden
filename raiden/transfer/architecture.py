@@ -248,8 +248,6 @@ class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
     task to cleanup after the child.
     """
 
-    __slots__ = ("new_state", "events")
-
     def __init__(self, new_state: Optional[ST], events: List[Event]) -> None:
         self.new_state = new_state
         self.events = events

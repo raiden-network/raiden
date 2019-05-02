@@ -32,7 +32,7 @@ from raiden.utils.typing import (
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from dataclasses import dataclass, field
-    from raiden.transfer.mediated_transfer.events import SendSecretReveal
+    from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa
 else:
     from raiden.storage.serialization import dataclass, field
 
@@ -89,11 +89,13 @@ class LockedTransferSignedState(LockedTransferState):
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
+        # pylint: disable=E1101
         if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
             raise ValueError('balance_proof must not be empty')
 
     @property
     def payer_address(self) -> Address:
+        # pylint: disable=E1101
         return self.balance_proof.sender
 
 
