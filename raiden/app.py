@@ -30,6 +30,7 @@ from raiden.settings import (
     RED_EYES_CONTRACT_VERSION,
 )
 from raiden.utils import pex, typing
+from raiden.utils.typing import Any, Dict
 from raiden_contracts.contract_manager import contracts_precompiled_path
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
@@ -136,7 +137,7 @@ class App:  # pylint: disable=too-few-public-methods
 
         # raiden.ui.console:Console assumes that a services
         # attribute is available for auto-registration
-        self.services = dict()
+        self.services: Dict[str, Any] = dict()
 
     def __repr__(self):
         return '<{} {}>'.format(
