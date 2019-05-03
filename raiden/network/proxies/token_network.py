@@ -29,9 +29,8 @@ from raiden.network.proxies.token import Token
 from raiden.network.proxies.utils import compare_contract_versions
 from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
-from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.utils import CanonicalIdentifier, pex, safe_gas_limit
+from raiden.utils import pex, safe_gas_limit
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     AdditionalHash,
@@ -171,11 +170,13 @@ class TokenNetwork:
             settle_timeout > self.settlement_timeout_max()
         )
         if invalid_timeout:
-            raise InvalidSettleTimeout('settle_timeout must be in range [{}, {}], is {}'.format(
-                self.settlement_timeout_min(),
-                self.settlement_timeout_max(),
-                settle_timeout,
-            ))
+            raise InvalidSettleTimeout(
+                'settle_timeout must be in range [{}, {}], is {}'.format(
+                    self.settlement_timeout_min(),
+                    self.settlement_timeout_max(),
+                    settle_timeout,
+                ),
+            )
 
         if self.node_address == partner:
             raise SamePeerAddress('The other peer must not have the same address as the client.')
