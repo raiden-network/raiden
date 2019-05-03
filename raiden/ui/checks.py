@@ -2,7 +2,7 @@ import sys
 
 import click
 import structlog
-from eth_utils import denoms, to_checksum_address
+from eth_utils import denoms, is_address, to_checksum_address
 from requests.exceptions import ConnectTimeout
 from web3 import Web3
 
@@ -16,7 +16,7 @@ from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils import typing
 from raiden.utils.ethereum_clients import is_supported_client
-from raiden.utils.typing import Address, Dict, Optional
+from raiden.utils.typing import Address, Optional
 from raiden_contracts.constants import GAS_REQUIRED_FOR_ENDPOINT_REGISTER, ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -123,15 +123,14 @@ def check_smart_contract_addresses(
         tokennetwork_registry_contract_address: Address,
         secret_registry_contract_address: Address,
         endpoint_registry_contract_address: Address,
-        contracts: Dict[str, Address],
 ) -> None:
-    contract_addresses_given = (
-        tokennetwork_registry_contract_address is not None and
-        secret_registry_contract_address is not None and
-        endpoint_registry_contract_address is not None
+    all_contract_addresses_given = (
+        is_address(tokennetwork_registry_contract_address) and
+        is_address(secret_registry_contract_address) and
+        is_address(endpoint_registry_contract_address)
     )
 
-    if not contract_addresses_given and not bool(contracts):
+    if not all_contract_addresses_given:
         click.secho(
             f"There are no known contract addresses for network id '{node_network_id}'. and "
             f"environment type {environment_type}. Please provide them on the command line or "

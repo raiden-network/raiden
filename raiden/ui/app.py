@@ -9,7 +9,7 @@ from eth_utils import to_canonical_address, to_normalized_address
 from web3 import HTTPProvider, Web3
 
 from raiden.accounts import AccountManager
-from raiden.constants import MONITORING_BROADCASTING_ROOM, RAIDEN_DB_VERSION
+from raiden.constants import MONITORING_BROADCASTING_ROOM, RAIDEN_DB_VERSION, Environment
 from raiden.exceptions import (
     AddressWithoutCode,
     AddressWrongContract,
@@ -31,6 +31,8 @@ from raiden.ui.checks import (
     check_ethereum_client_is_supported,
     check_ethereum_has_accounts,
     check_ethereum_network_id,
+    check_raiden_environment,
+    check_smart_contract_addresses,
     check_sql_version,
     check_synced,
 )
@@ -40,11 +42,10 @@ from raiden.ui.prompt import (
     unlock_account_with_passwordprompt,
 )
 from raiden.ui.startup import (
+    environment_type_to_contracts_version,
     handle_contract_no_code,
     handle_contract_version_mismatch,
     handle_contract_wrong_address,
-    setup_contracts_or_exit,
-    setup_environment,
     setup_proxies_or_exit,
     setup_udp,
 )
@@ -52,7 +53,11 @@ from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.typing import Address, AddressHex, Optional, PrivateKey, TextIO, Tuple
 from raiden_contracts.constants import ID_TO_NETWORKNAME
-from raiden_contracts.contract_manager import ContractManager
+from raiden_contracts.contract_manager import (
+    ContractManager,
+    contracts_precompiled_path,
+    get_contracts_deployment_info,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -129,54 +134,92 @@ def run_app(
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
     from raiden.app import App
 
-    account_manager = AccountManager(keystore_path)
-    web3 = Web3(HTTPProvider(rpc_normalized_endpoint(eth_rpc_endpoint)))
-
     check_sql_version()
-    check_ethereum_has_accounts(account_manager)
-    check_ethereum_client_is_supported(web3)
-    check_ethereum_network_id(network_id, web3)
+    check_raiden_environment(network_id, environment_type)
 
+    account_manager = AccountManager(keystore_path)
+    check_ethereum_has_accounts(account_manager)
     (address, privatekey_bin) = get_account_and_private_key(
         account_manager,
         address,
         password_file,
     )
 
-    (listen_host, listen_port) = split_endpoint(listen_address)
-    (api_host, api_port) = split_endpoint(api_address)
-
-    parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
-    if not parsed_eth_rpc_endpoint.scheme:
-        eth_rpc_endpoint = f'http://{eth_rpc_endpoint}'
-
-    web3 = Web3(HTTPProvider(eth_rpc_endpoint))
+    web3 = Web3(HTTPProvider(rpc_normalized_endpoint(eth_rpc_endpoint)))
     check_ethereum_client_is_supported(web3)
     check_ethereum_network_id(network_id, web3)
 
-    config['transport']['udp']['host'] = listen_host
-    config['transport']['udp']['port'] = listen_port
+    contracts_version = environment_type_to_contracts_version(environment_type)
+    contracts_path = contracts_precompiled_path(contracts_version)
+    contract_manager = ContractManager(contracts_path)
+
+    contracts = dict()
+    if network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[network_id] != 'smoketest':
+        deployment_data = get_contracts_deployment_info(
+            chain_id=network_id,
+            version=contracts_version,
+        )
+        contracts = deployment_data['contracts']
+    else:
+        check_smart_contract_addresses(
+            environment_type,
+            network_id,
+            tokennetwork_registry_contract_address,
+            secret_registry_contract_address,
+            endpoint_registry_contract_address,
+        )
+
+    rpc_client = JSONRPCClient(
+        web3=web3,
+        privkey=privatekey_bin,
+        gas_price_strategy=gas_price,
+        block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+        uses_infura='infura.io' in eth_rpc_endpoint,
+    )
+    blockchain_service = BlockChainService(
+        jsonrpc_client=rpc_client,
+        contract_manager=contract_manager,
+    )
+
+    if sync_check:
+        check_synced(blockchain_service)
+
+    if transport == 'udp':
+        check_discovery_registration_gas(blockchain_service, address)
+
+    (api_host, api_port) = split_endpoint(api_address)
+
     config['console'] = console
     config['rpc'] = rpc
     config['web_ui'] = rpc and web_ui
     config['api_host'] = api_host
     config['api_port'] = api_port
     config['resolver_endpoint'] = resolver_endpoint
-    if mapped_socket:
-        config['socket'] = mapped_socket.socket
-        config['transport']['udp']['external_ip'] = mapped_socket.external_ip
-        config['transport']['udp']['external_port'] = mapped_socket.external_port
-    config['transport_type'] = transport
-    config['transport']['matrix']['server'] = matrix_server
-    config['transport']['udp']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
     timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
-    config['transport']['udp']['nat_keepalive_timeout'] = timeout
     config['unrecoverable_error_should_crash'] = unrecoverable_error_should_crash
     config['services']['pathfinding_max_paths'] = pathfinding_max_paths
     config['services']['monitoring_enabled'] = enable_monitoring
     config['chain_id'] = network_id
+    config['contracts_path'] = contracts_path
+    config['environment_type'] = environment_type
 
-    if transport == 'matrix':
+    config['transport_type'] = transport
+    if transport == 'udp':
+        if not mapped_socket:
+            raise RuntimeError('Missing socket')
+
+        (listen_host, listen_port) = split_endpoint(listen_address)
+        config['socket'] = mapped_socket.socket
+        config['transport']['udp']['host'] = listen_host
+        config['transport']['udp']['port'] = listen_port
+        config['transport']['udp']['external_ip'] = mapped_socket.external_ip
+        config['transport']['udp']['external_port'] = mapped_socket.external_port
+        config['transport']['udp']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
+        config['transport']['udp']['nat_keepalive_timeout'] = timeout
+
+    elif transport == 'matrix':
+        config['transport']['matrix']['server'] = matrix_server
+
         if config['transport']['matrix'].get('available_servers') is None:
             available_servers_url = DEFAULT_MATRIX_KNOWN_SERVERS[config['environment_type']]
             available_servers = get_matrix_servers(available_servers_url)
@@ -185,37 +228,15 @@ def run_app(
         if config['services']['monitoring_enabled'] is True:
             config['transport']['matrix']['global_rooms'].append(MONITORING_BROADCASTING_ROOM)
 
-    setup_environment(config, environment_type)
-
-    contracts = setup_contracts_or_exit(config, network_id)
-
-    rpc_client = JSONRPCClient(
-        web3,
-        privatekey_bin,
-        gas_price_strategy=gas_price,
-        block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-        uses_infura='infura.io' in eth_rpc_endpoint,
-    )
-
-    blockchain_service = BlockChainService(
-        jsonrpc_client=rpc_client,
-        contract_manager=ContractManager(config['contracts_path']),
-    )
-
-    if transport == 'udp':
-        if not mapped_socket:
-            raise RuntimeError('Missing socket')
-
-        check_discovery_registration_gas(blockchain_service, address)
-
-    if sync_check:
-        check_synced(blockchain_service)
+        # Safe configuration: restrictions for mainnet apply and matrix rooms
+        # have to be private
+        if environment_type == Environment.PRODUCTION:
+            config['transport']['matrix']['private_rooms'] = True
 
     proxies = setup_proxies_or_exit(
         config=config,
         tokennetwork_registry_contract_address=tokennetwork_registry_contract_address,
         secret_registry_contract_address=secret_registry_contract_address,
-        endpoint_registry_contract_address=endpoint_registry_contract_address,
         user_deposit_contract_address=user_deposit_contract_address,
         service_registry_contract_address=service_registry_contract_address,
         blockchain_service=blockchain_service,
@@ -234,11 +255,11 @@ def run_app(
     )
     config['database_path'] = database_path
 
+    network_id_or_name = ID_TO_NETWORKNAME.get(network_id, network_id)
     print(
-        '\nYou are connected to the \'{}\' network and the DB path is: {}'.format(
-            ID_TO_NETWORKNAME.get(network_id, network_id),
-            database_path,
-        ),
+        f'Raiden is running in {environment_type.value.lower()} mode, '
+        f'connected to the network {network_id_or_name}. The DB path is '
+        f'{database_path}',
     )
 
     discovery = None

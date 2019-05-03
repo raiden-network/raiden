@@ -16,11 +16,7 @@ from raiden.network.proxies.user_deposit import UserDeposit
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import UDPTransport
 from raiden.settings import DEVELOPMENT_CONTRACT_VERSION, RED_EYES_CONTRACT_VERSION
-from raiden.ui.checks import (
-    check_pfs_configuration,
-    check_raiden_environment,
-    check_smart_contract_addresses,
-)
+from raiden.ui.checks import check_pfs_configuration
 from raiden.utils.typing import Address
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -29,10 +25,6 @@ from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK_REGISTRY,
     CONTRACT_USER_DEPOSIT,
     ID_TO_NETWORKNAME,
-)
-from raiden_contracts.contract_manager import (
-    contracts_precompiled_path,
-    get_contracts_deployment_info,
 )
 
 
@@ -43,53 +35,6 @@ def environment_type_to_contracts_version(environment_type: Environment) -> str:
         contracts_version = RED_EYES_CONTRACT_VERSION
 
     return contracts_version
-
-
-def setup_environment(config: Dict[str, Any], environment_type: Environment) -> None:
-    """Sets the config depending on the environment type"""
-    # interpret the provided string argument
-    if environment_type == Environment.PRODUCTION:
-        # Safe configuration: restrictions for mainnet apply and matrix rooms have to be private
-        config['transport']['matrix']['private_rooms'] = True
-
-    config['environment_type'] = environment_type
-
-    print(f'Raiden is running in {environment_type.value.lower()} mode')
-
-
-def setup_contracts_or_exit(
-        config: Dict[str, Any],
-        network_id: int,
-) -> Dict[str, Any]:
-    """Sets the contract deployment data depending on the network id and environment type
-
-    If an invalid combination of network id and environment type is provided, exits
-    the program with an error
-    """
-    environment_type = config['environment_type']
-
-    check_raiden_environment(
-        network_id,
-        environment_type,
-    )
-
-    contracts: Dict[str, Any] = dict()
-    contracts_version = environment_type_to_contracts_version(environment_type)
-
-    config['contracts_path'] = contracts_precompiled_path(contracts_version)
-
-    if network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[network_id] != 'smoketest':
-        try:
-            deployment_data = get_contracts_deployment_info(
-                chain_id=network_id,
-                version=contracts_version,
-            )
-        except ValueError:
-            return contracts
-
-        contracts = deployment_data['contracts']
-
-    return contracts
 
 
 def handle_contract_version_mismatch(mismatch_exception: ContractVersionMismatch) -> None:
@@ -127,7 +72,6 @@ def setup_proxies_or_exit(
         config: Dict[str, Any],
         tokennetwork_registry_contract_address: Address,
         secret_registry_contract_address: Address,
-        endpoint_registry_contract_address: Address,
         user_deposit_contract_address: Address,
         service_registry_contract_address: Address,
         blockchain_service: BlockChainService,
@@ -149,14 +93,6 @@ def setup_proxies_or_exit(
     node_network_id = config['chain_id']
     environment_type = config['environment_type']
 
-    check_smart_contract_addresses(
-        environment_type,
-        node_network_id,
-        tokennetwork_registry_contract_address,
-        secret_registry_contract_address,
-        endpoint_registry_contract_address,
-        contracts,
-    )
     try:
         registered_address: Address
         if tokennetwork_registry_contract_address is not None:
