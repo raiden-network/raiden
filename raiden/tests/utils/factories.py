@@ -1,10 +1,10 @@
 # pylint: disable=too-many-arguments
 import random
 import string
-from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 from typing import Any, ClassVar, Dict, List, NamedTuple, Optional, Tuple, Type
 
+from dataclasses import dataclass, fields, replace
 from eth_utils import to_checksum_address
 
 from raiden.balance_proof import pack_balance_proof
@@ -579,13 +579,6 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
         keys = ('transferred_amount', 'locked_amount', 'locksroot')
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
-        canonical_identifier = make_canonical_identifier(
-            chain_identifier=params.pop('chain_id'),
-            token_network_address=params.pop('token_network_identifier'),
-            channel_identifier=params.pop('channel_identifier'),
-        )
-        params['canonical_identifier'] = canonical_identifier
-
         data_to_sign = pack_balance_proof(
             nonce=params.get('nonce'),
             balance_hash=balance_hash,
@@ -737,10 +730,12 @@ def make_signed_transfer_for(
             expiration=properties.transfer.expiration,
             secrethash=sha3(properties.transfer.secret),
         )
-        locksroot = merkleroot(channel.compute_merkletree_with(
-            merkletree=channel_state.partner_state.merkletree,
-            lockhash=sha3(lock.as_bytes),
-        ))
+        locksroot = merkleroot(
+            channel.compute_merkletree_with(
+                merkletree=channel_state.partner_state.merkletree,
+                lockhash=sha3(lock.as_bytes),
+            ),
+        )
     else:
         locksroot = properties.transfer.balance_proof.locksroot
 
@@ -905,11 +900,13 @@ def make_transfers_pair(
 ) -> MediatorTransfersPair:
 
     deposit = 5 * amount
-    defaults = create_properties(NettingChannelStateProperties(
-        our_state=NettingChannelEndStateProperties(balance=deposit),
-        partner_state=NettingChannelEndStateProperties(balance=deposit),
-        open_transaction=TransactionExecutionStatusProperties(finished_block_number=10),
-    ))
+    defaults = create_properties(
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=deposit),
+            partner_state=NettingChannelEndStateProperties(balance=deposit),
+            open_transaction=TransactionExecutionStatusProperties(finished_block_number=10),
+        ),
+    )
     properties_list = [
         NettingChannelStateProperties(
             canonical_identifier=make_canonical_identifier(channel_identifier=i),
@@ -934,14 +931,16 @@ def make_transfers_pair(
         payee_index = payer_index + 1
 
         receiver_channel = channels[payer_index]
-        received_transfer = create(LockedTransferSignedStateProperties(
-            amount=amount,
-            expiration=lock_expiration,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            canonical_identifier=receiver_channel.canonical_identifier,
-            sender=channels.partner_address(payer_index),
-            pkey=channels.partner_privatekeys[payer_index],
-        ))
+        received_transfer = create(
+            LockedTransferSignedStateProperties(
+                amount=amount,
+                expiration=lock_expiration,
+                payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+                canonical_identifier=receiver_channel.canonical_identifier,
+                sender=channels.partner_address(payer_index),
+                pkey=channels.partner_privatekeys[payer_index],
+            ),
+        )
 
         is_valid, _, msg = channel.handle_receive_lockedtransfer(
             receiver_channel,
@@ -1002,17 +1001,19 @@ class RouteProperties(Properties):
 
 
 def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
-    channel = create(NettingChannelStateProperties(
-        canonical_identifier=make_canonical_identifier(),
-        our_state=NettingChannelEndStateProperties(
-            address=route.address1,
-            balance=route.capacity1to2,
+    channel = create(
+        NettingChannelStateProperties(
+            canonical_identifier=make_canonical_identifier(),
+            our_state=NettingChannelEndStateProperties(
+                address=route.address1,
+                balance=route.capacity1to2,
+            ),
+            partner_state=NettingChannelEndStateProperties(
+                address=route.address2,
+                balance=route.capacity2to1,
+            ),
         ),
-        partner_state=NettingChannelEndStateProperties(
-            address=route.address2,
-            balance=route.capacity2to1,
-        ),
-    ))
+    )
     return channel  # type: ignore
 
 
