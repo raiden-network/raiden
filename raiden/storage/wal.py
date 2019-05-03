@@ -4,14 +4,14 @@ import gevent.lock
 import structlog
 
 from raiden.storage.sqlite import SQLiteStorage
-from raiden.transfer.architecture import StateManager
-from raiden.utils import typing
+from raiden.transfer.architecture import Event, State, StateChange, StateManager
+from raiden.utils.typing import Callable, List, Tuple
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def restore_to_state_change(
-        transition_function: typing.Callable,
+        transition_function: Callable,
         storage: SQLiteStorage,
         state_change_identifier: int,
 ) -> 'WriteAheadLog':
@@ -50,7 +50,7 @@ def restore_to_state_change(
 
 
 class WriteAheadLog:
-    def __init__(self, state_manager, storage):
+    def __init__(self, state_manager: StateManager, storage: SQLiteStorage) -> None:
         self.state_manager = state_manager
         self.state_change_id = None
         self.storage = storage
@@ -61,7 +61,7 @@ class WriteAheadLog:
         # execution order.
         self._lock = gevent.lock.Semaphore()
 
-    def log_and_dispatch(self, state_change):
+    def log_and_dispatch(self, state_change: StateChange) -> Tuple[State, List[Event]]:
         """ Log and apply a state change.
 
         This function will first write the state change to the write-ahead-log,
@@ -77,12 +77,13 @@ class WriteAheadLog:
             self.state_change_id = state_change_id
 
             events = self.state_manager.dispatch(state_change)
+            state = self.state_manager.current_state
 
             self.storage.write_events(state_change_id, events, timestamp)
 
-        return events
+        return state, events
 
-    def snapshot(self):
+    def snapshot(self) -> None:
         """ Snapshot the application state.
 
         Snapshots are used to restore the application state, either after a

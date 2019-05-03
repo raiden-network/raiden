@@ -90,4 +90,8 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     )
 
     # This should not throw an unrecoverable error
-    RaidenEventHandler().on_raiden_event(raiden=raiden, event=event)
+    RaidenEventHandler().on_raiden_event(
+        raiden=raiden,
+        chain_state=raiden.wal.state_manager.current_state,
+        event=event,
+    )
