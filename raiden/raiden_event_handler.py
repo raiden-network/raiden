@@ -366,6 +366,8 @@ class RaidenEventHandler:
             chain_state: ChainState,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
+        assert raiden.wal, 'The Raiden Service must be initialize to handle events'
+
         canonical_identifier = channel_unlock_event.canonical_identifier
         token_network_identifier = canonical_identifier.token_network_address
         channel_identifier = canonical_identifier.channel_identifier
@@ -504,6 +506,8 @@ class RaidenEventHandler:
             raiden: 'RaidenService',
             channel_settle_event: ContractSendChannelSettle,
     ):
+        assert raiden.wal, 'The Raiden Service must be initialize to handle events'
+
         canonical_identifier = CanonicalIdentifier(
             chain_identifier=raiden.chain.network_id,
             token_network_address=channel_settle_event.token_network_identifier,

@@ -619,7 +619,12 @@ def run_test_secret_revealed_on_chain(
         balance_proof=channel_state2_1.partner_state.balance_proof,
         triggered_by_block_hash=app0.raiden.chain.block_hash(),
     )
-    app2.raiden.raiden_event_handler.on_raiden_event(app2.raiden, channel_close_event)
+    current_state = app2.raiden.wal.state_manager.current_state
+    app2.raiden.raiden_event_handler.on_raiden_event(
+        raiden=app2.raiden,
+        chain_state=current_state,
+        event=channel_close_event,
+    )
 
     settle_expiration = (
         app0.raiden.chain.block_number() +

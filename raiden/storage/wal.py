@@ -3,16 +3,16 @@ from datetime import datetime
 import gevent.lock
 import structlog
 
-from raiden.storage.sqlite import SQLiteStorage
+from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.transfer.architecture import Event, State, StateChange, StateManager
-from raiden.utils.typing import Callable, List, Tuple
+from raiden.utils.typing import Callable, Generic, List, Tuple, TypeVar
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def restore_to_state_change(
         transition_function: Callable,
-        storage: SQLiteStorage,
+        storage: SerializedSQLiteStorage,
         state_change_identifier: int,
 ) -> 'WriteAheadLog':
     msg = "state change identifier 'latest' or an integer greater than zero"
@@ -49,8 +49,11 @@ def restore_to_state_change(
     return wal
 
 
-class WriteAheadLog:
-    def __init__(self, state_manager: StateManager, storage: SQLiteStorage) -> None:
+ST = TypeVar('ST', bound=State)
+
+
+class WriteAheadLog(Generic[ST]):
+    def __init__(self, state_manager: StateManager[ST], storage: SerializedSQLiteStorage) -> None:
         self.state_manager = state_manager
         self.state_change_id = None
         self.storage = storage
@@ -61,7 +64,7 @@ class WriteAheadLog:
         # execution order.
         self._lock = gevent.lock.Semaphore()
 
-    def log_and_dispatch(self, state_change: StateChange) -> Tuple[State, List[Event]]:
+    def log_and_dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
         """ Log and apply a state change.
 
         This function will first write the state change to the write-ahead-log,
@@ -76,8 +79,7 @@ class WriteAheadLog:
             state_change_id = self.storage.write_state_change(state_change, timestamp)
             self.state_change_id = state_change_id
 
-            events = self.state_manager.dispatch(state_change)
-            state = self.state_manager.current_state
+            state, events = self.state_manager.dispatch(state_change)
 
             self.storage.write_events(state_change_id, events, timestamp)
 
