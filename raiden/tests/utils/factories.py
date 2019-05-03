@@ -176,7 +176,7 @@ def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> Route
 
 
 def make_route_to_channel(channel_state: NettingChannelState = EMPTY) -> RouteState:
-    channel_state = if_empty(channel_state, make_channel_state())
+    channel_state = if_empty(channel_state, create(NettingChannelStateProperties()))
     return RouteState(channel_state.our_state.address, channel_state.identifier)
 
 
