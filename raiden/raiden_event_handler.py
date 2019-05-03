@@ -345,20 +345,14 @@ class RaidenEventHandler:
             )
             our_signature = raiden.signer.sign(data=non_closing_data)
 
-            try:
-                channel.update_transfer(
-                    nonce=balance_proof.nonce,
-                    balance_hash=balance_proof.balance_hash,
-                    additional_hash=balance_proof.message_hash,
-                    partner_signature=balance_proof.signature,
-                    signature=our_signature,
-                    block_identifier=channel_update_event.triggered_by_block_hash,
-                )
-            except ChannelOutdatedError as e:
-                log.error(
-                    str(e),
-                    node=pex(raiden.address),
-                )
+            channel.update_transfer(
+                nonce=balance_proof.nonce,
+                balance_hash=balance_proof.balance_hash,
+                additional_hash=balance_proof.message_hash,
+                partner_signature=balance_proof.signature,
+                signature=our_signature,
+                block_identifier=channel_update_event.triggered_by_block_hash,
+            )
 
     @staticmethod
     def handle_contract_send_channelunlock(
