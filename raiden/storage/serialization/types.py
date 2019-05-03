@@ -38,7 +38,14 @@ from raiden.utils.typing import (
 )
 
 
-def determine_types(*args):
+def determine_union_types(*args):
+    """
+    Handle case where the type is a Union of:
+    1. [X, X] (example TokenNetworkID, TokenNetworkAddress),
+       in this case we use the same field.
+    2. [X, None] for Optional types, we use the field
+       of X type.
+    """
     first_type = type(args[0])
 
     for arg in args:
@@ -86,5 +93,5 @@ TYPES.update({
     TransferID: fields.Int,
 
     # Union
-    Union: determine_types,
+    Union: determine_union_types,
 })
