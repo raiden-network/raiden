@@ -188,7 +188,7 @@ def run_app(
     )
 
     if sync_check:
-        check_synced(blockchain_service, network_id)
+        check_synced(blockchain_service)
 
     proxies = setup_proxies_or_exit(
         config=config,
