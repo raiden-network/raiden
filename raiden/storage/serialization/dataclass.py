@@ -1,10 +1,22 @@
 # pylint: disable=unused-import
-from dataclasses import dataclass as stdlib_dataclass, field, fields, replace  # noqa
+from dataclasses import (  # noqa
+    _FIELD,
+    MISSING,
+    Field,
+    dataclass as stdlib_dataclass,
+    field,
+    fields,
+    replace,
+)
 
 from dataclasses_json import dataclass_json
 
 # pylint: disable=unused-import
 import raiden.storage.serialization.types  # noqa # isort:skip
+
+
+def class_type(cls):
+    return f'{cls.__module__}.{cls.__name__}'
 
 
 def dataclass(
@@ -27,7 +39,23 @@ def dataclass(
             unsafe_hash=unsafe_hash,
             frozen=frozen,
         )
-        return dataclass_json(cls)
+        #
+        type_field = Field(
+            default=MISSING,
+            default_factory=MISSING,
+            init=False,
+            hash=None,
+            repr=False,
+            compare=False,
+            metadata=None,
+        )
+        type_field.name = 'type_'
+        type_field._field_type = _FIELD
+        cls.__dataclass_fields__['type_'] = type_field
+        cls.type_ = class_type(cls)
+        cls = dataclass_json(cls)
+
+        return cls
 
     if _cls is None:
         return wrapper
