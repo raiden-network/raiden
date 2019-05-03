@@ -16,7 +16,7 @@ from raiden.storage.sqlite import assert_sqlite_version
 from raiden.ui.sync import wait_for_sync
 from raiden.utils import typing
 from raiden.utils.ethereum_clients import is_supported_client
-from raiden.utils.typing import Address, Dict
+from raiden.utils.typing import Address, Dict, Optional
 from raiden_contracts.constants import GAS_REQUIRED_FOR_ENDPOINT_REGISTER, ID_TO_NETWORKNAME
 
 log = structlog.get_logger(__name__)
@@ -144,7 +144,7 @@ def check_smart_contract_addresses(
 def check_pfs_configuration(
         routing_mode: RoutingMode,
         environment_type: Environment,
-        service_registry: ServiceRegistry,
+        service_registry: Optional[ServiceRegistry],
         pathfinding_service_address: str,
 ) -> None:
     if routing_mode == RoutingMode.PFS:
