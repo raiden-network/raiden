@@ -11,6 +11,7 @@ from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs
 from raiden.transfer.architecture import Event as RaidenEvent, TransitionResult
 from raiden.transfer.mediated_transfer.events import SendBalanceProof, SendSecretRequest
+from raiden.transfer.state import ChainState
 from raiden.utils import pex, typing
 
 log = structlog.get_logger(__name__)
@@ -24,6 +25,7 @@ class MessageWaiting(typing.NamedTuple):
 
 class Hold(typing.NamedTuple):
     event: RaidenEvent
+    chain_state: ChainState
     event_type: type
     async_result: AsyncResult
     attributes: typing.Dict
@@ -67,7 +69,12 @@ class HoldRaidenEvent(RaidenEventHandler):
     def __init__(self):
         self.eventtype_to_holds = defaultdict(list)
 
-    def on_raiden_event(self, raiden: RaidenService, event: RaidenEvent):
+    def on_raiden_event(
+            self,
+            raiden: RaidenService,
+            chain_state: ChainState,
+            event: RaidenEvent,
+    ):
         holds = self.eventtype_to_holds[type(event)]
         found = None
 
@@ -81,7 +88,7 @@ class HoldRaidenEvent(RaidenEventHandler):
                 )
                 assert hold.event is None, msg
 
-                newhold = hold._replace(event=event)
+                newhold = hold._replace(event=event, chain_state=chain_state)
                 found = (pos, newhold)
                 break
 
@@ -90,11 +97,12 @@ class HoldRaidenEvent(RaidenEventHandler):
             holds[found[0]] = found[1]
             hold.async_result.set(event)
         else:
-            super().on_raiden_event(raiden, event)
+            super().on_raiden_event(raiden, chain_state, event)
 
     def hold(self, event_type: type, attributes: typing.Dict) -> AsyncResult:
         hold = Hold(
             event=None,
+            chain_state=None,
             event_type=event_type,
             async_result=AsyncResult(),
             attributes=attributes,
@@ -120,7 +128,7 @@ class HoldRaidenEvent(RaidenEventHandler):
         assert found is not None, msg
 
         hold = holds.pop(found[0])
-        super().on_raiden_event(raiden, event)
+        super().on_raiden_event(raiden, hold.chain_state, event)
         log.debug(f'{event} released.', node=pex(raiden.address))
 
     def hold_secretrequest_for(self, secrethash: typing.SecretHash) -> AsyncResult:
