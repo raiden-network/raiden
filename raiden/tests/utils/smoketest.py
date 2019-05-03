@@ -39,7 +39,6 @@ from raiden.constants import (
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.network.utils import get_free_port
 from raiden.raiden_service import RaidenService
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEVELOPMENT_CONTRACT_VERSION
 from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
@@ -59,7 +58,7 @@ from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.ui.app import run_app
 from raiden.utils import merge_dict, privatekey_to_address, split_endpoint
 from raiden.utils.http import HTTPExecutor
-from raiden.utils.typing import Address, AddressHex, ChainID, Dict
+from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Iterator
 from raiden.waiting import wait_for_block
 from raiden_contracts.constants import (
     CONTRACT_ENDPOINT_REGISTRY,
@@ -97,9 +96,9 @@ def ensure_executable(cmd):
         sys.exit(1)
 
 
-def run_restapi_smoketests():
+def run_restapi_smoketests(port_number):
     """Test if REST api works. """
-    url = 'http://localhost:{port}/api/v1/channels'.format(port=5001)
+    url = 'http://localhost:{port}/api/v1/channels'.format(port=port_number)
 
     response = requests.get(url)
     assert response.status_code == HTTPStatus.OK
@@ -159,7 +158,7 @@ def smoketest_perform_tests(
         assert channel.get_status(channel_state) == CHANNEL_STATE_OPENED
 
         # Run API test
-        run_restapi_smoketests()
+        run_restapi_smoketests(raiden_service.config['api_port'])
     except:  # NOQA pylint: disable=bare-except
         error = traceback.format_exc()
         return error
@@ -238,8 +237,14 @@ def setup_testchain_and_raiden(
         matrix_server: str,
         contracts_version: str,
         print_step: Callable,
+        free_port_generator: Iterator[int],
 ):
-    with setup_testchain(eth_client, print_step) as testchain:
+    testchain_manager = setup_testchain(
+        eth_client=eth_client,
+        print_step=print_step,
+        free_port_generator=free_port_generator,
+    )
+    with testchain_manager as testchain:
         yield setup_raiden(
             transport,
             matrix_server,
@@ -250,16 +255,19 @@ def setup_testchain_and_raiden(
 
 
 @contextmanager
-def setup_testchain(eth_client: EthClient, print_step: Callable) -> ContextManager[Dict[str, Any]]:
+def setup_testchain(
+        eth_client: EthClient,
+        print_step: Callable,
+        free_port_generator: Iterator[int],
+) -> ContextManager[Dict[str, Any]]:
     # TODO: This has a lot of overlap with `raiden.tests.utils.eth_node.run_private_blockchain` -
     #       refactor into a unified utility
     print_step('Starting Ethereum node')
 
     ensure_executable(eth_client.value)
 
-    free_port = get_free_port()
-    rpc_port = next(free_port)
-    p2p_port = next(free_port)
+    rpc_port = next(free_port_generator)
+    p2p_port = next(free_port_generator)
     base_datadir = os.environ['RST_DATADIR']
 
     description = EthNodeDescription(

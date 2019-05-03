@@ -59,11 +59,11 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
-        '--synapse-base-port',
+        '--base-port',
         action='store',
         default=8500,
         type='int',
-        help='Base port number to use for synapse servers being started during Matrix tests.',
+        help='Base port number to use for tests.',
     )
 
 
