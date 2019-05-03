@@ -9,13 +9,12 @@ from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import ContextManager
+from typing import ContextManager, Iterator
 from urllib.parse import urljoin, urlsplit
 
 import requests
 from twisted.internet import defer
 
-from raiden.network.utils import get_free_port
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.signer import recover
 
@@ -177,17 +176,17 @@ def generate_synapse_config() -> ContextManager:
 
 @contextmanager
 def matrix_server_starter(
+        free_port_generator: Iterator[int],
         *,
         count: int = 1,
         config_generator: ContextManager = None,
         log_context: str = None,
-        initial_port: int = 8500,
 ) -> ContextManager:
     with ExitStack() as exit_stack:
         if config_generator is None:
             config_generator = exit_stack.enter_context(generate_synapse_config())
         server_urls = []
-        for _, port in zip(range(count), get_free_port(initial_port=initial_port)):
+        for _, port in zip(range(count), free_port_generator):
             server_name, config_file = config_generator(port)
             server_url = ParsedURL(f'https://{server_name}')
             server_urls.append(server_url)

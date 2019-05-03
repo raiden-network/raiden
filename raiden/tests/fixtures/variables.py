@@ -263,9 +263,9 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
 
 
 @pytest.fixture(scope='session')
-def port_generator():
+def port_generator(request):
     """ count generator used to get a unique port number. """
-    return get_free_port()
+    return get_free_port(request.config.getoption('base_port'))
 
 
 @pytest.fixture

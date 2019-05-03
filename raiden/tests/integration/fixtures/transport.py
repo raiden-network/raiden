@@ -29,16 +29,17 @@ def local_matrix_servers(
         transport_protocol,
         matrix_server_count,
         synapse_config_generator,
+        port_generator,
 ):
     if transport_protocol is not TransportProtocol.MATRIX:
         yield [None]
         return
 
     starter = matrix_server_starter(
+        free_port_generator=port_generator,
         count=matrix_server_count,
         config_generator=synapse_config_generator,
         log_context=request.node.name,
-        initial_port=request.config.getoption('synapse_base_port'),
     )
     with starter as server_urls:
         yield server_urls
