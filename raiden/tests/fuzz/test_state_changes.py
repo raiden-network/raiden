@@ -281,6 +281,9 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             # invariant (7R), add withdrawn amounts when implemented
             assert -our_deposit <= netted_transferred <= partner_deposit
 
+    def assume_channel_opened(self, partner_address):
+        needed_channel = self.address_to_channel[partner_address]
+        assume(channel.get_status(needed_channel) == channel.CHANNEL_STATE_OPENED)
 
 class InitiatorMixin:
     def __init__(self):
@@ -337,8 +340,7 @@ class InitiatorMixin:
 
     def _assume_channel_opened(self, action):
         if not self.failing_path_2:
-            needed_channel = self.address_to_channel[action.transfer.target]
-            assume(channel.get_status(needed_channel) == channel.CHANNEL_STATE_OPENED)
+            self.assume_channel_opened(action.transfer.target)
 
     def _is_removed(self, action):
         expiry = self.expected_expiry[action.transfer.secrethash]
@@ -450,14 +452,13 @@ class InitiatorMixin:
 
 
 class BalanceProofData:
-    def __init__(self, channel_id, token_network_id):
+    def __init__(self, canonical_identifier):
         self._merkletree = make_empty_merkle_tree()
         self.properties = factories.BalanceProofProperties(
             transferred_amount=0,
             locked_amount=0,
             nonce=0,
-            channel_identifier=channel_id,
-            token_network_identifier=token_network_id,
+            canonical_identifier=canonical_identifier,
         )
 
     def update(self, amount, lockhash):
@@ -485,14 +486,13 @@ class MediatorMixin:
         if partner not in self.partner_to_balance_proof_data:
             partner_channel = self.address_to_channel[partner]
             self.partner_to_balance_proof_data[partner] = BalanceProofData(
-                channel_id=partner_channel.identifier,
-                token_network_id=self.token_network_id,
+                canonical_identifier=partner_channel.canonical_identifier,
             )
         return self.partner_to_balance_proof_data[partner]
 
     def _update_balance_proof_data(self, partner, amount, expiration, secret):
         expected = self._get_balance_proof_data(partner)
-        lock = Lock(amount, expiration, sha3(secret))
+        lock = Lock(amount=amount, expiration=expiration, secrethash=sha3(secret))
         expected.update(amount, lock.lockhash)
         return expected
 
@@ -518,16 +518,14 @@ class MediatorMixin:
         self.secrethash_to_secret[sha3(secret)] = secret
 
         return factories.create(factories.LockedTransferSignedStateProperties(
-            transfer=factories.LockedTransferProperties(
-                balance_proof=balance_proof_data.properties,
-                amount=amount,
-                expiration=self.block_number + 10,
-                payment_identifier=payment_id,
-                secret=secret,
-                initiator=initiator_address,
-                target=target_address,
-                token=self.token_id,
-            ),
+            **balance_proof_data.properties.__dict__,
+            amount=amount,
+            expiration=self.block_number + 10,
+            payment_identifier=payment_id,
+            secret=secret,
+            initiator=initiator_address,
+            target=target_address,
+            token=self.token_id,
             sender=initiator_address,
             recipient=self.address,
             pkey=initiator_pkey,
@@ -539,7 +537,7 @@ class MediatorMixin:
         target_channel = self.address_to_channel[transfer.target]
 
         return ActionInitMediator(
-            [factories.route_from_channel(target_channel)],
+            [factories.make_route_from_channel(target_channel)],
             factories.make_route_to_channel(initiator_channel),
             transfer,
         )
@@ -629,6 +627,7 @@ class MediatorMixin:
         invalid_sender=address(),
     )
     def wrong_address_receive_secret_reveal(self, previous_action, invalid_sender):
+        self.assume_channel_opened(previous_action.from_transfer.target)
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
         invalid_action = ReceiveSecretReveal(secret, invalid_sender)
         result = node.state_transition(self.chain_state, invalid_action)
@@ -644,12 +643,13 @@ class MediatorMixin:
         message_identifier=integers(min_value=1),
     )
     def valid_receive_unlock(self, previous_action, message_identifier):
+        self.assume_channel_opened(previous_action.from_transfer.target)
         partner = self.waiting_for_unlock.get(previous_action.secret)
         assume(partner is not None)
 
         balance_proof_properties = self._get_balance_proof_data(partner).properties
         signed_balance_proof = factories.create(factories.BalanceProofSignedStateProperties(
-            balance_proof=balance_proof_properties,
+            **balance_proof_properties.__dict__,
             pkey=self.address_to_privkey[partner],
         ))
         action = ReceiveUnlock(
