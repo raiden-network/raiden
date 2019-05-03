@@ -19,6 +19,7 @@ from raiden.utils.typing import (
     T_BlockNumber,
     T_ChannelID,
     TransactionHash,
+    Tuple,
     TypeVar,
 )
 
@@ -250,7 +251,10 @@ class ContractReceiveStateChange(StateChange):
         return not self.__eq__(other)
 
 
-class StateManager:
+ST = TypeVar('ST', bound=State)
+
+
+class StateManager(Generic[ST]):
     """ The mutable storage for the application state, this storage can do
     state transitions by applying the StateChanges to the current State.
     """
@@ -259,7 +263,11 @@ class StateManager:
         'current_state',
     )
 
-    def __init__(self, state_transition: Callable, current_state: Optional[State]) -> None:
+    def __init__(
+            self,
+            state_transition: Callable[[Optional[ST], StateChange], State],
+            current_state: Optional[ST],
+    ) -> None:
         """ Initialize the state manager.
 
         Args:
@@ -272,7 +280,7 @@ class StateManager:
         self.state_transition = state_transition
         self.current_state = current_state
 
-    def dispatch(self, state_change: StateChange) -> List[Event]:
+    def dispatch(self, state_change: StateChange) -> Tuple[ST, List[Event]]:
         """ Apply the `state_change` in the current machine and return the
         resulting events.
 
@@ -302,10 +310,10 @@ class StateManager:
         self.current_state = iteration.new_state
         events = iteration.events
 
-        assert isinstance(self.current_state, (State, type(None)))
+        assert isinstance(self.current_state, State)
         assert all(isinstance(e, Event) for e in events)
 
-        return events
+        return next_state, events
 
     def __eq__(self, other: Any) -> bool:
         return (
@@ -316,9 +324,6 @@ class StateManager:
 
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
-
-
-ST = TypeVar('ST', bound=State)
 
 
 class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object

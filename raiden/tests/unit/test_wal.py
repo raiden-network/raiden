@@ -16,8 +16,12 @@ from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnloc
 from raiden.utils import sha3
 
 
+class Empty(State):
+    pass
+
+
 def state_transition_noop(state, state_change):  # pylint: disable=unused-argument
-    return TransitionResult(state, list())
+    return TransitionResult(Empty(), list())
 
 
 class AccState(State):
@@ -42,8 +46,7 @@ def state_transtion_acc(state, state_change):
     return TransitionResult(state, list())
 
 
-def new_wal(state_transition):
-    state = None
+def new_wal(state_transition, state=None):
     serializer = JSONSerializer
 
     state_manager = StateManager(state_transition, state)

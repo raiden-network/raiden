@@ -864,7 +864,11 @@ class RaidenService(Runnable):
 
         for transaction in pending_transactions:
             try:
-                self.raiden_event_handler.on_raiden_event(self, transaction)
+                self.raiden_event_handler.on_raiden_event(
+                    raiden=self,
+                    chain_state=chain_state,
+                    event=transaction,
+                )
             except RaidenRecoverableError as e:
                 log.error(str(e))
             except InvalidDBData:

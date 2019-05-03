@@ -336,6 +336,8 @@ def wait_for_transfer_success(
     Note:
         This does not time out, use gevent.Timeout.
     """
+    assert raiden.wal, 'The Raiden Service must be initialize to handle events'
+
     found = False
     while not found:
         state_events = raiden.wal.storage.get_events()
