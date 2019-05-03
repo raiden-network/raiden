@@ -14,7 +14,11 @@ signer = LocalSigner(PRIVKEY)
 
 
 def test_signature():
-    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
+    ping = Ping(
+        nonce=0,
+        current_protocol_version=constants.PROTOCOL_VERSION,
+        signature=constants.EMPTY_SIGNATURE,
+    )
     ping.sign(signer)
     assert ping.sender == ADDRESS
 
@@ -40,7 +44,11 @@ def test_signature():
 
 
 def test_encoding():
-    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
+    ping = Ping(
+        nonce=0,
+        current_protocol_version=constants.PROTOCOL_VERSION,
+        signature=constants.EMPTY_SIGNATURE,
+    )
     ping.sign(signer)
     decoded_ping = decode(ping.encode())
     assert isinstance(decoded_ping, Ping)
@@ -52,7 +60,11 @@ def test_encoding():
 
 
 def test_hash():
-    ping = Ping(nonce=0, current_protocol_version=constants.PROTOCOL_VERSION)
+    ping = Ping(
+        nonce=0,
+        current_protocol_version=constants.PROTOCOL_VERSION,
+        signature=constants.EMPTY_SIGNATURE,
+    )
     ping.sign(signer)
     data = ping.encode()
     msghash = sha3(data)
@@ -62,7 +74,10 @@ def test_hash():
 
 def test_processed():
     message_identifier = random.randint(0, constants.UINT64_MAX)
-    processed_message = Processed(message_identifier=message_identifier)
+    processed_message = Processed(
+        message_identifier=message_identifier,
+        signature=constants.EMPTY_SIGNATURE,
+    )
     processed_message.sign(signer)
     assert processed_message.sender == ADDRESS
 

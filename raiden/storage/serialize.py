@@ -6,8 +6,9 @@ with sanitized input, to avoid the risk of exploits.
 """
 import importlib
 import json
+from dataclasses import fields
 
-from raiden.utils.typing import Any
+from raiden.utils.typing import Any, Type
 
 
 def _import_type(type_name):
@@ -98,8 +99,14 @@ class SerializationBase:
 class JSONSerializer(SerializationBase):
     @staticmethod
     def serialize(obj):
-        return json.dumps(obj, default=to_dict_hook)
+        schema = obj.schema()
+        schema.Meta.fields += ('type',)
+        import pdb; pdb.set_trace()
+
+        return schema.dumps(obj)
 
     @staticmethod
     def deserialize(data):
+        import pdb; pdb.set_trace()
+
         return json.loads(data, object_hook=from_dict_hook)
