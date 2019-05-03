@@ -21,7 +21,7 @@ alltest=${tmpdir}/all_test
 output=${tmpdir}/sessions
 logs=${tmpdir}/logs
 session_prefixes="${output}/raiden-tests"
-synapse_base_port=10500
+base_port=10500
 
 echo "Tests files located at ${tmpdir}"
 
@@ -50,7 +50,7 @@ if (type tmux &> /dev/null); then
             args+=(split-window)
         fi
         logfile=$(basename ${f})
-        args+=("pytest raiden/tests --select-from-file ${f} -v --color yes --synapse-base-port $(( ${synapse_base_port} + ( ${idx} * 1000) )) | tee ${logs}/${logfile}; echo 'Ctrl-C to exit'; read")
+        args+=("pytest raiden/tests --select-from-file ${f} -v --color yes --base-port $(( ${base_port} + ( ${idx} * 1000) )) | tee ${logs}/${logfile}; echo 'Ctrl-C to exit'; read")
         args+=(";")
         args+=("select-layout" "${LAYOUT}" ";")
         idx=$(( $idx + 1 ))
@@ -66,7 +66,7 @@ else
     idx=0
     for f in ${session_prefixes}*; do
         logfile=$(basename ${f})
-        pytest raiden/tests --select-from-file ${f} -v --synapse-base-port $(( ${synapse_base_port} + ( ${idx} * 1000) )) > ${logs}/${logfile} &
+        pytest raiden/tests --select-from-file ${f} -v --base-port $(( ${base_port} + ( ${idx} * 1000) )) > ${logs}/${logfile} &
         idx=$(( $idx + 1 ))
     done
     wait  # wait for all tests to run

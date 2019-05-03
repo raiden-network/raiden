@@ -555,10 +555,12 @@ def version(short):
     if short:
         print(get_system_spec()['raiden'])
     else:
-        print(json.dumps(
-            get_system_spec(),
-            indent=2,
-        ))
+        print(
+            json.dumps(
+                get_system_spec(),
+                indent=2,
+            ),
+        )
 
 
 @run.command()
@@ -586,6 +588,7 @@ def smoketest(ctx, debug, eth_client):
         log_file=report_file,
         disable_debug_logfile=ctx.parent.params['disable_debug_logfile'],
     )
+    free_port_generator = get_free_port()
     click.secho(f'Report file: {report_file}', fg='yellow')
 
     def append_report(subject: str, data: Optional[AnyStr] = None):
@@ -631,6 +634,7 @@ def smoketest(ctx, debug, eth_client):
             matrix_server=ctx.parent.params['matrix_server'],
             contracts_version=contracts_version,
             print_step=print_step,
+            free_port_generator=free_port_generator,
     ) as result:
         args = result['args']
         contract_addresses = result['contract_addresses']
@@ -644,7 +648,7 @@ def smoketest(ctx, debug, eth_client):
             else:
                 args[option_.name] = option_.default
 
-        port = next(get_free_port(5001))
+        port = next(free_port_generator)
 
         args['api_address'] = 'localhost:' + str(port)
 
@@ -664,7 +668,7 @@ def smoketest(ctx, debug, eth_client):
             args['mapped_socket'] = None
             print_step('Starting Matrix transport')
             try:
-                with matrix_server_starter() as server_urls:
+                with matrix_server_starter(free_port_generator=free_port_generator) as server_urls:
                     # Disable TLS verification so we can connect to the self signed certificate
                     make_requests_insecure()
                     urllib3.disable_warnings(InsecureRequestWarning)
