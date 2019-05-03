@@ -612,8 +612,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     if params["locksroot"] == EMPTY_MERKLE_ROOT:
         params["locksroot"] = lock.lockhash
 
-    # TODO fix LockedTransfer class so it can be instantiated without the signature argument
-    locked_transfer = LockedTransfer(lock=lock, **params, signature=b'')
+    locked_transfer = LockedTransfer(lock=lock, **params, signature=Signature(b''))
     locked_transfer.sign(signer)
 
     assert locked_transfer.sender == sender

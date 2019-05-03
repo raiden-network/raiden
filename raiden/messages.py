@@ -9,7 +9,7 @@ from eth_utils import (
     to_normalized_address,
 )
 
-from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
@@ -265,9 +265,7 @@ class SignedMessage(AuthenticatedMessage):
     # signing is a bit problematic, we need to pack the data to sign, but the
     # current API assumes that signing is called before, this can be improved
     # by changing the order to packing then signing
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.signature = b""
+    signature: Signature
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
@@ -396,8 +394,11 @@ class Processed(SignedRetrieableMessage):
 
     @classmethod
     def unpack(cls, packed):
-        processed = cls(message_identifier=packed.message_identifier)
-        processed.signature = packed.signature
+        # pylint: disable=unexpected-keyword-arg
+        processed = cls(
+            message_identifier=packed.message_identifier,
+            signature=packed.signature,
+        )
         return processed
 
     def pack(self, packed) -> None:
@@ -406,7 +407,10 @@ class Processed(SignedRetrieableMessage):
 
     @classmethod
     def from_event(cls, event):
-        return cls(message_identifier=event.message_identifier)
+        return cls(
+            message_identifier=event.message_identifier,
+            signature=EMPTY_SIGNATURE,
+        )
 
     def __repr__(self):
         return "<{} [msgid:{}]>".format(self.__class__.__name__, self.message_identifier)
@@ -442,8 +446,11 @@ class ToDevice(SignedMessage):
 
     @classmethod
     def unpack(cls, packed):
-        to_device = cls(message_identifier=packed.message_identifier)
-        to_device.signature = packed.signature
+        # pylint: disable=unexpected-keyword-arg
+        to_device = cls(
+            message_identifier=packed.message_identifier,
+            signature=packed.signature,
+        )
         return to_device
 
     def pack(self, packed) -> None:
@@ -484,8 +491,11 @@ class Delivered(SignedMessage):
 
     @classmethod
     def unpack(cls, packed):
-        delivered = cls(delivered_message_identifier=packed.delivered_message_identifier)
-        delivered.signature = packed.signature
+        # pylint: disable=unexpected-keyword-arg
+        delivered = cls(
+            delivered_message_identifier=packed.delivered_message_identifier,
+            signature=packed.signature,
+        )
         return delivered
 
     def pack(self, packed) -> None:
@@ -524,8 +534,10 @@ class Pong(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        pong = Pong(nonce=packed.nonce)
-        pong.signature = packed.signature
+        pong = Pong(
+            nonce=packed.nonce,
+            signature=packed.signature,
+        )
         return pong
 
     def pack(self, packed) -> None:
@@ -545,7 +557,12 @@ class Ping(SignedMessage):
 
     @classmethod
     def unpack(cls, packed):
-        ping = cls(nonce=packed.nonce, current_protocol_version=packed.current_protocol_version)
+        # pylint: disable=unexpected-keyword-arg
+        ping = cls(
+            nonce=packed.nonce,
+            current_protocol_version=packed.current_protocol_version,
+            signature=EMPTY_SIGNATURE,
+        )
         ping.signature = packed.signature
         return ping
 
@@ -597,6 +614,7 @@ class SecretRequest(SignedRetrieableMessage):
             secrethash=packed.secrethash,
             amount=packed.amount,
             expiration=packed.expiration,
+            signature=EMPTY_SIGNATURE,
         )
         secret_request.signature = packed.signature
         return secret_request
@@ -617,6 +635,7 @@ class SecretRequest(SignedRetrieableMessage):
             secrethash=event.secrethash,
             amount=event.amount,
             expiration=event.expiration,
+            signature=EMPTY_SIGNATURE,
         )
 
     def to_dict(self):
@@ -735,6 +754,7 @@ class Unlock(EnvelopeMessage):
             locked_amount=packed.locked_amount,
             locksroot=packed.locksroot,
             secret=packed.secret,
+            signature=EMPTY_SIGNATURE,
         )
         secret.signature = packed.signature
         return secret
@@ -766,6 +786,7 @@ class Unlock(EnvelopeMessage):
             locked_amount=balance_proof.locked_amount,
             locksroot=balance_proof.locksroot,
             secret=event.secret,
+            signature=EMPTY_SIGNATURE,
         )
 
     def to_dict(self):
@@ -1025,6 +1046,7 @@ class LockedTransferBase(EnvelopeMessage):
             locked_amount=packed.locked_amount,
             locksroot=packed.locksroot,
             lock=lock,
+            signature=EMPTY_SIGNATURE,
         )
         locked_transfer.signature = packed.signature
         return locked_transfer
@@ -1132,6 +1154,7 @@ class LockedTransfer(LockedTransferBase):
             target=packed.target,
             initiator=packed.initiator,
             fee=packed.fee,
+            signature=EMPTY_SIGNATURE,
         )
         mediated_transfer.signature = packed.signature
         return mediated_transfer
@@ -1186,6 +1209,7 @@ class LockedTransfer(LockedTransferBase):
             target=transfer.target,
             initiator=transfer.initiator,
             fee=fee,
+            signature=Signature(b''),
         )
 
     def to_dict(self):
@@ -1265,6 +1289,7 @@ class RefundTransfer(LockedTransfer):
             target=packed.target,
             initiator=packed.initiator,
             fee=packed.fee,
+            signature=Signature(b''),
         )
         locked_transfer.signature = packed.signature
         return locked_transfer
@@ -1624,9 +1649,14 @@ class RequestMonitoring(SignedMessage):
             )
 
         onchain_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
-            balance_proof=balance_proof
+            balance_proof=balance_proof,
         )
-        return cls(onchain_balance_proof=onchain_balance_proof, reward_amount=reward_amount)
+        # pylint: disable=unexpected-keyword-arg
+        return cls(
+            balance_proof=onchain_balance_proof,
+            reward_amount=reward_amount,
+            signature=Signature(b''),
+        )
 
     @property
     def reward_proof_signature(self) -> Signature:
@@ -1818,36 +1848,7 @@ class UpdatePFS(SignedMessage):
             ),
             reveal_timeout=channel_state.reveal_timeout,
             mediation_fee=channel_state.mediation_fee,
-        )
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "type": self.__class__.__name__,
-            "canonical_identifier": self.canonical_identifier.to_dict(),
-            "updating_participant": to_normalized_address(self.updating_participant),
-            "other_participant": to_normalized_address(self.other_participant),
-            "updating_nonce": self.updating_nonce,
-            "other_nonce": self.other_nonce,
-            "updating_capacity": str(self.updating_capacity),
-            "other_capacity": str(self.other_capacity),
-            "reveal_timeout": self.reveal_timeout,
-            "mediation_fee": str(self.mediation_fee),
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "UpdatePFS":
-        return cls(
-            canonical_identifier=CanonicalIdentifier.from_dict(data["canonical_identifier"]),
-            updating_participant=to_canonical_address(data["updating_participant"]),
-            other_participant=to_canonical_address(data["other_participant"]),
-            updating_nonce=data["updating_nonce"],
-            other_nonce=data["other_nonce"],
-            updating_capacity=TokenAmount(int(data["updating_capacity"])),
-            other_capacity=TokenAmount(int(data["other_capacity"])),
-            reveal_timeout=data["reveal_timeout"],
-            mediation_fee=FeeAmount(int(data["mediation_fee"])),
-            signature=decode_hex(data["signature"]),
+            signature=Signature(b''),
         )
 
     def packed(self) -> bytes:

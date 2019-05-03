@@ -6,7 +6,7 @@ import gevent
 from gevent.timeout import Timeout
 
 from raiden.app import App
-from raiden.constants import UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.message_handler import MessageHandler
 from raiden.messages import (
     LockedTransfer,
@@ -559,6 +559,7 @@ def make_receive_transfer_mediated(
         lock=lock,
         target=transfer_target,
         initiator=transfer_initiator,
+        signature=EMPTY_SIGNATURE,
     )
     mediated_transfer_msg.sign(signer)
 
