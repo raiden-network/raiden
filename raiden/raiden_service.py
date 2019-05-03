@@ -376,6 +376,7 @@ class RaidenService(Runnable):
 
         self.contract_manager = ContractManager(config['contracts_path'])
         self.database_path = config['database_path']
+        self.wal = None
         if self.database_path != ':memory:':
             database_dir = os.path.dirname(config['database_path'])
             os.makedirs(database_dir, exist_ok=True)
@@ -695,12 +696,10 @@ class RaidenService(Runnable):
         )
 
         old_state = views.state_from_raiden(self)
+        new_state, raiden_event_list = self.wal.log_and_dispatch(state_change)
 
-        raiden_event_list = self.wal.log_and_dispatch(state_change)
-
-        current_state = views.state_from_raiden(self)
-        for changed_balance_proof in views.detect_balance_proof_change(old_state, current_state):
-            update_services_from_balance_proof(self, current_state, changed_balance_proof)
+        for changed_balance_proof in views.detect_balance_proof_change(old_state, new_state):
+            update_services_from_balance_proof(self, new_state, changed_balance_proof)
 
         log.debug(
             'Raiden events',
@@ -715,7 +714,7 @@ class RaidenService(Runnable):
         if self.ready_to_process_events:
             for raiden_event in raiden_event_list:
                 greenlets.append(
-                    self.handle_event(raiden_event=raiden_event),
+                    self.handle_event(chain_state=new_state, raiden_event=raiden_event),
                 )
 
             state_changes_count = self.wal.storage.count_state_changes()
@@ -729,7 +728,7 @@ class RaidenService(Runnable):
 
         return greenlets
 
-    def handle_event(self, raiden_event: RaidenEvent) -> Greenlet:
+    def handle_event(self, chain_state: ChainState, raiden_event: RaidenEvent) -> Greenlet:
         """Spawn a new thread to handle a Raiden event.
 
         This will spawn a new greenlet to handle each event, which is
@@ -747,13 +746,16 @@ class RaidenService(Runnable):
             This is spawing a new greenlet for /each/ transaction. It's
             therefore /required/ that there is *NO* order among these.
         """
-        return gevent.spawn(self._handle_event, raiden_event)
+        return gevent.spawn(self._handle_event, chain_state, raiden_event)
 
-    def _handle_event(self, raiden_event: RaidenEvent):
+    def _handle_event(self, chain_state: ChainState, raiden_event: RaidenEvent):
+        assert isinstance(chain_state, ChainState)
         assert isinstance(raiden_event, RaidenEvent)
+
         try:
             self.raiden_event_handler.on_raiden_event(
                 raiden=self,
+                chain_state=chain_state,
                 event=raiden_event,
             )
         except RaidenRecoverableError as e:

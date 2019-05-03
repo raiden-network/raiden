@@ -41,14 +41,14 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.state import NettingChannelEndState
+from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.utils import (
     get_event_with_balance_proof_by_balance_hash,
     get_event_with_balance_proof_by_locksroot,
     get_state_change_with_balance_proof_by_balance_hash,
     get_state_change_with_balance_proof_by_locksroot,
 )
-from raiden.transfer.views import get_channelstate_by_token_network_and_partner, state_from_raiden
+from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils import pex
 from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce, TokenNetworkID
 
@@ -93,7 +93,7 @@ def unlock(
 
 class RaidenEventHandler:
 
-    def on_raiden_event(self, raiden: 'RaidenService', event: Event):
+    def on_raiden_event(self, raiden: 'RaidenService', chain_state: ChainState, event: Event):
         # pylint: disable=too-many-branches
         if type(event) == SendLockExpired:
             assert isinstance(event, SendLockExpired), MYPY_ANNOTATION
@@ -130,13 +130,13 @@ class RaidenEventHandler:
             self.handle_contract_send_secretreveal(raiden, event)
         elif type(event) == ContractSendChannelClose:
             assert isinstance(event, ContractSendChannelClose), MYPY_ANNOTATION
-            self.handle_contract_send_channelclose(raiden, event)
+            self.handle_contract_send_channelclose(raiden, chain_state, event)
         elif type(event) == ContractSendChannelUpdateTransfer:
             assert isinstance(event, ContractSendChannelUpdateTransfer), MYPY_ANNOTATION
             self.handle_contract_send_channelupdate(raiden, event)
         elif type(event) == ContractSendChannelBatchUnlock:
             assert isinstance(event, ContractSendChannelBatchUnlock), MYPY_ANNOTATION
-            self.handle_contract_send_channelunlock(raiden, event)
+            self.handle_contract_send_channelunlock(raiden, chain_state, event)
         elif type(event) == ContractSendChannelSettle:
             assert isinstance(event, ContractSendChannelSettle), MYPY_ANNOTATION
             self.handle_contract_send_channelsettle(raiden, event)
@@ -290,6 +290,7 @@ class RaidenEventHandler:
     @staticmethod
     def handle_contract_send_channelclose(
             raiden: 'RaidenService',
+            chain_state: ChainState,
             channel_close_event: ContractSendChannelClose,
     ):
         balance_proof = channel_close_event.balance_proof
@@ -308,7 +309,7 @@ class RaidenEventHandler:
 
         channel_proxy = raiden.chain.payment_channel(
             canonical_identifier=CanonicalIdentifier(
-                chain_identifier=state_from_raiden(raiden).chain_id,
+                chain_identifier=chain_state.chain_id,
                 token_network_address=channel_close_event.token_network_identifier,
                 channel_identifier=channel_close_event.channel_identifier,
             ),
@@ -362,6 +363,7 @@ class RaidenEventHandler:
     @staticmethod
     def handle_contract_send_channelunlock(
             raiden: 'RaidenService',
+            chain_state: ChainState,
             channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
         canonical_identifier = channel_unlock_event.canonical_identifier
@@ -374,7 +376,7 @@ class RaidenEventHandler:
         )
 
         channel_state = get_channelstate_by_token_network_and_partner(
-            chain_state=state_from_raiden(raiden),
+            chain_state=chain_state,
             token_network_id=TokenNetworkID(token_network_identifier),
             partner_address=participant,
         )

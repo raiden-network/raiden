@@ -4,11 +4,10 @@ from contextlib import contextmanager
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
+from raiden.storage.serialize import SerializationBase
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec
 from raiden.utils.typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union
-
-from .serialize import SerializationBase
 
 
 class EventRecord(NamedTuple):
@@ -63,7 +62,7 @@ def _filter_from_dict(current: Dict[str, Any]) -> Dict[str, Any]:
     return filter_
 
 
-class SQLiteStorage(SerializationBase):
+class SQLiteStorage:
     def __init__(self, database_path):
         conn = sqlite3.connect(database_path, detect_types=sqlite3.PARSE_DECLTYPES)
         conn.text_factory = str
