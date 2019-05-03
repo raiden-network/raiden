@@ -50,7 +50,7 @@ from raiden.ui.startup import (
 )
 from raiden.utils import pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
-from raiden.utils.typing import Address, AddressHex, Optional, PrivateKey, Tuple
+from raiden.utils.typing import Address, AddressHex, Optional, PrivateKey, TextIO, Tuple
 from raiden_contracts.constants import ID_TO_NETWORKNAME
 from raiden_contracts.contract_manager import ContractManager
 
@@ -60,12 +60,12 @@ log = structlog.get_logger(__name__)
 def get_account_and_private_key(
         account_manager: AccountManager,
         address_hex: Optional[AddressHex],
-        password_file: Optional[str],
+        password_file: Optional[TextIO],
 ) -> Tuple[Address, PrivateKey]:
     if not address_hex:
         address_hex = prompt_account(account_manager)
     else:
-        address_hex = to_normalized_address(address_hex)
+        address_hex = AddressHex(to_normalized_address(address_hex))
 
     if password_file:
         privatekey_bin = unlock_account_with_passwordfile(
