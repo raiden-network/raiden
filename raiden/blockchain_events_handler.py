@@ -352,6 +352,8 @@ def handle_channel_settled(raiden: 'RaidenService', event: Event):
 
 
 def handle_channel_batch_unlock(raiden: 'RaidenService', event: Event):
+    assert raiden.wal, 'The Raiden Service must be initialize to handle events'
+
     token_network_identifier = event.originating_contract
     data = event.event_data
     args = data['args']
