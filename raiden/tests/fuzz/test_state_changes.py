@@ -37,6 +37,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.state import (
+    NODE_NETWORK_REACHABLE,
     ChainState,
     PaymentNetworkState,
     TokenNetworkState,
@@ -46,7 +47,6 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelNew,
     ContractReceiveChannelSettled,
-    ReceiveUnlock,
 )
 from raiden.utils import random_secret, sha3
 from raiden.utils.typing import BlockNumber
@@ -140,6 +140,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             block_hash=factories.make_block_hash(),
         )
         node.state_transition(self.chain_state, channel_new_state_change)
+        self.chain_state.nodeaddresses_to_networkstates[partner_address] = NODE_NETWORK_REACHABLE
 
         return partner_address
 
@@ -165,8 +166,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             chain_id=factories.UNIT_CHAIN_ID,
         )
 
-        self.token_network_id = factories.make_address()
-        self.token_id = factories.make_address()
+        self.token_network_id = factories.UNIT_TOKEN_NETWORK_ADDRESS
+        self.token_id = factories.UNIT_TOKEN_ADDRESS
         self.token_network_state = TokenNetworkState(self.token_network_id, self.token_id)
 
         self.payment_network_id = factories.make_payment_network_identifier()
@@ -221,14 +222,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
                 >= self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
             )
             assert (
-<<<<<<< HEAD
                 partner_unclaimed + partner_transferred
-                >= self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
-=======
-                partner_unclaimed + partner_transferred >=
-                self.partner_previous_transferred[address] +
-                self.partner_previous_unclaimed[address]
->>>>>>> 82e5f785... Add some fixes to fuzz test module
+                >= self.partner_previous_transferred[address] + self.partner_previous_unclaimed[address]
             )
             self.our_previous_transferred[address] = our_transferred
             self.partner_previous_transferred[address] = partner_transferred
@@ -281,9 +276,10 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             # invariant (7R), add withdrawn amounts when implemented
             assert -our_deposit <= netted_transferred <= partner_deposit
 
-    def assume_channel_opened(self, partner_address):
+    def channel_opened(self, partner_address):
         needed_channel = self.address_to_channel[partner_address]
-        assume(channel.get_status(needed_channel) == channel.CHANNEL_STATE_OPENED)
+        return channel.get_status(needed_channel) == channel.CHANNEL_STATE_OPENED
+
 
 class InitiatorMixin:
     def __init__(self):
@@ -340,7 +336,7 @@ class InitiatorMixin:
 
     def _assume_channel_opened(self, action):
         if not self.failing_path_2:
-            self.assume_channel_opened(action.transfer.target)
+            assume(self.channel_opened(action.transfer.target))
 
     def _is_removed(self, action):
         expiry = self.expected_expiry[action.transfer.secrethash]
@@ -578,15 +574,16 @@ class MediatorMixin:
     def valid_receive_secret_reveal(self, previous_action):
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
         sender = previous_action.from_transfer.target
+        recipient = previous_action.from_transfer.initiator
 
         action = ReceiveSecretReveal(secret, sender)
         result = node.state_transition(self.chain_state, action)
 
         expiration = previous_action.from_transfer.lock.expiration
-        target_channel = self.address_to_channel[previous_action.from_transfer.target]
         in_time = self.block_number < expiration - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-        channel_open = channel.get_status(target_channel) == channel.CHANNEL_STATE_OPENED
-        if in_time and channel_open:
+        still_waiting = self.block_number < expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
+
+        if in_time and self.channel_opened(sender) and self.channel_opened(recipient):
             assert event_types_match(
                 result.events,
                 SendSecretReveal,
@@ -594,8 +591,8 @@ class MediatorMixin:
                 EventUnlockSuccess,
             )
             self.event('Unlock successful.')
-            self.waiting_for_unlock[secret] = previous_action.from_transfer.initiator
-        elif self.block_number < expiration + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL:
+            self.waiting_for_unlock[secret] = recipient
+        elif still_waiting and self.channel_opened(recipient):
             assert event_types_match(result.events, SendSecretReveal)
             self.event('Unlock failed, secret revealed too late.')
         else:
@@ -627,7 +624,6 @@ class MediatorMixin:
         invalid_sender=address(),
     )
     def wrong_address_receive_secret_reveal(self, previous_action, invalid_sender):
-        self.assume_channel_opened(previous_action.from_transfer.target)
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
         invalid_action = ReceiveSecretReveal(secret, invalid_sender)
         result = node.state_transition(self.chain_state, invalid_action)
@@ -636,31 +632,6 @@ class MediatorMixin:
         valid_sender = previous_action.from_transfer.target
         valid_action = ReceiveSecretReveal(secret, valid_sender)
         return valid_action
-
-    @rule(
-        target=unlocks,
-        previous_action=consumes(secret_requests),
-        message_identifier=integers(min_value=1),
-    )
-    def valid_receive_unlock(self, previous_action, message_identifier):
-        self.assume_channel_opened(previous_action.from_transfer.target)
-        partner = self.waiting_for_unlock.get(previous_action.secret)
-        assume(partner is not None)
-
-        balance_proof_properties = self._get_balance_proof_data(partner).properties
-        signed_balance_proof = factories.create(factories.BalanceProofSignedStateProperties(
-            **balance_proof_properties.__dict__,
-            pkey=self.address_to_privkey[partner],
-        ))
-        action = ReceiveUnlock(
-            balance_proof=signed_balance_proof,
-            message_identifier=message_identifier,
-            secret=previous_action.secret,
-        )
-        result = node.state_transition(self.chain_state, action)
-
-        assert result.events  # TODO
-        return action
 
 
 class OnChainMixin:
