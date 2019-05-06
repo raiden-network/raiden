@@ -41,21 +41,27 @@ clean-test:
 
 LINT_PATHS = raiden/ tools/scenario-player/
 ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' --recursive $(LINT_PATHS)
+BLACK_PATHS = raiden/ tools/
 
 lint:
 	flake8 raiden/ tools/
-	autopep8 --diff --exit-code --recursive $(LINT_PATHS)
 	isort $(ISORT_PARAMS) --diff --check-only
+	black --check $(BLACK_PATHS)
 	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc $(LINT_PATHS)
 	python setup.py check --restructuredtext --strict
-	mypy raiden --ignore-missing-imports
-
+	mypy raiden
 	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
 	# Remaining errors in tests:
 	mypy --config-file /dev/null raiden --ignore-missing-imports|grep error|wc -l
 
 isort:
 	isort $(ISORT_PARAMS)
+
+mypy:
+	mypy raiden
+
+black:
+	black $(BLACK_PATHS)
 
 test:
 	python setup.py test
