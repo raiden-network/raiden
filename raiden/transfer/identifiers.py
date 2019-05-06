@@ -14,7 +14,7 @@ from raiden.utils.typing import (
 )
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class QueueIdentifier:
     recipient: Address
     channel_identifier: ChannelID

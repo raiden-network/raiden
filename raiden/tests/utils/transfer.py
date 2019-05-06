@@ -560,6 +560,7 @@ def make_receive_transfer_mediated(
         target=transfer_target,
         initiator=transfer_initiator,
         signature=EMPTY_SIGNATURE,
+        fee=0,
     )
     mediated_transfer_msg.sign(signer)
 
@@ -617,6 +618,7 @@ def make_receive_expired_lock(
         token_network_address=channel_state.token_network_identifier,
         recipient=channel_state.partner_state.address,
         secrethash=lock.secrethash,
+        signature=EMPTY_SIGNATURE,
     )
     lock_expired_msg.sign(signer)
 
