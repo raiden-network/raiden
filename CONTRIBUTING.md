@@ -263,38 +263,27 @@ rules.
 
 In this section we are going to see style rules that should be followed across all languages.
 
-**Line breaks after operators**
-
-For long expressions where we break the expression at the operators the line
-break should come **after** the operator and not before.
-
-The following should be avoided:
-
-```python
-        participant1_amount = (
-            participant1_state.deposit
-            + participant2_state.transferred_amount
-            - participant1_state.transferred_amount
-        )
-```
-
-instead it should be:
-
-```python
-        participant1_amount = (
-            participant1_state.deposit +
-            participant2_state.transferred_amount -
-            participant1_state.transferred_amount
-        )
-```
 
 #### Python
 
 Raiden is written in Python and we follow the official Python style guide
-[PEP8](https://www.python.org/dev/peps/pep-0008/). It is highly recommended to
-use the [linting tools](requirements-lint.txt) in order to automatically
-determine any and all style violations. The customizable part of pylint is at
-[.pylint.rc](.pylint.rc).
+[PEP8](https://www.python.org/dev/peps/pep-0008/). For formatting, we use the
+automatic formatter [black](https://github.com/python/black). The configuration options
+for black are set in `pyproject.toml`, so a simple run of
+
+```
+make black
+```
+will ensure that you to comply with our formatting rules.
+
+It is highly recommended to also use the other [linting tools](requirements-lint.txt),
+in order to automatically determine any and all style violations.
+The customizable part of pylint is at [.pylint.rc](.pylint.rc).
+
+All pull requests need to pass
+```
+make lint
+```
 
 **Line Length**
 
@@ -302,36 +291,35 @@ Flake8 will warn you for 99 characters which is the hard limit on the max
 length. Try not to go above it. We also have a soft limit on 80 characters but
 that is not enforced and is there just to encourage short lines.
 
+Sometimes `black` will reformat lines, so they will go above our hard limit of 99 characters. In
+such cases, try to break up the expression, e.g.
+
+```python
+def testalongline(a):
+    mysum = int(
+        sum(
+            content.value.amount
+            for content in a.internal_field.fields_internal_long_named_dictionary_variables.values()
+        )
+    )
+    return mysum
+```
+This will fail `flake8` test on `make lint`. Change it to
+
+```python
+def testalongline(a):
+    mysum = sum(
+        content.value.amount
+        for content in a.internal_field.fields_internal_long_named_dictionary_variables.values()
+    )
+    mysum = int(mysum)
+    return mysum
+```
+
+
 **Shadowing built-ins**
 
 Shadowing built-in names is not allowed. Pylint will also warn you about it. If you want to use a built-in name then add a trailing underscore and not a leading one. Leading ones are reserved for private attributes. For example `type` -> `type_`.
-
-**Function definitions formatting**
-
-The line length must be [smaller than 100 characters](#python), so the
-function definition must be split when this limit is reached. When
-splitting the function arguments, each must go into its own line, followed by
-the argument type and a comma, and indented with 8 spaces.
-
-The following is not allowed:
-
-```python
-
-def function_with_many_args(argument1: Type1, argument2: Type2, argument3: Type3) -> ReturnType:
-    pass
-```
-
-This must be used instead:
-
-```python
-
-def function_with_many_args(
-        argument1: Type1,
-        argument2: Type2,
-        argument3: Type3,
-) -> ReturnType:
-    pass
-```
 
 **Docstrings**
 
@@ -339,10 +327,7 @@ For docstrings we follow [PEP 0257](https://www.python.org/dev/peps/pep-0257/#mu
 
 A single line docstring should be like this:
 ```python
-def a(
-        b: B,
-        c: C,
-) -> D:
+def a(b: B, c: C) -> D:
     """ Here be docs """
     pass
 ```
@@ -350,41 +335,13 @@ def a(
 A multiline docstring should have a short title and then a body. So like this:
 
 ```python
-def a(
-        b: B,
-        c: C,
-) -> D:
+def a(b: B, c: C) -> D:
     """ Function Title
 
     body comes
     here
     """
     pass
-```
-
-The closing quotes should be on their own line. If in doubt consult the PEP.
-
-**Usage of single and double quotes**
-
-All strings must use single quotes by default.
-
-Bad:
-
-```python
-s = "foo"
-```
-
-Good:
-
-```python
-s = 'foo'
-```
-
-The only reason to use double quotes is to avoid escaping the single quote in a
-string. So this is okay:
-
-```python
-s = "Augusto's computer is awesome"
 ```
 
 **Naming Convention**
