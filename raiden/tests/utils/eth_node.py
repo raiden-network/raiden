@@ -199,7 +199,7 @@ def parity_generate_chain_spec(
     genesis_path: str, genesis_description: GenesisDescription, seal_account: Address
 ) -> None:
     alloc = {
-        to_checksum_address(address): {"balance": 1000000000000000000}
+        to_checksum_address(address): {"balance": 1_000_000_000_000_000_000}
         for address in genesis_description.prefunded_accounts
     }
     validators = {"list": [to_checksum_address(seal_account)]}

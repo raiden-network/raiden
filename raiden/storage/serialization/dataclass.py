@@ -16,28 +16,22 @@ import raiden.storage.serialization.types  # noqa # isort:skip
 
 
 def class_type(cls):
-    return f'{cls.__module__}.{cls.__name__}'
+    return f"{cls.__module__}.{cls.__name__}"
 
 
 def dataclass(
-        _cls: type = None,
-        *,
-        init: bool = True,
-        repr: bool = True,  # pylint: disable=redefined-builtin
-        eq: bool = True,
-        order: bool = False,
-        unsafe_hash: bool = False,
-        frozen: bool = False,
+    _cls: type = None,
+    *,
+    init: bool = True,
+    repr: bool = True,  # pylint: disable=redefined-builtin
+    eq: bool = True,
+    order: bool = False,
+    unsafe_hash: bool = False,
+    frozen: bool = False,
 ) -> type:
     def wrapper(cls):
         cls = stdlib_dataclass(  # type: ignore
-            cls,
-            init=init,
-            repr=repr,
-            eq=eq,
-            order=order,
-            unsafe_hash=unsafe_hash,
-            frozen=frozen,
+            cls, init=init, repr=repr, eq=eq, order=order, unsafe_hash=unsafe_hash, frozen=frozen
         )
         #
         type_field = Field(
@@ -49,9 +43,9 @@ def dataclass(
             compare=False,
             metadata=None,
         )
-        type_field.name = 'type_'
+        type_field.name = "type_"
         type_field._field_type = _FIELD
-        cls.__dataclass_fields__['type_'] = type_field
+        cls.__dataclass_fields__["type_"] = type_field
         cls.type_ = class_type(cls)
         cls = dataclass_json(cls)
 

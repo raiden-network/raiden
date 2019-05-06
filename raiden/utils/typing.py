@@ -155,6 +155,9 @@ Signature = NewType("Signature", T_Signature)
 T_TransactionHash = bytes
 TransactionHash = NewType("TransactionHash", T_TransactionHash)
 
+T_EncodedData = bytes
+EncodedData = NewType("EncodedData", T_EncodedData)
+
 # This should be changed to `Optional[str]`
 SuccessOrError = Tuple[bool, Optional[str]]
 
