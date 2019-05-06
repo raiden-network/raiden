@@ -5,6 +5,7 @@ import pytest
 
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
+from raiden.storage.serialization import dataclass, field
 from raiden.storage.serialize import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.utils import TimestampedEvent
@@ -14,6 +15,7 @@ from raiden.transfer.architecture import State, StateManager, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.state_change import Block, ContractReceiveChannelBatchUnlock
 from raiden.utils import sha3
+from raiden.utils.typing import List
 
 
 class Empty(State):
@@ -24,18 +26,9 @@ def state_transition_noop(state, state_change):  # pylint: disable=unused-argume
     return TransitionResult(Empty(), list())
 
 
+@dataclass
 class AccState(State):
-    def __init__(self):
-        self.state_changes = list()
-
-    def to_dict(self):
-        return {"state_changes": self.state_changes}
-
-    @classmethod
-    def from_dict(cls, data):
-        result = cls()
-        result.state_changes = data["state_changes"]
-        return result
+    state_changes: List[Block] = field(default_factory=list)
 
 
 def state_transtion_acc(state, state_change):
