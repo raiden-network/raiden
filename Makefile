@@ -63,6 +63,8 @@ mypy:
 black:
 	black $(BLACK_PATHS)
 
+format: isort black
+
 test:
 	python setup.py test
 
