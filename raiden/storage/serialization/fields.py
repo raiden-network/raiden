@@ -34,7 +34,7 @@ class PRNGField(marshmallow.fields.Field):
     def pseudo_random_generator_from_json(data: Any) -> Random:
         # JSON serializes a tuple as a list
         pseudo_random_generator = Random()
-        state = list(data['pseudo_random_generator'])  # copy
+        state = list(data["pseudo_random_generator"])  # copy
         state[1] = tuple(state[1])  # fix type
         pseudo_random_generator.setstate(tuple(state))
 

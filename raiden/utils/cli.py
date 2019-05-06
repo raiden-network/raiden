@@ -270,8 +270,7 @@ class EnumChoiceType(Choice):
         self._enum_type = enum_type
         # https://github.com/python/typeshed/issues/2942
         super().__init__(  # type: ignore
-            [choice.value for choice in enum_type],  # type: ignore
-            case_sensitive=case_sensitive,
+            [choice.value for choice in enum_type], case_sensitive=case_sensitive  # type: ignore
         )
 
     def convert(self, value, param, ctx):

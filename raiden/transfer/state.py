@@ -59,6 +59,7 @@ from raiden.utils.typing import (
 
 if TYPE_CHECKING:
     from dataclasses import dataclass, field
+
     # pylint: disable=unused-import
     from messages import EnvelopeMessage
     from raiden.transfer.mediated_transfer.tasks import TransferTask
@@ -144,10 +145,8 @@ class PaymentMappingState(State):
     # Because token swaps span multiple token networks, the state of the
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
-    secrethashes_to_task: Dict[SecretHash, 'TransferTask'] = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
+    secrethashes_to_task: Dict[SecretHash, "TransferTask"] = field(
+        init=False, repr=False, default_factory=dict
     )
 
 
@@ -158,47 +157,40 @@ class TokenNetworkGraphState(State):
     """ Stores the existing channels in the channel manager contract, used for
     route finding.
     """
+
     token_network_id: TokenNetworkID
-    network: networkx.Graph = field(
-        init=False,
-        repr=False,
-        )
+    network: networkx.Graph = field(init=False, repr=False)
     channel_identifier_to_participants: Dict[ChannelID, Tuple[Address, Address]] = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
-        )
+        init=False, repr=False, default_factory=dict
+    )
 
     def __post_init__(self) -> None:
         self.network = networkx.Graph()
 
     def __repr__(self):
-        return 'TokenNetworkGraphState(num_edges:{})'.format(len(self.network.edges))
+        return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
 
 
 @dataclass
 class TokenNetworkState(State):
     """ Corresponds to a token network smart contract. """
+
     address: TokenNetworkID
     token_address: TokenAddress
-    network_graph: TokenNetworkGraphState
+    network_graph: TokenNetworkGraphState = field(init=False, repr=False)
     channelidentifiers_to_channels: ChannelMap = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
+        init=False, repr=False, default_factory=dict
     )
     partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = field(
-        init=False,
-        repr=False,
-        default_factory=lambda: defaultdict(list),
+        init=False, repr=False, default_factory=lambda: defaultdict(list)
     )
 
     def __post_init__(self) -> None:
         if not isinstance(self.address, T_Address):
-            raise ValueError('address must be an address instance')
+            raise ValueError("address must be an address instance")
 
         if not isinstance(self.token_address, T_Address):
-            raise ValueError('token_address must be an address instance')
+            raise ValueError("token_address must be an address instance")
 
         self.network_graph = TokenNetworkGraphState(self.address)
 
@@ -206,26 +198,22 @@ class TokenNetworkState(State):
 @dataclass
 class PaymentNetworkState(State):
     """ Corresponds to a registry smart contract. """
+
     address: PaymentNetworkID
     token_network_list: List[TokenNetworkState]
     tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
+        init=False, repr=False, default_factory=dict
     )
     tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
+        init=False, repr=False, default_factory=dict
     )
 
     def __post_init__(self) -> None:
         if not isinstance(self.address, T_Address):
-            raise ValueError('address must be an address instance')
+            raise ValueError("address must be an address instance")
 
         self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = {
-            token_network.address: token_network
-            for token_network in self.token_network_list
+            token_network.address: token_network for token_network in self.token_network_list
         }
         self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = {
             token_network.token_address: token_network.address
@@ -241,64 +229,43 @@ class ChainState(State):
 
     TODO: Split the node specific attributes to a "NodeState" class
     """
+
     pseudo_random_generator: random.Random
     block_number: BlockNumber
     block_hash: BlockHash
     our_address: Address
     chain_id: ChainID
     identifiers_to_paymentnetworks: Dict[PaymentNetworkID, PaymentNetworkState] = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
+        init=False, repr=False, default_factory=dict
     )
     nodeaddresses_to_networkstates: Dict[Address, str] = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
+        init=False, repr=False, default_factory=dict
     )
     payment_mapping: PaymentMappingState = field(
-        init=False,
-        repr=False,
-        default_factory=PaymentMappingState,
+        init=False, repr=False, default_factory=PaymentMappingState
     )
     pending_transactions: List[ContractSendEvent] = field(
-        init=False,
-        repr=False,
-        default_factory=list,
+        init=False, repr=False, default_factory=list
     )
-    queueids_to_queues: QueueIdsToQueues = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
-    )
-    last_transport_authdata: Optional[str] = field(
-        init=False,
-        repr=False,
-        default=None,
-    )
+    queueids_to_queues: QueueIdsToQueues = field(init=False, repr=False, default_factory=dict)
+    last_transport_authdata: Optional[str] = field(init=False, repr=False, default=None)
     tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
-        TokenNetworkAddress,
-        PaymentNetworkID,
-    ] = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
-    )
+        TokenNetworkAddress, PaymentNetworkID
+    ] = field(init=False, repr=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.block_number, T_BlockNumber):
-            raise ValueError('block_number must be of BlockNumber type')
+            raise ValueError("block_number must be of BlockNumber type")
 
         if not isinstance(self.block_hash, T_BlockHash):
-            raise ValueError('block_hash must be of BlockHash type')
+            raise ValueError("block_hash must be of BlockHash type")
 
         if not isinstance(self.chain_id, T_ChainID):
-            raise ValueError('chain_id must be of ChainID type')
+            raise ValueError("chain_id must be of ChainID type")
 
     def __repr__(self):
         return (
-            'ChainState(block_number={} block_hash={} networks={} '
-            'qty_transfers={} chain_id={})'
+            "ChainState(block_number={} block_hash={} networks={} " "qty_transfers={} chain_id={})"
         ).format(
             self.block_number,
             pex(self.block_hash),
@@ -318,17 +285,19 @@ class RouteState(State):
         node_address: The address of the next_hop.
         channel_identifier: The channel identifier.
     """
+
     node_address: Address
     channel_identifier: ChannelID
 
     def __post_init__(self) -> None:
         if not isinstance(self.node_address, T_Address):
-            raise ValueError('node_address must be an address instance')
+            raise ValueError("node_address must be an address instance")
 
 
 @dataclass
 class BalanceProofUnsignedState(State):
     """ Balance proof from the local node without the signature. """
+
     nonce: Nonce
     transferred_amount: TokenAmount
     locked_amount: TokenAmount
@@ -337,31 +306,31 @@ class BalanceProofUnsignedState(State):
 
     def __self_init__(self) -> None:
         if not isinstance(self.nonce, int):
-            raise ValueError('nonce must be int')
+            raise ValueError("nonce must be int")
 
         if not isinstance(self.transferred_amount, T_TokenAmount):
-            raise ValueError('transferred_amount must be a token_amount instance')
+            raise ValueError("transferred_amount must be a token_amount instance")
 
         if not isinstance(self.locked_amount, T_TokenAmount):
-            raise ValueError('locked_amount must be a token_amount instance')
+            raise ValueError("locked_amount must be a token_amount instance")
 
         if not isinstance(self.locksroot, T_Keccak256):
-            raise ValueError('locksroot must be a keccak256 instance')
+            raise ValueError("locksroot must be a keccak256 instance")
 
         if self.nonce <= 0:
-            raise ValueError('nonce cannot be zero or negative')
+            raise ValueError("nonce cannot be zero or negative")
 
         if self.nonce > UINT64_MAX:
-            raise ValueError('nonce is too large')
+            raise ValueError("nonce is too large")
 
         if self.transferred_amount < 0:
-            raise ValueError('transferred_amount cannot be negative')
+            raise ValueError("transferred_amount cannot be negative")
 
         if self.transferred_amount > UINT256_MAX:
-            raise ValueError('transferred_amount is too large')
+            raise ValueError("transferred_amount is too large")
 
         if len(self.locksroot) != 32:
-            raise ValueError('locksroot must have length 32')
+            raise ValueError("locksroot must have length 32")
 
         self.canonical_identifier.validate()
 
@@ -391,6 +360,7 @@ class BalanceProofSignedState(State):
     """ Proof of a channel balance that can be used on-chain to resolve
     disputes.
     """
+
     nonce: Nonce
     transferred_amount: TokenAmount
     locked_amount: TokenAmount
@@ -402,46 +372,46 @@ class BalanceProofSignedState(State):
 
     def __post_init__(self) -> None:
         if not isinstance(self.nonce, int):
-            raise ValueError('nonce must be int')
+            raise ValueError("nonce must be int")
 
         if not isinstance(self.transferred_amount, T_TokenAmount):
-            raise ValueError('transferred_amount must be a token_amount instance')
+            raise ValueError("transferred_amount must be a token_amount instance")
 
         if not isinstance(self.locked_amount, T_TokenAmount):
-            raise ValueError('locked_amount must be a token_amount instance')
+            raise ValueError("locked_amount must be a token_amount instance")
 
         if not isinstance(self.locksroot, T_Keccak256):
-            raise ValueError('locksroot must be a keccak256 instance')
+            raise ValueError("locksroot must be a keccak256 instance")
 
         if not isinstance(self.message_hash, T_Keccak256):
-            raise ValueError('message_hash must be a keccak256 instance')
+            raise ValueError("message_hash must be a keccak256 instance")
 
         if not isinstance(self.signature, T_Signature):
-            raise ValueError('signature must be a signature instance')
+            raise ValueError("signature must be a signature instance")
 
         if not isinstance(self.sender, T_Address):
-            raise ValueError('sender must be an address instance')
+            raise ValueError("sender must be an address instance")
 
         if self.nonce <= 0:
-            raise ValueError('nonce cannot be zero or negative')
+            raise ValueError("nonce cannot be zero or negative")
 
         if self.nonce > UINT64_MAX:
-            raise ValueError('nonce is too large')
+            raise ValueError("nonce is too large")
 
         if self.transferred_amount < 0:
-            raise ValueError('transferred_amount cannot be negative')
+            raise ValueError("transferred_amount cannot be negative")
 
         if self.transferred_amount > UINT256_MAX:
-            raise ValueError('transferred_amount is too large')
+            raise ValueError("transferred_amount is too large")
 
         if len(self.locksroot) != 32:
-            raise ValueError('locksroot must have length 32')
+            raise ValueError("locksroot must have length 32")
 
         if len(self.message_hash) != 32:
-            raise ValueError('message_hash is an invalid hash')
+            raise ValueError("message_hash is an invalid hash")
 
         if len(self.signature) != 65:
-            raise ValueError('signature is an invalid signature')
+            raise ValueError("signature is an invalid signature")
 
         self.canonical_identifier.validate()
 
@@ -469,27 +439,22 @@ class BalanceProofSignedState(State):
 @dataclass
 class HashTimeLockState(State):
     """ Represents a hash time lock. """
+
     amount: PaymentWithFeeAmount
     expiration: BlockExpiration
     secrethash: SecretHash
-    encoded: bytes = field(
-        init=False,
-        repr=False,
-    )
-    lockhash: LockHash = field(
-        init=False,
-        repr=False,
-    )
+    encoded: EncodedData = field(init=False, repr=False)
+    lockhash: LockHash = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         if not isinstance(self.amount, T_PaymentWithFeeAmount):
-            raise ValueError('amount must be a PaymentWithFeeAmount instance')
+            raise ValueError("amount must be a PaymentWithFeeAmount instance")
 
         if not isinstance(self.expiration, T_BlockNumber):
-            raise ValueError('expiration must be a BlockNumber instance')
+            raise ValueError("expiration must be a BlockNumber instance")
 
         if not isinstance(self.secrethash, T_Keccak256):
-            raise ValueError('secrethash must be a Keccak256 instance')
+            raise ValueError("secrethash must be a Keccak256 instance")
 
         packed = messages.Lock(buffer_for(messages.Lock))
         # pylint: disable=assigning-non-slot
@@ -505,37 +470,21 @@ class HashTimeLockState(State):
 @dataclass
 class UnlockPartialProofState(State):
     """ Stores the lock along with its unlocking secret. """
+
     lock: HashTimeLockState
-    secret: Secret = field(
-        repr=False,
-    )
-    amount: PaymentWithFeeAmount = field(
-        init=False,
-        repr=False,
-    )
-    expiration: BlockExpiration = field(
-        init=False,
-        repr=False,
-    )
-    secrethash: SecretHash = field(
-        init=False,
-        repr=False,
-    )
-    encoded: bytes = field(
-        init=False,
-        repr=False,
-    )
-    lockhash: LockHash = field(
-        init=False,
-        repr=False,
-        )
+    secret: Secret = field(repr=False)
+    amount: PaymentWithFeeAmount = field(init=False, repr=False)
+    expiration: BlockExpiration = field(init=False, repr=False)
+    secrethash: SecretHash = field(init=False, repr=False)
+    encoded: EncodedData = field(init=False, repr=False)
+    lockhash: LockHash = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         if not isinstance(self.lock, HashTimeLockState):
-            raise ValueError('lock must be a HashTimeLockState instance')
+            raise ValueError("lock must be a HashTimeLockState instance")
 
         if not isinstance(self.secret, T_Secret):
-            raise ValueError('secret must be a secret instance')
+            raise ValueError("secret must be a secret instance")
 
         self.amount = self.lock.amount
         self.expiration = self.lock.expiration
@@ -547,13 +496,14 @@ class UnlockPartialProofState(State):
 @dataclass
 class UnlockProofState(State):
     """ An unlock proof for a given lock. """
+
     merkle_proof: List[Keccak256]
     lock_encoded: bytes
     secret: Secret = field(repr=False)
 
     def __post_init__(self):
         if not isinstance(self.secret, T_Secret):
-            raise ValueError('secret must be a secret instance')
+            raise ValueError("secret must be a secret instance")
 
 
 @dataclass
@@ -569,18 +519,13 @@ class TransactionExecutionStatus(State):
     result: Optional[str] = None
 
     def __post_init__(self) -> None:
-        is_valid_start = (
-            self.started_block_number is None or
-            isinstance(self.started_block_number, T_BlockNumber)
+        is_valid_start = self.started_block_number is None or isinstance(
+            self.started_block_number, T_BlockNumber
         )
-        is_valid_finish = (
-            self.finished_block_number is None or
-            isinstance(self.finished_block_number, T_BlockNumber)
+        is_valid_finish = self.finished_block_number is None or isinstance(
+            self.finished_block_number, T_BlockNumber
         )
-        is_valid_result = (
-            self.result is None or
-            self.result in self.VALID_RESULT_VALUES
-        )
+        is_valid_result = self.result is None or self.result in self.VALID_RESULT_VALUES
         is_valid_result = result is None or result in self.VALID_RESULT_VALUES
 
         if not is_valid_start:
@@ -606,13 +551,13 @@ class TransactionChannelNewBalance(State):
 
     def __post_init__(self) -> None:
         if not isinstance(self.participant_address, T_Address):
-            raise ValueError('participant_address must be of type address')
+            raise ValueError("participant_address must be of type address")
 
         if not isinstance(self.contract_balance, T_TokenAmount):
-            raise ValueError('contract_balance must be of type token_amount')
+            raise ValueError("contract_balance must be of type token_amount")
 
         if not isinstance(self.deposit_block_number, T_BlockNumber):
-            raise ValueError('deposit_block_number must be of type block_number')
+            raise ValueError("deposit_block_number must be of type block_number")
 
 
 @dataclass(order=True)
@@ -624,50 +569,44 @@ class TransactionOrder(State):
 @dataclass
 class NettingChannelEndState(State):
     """ The state of one of the nodes in a two party netting channel. """
+
     address: Address
     contract_balance: Balance
 
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
     secrethashes_to_lockedlocks: SecretHashToLock = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
+        init=False, repr=False, default_factory=dict
     )
-        #: Locks for which the secret is known, but the partner has not sent an
-        #: unlock off chain yet.
+    #: Locks for which the secret is known, but the partner has not sent an
+    #: unlock off chain yet.
     secrethashes_to_unlockedlocks: SecretHashToPartialUnlockProof = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
+        init=False, repr=False, default_factory=dict
     )
-        #: Locks for which the secret is known, the partner has not sent an
-        #: unlocked off chain yet, and the secret has been registered onchain
-        #: before the lock has expired.
+    #: Locks for which the secret is known, the partner has not sent an
+    #: unlocked off chain yet, and the secret has been registered onchain
+    #: before the lock has expired.
     secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = field(
-        init=False,
-        repr=False,
-        default_factory=dict,
-        )
+        init=False, repr=False, default_factory=dict
+    )
     merkletree: MerkleTreeState = field(
-        init=False,
-        repr=False,
-        default_factory=make_empty_merkle_tree,
-        )
+        init=False, repr=False, default_factory=make_empty_merkle_tree
+    )
     balance_proof: OptionalBalanceProofState = None
     onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
 
     def __post_init__(self) -> None:
         if not isinstance(self.address, T_Address):
-            raise ValueError('address must be an address instance')
+            raise ValueError("address must be an address instance")
 
         if not isinstance(self.contract_balance, T_TokenAmount):
-            raise ValueError('balance must be a token_amount isinstance')
+            raise ValueError("balance must be a token_amount isinstance")
 
 
 @dataclass
 class NettingChannelState(State):
     """ The state of a netting channel. """
+
     canonical_identifier: CanonicalIdentifier
     token_address: TokenAddress = field(repr=False)
     payment_network_identifier: PaymentNetworkID = field(repr=False)
@@ -681,23 +620,21 @@ class NettingChannelState(State):
     settle_transaction: Optional[TransactionExecutionStatus] = None
     update_transaction: Optional[TransactionExecutionStatus] = None
     deposit_transaction_queue: List[TransactionOrder] = field(
-        init=False,
-        repr=False,
-        default_factory=list,
+        init=False, repr=False, default_factory=list
     )
 
     def __post_init__(self) -> None:
         if self.reveal_timeout >= self.settle_timeout:
-            raise ValueError('reveal_timeout must be smaller than settle_timeout')
+            raise ValueError("reveal_timeout must be smaller than settle_timeout")
 
         if not isinstance(self.reveal_timeout, int) or self.reveal_timeout <= 0:
-            raise ValueError('reveal_timeout must be a positive integer')
+            raise ValueError("reveal_timeout must be a positive integer")
 
         if not isinstance(self.settle_timeout, int) or self.settle_timeout <= 0:
-            raise ValueError('settle_timeout must be a positive integer')
+            raise ValueError("settle_timeout must be a positive integer")
 
         if not isinstance(self.open_transaction, TransactionExecutionStatus):
-            raise ValueError('open_transaction must be a TransactionExecutionStatus instance')
+            raise ValueError("open_transaction must be a TransactionExecutionStatus instance")
 
         if self.open_transaction.result != TransactionExecutionStatus.SUCCESS:
             raise ValueError(
@@ -705,24 +642,22 @@ class NettingChannelState(State):
             )
 
         if not isinstance(self.canonical_identifier.channel_identifier, T_ChannelID):
-            raise ValueError('channel identifier must be of type T_ChannelID')
+            raise ValueError("channel identifier must be of type T_ChannelID")
 
         if (
-                self.canonical_identifier.channel_identifier < 0 or
-                self.canonical_identifier.channel_identifier > UINT256_MAX
+            self.canonical_identifier.channel_identifier < 0
+            or self.canonical_identifier.channel_identifier > UINT256_MAX
         ):
             raise ValueError("channel identifier should be a uint256")
 
-        valid_close_transaction = (
-            self.close_transaction is None or
-            isinstance(self.close_transaction, TransactionExecutionStatus)
+        valid_close_transaction = self.close_transaction is None or isinstance(
+            self.close_transaction, TransactionExecutionStatus
         )
         if not valid_close_transaction:
             raise ValueError("close_transaction must be a TransactionExecutionStatus instance")
 
-        valid_settle_transaction = (
-            self.settle_transaction is None or
-            isinstance(self.settle_transaction, TransactionExecutionStatus)
+        valid_settle_transaction = self.settle_transaction is None or isinstance(
+            self.settle_transaction, TransactionExecutionStatus
         )
         if not valid_settle_transaction:
             raise ValueError(

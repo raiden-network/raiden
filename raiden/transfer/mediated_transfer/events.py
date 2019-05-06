@@ -61,6 +61,7 @@ class SendLockExpired(SendMessageEvent):
 @dataclass(init=False)
 class SendLockedTransfer(SendMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """
+
     transfer: LockedTransferUnsignedState
 
     def __init__(
@@ -111,6 +112,7 @@ class SendSecretReveal(SendMessageEvent):
         to the sender, so when the secret is learned it is not yet time to
         update the balance.
     """
+
     secret: Secret = field(repr=False)
     secrethash: SecretHash
 
@@ -147,6 +149,7 @@ class SendBalanceProof(SendMessageEvent):
         two uni-directional channels), as a consequence the merkle root is only
         updated by the recipient once a balance proof message is received.
     """
+
     payment_identifier: PaymentID
     token_address: TokenAddress
     secret: Secret = field(repr=False)
@@ -176,6 +179,7 @@ class SendSecretRequest(SendMessageEvent):
     """ Event used by a target node to request the secret from the initiator
     (`recipient`).
     """
+
     payment_identifier: PaymentID
     amount: PaymentWithFeeAmount
     expiration: BlockExpiration
@@ -207,6 +211,7 @@ class SendRefundTransfer(SendMessageEvent):
     the sender, allowing the sender to try a different route without the risk
     of losing token.
     """
+
     transfer: LockedTransferUnsignedState
 
     def __init__(
@@ -229,6 +234,7 @@ class SendRefundTransfer(SendMessageEvent):
 @dataclass
 class EventUnlockSuccess(Event):
     """ Event emitted when a lock unlock succeded. """
+
     identifier: PaymentID
     secrethash: SecretHash
 
@@ -236,6 +242,7 @@ class EventUnlockSuccess(Event):
 @dataclass
 class EventUnlockFailed(Event):
     """ Event emitted when a lock unlock failed. """
+
     identifier: PaymentID
     secrethash: SecretHash
     reason: str
@@ -244,6 +251,7 @@ class EventUnlockFailed(Event):
 @dataclass
 class EventUnlockClaimSuccess(Event):
     """ Event emitted when a lock claim succeded. """
+
     identifier: PaymentID
     secrethash: SecretHash
 
@@ -251,6 +259,7 @@ class EventUnlockClaimSuccess(Event):
 @dataclass
 class EventUnlockClaimFailed(Event):
     """ Event emitted when a lock claim failed. """
+
     identifier: PaymentID
     secrethash: SecretHash
     reason: str
@@ -259,5 +268,6 @@ class EventUnlockClaimFailed(Event):
 @dataclass
 class EventUnexpectedSecretReveal(Event):
     """ Event emitted when an unexpected secret reveal message is received. """
+
     secrethash: SecretHash
     reason: str

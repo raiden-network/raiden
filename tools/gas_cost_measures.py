@@ -78,7 +78,7 @@ def find_max_pending_transfers(gas_limit):
 
     tester.deploy_contract(
         "HumanStandardToken",
-        _initialAmount=100000,
+        _initialAmount=100_000,
         _decimalUnits=3,
         _tokenName="SomeToken",
         _tokenSymbol="SMT",

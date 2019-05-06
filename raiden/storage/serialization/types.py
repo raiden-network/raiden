@@ -54,44 +54,43 @@ def determine_union_types(*args):
     return args[0]
 
 
-TYPES.update({
-    # Addresses
-    Address: AddressField,
-    InitiatorAddress: AddressField,
-    PaymentNetworkID: AddressField,
-    SecretRegistryAddress: AddressField,
-    TargetAddress: AddressField,
-    TokenAddress: AddressField,
-    TokenNetworkAddress: AddressField,
-    TokenNetworkID: AddressField,
-
-    # Bytes
-    EncodedData: BytesField,
-    AdditionalHash: BytesField,
-    BalanceHash: BytesField,
-    BlockHash: BytesField,
-    Locksroot: BytesField,
-    LockHash: BytesField,
-    Secret: BytesField,
-    SecretHash: BytesField,
-    Signature: BytesField,
-    TransactionHash: BytesField,
-
-    # Ints
-    BlockExpiration: fields.Int,
-    BlockNumber: fields.Int,
-    ChainID: fields.Int,
-    ChannelID: fields.Int,
-    FeeAmount: fields.Int,
-    LockedAmount: fields.Int,
-    BlockGasLimit: fields.Int,
-    MessageID: fields.Int,
-    Nonce: fields.Int,
-    PaymentAmount: fields.Int,
-    PaymentID: fields.Int,
-    PaymentWithFeeAmount: fields.Int,
-    TransferID: fields.Int,
-
-    # Union
-    Union: determine_union_types,
-})
+TYPES.update(
+    {
+        # Addresses
+        Address: AddressField,
+        InitiatorAddress: AddressField,
+        PaymentNetworkID: AddressField,
+        SecretRegistryAddress: AddressField,
+        TargetAddress: AddressField,
+        TokenAddress: AddressField,
+        TokenNetworkAddress: AddressField,
+        TokenNetworkID: AddressField,
+        # Bytes
+        EncodedData: BytesField,
+        AdditionalHash: BytesField,
+        BalanceHash: BytesField,
+        BlockHash: BytesField,
+        Locksroot: BytesField,
+        LockHash: BytesField,
+        Secret: BytesField,
+        SecretHash: BytesField,
+        Signature: BytesField,
+        TransactionHash: BytesField,
+        # Ints
+        BlockExpiration: fields.Int,
+        BlockNumber: fields.Int,
+        ChainID: fields.Int,
+        ChannelID: fields.Int,
+        FeeAmount: fields.Int,
+        LockedAmount: fields.Int,
+        BlockGasLimit: fields.Int,
+        MessageID: fields.Int,
+        Nonce: fields.Int,
+        PaymentAmount: fields.Int,
+        PaymentID: fields.Int,
+        PaymentWithFeeAmount: fields.Int,
+        TransferID: fields.Int,
+        # Union
+        Union: determine_union_types,
+    }
+)

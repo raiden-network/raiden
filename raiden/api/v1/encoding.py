@@ -152,7 +152,7 @@ class BaseOpts(SchemaOpts):
 
     def __init__(self, meta, ordered):
         SchemaOpts.__init__(self, meta, ordered)
-        self.decoding_class = getattr(meta, 'decoding_class', None)
+        self.decoding_class = getattr(meta, "decoding_class", None)
 
 
 class BaseSchema(Schema):

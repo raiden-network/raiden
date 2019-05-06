@@ -311,17 +311,13 @@ class SignedMessage(AuthenticatedMessage):
 class RetrieableMessage:
     """ Message, that supports a retry-queue. """
 
-    def __init__(
-        self, *, message_identifier: MessageID, **kwargs  # pylint: disable=unused-argument
-    ):
-        self.message_identifier = message_identifier
+    message_identifier: MessageID
 
 
 class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
     """ Mixin of SignedMessage and RetrieableMessage. """
 
-    def __init__(self, *, message_identifier: MessageID, **kwargs):
-        super().__init__(message_identifier=message_identifier, **kwargs)
+    message_identifier: MessageID
 
 
 class EnvelopeMessage(SignedRetrieableMessage):
@@ -395,10 +391,7 @@ class Processed(SignedRetrieableMessage):
     @classmethod
     def unpack(cls, packed):
         # pylint: disable=unexpected-keyword-arg
-        processed = cls(
-            message_identifier=packed.message_identifier,
-            signature=packed.signature,
-        )
+        processed = cls(message_identifier=packed.message_identifier, signature=packed.signature)
         return processed
 
     def pack(self, packed) -> None:
@@ -407,10 +400,7 @@ class Processed(SignedRetrieableMessage):
 
     @classmethod
     def from_event(cls, event):
-        return cls(
-            message_identifier=event.message_identifier,
-            signature=EMPTY_SIGNATURE,
-        )
+        return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
 
     def __repr__(self):
         return "<{} [msgid:{}]>".format(self.__class__.__name__, self.message_identifier)
@@ -438,7 +428,7 @@ class ToDevice(SignedMessage):
     subclass.
     """
 
-    cmdid = messages.TODEVICE
+    cmdid: ClassVar[Optional[int]] = messages.TODEVICE
 
     def __init__(self, *, message_identifier: MessageID, **kwargs):
         super().__init__(**kwargs)
@@ -447,10 +437,7 @@ class ToDevice(SignedMessage):
     @classmethod
     def unpack(cls, packed):
         # pylint: disable=unexpected-keyword-arg
-        to_device = cls(
-            message_identifier=packed.message_identifier,
-            signature=packed.signature,
-        )
+        to_device = cls(message_identifier=packed.message_identifier, signature=packed.signature)
         return to_device
 
     def pack(self, packed) -> None:
@@ -482,6 +469,8 @@ class Delivered(SignedMessage):
     """ Message used to inform the partner node that a message was received *and*
     persisted.
     """
+
+    cmdid: ClassVar[Optional[int]] = messages.DELIVERED
 
     cmdid = messages.DELIVERED
 
@@ -526,6 +515,8 @@ class Delivered(SignedMessage):
 class Pong(SignedMessage):
     """ Response to a Ping message. """
 
+    cmdid: ClassVar[Optional[int]] = messages.PONG
+
     cmdid = messages.PONG
 
     def __init__(self, *, nonce: int, **kwargs):
@@ -534,10 +525,7 @@ class Pong(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        pong = Pong(
-            nonce=packed.nonce,
-            signature=packed.signature,
-        )
+        pong = Pong(nonce=packed.nonce, signature=packed.signature)
         return pong
 
     def pack(self, packed) -> None:
@@ -547,6 +535,8 @@ class Pong(SignedMessage):
 
 class Ping(SignedMessage):
     """ Healthcheck message. """
+
+    cmdid: ClassVar[Optional[int]] = messages.PING
 
     cmdid = messages.PING
 
@@ -574,6 +564,8 @@ class Ping(SignedMessage):
 
 class SecretRequest(SignedRetrieableMessage):
     """ Requests the secret which unlocks a secrethash. """
+
+    cmdid: ClassVar[Optional[int]] = messages.SECRETREQUEST
 
     cmdid = messages.SECRETREQUEST
 
@@ -672,6 +664,8 @@ class Unlock(EnvelopeMessage):
     the other party to claim the unlocked lock.
     """
 
+    cmdid: ClassVar[Optional[int]] = messages.UNLOCK
+
     cmdid = messages.UNLOCK
 
     def __init__(
@@ -701,40 +695,15 @@ class Unlock(EnvelopeMessage):
             **kwargs,
         )
 
-        if payment_identifier < 0:
+    def __post_init__(self):
+        if self.payment_identifier < 0:
             raise ValueError("payment_identifier cannot be negative")
 
-        if payment_identifier > UINT64_MAX:
+        if self.payment_identifier > UINT64_MAX:
             raise ValueError("payment_identifier is too large")
 
-        if len(secret) != 32:
+        if len(self.secret) != 32:
             raise ValueError("secret must have 32 bytes")
-
-        self.message_identifier = message_identifier
-        self.payment_identifier = payment_identifier
-        self.secret = secret
-
-    def __repr__(self):
-        return (
-            "<{} ["
-            "chainid:{} msgid:{} paymentid:{} token_network:{} channel_identifier:{} "
-            "nonce:{} transferred_amount:{} "
-            "locked_amount:{} locksroot:{} hash:{} secrethash:{}"
-            "]>"
-        ).format(
-            self.__class__.__name__,
-            self.chain_id,
-            self.message_identifier,
-            self.payment_identifier,
-            pex(self.token_network_address),
-            self.channel_identifier,
-            self.nonce,
-            self.transferred_amount,
-            self.locked_amount,
-            pex(self.locksroot),
-            pex(self.hash),
-            pex(self.secrethash),
-        )
 
     @property  # type: ignore
     @cached(_hashes_cache, key=attrgetter("secret"))
@@ -834,6 +803,8 @@ class RevealSecret(SignedRetrieableMessage):
     that must not update the internal channel state.
     """
 
+    cmdid: ClassVar[Optional[int]] = messages.REVEALSECRET
+
     cmdid = messages.REVEALSECRET
 
     def __init__(self, *, message_identifier: MessageID, secret: Secret, **kwargs):
@@ -865,25 +836,8 @@ class RevealSecret(SignedRetrieableMessage):
 
     @classmethod
     def from_event(cls, event):
+        # pylint: disable=unexpected-keyword-arg
         return cls(message_identifier=event.message_identifier, secret=event.secret)
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "message_identifier": self.message_identifier,
-            "secret": encode_hex(self.secret),
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-        reveal_secret = cls(
-            message_identifier=data["message_identifier"], secret=decode_hex(data["secret"])
-        )
-        reveal_secret.signature = decode_hex(data["signature"])
-        return reveal_secret
 
 
 class Lock:
@@ -905,24 +859,20 @@ class Lock:
         super().__init__()
         # guarantee that `amount` can be serialized using the available bytes
         # in the fixed length format
-        if amount < 0:
-            raise ValueError(f"amount {amount} needs to be positive")
+        if self.amount < 0:
+            raise ValueError(f"amount {self.amount} needs to be positive")
 
-        if amount >= 2 ** 256:
-            raise ValueError(f"amount {amount} is too large")
+        if self.amount >= 2 ** 256:
+            raise ValueError(f"amount {self.amount} is too large")
 
-        if expiration < 0:
-            raise ValueError(f"expiration {expiration} needs to be positive")
+        if self.expiration < 0:
+            raise ValueError(f"expiration {self.expiration} needs to be positive")
 
-        if expiration >= 2 ** 256:
-            raise ValueError(f"expiration {expiration} is too large")
+        if self.expiration >= 2 ** 256:
+            raise ValueError(f"expiration {self.expiration} is too large")
 
-        if not ishash(secrethash):
-            raise ValueError("secrethash {secrethash} is not a valid hash")
-
-        self.amount = amount
-        self.expiration = expiration
-        self.secrethash = secrethash
+        if not ishash(self.secrethash):
+            raise ValueError("secrethash {self.secrethash} is not a valid hash")
 
     @property  # type: ignore
     @cached(_lock_bytes_cache, key=attrgetter("amount", "expiration", "secrethash"))
@@ -991,6 +941,11 @@ class LockedTransferBase(EnvelopeMessage):
     [nonce, token, balance, recipient, locksroot, ...] along a merkle proof
     from locksroot to the not yet netted formerly locked amount.
     """
+
+    payment_identifier: PaymentID
+    token: TokenAddress
+    recipient: Address
+    lock: Lock
 
     def __init__(
         self,
@@ -1100,37 +1055,13 @@ class LockedTransfer(LockedTransferBase):
 
     def __post_init__(self):
         if len(self.target) != 20:
-            raise ValueError('target is an invalid address')
+            raise ValueError("target is an invalid address")
 
-        self.target = target
-        self.fee = fee
-        self.initiator = initiator
+        if len(self.initiator) != 20:
+            raise ValueError("initiator is an invalid address")
 
-    def __repr__(self):
-        representation = (
-            "<{} ["
-            "chainid:{} msgid:{} paymentid:{} token_network:{} channel_identifier:{} "
-            "nonce:{} transferred_amount:{} "
-            "locked_amount:{} locksroot:{} hash:{} secrethash:{} expiration:{} amount:{}"
-            "]>"
-        ).format(
-            self.__class__.__name__,
-            self.chain_id,
-            self.message_identifier,
-            self.payment_identifier,
-            pex(self.token_network_address),
-            self.channel_identifier,
-            self.nonce,
-            self.transferred_amount,
-            self.locked_amount,
-            pex(self.locksroot),
-            pex(self.hash),
-            pex(self.lock.secrethash),
-            self.lock.expiration,
-            self.lock.amount,
-        )
-
-        return representation
+        if self.fee > UINT256_MAX:
+            raise ValueError("fee is too large")
 
     @classmethod
     def unpack(cls, packed):
@@ -1209,7 +1140,7 @@ class LockedTransfer(LockedTransferBase):
             target=transfer.target,
             initiator=transfer.initiator,
             fee=fee,
-            signature=Signature(b''),
+            signature=Signature(b""),
         )
 
     def to_dict(self):
@@ -1262,10 +1193,7 @@ class RefundTransfer(LockedTransfer):
     transfer amount allowing him to try a new path to complete the transfer.
     """
 
-    cmdid = messages.REFUNDTRANSFER
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    cmdid: ClassVar[Optional[int]] = messages.REFUNDTRANSFER
 
     @classmethod
     def unpack(cls, packed):
@@ -1289,7 +1217,7 @@ class RefundTransfer(LockedTransfer):
             target=packed.target,
             initiator=packed.initiator,
             fee=packed.fee,
-            signature=Signature(b''),
+            signature=Signature(b""),
         )
         locked_transfer.signature = packed.signature
         return locked_transfer
@@ -1371,6 +1299,8 @@ class LockExpired(EnvelopeMessage):
     """Message used to notify opposite channel participant that a lock has
     expired.
     """
+
+    cmdid: ClassVar[Optional[int]] = messages.LOCKEXPIRED
 
     cmdid = messages.LOCKEXPIRED
 
@@ -1514,29 +1444,18 @@ class SignedBlindedBalanceProof:
     """Message sub-field `onchain_balance_proof` for `RequestMonitoring`.
     """
 
-    def __init__(
-        self,
-        *,
-        channel_identifier: ChannelID,
-        token_network_address: TokenNetworkID,
-        nonce: Nonce,
-        additional_hash: AdditionalHash,
-        chain_id: ChainID,
-        signature: Signature,
-        balance_hash: BalanceHash,
-    ):
-        if not signature:
-            raise ValueError("balance proof is not signed")
+    channel_identifier: ChannelID
+    token_network_address: TokenNetworkID
+    nonce: Nonce
+    additional_hash: AdditionalHash
+    chain_id: ChainID
+    balance_hash: BalanceHash
+    signature: Signature
+    non_closing_signature: Optional[Signature] = field(init=False, default=None)
 
-        super().__init__()
-        self.channel_identifier = channel_identifier
-        self.token_network_address = token_network_address
-        self.nonce = nonce
-        self.additional_hash = additional_hash
-        self.chain_id = chain_id
-        self.balance_hash = balance_hash
-        self.signature = signature
-        self.non_closing_signature = None
+    def __post_init__(self):
+        if not self.signature:
+            raise ValueError("balance proof is not signed")
 
     @classmethod
     def from_balance_proof_signed_state(
@@ -1617,27 +1536,16 @@ class RequestMonitoring(SignedMessage):
 #monitor-request
     """
 
-    def __init__(
-        self,
-        *,
-        onchain_balance_proof: SignedBlindedBalanceProof,
-        reward_amount: TokenAmount,
-        non_closing_signature: Optional[Signature] = None,
-        reward_proof_signature: Optional[Signature] = None,
-        **kwargs,
-    ):
-        if onchain_balance_proof is None:
+    balance_proof: SignedBlindedBalanceProof
+    reward_amount: TokenAmount
+    non_closing_signature: Optional[Signature] = None
+
+    def __post_init__(self):
+        if self.balance_proof is None:
             raise ValueError("no balance proof given")
 
-        if not isinstance(onchain_balance_proof, SignedBlindedBalanceProof):
+        if not isinstance(self.balance_proof, SignedBlindedBalanceProof):
             raise ValueError("onchain_balance_proof is not a SignedBlindedBalanceProof")
-
-        super().__init__(**kwargs)
-
-        self.balance_proof = onchain_balance_proof
-        self.reward_amount = reward_amount
-        self.non_closing_signature = non_closing_signature
-        self.signature = reward_proof_signature
 
     @classmethod
     def from_balance_proof_signed_state(
@@ -1649,13 +1557,13 @@ class RequestMonitoring(SignedMessage):
             )
 
         onchain_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
-            balance_proof=balance_proof,
+            balance_proof=balance_proof
         )
         # pylint: disable=unexpected-keyword-arg
         return cls(
             balance_proof=onchain_balance_proof,
             reward_amount=reward_amount,
-            signature=Signature(b''),
+            signature=Signature(b""),
         )
 
     @property
@@ -1792,48 +1700,34 @@ class RequestMonitoring(SignedMessage):
             reward_amount=self.reward_amount,
             nonce=self.balance_proof.nonce,
         )
+        reward_proof_signature = self.reward_proof_signature or Signature(b"")
         return (
             recover(balance_proof_data, self.balance_proof.signature) == partner_address
             and recover(blinded_data, self.non_closing_signature) == requesting_address
-            and recover(reward_proof_data, self.reward_proof_signature) == requesting_address
+            and recover(reward_proof_data, reward_proof_signature) == requesting_address
         )
 
 
 class UpdatePFS(SignedMessage):
     """ Message to inform a pathfinding service about a capacity change. """
 
-    def __init__(
-        self,
-        *,
-        canonical_identifier: CanonicalIdentifier,
-        updating_participant: Address,
-        other_participant: Address,
-        updating_nonce: Nonce,
-        other_nonce: Nonce,
-        updating_capacity: TokenAmount,
-        other_capacity: TokenAmount,
-        reveal_timeout: int,
-        mediation_fee: FeeAmount,
-        signature: Optional[Signature] = None,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.canonical_identifier = canonical_identifier
-        self.updating_participant = updating_participant
-        self.other_participant = other_participant
-        self.updating_nonce = updating_nonce
-        self.other_nonce = other_nonce
-        self.updating_capacity = updating_capacity
-        self.other_capacity = other_capacity
-        self.reveal_timeout = reveal_timeout
-        self.mediation_fee = mediation_fee
-        if signature is None:
+    canonical_identifier: CanonicalIdentifier
+    updating_participant: Address
+    other_participant: Address
+    updating_nonce: Nonce
+    other_nonce: Nonce
+    updating_capacity: TokenAmount
+    other_capacity: TokenAmount
+    reveal_timeout: int
+    mediation_fee: FeeAmount
+
+    def __post_init__(self):
+        if self.signature is None:
             self.signature = Signature(b"")
-        else:
-            self.signature = signature
 
     @classmethod
     def from_channel_state(cls, channel_state: NettingChannelState) -> "UpdatePFS":
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             canonical_identifier=channel_state.canonical_identifier,
             updating_participant=channel_state.our_state.address,
@@ -1848,7 +1742,7 @@ class UpdatePFS(SignedMessage):
             ),
             reveal_timeout=channel_state.reveal_timeout,
             mediation_fee=channel_state.mediation_fee,
-            signature=Signature(b''),
+            signature=Signature(b""),
         )
 
     def packed(self) -> bytes:
@@ -1874,6 +1768,7 @@ class UpdatePFS(SignedMessage):
 
     @classmethod
     def unpack(cls, packed) -> "UpdatePFS":
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             canonical_identifier=CanonicalIdentifier(
                 chain_identifier=packed.chain_id,
@@ -1892,15 +1787,11 @@ class UpdatePFS(SignedMessage):
         )
 
 
-def lockedtransfersigned_from_message(message: LockedTransfer) -> 'LockedTransferSignedState':
+def lockedtransfersigned_from_message(message: LockedTransfer) -> "LockedTransferSignedState":
     """ Create LockedTransferSignedState from a LockedTransfer message. """
     balance_proof = balanceproof_from_envelope(message)
 
-    lock = HashTimeLockState(
-        message.lock.amount,
-        message.lock.expiration,
-        message.lock.secrethash,
-    )
+    lock = HashTimeLockState(message.lock.amount, message.lock.expiration, message.lock.secrethash)
 
     transfer_state = LockedTransferSignedState(
         message.message_identifier,
