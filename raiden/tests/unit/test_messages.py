@@ -1,7 +1,8 @@
 import pytest
 
-from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.messages import Ping, RequestMonitoring, SignedBlindedBalanceProof, UpdatePFS
+from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.transfer.balance_proof import (
@@ -18,7 +19,7 @@ signer = LocalSigner(PRIVKEY)
 
 
 def test_signature():
-    ping = Ping(nonce=0, current_protocol_version=0)
+    ping = Ping(nonce=0, current_protocol_version=0, signature=EMPTY_SIGNATURE)
     ping.sign(signer)
     assert ping.sender == ADDRESS
 
@@ -30,7 +31,7 @@ def test_request_monitoring():
         balance_proof
     )
     request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
+        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
     )
     assert request_monitoring
     with pytest.raises(ValueError):
@@ -117,7 +118,7 @@ def test_update_pfs():
     message.sign(signer2)
     assert recover(message._data_to_sign(), message.signature) == address2
 
-    assert message == UpdatePFS.from_dict(message.to_dict())
+    assert message == DictSerializer.deserialize(DictSerializer.serialize(message))
 
 
 def test_tamper_request_monitoring():
@@ -131,7 +132,7 @@ def test_tamper_request_monitoring():
         balance_proof
     )
     request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
+        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
     )
     request_monitoring.sign(signer)
 
@@ -154,7 +155,7 @@ def test_tamper_request_monitoring():
     partner_signed_balance_proof.balance_hash = "tampered".encode()
 
     tampered_balance_hash_request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
+        balance_proof=partner_signed_balance_proof, reward_amount=55
     )
 
     tampered_bp = tampered_balance_hash_request_monitoring.balance_proof
@@ -184,7 +185,7 @@ def test_tamper_request_monitoring():
     partner_signed_balance_proof.additional_hash = "tampered".encode()
 
     tampered_additional_hash_request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
+        balance_proof=partner_signed_balance_proof, reward_amount=55
     )
 
     tampered_bp = tampered_additional_hash_request_monitoring.balance_proof
@@ -215,7 +216,7 @@ def test_tamper_request_monitoring():
     partner_signed_balance_proof.non_closing_signature = "tampered".encode()
 
     tampered_non_closing_signature_request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
+        balance_proof=partner_signed_balance_proof, reward_amount=55
     )
 
     tampered_bp = tampered_non_closing_signature_request_monitoring.balance_proof

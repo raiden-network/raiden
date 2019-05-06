@@ -1,3 +1,4 @@
+from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import SendRefundTransfer
 
@@ -16,4 +17,5 @@ def test_send_refund_transfer_contains_balance_proof():
 
     assert hasattr(event, "balance_proof")
     # pylint: disable=E1101
-    assert SendRefundTransfer.schema().loads(SendRefundTransfer.schema().dumps(event)) == event
+
+    assert JSONSerializer.deserialize(JSONSerializer.serialize(event)) == event

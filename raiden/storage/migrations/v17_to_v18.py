@@ -1,6 +1,7 @@
 import json
 
 from raiden.exceptions import ChannelNotFound
+from raiden.storage.serialization import DictSerializer
 from raiden.storage.sqlite import SQLiteStorage
 from raiden.transfer.state import RouteState
 from raiden.utils.typing import Any, Dict, Optional
@@ -65,12 +66,15 @@ def _transform_snapshot(raw_snapshot: str) -> str:
         # that were originally calculated when the transfer was being
         # mediated so this step should be sufficient for now.
         mediator_state["routes"] = [
-            RouteState.from_dict(
-                {
-                    "node_address": channel["partner_state"]["address"],
-                    "channel_identifier": channel_identifier,
-                }
-            ).to_dict()
+            DictSerializer.serialize(
+                DictSerializer.deserialize(
+                    {
+                        "type": "raiden.transfer.state.RouteState",
+                        "node_address": channel["partner_state"]["address"],
+                        "channel_identifier": channel_identifier,
+                    }
+                )
+            )
         ]
     return json.dumps(snapshot)
 

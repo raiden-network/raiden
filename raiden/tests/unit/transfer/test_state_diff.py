@@ -62,9 +62,9 @@ def test_detect_balance_proof_change():
     )
     channel_copy = deepcopy(channel)
     token_network.channelidentifiers_to_channels["a"] = channel
-    our_state = NettingChannelEndState(address=b"b", balance=1)
+    our_state = NettingChannelEndState(address=b"b", contract_balance=1)
     our_state_copy = deepcopy(our_state)
-    partner_state = NettingChannelEndState(address=b"a", balance=0)
+    partner_state = NettingChannelEndState(address=b"a", contract_balance=0)
     partner_state_copy = deepcopy(partner_state)
 
     channel.our_state = our_state
