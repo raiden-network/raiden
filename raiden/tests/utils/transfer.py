@@ -86,7 +86,6 @@ def transfer(
     Note:
         Only the initiator and target are synched.
     """
-    assert identifier is not None, "The identifier must be provided"
     if transfer_state is TransferState.UNLOCKED:
         _transfer_unlocked(
             initiator_app=initiator_app,

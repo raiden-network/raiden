@@ -5,7 +5,7 @@ import structlog
 from eth_utils import to_checksum_address, to_hex
 
 from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_HASH, EMPTY_MESSAGE_HASH, EMPTY_SIGNATURE
-from raiden.exceptions import ChannelOutdatedError, RaidenUnrecoverableError
+from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import message_from_sendevent
 from raiden.network.pathfinding import post_pfs_feedback
 from raiden.network.proxies.payment_channel import PaymentChannel
@@ -53,7 +53,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.state import ChainState, NettingChannelEndState
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils import pex
-from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce
+from raiden.utils.typing import MYPY_ANNOTATION, Address, BlockSpecification, Nonce
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -73,20 +73,21 @@ UNEVENTFUL_EVENTS = (
 
 
 def unlock(
-    raiden: "RaidenService",
     payment_channel: PaymentChannel,
     end_state: NettingChannelEndState,
     participant: Address,
     partner: Address,
+    given_block_identifier: BlockSpecification,
 ) -> None:
-    merkle_tree_leaves = get_batch_unlock(end_state)
+    merkle_tree_locks = get_batch_unlock(end_state)
+    assert merkle_tree_locks, "merkle tree is missing"
 
-    try:
-        payment_channel.unlock(
-            participant=participant, partner=partner, merkle_tree_leaves=merkle_tree_leaves
-        )
-    except ChannelOutdatedError as e:
-        log.error(str(e), node=pex(raiden.address))
+    payment_channel.unlock(
+        participant=participant,
+        partner=partner,
+        merkle_tree_locks=merkle_tree_locks,
+        given_block_identifier=given_block_identifier,
+    )
 
 
 class EventHandler(ABC):
@@ -400,11 +401,11 @@ class RaidenEventHandler(EventHandler):
             )
             if not skip_unlock:
                 unlock(
-                    raiden=raiden,
                     payment_channel=payment_channel,
                     end_state=restored_channel_state.partner_state,
                     participant=our_address,
                     partner=partner_address,
+                    given_block_identifier=channel_unlock_event.triggered_by_block_hash,
                 )
 
         if search_events:
@@ -442,11 +443,11 @@ class RaidenEventHandler(EventHandler):
             )
             if not skip_unlock:
                 unlock(
-                    raiden=raiden,
                     payment_channel=payment_channel,
                     end_state=restored_channel_state.our_state,
                     participant=partner_address,
                     partner=our_address,
+                    given_block_identifier=channel_unlock_event.triggered_by_block_hash,
                 )
 
     @staticmethod

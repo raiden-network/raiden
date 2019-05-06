@@ -1,5 +1,4 @@
 from collections import defaultdict
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple
 
 import structlog
 from eth_utils import (
@@ -14,6 +13,7 @@ from gevent.lock import RLock, Semaphore
 
 from raiden.constants import (
     EMPTY_HASH,
+    EMPTY_MERKLE_ROOT,
     EMPTY_SIGNATURE,
     GENESIS_BLOCK_NUMBER,
     UINT256_MAX,
@@ -36,19 +36,26 @@ from raiden.network.rpc.client import StatelessFilter, check_address_has_code
 from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.transfer.balance_proof import pack_balance_proof, pack_balance_proof_update
 from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.merkle_tree import compute_layers, merkleroot
+from raiden.transfer.state import MerkleTreeState
 from raiden.utils import pex, safe_gas_limit
 from raiden.utils.signer import recover
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
+    Any,
     BalanceHash,
     BlockNumber,
     BlockSpecification,
     ChainID,
     ChannelID,
+    Dict,
     ErrorType,
+    Keccak256,
+    List,
     Locksroot,
     MerkleTreeLeaves,
+    NamedTuple,
     Nonce,
     Signature,
     T_ChannelID,
@@ -56,6 +63,8 @@ from raiden.utils.typing import (
     TokenAddress,
     TokenAmount,
     TokenNetworkAddress,
+    Tuple,
+    cast,
 )
 from raiden_contracts.constants import (
     CONTRACT_TOKEN_NETWORK,
@@ -1207,6 +1216,7 @@ class TokenNetwork:
                     )
                     raise RaidenUnrecoverableError(msg)
 
+                # Query the current state to check for transaction races
                 channel_data = self._detail_channel(
                     participant1=self.node_address,
                     participant2=partner,
@@ -1343,24 +1353,62 @@ class TokenNetwork:
         channel_identifier: ChannelID,
         participant: Address,
         partner: Address,
-        merkle_tree_leaves: Optional[MerkleTreeLeaves],
+        merkle_tree_locks: MerkleTreeLeaves,
+        given_block_identifier: BlockSpecification,
     ):
         log_details = {
             "token_network": pex(self.address),
             "node": pex(self.node_address),
             "partner": pex(partner),
             "participant": pex(participant),
-            "merkle_tree_leaves": merkle_tree_leaves,
+            "merkle_tree_locks": merkle_tree_locks,
         }
 
-        if merkle_tree_leaves is None or not merkle_tree_leaves:
-            log.info("skipping unlock, tree is empty", **log_details)
-            return
+        if not merkle_tree_locks:
+            raise ValueError("unlock cannot be done without merkle_tree_leaves")
 
-        leaves_packed = b"".join(lock.encoded for lock in merkle_tree_leaves)
+        leaves = cast(List[Keccak256], [lock.lockhash for lock in merkle_tree_locks])
+        merkle_tree = MerkleTreeState(compute_layers(leaves))
+
+        # Check the preconditions for calling unlock at the time the event was
+        # emitted.
+        try:
+            channel_onchain_detail = self._detail_channel(
+                participant1=participant,
+                participant2=partner,
+                block_identifier=given_block_identifier,
+                channel_identifier=channel_identifier,
+            )
+            unlock_end_details = self._detail_participant(
+                channel_identifier=channel_identifier,
+                participant=participant,
+                partner=partner,
+                block_identifier=given_block_identifier,
+            )
+        except ValueError:
+            # If `given_block_identifier` has been pruned the checks cannot be
+            # performed.
+            pass
+        else:
+            if channel_onchain_detail.state != ChannelState.SETTLED:
+                msg = (
+                    f"The channel was not settled at the provided block "
+                    f"({given_block_identifier}). This call should never have "
+                    f"been attempted."
+                )
+                raise RaidenUnrecoverableError(msg)
+
+            local_merkleroot = merkleroot(merkle_tree)
+            if unlock_end_details.locksroot != local_merkleroot:
+                msg = (
+                    f"The provided merkle tree ({to_hex(local_merkleroot)}) "
+                    f"does correspond to the on-chain locksroot "
+                    f"{to_hex(unlock_end_details.locksroot)}."
+                )
+                raise RaidenUnrecoverableError(msg)
 
         checking_block = self.client.get_checking_block()
-        error_prefix = "Call to unlock will fail"
+        leaves_packed = b"".join(lock.encoded for lock in merkle_tree_locks)
         gas_limit = self.proxy.estimate_gas(
             checking_block,
             "unlock",
@@ -1371,12 +1419,10 @@ class TokenNetwork:
         )
 
         if gas_limit:
-            gas_limit = safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT)
-            error_prefix = "Call to unlock failed"
             log.info("unlock called", **log_details)
             transaction_hash = self.proxy.transact(
-                "unlock",
-                gas_limit,
+                function_name="unlock",
+                startgas=safe_gas_limit(gas_limit, UNLOCK_TX_GAS_LIMIT),
                 channel_identifier=channel_identifier,
                 participant=participant,
                 partner=partner,
@@ -1386,33 +1432,75 @@ class TokenNetwork:
             self.client.poll(transaction_hash)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
-        transaction_executed = gas_limit is not None
-        if not transaction_executed or receipt_or_none:
-            if transaction_executed:
-                block = receipt_or_none["blockNumber"]
-            else:
-                block = checking_block
+            if receipt_or_none:
+                # Because the gas estimation succeeded it is known that:
+                # - The channel was settled.
+                # - The channel had pending locks on-chain for that participant.
+                # - The account had enough balance to pay for the gas (however
+                #   there is a race condition for multiple transactions #3890)
+
+                if receipt_or_none["cumulativeGasUsed"] == gas_limit:
+                    msg = (
+                        "update transfer failed and all gas was used. Estimate gas "
+                        "may have underestimated update transfer, or succeeded even "
+                        "though an assert is triggered, or the smart contract code "
+                        "has an conditional assert."
+                    )
+                    raise RaidenUnrecoverableError(msg)
+
+                # Query the current state to check for transaction races
+                unlock_end_details = self._detail_participant(
+                    channel_identifier=channel_identifier,
+                    participant=partner,
+                    partner=self.node_address,
+                    block_identifier=given_block_identifier,
+                )
+
+                is_unlock_done = unlock_end_details.locksroot == EMPTY_MERKLE_ROOT
+                if is_unlock_done:
+                    raise RaidenRecoverableError("The merkle tree is already unlocked ")
+
+                raise RaidenUnrecoverableError("Unlocked failed for an unknown reason")
+        else:
+            # The transaction would have failed if sent, figure out why.
+
+            # The latest block can not be used reliably because of reorgs,
+            # therefore every call using this block has to handle pruned data.
+            failed_at = self.proxy.jsonrpc_client.get_block("latest")
+            failed_at_blockhash = encode_hex(failed_at["hash"])
+            failed_at_blocknumber = failed_at["number"]
 
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
                 transaction_name="unlock",
-                transaction_executed=transaction_executed,
+                transaction_executed=False,
                 required_gas=UNLOCK_TX_GAS_LIMIT,
-                block_identifier=block,
+                block_identifier=failed_at_blocknumber,
             )
-            channel_settled = self.channel_is_settled(
-                participant1=participant,
+            detail = self._detail_channel(
+                participant1=self.node_address,
                 participant2=partner,
-                block_identifier=block,
+                block_identifier=given_block_identifier,
                 channel_identifier=channel_identifier,
             )
-            msg = ""
-            if channel_settled is False:
-                msg = "Channel is not in a settled state"
+            unlock_end_details = self._detail_participant(
+                channel_identifier=channel_identifier,
+                participant=partner,
+                partner=self.node_address,
+                block_identifier=failed_at_blockhash,
+            )
 
-            error_msg = f"{error_prefix}. {msg}"
+            if detail.state < ChannelState.SETTLED:
+                msg = (
+                    f"cannot call unlock on a channel that has not been settled yet. "
+                    f"current_state={detail.state}"
+                )
+                raise RaidenUnrecoverableError(msg)
 
-            log.critical(error_msg, **log_details)
-            raise RaidenUnrecoverableError(error_msg)
+            is_unlock_done = unlock_end_details.locksroot == EMPTY_MERKLE_ROOT
+            if is_unlock_done:
+                raise RaidenRecoverableError("The merkle tree is already unlocked ")
+
+            raise RaidenUnrecoverableError("unlock failed for an unknown reason")
 
         log.info("unlock successful", **log_details)
 
