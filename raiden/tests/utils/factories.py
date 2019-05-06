@@ -1,6 +1,7 @@
 # pylint: disable=too-many-arguments
 import random
 import string
+from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 
 from eth_utils import to_checksum_address

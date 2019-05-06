@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+
 from raiden.transfer.architecture import State
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import (
@@ -5,12 +7,7 @@ from raiden.transfer.mediated_transfer.state import (
     MediatorTransferState,
     TargetTransferState,
 )
-from raiden.utils.typing import TYPE_CHECKING, ChannelID, TokenNetworkID
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass, field
-else:
-    from raiden.storage.serialization import dataclass, field
+from raiden.utils.typing import ChannelID, TokenNetworkID
 
 
 @dataclass

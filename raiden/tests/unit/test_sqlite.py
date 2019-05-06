@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from raiden.messages import Lock
-from raiden.storage.serialize import JSONSerializer
+from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.events import (

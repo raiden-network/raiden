@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 from raiden.constants import RAIDEN_DB_VERSION, SQLITE_MIN_REQUIRED_VERSION
 from raiden.exceptions import InvalidDBData, InvalidNumberInput
-from raiden.storage.serialize import SerializationBase
+from raiden.storage.serialization import SerializationBase
 from raiden.storage.utils import DB_SCRIPT_CREATE_TABLES, TimestampedEvent
 from raiden.utils import get_system_spec
 from raiden.utils.typing import Any, Dict, Iterator, List, NamedTuple, Optional, Tuple, Union

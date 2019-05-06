@@ -1,4 +1,6 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from dataclasses import dataclass, field
+
 from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -8,7 +10,6 @@ from raiden.transfer.state import BalanceProofSignedState, RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils import sha3
 from raiden.utils.typing import (
-    TYPE_CHECKING,
     Address,
     BlockExpiration,
     List,
@@ -18,11 +19,6 @@ from raiden.utils.typing import (
     Secret,
     SecretHash,
 )
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass, field
-else:
-    from raiden.storage.serialization import dataclass, field
 
 
 # Note: The init states must contain all the required data for trying doing
