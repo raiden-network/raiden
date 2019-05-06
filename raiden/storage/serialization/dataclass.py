@@ -9,7 +9,7 @@ from dataclasses import (  # noqa
     replace,
 )
 
-from dataclasses_json import dataclass_json
+# from dataclasses_json import dataclass_json
 
 # pylint: disable=unused-import
 import raiden.storage.serialization.types  # noqa # isort:skip

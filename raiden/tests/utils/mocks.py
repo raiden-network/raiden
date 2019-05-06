@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 
 import requests
 
-from raiden.storage.serialize import JSONSerializer
+from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.wal import WriteAheadLog
 from raiden.tests.utils import factories

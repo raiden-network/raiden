@@ -2,6 +2,7 @@ import pytest
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.messages import LockedTransfer, RefundTransfer
+from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.utils.signer import LocalSigner
 

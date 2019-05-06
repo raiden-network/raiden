@@ -1,12 +1,12 @@
 import os
 import sqlite3
+from dataclasses import dataclass, field
 
 import pytest
 
 from raiden.constants import RAIDEN_DB_VERSION
 from raiden.exceptions import InvalidDBData
-from raiden.storage.serialization import dataclass, field
-from raiden.storage.serialize import JSONSerializer
+from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage
 from raiden.storage.utils import TimestampedEvent
 from raiden.storage.wal import WriteAheadLog, restore_to_state_change
