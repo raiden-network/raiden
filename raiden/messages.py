@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import MISSING, dataclass, field
 from operator import attrgetter
 
 from cachetools import LRUCache, cached
@@ -245,13 +245,6 @@ class Message:
         raise NotImplementedError("Method needs to be implemented in a subclass.")
 
     def pack(self, packed) -> None:
-        raise NotImplementedError("Method needs to be implemented in a subclass.")
-
-    def to_dict(self):
-        raise NotImplementedError("Method needs to be implemented in a subclass.")
-
-    @classmethod
-    def from_dict(cls, data):
         raise NotImplementedError("Method needs to be implemented in a subclass.")
 
 
@@ -1052,7 +1045,7 @@ class LockedTransfer(LockedTransferBase):
 
     target: TargetAddress
     initiator: InitiatorAddress
-    fee: int = 0
+    fee: int
 
     def __post_init__(self):
         if len(self.target) != 20:
@@ -1382,6 +1375,7 @@ class LockExpired(EnvelopeMessage):
             message_identifier=event.message_identifier,
             recipient=event.recipient,
             secrethash=event.secrethash,
+            signature=EMPTY_SIGNATURE,
         )
 
     def __repr__(self):

@@ -1,3 +1,4 @@
+from raiden.constants import EMPTY_SIGNATURE
 from raiden.messages import Processed
 from raiden.tests.utils import factories
 from raiden.transfer.events import (
@@ -78,9 +79,9 @@ def test_message_operators():
     message_identifier = 10
     message_identifier2 = 11
 
-    a = Processed(message_identifier=message_identifier)
-    b = Processed(message_identifier=message_identifier)
-    c = Processed(message_identifier=message_identifier2)
+    a = Processed(message_identifier=message_identifier, signature=EMPTY_SIGNATURE)
+    b = Processed(message_identifier=message_identifier, signature=EMPTY_SIGNATURE)
+    c = Processed(message_identifier=message_identifier2, signature=EMPTY_SIGNATURE)
 
     # pylint: disable=unneeded-not
     assert a == b

@@ -164,7 +164,7 @@ class MediationPairState(State):
     payee_address: Address
     payee_transfer: LockedTransferUnsignedState
     payer_state: str = field(init=False, default="payer_pending")
-    payee_state: str = field(init=False, default="payer_pending")
+    payee_state: str = field(init=False, default="payee_pending")
     # payee_pending:
     #   Initial state.
     #

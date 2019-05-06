@@ -612,7 +612,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     params["token_network_address"] = canonical_identifier.token_network_address
     if params["locksroot"] == EMPTY_MERKLE_ROOT:
         params["locksroot"] = lock.lockhash
-
+    params["fee"] = 0
     locked_transfer = LockedTransfer(lock=lock, **params, signature=Signature(b""))
     locked_transfer.sign(signer)
 
