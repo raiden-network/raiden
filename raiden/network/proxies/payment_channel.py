@@ -24,13 +24,13 @@ from raiden_contracts.contract_manager import ContractManager
 
 class PaymentChannel:
     def __init__(
-            self,
-            token_network: TokenNetwork,
-            channel_identifier: ChannelID,
-            contract_manager: ContractManager,
+        self,
+        token_network: TokenNetwork,
+        channel_identifier: ChannelID,
+        contract_manager: ContractManager,
     ):
         if channel_identifier <= 0 or channel_identifier > UINT256_MAX:
-            raise ValueError(f'channel_identifier {channel_identifier} is not a uint256')
+            raise ValueError(f"channel_identifier {channel_identifier} is not a uint256")
 
         # FIXME: Issue #3958
         from_block = GENESIS_BLOCK_NUMBER
@@ -38,7 +38,7 @@ class PaymentChannel:
         # For this check it is perfectly fine to use a `latest` block number.
         # If the channel happened to be closed, even if the chanel is already
         # closed/settled.
-        to_block = 'latest'
+        to_block = "latest"
 
         filter_args = get_filter_args_for_specific_event_from_channel(
             token_network_address=token_network.address,
@@ -51,17 +51,14 @@ class PaymentChannel:
 
         events = token_network.proxy.contract.web3.eth.getLogs(filter_args)
         if not len(events) > 0:
-            raise ValueError('Channel is non-existing.')
+            raise ValueError("Channel is non-existing.")
 
-        event = decode_event(
-            contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            events[-1],
-        )
-        participant1 = Address(decode_hex(event['args']['participant1']))
-        participant2 = Address(decode_hex(event['args']['participant2']))
+        event = decode_event(contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1])
+        participant1 = Address(decode_hex(event["args"]["participant1"]))
+        participant2 = Address(decode_hex(event["args"]["participant2"]))
 
         if token_network.node_address not in (participant1, participant2):
-            raise ValueError('One participant must be the node address')
+            raise ValueError("One participant must be the node address")
 
         if token_network.node_address == participant2:
             participant1, participant2 = participant2, participant1
@@ -99,14 +96,13 @@ class PaymentChannel:
         )
 
         events = self.token_network.proxy.contract.web3.eth.getLogs(filter_args)
-        assert len(events) > 0, 'No matching ChannelOpen event found.'
+        assert len(events) > 0, "No matching ChannelOpen event found."
 
         # we want the latest event here, there might have been multiple channels
         event = decode_event(
-            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            events[-1],
+            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[-1]
         )
-        return event['args']['settle_timeout']
+        return event["args"]["settle_timeout"]
 
     def close_block_number(self) -> Optional[int]:
         """ Returns the channel's closed block number. """
@@ -126,10 +122,9 @@ class PaymentChannel:
 
         assert len(events) == 1
         event = decode_event(
-            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK),
-            events[0],
+            self.contract_manager.get_contract_abi(CONTRACT_TOKEN_NETWORK), events[0]
         )
-        return event['blockNumber']
+        return event["blockNumber"]
 
     def opened(self, block_identifier: BlockSpecification) -> bool:
         """ Returns if the channel is opened. """
@@ -176,12 +171,12 @@ class PaymentChannel:
         )
 
     def close(
-            self,
-            nonce: Nonce,
-            balance_hash: BalanceHash,
-            additional_hash: AdditionalHash,
-            signature: Signature,
-            block_identifier: BlockSpecification,
+        self,
+        nonce: Nonce,
+        balance_hash: BalanceHash,
+        additional_hash: AdditionalHash,
+        signature: Signature,
+        block_identifier: BlockSpecification,
     ):
         """ Closes the channel using the provided balance proof. """
         self.token_network.close(
@@ -195,13 +190,13 @@ class PaymentChannel:
         )
 
     def update_transfer(
-            self,
-            nonce: Nonce,
-            balance_hash: BalanceHash,
-            additional_hash: AdditionalHash,
-            partner_signature: Signature,
-            signature: Signature,
-            block_identifier: BlockSpecification,
+        self,
+        nonce: Nonce,
+        balance_hash: BalanceHash,
+        additional_hash: AdditionalHash,
+        partner_signature: Signature,
+        signature: Signature,
+        block_identifier: BlockSpecification,
     ):
         """ Updates the channel using the provided balance proof. """
         self.token_network.update_transfer(
@@ -216,10 +211,10 @@ class PaymentChannel:
         )
 
     def unlock(
-            self,
-            merkle_tree_leaves: Optional[MerkleTreeLeaves],
-            participant: Address,
-            partner: Address,
+        self,
+        merkle_tree_leaves: Optional[MerkleTreeLeaves],
+        participant: Address,
+        partner: Address,
     ):
         self.token_network.unlock(
             channel_identifier=self.channel_identifier,
@@ -229,14 +224,14 @@ class PaymentChannel:
         )
 
     def settle(
-            self,
-            transferred_amount: TokenAmount,
-            locked_amount: TokenAmount,
-            locksroot: Locksroot,
-            partner_transferred_amount: TokenAmount,
-            partner_locked_amount: TokenAmount,
-            partner_locksroot: Locksroot,
-            block_identifier: BlockSpecification,
+        self,
+        transferred_amount: TokenAmount,
+        locked_amount: TokenAmount,
+        locksroot: Locksroot,
+        partner_transferred_amount: TokenAmount,
+        partner_locked_amount: TokenAmount,
+        partner_locksroot: Locksroot,
+        block_identifier: BlockSpecification,
     ):
         """ Settles the channel. """
         self.token_network.settle(
@@ -252,15 +247,10 @@ class PaymentChannel:
         )
 
     def all_events_filter(
-            self,
-            from_block: BlockSpecification = None,
-            to_block: BlockSpecification = None,
+        self, from_block: BlockSpecification = None, to_block: BlockSpecification = None
     ) -> Filter:
 
-        channel_topics = [
-            None,  # event topic is any
-            f'0x{self.channel_identifier:064x}',
-        ]
+        channel_topics = [None, f"0x{self.channel_identifier:064x}"]  # event topic is any
 
         # This will match the events:
         # ChannelOpened, ChannelNewDeposit, ChannelWithdraw, ChannelClosed,

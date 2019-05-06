@@ -2,18 +2,18 @@ from astroid.exceptions import InferenceError
 from pylint.checkers import BaseChecker
 from pylint.interfaces import IAstroidChecker
 
-JOINALL_ID = 'gevent-joinall'
+JOINALL_ID = "gevent-joinall"
 JOINALL_MSG = (
-    'First argument of joinall must have type set to avoid deadlocks. NOTE: set '
-    'comprehensions are false positives, use `set(<generator>)` instead.'
+    "First argument of joinall must have type set to avoid deadlocks. NOTE: set "
+    "comprehensions are false positives, use `set(<generator>)` instead."
 )
 
 
 def is_joinall(inferred_func):
     return (
-        inferred_func.name == 'joinall' and
-        inferred_func.callable() and
-        inferred_func.root().name.startswith('gevent')
+        inferred_func.name == "joinall"
+        and inferred_func.callable()
+        and inferred_func.root().name.startswith("gevent")
     )
 
 
@@ -28,15 +28,9 @@ def register(linter):
 class GeventWaitall(BaseChecker):
     __implements__ = IAstroidChecker
 
-    name = 'gevent'
+    name = "gevent"
     priority = -1
-    msgs = {
-        'E6491': (
-            JOINALL_MSG,
-            JOINALL_ID,
-            'Waiting with joinall on a non set is an error.',
-        ),
-    }
+    msgs = {"E6491": (JOINALL_MSG, JOINALL_ID, "Waiting with joinall on a non set is an error.")}
 
     def visit_call(self, node):
         """Called on expressions of the form `expr()`, where `expr` is a simple
@@ -62,7 +56,7 @@ class GeventWaitall(BaseChecker):
             if is_joinall(inferred_func):
 
                 is_every_value_a_set = all(
-                    inferred_first_arg.pytype() == 'builtins.set'
+                    inferred_first_arg.pytype() == "builtins.set"
                     for inferred_first_arg in node.args[0].infer()
                 )
                 if not is_every_value_a_set:

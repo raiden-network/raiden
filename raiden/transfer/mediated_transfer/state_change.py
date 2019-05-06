@@ -41,43 +41,33 @@ class ActionInitInitiator(StateChange):
     """
 
     def __init__(
-            self,
-            transfer_description: TransferDescriptionWithSecretState,
-            routes: List[RouteState],
+        self, transfer_description: TransferDescriptionWithSecretState, routes: List[RouteState]
     ) -> None:
         if not isinstance(transfer_description, TransferDescriptionWithSecretState):
-            raise ValueError('transfer must be an TransferDescriptionWithSecretState instance.')
+            raise ValueError("transfer must be an TransferDescriptionWithSecretState instance.")
 
         self.transfer = transfer_description
         self.routes = routes
 
     def __repr__(self):
-        return '<ActionInitInitiator transfer:{}>'.format(
-            self.transfer,
-        )
+        return "<ActionInitInitiator transfer:{}>".format(self.transfer)
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ActionInitInitiator) and
-            self.transfer == other.transfer and
-            self.routes == other.routes
+            isinstance(other, ActionInitInitiator)
+            and self.transfer == other.transfer
+            and self.routes == other.routes
         )
 
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            'transfer': self.transfer,
-            'routes': self.routes,
-        }
+        return {"transfer": self.transfer, "routes": self.routes}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ActionInitInitiator':
-        return cls(
-            transfer_description=data['transfer'],
-            routes=data['routes'],
-        )
+    def from_dict(cls, data: Dict[str, Any]) -> "ActionInitInitiator":
+        return cls(transfer_description=data["transfer"], routes=data["routes"])
 
 
 class ActionInitMediator(BalanceProofStateChange):
@@ -90,17 +80,17 @@ class ActionInitMediator(BalanceProofStateChange):
     """
 
     def __init__(
-            self,
-            routes: List[RouteState],
-            from_route: RouteState,
-            from_transfer: LockedTransferSignedState,
+        self,
+        routes: List[RouteState],
+        from_route: RouteState,
+        from_transfer: LockedTransferSignedState,
     ) -> None:
 
         if not isinstance(from_route, RouteState):
-            raise ValueError('from_route must be a RouteState instance')
+            raise ValueError("from_route must be a RouteState instance")
 
         if not isinstance(from_transfer, LockedTransferSignedState):
-            raise ValueError('from_transfer must be a LockedTransferSignedState instance')
+            raise ValueError("from_transfer must be a LockedTransferSignedState instance")
 
         super().__init__(from_transfer.balance_proof)
         self.routes = routes
@@ -108,17 +98,16 @@ class ActionInitMediator(BalanceProofStateChange):
         self.from_transfer = from_transfer
 
     def __repr__(self):
-        return '<ActionInitMediator from_route:{} from_transfer:{}>'.format(
-            self.from_route,
-            self.from_transfer,
+        return "<ActionInitMediator from_route:{} from_transfer:{}>".format(
+            self.from_route, self.from_transfer
         )
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ActionInitMediator) and
-            self.routes == other.routes and
-            self.from_route == other.from_route and
-            self.from_transfer == other.from_transfer
+            isinstance(other, ActionInitMediator)
+            and self.routes == other.routes
+            and self.from_route == other.from_route
+            and self.from_transfer == other.from_transfer
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -126,18 +115,18 @@ class ActionInitMediator(BalanceProofStateChange):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'routes': self.routes,
-            'from_route': self.from_route,
-            'from_transfer': self.from_transfer,
-            'balance_proof': self.balance_proof,
+            "routes": self.routes,
+            "from_route": self.from_route,
+            "from_transfer": self.from_transfer,
+            "balance_proof": self.balance_proof,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ActionInitMediator':
+    def from_dict(cls, data: Dict[str, Any]) -> "ActionInitMediator":
         return cls(
-            routes=data['routes'],
-            from_route=data['from_route'],
-            from_transfer=data['from_transfer'],
+            routes=data["routes"],
+            from_route=data["from_route"],
+            from_transfer=data["from_transfer"],
         )
 
 
@@ -149,32 +138,25 @@ class ActionInitTarget(BalanceProofStateChange):
         transfer: The payee transfer.
     """
 
-    def __init__(
-            self,
-            route: RouteState,
-            transfer: LockedTransferSignedState,
-    ) -> None:
+    def __init__(self, route: RouteState, transfer: LockedTransferSignedState) -> None:
         if not isinstance(route, RouteState):
-            raise ValueError('route must be a RouteState instance')
+            raise ValueError("route must be a RouteState instance")
 
         if not isinstance(transfer, LockedTransferSignedState):
-            raise ValueError('transfer must be a LockedTransferSignedState instance')
+            raise ValueError("transfer must be a LockedTransferSignedState instance")
 
         super().__init__(transfer.balance_proof)
         self.route = route
         self.transfer = transfer
 
     def __repr__(self):
-        return '<ActionInitTarget route:{} transfer:{}>'.format(
-            self.route,
-            self.transfer,
-        )
+        return "<ActionInitTarget route:{} transfer:{}>".format(self.route, self.transfer)
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ActionInitTarget) and
-            self.route == other.route and
-            self.transfer == other.transfer
+            isinstance(other, ActionInitTarget)
+            and self.route == other.route
+            and self.transfer == other.transfer
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -182,44 +164,40 @@ class ActionInitTarget(BalanceProofStateChange):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'route': self.route,
-            'transfer': self.transfer,
-            'balance_proof': self.balance_proof,
+            "route": self.route,
+            "transfer": self.transfer,
+            "balance_proof": self.balance_proof,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ActionInitTarget':
-        return cls(
-            route=data['route'],
-            transfer=data['transfer'],
-        )
+    def from_dict(cls, data: Dict[str, Any]) -> "ActionInitTarget":
+        return cls(route=data["route"], transfer=data["transfer"])
 
 
 class ReceiveLockExpired(BalanceProofStateChange):
     """ A LockExpired message received. """
 
     def __init__(
-            self,
-            balance_proof: BalanceProofSignedState,
-            secrethash: SecretHash,
-            message_identifier: MessageID,
+        self,
+        balance_proof: BalanceProofSignedState,
+        secrethash: SecretHash,
+        message_identifier: MessageID,
     ) -> None:
         super().__init__(balance_proof)
         self.secrethash = secrethash
         self.message_identifier = message_identifier
 
     def __repr__(self):
-        return '<ReceiveLockExpired sender:{} balance_proof:{}>'.format(
-            pex(self.sender),
-            self.balance_proof,
+        return "<ReceiveLockExpired sender:{} balance_proof:{}>".format(
+            pex(self.sender), self.balance_proof
         )
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ReceiveLockExpired) and
-            self.secrethash == other.secrethash and
-            self.message_identifier == other.message_identifier and
-            super().__eq__(other)
+            isinstance(other, ReceiveLockExpired)
+            and self.secrethash == other.secrethash
+            and self.message_identifier == other.message_identifier
+            and super().__eq__(other)
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -227,17 +205,17 @@ class ReceiveLockExpired(BalanceProofStateChange):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'balance_proof': self.balance_proof,
-            'secrethash': serialize_bytes(self.secrethash),
-            'message_identifier': str(self.message_identifier),
+            "balance_proof": self.balance_proof,
+            "secrethash": serialize_bytes(self.secrethash),
+            "message_identifier": str(self.message_identifier),
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ReceiveLockExpired':
+    def from_dict(cls, data: Dict[str, Any]) -> "ReceiveLockExpired":
         return cls(
-            balance_proof=data['balance_proof'],
-            secrethash=SecretHash(deserialize_bytes(data['secrethash'])),
-            message_identifier=MessageID(int(data['message_identifier'])),
+            balance_proof=data["balance_proof"],
+            secrethash=SecretHash(deserialize_bytes(data["secrethash"])),
+            message_identifier=MessageID(int(data["message_identifier"])),
         )
 
 
@@ -245,12 +223,12 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     """ A SecretRequest message received. """
 
     def __init__(
-            self,
-            payment_identifier: PaymentID,
-            amount: PaymentAmount,
-            expiration: BlockExpiration,
-            secrethash: SecretHash,
-            sender: Address,
+        self,
+        payment_identifier: PaymentID,
+        amount: PaymentAmount,
+        expiration: BlockExpiration,
+        secrethash: SecretHash,
+        sender: Address,
     ) -> None:
         super().__init__(sender)
         self.payment_identifier = payment_identifier
@@ -260,22 +238,19 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
         self.revealsecret = None
 
     def __repr__(self):
-        return '<ReceiveSecretRequest paymentid:{} amount:{} secrethash:{} sender:{}>'.format(
-            self.payment_identifier,
-            self.amount,
-            pex(self.secrethash),
-            pex(self.sender),
+        return "<ReceiveSecretRequest paymentid:{} amount:{} secrethash:{} sender:{}>".format(
+            self.payment_identifier, self.amount, pex(self.secrethash), pex(self.sender)
         )
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ReceiveSecretRequest) and
-            self.payment_identifier == other.payment_identifier and
-            self.amount == other.amount and
-            self.secrethash == other.secrethash and
-            self.sender == other.sender and
-            self.revealsecret == other.revealsecret and
-            super().__eq__(other)
+            isinstance(other, ReceiveSecretRequest)
+            and self.payment_identifier == other.payment_identifier
+            and self.amount == other.amount
+            and self.secrethash == other.secrethash
+            and self.sender == other.sender
+            and self.revealsecret == other.revealsecret
+            and super().__eq__(other)
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -283,35 +258,31 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'payment_identifier': str(self.payment_identifier),
-            'amount': str(self.amount),
-            'expiration': str(self.expiration),
-            'secrethash': serialize_bytes(self.secrethash),
-            'sender': to_checksum_address(self.sender),
-            'revealsecret': self.revealsecret,
+            "payment_identifier": str(self.payment_identifier),
+            "amount": str(self.amount),
+            "expiration": str(self.expiration),
+            "secrethash": serialize_bytes(self.secrethash),
+            "sender": to_checksum_address(self.sender),
+            "revealsecret": self.revealsecret,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ReceiveSecretRequest':
+    def from_dict(cls, data: Dict[str, Any]) -> "ReceiveSecretRequest":
         instance = cls(
-            payment_identifier=PaymentID(int(data['payment_identifier'])),
-            amount=PaymentAmount(int(data['amount'])),
-            expiration=BlockExpiration(int(data['expiration'])),
-            secrethash=SecretHash(deserialize_bytes(data['secrethash'])),
-            sender=to_canonical_address(data['sender']),
+            payment_identifier=PaymentID(int(data["payment_identifier"])),
+            amount=PaymentAmount(int(data["amount"])),
+            expiration=BlockExpiration(int(data["expiration"])),
+            secrethash=SecretHash(deserialize_bytes(data["secrethash"])),
+            sender=to_canonical_address(data["sender"]),
         )
-        instance.revealsecret = data['revealsecret']
+        instance.revealsecret = data["revealsecret"]
         return instance
 
 
 class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     """ A SecretReveal message received. """
 
-    def __init__(
-            self,
-            secret: Secret,
-            sender: Address,
-    ) -> None:
+    def __init__(self, secret: Secret, sender: Address) -> None:
         super().__init__(sender)
         secrethash = sha3(secret)
 
@@ -319,17 +290,16 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
         self.secrethash = secrethash
 
     def __repr__(self):
-        return '<ReceiveSecretReveal secrethash:{} sender:{}>'.format(
-            pex(self.secrethash),
-            pex(self.sender),
+        return "<ReceiveSecretReveal secrethash:{} sender:{}>".format(
+            pex(self.secrethash), pex(self.sender)
         )
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ReceiveSecretReveal) and
-            self.secret == other.secret and
-            self.secrethash == other.secrethash and
-            super().__eq__(other)
+            isinstance(other, ReceiveSecretReveal)
+            and self.secret == other.secret
+            and self.secrethash == other.secrethash
+            and super().__eq__(other)
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -337,18 +307,18 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'secret': serialize_bytes(self.secret),
-            'secrethash': serialize_bytes(self.secrethash),
-            'sender': to_checksum_address(self.sender),
+            "secret": serialize_bytes(self.secret),
+            "secrethash": serialize_bytes(self.secrethash),
+            "sender": to_checksum_address(self.sender),
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ReceiveSecretReveal':
+    def from_dict(cls, data: Dict[str, Any]) -> "ReceiveSecretReveal":
         instance = cls(
-            secret=Secret(deserialize_bytes(data['secret'])),
-            sender=to_canonical_address(data['sender']),
+            secret=Secret(deserialize_bytes(data["secret"])),
+            sender=to_canonical_address(data["sender"]),
         )
-        instance.secrethash = deserialize_bytes(data['secrethash'])
+        instance.secrethash = deserialize_bytes(data["secrethash"])
         return instance
 
 
@@ -358,13 +328,10 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     """
 
     def __init__(
-            self,
-            routes: List[RouteState],
-            transfer: LockedTransferSignedState,
-            secret: Secret,
+        self, routes: List[RouteState], transfer: LockedTransferSignedState, secret: Secret
     ) -> None:
         if not isinstance(transfer, LockedTransferSignedState):
-            raise ValueError('transfer must be an instance of LockedTransferSignedState')
+            raise ValueError("transfer must be an instance of LockedTransferSignedState")
 
         secrethash = sha3(secret)
 
@@ -375,20 +342,19 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
         self.secret = secret
 
     def __repr__(self):
-        return '<ReceiveTransferRefundCancelRoute sender:{} transfer:{}>'.format(
-            pex(self.sender),
-            self.transfer,
+        return "<ReceiveTransferRefundCancelRoute sender:{} transfer:{}>".format(
+            pex(self.sender), self.transfer
         )
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ReceiveTransferRefundCancelRoute) and
-            self.sender == other.sender and
-            self.transfer == other.transfer and
-            self.routes == other.routes and
-            self.secret == other.secret and
-            self.secrethash == other.secrethash and
-            super().__eq__(other)
+            isinstance(other, ReceiveTransferRefundCancelRoute)
+            and self.sender == other.sender
+            and self.transfer == other.transfer
+            and self.routes == other.routes
+            and self.secret == other.secret
+            and self.secrethash == other.secrethash
+            and super().__eq__(other)
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -396,18 +362,18 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'secret': serialize_bytes(self.secret),
-            'routes': self.routes,
-            'transfer': self.transfer,
-            'balance_proof': self.balance_proof,
+            "secret": serialize_bytes(self.secret),
+            "routes": self.routes,
+            "transfer": self.transfer,
+            "balance_proof": self.balance_proof,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ReceiveTransferRefundCancelRoute':
+    def from_dict(cls, data: Dict[str, Any]) -> "ReceiveTransferRefundCancelRoute":
         instance = cls(
-            routes=data['routes'],
-            transfer=data['transfer'],
-            secret=Secret(deserialize_bytes(data['secret'])),
+            routes=data["routes"],
+            transfer=data["transfer"],
+            secret=Secret(deserialize_bytes(data["secret"])),
         )
         return instance
 
@@ -415,30 +381,25 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
 class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 
-    def __init__(
-            self,
-            transfer: LockedTransferSignedState,
-            routes: List[RouteState],
-    ) -> None:
+    def __init__(self, transfer: LockedTransferSignedState, routes: List[RouteState]) -> None:
         if not isinstance(transfer, LockedTransferSignedState):
-            raise ValueError('transfer must be an instance of LockedTransferSignedState')
+            raise ValueError("transfer must be an instance of LockedTransferSignedState")
 
         super().__init__(transfer.balance_proof)
         self.transfer = transfer
         self.routes = routes
 
     def __repr__(self):
-        return '<ReceiveTransferRefund sender:{} transfer:{}>'.format(
-            pex(self.sender),
-            self.transfer,
+        return "<ReceiveTransferRefund sender:{} transfer:{}>".format(
+            pex(self.sender), self.transfer
         )
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ReceiveTransferRefund) and
-            self.transfer == other.transfer and
-            self.routes == other.routes and
-            super().__eq__(other)
+            isinstance(other, ReceiveTransferRefund)
+            and self.transfer == other.transfer
+            and self.routes == other.routes
+            and super().__eq__(other)
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -446,15 +407,12 @@ class ReceiveTransferRefund(BalanceProofStateChange):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
-            'routes': self.routes,
-            'transfer': self.transfer,
-            'balance_proof': self.balance_proof,
+            "routes": self.routes,
+            "transfer": self.transfer,
+            "balance_proof": self.balance_proof,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'ReceiveTransferRefund':
-        instance = cls(
-            routes=data['routes'],
-            transfer=data['transfer'],
-        )
+    def from_dict(cls, data: Dict[str, Any]) -> "ReceiveTransferRefund":
+        instance = cls(routes=data["routes"], transfer=data["transfer"])
         return instance

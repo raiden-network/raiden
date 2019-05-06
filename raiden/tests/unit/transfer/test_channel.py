@@ -17,7 +17,7 @@ def _channel_and_transfer(merkletree_width):
     partner_model, privkey = create_model(700, merkletree_width)
     reverse_channel_state = create_channel_from_models(partner_model, our_model)
 
-    lock_secret = sha3(b'some secret')
+    lock_secret = sha3(b"some secret")
     lock = HashTimeLockState(30, 10, sha3(lock_secret))
 
     mediated_transfer = make_receive_transfer_mediated(

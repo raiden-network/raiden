@@ -9,16 +9,16 @@ def _get_gevent_imports():
 
     imports = []
     imports.extend(
-        'gevent.{}'.format(
-            str(module.relative_to(package_path)).replace('.py', '').replace('/', '.'),
+        "gevent.{}".format(
+            str(module.relative_to(package_path)).replace(".py", "").replace("/", ".")
         )
-        for module in package_path.glob('**/*.py')
+        for module in package_path.glob("**/*.py")
     )
     imports.extend(
-        'gevent.{}'.format(
-            str(module.relative_to(package_path)).partition('.')[0].replace('/', '.'),
+        "gevent.{}".format(
+            str(module.relative_to(package_path)).partition(".")[0].replace("/", ".")
         )
-        for module in package_path.glob('**/*.so')
+        for module in package_path.glob("**/*.so")
     )
 
     return imports

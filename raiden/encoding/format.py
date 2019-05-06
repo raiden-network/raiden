@@ -2,37 +2,23 @@ from collections import Counter, namedtuple
 
 from raiden.exceptions import InvalidProtocolMessage
 
-__all__ = ('Field', 'namedbuffer', 'buffer_for')
+__all__ = ("Field", "namedbuffer", "buffer_for")
 
 
-Field = namedtuple(
-    'Field',
-    ('name', 'size_bytes', 'format_string', 'encoder'),
-)
+Field = namedtuple("Field", ("name", "size_bytes", "format_string", "encoder"))
 
-Pad = namedtuple(
-    'Pad',
-    ('size_bytes', 'format_string'),
-)
+Pad = namedtuple("Pad", ("size_bytes", "format_string"))
 
 
 def make_field(name, size_bytes, format_string, encoder=None):
     if size_bytes < 0:
-        raise ValueError('negative size_bytes')
+        raise ValueError("negative size_bytes")
 
-    return Field(
-        name,
-        size_bytes,
-        format_string,
-        encoder,
-    )
+    return Field(name, size_bytes, format_string, encoder)
 
 
 def pad(bytes_):
-    return Pad(
-        bytes_,
-        '{}x'.format(bytes_),
-    )
+    return Pad(bytes_, "{}x".format(bytes_))
 
 
 def buffer_for(klass):
@@ -65,36 +51,29 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
     # pylint: disable=protected-access,unused-argument
 
     if not len(buffer_name):
-        raise ValueError('buffer_name is empty')
+        raise ValueError("buffer_name is empty")
 
     if not len(fields_spec):
-        raise ValueError('fields_spec is empty')
+        raise ValueError("fields_spec is empty")
 
-    fields = [
-        field
-        for field in fields_spec
-        if not isinstance(field, Pad)
-    ]
+    fields = [field for field in fields_spec if not isinstance(field, Pad)]
 
     if any(field.size_bytes < 0 for field in fields):
-        raise ValueError('negative size_bytes')
+        raise ValueError("negative size_bytes")
 
     if any(len(field.name) < 0 for field in fields):
-        raise ValueError('field missing name')
+        raise ValueError("field missing name")
 
-    names_fields = {
-        field.name: field
-        for field in fields
-    }
+    names_fields = {field.name: field for field in fields}
 
-    if 'data' in names_fields:
-        raise ValueError('data field shadowing underlying buffer')
+    if "data" in names_fields:
+        raise ValueError("data field shadowing underlying buffer")
 
     if any(count > 1 for count in Counter(field.name for field in fields).values()):
-        raise ValueError('repeated field name')
+        raise ValueError("repeated field name")
 
     # big endian format
-    fields_format = '>' + ''.join(field.format_string for field in fields_spec)
+    fields_format = ">" + "".join(field.format_string for field in fields_spec)
     size = sum(field.size_bytes for field in fields_spec)
     names_slices = compute_slices(fields_spec)
     sorted_names = sorted(names_fields.keys())
@@ -107,10 +86,10 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
     def __init__(self, data):
         if len(data) < size:
             raise InvalidProtocolMessage(
-                'data buffer has less than the expected size {}'.format(size),
+                "data buffer has less than the expected size {}".format(size)
             )
 
-        object.__setattr__(self, 'data', data)
+        object.__setattr__(self, "data", data)
 
     # Intentionally exposing only the attributes from the spec, since the idea
     # is for the instance to expose the underlying buffer as attributes
@@ -119,7 +98,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
             slice_ = names_slices[name]
             field = names_fields[name]
 
-            data = object.__getattribute__(self, 'data')
+            data = object.__getattribute__(self, "data")
             value = data[slice_]
 
             if field.encoder:
@@ -127,8 +106,8 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
 
             return value
 
-        if name == 'data':
-            return object.__getattribute__(self, 'data')
+        if name == "data":
+            return object.__getattribute__(self, "data")
 
         raise AttributeError
 
@@ -143,17 +122,16 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
 
             length = len(value)
             if length > field.size_bytes:
-                msg = 'value with length {length} for {attr} is too big'.format(
-                    length=length,
-                    attr=name,
+                msg = "value with length {length} for {attr} is too big".format(
+                    length=length, attr=name
                 )
                 raise ValueError(msg)
             elif length < field.size_bytes:
                 pad_size = field.size_bytes - length
-                pad_value = b'\x00' * pad_size
+                pad_value = b"\x00" * pad_size
                 value = pad_value + value
 
-            data = object.__getattribute__(self, 'data')
+            data = object.__getattribute__(self, "data")
             if isinstance(value, str):
                 value = value.encode()
             data[slice_] = value
@@ -161,7 +139,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
             super(self.__class__, self).__setattr__(name, value)
 
     def __repr__(self):
-        return '<{} [...]>'.format(buffer_name)
+        return "<{} [...]>".format(buffer_name)
 
     def __len__(self):
         return size
@@ -170,20 +148,19 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
         return sorted_names
 
     attributes = {
-        '__init__': __init__,
-        '__slots__': ('data',),
-        '__getattribute__': __getattribute__,
-        '__setattr__': __setattr__,
-        '__repr__': __repr__,
-        '__len__': __len__,
-        '__dir__': __dir__,
-
+        "__init__": __init__,
+        "__slots__": ("data",),
+        "__getattribute__": __getattribute__,
+        "__setattr__": __setattr__,
+        "__repr__": __repr__,
+        "__len__": __len__,
+        "__dir__": __dir__,
         # These are class attributes hidden from instance, i.e. must be
         # accessed through the class instance.
-        'fields_spec': fields_spec,
-        'format': fields_format,
-        'size': size,
-        'get_bytes_from': get_bytes_from,
+        "fields_spec": fields_spec,
+        "format": fields_format,
+        "size": size,
+        "get_bytes_from": get_bytes_from,
     }
 
     return type(buffer_name, (), attributes)

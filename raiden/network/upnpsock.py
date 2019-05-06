@@ -4,19 +4,16 @@ import miniupnpc
 import structlog
 
 MAX_PORT = 65535
-RAIDEN_IDENTIFICATOR = 'raiden-network udp service'
+RAIDEN_IDENTIFICATOR = "raiden-network udp service"
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
-NON_MAPPABLE = [
-    '127.0.0.1',
-    '0.0.0.0',
-]
+NON_MAPPABLE = ["127.0.0.1", "0.0.0.0"]
 
 
 def valid_mappable_ipv4(address):
     try:
-        address_uni = str(address, errors='ignore')
+        address_uni = str(address, errors="ignore")
     except TypeError:
         address_uni = address
 
@@ -26,7 +23,7 @@ def valid_mappable_ipv4(address):
     try:
         parsed = ipaddress.ip_address(address_uni)
     except ValueError:
-        log.debug('invalid IPv4 address', input=address)
+        log.debug("invalid IPv4 address", input=address)
         return False
     if parsed is not None and parsed.version == 4:
         return True
@@ -45,28 +42,28 @@ def connect():
     upnp.discoverdelay = 200
     providers = upnp.discover()
     if providers > 1:
-        log.debug('multiple upnp providers found', num_providers=providers)
+        log.debug("multiple upnp providers found", num_providers=providers)
     elif providers < 1:
-        log.error('no upnp providers found')
+        log.error("no upnp providers found")
         return None
 
     try:
         location = upnp.selectigd()
-        log.debug('connected', upnp=upnp)
+        log.debug("connected", upnp=upnp)
     except Exception as e:
-        log.error('Error when connecting to uPnP provider', exception_info=e)
+        log.error("Error when connecting to uPnP provider", exception_info=e)
         return None
 
     if not valid_mappable_ipv4(upnp.lanaddr):
-        log.error('could not query your lanaddr', reported=upnp.lanaddr)
+        log.error("could not query your lanaddr", reported=upnp.lanaddr)
         return None
     try:  # this can fail if router advertises uPnP incorrectly
         if not valid_mappable_ipv4(upnp.externalipaddress()):
-            log.error('could not query your externalipaddress', reported=upnp.externalipaddress())
+            log.error("could not query your externalipaddress", reported=upnp.externalipaddress())
             return None
         return upnp, location
     except Exception:
-        log.error('error when connecting with uPnP provider', location=location)
+        log.error("error when connecting with uPnP provider", location=location)
         return None
 
 
@@ -89,28 +86,25 @@ def open_port(upnp, internal_port, external_start_port=None):
 
     def register(internal, external):
         # test existing mappings
-        mapping = upnp.getspecificportmapping(external, 'UDP')
+        mapping = upnp.getspecificportmapping(external, "UDP")
         if mapping is not None:
             # FIXME: figure out semantics of the last two values
             lanaddr, internal_mapped, name, _, _ = mapping
 
             is_valid_mapping = (
-                lanaddr == upnp.lanaddr and
-                name == RAIDEN_IDENTIFICATOR and
-                internal_mapped == internal
-            )
-            is_not_our_mapping = (
-                internal_mapped != internal and
-                name != RAIDEN_IDENTIFICATOR
-            )
-            is_previous_mapping = (
-                internal_mapped != internal and
-                name == RAIDEN_IDENTIFICATOR and
                 lanaddr == upnp.lanaddr
+                and name == RAIDEN_IDENTIFICATOR
+                and internal_mapped == internal
+            )
+            is_not_our_mapping = internal_mapped != internal and name != RAIDEN_IDENTIFICATOR
+            is_previous_mapping = (
+                internal_mapped != internal
+                and name == RAIDEN_IDENTIFICATOR
+                and lanaddr == upnp.lanaddr
             )
             if is_valid_mapping:
                 log.debug(
-                    'keeping pre-existing portmapping',
+                    "keeping pre-existing portmapping",
                     internal=internal,
                     external=external,
                     lanaddr=lanaddr,
@@ -119,7 +113,7 @@ def open_port(upnp, internal_port, external_start_port=None):
             elif lanaddr != upnp.lanaddr:
                 # don't touch other people's mappings
                 log.debug(
-                    'ignoring existing mapping for other IP',
+                    "ignoring existing mapping for other IP",
                     internal=internal,
                     external=external,
                     other_ip=lanaddr,
@@ -127,41 +121,30 @@ def open_port(upnp, internal_port, external_start_port=None):
                 )
                 return False
             elif is_not_our_mapping:
-                log.debug(
-                    'ignoring existing mapping for other program',
-                    name=name,
-                )
+                log.debug("ignoring existing mapping for other program", name=name)
                 # some other program uses our port
                 return False
             elif is_previous_mapping:
                 # we ran before on a different internal port
-                log.debug('releasing previous port mapping')
-                upnp.deleteportmapping(external, 'UDP')
+                log.debug("releasing previous port mapping")
+                upnp.deleteportmapping(external, "UDP")
 
-        log.debug('trying to create new port mapping', internal=internal, external=external)
+        log.debug("trying to create new port mapping", internal=internal, external=external)
         return upnp.addportmapping(
-            external,
-            'UDP',
-            upnp.lanaddr,
-            internal,
-            RAIDEN_IDENTIFICATOR,
-            '',
+            external, "UDP", upnp.lanaddr, internal, RAIDEN_IDENTIFICATOR, ""
         )
 
     external_port = external_start_port
     success = register(internal_port, external_port)
     while not success and external_port <= MAX_PORT:
         external_port += 1
-        log.debug('trying', external=external_port)
+        log.debug("trying", external=external_port)
         success = register(internal_port, external_port)
 
     if success:
         return upnp.externalipaddress(), external_port
     else:
-        log.error(
-            'could not register a port-mapping',
-            location='FIXME',
-        )
+        log.error("could not register a port-mapping", location="FIXME")
         return False
 
     return False
@@ -176,19 +159,17 @@ def release_port(upnp, external_port):
     Returns:
         success (boolean): if the release was successful.
     """
-    mapping = upnp.getspecificportmapping(external_port, 'UDP')
+    mapping = upnp.getspecificportmapping(external_port, "UDP")
 
     if mapping is None:
-        log.error('could not find a port mapping', external=external_port)
+        log.error("could not find a port mapping", external=external_port)
         return False
     else:
-        log.debug('found existing port mapping', mapping=mapping)
+        log.debug("found existing port mapping", mapping=mapping)
 
-    if upnp.deleteportmapping(external_port, 'UDP'):
-        log.info('successfully released port mapping', external=external_port)
+    if upnp.deleteportmapping(external_port, "UDP"):
+        log.info("successfully released port mapping", external=external_port)
         return True
 
-    log.warning(
-        'could not release port mapping, check your router for stale mappings',
-    )
+    log.warning("could not release port mapping, check your router for stale mappings")
     return False

@@ -12,6 +12,7 @@ class Runnable:
     Allows subtasks to crash self, and bubble up the exception in the greenlet
     In the future, when proper restart is implemented, may be replaced by actual greenlet
     """
+
     greenlet: Greenlet = None
     args: Sequence = tuple()  # args for _run()
     kwargs: dict = dict()  # kwargs for _run()
@@ -21,7 +22,7 @@ class Runnable:
         self.kwargs = kwargs
 
         self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
-        self.greenlet.name = f'{self.__class__.__name__}|{self.greenlet.name}'
+        self.greenlet.name = f"{self.__class__.__name__}|{self.greenlet.name}"
 
     def start(self):
         """ Synchronously start task
@@ -30,15 +31,15 @@ class Runnable:
         Start-time exceptions may be raised
         """
         if self.greenlet:
-            raise RuntimeError(f'Greenlet {self.greenlet!r} already started')
+            raise RuntimeError(f"Greenlet {self.greenlet!r} already started")
         pristine = (
-            not self.greenlet.dead and
-            tuple(self.greenlet.args) == tuple(self.args) and
-            self.greenlet.kwargs == self.kwargs
+            not self.greenlet.dead
+            and tuple(self.greenlet.args) == tuple(self.args)
+            and self.greenlet.kwargs == self.kwargs
         )
         if not pristine:
             self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
-            self.greenlet.name = f'{self.__class__.__name__}|{self.greenlet.name}'
+            self.greenlet.name = f"{self.__class__.__name__}|{self.greenlet.name}"
         self.greenlet.start()
 
     def _run(self, *args, **kwargs):
@@ -61,7 +62,7 @@ class Runnable:
 
         Default callback re-raises the exception inside _run() """
         log.error(
-            'Runnable subtask died!',
+            "Runnable subtask died!",
             this=self,
             running=bool(self),
             subtask=subtask,

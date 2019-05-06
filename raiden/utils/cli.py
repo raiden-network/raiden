@@ -23,7 +23,7 @@ from raiden.exceptions import InvalidAddress
 from raiden.utils import address_checksum_and_decode
 from raiden_contracts.constants import NETWORKNAME_TO_ID
 
-LOG_CONFIG_OPTION_NAME = 'log_config'
+LOG_CONFIG_OPTION_NAME = "log_config"
 
 
 class HelpFormatter(click.HelpFormatter):
@@ -46,31 +46,29 @@ class HelpFormatter(click.HelpFormatter):
         if widths is None:
             widths = measure_table(rows)
         if len(widths) != 2:
-            raise TypeError('Expected two columns for definition list')
+            raise TypeError("Expected two columns for definition list")
 
         first_col = min(widths[0], col_max) + col_spacing
 
         for first, second in iter_rows(rows, len(widths)):
-            self.write('%*s%s' % (self.current_indent, '', first))
+            self.write("%*s%s" % (self.current_indent, "", first))
             if not second:
-                self.write('\n')
+                self.write("\n")
                 continue
             if term_len(first) <= first_col - col_spacing:
-                self.write(' ' * (first_col - term_len(first)))
+                self.write(" " * (first_col - term_len(first)))
             else:
-                self.write('\n')
-                self.write(' ' * (first_col + self.current_indent))
+                self.write("\n")
+                self.write(" " * (first_col + self.current_indent))
 
             text_width = max(self.width - first_col - 2, 10)
             lines = iter(wrap_text(second, text_width).splitlines())
             if lines:
-                self.write(next(lines) + '\n')
+                self.write(next(lines) + "\n")
                 for line in lines:
-                    self.write('%*s%s\n' % (
-                        first_col + self.current_indent, '', line,
-                    ))
+                    self.write("%*s%s\n" % (first_col + self.current_indent, "", line))
             else:
-                self.write('\n')
+                self.write("\n")
 
 
 class Context(click.Context):
@@ -108,19 +106,19 @@ class CustomContextMixin:
 
 class GroupableOption(click.Option):
     def __init__(
-            self,
-            param_decls=None,
-            show_default=False,
-            prompt=False,
-            confirmation_prompt=False,
-            hide_input=False,
-            is_flag=None,
-            flag_value=None,
-            multiple=False,
-            count=False,
-            allow_from_autoenv=True,
-            option_group=None,
-            **attrs,
+        self,
+        param_decls=None,
+        show_default=False,
+        prompt=False,
+        confirmation_prompt=False,
+        hide_input=False,
+        is_flag=None,
+        flag_value=None,
+        multiple=False,
+        count=False,
+        allow_from_autoenv=True,
+        option_group=None,
+        **attrs,
     ):
         super().__init__(
             param_decls,
@@ -141,16 +139,10 @@ class GroupableOption(click.Option):
 class GroupableOptionCommand(CustomContextMixin, click.Command):
     def format_options(self, ctx, formatter):
         def keyfunc(o):
-            value = getattr(o, 'option_group', None)
-            return value if value is not None else ''
+            value = getattr(o, "option_group", None)
+            return value if value is not None else ""
 
-        grouped_options = groupby(
-            sorted(
-                self.get_params(ctx),
-                key=keyfunc,
-            ),
-            key=keyfunc,
-        )
+        grouped_options = groupby(sorted(self.get_params(ctx), key=keyfunc), key=keyfunc)
 
         options = {}
         for option_group, params in grouped_options:
@@ -161,12 +153,12 @@ class GroupableOptionCommand(CustomContextMixin, click.Command):
 
         if options:
             widths_a, widths_b = list(
-                zip(*[measure_table(group_options) for group_options in options.values()]),
+                zip(*[measure_table(group_options) for group_options in options.values()])
             )
             widths = (max(widths_a), max(widths_b))
 
             for option_group, group_options in options.items():
-                with formatter.section(option_group if option_group else 'Options'):
+                with formatter.section(option_group if option_group else "Options"):
                     formatter.write_dl(group_options, widths=widths)
 
 
@@ -176,10 +168,10 @@ class GroupableOptionCommandGroup(CustomContextMixin, click.Group):
         self.format_commands(ctx, formatter)
 
     def command(self, *args, **kwargs):
-        return super().command(*args, **{'cls': GroupableOptionCommand, **kwargs})
+        return super().command(*args, **{"cls": GroupableOptionCommand, **kwargs})
 
     def group(self, *args, **kwargs):
-        return super().group(*args, **{'cls': self.__class__, **kwargs})
+        return super().group(*args, **{"cls": self.__class__, **kwargs})
 
 
 def command(name=None, cls=GroupableOptionCommand, **attrs):
@@ -187,11 +179,11 @@ def command(name=None, cls=GroupableOptionCommand, **attrs):
 
 
 def group(name=None, **attrs):
-    return click.group(name, **{'cls': GroupableOptionCommandGroup, **attrs})
+    return click.group(name, **{"cls": GroupableOptionCommandGroup, **attrs})
 
 
 def option(*args, **kwargs):
-    return click.option(*args, **{'cls': GroupableOption, **kwargs})
+    return click.option(*args, **{"cls": GroupableOption, **kwargs})
 
 
 def option_group(name: str, *options: List[Callable]):
@@ -199,7 +191,7 @@ def option_group(name: str, *options: List[Callable]):
         for option_ in reversed(options):
             for closure_cell in option_.__closure__:
                 if isinstance(closure_cell.cell_contents, dict):
-                    closure_cell.cell_contents['option_group'] = name
+                    closure_cell.cell_contents["option_group"] = name
                     break
             option_(f)
         return f
@@ -208,7 +200,7 @@ def option_group(name: str, *options: List[Callable]):
 
 
 class AddressType(click.ParamType):
-    name = 'address'
+    name = "address"
 
     def convert(self, value, param, ctx):  # pylint: disable=unused-argument
         try:
@@ -218,42 +210,42 @@ class AddressType(click.ParamType):
 
 
 class LogLevelConfigType(click.ParamType):
-    name = 'log-config'
+    name = "log-config"
     _validate_re = re.compile(
-        r'^(?:'
-        r'(?P<logger_name>[a-zA-Z0-9._]+)?'
-        r':'
-        r'(?P<logger_level>debug|info|warn(?:ing)?|error|critical|fatal)'
-        r',?)*$',
+        r"^(?:"
+        r"(?P<logger_name>[a-zA-Z0-9._]+)?"
+        r":"
+        r"(?P<logger_level>debug|info|warn(?:ing)?|error|critical|fatal)"
+        r",?)*$",
         re.IGNORECASE,
     )
 
     def convert(self, value, param, ctx):  # pylint: disable=unused-argument
         if not self._validate_re.match(value):
-            self.fail('Invalid log config format')
+            self.fail("Invalid log config format")
         level_config = dict()
-        if value.strip(' ') == '':
+        if value.strip(" ") == "":
             return None  # default value
 
-        for logger_config in value.split(','):
-            logger_name, logger_level = logger_config.split(':')
+        for logger_config in value.split(","):
+            logger_name, logger_level = logger_config.split(":")
             level_config[logger_name] = logger_level.upper()
         return level_config
 
 
 class NATChoiceType(click.Choice):
     def convert(self, value, param, ctx):
-        if value.startswith('ext:'):
-            ip, _, port = value[4:].partition(':')
+        if value.startswith("ext:"):
+            ip, _, port = value[4:].partition(":")
             try:
                 IPv4Address(ip)
             except AddressValueError:
-                self.fail('invalid IP address: {}'.format(ip), param, ctx)
+                self.fail("invalid IP address: {}".format(ip), param, ctx)
             if port:
                 try:
                     port = int(port, 0)
                 except ValueError:
-                    self.fail('invalid port number: {}'.format(port), param, ctx)
+                    self.fail("invalid port number: {}".format(port), param, ctx)
             else:
                 port = None
             return ip, port
@@ -268,7 +260,7 @@ class NetworkChoiceType(click.Choice):
             try:
                 return int(value)
             except ValueError:
-                self.fail(f'invalid numeric network id: {value}', param, ctx)
+                self.fail(f"invalid numeric network id: {value}", param, ctx)
         else:
             network_name = super().convert(value, param, ctx)
             return NETWORKNAME_TO_ID[network_name]
@@ -303,10 +295,10 @@ class GasPriceChoiceType(click.Choice):
 
                 return fixed_gas_price_strategy
             except ValueError:
-                self.fail(f'invalid numeric gas price: {value}', param, ctx)
+                self.fail(f"invalid numeric gas price: {value}", param, ctx)
         else:
             gas_price_string = super().convert(value, param, ctx)
-            if gas_price_string == 'fast':
+            if gas_price_string == "fast":
                 return fast_gas_price_strategy
             else:
                 return medium_gas_price_strategy
@@ -314,13 +306,13 @@ class GasPriceChoiceType(click.Choice):
 
 class MatrixServerType(click.Choice):
     def convert(self, value, param, ctx):
-        if value.startswith('http'):
+        if value.startswith("http"):
             return value
         return super().convert(value, param, ctx)
 
 
 class HypenTemplate(Template):
-    idpattern = r'(?-i:[_a-zA-Z-][_a-zA-Z0-9-]*)'
+    idpattern = r"(?-i:[_a-zA-Z-][_a-zA-Z0-9-]*)"
 
 
 class PathRelativePath(click.Path):
@@ -342,8 +334,8 @@ class PathRelativePath(click.Path):
                 value = self.expand_default(value, ctx.params)
             except KeyError as ex:
                 raise RuntimeError(
-                    'Subsitution parameter not found in context. '
-                    'Make sure it\'s defined with `is_eager=True`.',  # noqa: C812
+                    "Subsitution parameter not found in context. "
+                    "Make sure it's defined with `is_eager=True`."  # noqa: C812
                 ) from ex
 
         return super().convert(value, param, ctx)
@@ -354,10 +346,10 @@ class PathRelativePath(click.Path):
 
 
 def apply_config_file(
-        command_function: Union[click.Command, click.Group],
-        cli_params: Dict[str, Any],
-        ctx,
-        config_file_option_name='config_file',
+    command_function: Union[click.Command, click.Group],
+    cli_params: Dict[str, Any],
+    ctx,
+    config_file_option_name="config_file",
 ):
     """ Applies all options set in the config file to `cli_params` """
     paramname_to_param = {param.name: param for param in command_function.params}
@@ -377,30 +369,28 @@ def apply_config_file(
         config_file_param = paramname_to_param[config_file_option_name]
         config_file_default_path = Path(
             config_file_param.type.expand_default(  # type: ignore
-                config_file_param.get_default(ctx),
-                cli_params,
-            ),
+                config_file_param.get_default(ctx), cli_params
+            )
         )
         default_config_missing = (
-            ex.errno == errno.ENOENT and
-            config_file_path.resolve() == config_file_default_path.resolve()
+            ex.errno == errno.ENOENT
+            and config_file_path.resolve() == config_file_default_path.resolve()
         )
         if default_config_missing:
-            cli_params['config_file'] = None
+            cli_params["config_file"] = None
         else:
-            click.secho(f"Error opening config file: {ex}", fg='red')
+            click.secho(f"Error opening config file: {ex}", fg="red")
             sys.exit(1)
     except TomlError as ex:
-        click.secho(f'Error loading config file: {ex}', fg='red')
+        click.secho(f"Error loading config file: {ex}", fg="red")
         sys.exit(1)
 
     for config_name, config_value in config_file_values.items():
-        config_name_int = config_name.replace('-', '_')
+        config_name_int = config_name.replace("-", "_")
 
         if config_name_int not in paramname_to_param:
             click.secho(
-                f"Unknown setting '{config_name}' found in config file - ignoring.",
-                fg='yellow',
+                f"Unknown setting '{config_name}' found in config file - ignoring.", fg="yellow"
             )
             continue
 
@@ -416,12 +406,10 @@ def apply_config_file(
             # We exclude `log-config` because it already is a dict when loading from toml
             try:
                 config_value = paramname_to_param[config_name_int].type.convert(
-                    config_value,
-                    paramname_to_param[config_name_int],
-                    ctx,
+                    config_value, paramname_to_param[config_name_int], ctx
                 )
             except click.BadParameter as ex:
-                click.secho(f"Invalid config file setting '{config_name}': {ex}", fg='red')
+                click.secho(f"Invalid config file setting '{config_name}': {ex}", fg="red")
                 sys.exit(1)
 
         # Use the config file value if the value from the command line is the default
@@ -440,44 +428,42 @@ def get_matrix_servers(url: str) -> List[str]:
     try:
         response = requests.get(url)
         if response.status_code != 200:
-            raise requests.RequestException('Response: {response!r}')
+            raise requests.RequestException("Response: {response!r}")
     except requests.RequestException as ex:
-        raise RuntimeError(f'Could not fetch matrix servers list: {url!r} => {ex!r}') from ex
+        raise RuntimeError(f"Could not fetch matrix servers list: {url!r} => {ex!r}") from ex
 
     available_servers = []
     for line in response.text.splitlines():
-        line = line.strip(string.whitespace + '-')
-        if line.startswith('#') or not line:
+        line = line.strip(string.whitespace + "-")
+        if line.startswith("#") or not line:
             continue
-        if not line.startswith('http'):
-            line = 'https://' + line  # default schema
+        if not line.startswith("http"):
+            line = "https://" + line  # default schema
         available_servers.append(line)
     return available_servers
 
 
 def validate_pfs_options(options):
-    eth_address = options.get('pathfinding-eth-address')
-    if options.get('pathfinding-service-address') not in ('auto', None) and eth_address is None:
+    eth_address = options.get("pathfinding-eth-address")
+    if options.get("pathfinding-service-address") not in ("auto", None) and eth_address is None:
         raise BadParameter(
             '"--pathfinding-service-address" set manually '
-            'but no "--pathfinding-eth-address" given.',
+            'but no "--pathfinding-eth-address" given.'
         )
     if eth_address is not None and not is_checksum_address(eth_address):
-        raise BadParameter(
-            '"--pathfinding-eth-address" value is not a valid EIP55 address.',
-        )
+        raise BadParameter('"--pathfinding-eth-address" value is not a valid EIP55 address.')
 
 
 def validate_option_dependencies(
-        command_function: Union[click.Command, click.Group],
-        ctx,
-        cli_params: Dict[str, Any],
-        option_dependencies: Dict[str, List[Tuple[str, Any]]],
+    command_function: Union[click.Command, click.Group],
+    ctx,
+    cli_params: Dict[str, Any],
+    option_dependencies: Dict[str, List[Tuple[str, Any]]],
 ):
     paramname_to_param = {param.name: param for param in command_function.params}
 
     for depending_option_name, requirements in option_dependencies.items():
-        depending_option_name_int = depending_option_name.replace('-', '_')
+        depending_option_name_int = depending_option_name.replace("-", "_")
         param = paramname_to_param[depending_option_name_int]
 
         depending_option_value = cli_params[depending_option_name_int]
@@ -490,7 +476,7 @@ def validate_option_dependencies(
             continue
 
         for depended_option_name, depended_option_required_value in requirements:
-            depended_option_name_int = depended_option_name.replace('-', '_')
+            depended_option_name_int = depended_option_name.replace("-", "_")
             depended_option_actual_value = cli_params[depended_option_name_int]
             if depended_option_actual_value != depended_option_required_value:
                 raise BadParameter(

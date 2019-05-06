@@ -24,16 +24,16 @@ from raiden.transfer.state_change import (
 from raiden.utils import create_default_identifier
 
 
-@pytest.mark.parametrize('deposit', [10])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize("deposit", [10])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_happy_case(
-        raiden_network,
-        number_of_nodes,
-        deposit,
-        token_addresses,
-        network_wait,
-        skip_if_not_udp,  # pylint: disable=unused-argument
+    raiden_network,
+    number_of_nodes,
+    deposit,
+    token_addresses,
+    network_wait,
+    skip_if_not_udp,  # pylint: disable=unused-argument
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
@@ -41,9 +41,7 @@ def test_recovery_happy_case(
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        chain_state,
-        payment_network_id,
-        token_address,
+        chain_state, payment_network_id, token_address
     )
 
     # make a few transfers from app0 to app2
@@ -61,8 +59,8 @@ def test_recovery_happy_case(
 
     app0.raiden.stop()
     host_port = (
-        app0.raiden.config['transport']['udp']['host'],
-        app0.raiden.config['transport']['udp']['port'],
+        app0.raiden.config["transport"]["udp"]["host"],
+        app0.raiden.config["transport"]["udp"]["port"],
     )
     socket = server._udp_socket(host_port)
 
@@ -71,7 +69,7 @@ def test_recovery_happy_case(
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport']['udp'],
+        app0.raiden.config["transport"]["udp"],
     )
 
     raiden_event_handler = RaidenEventHandler()
@@ -97,26 +95,26 @@ def test_recovery_happy_case(
 
     assert_synced_channel_state(
         token_network_identifier,
-        app0_restart, deposit - spent_amount, [],
-        app1, deposit + spent_amount, [],
+        app0_restart,
+        deposit - spent_amount,
+        [],
+        app1,
+        deposit + spent_amount,
+        [],
     )
     assert_synced_channel_state(
         token_network_identifier,
-        app1, deposit - spent_amount, [],
-        app2, deposit + spent_amount, [],
+        app1,
+        deposit - spent_amount,
+        [],
+        app2,
+        deposit + spent_amount,
+        [],
     )
 
     # wait for the nodes' healthcheck to update the network statuses
-    waiting.wait_for_healthy(
-        app0_restart.raiden,
-        app1.raiden.address,
-        network_wait,
-    )
-    waiting.wait_for_healthy(
-        app1.raiden,
-        app0_restart.raiden.address,
-        network_wait,
-    )
+    waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
+    waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
 
     transfer(
         initiator_app=app2,
@@ -137,37 +135,43 @@ def test_recovery_happy_case(
 
     assert_synced_channel_state(
         token_network_identifier,
-        app0_restart, deposit - spent_amount, [],
-        app1, deposit + spent_amount, [],
+        app0_restart,
+        deposit - spent_amount,
+        [],
+        app1,
+        deposit + spent_amount,
+        [],
     )
 
     assert_synced_channel_state(
         token_network_identifier,
-        app1, deposit - spent_amount, [],
-        app2, deposit + spent_amount, [],
+        app1,
+        deposit - spent_amount,
+        [],
+        app2,
+        deposit + spent_amount,
+        [],
     )
 
 
-@pytest.mark.parametrize('deposit', [10])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize("deposit", [10])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [3])
 def test_recovery_unhappy_case(
-        raiden_network,
-        number_of_nodes,
-        deposit,
-        token_addresses,
-        network_wait,
-        skip_if_not_udp,  # pylint: disable=unused-argument
-        retry_timeout,
+    raiden_network,
+    number_of_nodes,
+    deposit,
+    token_addresses,
+    network_wait,
+    skip_if_not_udp,  # pylint: disable=unused-argument
+    retry_timeout,
 ):
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     chain_state = views.state_from_app(app0)
     payment_network_id = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        chain_state,
-        payment_network_id,
-        token_address,
+        chain_state, payment_network_id, token_address
     )
 
     # make a few transfers from app0 to app2
@@ -185,8 +189,8 @@ def test_recovery_unhappy_case(
 
     app0.raiden.stop()
     host_port = (
-        app0.raiden.config['transport']['udp']['host'],
-        app0.raiden.config['transport']['udp']['port'],
+        app0.raiden.config["transport"]["udp"]["host"],
+        app0.raiden.config["transport"]["udp"]["port"],
     )
     socket = server._udp_socket(host_port)
 
@@ -195,15 +199,13 @@ def test_recovery_unhappy_case(
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport']['udp'],
+        app0.raiden.config["transport"]["udp"],
     )
 
     app0.stop()
 
     RaidenAPI(app1.raiden).channel_close(
-        app1.raiden.default_registry.address,
-        token_address,
-        app0.raiden.address,
+        app1.raiden.default_registry.address, token_address, app0.raiden.address
     )
 
     channel01 = views.get_channelstate_for(
@@ -240,26 +242,27 @@ def test_recovery_unhappy_case(
     app0_restart.start()
 
     state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
+        from_identifier=0, to_identifier="latest"
     )
 
     assert search_for_item(
-        state_changes, ContractReceiveChannelSettled, {
-            'token_network_identifier': token_network_identifier,
-            'channel_identifier': channel01.identifier,
+        state_changes,
+        ContractReceiveChannelSettled,
+        {
+            "token_network_identifier": token_network_identifier,
+            "channel_identifier": channel01.identifier,
         },
     )
 
 
-@pytest.mark.parametrize('deposit', [10])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize("deposit", [10])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [2])
 def test_recovery_blockchain_events(
-        raiden_network,
-        token_addresses,
-        network_wait,
-        skip_if_not_udp,  # pylint: disable=unused-argument
+    raiden_network,
+    token_addresses,
+    network_wait,
+    skip_if_not_udp,  # pylint: disable=unused-argument
 ):
     """ Close one of the two raiden apps that have a channel between them,
     have the counterparty close the channel and then make sure the restarted
@@ -270,8 +273,8 @@ def test_recovery_blockchain_events(
 
     app0.raiden.stop()
     host_port = (
-        app0.raiden.config['transport']['udp']['host'],
-        app0.raiden.config['transport']['udp']['port'],
+        app0.raiden.config["transport"]["udp"]["host"],
+        app0.raiden.config["transport"]["udp"]["port"],
     )
     socket = server._udp_socket(host_port)
 
@@ -280,7 +283,7 @@ def test_recovery_blockchain_events(
         app0.discovery,
         socket,
         app0.raiden.transport.throttle_policy,
-        app0.raiden.config['transport']['udp'],
+        app0.raiden.config["transport"]["udp"],
     )
 
     app1_api = RaidenAPI(app1.raiden)
@@ -315,18 +318,9 @@ def test_recovery_blockchain_events(
     app0_restart.raiden.start()
 
     # wait for the nodes' healthcheck to update the network statuses
-    waiting.wait_for_healthy(
-        app0_restart.raiden,
-        app1.raiden.address,
-        network_wait,
-    )
-    waiting.wait_for_healthy(
-        app1.raiden,
-        app0_restart.raiden.address,
-        network_wait,
-    )
+    waiting.wait_for_healthy(app0_restart.raiden, app1.raiden.address, network_wait)
+    waiting.wait_for_healthy(app1.raiden, app0_restart.raiden.address, network_wait)
     restarted_state_changes = app0_restart.raiden.wal.storage.get_statechanges_by_identifier(
-        0,
-        'latest',
+        0, "latest"
     )
     assert search_for_item(restarted_state_changes, ContractReceiveChannelClosed, {})

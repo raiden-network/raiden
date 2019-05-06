@@ -48,12 +48,11 @@ def transferred_amount(state):
     return 0 if not state.balance_proof else state.balance_proof.transferred_amount
 
 
-partners = Bundle('partners')
+partners = Bundle("partners")
 # shared bundle of ChainStateStateMachine and all mixin classes
 
 
 class ChainStateStateMachine(RuleBasedStateMachine):
-
     def __init__(self, address=None):
         self.address = address or factories.make_address()
         self.replay_path = False
@@ -83,17 +82,15 @@ class ChainStateStateMachine(RuleBasedStateMachine):
         self.address_to_channel[partner_address] = factories.create(
             factories.NettingChannelStateProperties(
                 our_state=factories.NettingChannelEndStateProperties(
-                    balance=1000,
-                    address=self.address,
+                    balance=1000, address=self.address
                 ),
                 partner_state=factories.NettingChannelEndStateProperties(
-                    balance=1000,
-                    address=partner_address,
+                    balance=1000, address=partner_address
                 ),
                 canonical_identifier=factories.make_canonical_identifier(
-                    token_network_address=self.token_network_id,
+                    token_network_address=self.token_network_id
                 ),
-            ),
+            )
         )
 
         return partner_address
@@ -139,8 +136,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
         self.payment_network_id = factories.make_payment_network_identifier()
         self.payment_network_state = PaymentNetworkState(
-            self.payment_network_id,
-            [self.token_network_state],
+            self.payment_network_id, [self.token_network_state]
         )
 
         self.chain_state.identifiers_to_paymentnetworks[
@@ -179,18 +175,16 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             our_transferred = transferred_amount(netting_channel.our_state)
             partner_transferred = transferred_amount(netting_channel.partner_state)
             our_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.our_state)
-            partner_unclaimed = channel.get_amount_unclaimed_onchain(
-                netting_channel.partner_state,
-            )
+            partner_unclaimed = channel.get_amount_unclaimed_onchain(netting_channel.partner_state)
             assert our_transferred >= self.our_previous_transferred[address]
             assert partner_transferred >= self.partner_previous_transferred[address]
             assert (
-                our_unclaimed + our_transferred >=
-                self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
+                our_unclaimed + our_transferred
+                >= self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
             )
             assert (
-                partner_unclaimed + partner_transferred >=
-                self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
+                partner_unclaimed + partner_transferred
+                >= self.our_previous_transferred[address] + self.our_previous_unclaimed[address]
             )
             self.our_previous_transferred[address] = our_transferred
             self.partner_previous_transferred[address] = partner_transferred
@@ -241,11 +235,10 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             assert 0 <= partner_deposit - our_transferred - partner_amount_locked <= total_deposit
 
             # invariant (7R), add withdrawn amounts when implemented
-            assert - our_deposit <= netted_transferred <= partner_deposit
+            assert -our_deposit <= netted_transferred <= partner_deposit
 
 
 class InitiatorMixin:
-
     def __init__(self):
         super().__init__()
         self.used_secrets = set()
@@ -257,10 +250,7 @@ class InitiatorMixin:
         channel = self.address_to_channel[transfer.target]
         if transfer.secrethash not in self.expected_expiry:
             self.expected_expiry[transfer.secrethash] = self.block_number + 10
-        return ActionInitInitiator(
-            transfer,
-            [factories.route_from_channel(channel)],
-        )
+        return ActionInitInitiator(transfer, [factories.route_from_channel(channel)])
 
     def _receive_secret_request(self, transfer: TransferDescriptionWithSecretState):
         secrethash = sha3(transfer.secret)
@@ -310,7 +300,7 @@ class InitiatorMixin:
         expiry = self.expected_expiry[action.transfer.secrethash]
         return self.block_number >= expiry + DEFAULT_WAIT_BEFORE_LOCK_REMOVAL
 
-    init_initiators = Bundle('init_initiators')
+    init_initiators = Bundle("init_initiators")
 
     @rule(
         target=init_initiators,
@@ -346,7 +336,7 @@ class InitiatorMixin:
         action = self._action_init_initiator(transfer)
         result = node.state_transition(self.chain_state, action)
         assert event_types_match(result.events, EventPaymentSentFailed)
-        self.event('ActionInitInitiator failed: Amount exceeded')
+        self.event("ActionInitInitiator failed: Amount exceeded")
 
     @rule(
         previous_action=init_initiators,
@@ -361,7 +351,7 @@ class InitiatorMixin:
         action = self._action_init_initiator(transfer)
         result = node.state_transition(self.chain_state, action)
         assert not result.events
-        self.event('ActionInitInitiator failed: Secret already in use.')
+        self.event("ActionInitInitiator failed: Secret already in use.")
 
     @rule(previous_action=init_initiators)
     def replay_init_initator(self, previous_action):
@@ -376,13 +366,13 @@ class InitiatorMixin:
         result = node.state_transition(self.chain_state, action)
         if action.secrethash in self.processed_secret_requests:
             assert not result.events
-            self.event('Valid SecretRequest dropped due to previous invalid one.')
+            self.event("Valid SecretRequest dropped due to previous invalid one.")
         elif self._is_removed(previous_action):
             assert not result.events
-            self.event('Ohterwise valid SecretRequest dropped due to expired lock.')
+            self.event("Ohterwise valid SecretRequest dropped due to expired lock.")
         else:
             assert event_types_match(result.events, SendSecretReveal)
-            self.event('Valid SecretRequest accepted.')
+            self.event("Valid SecretRequest accepted.")
             self.processed_secret_requests.add(action.secrethash)
 
     @rule(previous_action=init_initiators, amount=integers())
@@ -395,8 +385,7 @@ class InitiatorMixin:
         self._invalid_authentic_secret_request(previous_action, action)
 
     @rule(
-        previous_action=init_initiators,
-        secret=secret(),  # pylint: disable=no-value-for-parameter
+        previous_action=init_initiators, secret=secret()  # pylint: disable=no-value-for-parameter
     )
     def secret_request_with_wrong_secrethash(self, previous_action, secret):
         assume(sha3(secret) != sha3(previous_action.transfer.secret))
@@ -481,12 +470,7 @@ def test_regression_malicious_secret_request_handled_properly():
     state.replay_path = True
 
     v1 = state.initialize(block_number=1, random=Random(), random_seed=None)
-    v2 = state.valid_init_initiator(
-        partner=v1,
-        amount=1,
-        payment_id=1,
-        secret=b'\x00' * 32,
-    )
+    v2 = state.valid_init_initiator(partner=v1, amount=1, payment_id=1, secret=b"\x00" * 32)
     state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.replay_init_initator(previous_action=v2)
 
@@ -500,7 +484,7 @@ def test_try_secret_request_after_settle_channel():
     state.failing_path_2 = True
 
     v1 = state.initialize(block_number=1, random=Random(), random_seed=None)
-    v2 = state.valid_init_initiator(amount=1, partner=v1, payment_id=1, secret=b'\x91' * 32)
+    v2 = state.valid_init_initiator(amount=1, partner=v1, payment_id=1, secret=b"\x91" * 32)
     state.settle_channel(partner=v1)
     state.valid_secret_request(previous_action=v2)
 

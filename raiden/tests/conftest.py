@@ -1,5 +1,6 @@
 # pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
 from gevent import monkey  # isort:skip # noqa
+
 monkey.patch_all()  # isort:skip # noqa
 
 import datetime
@@ -20,54 +21,49 @@ from raiden.tests.fixtures.variables import *  # noqa: F401,F403
 from raiden.tests.utils.transport import make_requests_insecure
 from raiden.utils.cli import LogLevelConfigType
 
-pytest.register_assert_rewrite('raiden.tests.utils.eth_node')
-pytest.register_assert_rewrite('raiden.tests.utils.factories')
-pytest.register_assert_rewrite('raiden.tests.utils.messages')
-pytest.register_assert_rewrite('raiden.tests.utils.network')
-pytest.register_assert_rewrite('raiden.tests.utils.protocol')
-pytest.register_assert_rewrite('raiden.tests.utils.smartcontracts')
-pytest.register_assert_rewrite('raiden.tests.utils.smoketest')
-pytest.register_assert_rewrite('raiden.tests.utils.transfer')
+pytest.register_assert_rewrite("raiden.tests.utils.eth_node")
+pytest.register_assert_rewrite("raiden.tests.utils.factories")
+pytest.register_assert_rewrite("raiden.tests.utils.messages")
+pytest.register_assert_rewrite("raiden.tests.utils.network")
+pytest.register_assert_rewrite("raiden.tests.utils.protocol")
+pytest.register_assert_rewrite("raiden.tests.utils.smartcontracts")
+pytest.register_assert_rewrite("raiden.tests.utils.smoketest")
+pytest.register_assert_rewrite("raiden.tests.utils.transfer")
 
 
 def pytest_addoption(parser):
     parser.addoption(
-        '--blockchain-type',
-        choices=[client.value for client in EthClient],
-        default='geth',
+        "--blockchain-type", choices=[client.value for client in EthClient], default="geth"
     )
 
     parser.addoption(
-        '--log-config',
-        action='store',
-        default=None,
-        help='Configure tests log output',
+        "--log-config", action="store", default=None, help="Configure tests log output"
     )
 
     parser.addoption(
-        '--plain-log',
-        action='store_true',
+        "--plain-log",
+        action="store_true",
         default=False,
-        help='Do not colorize console log output',
+        help="Do not colorize console log output",
     )
 
     parser.addoption(
-        '--transport',
-        choices=('none', 'udp', 'matrix', 'all'),
-        default='matrix',
-        help='Run integration tests with udp, with matrix, with both or not at all.',
+        "--transport",
+        choices=("none", "udp", "matrix", "all"),
+        default="matrix",
+        help="Run integration tests with udp, with matrix, with both or not at all.",
     )
 
     parser.addoption(
-        '--base-port',
-        action='store',
+        "--base-port",
+        action="store",
         default=8500,
-        type='int',
-        help='Base port number to use for tests.',
+        type="int",
+        help="Base port number to use for tests.",
     )
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def enable_gevent_monitoring_signal():
     """ Install a signal handler for SIGUSR1 that executes gevent.util.print_run_info().
     This can help evaluating the gevent greenlet tree.
@@ -80,10 +76,11 @@ def enable_gevent_monitoring_signal():
     """
     import gevent.util
     import signal
+
     signal.signal(signal.SIGUSR1, gevent.util.print_run_info)
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def enable_greenlet_debugger(request):
     """ Enable the pdb debugger for gevent's greenlets.
 
@@ -126,39 +123,34 @@ def enable_greenlet_debugger(request):
         hub.handle_error = debugger
 
 
-@pytest.fixture(autouse=True, scope='session')
+@pytest.fixture(autouse=True, scope="session")
 def logging_level(request):
     """ Configure the structlog level.
 
     For integration tests this also sets the geth verbosity.
     """
     # disable pytest's built in log capture, otherwise logs are printed twice
-    request.config.option.showcapture = 'no'
+    request.config.option.showcapture = "no"
 
     if request.config.option.log_cli_level:
         level = request.config.option.log_cli_level
     elif request.config.option.verbose > 3:
-        level = 'DEBUG'
+        level = "DEBUG"
     elif request.config.option.verbose > 1:
-        level = 'INFO'
+        level = "INFO"
     else:
-        level = 'WARNING'
+        level = "WARNING"
 
     if request.config.option.log_config:
         config_converter = LogLevelConfigType()
         logging_levels = config_converter.convert(
-            value=request.config.option.log_config,
-            param=None,
-            ctx=None,
+            value=request.config.option.log_config, param=None, ctx=None
         )
     else:
-        logging_levels = {'': level}
+        logging_levels = {"": level}
 
     time = datetime.datetime.utcnow().isoformat()
-    debug_path = os.path.join(
-        tempfile.gettempdir(),
-        f'raiden-debug_{time}.log',
-    )
+    debug_path = os.path.join(tempfile.gettempdir(), f"raiden-debug_{time}.log")
     configure_logging(
         logging_levels,
         colorize=not request.config.option.plain_log,
@@ -168,7 +160,7 @@ def logging_level(request):
     )
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def dont_exit_pytest():
     """ Raiden will quit on any unhandled exception.
 
@@ -177,7 +169,7 @@ def dont_exit_pytest():
     gevent.get_hub().NOT_ERROR = (gevent.GreenletExit, SystemExit)
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def insecure_tls():
     make_requests_insecure()
 
@@ -186,61 +178,63 @@ def insecure_tls():
 def pytest_generate_tests(metafunc):
     fixtures = metafunc.fixturenames
 
-    if 'transport' in fixtures:
-        transport = metafunc.config.getoption('transport')
+    if "transport" in fixtures:
+        transport = metafunc.config.getoption("transport")
         parmeterize_private_rooms = True
         transport_and_privacy = list()
         number_of_transports = list()
 
         # Filter existing parametrization which is already done in the test
         for mark in metafunc.definition.own_markers:
-            if mark.name == 'parametrize':
+            if mark.name == "parametrize":
                 # Check if 'private_rooms' gets parameterized
-                if 'private_rooms' in mark.args[0]:
+                if "private_rooms" in mark.args[0]:
                     parmeterize_private_rooms = False
                 # Check if more than one transport is used
-                if 'number_of_transports' == mark.args[0]:
+                if "number_of_transports" == mark.args[0]:
                     number_of_transports = mark.args[1]
         # avoid collecting test if 'skip_if_not_*'
-        if transport in ('udp', 'all') and 'skip_if_not_matrix' not in fixtures:
-            transport_and_privacy.append(('udp', None))
+        if transport in ("udp", "all") and "skip_if_not_matrix" not in fixtures:
+            transport_and_privacy.append(("udp", None))
 
-        if transport in ('matrix', 'all') and 'skip_if_not_udp' not in fixtures:
+        if transport in ("matrix", "all") and "skip_if_not_udp" not in fixtures:
 
-            if 'public_and_private_rooms' in fixtures:
+            if "public_and_private_rooms" in fixtures:
                 if number_of_transports:
-                    transport_and_privacy.extend([
-                        ('matrix', [False for _ in range(number_of_transports[0])]),
-                        ('matrix', [True for _ in range(number_of_transports[0])]),
-                    ])
+                    transport_and_privacy.extend(
+                        [
+                            ("matrix", [False for _ in range(number_of_transports[0])]),
+                            ("matrix", [True for _ in range(number_of_transports[0])]),
+                        ]
+                    )
                 else:
-                    transport_and_privacy.extend([('matrix', False), ('matrix', True)])
+                    transport_and_privacy.extend([("matrix", False), ("matrix", True)])
             else:
                 if number_of_transports:
-                    transport_and_privacy.extend([
-                        ('matrix', [False for _ in range(number_of_transports[0])]),
-                    ])
+                    transport_and_privacy.extend(
+                        [("matrix", [False for _ in range(number_of_transports[0])])]
+                    )
                 else:
-                    transport_and_privacy.append(('matrix', False))
+                    transport_and_privacy.append(("matrix", False))
 
-        if not parmeterize_private_rooms or 'private_rooms' not in fixtures:
+        if not parmeterize_private_rooms or "private_rooms" not in fixtures:
             # If the test does not expect the private_rooms parameter or parametrizes
             # `private_rooms` itself, only give he transport values
             metafunc.parametrize(
-                'transport',
+                "transport",
                 list(set(transport_type for transport_type, _ in transport_and_privacy)),
             )
 
         else:
-            metafunc.parametrize('transport,private_rooms', transport_and_privacy)
+            metafunc.parametrize("transport,private_rooms", transport_and_privacy)
 
 
-if sys.platform == 'darwin':
+if sys.platform == "darwin":
     # On macOS the temp directory base path is already very long.
     # To avoid failures on ipc tests (ipc path length is limited to 104/108 chars on macOS/linux)
     # we override the pytest tmpdir machinery to produce shorter paths.
 
-    @pytest.fixture(scope='session', autouse=True)
+    @pytest.fixture(scope="session", autouse=True)
     def _tmpdir_short():
         """Shorten tmpdir paths"""
         from _pytest.tmpdir import TempPathFactory
@@ -260,10 +254,7 @@ if sys.platform == 'darwin':
                     rootdir = temproot.joinpath("pyt-{}".format(user))
                     rootdir.mkdir(exist_ok=True)
                     basetemp = make_numbered_dir_with_cleanup(
-                        prefix="",
-                        root=rootdir,
-                        keep=3,
-                        lock_timeout=LOCK_TIMEOUT,
+                        prefix="", root=rootdir, keep=3, lock_timeout=LOCK_TIMEOUT
                     )
                 assert basetemp is not None
                 self._basetemp = t = basetemp
@@ -283,7 +274,7 @@ if sys.platform == 'darwin':
         path object.
         """
         name = request.node.name
-        name = re.sub(r'[\W]', '_', name)
+        name = re.sub(r"[\W]", "_", name)
         MAXVAL = 15
         if len(name) > MAXVAL:
             name = name[:MAXVAL]

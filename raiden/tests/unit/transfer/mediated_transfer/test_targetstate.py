@@ -65,23 +65,24 @@ class TargetStateSetup(NamedTuple):
 
 
 def make_target_state(
-        our_address=factories.ADDR,
-        amount=3,
-        block_number=1,
-        initiator=UNIT_TRANSFER_INITIATOR,
-        expiration=None,
-        pseudo_random_generator=None,
+    our_address=factories.ADDR,
+    amount=3,
+    block_number=1,
+    initiator=UNIT_TRANSFER_INITIATOR,
+    expiration=None,
+    pseudo_random_generator=None,
 ):
     pseudo_random_generator = pseudo_random_generator or random.Random()
-    channels = make_channel_set([
-        NettingChannelStateProperties(
-            our_state=NettingChannelEndStateProperties(address=our_address),
-            partner_state=NettingChannelEndStateProperties(
-                address=UNIT_TRANSFER_SENDER,
-                balance=amount,
-            ),
-        ),
-    ])
+    channels = make_channel_set(
+        [
+            NettingChannelStateProperties(
+                our_state=NettingChannelEndStateProperties(address=our_address),
+                partner_state=NettingChannelEndStateProperties(
+                    address=UNIT_TRANSFER_SENDER, balance=amount
+                ),
+            )
+        ]
+    )
 
     expiration = expiration or channels[0].reveal_timeout + block_number + 1
     from_transfer = make_target_transfer(channels[0], amount, expiration, initiator)
@@ -150,10 +151,10 @@ def test_events_for_onchain_secretreveal():
         block_hash=factories.make_block_hash(),
     )
 
-    msg = 'when its not safe to wait, the contract send must be emitted'
-    assert search_for_item(events, ContractSendSecretReveal, {'secret': UNIT_SECRET}), msg
+    msg = "when its not safe to wait, the contract send must be emitted"
+    assert search_for_item(events, ContractSendSecretReveal, {"secret": UNIT_SECRET}), msg
 
-    msg = 'second call must not emit ContractSendSecretReveal again'
+    msg = "second call must not emit ContractSendSecretReveal again"
     assert not target.events_for_onchain_secretreveal(
         target_state=state,
         channel_state=channels[0],
@@ -181,18 +182,19 @@ def test_handle_inittarget():
     state_change = ActionInitTarget(channels.get_route(0), from_transfer)
 
     iteration = target.handle_inittarget(
-        state_change,
-        channels[0],
-        pseudo_random_generator,
-        block_number,
+        state_change, channels[0], pseudo_random_generator, block_number
     )
 
-    assert search_for_item(iteration.events, SendSecretRequest, {
-        'payment_identifier': from_transfer.payment_identifier,
-        'amount': from_transfer.lock.amount,
-        'secrethash': from_transfer.lock.secrethash,
-        'recipient': UNIT_TRANSFER_INITIATOR,
-    })
+    assert search_for_item(
+        iteration.events,
+        SendSecretRequest,
+        {
+            "payment_identifier": from_transfer.payment_identifier,
+            "amount": from_transfer.lock.amount,
+            "secrethash": from_transfer.lock.secrethash,
+            "recipient": UNIT_TRANSFER_INITIATOR,
+        },
+    )
     assert search_for_item(iteration.events, SendProcessed, {})
 
 
@@ -209,10 +211,7 @@ def test_handle_inittarget_bad_expiration():
 
     state_change = ActionInitTarget(channels.get_route(0), from_transfer)
     iteration = target.handle_inittarget(
-        state_change,
-        channels[0],
-        pseudo_random_generator,
-        block_number,
+        state_change, channels[0], pseudo_random_generator, block_number
     )
     assert search_for_item(iteration.events, EventUnlockClaimFailed, {})
 
@@ -235,7 +234,7 @@ def test_handle_offchain_secretreveal():
     reveal = iteration.events[0]
     assert isinstance(reveal, SendSecretReveal)
 
-    assert iteration.new_state.state == 'reveal_secret'
+    assert iteration.new_state.state == "reveal_secret"
     assert reveal.secret == UNIT_SECRET
     assert reveal.recipient == setup.new_state.route.node_address
 
@@ -261,7 +260,7 @@ def test_handle_offchain_secretreveal_after_lock_expired():
     setup = make_target_state()
 
     lock_expiration_block_number = channel.get_sender_expiration_threshold(
-        setup.new_state.transfer.lock,
+        setup.new_state.transfer.lock
     )
     lock_expiration_block = Block(
         block_number=lock_expiration_block_number,
@@ -277,7 +276,7 @@ def test_handle_offchain_secretreveal_after_lock_expired():
     )
     state = iteration.new_state
 
-    msg = 'At the expiration block we should get an EventUnlockClaimFailed'
+    msg = "At the expiration block we should get an EventUnlockClaimFailed"
     assert search_for_item(iteration.events, EventUnlockClaimFailed, {}), msg
 
     iteration = target.state_transition(
@@ -301,7 +300,7 @@ def test_handle_offchain_secretreveal_after_lock_expired():
         pseudo_random_generator=setup.pseudo_random_generator,
         block_number=lock_expiration_block_number + 1,
     )
-    msg = 'At the next block we should not get the same event'
+    msg = "At the next block we should not get the same event"
     assert not search_for_item(iteration.events, EventUnlockClaimFailed, {}), msg
 
 
@@ -309,10 +308,7 @@ def test_handle_onchain_secretreveal():
     """ The target node must update the lock state when the secret is
     registered in the blockchain.
     """
-    setup = make_target_state(
-        block_number=1,
-        expiration=1 + factories.UNIT_REVEAL_TIMEOUT,
-    )
+    setup = make_target_state(block_number=1, expiration=1 + factories.UNIT_REVEAL_TIMEOUT)
     assert factories.UNIT_SECRETHASH in setup.channel.partner_state.secrethashes_to_lockedlocks
 
     offchain_secret_reveal_iteration = target.state_transition(
@@ -395,11 +391,7 @@ def test_handle_block_equal_block_number():
     """ Nothing changes. """
     setup = make_target_state()
 
-    new_block = Block(
-        block_number=1,
-        gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
-    )
+    new_block = Block(block_number=1, gas_limit=1, block_hash=factories.make_transaction_hash())
 
     iteration = target.state_transition(
         target_state=setup.new_state,
@@ -457,9 +449,7 @@ def test_state_transition():
     assert init_transition.new_state.transfer == from_transfer
 
     first_new_block = Block(
-        block_number=block_number + 1,
-        gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
+        block_number=block_number + 1, gas_limit=1, block_hash=factories.make_transaction_hash()
     )
     first_block_iteration = target.state_transition(
         target_state=init_transition.new_state,
@@ -480,9 +470,7 @@ def test_state_transition():
     assert reveal_iteration.events
 
     second_new_block = Block(
-        block_number=block_number + 2,
-        gas_limit=1,
-        block_hash=factories.make_transaction_hash(),
+        block_number=block_number + 2, gas_limit=1, block_hash=factories.make_transaction_hash()
     )
     iteration = target.state_transition(
         target_state=init_transition.new_state,
@@ -493,17 +481,19 @@ def test_state_transition():
     )
     assert not iteration.events
 
-    balance_proof = create(BalanceProofSignedStateProperties(
-        nonce=from_transfer.balance_proof.nonce + 1,
-        transferred_amount=lock_amount,
-        locked_amount=0,
-        canonical_identifier=factories.make_canonical_identifier(
-            token_network_address=channels[0].token_network_identifier,
-            channel_identifier=channels.get_route(0).channel_identifier,
-        ),
-        locksroot=EMPTY_MERKLE_ROOT,
-        message_hash=b'\x00' * 32,  # invalid
-    ))
+    balance_proof = create(
+        BalanceProofSignedStateProperties(
+            nonce=from_transfer.balance_proof.nonce + 1,
+            transferred_amount=lock_amount,
+            locked_amount=0,
+            canonical_identifier=factories.make_canonical_identifier(
+                token_network_address=channels[0].token_network_identifier,
+                channel_identifier=channels.get_route(0).channel_identifier,
+            ),
+            locksroot=EMPTY_MERKLE_ROOT,
+            message_hash=b"\x00" * 32,  # invalid
+        )
+    )
 
     balance_proof_state_change = ReceiveUnlock(
         message_identifier=random.randint(0, UINT64_MAX),
@@ -561,9 +551,7 @@ def test_target_receive_lock_expired():
     expiration = block_number + channels[0].settle_timeout - channels[0].reveal_timeout
 
     from_transfer = make_target_transfer(
-        channels[0],
-        amount=lock_amount,
-        block_number=block_number,
+        channels[0], amount=lock_amount, block_number=block_number
     )
 
     init = ActionInitTarget(channels.get_route(0), from_transfer)
@@ -579,18 +567,18 @@ def test_target_receive_lock_expired():
     assert init_transition.new_state.route == channels.get_route(0)
     assert init_transition.new_state.transfer == from_transfer
 
-    balance_proof = create(BalanceProofSignedStateProperties(
-        nonce=2,
-        transferred_amount=from_transfer.balance_proof.transferred_amount,
-        locked_amount=0,
-        canonical_identifier=channels[0].canonical_identifier,
-        message_hash=from_transfer.lock.secrethash,
-    ))
+    balance_proof = create(
+        BalanceProofSignedStateProperties(
+            nonce=2,
+            transferred_amount=from_transfer.balance_proof.transferred_amount,
+            locked_amount=0,
+            canonical_identifier=channels[0].canonical_identifier,
+            message_hash=from_transfer.lock.secrethash,
+        )
+    )
 
     lock_expired_state_change = ReceiveLockExpired(
-        balance_proof=balance_proof,
-        secrethash=from_transfer.lock.secrethash,
-        message_identifier=1,
+        balance_proof=balance_proof, secrethash=from_transfer.lock.secrethash, message_identifier=1
     )
 
     block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS - 1
@@ -652,7 +640,7 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
     assert search_for_item(iteration.events, EventUnlockClaimFailed, {})
 
 
-@pytest.mark.xfail(reason='Not implemented #522')
+@pytest.mark.xfail(reason="Not implemented #522")
 def test_transfer_successful_after_secret_learned():
     # TransferCompleted event must be used only after the secret is learned and
     # there is enough time to unlock the lock on chain.

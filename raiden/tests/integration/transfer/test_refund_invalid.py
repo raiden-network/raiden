@@ -18,8 +18,8 @@ from raiden.transfer import views
 from raiden.utils.signer import LocalSigner
 
 
-@pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
 def test_receive_secrethashtransfer_unknown(raiden_network, token_addresses):
     raise_on_failure(
         raiden_network,
@@ -34,9 +34,7 @@ def run_test_receive_secrethashtransfer_unknown(raiden_network, token_addresses)
     token_address = token_addresses[0]
 
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_address,
+        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
 
     other_key = HOP1_KEY
@@ -82,7 +80,6 @@ def run_test_receive_secrethashtransfer_unknown(raiden_network, token_addresses)
     sign_and_inject(secret_request_message, other_signer, app0)
 
     reveal_secret_message = RevealSecret(
-        message_identifier=random.randint(0, UINT64_MAX),
-        secret=UNIT_SECRET,
+        message_identifier=random.randint(0, UINT64_MAX), secret=UNIT_SECRET
     )
     sign_and_inject(reveal_secret_message, other_signer, app0)

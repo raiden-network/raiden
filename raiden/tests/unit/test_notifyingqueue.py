@@ -15,20 +15,17 @@ def test_copy():
 
     queue.put(1)
     assert queue.copy() == [1]
-    assert queue.peek() == 1, 'copy must preserve the queue'
+    assert queue.peek() == 1, "copy must preserve the queue"
 
     queue.put(2)
-    assert queue.copy() == [1, 2], 'copy must preserve the items order'
+    assert queue.copy() == [1, 2], "copy must preserve the items order"
 
 
 def test_event_must_be_set():
     queue = NotifyingQueue()
     event_stop = Event()
 
-    data_or_stop = event_first_of(
-        queue,
-        event_stop,
-    )
+    data_or_stop = event_first_of(queue, event_stop)
 
     spawn_after_seconds = 1
     element = 1

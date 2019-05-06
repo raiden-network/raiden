@@ -6,8 +6,8 @@ from raiden.api.python import RaidenAPI
 from raiden.tests.utils.detect_failure import raise_on_failure
 
 
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [1])
 def test_close_regression(raiden_network, deposit, token_addresses):
     """ The python api was using the wrong balance proof to close the channel,
     thus the close was failing if a transfer was made.
@@ -41,19 +41,12 @@ def run_test_close_regression(raiden_network, deposit, token_addresses):
     amount = 10
     identifier = 42
     assert api1.transfer(
-        registry_address,
-        token_address,
-        amount,
-        api2.address,
-        identifier=identifier,
+        registry_address, token_address, amount, api2.address, identifier=identifier
     )
-    exception = ValueError('Waiting for transfer received success in the WAL timed out')
+    exception = ValueError("Waiting for transfer received success in the WAL timed out")
     with gevent.Timeout(seconds=5, exception=exception):
         waiting.wait_for_transfer_success(
-            app1.raiden,
-            identifier,
-            amount,
-            app1.raiden.alarm.sleep_time,
+            app1.raiden, identifier, amount, app1.raiden.alarm.sleep_time
         )
 
     api2.channel_close(registry_address, token_address, api1.address)

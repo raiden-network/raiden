@@ -10,7 +10,7 @@ class FlatList(list):
         return list(self)
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, list(self))
+        return "<{}: {}>".format(self.__class__.__name__, list(self))
 
 
 class AddressList(FlatList):

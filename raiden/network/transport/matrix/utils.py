@@ -45,16 +45,16 @@ from raiden_contracts.constants import ID_TO_NETWORKNAME
 log = structlog.get_logger(__name__)
 
 JOIN_RETRIES = 10
-USERID_RE = re.compile(r'^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$')
-ROOM_NAME_SEPARATOR = '_'
-ROOM_NAME_PREFIX = 'raiden'
+USERID_RE = re.compile(r"^@(0x[0-9a-f]{40})(?:\.[0-9a-f]{8})?(?::.+)?$")
+ROOM_NAME_SEPARATOR = "_"
+ROOM_NAME_PREFIX = "raiden"
 
 
 class UserPresence(Enum):
-    ONLINE = 'online'
-    UNAVAILABLE = 'unavailable'
-    OFFLINE = 'offline'
-    UNKNOWN = 'unknown'
+    ONLINE = "online"
+    UNAVAILABLE = "unavailable"
+    OFFLINE = "offline"
+    UNKNOWN = "unknown"
 
 
 class AddressReachability(Enum):
@@ -93,12 +93,12 @@ class UserAddressManager:
     """
 
     def __init__(
-            self,
-            client: GMatrixClient,
-            get_user_callable: Callable[[Union[User, str]], User],
-            address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
-            user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
-            stop_event: Optional[Event] = None,
+        self,
+        client: GMatrixClient,
+        get_user_callable: Callable[[Union[User, str]], User],
+        address_reachability_changed_callback: Callable[[Address, AddressReachability], None],
+        user_presence_changed_callback: Optional[Callable[[User, UserPresence], None]] = None,
+        stop_event: Optional[Event] = None,
     ):
         self._client = client
         self._get_user = get_user_callable
@@ -172,9 +172,7 @@ class UserAddressManager:
         should **not** generally be used.
         """
         composite_presence = {
-            self._fetch_user_presence(uid)
-            for uid
-            in self._address_to_userids[address]
+            self._fetch_user_presence(uid) for uid in self._address_to_userids[address]
         }
 
         # Iterate over UserPresence in definition order (most to least online) and pick
@@ -191,7 +189,7 @@ class UserAddressManager:
             # Cached address reachability matches new state, do nothing
             return
         log.debug(
-            'Changing address presence state',
+            "Changing address presence state",
             current_user=self._user_id,
             address=to_normalized_address(address),
             prev_state=self._address_to_reachability.get(address),
@@ -209,12 +207,12 @@ class UserAddressManager:
         """
         if self._stop_event.ready():
             return
-        user_id = event['sender']
-        if event['type'] != 'm.presence' or user_id == self._user_id:
+        user_id = event["sender"]
+        if event["type"] != "m.presence" or user_id == self._user_id:
             return
 
         user = self._get_user(user_id)
-        user.displayname = event['content'].get('displayname') or user.displayname
+        user.displayname = event["content"].get("displayname") or user.displayname
         address = self._validate_userid_signature(user)
         if not address:
             # Malformed address - skip
@@ -225,7 +223,7 @@ class UserAddressManager:
             return
         self.add_userid_for_address(address, user_id)
 
-        new_state = UserPresence(event['content']['presence'])
+        new_state = UserPresence(event["content"]["presence"])
         if new_state == self._userid_to_presence.get(user_id):
             # Cached presence state matches, no action required
             return
@@ -238,16 +236,14 @@ class UserAddressManager:
 
     @property
     def _user_id(self) -> str:
-        user_id = getattr(self._client, 'user_id', None)
-        assert user_id, f'{self.__class__.__name__}._user_id accessed before client login'
+        user_id = getattr(self._client, "user_id", None)
+        assert user_id, f"{self.__class__.__name__}._user_id accessed before client login"
         return user_id
 
     def _fetch_user_presence(self, user_id: str) -> UserPresence:
         if user_id not in self._userid_to_presence:
             try:
-                presence = UserPresence(
-                    self._client.get_user_presence(user_id),
-                )
+                presence = UserPresence(self._client.get_user_presence(user_id))
             except MatrixRequestError:
                 presence = UserPresence.UNKNOWN
             self._userid_to_presence[user_id] = presence
@@ -273,27 +269,25 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
         matrix's Room instance linked to client
     """
     our_server_name = urlparse(client.api.base_url).netloc
-    assert our_server_name, 'Invalid client\'s homeserver url'
+    assert our_server_name, "Invalid client's homeserver url"
     servers = [our_server_name] + [  # client's own server first
         urlparse(s).netloc
         for s in servers
-        if urlparse(s).netloc not in {None, '', our_server_name}
+        if urlparse(s).netloc not in {None, "", our_server_name}
     ]
 
-    our_server_global_room_alias_full = f'#{name}:{servers[0]}'
+    our_server_global_room_alias_full = f"#{name}:{servers[0]}"
 
     # try joining a global room on any of the available servers, starting with ours
     for server in servers:
-        global_room_alias_full = f'#{name}:{server}'
+        global_room_alias_full = f"#{name}:{server}"
         try:
             global_room = client.join_room(global_room_alias_full)
         except MatrixRequestError as ex:
             if ex.code not in (403, 404, 500):
                 raise
             log.debug(
-                'Could not join global room',
-                room_alias_full=global_room_alias_full,
-                _exception=ex,
+                "Could not join global room", room_alias_full=global_room_alias_full, _exception=ex
             )
         else:
             if our_server_global_room_alias_full not in global_room.aliases:
@@ -302,7 +296,7 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
                 global_room.aliases.append(our_server_global_room_alias_full)
             break
     else:
-        log.debug('Could not join any global room, trying to create one')
+        log.debug("Could not join any global room, trying to create one")
         for _ in range(JOIN_RETRIES):
             try:
                 global_room = client.create_room(name, is_public=True)
@@ -310,9 +304,7 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
                 if ex.code not in (400, 409):
                     raise
                 try:
-                    global_room = client.join_room(
-                        our_server_global_room_alias_full,
-                    )
+                    global_room = client.join_room(our_server_global_room_alias_full)
                 except MatrixRequestError as ex:
                     if ex.code not in (404, 403):
                         raise
@@ -321,16 +313,13 @@ def join_global_room(client: GMatrixClient, name: str, servers: Sequence[str] = 
             else:
                 break
         else:
-            raise TransportError('Could neither join nor create a global room')
+            raise TransportError("Could neither join nor create a global room")
 
     return global_room
 
 
 def login_or_register(
-        client: GMatrixClient,
-        signer: Signer,
-        prev_user_id: str = None,
-        prev_access_token: str = None,
+    client: GMatrixClient, signer: Signer, prev_user_id: str = None, prev_access_token: str = None
 ) -> User:
     """Login to a Raiden matrix server with password and displayname proof-of-keys
 
@@ -355,19 +344,18 @@ def login_or_register(
 
     base_username = to_normalized_address(signer.address)
     _match_user = re.match(
-        f'^@{re.escape(base_username)}.*:{re.escape(server_name)}$',
-        prev_user_id or '',
+        f"^@{re.escape(base_username)}.*:{re.escape(server_name)}$", prev_user_id or ""
     )
     if _match_user:  # same user as before
         assert prev_user_id is not None
-        log.debug('Trying previous user login', user_id=prev_user_id)
+        log.debug("Trying previous user login", user_id=prev_user_id)
         client.set_access_token(user_id=prev_user_id, token=prev_access_token)
 
         try:
             client.api.get_devices()
         except MatrixRequestError as ex:
             log.debug(
-                'Couldn\'t use previous login credentials, discarding',
+                "Couldn't use previous login credentials, discarding",
                 prev_user_id=prev_user_id,
                 _exception=ex,
             )
@@ -375,11 +363,11 @@ def login_or_register(
             prev_sync_limit = client.set_sync_limit(0)
             client._sync()  # initial_sync
             client.set_sync_limit(prev_sync_limit)
-            log.debug('Success. Valid previous credentials', user_id=prev_user_id)
+            log.debug("Success. Valid previous credentials", user_id=prev_user_id)
             return client.get_user(client.user_id)
     elif prev_user_id:
         log.debug(
-            'Different server or account, discarding',
+            "Different server or account, discarding",
             prev_user_id=prev_user_id,
             current_address=base_username,
             current_server=server_name,
@@ -395,26 +383,21 @@ def login_or_register(
             if not rand:
                 rand = Random()  # deterministic, random secret for username suffixes
                 # initialize rand for seed (which requires a signature) only if/when needed
-                rand.seed(int.from_bytes(signer.sign(b'seed')[-32:], 'big'))
-            username = f'{username}.{rand.randint(0, 0xffffffff):08x}'
+                rand.seed(int.from_bytes(signer.sign(b"seed")[-32:], "big"))
+            username = f"{username}.{rand.randint(0, 0xffffffff):08x}"
 
         try:
             client.login(username, password, sync=False)
             prev_sync_limit = client.set_sync_limit(0)
             client._sync()  # when logging, do initial_sync with limit=0
             client.set_sync_limit(prev_sync_limit)
-            log.debug(
-                'Login',
-                homeserver=server_name,
-                server_url=server_url,
-                username=username,
-            )
+            log.debug("Login", homeserver=server_name, server_url=server_url, username=username)
             break
         except MatrixRequestError as ex:
             if ex.code != 403:
                 raise
             log.debug(
-                'Could not login. Trying register',
+                "Could not login. Trying register",
                 homeserver=server_name,
                 server_url=server_url,
                 username=username,
@@ -422,19 +405,16 @@ def login_or_register(
             try:
                 client.register_with_password(username, password)
                 log.debug(
-                    'Register',
-                    homeserver=server_name,
-                    server_url=server_url,
-                    username=username,
+                    "Register", homeserver=server_name, server_url=server_url, username=username
                 )
                 break
             except MatrixRequestError as ex:
                 if ex.code != 400:
                     raise
-                log.debug('Username taken. Continuing')
+                log.debug("Username taken. Continuing")
                 continue
     else:
-        raise ValueError('Could not register or login!')
+        raise ValueError("Could not register or login!")
 
     name = encode_hex(signer.sign(client.user_id.encode()))
     user = client.get_user(client.user_id)
@@ -442,7 +422,7 @@ def login_or_register(
     return user
 
 
-@cached(cache=LRUCache(128), key=attrgetter('user_id', 'displayname'), lock=Semaphore())
+@cached(cache=LRUCache(128), key=attrgetter("user_id", "displayname"), lock=Semaphore())
 def validate_userid_signature(user: User) -> Optional[Address]:
     """ Validate a userId format and signature on displayName, and return its address"""
     # display_name should be an address in the USERID_RE format
@@ -455,18 +435,15 @@ def validate_userid_signature(user: User) -> Optional[Address]:
 
     try:
         displayname = user.get_display_name()
-        recovered = recover(
-            data=user.user_id.encode(),
-            signature=decode_hex(displayname),
-        )
+        recovered = recover(data=user.user_id.encode(), signature=decode_hex(displayname))
         if not (address and recovered and recovered == address):
             return None
     except (
-            DecodeError,
-            TypeError,
-            InvalidSignature,
-            MatrixRequestError,
-            json.decoder.JSONDecodeError,
+        DecodeError,
+        TypeError,
+        InvalidSignature,
+        MatrixRequestError,
+        json.decoder.JSONDecodeError,
     ):
         return None
     return address
@@ -481,21 +458,18 @@ def sort_servers_closest(servers: Sequence[str]) -> Sequence[Tuple[str, float]]:
         sequence of pairs of url,rtt in seconds, sorted by rtt, excluding failed servers
         (possibly empty)
     """
-    if not {urlparse(url).scheme for url in servers}.issubset({'http', 'https'}):
-        raise TransportError('Invalid server urls')
+    if not {urlparse(url).scheme for url in servers}.issubset({"http", "https"}):
+        raise TransportError("Invalid server urls")
 
     get_rtt_jobs = set(
-        gevent.spawn(lambda url: (url, get_http_rtt(url)), server_url)
-        for server_url
-        in servers
+        gevent.spawn(lambda url: (url, get_http_rtt(url)), server_url) for server_url in servers
     )
     # these tasks should never raise, returns None on errors
     gevent.joinall(get_rtt_jobs, raise_error=False)  # block and wait tasks
     sorted_servers: List[Tuple[str, float]] = sorted(
-        (job.value for job in get_rtt_jobs if job.value[1] is not None),
-        key=itemgetter(1),
+        (job.value for job in get_rtt_jobs if job.value[1] is not None), key=itemgetter(1)
     )
-    log.debug('Matrix homeserver RTT times', rtt_times=sorted_servers)
+    log.debug("Matrix homeserver RTT times", rtt_times=sorted_servers)
     return sorted_servers
 
 
@@ -509,32 +483,28 @@ def make_client(servers: List[str], *args, **kwargs) -> GMatrixClient:
         GMatrixClient instance for one of the available servers
     """
     if len(servers) > 1:
-        sorted_servers = [
-            server_url
-            for (server_url, _) in sort_servers_closest(servers)
-        ]
+        sorted_servers = [server_url for (server_url, _) in sort_servers_closest(servers)]
         log.info(
-            'Automatically selecting matrix homeserver based on RTT',
-            sorted_servers=sorted_servers,
+            "Automatically selecting matrix homeserver based on RTT", sorted_servers=sorted_servers
         )
     elif len(servers) == 1:
         sorted_servers = servers
     else:
-        raise TransportError('No valid servers list given')
+        raise TransportError("No valid servers list given")
 
     last_ex = None
     for server_url in sorted_servers:
         client = GMatrixClient(server_url, *args, **kwargs)
         try:
-            client.api._send('GET', '/versions', api_path='/_matrix/client')
+            client.api._send("GET", "/versions", api_path="/_matrix/client")
         except MatrixError as ex:
-            log.warning('Selected server not usable', server_url=server_url, _exception=ex)
+            log.warning("Selected server not usable", server_url=server_url, _exception=ex)
             last_ex = ex
         else:
             break
     else:
         raise TransportError(
-            'Unable to find a reachable Matrix server. Please check your network connectivity.',
+            "Unable to find a reachable Matrix server. Please check your network connectivity."
         ) from last_ex
     return client
 
@@ -561,13 +531,13 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
 
     if not isinstance(data, str):
         log.warning(
-            'Received ToDevice Message body not a string',
+            "Received ToDevice Message body not a string",
             message_data=data,
             peer_address=pex(peer_address),
         )
         return []
 
-    if data.startswith('0x'):
+    if data.startswith("0x"):
         try:
             message = message_from_bytes(decode_hex(data))
             if not message:
@@ -582,7 +552,7 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
             return []
         except InvalidProtocolMessage as ex:
             log.warning(
-                'Received ToDevice Message binary data is not a valid message',
+                "Received ToDevice Message binary data is not a valid message",
                 message_data=data,
                 peer_address=pex(peer_address),
                 _exc=ex,
@@ -617,14 +587,14 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
                 continue
             if not isinstance(message, SignedMessage):
                 log.warning(
-                    'ToDevice Message not a SignedMessage!',
+                    "ToDevice Message not a SignedMessage!",
                     message=message,
                     peer_address=pex(peer_address),
                 )
                 continue
             if message.sender != peer_address:
                 log.warning(
-                    'ToDevice Message not signed by sender!',
+                    "ToDevice Message not signed by sender!",
                     message=message,
                     signer=message.sender,
                     peer_address=pex(peer_address),

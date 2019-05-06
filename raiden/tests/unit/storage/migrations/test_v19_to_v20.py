@@ -14,33 +14,34 @@ from raiden.utils.upgrades import UpgradeManager, UpgradeRecord
 def setup_storage(db_path):
     storage = SQLiteStorage(str(db_path))
 
-    state_changes_file = Path(__file__).parent / 'data/v19_statechanges.json'
+    state_changes_file = Path(__file__).parent / "data/v19_statechanges.json"
     state_changes_data = json.loads(state_changes_file.read_text())
     for state_change_record in state_changes_data:
         storage.write_state_change(
             state_change=json.dumps(state_change_record[1]),
-            log_time=datetime.utcnow().isoformat(timespec='milliseconds'),
+            log_time=datetime.utcnow().isoformat(timespec="milliseconds"),
         )
 
-    chain_state_data = Path(__file__).parent / 'data/v19_chainstate.json'
+    chain_state_data = Path(__file__).parent / "data/v19_chainstate.json"
     chain_state = chain_state_data.read_text()
     cursor = storage.conn.cursor()
     cursor.execute(
         """
         INSERT INTO state_snapshot(identifier, statechange_id, data)
         VALUES(1, 1, ?)
-        """, (chain_state,),
+        """,
+        (chain_state,),
     )
     storage.conn.commit()
     return storage
 
 
 def test_upgrade_v19_to_v20(tmp_path):
-    old_db_filename = tmp_path / Path('v19_log.db')
-    with patch('raiden.utils.upgrades.latest_db_file') as latest_db_file:
+    old_db_filename = tmp_path / Path("v19_log.db")
+    with patch("raiden.utils.upgrades.latest_db_file") as latest_db_file:
         latest_db_file.return_value = str(old_db_filename)
         storage = setup_storage(str(old_db_filename))
-        with patch('raiden.storage.sqlite.RAIDEN_DB_VERSION', new=19):
+        with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=19):
             storage.update_version()
         storage.conn.close()
 
@@ -63,11 +64,11 @@ def test_upgrade_v19_to_v20(tmp_path):
 
     raiden_service_mock.chain.payment_channel = payment_channel_func
 
-    db_path = tmp_path / Path('v20_log.db')
+    db_path = tmp_path / Path("v20_log.db")
     manager = UpgradeManager(db_filename=str(db_path), raiden=raiden_service_mock)
     with patch(
-            'raiden.utils.upgrades.UPGRADES_LIST',
-            new=[UpgradeRecord(from_version=19, function=upgrade_v19_to_v20)],
+        "raiden.utils.upgrades.UPGRADES_LIST",
+        new=[UpgradeRecord(from_version=19, function=upgrade_v19_to_v20)],
     ):
         manager.run()
 
@@ -75,46 +76,41 @@ def test_upgrade_v19_to_v20(tmp_path):
 
     batch_query = storage.batch_query_state_changes(
         batch_size=500,
-        filters=[
-            ('_type', 'raiden.transfer.state_change.ContractReceiveChannelNew'),
-        ],
+        filters=[("_type", "raiden.transfer.state_change.ContractReceiveChannelNew")],
     )
     for state_changes_batch in batch_query:
         for state_change_record in state_changes_batch:
             data = json.loads(state_change_record.data)
-            assert 'onchain_locksroot' in data['channel_state']['our_state']
-            assert 'onchain_locksroot' in data['channel_state']['partner_state']
+            assert "onchain_locksroot" in data["channel_state"]["our_state"]
+            assert "onchain_locksroot" in data["channel_state"]["partner_state"]
 
     batch_query = storage.batch_query_state_changes(
         batch_size=500,
-        filters=[
-            ('_type', 'raiden.transfer.state_change.ContractReceiveChannelSettled'),
-        ],
+        filters=[("_type", "raiden.transfer.state_change.ContractReceiveChannelSettled")],
     )
     for state_changes_batch in batch_query:
         for state_change_record in state_changes_batch:
             data = json.loads(state_change_record.data)
-            assert data['our_onchain_locksroot'] == serialize_bytes(our_onchain_locksroot)
-            assert data['partner_onchain_locksroot'] == serialize_bytes(partner_onchain_locksroot)
+            assert data["our_onchain_locksroot"] == serialize_bytes(our_onchain_locksroot)
+            assert data["partner_onchain_locksroot"] == serialize_bytes(partner_onchain_locksroot)
 
     batch_query = storage.batch_query_event_records(
-        batch_size=500,
-        filters=[('_type', 'events.ContractSendChannelBatchUnlock')],
+        batch_size=500, filters=[("_type", "events.ContractSendChannelBatchUnlock")]
     )
     for events_batch in batch_query:
         for event_record in events_batch:
             data = json.loads(event_record.data)
-            assert 'partner' in data
+            assert "partner" in data
 
     _, snapshot = storage.get_latest_state_snapshot()
     assert snapshot is not None
 
     snapshot = json.loads(snapshot)
 
-    for payment_network in snapshot['identifiers_to_paymentnetworks'].values():
-        for token_network in payment_network['tokennetworks']:
-            for channel in token_network['channelidentifiers_to_channels'].values():
-                channel_our_locksroot = channel['our_state']['onchain_locksroot']
-                channel_partner_locksroot = channel['partner_state']['onchain_locksroot']
+    for payment_network in snapshot["identifiers_to_paymentnetworks"].values():
+        for token_network in payment_network["tokennetworks"]:
+            for channel in token_network["channelidentifiers_to_channels"].values():
+                channel_our_locksroot = channel["our_state"]["onchain_locksroot"]
+                channel_partner_locksroot = channel["partner_state"]["onchain_locksroot"]
                 assert channel_our_locksroot == serialize_bytes(our_onchain_locksroot)
                 assert channel_partner_locksroot == serialize_bytes(partner_onchain_locksroot)

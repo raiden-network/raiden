@@ -29,10 +29,7 @@ def all_combinations(values):
     """ Returns all possible combinations, from length 1 up to full-length of
     values.
     """
-    all_generators = (
-        combinations(values, r)
-        for r in range(1, len(values))
-    )
+    all_generators = (combinations(values, r) for r in range(1, len(values)))
     flat = chain.from_iterable(all_generators)
     return flat
 
@@ -71,10 +68,7 @@ def fixture_all_combinations(invalid_values):
     # - {a: 2, b:4}
     for invalid_combinations in all_invalid_values:
         # expand the value list `(key, [v1,v2])` to `((key, v1), (key, v2))`
-        keys_values = (
-            product((key,), values)
-            for key, values in invalid_combinations
-        )
+        keys_values = (product((key,), values) for key, values in invalid_combinations)
 
         # now make the cartesian product of all possible invalid keys and values
         invalid_instances = product(*keys_values)

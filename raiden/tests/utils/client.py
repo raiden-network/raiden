@@ -10,9 +10,5 @@ def burn_eth(raiden_service, amount_to_leave=0):
     web3 = client.web3
     gas_price = web3.eth.gasPrice
     value = web3.eth.getBalance(address) - gas_price * (21000 + amount_to_leave)
-    transaction_hash = client.send_transaction(
-        to=HOP1,
-        value=value,
-        startgas=21000,
-    )
+    transaction_hash = client.send_transaction(to=HOP1, value=value, startgas=21000)
     client.poll(transaction_hash)

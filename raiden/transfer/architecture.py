@@ -64,6 +64,7 @@ class State:
           objects as immutable.
     - This class is used as a marker for states.
     """
+
     __slots__ = ()
 
 
@@ -83,14 +84,11 @@ class StateChange:
     - These objects don't have logic by design.
     - This class is used as a marker for state changes.
     """
+
     __slots__ = ()
 
     def to_dict(self):
-        return {
-            attr: value
-            for attr, value in self.__dict__.items()
-            if not attr.startswith('_')
-        }
+        return {attr: value for attr, value in self.__dict__.items() if not attr.startswith("_")}
 
 
 class Event:
@@ -107,6 +105,7 @@ class Event:
     - Separate events are preferred because there is a decoupling of what the
       upper layer will use the events for.
     """
+
     __slots__ = ()
 
 
@@ -119,29 +118,25 @@ class SendMessageEvent(Event):
     """
 
     def __init__(
-            self,
-            recipient: Address,
-            channel_identifier: ChannelID,
-            message_identifier: MessageID,
+        self, recipient: Address, channel_identifier: ChannelID, message_identifier: MessageID
     ) -> None:
         # Note that here and only here channel identifier can also be 0 which stands
         # for the identifier of no channel (i.e. the global queue)
         if not isinstance(channel_identifier, T_ChannelID):
-            raise ValueError('channel identifier must be of type T_ChannelIdentifier')
+            raise ValueError("channel identifier must be of type T_ChannelIdentifier")
 
         self.recipient = recipient
         self.queue_identifier = QueueIdentifier(
-            recipient=recipient,
-            channel_identifier=channel_identifier,
+            recipient=recipient, channel_identifier=channel_identifier
         )
         self.message_identifier = message_identifier
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, SendMessageEvent) and
-            self.recipient == other.recipient and
-            self.queue_identifier == other.queue_identifier and
-            self.message_identifier == other.message_identifier
+            isinstance(other, SendMessageEvent)
+            and self.recipient == other.recipient
+            and self.queue_identifier == other.queue_identifier
+            and self.message_identifier == other.message_identifier
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -155,10 +150,7 @@ class AuthenticatedSenderStateChange(StateChange):
         self.sender = sender
 
     def __eq__(self, other: Any) -> bool:
-        return (
-            isinstance(other, AuthenticatedSenderStateChange) and
-            self.sender == other.sender
-        )
+        return isinstance(other, AuthenticatedSenderStateChange) and self.sender == other.sender
 
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
@@ -167,15 +159,15 @@ class AuthenticatedSenderStateChange(StateChange):
 class BalanceProofStateChange(AuthenticatedSenderStateChange):
     """ Marker used for state changes which contain a balance proof. """
 
-    def __init__(self, balance_proof: 'BalanceProofSignedState') -> None:
+    def __init__(self, balance_proof: "BalanceProofSignedState") -> None:
         super().__init__(sender=balance_proof.sender)
         self.balance_proof = balance_proof
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, BalanceProofStateChange) and
-            super().__eq__(other) and
-            self.balance_proof == other.balance_proof
+            isinstance(other, BalanceProofStateChange)
+            and super().__eq__(other)
+            and self.balance_proof == other.balance_proof
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -187,14 +179,14 @@ class ContractSendEvent(Event):
 
     def __init__(self, triggered_by_block_hash: BlockHash) -> None:
         if not isinstance(triggered_by_block_hash, T_BlockHash):
-            raise ValueError('triggered_by_block_hash must be of type block_hash')
+            raise ValueError("triggered_by_block_hash must be of type block_hash")
         # This is the blockhash for which the event was triggered
         self.triggered_by_block_hash = triggered_by_block_hash
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ContractSendEvent) and
-            self.triggered_by_block_hash == other.triggered_by_block_hash
+            isinstance(other, ContractSendEvent)
+            and self.triggered_by_block_hash == other.triggered_by_block_hash
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -212,9 +204,9 @@ class ContractSendExpirableEvent(ContractSendEvent):
 
     def __eq__(self, other: Any) -> bool:
         return (
-            super().__eq__(other) and
-            isinstance(other, ContractSendExpirableEvent) and
-            self.expiration == other.expiration
+            super().__eq__(other)
+            and isinstance(other, ContractSendExpirableEvent)
+            and self.expiration == other.expiration
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -225,15 +217,12 @@ class ContractReceiveStateChange(StateChange):
     """ Marker used for state changes which represent on-chain logs. """
 
     def __init__(
-            self,
-            transaction_hash: TransactionHash,
-            block_number: BlockNumber,
-            block_hash: BlockHash,
+        self, transaction_hash: TransactionHash, block_number: BlockNumber, block_hash: BlockHash
     ) -> None:
         if not isinstance(block_number, T_BlockNumber):
-            raise ValueError('block_number must be of type block_number')
+            raise ValueError("block_number must be of type block_number")
         if not isinstance(block_hash, T_BlockHash):
-            raise ValueError('block_hash must be of type block_hash')
+            raise ValueError("block_hash must be of type block_hash")
 
         self.transaction_hash = transaction_hash
         self.block_number = block_number
@@ -241,32 +230,30 @@ class ContractReceiveStateChange(StateChange):
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, ContractReceiveStateChange) and
-            self.transaction_hash == other.transaction_hash and
-            self.block_number == other.block_number and
-            self.block_hash == other.block_hash
+            isinstance(other, ContractReceiveStateChange)
+            and self.transaction_hash == other.transaction_hash
+            and self.block_number == other.block_number
+            and self.block_hash == other.block_hash
         )
 
     def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
 
-ST = TypeVar('ST', bound=State)
+ST = TypeVar("ST", bound=State)
 
 
 class StateManager(Generic[ST]):
     """ The mutable storage for the application state, this storage can do
     state transitions by applying the StateChanges to the current State.
     """
-    __slots__ = (
-        'state_transition',
-        'current_state',
-    )
+
+    __slots__ = ("state_transition", "current_state")
 
     def __init__(
-            self,
-            state_transition: Callable[[Optional[ST], StateChange], State],
-            current_state: Optional[ST],
+        self,
+        state_transition: Callable[[Optional[ST], StateChange], State],
+        current_state: Optional[ST],
     ) -> None:
         """ Initialize the state manager.
 
@@ -275,7 +262,7 @@ class StateManager(Generic[ST]):
             current_state: current application state.
         """
         if not callable(state_transition):
-            raise ValueError('state_transition must be a callable')
+            raise ValueError("state_transition must be a callable")
 
         self.state_transition = state_transition
         self.current_state = current_state
@@ -300,10 +287,7 @@ class StateManager(Generic[ST]):
         next_state = deepcopy(self.current_state)
 
         # update the current state by applying the change
-        iteration = self.state_transition(
-            next_state,
-            state_change,
-        )
+        iteration = self.state_transition(next_state, state_change)
 
         assert isinstance(iteration, TransitionResult)
 
@@ -317,9 +301,9 @@ class StateManager(Generic[ST]):
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, StateManager) and
-            self.state_transition == other.state_transition and
-            self.current_state == other.current_state
+            isinstance(other, StateManager)
+            and self.state_transition == other.state_transition
+            and self.current_state == other.current_state
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -333,10 +317,7 @@ class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
     task to cleanup after the child.
     """
 
-    __slots__ = (
-        'new_state',
-        'events',
-    )
+    __slots__ = ("new_state", "events")
 
     def __init__(self, new_state: Optional[ST], events: List[Event]) -> None:
         self.new_state = new_state
@@ -344,9 +325,9 @@ class TransitionResult(Generic[ST]):  # pylint: disable=unsubscriptable-object
 
     def __eq__(self, other: Any) -> bool:
         return (
-            isinstance(other, TransitionResult) and
-            self.new_state == other.new_state and
-            self.events == other.events
+            isinstance(other, TransitionResult)
+            and self.new_state == other.new_state
+            and self.events == other.events
         )
 
     def __ne__(self, other: Any) -> bool:

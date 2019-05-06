@@ -23,12 +23,7 @@ class Discovery:
     endpoints for other ethereum-/raiden-addressess.
     """
 
-    def __init__(
-            self,
-            jsonrpc_client,
-            discovery_address,
-            contract_manager: ContractManager,
-    ):
+    def __init__(self, jsonrpc_client, discovery_address, contract_manager: ContractManager):
         contract = jsonrpc_client.new_contract(
             contract_manager.get_contract_abi(CONTRACT_ENDPOINT_REGISTRY),
             to_normalized_address(discovery_address),
@@ -36,9 +31,9 @@ class Discovery:
         proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(discovery_address):
-            raise ValueError('discovery_address must be a valid address')
+            raise ValueError("discovery_address must be a valid address")
 
-        check_address_has_code(jsonrpc_client, discovery_address, 'Discovery')
+        check_address_has_code(jsonrpc_client, discovery_address, "Discovery")
 
         compare_contract_versions(
             proxy=proxy,
@@ -58,35 +53,31 @@ class Discovery:
             raise ValueError("node_address doesnt match this node's address")
 
         log_details = {
-            'node': pex(self.node_address),
-            'node_address': pex(node_address),
-            'endpoint': endpoint,
+            "node": pex(self.node_address),
+            "node_address": pex(node_address),
+            "endpoint": endpoint,
         }
-        log.debug('registerEndpoint called', **log_details)
+        log.debug("registerEndpoint called", **log_details)
 
         transaction_hash = self.proxy.transact(
-            'registerEndpoint',
-            safe_gas_limit(GAS_REQUIRED_FOR_ENDPOINT_REGISTER),
-            endpoint,
+            "registerEndpoint", safe_gas_limit(GAS_REQUIRED_FOR_ENDPOINT_REGISTER), endpoint
         )
 
         self.client.poll(transaction_hash)
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.critical('registerEndpoint failed', **log_details)
-            raise TransactionThrew('Register Endpoint', receipt_or_none)
+            log.critical("registerEndpoint failed", **log_details)
+            raise TransactionThrew("Register Endpoint", receipt_or_none)
 
-        log.debug('registerEndpoint successful', **log_details)
+        log.debug("registerEndpoint successful", **log_details)
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = to_checksum_address(node_address_bin)
-        endpoint = self.proxy.contract.functions.findEndpointByAddress(
-            node_address_hex,
-        ).call()
+        endpoint = self.proxy.contract.functions.findEndpointByAddress(node_address_hex).call()
 
-        if endpoint == '':
-            raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
+        if endpoint == "":
+            raise UnknownAddress("Unknown address {}".format(pex(node_address_bin)))
 
         return endpoint
 

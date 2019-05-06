@@ -23,7 +23,6 @@ TRANSFER_MEMORY = 4096
 
 
 class EchoNode:
-
     def __init__(self, api, token_address):
         assert isinstance(api, RaidenAPI)
         self.ready = Event()
@@ -32,8 +31,7 @@ class EchoNode:
         self.token_address = token_address
 
         existing_channels = self.api.get_channel_list(
-            api.raiden.default_registry.address,
-            self.token_address,
+            api.raiden.default_registry.address, self.token_address
         )
 
         open_channels = [
@@ -45,16 +43,16 @@ class EchoNode:
         if len(open_channels) == 0:
             token = self.api.raiden.chain.token(self.token_address)
             if not token.balance_of(self.api.raiden.address) > 0:
-                raise ValueError('not enough funds for echo node %s for token %s' % (
-                    pex(self.api.raiden.address),
-                    pex(self.token_address),
-                ))
+                raise ValueError(
+                    "not enough funds for echo node %s for token %s"
+                    % (pex(self.api.raiden.address), pex(self.token_address))
+                )
             self.api.token_network_connect(
                 self.api.raiden.default_registry.address,
                 self.token_address,
                 token.balance_of(self.api.raiden.address),
                 initial_channel_target=10,
-                joinable_funds_target=.5,
+                joinable_funds_target=0.5,
             )
 
         self.last_poll_offset = 0
@@ -68,7 +66,7 @@ class EchoNode:
         # register ourselves with the raiden alarm task
         self.api.raiden.alarm.register_callback(self.echo_node_alarm_callback)
         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
-        log.info('Echo node started')
+        log.info("Echo node started")
 
     def echo_node_alarm_callback(self, block_number):
         """ This can be registered with the raiden AlarmTask.
@@ -77,7 +75,7 @@ class EchoNode:
         """
         if not self.ready.is_set():
             self.ready.set()
-        log.debug('echo_node callback', block_number=block_number)
+        log.debug("echo_node callback", block_number=block_number)
         if self.stop_signal is not None:
             return REMOVE_CALLBACK
         else:
@@ -98,8 +96,7 @@ class EchoNode:
                     return
                 else:
                     received_transfers = self.api.get_raiden_events_payment_history(
-                        token_address=self.token_address,
-                        offset=self.last_poll_offset,
+                        token_address=self.token_address, offset=self.last_poll_offset
                     )
 
                     # received transfer is a tuple of (block_number, event)
@@ -119,14 +116,14 @@ class EchoNode:
 
                     if not self.echo_worker_greenlet.started:
                         log.debug(
-                            'restarting echo_worker_greenlet',
+                            "restarting echo_worker_greenlet",
                             dead=self.echo_worker_greenlet.dead,
                             successful=self.echo_worker_greenlet.successful(),
                             exception=self.echo_worker_greenlet.exception,
                         )
                         self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
         except Timeout:
-            log.info('timeout while polling for events')
+            log.info("timeout while polling for events")
         finally:
             if locked:
                 self.lock.release()
@@ -134,13 +131,13 @@ class EchoNode:
     def echo_worker(self):
         """ The `echo_worker` works through the `self.received_transfers` queue and spawns
         `self.on_transfer` greenlets for all not-yet-seen transfers. """
-        log.debug('echo worker', qsize=self.received_transfers.qsize())
+        log.debug("echo worker", qsize=self.received_transfers.qsize())
         while self.stop_signal is None:
             if self.received_transfers.qsize() > 0:
                 transfer = self.received_transfers.get()
                 if transfer in self.seen_transfers:
                     log.debug(
-                        'duplicate transfer ignored',
+                        "duplicate transfer ignored",
                         initiator=pex(transfer.initiator),
                         amount=transfer.amount,
                         identifier=transfer.identifier,
@@ -149,7 +146,7 @@ class EchoNode:
                     self.seen_transfers.append(transfer)
                     self.greenlets.add(gevent.spawn(self.on_transfer, transfer))
             else:
-                gevent.sleep(.5)
+                gevent.sleep(0.5)
 
     def on_transfer(self, transfer):
         """ This handles the echo logic, as described in
@@ -168,7 +165,7 @@ class EchoNode:
         echo_amount = 0
         if transfer.amount % 3 == 0:
             log.info(
-                'ECHO amount - 1',
+                "ECHO amount - 1",
                 initiator=pex(transfer.initiator),
                 amount=transfer.amount,
                 identifier=transfer.identifier,
@@ -177,7 +174,7 @@ class EchoNode:
 
         elif transfer.amount == 7:
             log.info(
-                'ECHO lucky number draw',
+                "ECHO lucky number draw",
                 initiator=pex(transfer.initiator),
                 amount=transfer.amount,
                 identifier=transfer.identifier,
@@ -193,7 +190,7 @@ class EchoNode:
             if any(ticket.initiator == transfer.initiator for ticket in tickets):
                 assert transfer not in tickets
                 log.debug(
-                    'duplicate lottery entry',
+                    "duplicate lottery entry",
                     initiator=pex(transfer.initiator),
                     identifier=transfer.identifier,
                     poolsize=len(tickets),
@@ -203,7 +200,7 @@ class EchoNode:
 
             # payout
             elif len(tickets) == 6:
-                log.info('payout!')
+                log.info("payout!")
                 # reset the pool
                 assert self.lottery_pool.qsize() == 6
                 self.lottery_pool = Queue()
@@ -217,7 +214,7 @@ class EchoNode:
 
         else:
             log.debug(
-                'echo transfer received',
+                "echo transfer received",
                 initiator=pex(transfer.initiator),
                 amount=transfer.amount,
                 identifier=transfer.identifier,
@@ -226,7 +223,7 @@ class EchoNode:
 
         if echo_amount:
             log.debug(
-                'sending echo transfer',
+                "sending echo transfer",
                 target=pex(transfer.initiator),
                 amount=echo_amount,
                 orig_identifier=transfer.identifier,

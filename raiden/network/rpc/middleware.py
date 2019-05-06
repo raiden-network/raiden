@@ -20,23 +20,22 @@ def make_connection_test_middleware():
                 if web3.isConnected():
                     return make_request(method, params)
                 else:
-                    raise EthNodeCommunicationError('Web3 provider not connected')
+                    raise EthNodeCommunicationError("Web3 provider not connected")
 
             # the isConnected check doesn't currently catch JSON errors
             # see https://github.com/ethereum/web3.py/issues/866
             except JSONDecodeError:
-                raise EthNodeCommunicationError('Web3 provider not connected')
+                raise EthNodeCommunicationError("Web3 provider not connected")
 
         return middleware
+
     return connection_test_middleware
 
 
 connection_test_middleware = make_connection_test_middleware()
 
 
-BLOCK_HASH_CACHE_RPC_WHITELIST = {
-    'eth_getBlockByHash',
-}
+BLOCK_HASH_CACHE_RPC_WHITELIST = {"eth_getBlockByHash"}
 
 
 block_hash_cache_middleware = construct_simple_cache_middleware(
@@ -50,23 +49,24 @@ block_hash_cache_middleware = construct_simple_cache_middleware(
 # https://github.com/raiden-network/raiden-services/blob/51b2b3093915c482e3d8307a09f2952ffa3c6c7e/src/pathfinding_service/middleware.py
 # We could potentially move it to a common code repository
 def http_retry_with_backoff_middleware(
-        make_request,
-        web3,  # pylint: disable=unused-argument
-        errors: Tuple = (
-            exceptions.ConnectionError,
-            exceptions.HTTPError,
-            exceptions.Timeout,
-            exceptions.TooManyRedirects,
-        ),
-        retries: int = 10,
-        first_backoff: float = 0.2,
-        backoff_factor: float = 2,
+    make_request,
+    web3,  # pylint: disable=unused-argument
+    errors: Tuple = (
+        exceptions.ConnectionError,
+        exceptions.HTTPError,
+        exceptions.Timeout,
+        exceptions.TooManyRedirects,
+    ),
+    retries: int = 10,
+    first_backoff: float = 0.2,
+    backoff_factor: float = 2,
 ):
     """ Retry requests with exponential backoff
     Creates middleware that retries failed HTTP requests and exponentially
     increases the backoff between retries. Meant to replace the default
     middleware `http_retry_request_middleware` for HTTPProvider.
     """
+
     def middleware(method, params):
         backoff = first_backoff
         if check_if_retry_on_failure(method):

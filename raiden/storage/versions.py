@@ -3,7 +3,7 @@ import re
 
 from raiden.utils.typing import List, Optional
 
-VERSION_RE = re.compile(r'^v(\d+)_log[.]db$')
+VERSION_RE = re.compile(r"^v(\d+)_log[.]db$")
 
 
 def latest_db_file(paths: List[str]) -> Optional[str]:
@@ -18,7 +18,7 @@ def latest_db_file(paths: List[str]) -> Optional[str]:
     dbs = {}
     for db_path in paths:
         matches = VERSION_RE.match(os.path.basename(db_path))
-        assert matches, f'Invalid path name {db_path}'
+        assert matches, f"Invalid path name {db_path}"
 
         try:
             version = int(matches.group(1))
@@ -40,8 +40,4 @@ def filter_db_names(paths: List[str]) -> List[str]:
     Args:
         paths: A list of file names.
     """
-    return [
-        db_path
-        for db_path in paths
-        if VERSION_RE.match(os.path.basename(db_path))
-    ]
+    return [db_path for db_path in paths if VERSION_RE.match(os.path.basename(db_path))]

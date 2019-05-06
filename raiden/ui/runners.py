@@ -37,9 +37,9 @@ log = structlog.get_logger(__name__)
 
 
 ETHEREUM_NODE_COMMUNICATION_ERROR = (
-    '\n'
-    'Could not contact the Ethereum node through JSON-RPC.\n'
-    'Please make sure that the Ethereum node is running and JSON-RPC is enabled.'
+    "\n"
+    "Could not contact the Ethereum node through JSON-RPC.\n"
+    "Please make sure that the Ethereum node is running and JSON-RPC is enabled."
 )
 
 
@@ -63,32 +63,32 @@ class NodeRunner:
 
     def run(self):
         configure_logging(
-            self._options['log_config'],
-            log_json=self._options['log_json'],
-            log_file=self._options['log_file'],
-            disable_debug_logfile=self._options['disable_debug_logfile'],
+            self._options["log_config"],
+            log_json=self._options["log_json"],
+            log_file=self._options["log_file"],
+            disable_debug_logfile=self._options["disable_debug_logfile"],
         )
 
-        log.info('Starting Raiden', **get_system_spec())
+        log.info("Starting Raiden", **get_system_spec())
 
-        if self._options['config_file']:
-            log.debug('Using config file', config_file=self._options['config_file'])
+        if self._options["config_file"]:
+            log.debug("Using config file", config_file=self._options["config_file"])
 
     def _start_services(self):
         from raiden.api.python import RaidenAPI
 
         config = deepcopy(App.DEFAULT_CONFIG)
-        if self._options.get('extra_config', dict()):
-            merge_dict(config, self._options['extra_config'])
-            del self._options['extra_config']
-        self._options['config'] = config
+        if self._options.get("extra_config", dict()):
+            merge_dict(config, self._options["extra_config"])
+            del self._options["extra_config"]
+        self._options["config"] = config
 
-        if self._options['showconfig']:
-            print('Configuration Dump:')
+        if self._options["showconfig"]:
+            print("Configuration Dump:")
             dump_config(config)
             dump_cmd_options(self._options)
-            dump_module('settings', settings)
-            dump_module('constants', constants)
+            dump_module("settings", settings)
+            dump_module("constants", constants)
 
         # this catches exceptions raised when waiting for the stalecheck to complete
         try:
@@ -97,56 +97,55 @@ class NodeRunner:
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
         except RuntimeError as e:
-            click.secho(str(e), fg='red')
+            click.secho(str(e), fg="red")
             sys.exit(1)
         except EthNodeInterfaceError as e:
-            click.secho(str(e), fg='red')
+            click.secho(str(e), fg="red")
             sys.exit(1)
 
         tasks = [app_.raiden]  # RaidenService takes care of Transport and AlarmTask
 
         domain_list = []
-        if self._options['rpccorsdomain']:
-            if ',' in self._options['rpccorsdomain']:
-                for domain in self._options['rpccorsdomain'].split(','):
+        if self._options["rpccorsdomain"]:
+            if "," in self._options["rpccorsdomain"]:
+                for domain in self._options["rpccorsdomain"].split(","):
                     domain_list.append(str(domain))
             else:
-                domain_list.append(str(self._options['rpccorsdomain']))
+                domain_list.append(str(self._options["rpccorsdomain"]))
 
         self._raiden_api = RaidenAPI(app_.raiden)
 
-        if self._options['rpc']:
+        if self._options["rpc"]:
             rest_api = RestAPI(self._raiden_api)
-            (api_host, api_port) = split_endpoint(self._options['api_address'])
+            (api_host, api_port) = split_endpoint(self._options["api_address"])
             api_server = APIServer(
                 rest_api,
-                config={'host': api_host, 'port': api_port},
+                config={"host": api_host, "port": api_port},
                 cors_domain_list=domain_list,
-                web_ui=self._options['web_ui'],
-                eth_rpc_endpoint=self._options['eth_rpc_endpoint'],
+                web_ui=self._options["web_ui"],
+                eth_rpc_endpoint=self._options["eth_rpc_endpoint"],
             )
 
             try:
                 api_server.start()
             except APIServerPortInUseError:
                 click.secho(
-                    f'ERROR: API Address {api_host}:{api_port} is in use. '
-                    f'Use --api-address <host:port> to specify a different port.',
-                    fg='red',
+                    f"ERROR: API Address {api_host}:{api_port} is in use. "
+                    f"Use --api-address <host:port> to specify a different port.",
+                    fg="red",
                 )
                 sys.exit(1)
 
             print(
-                'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
-                'See the Raiden documentation for all available endpoints at\n'
-                'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
-                    api_host,
-                    api_port,
-                ),
+                "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
+                "See the Raiden documentation for all available endpoints at\n"
+                "http://raiden-network.readthedocs.io/en/stable/rest_api.html".format(
+                    api_host, api_port
+                )
             )
             tasks.append(api_server)
 
-        if self._options['console']:
+        if self._options["console"]:
             from raiden.ui.console import Console
 
             console = Console(app_)
@@ -154,32 +153,24 @@ class NodeRunner:
             tasks.append(console)
 
         # spawn a greenlet to handle the version checking
-        version = get_system_spec()['raiden']
+        version = get_system_spec()["raiden"]
         tasks.append(gevent.spawn(check_version, version))
 
         # spawn a greenlet to handle the gas reserve check
         tasks.append(gevent.spawn(check_gas_reserve, app_.raiden))
         # spawn a greenlet to handle the periodic check for the network id
-        tasks.append(gevent.spawn(
-            check_network_id,
-            app_.raiden.chain.network_id,
-            app_.raiden.chain.client.web3,
-        ))
-
-        spawn_user_deposit_task = (
-            app_.user_deposit and
-            (
-                self._options['pathfinding_service_address'] or
-                self._options['enable_monitoring']
+        tasks.append(
+            gevent.spawn(
+                check_network_id, app_.raiden.chain.network_id, app_.raiden.chain.client.web3
             )
+        )
+
+        spawn_user_deposit_task = app_.user_deposit and (
+            self._options["pathfinding_service_address"] or self._options["enable_monitoring"]
         )
         if spawn_user_deposit_task:
             # spawn a greenlet to handle RDN deposits check
-            tasks.append(gevent.spawn(
-                check_rdn_deposits,
-                app_.raiden,
-                app_.user_deposit,
-            ))
+            tasks.append(gevent.spawn(check_rdn_deposits, app_.raiden, app_.user_deposit))
 
         # spawn a greenlet to handle the functions
 
@@ -201,26 +192,26 @@ class NodeRunner:
 
         try:
             event.get()
-            print('Signal received. Shutting down ...')
+            print("Signal received. Shutting down ...")
         except (EthNodeCommunicationError, RequestsConnectionError):
             print(ETHEREUM_NODE_COMMUNICATION_ERROR)
             sys.exit(1)
         except RaidenError as ex:
-            click.secho(f'FATAL: {ex}', fg='red')
+            click.secho(f"FATAL: {ex}", fg="red")
         except Exception as ex:
             file = NamedTemporaryFile(
-                'w',
-                prefix=f'raiden-exception-{datetime.utcnow():%Y-%m-%dT%H-%M}',
-                suffix='.txt',
+                "w",
+                prefix=f"raiden-exception-{datetime.utcnow():%Y-%m-%dT%H-%M}",
+                suffix=".txt",
                 delete=False,
             )
             with file as traceback_file:
                 traceback.print_exc(file=traceback_file)
                 click.secho(
-                    f'FATAL: An unexpected exception occured. '
-                    f'A traceback has been written to {traceback_file.name}\n'
-                    f'{ex}',
-                    fg='red',
+                    f"FATAL: An unexpected exception occured. "
+                    f"A traceback has been written to {traceback_file.name}\n"
+                    f"{ex}",
+                    fg="red",
                 )
         finally:
             self._shutdown_hook()
@@ -236,7 +227,7 @@ class NodeRunner:
 
             gevent.joinall(
                 [gevent.spawn(stop_task, task) for task in tasks],
-                app_.config.get('shutdown_timeout', settings.DEFAULT_SHUTDOWN_TIMEOUT),
+                app_.config.get("shutdown_timeout", settings.DEFAULT_SHUTDOWN_TIMEOUT),
                 raise_error=True,
             )
 
@@ -247,23 +238,19 @@ class UDPRunner(NodeRunner):
     def run(self):
         super().run()
 
-        (listen_host, listen_port) = split_endpoint(self._options['listen_address'])
+        (listen_host, listen_port) = split_endpoint(self._options["listen_address"])
         try:
-            factory = SocketFactory(
-                listen_host,
-                listen_port,
-                strategy=self._options['nat'],
-            )
+            factory = SocketFactory(listen_host, listen_port, strategy=self._options["nat"])
             with factory as mapped_socket:
-                self._options['mapped_socket'] = mapped_socket
+                self._options["mapped_socket"] = mapped_socket
                 app = self._start_services()
 
         except RaidenServicePortInUseError:
             click.secho(
-                'ERROR: Address %s:%s is in use. '
-                'Use --listen-address <host:port> to specify port to listen on.' %
-                (listen_host, listen_port),
-                fg='red',
+                "ERROR: Address %s:%s is in use. "
+                "Use --listen-address <host:port> to specify port to listen on."
+                % (listen_host, listen_port),
+                fg="red",
             )
             sys.exit(1)
         return app
@@ -272,7 +259,7 @@ class UDPRunner(NodeRunner):
 class MatrixRunner(NodeRunner):
     def run(self):
         super().run()
-        self._options['mapped_socket'] = None
+        self._options["mapped_socket"] = None
         return self._start_services()
 
 
@@ -284,7 +271,7 @@ class EchoNodeRunner(NodeRunner):
 
     @property
     def welcome_string(self):
-        return '{} [ECHO NODE]'.format(super().welcome_string)
+        return "{} [ECHO NODE]".format(super().welcome_string)
 
     def _startup_hook(self):
         self._echo_node = EchoNode(self._raiden_api, self._token_address)

@@ -19,15 +19,15 @@ class Discovery:
 
     def register(self, node_address: bytes, host: str, port: int):
         if not is_binary_address(node_address):
-            raise ValueError('node_address must be a valid address')
+            raise ValueError("node_address must be a valid address")
 
         try:
             socket.inet_pton(socket.AF_INET, host)
         except OSError:
-            raise ValueError('invalid ip address provided: {}'.format(host))
+            raise ValueError("invalid ip address provided: {}".format(host))
 
         if not isinstance(port, int):
-            raise ValueError('port must be a valid number')
+            raise ValueError("port must be a valid number")
 
         self.nodeid_to_hostport[node_address] = (host, port)
 
@@ -35,7 +35,7 @@ class Discovery:
         try:
             return self.nodeid_to_hostport[node_address]
         except KeyError:
-            raise InvalidAddress('Unknown address {}'.format(pex(node_address)))
+            raise InvalidAddress("Unknown address {}".format(pex(node_address)))
 
 
 class ContractDiscovery(Discovery):
@@ -44,11 +44,7 @@ class ContractDiscovery(Discovery):
     Allows registering and looking up by endpoint (host, port) for node_address.
     """
 
-    def __init__(
-            self,
-            node_address: bytes,
-            discovery_proxy: DiscoveryProxy,
-    ):
+    def __init__(self, node_address: bytes, discovery_proxy: DiscoveryProxy):
 
         super().__init__()
 
@@ -57,24 +53,24 @@ class ContractDiscovery(Discovery):
 
     def register(self, node_address: bytes, host: str, port: int):
         if node_address != self.node_address:
-            raise ValueError('You can only register your own endpoint.')
+            raise ValueError("You can only register your own endpoint.")
 
         if not is_binary_address(node_address):
-            raise ValueError('node_address must be a valid address')
+            raise ValueError("node_address must be a valid address")
 
         try:
             socket.inet_pton(socket.AF_INET, host)
         except OSError:
-            raise ValueError('invalid ip address provided: {}'.format(host))
+            raise ValueError("invalid ip address provided: {}".format(host))
 
         if not isinstance(port, int):
-            raise ValueError('port must be a valid number')
+            raise ValueError("port must be a valid number")
 
         try:
             current_value = self.get(node_address)
             if current_value == (host, port):
                 log.info(
-                    'endpoint already registered',
+                    "endpoint already registered",
                     node_address=pex(node_address),
                     host=host,
                     port=port,
@@ -86,7 +82,7 @@ class ContractDiscovery(Discovery):
         endpoint = host_port_to_endpoint(host, port)
         self.discovery_proxy.register_endpoint(node_address, endpoint)
         log.info(
-            'registered endpoint in discovery',
+            "registered endpoint in discovery",
             node_address=pex(node_address),
             host=host,
             port=port,

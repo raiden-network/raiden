@@ -55,38 +55,33 @@ def sign_and_inject(message: Message, signer: Signer, app: App) -> None:
 
 
 def get_channelstate(
-        app0: App,
-        app1: App,
-        token_network_identifier: TokenNetworkID,
+    app0: App, app1: App, token_network_identifier: TokenNetworkID
 ) -> NettingChannelState:
     channel_state = views.get_channelstate_by_token_network_and_partner(
-        views.state_from_app(app0),
-        token_network_identifier,
-        app1.raiden.address,
+        views.state_from_app(app0), token_network_identifier, app1.raiden.address
     )
     return channel_state
 
 
 def transfer(
-        initiator_app: App,
-        target_app: App,
-        token_address: TokenAddress,
-        amount: PaymentAmount,
-        identifier: PaymentID,
-        fee: FeeAmount = 0,
-        timeout: float = 10,
+    initiator_app: App,
+    target_app: App,
+    token_address: TokenAddress,
+    amount: PaymentAmount,
+    identifier: PaymentID,
+    fee: FeeAmount = 0,
+    timeout: float = 10,
 ) -> None:
     """ Nice to read shortcut to make successful LockedTransfer.
 
     Note:
         Only the initiator and target are synched.
     """
-    assert identifier is not None, 'The identifier must be provided'
+    assert identifier is not None, "The identifier must be provided"
     assert isinstance(target_app.raiden.message_handler, WaitForMessage)
 
     wait_for_unlock = target_app.raiden.message_handler.wait_for_message(
-        Unlock,
-        {'payment_identifier': identifier},
+        Unlock, {"payment_identifier": identifier}
     )
 
     payment_network_identifier = initiator_app.raiden.default_registry.address
@@ -106,19 +101,19 @@ def transfer(
     with Timeout(seconds=timeout):
         wait_for_unlock.get()
         msg = (
-            f'transfer from {pex(initiator_app.raiden.address)} '
-            f'to {pex(target_app.raiden.address)} failed.'
+            f"transfer from {pex(initiator_app.raiden.address)} "
+            f"to {pex(target_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 
 
 def transfer_and_assert_path(
-        path: List[App],
-        token_address: TokenAddress,
-        amount: PaymentAmount,
-        identifier: PaymentID,
-        fee: FeeAmount = 0,
-        timeout: float = 10,
+    path: List[App],
+    token_address: TokenAddress,
+    amount: PaymentAmount,
+    identifier: PaymentID,
+    fee: FeeAmount = 0,
+    timeout: float = 10,
 ) -> None:
     """ Nice to read shortcut to make successful LockedTransfer.
 
@@ -128,7 +123,7 @@ def transfer_and_assert_path(
         caller to ensure the path will be used. All nodes in `path` are
         synched.
     """
-    assert identifier is not None, 'The identifier must be provided'
+    assert identifier is not None, "The identifier must be provided"
     secret = random_secret()
 
     first_app = path[0]
@@ -142,9 +137,7 @@ def transfer_and_assert_path(
     for app in path:
         assert isinstance(app.raiden.message_handler, WaitForMessage)
 
-        msg = (
-            'The apps must be on the same payment network'
-        )
+        msg = "The apps must be on the same payment network"
         assert app.raiden.default_registry.address == payment_network_identifier, msg
 
         app_token_network_address = views.get_token_network_identifier_by_token_address(
@@ -153,9 +146,7 @@ def transfer_and_assert_path(
             token_address=token_address,
         )
 
-        msg = (
-            'The apps must be synchronized with the blockchain'
-        )
+        msg = "The apps must be synchronized with the blockchain"
         assert token_network_address == app_token_network_address, msg
 
     pairs = zip(path[:-1], path[1:])
@@ -173,17 +164,17 @@ def transfer_and_assert_path(
         )
 
         msg = (
-            f'{pex(from_app.raiden.address)} does not have a channel with '
-            f'{pex(to_app.raiden.address)} needed to transfer through the '
-            f'path {lpex(app.raiden.address for app in path)}.'
+            f"{pex(from_app.raiden.address)} does not have a channel with "
+            f"{pex(to_app.raiden.address)} needed to transfer through the "
+            f"path {lpex(app.raiden.address for app in path)}."
         )
         assert from_channel_state, msg
         assert to_channel_state, msg
 
         msg = (
-            f'channel among {pex(from_app.raiden.address)} and '
-            f'{pex(to_app.raiden.address)} must be open to be used for a '
-            f'transfer'
+            f"channel among {pex(from_app.raiden.address)} and "
+            f"{pex(to_app.raiden.address)} must be open to be used for a "
+            f"transfer"
         )
         assert channel.get_status(from_channel_state) == CHANNEL_STATE_OPENED, msg
         assert channel.get_status(to_channel_state) == CHANNEL_STATE_OPENED, msg
@@ -194,10 +185,10 @@ def transfer_and_assert_path(
         app.raiden.message_handler.wait_for_message(
             Unlock,
             {
-                'channel_identifier': channel_identifier,
-                'token_network_address': token_network_address,
-                'payment_identifier': identifier,
-                'secret': secret,
+                "channel_identifier": channel_identifier,
+                "token_network_address": token_network_address,
+                "payment_identifier": identifier,
+                "secret": secret,
             },
         )
         for app, channel_identifier in receiving
@@ -216,20 +207,20 @@ def transfer_and_assert_path(
     with Timeout(seconds=timeout):
         gevent.wait(results)
         msg = (
-            f'transfer from {pex(first_app.raiden.address)} '
-            f'to {pex(last_app.raiden.address)} failed.'
+            f"transfer from {pex(first_app.raiden.address)} "
+            f"to {pex(last_app.raiden.address)} failed."
         )
         assert payment_status.payment_done.get(), msg
 
 
 def assert_synced_channel_state(
-        token_network_identifier: TokenNetworkID,
-        app0: App,
-        balance0: Balance,
-        pending_locks0: List[HashTimeLockState],
-        app1: App,
-        balance1: Balance,
-        pending_locks1: List[HashTimeLockState],
+    token_network_identifier: TokenNetworkID,
+    app0: App,
+    balance0: Balance,
+    pending_locks0: List[HashTimeLockState],
+    app1: App,
+    balance1: Balance,
+    pending_locks1: List[HashTimeLockState],
 ) -> None:
     """ Assert the values of two synced channels.
 
@@ -306,8 +297,7 @@ def assert_mirror(original: NettingChannelState, mirror: NettingChannelState) ->
 
 
 def assert_locked(
-        from_channel: NettingChannelState,
-        pending_locks: List[HashTimeLockState],
+    from_channel: NettingChannelState, pending_locks: List[HashTimeLockState]
 ) -> None:
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
@@ -327,9 +317,7 @@ def assert_locked(
 
 
 def assert_balance(
-        from_channel: NettingChannelState,
-        balance: Balance,
-        locked: LockedAmount,
+    from_channel: NettingChannelState, balance: Balance, locked: LockedAmount
 ) -> None:
     """ Assert the from_channel overall token values. """
     assert balance >= 0
@@ -337,39 +325,38 @@ def assert_balance(
 
     distributable = balance - locked
     channel_distributable = channel.get_distributable(
-        from_channel.our_state,
-        from_channel.partner_state,
+        from_channel.our_state, from_channel.partner_state
     )
     channel_balance = channel.get_balance(from_channel.our_state, from_channel.partner_state)
     channel_locked_amount = channel.get_amount_locked(from_channel.our_state)
 
-    msg = f'channel balance does not match. Expected: {balance} got: {channel_balance}'
+    msg = f"channel balance does not match. Expected: {balance} got: {channel_balance}"
     assert channel_balance == balance, msg
 
     msg = (
-        f'channel distributable amount does not match. '
-        f'Expected: {distributable} got: {channel_distributable}'
+        f"channel distributable amount does not match. "
+        f"Expected: {distributable} got: {channel_distributable}"
     )
     assert channel_distributable == distributable, msg
 
-    msg = f'channel locked amount does not match. Expected: {locked} got: {channel_locked_amount}'
+    msg = f"channel locked amount does not match. Expected: {locked} got: {channel_locked_amount}"
     assert channel_locked_amount == locked, msg
 
     msg = (
-        f'locked_amount ({locked}) + distributable ({distributable}) '
-        f'did not equal the balance ({balance})'
+        f"locked_amount ({locked}) + distributable ({distributable}) "
+        f"did not equal the balance ({balance})"
     )
     assert balance == locked + distributable, msg
 
 
 def make_mediated_transfer(
-        from_channel: NettingChannelState,
-        partner_channel: NettingChannelState,
-        initiator: InitiatorAddress,
-        target: TargetAddress,
-        lock: HashTimeLockState,
-        pkey: bytes,
-        secret: Optional[Secret] = None,
+    from_channel: NettingChannelState,
+    partner_channel: NettingChannelState,
+    initiator: InitiatorAddress,
+    target: TargetAddress,
+    lock: HashTimeLockState,
+    pkey: bytes,
+    secret: Optional[Secret] = None,
 ) -> LockedTransfer:
     """ Helper to create and register a mediated transfer from `from_channel` to
     `partner_channel`."""
@@ -398,10 +385,7 @@ def make_mediated_transfer(
     assert mediated_transfer_msg.sender == from_channel.our_state.address
     receive_lockedtransfer = lockedtransfersigned_from_message(mediated_transfer_msg)
 
-    channel.handle_receive_lockedtransfer(
-        partner_channel,
-        receive_lockedtransfer,
-    )
+    channel.handle_receive_lockedtransfer(partner_channel, receive_lockedtransfer)
 
     if secret is not None:
         secrethash = sha3(secret)
@@ -413,23 +397,23 @@ def make_mediated_transfer(
 
 
 def make_receive_transfer_mediated(
-        channel_state: NettingChannelState,
-        privkey: bytes,
-        nonce: Nonce,
-        transferred_amount: TokenAmount,
-        lock: HashTimeLockState,
-        merkletree_leaves: List[Keccak256] = None,
-        locked_amount: Optional[LockedAmount] = None,
-        chain_id: Optional[ChainID] = None,
+    channel_state: NettingChannelState,
+    privkey: bytes,
+    nonce: Nonce,
+    transferred_amount: TokenAmount,
+    lock: HashTimeLockState,
+    merkletree_leaves: List[Keccak256] = None,
+    locked_amount: Optional[LockedAmount] = None,
+    chain_id: Optional[ChainID] = None,
 ) -> LockedTransferSignedState:
 
     if not isinstance(lock, HashTimeLockState):
-        raise ValueError('lock must be of type HashTimeLockState')
+        raise ValueError("lock must be of type HashTimeLockState")
 
     signer = LocalSigner(privkey)
     address = signer.address
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
-        raise ValueError('Private key does not match any of the participants.')
+        raise ValueError("Private key does not match any of the participants.")
 
     if merkletree_leaves is None:
         layers = [[lock.lockhash]]
@@ -482,23 +466,23 @@ def make_receive_transfer_mediated(
 
 
 def make_receive_expired_lock(
-        channel_state: NettingChannelState,
-        privkey: bytes,
-        nonce: Nonce,
-        transferred_amount: TokenAmount,
-        lock: HashTimeLockState,
-        merkletree_leaves: List[Keccak256] = None,
-        locked_amount: LockedAmount = None,
-        chain_id: ChainID = None,
+    channel_state: NettingChannelState,
+    privkey: bytes,
+    nonce: Nonce,
+    transferred_amount: TokenAmount,
+    lock: HashTimeLockState,
+    merkletree_leaves: List[Keccak256] = None,
+    locked_amount: LockedAmount = None,
+    chain_id: ChainID = None,
 ) -> ReceiveLockExpired:
 
     if not isinstance(lock, HashTimeLockState):
-        raise ValueError('lock must be of type HashTimeLockState')
+        raise ValueError("lock must be of type HashTimeLockState")
 
     signer = LocalSigner(privkey)
     address = signer.address
     if address not in (channel_state.our_state.address, channel_state.partner_state.address):
-        raise ValueError('Private key does not match any of the participants.')
+        raise ValueError("Private key does not match any of the participants.")
 
     if merkletree_leaves is None:
         layers = make_empty_merkle_tree().layers

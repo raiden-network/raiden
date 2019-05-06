@@ -5,13 +5,7 @@ from raiden.network.rpc.client import JSONRPCClient
 from raiden.utils import privatekey_to_address
 
 
-def test_token(
-        deploy_client,
-        token_proxy,
-        private_keys,
-        web3,
-        contract_manager,
-):
+def test_token(deploy_client, token_proxy, private_keys, web3, contract_manager):
     privkey = private_keys[1]
     address = privatekey_to_address(privkey)
     address = to_canonical_address(address)
@@ -29,8 +23,7 @@ def test_token(
     allow_funds = 100
     token_proxy.approve(address, allow_funds)
     assert allow_funds == token_proxy.proxy.contract.functions.allowance(
-        to_checksum_address(deploy_client.address),
-        to_checksum_address(address),
-    ).call(block_identifier='latest')
+        to_checksum_address(deploy_client.address), to_checksum_address(address)
+    ).call(block_identifier="latest")
     other_token_proxy.transfer(deploy_client.address, transfer_funds)
     assert token_proxy.balance_of(address) == 0

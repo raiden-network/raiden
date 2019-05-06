@@ -1,1 +1,1 @@
-hiddenimports = ['eth_hash.backends.pycryptodome']
+hiddenimports = ["eth_hash.backends.pycryptodome"]

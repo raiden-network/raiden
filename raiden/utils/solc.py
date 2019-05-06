@@ -17,17 +17,16 @@ def solidity_resolve_address(hex_code, library_symbol, library_address):
         bin: The bytecode encoded in hexadecimal with the library references
             resolved.
     """
-    if library_address.startswith('0x'):
-        raise ValueError('Address should not contain the 0x prefix')
+    if library_address.startswith("0x"):
+        raise ValueError("Address should not contain the 0x prefix")
 
     try:
         decode_hex(library_address)
     except TypeError:
-        raise ValueError(
-            'library_address contains invalid characters, it must be hex encoded.')
+        raise ValueError("library_address contains invalid characters, it must be hex encoded.")
 
     if len(library_symbol) != 40 or len(library_address) != 40:
-        raise ValueError('Address with wrong length')
+        raise ValueError("Address with wrong length")
 
     return hex_code.replace(library_symbol, library_address)
 
@@ -52,12 +51,9 @@ def solidity_library_symbol(library_name):
     length = min(len(library_name), 36)
 
     library_piece = library_name[:length]
-    hold_piece = '_' * (36 - length)
+    hold_piece = "_" * (36 - length)
 
-    return '__{library}{hold}__'.format(
-        library=library_piece,
-        hold=hold_piece,
-    )
+    return "__{library}{hold}__".format(library=library_piece, hold=hold_piece)
 
 
 def solidity_unresolved_symbols(hex_code):
@@ -82,12 +78,9 @@ def compile_files_cwd(*args, **kwargs):
     if os.path.isfile(compile_wd):
         compile_wd = os.path.dirname(compile_wd)
     # remove prefix from the files
-    if compile_wd[-1] != '/':
-        compile_wd += '/'
-    file_list = [
-        x.replace(compile_wd, '')
-        for x in args[0]
-    ]
+    if compile_wd[-1] != "/":
+        compile_wd += "/"
+    file_list = [x.replace(compile_wd, "") for x in args[0]]
     cwd = os.getcwd()
     try:
         os.chdir(compile_wd)
@@ -96,7 +89,7 @@ def compile_files_cwd(*args, **kwargs):
             # We need to specify output values here because py-solc by default
             # provides them all and does not know that "clone-bin" does not exist
             # in solidity >= v0.5.0
-            output_values=('abi', 'asm', 'ast', 'bin', 'bin-runtime'),
+            output_values=("abi", "asm", "ast", "bin", "bin-runtime"),
             **kwargs,
         )
     finally:

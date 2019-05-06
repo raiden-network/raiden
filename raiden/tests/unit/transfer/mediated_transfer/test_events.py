@@ -14,5 +14,5 @@ def test_send_refund_transfer_contains_balance_proof():
         transfer=transfer,
     )
 
-    assert hasattr(event, 'balance_proof')
+    assert hasattr(event, "balance_proof")
     assert SendRefundTransfer.from_dict(event.to_dict()) == event

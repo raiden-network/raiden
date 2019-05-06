@@ -41,16 +41,16 @@ def compute_layers(elements: List[Keccak256]) -> List[List[Keccak256]]:
     """
 
     elements = list(elements)  # consume generators
-    assert elements, 'Use make_empty_merkle_tree if there are no elements'
+    assert elements, "Use make_empty_merkle_tree if there are no elements"
 
     if not all(isinstance(item, bytes) for item in elements):
-        raise ValueError('all elements must be bytes')
+        raise ValueError("all elements must be bytes")
 
     if any(len(item) != 32 for item in elements):
         raise HashLengthNot32()
 
     if len(elements) != len(set(elements)):
-        raise ValueError('Duplicated element')
+        raise ValueError("Duplicated element")
 
     leaves = sorted(item for item in elements)
     tree = [leaves]
@@ -64,7 +64,7 @@ def compute_layers(elements: List[Keccak256]) -> List[List[Keccak256]]:
     return tree
 
 
-def compute_merkleproof_for(merkletree: 'MerkleTreeState', element: Keccak256) -> List[Keccak256]:
+def compute_merkleproof_for(merkletree: "MerkleTreeState", element: Keccak256) -> List[Keccak256]:
     """ Containment proof for element.
 
     The proof contains only the entries that are sufficient to recompute the
@@ -104,10 +104,10 @@ def validate_proof(proof: List[Keccak256], root: Keccak256, leaf_element: Keccak
     return hash_ == root
 
 
-def merkleroot(merkletree: 'MerkleTreeState') -> Locksroot:
+def merkleroot(merkletree: "MerkleTreeState") -> Locksroot:
     """ Return the root element of the merkle tree. """
-    assert merkletree.layers, 'the merkle tree layers are empty'
-    assert merkletree.layers[MERKLEROOT], 'the root layer is empty'
+    assert merkletree.layers, "the merkle tree layers are empty"
+    assert merkletree.layers[MERKLEROOT], "the root layer is empty"
 
     return Locksroot(merkletree.layers[MERKLEROOT][0])
 
@@ -116,5 +116,5 @@ def merkle_leaves_from_packed_data(packed_data: bytes) -> List[Keccak256]:
     number_of_bytes = len(packed_data)
     leaves = []
     for i in range(0, number_of_bytes, 96):
-        leaves.append(sha3(packed_data[i: i + 96]))
+        leaves.append(sha3(packed_data[i : i + 96]))
     return leaves

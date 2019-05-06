@@ -1,1 +1,1 @@
-hiddenimports = ['cytoolz.utils', 'cytoolz._signatures']
+hiddenimports = ["cytoolz.utils", "cytoolz._signatures"]

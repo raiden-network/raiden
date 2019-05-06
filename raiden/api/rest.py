@@ -106,141 +106,90 @@ ERROR_STATUS_CODES = [
 
 
 URLS_V1 = [
+    ("/address", AddressResource),
+    ("/channels", ChannelsResource),
+    ("/channels/<hexaddress:token_address>", ChannelsResourceByTokenAddress),
     (
-        '/address',
-        AddressResource,
-    ),
-    (
-        '/channels',
-        ChannelsResource,
-    ),
-    (
-        '/channels/<hexaddress:token_address>',
-        ChannelsResourceByTokenAddress,
-    ),
-    (
-        '/channels/<hexaddress:token_address>/<hexaddress:partner_address>',
+        "/channels/<hexaddress:token_address>/<hexaddress:partner_address>",
         ChannelsResourceByTokenAndPartnerAddress,
     ),
+    ("/connections/<hexaddress:token_address>", ConnectionsResource),
+    ("/connections", ConnectionsInfoResource),
+    ("/payments", PaymentResource),
+    ("/payments/<hexaddress:token_address>", PaymentResource, "token_paymentresource"),
     (
-        '/connections/<hexaddress:token_address>',
-        ConnectionsResource,
-    ),
-    (
-        '/connections',
-        ConnectionsInfoResource,
-    ),
-    (
-        '/payments',
+        "/payments/<hexaddress:token_address>/<hexaddress:target_address>",
         PaymentResource,
+        "token_target_paymentresource",
     ),
+    ("/tokens", TokensResource),
+    ("/tokens/<hexaddress:token_address>/partners", PartnersResourceByTokenAddress),
+    ("/tokens/<hexaddress:token_address>", RegisterTokenResource),
+    ("/pending_transfers", PendingTransfersResource, "pending_transfers_resource"),
     (
-        '/payments/<hexaddress:token_address>',
-        PaymentResource,
-        'token_paymentresource',
-    ),
-    (
-        '/payments/<hexaddress:token_address>/<hexaddress:target_address>',
-        PaymentResource,
-        'token_target_paymentresource',
-    ),
-    (
-        '/tokens',
-        TokensResource,
-    ),
-    (
-        '/tokens/<hexaddress:token_address>/partners',
-        PartnersResourceByTokenAddress,
-    ),
-    (
-        '/tokens/<hexaddress:token_address>',
-        RegisterTokenResource,
-    ),
-    (
-        '/pending_transfers',
-        PendingTransfersResource,
-        'pending_transfers_resource',
-    ),
-    (
-        '/pending_transfers/<hexaddress:token_address>',
+        "/pending_transfers/<hexaddress:token_address>",
         PendingTransfersResourceByTokenAddress,
-        'pending_transfers_resource_by_token',
+        "pending_transfers_resource_by_token",
     ),
     (
-        '/pending_transfers/<hexaddress:token_address>/<hexaddress:partner_address>',
+        "/pending_transfers/<hexaddress:token_address>/<hexaddress:partner_address>",
         PendingTransfersResourceByTokenAndPartnerAddress,
-        'pending_transfers_resource_by_token_and_partner',
+        "pending_transfers_resource_by_token_and_partner",
     ),
-
+    ("/_debug/blockchain_events/network", BlockchainEventsNetworkResource),
+    ("/_debug/blockchain_events/tokens/<hexaddress:token_address>", BlockchainEventsTokenResource),
     (
-        '/_debug/blockchain_events/network',
-        BlockchainEventsNetworkResource,
-    ),
-    (
-        '/_debug/blockchain_events/tokens/<hexaddress:token_address>',
-        BlockchainEventsTokenResource,
-    ),
-    (
-        '/_debug/blockchain_events/payment_networks/<hexaddress:token_address>/channels',
+        "/_debug/blockchain_events/payment_networks/<hexaddress:token_address>/channels",
         ChannelBlockchainEventsResource,
-        'tokenchanneleventsresourceblockchain',
+        "tokenchanneleventsresourceblockchain",
     ),
     (
         (
-            '/_debug/blockchain_events/payment_networks/'
-            '<hexaddress:token_address>/channels/<hexaddress:partner_address>'
+            "/_debug/blockchain_events/payment_networks/"
+            "<hexaddress:token_address>/channels/<hexaddress:partner_address>"
         ),
         ChannelBlockchainEventsResource,
     ),
-    (
-        '/_debug/raiden_events',
-        RaidenInternalEventsResource,
-    ),
+    ("/_debug/raiden_events", RaidenInternalEventsResource),
 ]
 
 
 def api_response(result, status_code=HTTPStatus.OK):
     if status_code == HTTPStatus.NO_CONTENT:
-        assert not result, 'Provided 204 response with non-zero length response'
-        data = ''
+        assert not result, "Provided 204 response with non-zero length response"
+        data = ""
     else:
         data = json.dumps(result)
 
-    log.debug('Request successful', response=result, status_code=status_code)
-    response = make_response((
-        data,
-        status_code,
-        {'mimetype': 'application/json', 'Content-Type': 'application/json'},
-    ))
+    log.debug("Request successful", response=result, status_code=status_code)
+    response = make_response(
+        (data, status_code, {"mimetype": "application/json", "Content-Type": "application/json"})
+    )
     return response
 
 
 def api_error(errors, status_code):
-    assert status_code in ERROR_STATUS_CODES, 'Programming error, unexpected error status code'
-    log.error('Error processing request', errors=errors, status_code=status_code)
-    response = make_response((
-        json.dumps(dict(errors=errors)),
-        status_code,
-        {'mimetype': 'application/json', 'Content-Type': 'application/json'},
-    ))
+    assert status_code in ERROR_STATUS_CODES, "Programming error, unexpected error status code"
+    log.error("Error processing request", errors=errors, status_code=status_code)
+    response = make_response(
+        (
+            json.dumps(dict(errors=errors)),
+            status_code,
+            {"mimetype": "application/json", "Content-Type": "application/json"},
+        )
+    )
     return response
 
 
 @parser.error_handler
-def handle_request_parsing_error(
-        err,
-        _req,
-        _schema,
-        _err_status_code,
-        _err_headers,
-):
+def handle_request_parsing_error(err, _req, _schema, _err_status_code, _err_headers):
     """ This handles request parsing errors generated for example by schema
     field validation failing."""
     abort(HTTPStatus.BAD_REQUEST, errors=err.messages)
 
 
 def endpoint_not_found(e):
-    errors = ['invalid endpoint']
+    errors = ["invalid endpoint"]
     if isinstance(e, InvalidEndpoint):
         errors.append(e.description)
     return api_error(errors, HTTPStatus.NOT_FOUND)
@@ -262,7 +211,7 @@ def encode_byte_values(map_: Dict):
 
 def encode_object_to_str(map_: Dict):
     for k, v in map_.items():
-        if isinstance(v, int) or k == 'args':
+        if isinstance(v, int) or k == "args":
             continue
         if not isinstance(v, str):
             map_[k] = repr(v)
@@ -274,21 +223,21 @@ def normalize_events_list(old_list):
     new_list = []
     for _event in old_list:
         new_event = dict(_event)
-        if new_event.get('args'):
-            new_event['args'] = dict(new_event['args'])
-            encode_byte_values(new_event['args'])
+        if new_event.get("args"):
+            new_event["args"] = dict(new_event["args"])
+            encode_byte_values(new_event["args"])
         # remove the queue identifier
-        if new_event.get('queue_identifier'):
-            del new_event['queue_identifier']
+        if new_event.get("queue_identifier"):
+            del new_event["queue_identifier"]
         # the events contain HexBytes values, convert those to strings
         hexbytes_to_str(new_event)
         # Some of the raiden events contain accounts and as such need to
         # be exported in hex to the outside world
-        name = new_event['event']
-        if name == 'EventPaymentReceivedSuccess':
-            new_event['initiator'] = to_checksum_address(new_event['initiator'])
-        if name in ('EventPaymentSentSuccess', 'EventPaymentSentFailed'):
-            new_event['target'] = to_checksum_address(new_event['target'])
+        name = new_event["event"]
+        if name == "EventPaymentReceivedSuccess":
+            new_event["initiator"] = to_checksum_address(new_event["initiator"])
+        if name in ("EventPaymentSentSuccess", "EventPaymentSentFailed"):
+            new_event["target"] = to_checksum_address(new_event["target"])
         encode_byte_values(new_event)
         # encode unserializable objects
         encode_object_to_str(new_event)
@@ -299,9 +248,7 @@ def normalize_events_list(old_list):
 def convert_to_serializable(event_list):
     returned_events = []
     for event in event_list:
-        new_event = {
-            'event': type(event).__name__,
-        }
+        new_event = {"event": type(event).__name__}
         new_event.update(event.__dict__)
         returned_events.append(new_event)
     return returned_events
@@ -315,11 +262,11 @@ def restapi_setup_urls(flask_api_context, rest_api, urls):
         elif len(url_tuple) == 3:
             route, resource_cls, endpoint = url_tuple
         else:
-            raise ValueError(f'Invalid URL format: {url_tuple!r}')
+            raise ValueError(f"Invalid URL format: {url_tuple!r}")
         flask_api_context.add_resource(
             resource_cls,
             route,
-            resource_class_kwargs={'rest_api_object': rest_api},
+            resource_class_kwargs={"rest_api_object": rest_api},
             endpoint=endpoint,
         )
 
@@ -347,47 +294,31 @@ class APIServer(Runnable):
         api_server.start()
     """
 
-    _api_prefix = '/api/1'
+    _api_prefix = "/api/1"
 
     def __init__(
-            self,
-            rest_api,
-            config,
-            cors_domain_list=None,
-            web_ui=False,
-            eth_rpc_endpoint=None,
+        self, rest_api, config, cors_domain_list=None, web_ui=False, eth_rpc_endpoint=None
     ):
         super().__init__()
         if rest_api.version != 1:
-            raise ValueError(
-                'Invalid api version: {}'.format(rest_api.version),
-            )
-        self._api_prefix = f'/api/v{rest_api.version}'
+            raise ValueError("Invalid api version: {}".format(rest_api.version))
+        self._api_prefix = f"/api/v{rest_api.version}"
 
         flask_app = Flask(__name__)
         if cors_domain_list:
             CORS(flask_app, origins=cors_domain_list)
 
         if eth_rpc_endpoint:
-            if not eth_rpc_endpoint.startswith('http'):
-                eth_rpc_endpoint = 'http://{}'.format(eth_rpc_endpoint)
-            flask_app.config['WEB3_ENDPOINT'] = eth_rpc_endpoint
+            if not eth_rpc_endpoint.startswith("http"):
+                eth_rpc_endpoint = "http://{}".format(eth_rpc_endpoint)
+            flask_app.config["WEB3_ENDPOINT"] = eth_rpc_endpoint
 
         blueprint = create_blueprint()
         flask_api_context = Api(blueprint, prefix=self._api_prefix)
 
-        restapi_setup_type_converters(
-            flask_app,
-            {
-                'hexaddress': HexAddressConverter,
-            },
-        )
+        restapi_setup_type_converters(flask_app, {"hexaddress": HexAddressConverter})
 
-        restapi_setup_urls(
-            flask_api_context,
-            rest_api,
-            URLS_V1,
-        )
+        restapi_setup_urls(flask_api_context, rest_api, URLS_V1)
 
         self.config = config
         self.rest_api = rest_api
@@ -398,7 +329,7 @@ class APIServer(Runnable):
         self.wsgiserver = None
         self.flask_app.register_blueprint(self.blueprint)
 
-        self.flask_app.config['WEBUI_PATH'] = RAIDEN_WEBUI_PATH
+        self.flask_app.config["WEBUI_PATH"] = RAIDEN_WEBUI_PATH
 
         self.flask_app.register_error_handler(HTTPStatus.NOT_FOUND, endpoint_not_found)
         self.flask_app.register_error_handler(Exception, self.unhandled_exception)
@@ -406,15 +337,12 @@ class APIServer(Runnable):
 
         # needed so flask_restful propagates the exception to our error handler above
         # or else, it'll replace it with a E500 response
-        self.flask_app.config['PROPAGATE_EXCEPTIONS'] = True
+        self.flask_app.config["PROPAGATE_EXCEPTIONS"] = True
 
         if web_ui:
-            for route in ('/ui/<path:file_name>', '/ui', '/ui/', '/index.html', '/'):
+            for route in ("/ui/<path:file_name>", "/ui", "/ui/", "/index.html", "/"):
                 self.flask_app.add_url_rule(
-                    route,
-                    route,
-                    view_func=self._serve_webui,
-                    methods=('GET', ),
+                    route, route, view_func=self._serve_webui, methods=("GET",)
                 )
 
         self._is_raiden_running()
@@ -426,43 +354,41 @@ class APIServer(Runnable):
         # that the actions are valid, e.g. deposit in a channel that has closed
         # while the node was offline.
         if not self.rest_api.raiden_api.raiden:
-            raise RuntimeError(
-                'The RaidenService must be started before the API can be used',
-            )
+            raise RuntimeError("The RaidenService must be started before the API can be used")
 
-    def _serve_webui(self, file_name='index.html'):  # pylint: disable=redefined-builtin
+    def _serve_webui(self, file_name="index.html"):  # pylint: disable=redefined-builtin
         try:
             if not file_name:
                 raise NotFound
 
-            web3 = self.flask_app.config.get('WEB3_ENDPOINT')
-            if 'config.' in file_name and file_name.endswith('.json'):
+            web3 = self.flask_app.config.get("WEB3_ENDPOINT")
+            if "config." in file_name and file_name.endswith(".json"):
                 environment_type = self.rest_api.raiden_api.raiden.config[
-                    'environment_type'
+                    "environment_type"
                 ].name.lower()
                 config = {
-                    'raiden': self._api_prefix,
-                    'web3': web3,
-                    'settle_timeout': self.rest_api.raiden_api.raiden.config['settle_timeout'],
-                    'reveal_timeout': self.rest_api.raiden_api.raiden.config['reveal_timeout'],
-                    'environment_type': environment_type,
+                    "raiden": self._api_prefix,
+                    "web3": web3,
+                    "settle_timeout": self.rest_api.raiden_api.raiden.config["settle_timeout"],
+                    "reveal_timeout": self.rest_api.raiden_api.raiden.config["reveal_timeout"],
+                    "environment_type": environment_type,
                 }
 
                 # if raiden sees eth rpc endpoint as localhost, replace it by Host header,
                 # which is the hostname by which the client/browser sees/access the raiden node
-                host = request.headers.get('Host')
+                host = request.headers.get("Host")
                 if web3 and host:
                     web3_host, web3_port = split_endpoint(web3)
-                    if web3_host in ('localhost', '127.0.0.1'):
+                    if web3_host in ("localhost", "127.0.0.1"):
                         host, _ = split_endpoint(host)
-                        web3 = f'http://{host}:{web3_port}'
-                        config['web3'] = web3
+                        web3 = f"http://{host}:{web3_port}"
+                        config["web3"] = web3
 
                 response = jsonify(config)
             else:
-                response = send_from_directory(self.flask_app.config['WEBUI_PATH'], file_name)
+                response = send_from_directory(self.flask_app.config["WEBUI_PATH"], file_name)
         except (NotFound, AssertionError):
-            response = send_from_directory(self.flask_app.config['WEBUI_PATH'], 'index.html')
+            response = send_from_directory(self.flask_app.config["WEBUI_PATH"], "index.html")
         return response
 
     def _run(self):
@@ -479,21 +405,21 @@ class APIServer(Runnable):
 
     def start(self):
         log.debug(
-            'REST API starting',
-            host=self.config['host'],
-            port=self.config['port'],
+            "REST API starting",
+            host=self.config["host"],
+            port=self.config["port"],
             node=pex(self.rest_api.raiden_api.address),
         )
 
         # WSGI expects an stdlib logger. With structlog there's conflict of
         # method names. Rest unhandled exception will be re-raised here:
-        wsgi_log = logging.getLogger(__name__ + '.pywsgi')
+        wsgi_log = logging.getLogger(__name__ + ".pywsgi")
 
         # server.stop() clears the handle and the pool, this is okay since a
         # new WSGIServer is created on each start
         pool = gevent.pool.Pool()
         wsgiserver = WSGIServer(
-            (self.config['host'], self.config['port']),
+            (self.config["host"], self.config["port"]),
             self.flask_app,
             log=wsgi_log,
             error_log=wsgi_log,
@@ -510,9 +436,9 @@ class APIServer(Runnable):
         self.wsgiserver = wsgiserver
 
         log.debug(
-            'REST API started',
-            host=self.config['host'],
-            port=self.config['port'],
+            "REST API started",
+            host=self.config["host"],
+            port=self.config["port"],
             node=pex(self.rest_api.raiden_api.address),
         )
 
@@ -520,9 +446,9 @@ class APIServer(Runnable):
 
     def stop(self):
         log.debug(
-            'REST API stoping',
-            host=self.config['host'],
-            port=self.config['port'],
+            "REST API stoping",
+            host=self.config["host"],
+            port=self.config["port"],
             node=pex(self.rest_api.raiden_api.address),
         )
 
@@ -531,16 +457,16 @@ class APIServer(Runnable):
             self.wsgiserver = None
 
         log.debug(
-            'REST API stopped',
-            host=self.config['host'],
-            port=self.config['port'],
+            "REST API stopped",
+            host=self.config["host"],
+            port=self.config["port"],
             node=pex(self.rest_api.raiden_api.address),
         )
 
     def unhandled_exception(self, exception: Exception):
         """ Flask.errorhandler when an exception wasn't correctly handled """
         log.critical(
-            'Unhandled exception when processing endpoint request',
+            "Unhandled exception when processing endpoint request",
             exc_info=True,
             node=pex(self.rest_api.raiden_api.address),
         )
@@ -554,6 +480,7 @@ class RestAPI:
     It will provide the additional, neccessary RESTful logic and
     the proper JSON-encoding of the Objects provided by the RaidenAPI
     """
+
     version = 1
 
     def __init__(self, raiden_api):
@@ -567,18 +494,14 @@ class RestAPI:
         self.failed_payment_schema = EventPaymentSentFailedSchema()
 
     def get_our_address(self):
-        return api_response(
-            result=dict(our_address=to_checksum_address(self.raiden_api.address)),
-        )
+        return api_response(result=dict(our_address=to_checksum_address(self.raiden_api.address)))
 
     def register_token(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+        self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress
     ):
-        if self.raiden_api.raiden.config['environment_type'] == Environment.PRODUCTION:
+        if self.raiden_api.raiden.config["environment_type"] == Environment.PRODUCTION:
             return api_error(
-                errors='Registering a new token is currently disabled in the Ethereum mainnet',
+                errors="Registering a new token is currently disabled in the Ethereum mainnet",
                 status_code=HTTPStatus.NOT_IMPLEMENTED,
             )
 
@@ -590,7 +513,7 @@ class RestAPI:
             AddressWithoutCode,
         )
         log.debug(
-            'Registering token',
+            "Registering token",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -603,15 +526,9 @@ class RestAPI:
                 token_network_deposit_limit=UINT256_MAX,
             )
         except conflict_exceptions as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         except InsufficientFunds as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         return api_response(
             result=dict(token_network_address=to_checksum_address(token_network_address)),
@@ -619,15 +536,15 @@ class RestAPI:
         )
 
     def open(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            partner_address: typing.Address,
-            token_address: typing.TokenAddress,
-            settle_timeout: typing.BlockTimeout = None,
-            total_deposit: typing.TokenAmount = None,
+        self,
+        registry_address: typing.PaymentNetworkID,
+        partner_address: typing.Address,
+        token_address: typing.TokenAddress,
+        settle_timeout: typing.BlockTimeout = None,
+        total_deposit: typing.TokenAmount = None,
     ):
         log.debug(
-            'Opening channel',
+            "Opening channel",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             partner_address=to_checksum_address(partner_address),
@@ -638,53 +555,36 @@ class RestAPI:
         try:
             token = self.raiden_api.raiden.chain.token(token_address)
         except AddressWithoutCode as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         balance = token.balance_of(self.raiden_api.raiden.address)
 
         if total_deposit is not None and total_deposit > balance:
-            error_msg = 'Not enough balance to deposit. {} Available={} Needed={}'.format(
-                pex(token_address),
-                balance,
-                total_deposit,
+            error_msg = "Not enough balance to deposit. {} Available={} Needed={}".format(
+                pex(token_address), balance, total_deposit
             )
-            return api_error(
-                errors=error_msg,
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
+            return api_error(errors=error_msg, status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         try:
             self.raiden_api.channel_open(
-                registry_address,
-                token_address,
-                partner_address,
-                settle_timeout,
+                registry_address, token_address, partner_address, settle_timeout
             )
         except (
-                InvalidAddress,
-                InvalidSettleTimeout,
-                SamePeerAddress,
-                AddressWithoutCode,
-                DuplicatedChannelError,
-                TokenNotRegistered,
+            InvalidAddress,
+            InvalidSettleTimeout,
+            SamePeerAddress,
+            AddressWithoutCode,
+            DuplicatedChannelError,
+            TokenNotRegistered,
         ) as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         except (InsufficientFunds, InsufficientGasReserve) as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         if total_deposit:
             # make initial deposit
             log.debug(
-                'Depositing to new channel',
+                "Depositing to new channel",
                 node=pex(self.raiden_api.address),
                 registry_address=to_checksum_address(registry_address),
                 token_address=to_checksum_address(token_address),
@@ -699,15 +599,9 @@ class RestAPI:
                     total_deposit=total_deposit,
                 )
             except InsufficientFunds as e:
-                return api_error(
-                    errors=str(e),
-                    status_code=HTTPStatus.PAYMENT_REQUIRED,
-                )
+                return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
             except (DepositOverLimit, DepositMismatch) as e:
-                return api_error(
-                    errors=str(e),
-                    status_code=HTTPStatus.CONFLICT,
-                )
+                return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(self.raiden_api.raiden),
@@ -718,21 +612,18 @@ class RestAPI:
 
         result = self.channel_schema.dump(channel_state)
 
-        return api_response(
-            result=result.data,
-            status_code=HTTPStatus.CREATED,
-        )
+        return api_response(result=result.data, status_code=HTTPStatus.CREATED)
 
     def connect(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
-            funds: typing.TokenAmount,
-            initial_channel_target: int = None,
-            joinable_funds_target: float = None,
+        self,
+        registry_address: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        funds: typing.TokenAmount,
+        initial_channel_target: int = None,
+        joinable_funds_target: float = None,
     ):
         log.debug(
-            'Connecting to token network',
+            "Connecting to token network",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -749,39 +640,22 @@ class RestAPI:
                 joinable_funds_target,
             )
         except (InsufficientFunds, InsufficientGasReserve) as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
         except (InvalidAmount, InvalidAddress) as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
-        return api_response(
-            result=dict(),
-            status_code=HTTPStatus.NO_CONTENT,
-        )
+        return api_response(result=dict(), status_code=HTTPStatus.NO_CONTENT)
 
-    def leave(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
-    ):
+    def leave(self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress):
         log.debug(
-            'Leaving token network',
+            "Leaving token network",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
         )
-        closed_channels = self.raiden_api.token_network_leave(
-            registry_address,
-            token_address,
-        )
+        closed_channels = self.raiden_api.token_network_leave(registry_address, token_address)
         closed_channels = [
-            self.channel_schema.dump(channel_state).data
-            for channel_state in closed_channels
+            self.channel_schema.dump(channel_state).data for channel_state in closed_channels
         ]
         return api_response(result=closed_channels)
 
@@ -789,7 +663,7 @@ class RestAPI:
         """Get a dict whose keys are token addresses and whose values are
         open channels, funds of last request, sum of deposits and number of channels"""
         log.debug(
-            'Getting connection managers info',
+            "Getting connection managers info",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
         )
@@ -804,7 +678,7 @@ class RestAPI:
 
             try:
                 connection_manager = self.raiden_api.raiden.connection_manager_for_token_network(
-                    token_network_identifier,
+                    token_network_identifier
                 )
             except InvalidAddress:
                 connection_manager = None
@@ -816,34 +690,30 @@ class RestAPI:
             )
             if connection_manager is not None and open_channels:
                 connection_managers[to_checksum_address(connection_manager.token_address)] = {
-                    'funds': connection_manager.funds,
-                    'sum_deposits': views.get_our_capacity_for_token_network(
-                        views.state_from_raiden(self.raiden_api.raiden),
-                        registry_address,
-                        token,
+                    "funds": connection_manager.funds,
+                    "sum_deposits": views.get_our_capacity_for_token_network(
+                        views.state_from_raiden(self.raiden_api.raiden), registry_address, token
                     ),
-                    'channels': len(open_channels),
+                    "channels": len(open_channels),
                 }
 
         return connection_managers
 
     def get_channel_list(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress = None,
-            partner_address: typing.Address = None,
+        self,
+        registry_address: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress = None,
+        partner_address: typing.Address = None,
     ):
         log.debug(
-            'Getting channel list',
+            "Getting channel list",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=optional_address_to_string(token_address),
             partner_address=optional_address_to_string(partner_address),
         )
         raiden_service_result = self.raiden_api.get_channel_list(
-            registry_address,
-            token_address,
-            partner_address,
+            registry_address, token_address, partner_address
         )
         assert isinstance(raiden_service_result, list)
         result = [
@@ -854,7 +724,7 @@ class RestAPI:
 
     def get_tokens_list(self, registry_address: typing.PaymentNetworkID):
         log.debug(
-            'Getting token list',
+            "Getting token list",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
         )
@@ -865,18 +735,15 @@ class RestAPI:
         return api_response(result=result.data)
 
     def get_token_network_for_token(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+        self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress
     ):
         log.debug(
-            'Getting token network for token',
+            "Getting token network for token",
             node=pex(self.raiden_api.address),
             token_address=to_checksum_address(token_address),
         )
         token_network_address = self.raiden_api.get_token_network_address_for_token_address(
-            registry_address=registry_address,
-            token_address=token_address,
+            registry_address=registry_address, token_address=token_address
         )
 
         if token_network_address is not None:
@@ -887,13 +754,13 @@ class RestAPI:
             return api_error(message, status_code=HTTPStatus.NOT_FOUND)
 
     def get_blockchain_events_network(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
-            to_block: typing.BlockSpecification = 'latest',
+        self,
+        registry_address: typing.PaymentNetworkID,
+        from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
+        to_block: typing.BlockSpecification = "latest",
     ):
         log.debug(
-            'Getting network events',
+            "Getting network events",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             from_block=from_block,
@@ -901,9 +768,7 @@ class RestAPI:
         )
         try:
             raiden_service_result = self.raiden_api.get_blockchain_events_network(
-                registry_address=registry_address,
-                from_block=from_block,
-                to_block=to_block,
+                registry_address=registry_address, from_block=from_block, to_block=to_block
             )
         except InvalidBlockNumberInput as e:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
@@ -911,13 +776,13 @@ class RestAPI:
         return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_blockchain_events_token_network(
-            self,
-            token_address: typing.TokenAddress,
-            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
-            to_block: typing.BlockSpecification = 'latest',
+        self,
+        token_address: typing.TokenAddress,
+        from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
+        to_block: typing.BlockSpecification = "latest",
     ):
         log.debug(
-            'Getting token network blockchain events',
+            "Getting token network blockchain events",
             node=pex(self.raiden_api.address),
             token_address=to_checksum_address(token_address),
             from_block=from_block,
@@ -925,9 +790,7 @@ class RestAPI:
         )
         try:
             raiden_service_result = self.raiden_api.get_blockchain_events_token_network(
-                token_address=token_address,
-                from_block=from_block,
-                to_block=to_block,
+                token_address=token_address, from_block=from_block, to_block=to_block
             )
             return api_response(result=normalize_events_list(raiden_service_result))
         except UnknownTokenAddress as e:
@@ -936,14 +799,14 @@ class RestAPI:
             return api_error(str(e), status_code=HTTPStatus.CONFLICT)
 
     def get_raiden_events_payment_history_with_timestamps(
-            self,
-            token_address: typing.TokenAddress = None,
-            target_address: typing.Address = None,
-            limit: int = None,
-            offset: int = None,
+        self,
+        token_address: typing.TokenAddress = None,
+        target_address: typing.Address = None,
+        limit: int = None,
+        offset: int = None,
     ):
         log.debug(
-            'Getting payment history',
+            "Getting payment history",
             node=pex(self.raiden_api.address),
             token_address=optional_address_to_string(token_address),
             target_address=optional_address_to_string(target_address),
@@ -970,7 +833,7 @@ class RestAPI:
                 serialized_event = self.received_success_payment_schema.dump(event)
             else:
                 log.warning(
-                    'Unexpected event',
+                    "Unexpected event",
                     node=pex(self.raiden_api.address),
                     unexpected_event=event.wrapped_event,
                 )
@@ -982,20 +845,19 @@ class RestAPI:
         return [
             str(e)
             for e in self.raiden_api.raiden.wal.storage.get_events_with_timestamps(
-                limit=limit,
-                offset=offset,
+                limit=limit, offset=offset
             )
         ]
 
     def get_blockchain_events_channel(
-            self,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address = None,
-            from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
-            to_block: typing.BlockSpecification = 'latest',
+        self,
+        token_address: typing.TokenAddress,
+        partner_address: typing.Address = None,
+        from_block: typing.BlockSpecification = GENESIS_BLOCK_NUMBER,
+        to_block: typing.BlockSpecification = "latest",
     ):
         log.debug(
-            'Getting channel blockchain events',
+            "Getting channel blockchain events",
             node=pex(self.raiden_api.address),
             token_address=to_checksum_address(token_address),
             partner_address=optional_address_to_string(partner_address),
@@ -1016,13 +878,13 @@ class RestAPI:
             return api_error(str(e), status_code=HTTPStatus.NOT_FOUND)
 
     def get_channel(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address,
+        self,
+        registry_address: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        partner_address: typing.Address,
     ):
         log.debug(
-            'Getting channel',
+            "Getting channel",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -1037,18 +899,13 @@ class RestAPI:
             result = self.channel_schema.dump(channel_state)
             return api_response(result=result.data)
         except ChannelNotFound as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.NOT_FOUND,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
 
     def get_partners_by_token(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
+        self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress
     ):
         log.debug(
-            'Getting partners by token',
+            "Getting partners by token",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -1056,42 +913,40 @@ class RestAPI:
         return_list = []
         try:
             raiden_service_result = self.raiden_api.get_channel_list(
-                registry_address,
-                token_address,
+                registry_address, token_address
             )
         except InvalidAddress as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         for result in raiden_service_result:
-            return_list.append({
-                'partner_address': result.partner_state.address,
-                'channel': url_for(
-                    # TODO: Somehow nicely parameterize this for future versions
-                    'v1_resources.channelsresourcebytokenandpartneraddress',
-                    token_address=token_address,
-                    partner_address=result.partner_state.address,
-                ),
-            })
+            return_list.append(
+                {
+                    "partner_address": result.partner_state.address,
+                    "channel": url_for(
+                        # TODO: Somehow nicely parameterize this for future versions
+                        "v1_resources.channelsresourcebytokenandpartneraddress",
+                        token_address=token_address,
+                        partner_address=result.partner_state.address,
+                    ),
+                }
+            )
 
         schema_list = PartnersPerTokenList(return_list)
         result = self.partner_per_token_list_schema.dump(schema_list)
         return api_response(result=result.data)
 
     def initiate_payment(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
-            target_address: typing.Address,
-            amount: typing.TokenAmount,
-            identifier: typing.PaymentID,
-            secret: typing.Secret,
-            secret_hash: typing.SecretHash,
+        self,
+        registry_address: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        target_address: typing.Address,
+        amount: typing.TokenAmount,
+        identifier: typing.PaymentID,
+        secret: typing.Secret,
+        secret_hash: typing.SecretHash,
     ):
         log.debug(
-            'Initiating payment',
+            "Initiating payment",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -1116,21 +971,15 @@ class RestAPI:
                 secrethash=secret_hash,
             )
         except (
-                InvalidAmount,
-                InvalidAddress,
-                InvalidSecretOrSecretHash,
-                PaymentConflict,
-                UnknownTokenAddress,
+            InvalidAmount,
+            InvalidAddress,
+            InvalidSecretOrSecretHash,
+            PaymentConflict,
+            UnknownTokenAddress,
         ) as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         except InsufficientFunds as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         if payment_status.payment_done.get() is False:
             return api_error(
@@ -1142,26 +991,26 @@ class RestAPI:
         secret = payment_status.payment_done.get()
 
         payment = {
-            'initiator_address': self.raiden_api.address,
-            'registry_address': registry_address,
-            'token_address': token_address,
-            'target_address': target_address,
-            'amount': amount,
-            'identifier': identifier,
-            'secret': to_hex(secret),
-            'secret_hash': to_hex(sha3(secret)),
+            "initiator_address": self.raiden_api.address,
+            "registry_address": registry_address,
+            "token_address": token_address,
+            "target_address": target_address,
+            "amount": amount,
+            "identifier": identifier,
+            "secret": to_hex(secret),
+            "secret_hash": to_hex(sha3(secret)),
         }
         result = self.payment_schema.dump(payment)
         return api_response(result=result.data)
 
     def _deposit(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            channel_state: NettingChannelState,
-            total_deposit: typing.TokenAmount,
+        self,
+        registry_address: typing.PaymentNetworkID,
+        channel_state: NettingChannelState,
+        total_deposit: typing.TokenAmount,
     ):
         log.debug(
-            'Depositing to channel',
+            "Depositing to channel",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
@@ -1182,37 +1031,24 @@ class RestAPI:
                 total_deposit,
             )
         except InsufficientFunds as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
         except DepositOverLimit as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
         except DepositMismatch as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         updated_channel_state = self.raiden_api.get_channel(
-            registry_address,
-            channel_state.token_address,
-            channel_state.partner_state.address,
+            registry_address, channel_state.token_address, channel_state.partner_state.address
         )
 
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result.data)
 
     def _close(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            channel_state: NettingChannelState,
+        self, registry_address: typing.PaymentNetworkID, channel_state: NettingChannelState
     ):
         log.debug(
-            'Closing channel',
+            "Closing channel",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             channel_identifier=channel_state.identifier,
@@ -1220,41 +1056,34 @@ class RestAPI:
 
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             return api_error(
-                errors='Attempted to close an already closed channel',
+                errors="Attempted to close an already closed channel",
                 status_code=HTTPStatus.CONFLICT,
             )
 
         try:
             self.raiden_api.channel_close(
-                registry_address,
-                channel_state.token_address,
-                channel_state.partner_state.address,
+                registry_address, channel_state.token_address, channel_state.partner_state.address
             )
         except InsufficientFunds as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.PAYMENT_REQUIRED,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.PAYMENT_REQUIRED)
 
         updated_channel_state = self.raiden_api.get_channel(
-            registry_address,
-            channel_state.token_address,
-            channel_state.partner_state.address,
+            registry_address, channel_state.token_address, channel_state.partner_state.address
         )
 
         result = self.channel_schema.dump(updated_channel_state)
         return api_response(result=result.data)
 
     def patch_channel(
-            self,
-            registry_address: typing.PaymentNetworkID,
-            token_address: typing.TokenAddress,
-            partner_address: typing.Address,
-            total_deposit: typing.TokenAmount = None,
-            state: str = None,
+        self,
+        registry_address: typing.PaymentNetworkID,
+        token_address: typing.TokenAddress,
+        partner_address: typing.Address,
+        total_deposit: typing.TokenAmount = None,
+        state: str = None,
     ):
         log.debug(
-            'Patching channel',
+            "Patching channel",
             node=pex(self.raiden_api.address),
             registry_address=to_checksum_address(registry_address),
             token_address=to_checksum_address(token_address),
@@ -1276,8 +1105,7 @@ class RestAPI:
             )
         if total_deposit and total_deposit < 0:
             return api_error(
-                errors="Amount to deposit must not be negative.",
-                status_code=HTTPStatus.CONFLICT,
+                errors="Amount to deposit must not be negative.", status_code=HTTPStatus.CONFLICT
             )
 
         try:
@@ -1289,17 +1117,13 @@ class RestAPI:
 
         except ChannelNotFound:
             return api_error(
-                errors='Requested channel for token {} and partner {} not found'.format(
-                    to_checksum_address(token_address),
-                    to_checksum_address(partner_address),
+                errors="Requested channel for token {} and partner {} not found".format(
+                    to_checksum_address(token_address), to_checksum_address(partner_address)
                 ),
                 status_code=HTTPStatus.CONFLICT,
             )
         except InvalidAddress as e:
-            return api_error(
-                errors=str(e),
-                status_code=HTTPStatus.CONFLICT,
-            )
+            return api_error(errors=str(e), status_code=HTTPStatus.CONFLICT)
 
         if total_deposit is not None:
             result = self._deposit(registry_address, channel_state, total_deposit)
@@ -1309,16 +1133,17 @@ class RestAPI:
 
         else:  # should never happen, channel_state is validated in the schema
             result = api_error(
-                errors='Provided invalid channel state {}'.format(state),
+                errors="Provided invalid channel state {}".format(state),
                 status_code=HTTPStatus.BAD_REQUEST,
             )
         return result
 
     def get_pending_transfers(self, token_address=None, partner_address=None):
         try:
-            return api_response(self.raiden_api.get_pending_transfers(
-                token_address=token_address,
-                partner_address=partner_address,
-            ))
+            return api_response(
+                self.raiden_api.get_pending_transfers(
+                    token_address=token_address, partner_address=partner_address
+                )
+            )
         except (ChannelNotFound, UnknownTokenAddress) as e:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)

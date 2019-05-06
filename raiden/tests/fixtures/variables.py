@@ -20,12 +20,12 @@ from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIME
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
 
-DUPLICATED_BRACKETS = str.maketrans({'{': '{{', '}': '}}'})
+DUPLICATED_BRACKETS = str.maketrans({"{": "{{", "}": "}}"})
 
 
 class TransportProtocol(Enum):
-    UDP = 'udp'
-    MATRIX = 'matrix'
+    UDP = "udp"
+    MATRIX = "matrix"
 
 
 def escape_for_format(string):
@@ -185,7 +185,7 @@ def privatekey_seed(request):
     """ Private key template, allow different keys to be used for each test to
     avoid collisions.
     """
-    return escape_for_format(request.node.name) + ':{}'
+    return escape_for_format(request.node.name) + ":{}"
 
 
 @pytest.fixture
@@ -207,22 +207,21 @@ def private_keys(number_of_nodes, privatekey_seed):
 
     # Note: The fixtures depend on the order of the private keys
     result = [
-        sha3(privatekey_seed.format(position).encode())
-        for position in range(number_of_nodes)
+        sha3(privatekey_seed.format(position).encode()) for position in range(number_of_nodes)
     ]
 
     # this must not happen, otherwise the keys and addresses will be equal!
-    assert len(set(result)) == number_of_nodes, '`privatekey_seed` generate repeated keys'
+    assert len(set(result)) == number_of_nodes, "`privatekey_seed` generate repeated keys"
 
     return result
 
 
 @pytest.fixture
 def deploy_key(privatekey_seed):
-    return sha3(privatekey_seed.format('deploykey').encode())
+    return sha3(privatekey_seed.format("deploykey").encode())
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def blockchain_type(request):
     return request.config.option.blockchain_type
 
@@ -248,7 +247,7 @@ def blockchain_key_seed(request):
     # Using the test name as part of the template to force the keys to be
     # different accross tests, otherwise the data directories would be the same
     # and collisions would happen
-    return escape_for_format(request.node.name) + 'cluster:{}'
+    return escape_for_format(request.node.name) + "cluster:{}"
 
 
 @pytest.fixture
@@ -262,10 +261,10 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
     ]
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def port_generator(request):
     """ count generator used to get a unique port number. """
-    return get_free_port(request.config.getoption('base_port'))
+    return get_free_port(request.config.getoption("base_port"))
 
 
 @pytest.fixture
@@ -273,10 +272,7 @@ def blockchain_rpc_ports(blockchain_number_of_nodes, port_generator):
     """ A list of unique port numbers to be used by the blockchain nodes for
     the json-rpc interface.
     """
-    return [
-        next(port_generator)
-        for _ in range(blockchain_number_of_nodes)
-    ]
+    return [next(port_generator) for _ in range(blockchain_number_of_nodes)]
 
 
 @pytest.fixture
@@ -284,10 +280,7 @@ def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
     """ A list of unique port numbers to be used by the blockchain nodes for
     the p2p protocol.
     """
-    return [
-        next(port_generator)
-        for _ in range(blockchain_number_of_nodes)
-    ]
+    return [next(port_generator) for _ in range(blockchain_number_of_nodes)]
 
 
 @pytest.fixture
@@ -295,10 +288,7 @@ def raiden_udp_ports(number_of_nodes, port_generator):
     """ A list of unique port numbers to be used by the raiden apps for the udp
     transport.
     """
-    return [
-        next(port_generator)
-        for _ in range(number_of_nodes)
-    ]
+    return [next(port_generator) for _ in range(number_of_nodes)]
 
 
 @pytest.fixture
@@ -322,7 +312,7 @@ def unrecoverable_error_should_crash():
 @pytest.fixture
 def transport(request):
     """ 'all' replaced by parametrize in conftest.pytest_generate_tests """
-    return request.config.getoption('transport')
+    return request.config.getoption("transport")
 
 
 @pytest.fixture
@@ -333,35 +323,35 @@ def transport_protocol(transport):
 @pytest.fixture
 def skip_if_not_udp(request):
     """Skip the test if not run with UDP transport"""
-    if request.config.option.transport in ('udp', 'all'):
+    if request.config.option.transport in ("udp", "all"):
         return
-    pytest.skip('This test works only with UDP transport')
+    pytest.skip("This test works only with UDP transport")
 
 
 @pytest.fixture
 def skip_if_not_matrix(request):
     """Skip the test if not run with Matrix transport"""
-    if request.config.option.transport in ('matrix', 'all'):
+    if request.config.option.transport in ("matrix", "all"):
         return
-    pytest.skip('This test works only with Matrix transport')
+    pytest.skip("This test works only with Matrix transport")
 
 
 @pytest.fixture
 def skip_if_parity(blockchain_type):
     """Skip the test if it is run with a Parity node"""
-    if blockchain_type == 'parity':
-        pytest.skip('This test does not work with parity.')
+    if blockchain_type == "parity":
+        pytest.skip("This test does not work with parity.")
 
 
 @pytest.fixture
 def skip_if_not_parity(blockchain_type):
     """Skip the test if it is not run with a Parity node"""
-    if blockchain_type != 'parity':
-        pytest.skip('This test works only with parity.')
+    if blockchain_type != "parity":
+        pytest.skip("This test works only with parity.")
 
 
 @pytest.fixture
 def skip_if_not_geth(blockchain_type):
     """Skip the test if it is run with a Geth node"""
-    if blockchain_type != 'geth':
-        pytest.skip('This test works only with geth.')
+    if blockchain_type != "geth":
+        pytest.skip("This test works only with geth.")

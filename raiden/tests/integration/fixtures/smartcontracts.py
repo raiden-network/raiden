@@ -28,15 +28,15 @@ from raiden_contracts.constants import (
 )
 
 
-@pytest.fixture(name='token_addresses')
+@pytest.fixture(name="token_addresses")
 def deploy_all_tokens_register_and_return_their_addresses(
-        token_amount,
-        number_of_tokens,
-        private_keys,
-        deploy_service,
-        token_network_registry_address,
-        register_tokens,
-        contract_manager,
+    token_amount,
+    number_of_tokens,
+    private_keys,
+    deploy_service,
+    token_network_registry_address,
+    register_tokens,
+    contract_manager,
 ) -> typing.List[typing.Address]:
     """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
     `token_amount` (per token) is distributed among the addresses behind `deploy_client` and
@@ -69,8 +69,7 @@ def deploy_all_tokens_register_and_return_their_addresses(
                 )
             else:
                 registry.add_token_without_limits(
-                    token_address=token,
-                    given_block_identifier='latest',
+                    token_address=token, given_block_identifier="latest"
                 )
 
     return token_addresses
@@ -86,7 +85,7 @@ def endpoint_registry_address(deploy_client, contract_manager) -> typing.Address
     return address
 
 
-@pytest.fixture(name='secret_registry_address')
+@pytest.fixture(name="secret_registry_address")
 def deploy_secret_registry_and_return_address(deploy_client, contract_manager) -> typing.Address:
     address = deploy_contract_web3(
         contract_name=CONTRACT_SECRET_REGISTRY,
@@ -96,12 +95,9 @@ def deploy_secret_registry_and_return_address(deploy_client, contract_manager) -
     return address
 
 
-@pytest.fixture(name='service_registry_address')
+@pytest.fixture(name="service_registry_address")
 def maybe_deploy_service_registry_and_return_address(
-        deploy_client,
-        contract_manager,
-        token_proxy,
-        environment_type,
+    deploy_client, contract_manager, token_proxy, environment_type
 ) -> Optional[typing.Address]:
     if environment_type == Environment.PRODUCTION:
         return None
@@ -117,23 +113,15 @@ def maybe_deploy_service_registry_and_return_address(
     return address
 
 
-@pytest.fixture(name='user_deposit_address')
+@pytest.fixture(name="user_deposit_address")
 def deploy_user_deposit_and_return_address(
-        deploy_service,
-        deploy_client,
-        contract_manager,
-        token_proxy,
-        private_keys,
-        environment_type,
+    deploy_service, deploy_client, contract_manager, token_proxy, private_keys, environment_type
 ) -> typing.Optional[typing.Address]:
     """ Deploy a token to emulate RDN and fund accounts with some balances."""
     if environment_type != Environment.DEVELOPMENT:
         return None
 
-    constructor_arguments = [
-        token_proxy.address,
-        UINT256_MAX,
-    ]
+    constructor_arguments = [token_proxy.address, UINT256_MAX]
     user_deposit_address = deploy_contract_web3(
         contract_name=CONTRACT_USER_DEPOSIT,
         deploy_client=deploy_client,
@@ -145,11 +133,7 @@ def deploy_user_deposit_and_return_address(
 
     participants = [privatekey_to_address(key) for key in private_keys]
     for transfer_to in participants:
-        user_deposit.deposit(
-            beneficiary=transfer_to,
-            total_deposit=100,
-            block_identifier='latest',
-        )
+        user_deposit.deposit(beneficiary=transfer_to, total_deposit=100, block_identifier="latest")
 
     return user_deposit_address
 
@@ -171,15 +155,15 @@ def secret_registry_proxy(deploy_client, secret_registry_address, contract_manag
     )
 
 
-@pytest.fixture(name='token_network_registry_address')
+@pytest.fixture(name="token_network_registry_address")
 def deploy_token_network_registry_and_return_address(
-        deploy_client,
-        secret_registry_address,
-        chain_id,
-        settle_timeout_min,
-        settle_timeout_max,
-        contract_manager,
-        environment_type,
+    deploy_client,
+    secret_registry_address,
+    chain_id,
+    settle_timeout_min,
+    settle_timeout_max,
+    contract_manager,
+    environment_type,
 ) -> typing.Address:
     constructor_arguments = [
         to_checksum_address(secret_registry_address),
@@ -199,12 +183,9 @@ def deploy_token_network_registry_and_return_address(
     return address
 
 
-@pytest.fixture(name='token_network_proxy')
+@pytest.fixture(name="token_network_proxy")
 def register_token_and_return_the_network_proxy(
-        contract_manager,
-        deploy_client,
-        token_proxy,
-        token_network_registry_address,
+    contract_manager, deploy_client, token_proxy, token_network_registry_address
 ):
     registry_address = to_canonical_address(token_network_registry_address)
 
@@ -226,15 +207,15 @@ def register_token_and_return_the_network_proxy(
     )
 
 
-@pytest.fixture(name='token_proxy')
+@pytest.fixture(name="token_proxy")
 def deploy_token_and_return_proxy(deploy_client, contract_manager):
     token_contract = deploy_token(
         deploy_client=deploy_client,
         contract_manager=contract_manager,
         initial_amount=10000,
         decimals=0,
-        token_name='TKN',
-        token_symbol='TKN',
+        token_name="TKN",
+        token_symbol="TKN",
     )
 
     return Token(

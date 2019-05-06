@@ -12,11 +12,11 @@ from typing import Any, Callable, Dict, FrozenSet, List, Optional, Pattern, Tupl
 import gevent
 import structlog
 
-DEFAULT_LOG_LEVEL = 'INFO'
+DEFAULT_LOG_LEVEL = "INFO"
 MAX_LOG_FILE_SIZE = 20 * 1024 * 1024
 LOG_BACKUP_COUNT = 3
 
-_FIRST_PARTY_PACKAGES = frozenset(['raiden', 'raiden_contracts'])
+_FIRST_PARTY_PACKAGES = frozenset(["raiden", "raiden_contracts"])
 
 
 def _chain(first_func, *funcs) -> Callable:
@@ -25,20 +25,19 @@ def _chain(first_func, *funcs) -> Callable:
     to the second one and so on and so forth until all function arguments are used.
     The last result is then returned.
     """
+
     @wraps(first_func)
     def wrapper(*args, **kwargs):
         result = first_func(*args, **kwargs)
         for func in funcs:
             result = func(result)
         return result
+
     return wrapper
 
 
-def _match_list(
-        module_rule: Tuple[List[str], str],
-        logger_name: str,
-) -> Tuple[int, Optional[str]]:
-    logger_modules_split = logger_name.split('.') if logger_name else []
+def _match_list(module_rule: Tuple[List[str], str], logger_name: str) -> Tuple[int, Optional[str]]:
+    logger_modules_split = logger_name.split(".") if logger_name else []
 
     modules_split: List[str] = module_rule[0]
     level: str = module_rule[1]
@@ -65,10 +64,9 @@ class LogFilter:
         """
         self._should_log: Dict[Tuple[str, str], bool] = {}
         # the empty module is not matched, so set it here
-        self._default_level = config.get('', default_level)
+        self._default_level = config.get("", default_level)
         self._log_rules = [
-            (logger.split('.') if logger else list(), level)
-            for logger, level in config.items()
+            (logger.split(".") if logger else list(), level) for logger, level in config.items()
         ]
 
     def _get_log_level(self, logger_name: str) -> str:
@@ -96,7 +94,7 @@ class LogFilter:
 
 
 class RaidenFilter(logging.Filter):
-    def __init__(self, log_level_config, name=''):
+    def __init__(self, log_level_config, name=""):
         super().__init__(name)
         self._log_filter = LogFilter(log_level_config, default_level=DEFAULT_LOG_LEVEL)
 
@@ -105,26 +103,26 @@ class RaidenFilter(logging.Filter):
 
 
 def add_greenlet_name(
-        _logger: str,
-        _method_name: str,
-        event_dict: Dict[str, Any],
+    _logger: str, _method_name: str, event_dict: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Add greenlet_name to the event dict for greenlets that have a non-default name."""
     current_greenlet = gevent.getcurrent()
-    greenlet_name = getattr(current_greenlet, 'name', None)
-    if greenlet_name is not None and not greenlet_name.startswith('Greenlet-'):
-        event_dict['greenlet_name'] = greenlet_name
+    greenlet_name = getattr(current_greenlet, "name", None)
+    if greenlet_name is not None and not greenlet_name.startswith("Greenlet-"):
+        event_dict["greenlet_name"] = greenlet_name
     return event_dict
 
 
 def redactor(blacklist: Dict[Pattern, str]) -> Callable[[str], str]:
     """Returns a function which transforms a str, replacing all matches for its replacement"""
+
     def processor_wrapper(msg: str) -> str:
         for regex, repl in blacklist.items():
             if repl is None:
-                repl = '<redacted>'
+                repl = "<redacted>"
             msg = regex.sub(repl, msg)
         return msg
+
     return processor_wrapper
 
 
@@ -134,35 +132,35 @@ def _wrap_tracebackexception_format(redact: Callable[[str], str]):
     Only the last call will be effective. Consecutive calls will overwrite the
     previous monkey patches.
     """
-    original_format = getattr(TracebackException, '_original', None)
+    original_format = getattr(TracebackException, "_original", None)
     if original_format is None:
         original_format = TracebackException.format
-        setattr(TracebackException, '_original', original_format)
+        setattr(TracebackException, "_original", original_format)
 
     @wraps(original_format)
     def tracebackexception_format(self, *, chain=True):
         for line in original_format(self, chain=chain):
             yield redact(line)
 
-    setattr(TracebackException, 'format', tracebackexception_format)
+    setattr(TracebackException, "format", tracebackexception_format)
 
 
 def configure_logging(
-        logger_level_config: Dict[str, str] = None,
-        colorize: bool = True,
-        log_json: bool = False,
-        log_file: str = None,
-        disable_debug_logfile: bool = False,
-        debug_log_file_name: str = None,
-        cache_logger_on_first_use: bool = True,
-        _first_party_packages: FrozenSet[str] = _FIRST_PARTY_PACKAGES,
-        _debug_log_file_additional_level_filters: Dict[str, str] = None,
+    logger_level_config: Dict[str, str] = None,
+    colorize: bool = True,
+    log_json: bool = False,
+    log_file: str = None,
+    disable_debug_logfile: bool = False,
+    debug_log_file_name: str = None,
+    cache_logger_on_first_use: bool = True,
+    _first_party_packages: FrozenSet[str] = _FIRST_PARTY_PACKAGES,
+    _debug_log_file_additional_level_filters: Dict[str, str] = None,
 ):
     structlog.reset_defaults()
 
     logger_level_config = logger_level_config or dict()
-    logger_level_config.setdefault('filelock', 'ERROR')
-    logger_level_config.setdefault('', DEFAULT_LOG_LEVEL)
+    logger_level_config.setdefault("filelock", "ERROR")
+    logger_level_config.setdefault("", DEFAULT_LOG_LEVEL)
 
     processors = [
         structlog.stdlib.add_logger_name,
@@ -175,101 +173,89 @@ def configure_logging(
     ]
 
     if log_json:
-        formatter = 'json'
+        formatter = "json"
     elif colorize and not log_file:
-        formatter = 'colorized'
+        formatter = "colorized"
     else:
-        formatter = 'plain'
+        formatter = "plain"
 
-    redact = redactor({
-        re.compile(r'\b(access_?token=)([a-z0-9_-]+)', re.I): r'\1<redacted>',
-    })
+    redact = redactor({re.compile(r"\b(access_?token=)([a-z0-9_-]+)", re.I): r"\1<redacted>"})
     _wrap_tracebackexception_format(redact)
 
     handlers: Dict[str, Any] = dict()
     if log_file:
-        handlers['file'] = {
-            'class': 'logging.handlers.WatchedFileHandler',
-            'filename': log_file,
-            'level': 'DEBUG',
-            'formatter': formatter,
-            'filters': ['user_filter'],
+        handlers["file"] = {
+            "class": "logging.handlers.WatchedFileHandler",
+            "filename": log_file,
+            "level": "DEBUG",
+            "formatter": formatter,
+            "filters": ["user_filter"],
         }
     else:
-        handlers['default'] = {
-            'class': 'logging.StreamHandler',
-            'level': 'DEBUG',
-            'formatter': formatter,
-            'filters': ['user_filter'],
+        handlers["default"] = {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": formatter,
+            "filters": ["user_filter"],
         }
 
     if not disable_debug_logfile:
         if debug_log_file_name is None:
             time = datetime.datetime.utcnow().isoformat()
-            debug_log_file_name = f'raiden-debug_{time}.log'
-        handlers['debug-info'] = {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': debug_log_file_name,
-            'level': 'DEBUG',
-            'formatter': 'debug',
-            'maxBytes': MAX_LOG_FILE_SIZE,
-            'backupCount': LOG_BACKUP_COUNT,
-            'filters': ['raiden_debug_file_filter'],
+            debug_log_file_name = f"raiden-debug_{time}.log"
+        handlers["debug-info"] = {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": debug_log_file_name,
+            "level": "DEBUG",
+            "formatter": "debug",
+            "maxBytes": MAX_LOG_FILE_SIZE,
+            "backupCount": LOG_BACKUP_COUNT,
+            "filters": ["raiden_debug_file_filter"],
         }
 
     logging.config.dictConfig(
         {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'filters': {
-                'user_filter': {
-                    '()': RaidenFilter,
-                    'log_level_config': logger_level_config,
-                },
-                'raiden_debug_file_filter': {
-                    '()': RaidenFilter,
-                    'log_level_config': {
-                        '': DEFAULT_LOG_LEVEL,
-                        'raiden': 'DEBUG',
+            "version": 1,
+            "disable_existing_loggers": False,
+            "filters": {
+                "user_filter": {"()": RaidenFilter, "log_level_config": logger_level_config},
+                "raiden_debug_file_filter": {
+                    "()": RaidenFilter,
+                    "log_level_config": {
+                        "": DEFAULT_LOG_LEVEL,
+                        "raiden": "DEBUG",
                         **(_debug_log_file_additional_level_filters or {}),
                     },
                 },
             },
-            'formatters': {
-                'plain': {
-                    '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': _chain(structlog.dev.ConsoleRenderer(colors=False), redact),
-                    'foreign_pre_chain': processors,
+            "formatters": {
+                "plain": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processor": _chain(structlog.dev.ConsoleRenderer(colors=False), redact),
+                    "foreign_pre_chain": processors,
                 },
-                'json': {
-                    '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': _chain(structlog.processors.JSONRenderer(), redact),
-                    'foreign_pre_chain': processors,
+                "json": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processor": _chain(structlog.processors.JSONRenderer(), redact),
+                    "foreign_pre_chain": processors,
                 },
-                'colorized': {
-                    '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': _chain(structlog.dev.ConsoleRenderer(colors=True), redact),
-                    'foreign_pre_chain': processors,
+                "colorized": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processor": _chain(structlog.dev.ConsoleRenderer(colors=True), redact),
+                    "foreign_pre_chain": processors,
                 },
-                'debug': {
-                    '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': _chain(structlog.processors.JSONRenderer(), redact),
-                    'foreign_pre_chain': processors,
-                },
-            },
-            'handlers': handlers,
-            'loggers': {
-                '': {
-                    'handlers': handlers.keys(),
-                    'propagate': True,
+                "debug": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processor": _chain(structlog.processors.JSONRenderer(), redact),
+                    "foreign_pre_chain": processors,
                 },
             },
-        },
+            "handlers": handlers,
+            "loggers": {"": {"handlers": handlers.keys(), "propagate": True}},
+        }
     )
     structlog.configure(
-        processors=processors + [
-            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-        ],
+        processors=processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=cache_logger_on_first_use,
@@ -277,9 +263,9 @@ def configure_logging(
 
     # set logging level of the root logger to DEBUG, to be able to intercept
     # all messages, which are then be filtered by the `RaidenFilter`
-    structlog.get_logger('').setLevel(logger_level_config.get('', DEFAULT_LOG_LEVEL))
+    structlog.get_logger("").setLevel(logger_level_config.get("", DEFAULT_LOG_LEVEL))
     for package in _first_party_packages:
-        structlog.get_logger(package).setLevel('DEBUG')
+        structlog.get_logger(package).setLevel("DEBUG")
 
     # rollover RotatingFileHandler on startup, to split logs also per-session
     root = logging.getLogger()
@@ -294,6 +280,7 @@ def configure_logging(
     # for some reason it didn't work to put this into conftest.py
     try:
         from eth.tools.logging import setup_trace_logging
+
         setup_trace_logging()
     except ImportError:
         pass

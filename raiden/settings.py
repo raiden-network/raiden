@@ -6,16 +6,16 @@ from raiden.utils.typing import FeeAmount, NetworkTimeout, TokenAmount
 INITIAL_PORT = 38647
 
 CACHE_TTL = 60
-GAS_LIMIT = 10 * 10**6
+GAS_LIMIT = 10 * 10 ** 6
 GAS_LIMIT_HEX = to_hex(GAS_LIMIT)
 GAS_PRICE = denoms.shannon * 20  # pylint: disable=no-member
 
 DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF = 5
-DEFAULT_TRANSPORT_THROTTLE_CAPACITY = 10.
-DEFAULT_TRANSPORT_THROTTLE_FILL_RATE = 10.
-DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL = 1.
+DEFAULT_TRANSPORT_THROTTLE_CAPACITY = 10.0
+DEFAULT_TRANSPORT_THROTTLE_FILL_RATE = 10.0
+DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL = 1.0
 # matrix gets spammed with the default retry-interval of 1s, wait a little more
-DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL = 5.
+DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL = 5.0
 DEFAULT_MATRIX_KNOWN_SERVERS = {
     Environment.PRODUCTION: (
         "https://raw.githubusercontent.com/raiden-network/raiden-transport"
@@ -48,10 +48,10 @@ DEFAULT_PATHFINDING_MAX_FEE = 1000
 DEFAULT_PATHFINDING_IOU_TIMEOUT = 50000  # now the pfs has 200h to cash in
 
 ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE = 3
-ETHERSCAN_API = 'https://{network}.etherscan.io/api?module=proxy&action={action}'
+ETHERSCAN_API = "https://{network}.etherscan.io/api?module=proxy&action={action}"
 
-RED_EYES_CONTRACT_VERSION = '0.4.0'
-DEVELOPMENT_CONTRACT_VERSION = '0.11.1'
+RED_EYES_CONTRACT_VERSION = "0.4.0"
+DEVELOPMENT_CONTRACT_VERSION = "0.11.1"
 
 MIN_REI_THRESHOLD = 100
 

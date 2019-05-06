@@ -17,34 +17,34 @@ from raiden.utils import typing
 from raiden.utils.smart_contracts import deploy_contract_web3
 from raiden_contracts.constants import CONTRACT_HUMAN_STANDARD_TOKEN
 
-GUI_GEVENT = 'gevent'
+GUI_GEVENT = "gevent"
 
 # ansi escape code for typesetting
-HEADER = '\033[95m'
-OKBLUE = '\033[94m'
-OKGREEN = '\033[92m'
-ENDC = '\033[0m'
+HEADER = "\033[95m"
+OKBLUE = "\033[94m"
+OKGREEN = "\033[92m"
+ENDC = "\033[0m"
 
 # ipython needs to accept "--gui gevent" option
-IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
+IPython.core.shellapp.InteractiveShellApp.gui.values += ("gevent",)
 
 
 def print_usage():
-    print("\t{}use `{}raiden{}` to interact with the raiden service.".format(
-        OKBLUE, HEADER, OKBLUE,
-    ))
+    print(
+        "\t{}use `{}raiden{}` to interact with the raiden service.".format(OKBLUE, HEADER, OKBLUE)
+    )
     print("\tuse `{}chain{}` to interact with the blockchain.".format(HEADER, OKBLUE))
     print("\tuse `{}discovery{}` to find raiden nodes.".format(HEADER, OKBLUE))
-    print("\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
-        HEADER, OKBLUE,
-    ))
+    print(
+        "\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
+            HEADER, OKBLUE
+        )
+    )
     print("\tuse `{}denoms{}` for ether calculations".format(HEADER, OKBLUE))
-    print("\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(
-        HEADER, OKBLUE,
-    ))
-    print("\tuse `{}lasterr(n){}` to see n lines of stderr. [default 1]".format(
-        HEADER, OKBLUE,
-    ))
+    print(
+        "\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(HEADER, OKBLUE)
+    )
+    print("\tuse `{}lasterr(n){}` to see n lines of stderr. [default 1]".format(HEADER, OKBLUE))
     print("\tuse `{}help(<topic>){}` for help on a specific topic.".format(HEADER, OKBLUE))
     print("\ttype `{}usage(){}` to see this help again.".format(HEADER, OKBLUE))
     print("\n" + ENDC)
@@ -56,9 +56,8 @@ def inputhook_gevent():
     return 0
 
 
-@inputhook_manager.register('gevent')
+@inputhook_manager.register("gevent")
 class GeventInputHook:
-
     def __init__(self, manager):
         self.manager = manager
         self._current_gui = GUI_GEVENT
@@ -107,7 +106,7 @@ class Console(gevent.Greenlet):
 
         stream = io.StringIO()
         handler = logging.StreamHandler(stream=stream)
-        handler.formatter = logging.Formatter(u'%(levelname)s:%(name)s %(message)s')
+        handler.formatter = logging.Formatter("%(levelname)s:%(name)s %(message)s")
         root.addHandler(handler)
         err = io.StringIO()
         sys.stderr = err
@@ -118,49 +117,39 @@ class Console(gevent.Greenlet):
             Use `level=INFO` to filter for a specific level.
             Level- and prefix-filtering are applied before tailing the log.
             """
-            lines = (stream.getvalue().strip().split('\n') or [])
+            lines = stream.getvalue().strip().split("\n") or []
             if prefix:
-                lines = [
-                    line
-                    for line in lines
-                    if line.split(':')[1].startswith(prefix)
-                ]
+                lines = [line for line in lines if line.split(":")[1].startswith(prefix)]
             if level:
-                lines = [
-                    line
-                    for line in lines
-                    if line.split(':')[0] == level
-                ]
+                lines = [line for line in lines if line.split(":")[0] == level]
             for line in lines[-n:]:
                 print(line)
 
         def lasterr(n=1):
             """ Print the last `n` entries of stderr to stdout. """
-            for line in (err.getvalue().strip().split('\n') or [])[-n:]:
+            for line in (err.getvalue().strip().split("\n") or [])[-n:]:
                 print(line)
 
         tools = ConsoleTools(
-            self.app.raiden,
-            self.app.discovery,
-            self.app.config['settle_timeout'],
+            self.app.raiden, self.app.discovery, self.app.config["settle_timeout"]
         )
 
         self.console_locals = {
-            'app': self.app,
-            'raiden': self.app.raiden,
-            'chain': self.app.raiden.chain,
-            'discovery': self.app.discovery,
-            'tools': tools,
-            'lasterr': lasterr,
-            'lastlog': lastlog,
-            'usage': print_usage,
+            "app": self.app,
+            "raiden": self.app.raiden,
+            "chain": self.app.raiden.chain,
+            "discovery": self.app.discovery,
+            "tools": tools,
+            "lasterr": lasterr,
+            "lastlog": lastlog,
+            "usage": print_usage,
         }
 
-        print('\n' * 2)
-        print('Entering Console' + OKGREEN)
-        print('Tip:' + OKBLUE)
+        print("\n" * 2)
+        print("Entering Console" + OKGREEN)
+        print("Tip:" + OKBLUE)
         print_usage()
-        IPython.start_ipython(argv=['--gui', 'gevent'], user_ns=self.console_locals)
+        IPython.start_ipython(argv=["--gui", "gevent"], user_ns=self.console_locals)
 
         sys.exit(0)
 
@@ -174,14 +163,14 @@ class ConsoleTools:
         self.settle_timeout = settle_timeout
 
     def create_token(
-            self,
-            registry_address,
-            initial_alloc=10 ** 6,
-            name='raidentester',
-            symbol='RDT',
-            decimals=2,
-            timeout=60,
-            auto_register=True,
+        self,
+        registry_address,
+        initial_alloc=10 ** 6,
+        name="raidentester",
+        symbol="RDT",
+        decimals=2,
+        timeout=60,
+        auto_register=True,
     ):
         """ Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
@@ -210,17 +199,18 @@ class ConsoleTools:
         token_address_hex = to_checksum_address(token_address)
         if auto_register:
             self.register_token(registry_address, token_address_hex)
-        print("Successfully created {}the token '{}'.".format(
-            'and registered ' if auto_register else ' ',
-            name,
-        ))
+        print(
+            "Successfully created {}the token '{}'.".format(
+                "and registered " if auto_register else " ", name
+            )
+        )
         return token_address_hex
 
     def register_token(
-            self,
-            registry_address_hex: typing.AddressHex,
-            token_address_hex: typing.AddressHex,
-            retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
+        self,
+        registry_address_hex: typing.AddressHex,
+        token_address_hex: typing.AddressHex,
+        retry_timeout: typing.NetworkTimeout = DEFAULT_RETRY_TIMEOUT,
     ) -> TokenNetwork:
         """ Register a token with the raiden token manager.
 
@@ -245,27 +235,22 @@ class ConsoleTools:
                 token_network_deposit_limit=UINT256_MAX,
             )
         else:
-            token_network_address = registry.add_token_without_limits(
-                token_address=token_address,
-            )
+            token_network_address = registry.add_token_without_limits(token_address=token_address)
 
         # Register the channel manager with the raiden registry
         waiting.wait_for_payment_network(
-            self._raiden,
-            registry.address,
-            token_address,
-            retry_timeout,
+            self._raiden, registry.address, token_address, retry_timeout
         )
 
         return self._raiden.chain.token_network(token_network_address)
 
     def open_channel_with_funding(
-            self,
-            registry_address_hex,
-            token_address_hex,
-            peer_address_hex,
-            total_deposit,
-            settle_timeout=None,
+        self,
+        registry_address_hex,
+        token_address_hex,
+        peer_address_hex,
+        total_deposit,
+        settle_timeout=None,
     ):
         """ Convenience method to open a channel.
 
@@ -286,21 +271,15 @@ class ConsoleTools:
         try:
             self._discovery.get(peer_address)
         except KeyError:
-            print('Error: peer {} not found in discovery'.format(peer_address_hex))
+            print("Error: peer {} not found in discovery".format(peer_address_hex))
             return None
 
         self._api.channel_open(
-            registry_address,
-            token_address,
-            peer_address,
-            settle_timeout=settle_timeout,
+            registry_address, token_address, peer_address, settle_timeout=settle_timeout
         )
 
         return self._api.set_total_channel_deposit(
-            registry_address,
-            token_address,
-            peer_address,
-            total_deposit,
+            registry_address, token_address, peer_address, total_deposit
         )
 
     def wait_for_contract(self, contract_address_hex, timeout=None):
@@ -315,9 +294,7 @@ class ConsoleTools:
         """
         contract_address = decode_hex(contract_address_hex)
         start_time = time.time()
-        result = self._raiden.chain.client.web3.eth.getCode(
-            to_checksum_address(contract_address),
-        )
+        result = self._raiden.chain.client.web3.eth.getCode(to_checksum_address(contract_address))
 
         current_time = time.time()
         while not result:
@@ -325,7 +302,7 @@ class ConsoleTools:
                 return False
 
             result = self._raiden.chain.client.web3.eth.getCode(
-                to_checksum_address(contract_address),
+                to_checksum_address(contract_address)
             )
             gevent.sleep(0.5)
 

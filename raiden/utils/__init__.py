@@ -59,7 +59,7 @@ def ishash(data: bytes) -> bool:
 
 
 def is_minified_address(addr):
-    return re.compile('(0x)?[a-f0-9]{6,8}').match(addr)
+    return re.compile("(0x)?[a-f0-9]{6,8}").match(addr)
 
 
 def address_checksum_and_decode(addr: str) -> Address:
@@ -69,10 +69,10 @@ def address_checksum_and_decode(addr: str) -> Address:
         checksummed according to EIP55 specification
     """
     if not is_0x_prefixed(addr):
-        raise InvalidAddress('Address must be 0x prefixed')
+        raise InvalidAddress("Address must be 0x prefixed")
 
     if not is_checksum_address(addr):
-        raise InvalidAddress('Address must be EIP55 checksummed')
+        raise InvalidAddress("Address must be EIP55 checksummed")
 
     addr_bytes = decode_hex(addr)
     assert len(addr_bytes) in (20, 0)
@@ -81,9 +81,7 @@ def address_checksum_and_decode(addr: str) -> Address:
 
 def data_encoder(data: bytes, length: int = 0) -> str:
     data = remove_0x_prefix(encode_hex(data))
-    return add_0x_prefix(
-        data.rjust(length * 2, b'0').decode(),
-    )
+    return add_0x_prefix(data.rjust(length * 2, b"0").decode())
 
 
 def data_decoder(data: str) -> bytes:
@@ -93,7 +91,7 @@ def data_decoder(data: str) -> bytes:
 
 def quantity_encoder(i: int) -> str:
     """Encode integer quantity `data`."""
-    return hex(i).rstrip('L')
+    return hex(i).rstrip("L")
 
 
 def pex(data: bytes) -> str:
@@ -105,13 +103,13 @@ def lpex(lst: Iterable[bytes]) -> List[str]:
 
 
 def host_port_to_endpoint(host: str, port: int) -> str:
-    return '{}:{}'.format(host, port)
+    return "{}:{}".format(host, port)
 
 
 def split_endpoint(endpoint: str) -> HostPort:
-    match = re.match(r'(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?', endpoint, re.I)
+    match = re.match(r"(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?", endpoint, re.I)
     if not match:
-        raise ValueError('Invalid endpoint', endpoint)
+        raise ValueError("Invalid endpoint", endpoint)
     host, port = match.groups()
     returned_port = None
     if port:
@@ -122,7 +120,7 @@ def split_endpoint(endpoint: str) -> HostPort:
 def privatekey_to_publickey(private_key_bin: PrivateKey) -> PublicKey:
     """ Returns public key in bitcoins 'bin' encoding. """
     if not ishash(private_key_bin):
-        raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
+        raise ValueError("private_key_bin format mismatch. maybe hex encoded?")
     return keys.PrivateKey(private_key_bin).public_key.to_bytes()
 
 
@@ -135,11 +133,8 @@ def get_project_root() -> str:
 
 
 def get_relative_path(file_name) -> str:
-    prefix = os.path.commonprefix([
-        os.path.realpath('.'),
-        os.path.realpath(file_name),
-    ])
-    return file_name.replace(prefix + '/', '')
+    prefix = os.path.commonprefix([os.path.realpath("."), os.path.realpath(file_name)])
+    return file_name.replace(prefix + "/", "")
 
 
 def get_system_spec() -> Dict[str, str]:
@@ -148,15 +143,12 @@ def get_system_spec() -> Dict[str, str]:
     import pkg_resources
     import platform
 
-    if sys.platform == 'darwin':
-        system_info = 'macOS {} {}'.format(
-            platform.mac_ver()[0],
-            platform.architecture()[0],
-        )
+    if sys.platform == "darwin":
+        system_info = "macOS {} {}".format(platform.mac_ver()[0], platform.architecture()[0])
     else:
-        system_info = '{} {} {}'.format(
+        system_info = "{} {} {}".format(
             platform.system(),
-            '_'.join(part for part in platform.architecture() if part),
+            "_".join(part for part in platform.architecture() if part),
             platform.release(),
         )
 
@@ -164,18 +156,18 @@ def get_system_spec() -> Dict[str, str]:
         version = pkg_resources.require(raiden.__name__)[0].version
     except (pkg_resources.VersionConflict, pkg_resources.DistributionNotFound):
         raise RuntimeError(
-            'Cannot detect Raiden version. Did you do python setup.py?  '
-            'Refer to https://raiden-network.readthedocs.io/en/latest/'
-            'overview_and_guide.html#for-developers',
+            "Cannot detect Raiden version. Did you do python setup.py?  "
+            "Refer to https://raiden-network.readthedocs.io/en/latest/"
+            "overview_and_guide.html#for-developers"
         )
 
     system_spec = {
-        'raiden': version,
-        'python_implementation': platform.python_implementation(),
-        'python_version': platform.python_version(),
-        'system': system_info,
-        'architecture': platform.machine(),
-        'distribution': 'bundled' if getattr(sys, 'frozen', False) else 'source',
+        "raiden": version,
+        "python_implementation": platform.python_implementation(),
+        "python_version": platform.python_version(),
+        "system": system_info,
+        "architecture": platform.machine(),
+        "distribution": "bundled" if getattr(sys, "frozen", False) else "source",
     }
     return system_spec
 
@@ -210,7 +202,7 @@ def wait_until(func, wait_for=None, sleep_for=0.5):
 
 
 def is_frozen():
-    return getattr(sys, 'frozen', False)
+    return getattr(sys, "frozen", False)
 
 
 def split_in_pairs(arg: Iterable) -> Iterable[Tuple]:
@@ -232,9 +224,8 @@ def create_default_identifier():
 def merge_dict(to_update: dict, other_dict: dict):
     """ merges b into a """
     for key, value in other_dict.items():
-        has_map = (
-            isinstance(value, collections.Mapping) and
-            isinstance(to_update.get(key, None), collections.Mapping)
+        has_map = isinstance(value, collections.Mapping) and isinstance(
+            to_update.get(key, None), collections.Mapping
         )
 
         if has_map:
@@ -244,7 +235,7 @@ def merge_dict(to_update: dict, other_dict: dict):
 
 
 def optional_address_to_string(
-        address: Optional[Union[Address, TokenAddress]] = None,
+    address: Optional[Union[Address, TokenAddress]] = None,
 ) -> Optional[str]:
     if address is None:
         return None
@@ -256,7 +247,7 @@ def safe_gas_limit(*estimates: int) -> int:
     """ Calculates a safe gas limit for a number of gas estimates
     including a security margin
     """
-    assert None not in estimates, 'if estimateGas returned None it should not reach here'
+    assert None not in estimates, "if estimateGas returned None it should not reach here"
     calculated_limit = max(estimates)
     return int(calculated_limit * constants.GAS_FACTOR)
 
@@ -270,14 +261,14 @@ def block_specification_to_number(block: BlockSpecification, web3: Web3) -> Bloc
     """ Converts a block specification to an actual block number """
     if isinstance(block, str):
         msg = f"string block specification can't contain {block}"
-        assert block in ('latest', 'pending'), msg
-        number = web3.eth.getBlock(block)['number']
+        assert block in ("latest", "pending"), msg
+        number = web3.eth.getBlock(block)["number"]
     elif isinstance(block, T_BlockHash):
-        number = web3.eth.getBlock(block)['number']
+        number = web3.eth.getBlock(block)["number"]
     elif isinstance(block, T_BlockNumber):
         number = block
     else:
         if __debug__:
-            raise AssertionError(f'Unknown type {type(block)} given for block specification')
+            raise AssertionError(f"Unknown type {type(block)} given for block specification")
 
     return BlockNumber(number)

@@ -23,7 +23,6 @@ from raiden.utils.typing import (
 
 
 class MockJSONRPCClient:
-
     def __init__(self):
         # To be manually set by each test
         self.balances_mapping = {}
@@ -47,10 +46,7 @@ class MockTokenNetworkProxy:
 
     @staticmethod
     def detail_participants(  # pylint: disable=unused-argument
-            participant1,
-            participant2,
-            block_identifier,
-            channel_identifier,
+        participant1, participant2, block_identifier, channel_identifier
     ):
         # To be changed by each test
         return None
@@ -73,33 +69,20 @@ class MockChain:
         return MockPaymentChannel(self.token_network, canonical_identifier.channel_identifier)
 
     def token_network_registry(  # pylint: disable=unused-argument, no-self-use
-            self,
-            address: Address,
+        self, address: Address
     ):
         return object()
 
-    def discovery(  # pylint: disable=unused-argument, no-self-use
-            self,
-            address: Address,
-    ):
+    def discovery(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         return object()
 
-    def secret_registry(  # pylint: disable=unused-argument, no-self-use
-            self,
-            address: Address,
-    ):
+    def secret_registry(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         return object()
 
-    def user_deposit(  # pylint: disable=unused-argument, no-self-use
-            self,
-            address: Address,
-    ):
+    def user_deposit(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         return object()
 
-    def service_registry(  # pylint: disable=unused-argument, no-self-use
-            self,
-            address: Address,
-    ):
+    def service_registry(self, address: Address):  # pylint: disable=unused-argument, no-self-use
         return object()
 
 
@@ -143,7 +126,7 @@ class MockRaidenService:
 
         serializer = JSONSerializer
         state_manager = StateManager(state_transition, None)
-        storage = SerializedSQLiteStorage(':memory:', serializer)
+        storage = SerializedSQLiteStorage(":memory:", serializer)
         self.wal = WriteAheadLog(state_manager, storage)
 
         state_change = ActionInitChain(
@@ -171,10 +154,10 @@ class MockRaidenService:
 
 
 def make_raiden_service_mock(
-        payment_network_identifier: PaymentNetworkID,
-        token_network_identifier: TokenNetworkID,
-        channel_identifier: ChannelID,
-        partner: Address,
+    payment_network_identifier: PaymentNetworkID,
+    token_network_identifier: TokenNetworkID,
+    channel_identifier: ChannelID,
+    partner: Address,
 ):
     raiden_service = MockRaidenService()
     chain_state = MockChainState()
@@ -190,50 +173,44 @@ def make_raiden_service_mock(
     tokenidentifiers_to_tokennetworks = payment_network.tokenidentifiers_to_tokennetworks
     tokenidentifiers_to_tokennetworks[token_network_identifier] = token_network
 
-    chain_state.identifiers_to_paymentnetworks = {
-        payment_network_identifier: payment_network,
-    }
+    chain_state.identifiers_to_paymentnetworks = {payment_network_identifier: payment_network}
     return raiden_service
 
 
 def patched_get_for_succesful_pfs_info():
     json_data = {
-        'price_info': 0,
-        'network_info': {
-            'chain_id': 1,
-            'registry_address': '0xB9633dd9a9a71F22C933bF121d7a22008f66B908',
+        "price_info": 0,
+        "network_info": {
+            "chain_id": 1,
+            "registry_address": "0xB9633dd9a9a71F22C933bF121d7a22008f66B908",
         },
-        'message': 'This is your favorite pathfinding service',
-        'operator': 'John Doe',
-        'version': '0.0.1',
+        "message": "This is your favorite pathfinding service",
+        "operator": "John Doe",
+        "version": "0.0.1",
     }
 
     response = Mock()
     response.configure_mock(status_code=200)
     response.json = Mock(return_value=json_data)
-    return patch.object(requests, 'get', return_value=response)
+    return patch.object(requests, "get", return_value=response)
 
 
-class MockEth():
-
+class MockEth:
     def getBlock(  # pylint: disable=unused-argument, no-self-use
-            self,
-            block_identifier: BlockSpecification,
+        self, block_identifier: BlockSpecification
     ) -> Dict:
         return {
-            'number': 42,
-            'hash': '0x8cb5f5fb0d888c03ec4d13f69d4eb8d604678508a1fa7c1a8f0437d0065b9b67',
+            "number": 42,
+            "hash": "0x8cb5f5fb0d888c03ec4d13f69d4eb8d604678508a1fa7c1a8f0437d0065b9b67",
         }
 
 
-class MockWeb3Version():
-
+class MockWeb3Version:
     def __init__(self, netid):
         self.network = netid
 
 
-class MockWeb3():
-
+class MockWeb3:
     def __init__(self, netid):
         self.version = MockWeb3Version(netid)
         self.eth = MockEth()

@@ -15,14 +15,14 @@ from raiden.utils.typing import (
     TokenAmount,
 )
 
-LATEST = 'https://api.github.com/repos/raiden-network/raiden/releases/latest'
-RELEASE_PAGE = 'https://github.com/raiden-network/raiden/releases'
-SECURITY_EXPRESSION = r'\[CRITICAL UPDATE.*?\]'
+LATEST = "https://api.github.com/repos/raiden-network/raiden/releases/latest"
+RELEASE_PAGE = "https://github.com/raiden-network/raiden/releases"
+SECURITY_EXPRESSION = r"\[CRITICAL UPDATE.*?\]"
 
 RAIDEN_DB_VERSION = 22
 SQLITE_MIN_REQUIRED_VERSION = (3, 9, 0)
 PROTOCOL_VERSION = RaidenProtocolVersion(1)
-MIN_REQUIRED_SOLC = 'v0.4.23'
+MIN_REQUIRED_SOLC = "v0.4.23"
 
 INT64_MAX = 2 ** 63 - 1
 UINT256_MAX = 2 ** 256 - 1
@@ -48,7 +48,7 @@ EMPTY_MESSAGE_HASH = AdditionalHash(bytes(32))
 EMPTY_HASH_KECCAK = keccak(EMPTY_HASH)
 EMPTY_SIGNATURE = Signature(bytes(65))
 EMPTY_MERKLE_ROOT = Locksroot(bytes(32))
-EMPTY_SECRET = Secret(b'')
+EMPTY_SECRET = Secret(b"")
 ZERO_TOKENS = TokenAmount(0)
 
 SECRET_HEXSTRING_LENGTH = len(to_hex(EMPTY_HASH))
@@ -58,15 +58,15 @@ RECEIPT_FAILURE_CODE = 0
 
 
 class EthClient(Enum):
-    GETH = 'geth'
-    PARITY = 'parity'
+    GETH = "geth"
+    PARITY = "parity"
 
 
 ETH_RPC_DEFAULT_PORT = 8545
 HTTP_PORT = 80
 HTTPS_PORT = 443
 
-START_QUERY_BLOCK_KEY = 'DefaultStartBlock'
+START_QUERY_BLOCK_KEY = "DefaultStartBlock"
 SNAPSHOT_STATE_CHANGES_COUNT = 500
 
 # An arbitrary limit for transaction size in Raiden, added in PR #1990
@@ -86,14 +86,16 @@ MAXIMUM_PENDING_TRANSFERS = 160
 
 class Environment(Enum):
     """Environment configurations that can be chosen on the command line."""
-    PRODUCTION = 'production'
-    DEVELOPMENT = 'development'
+
+    PRODUCTION = "production"
+    DEVELOPMENT = "development"
 
 
 class RoutingMode(Enum):
     """Routing mode configuration that can be chosen on the command line"""
-    BASIC = 'basic'
-    PFS = 'pfs'
+
+    BASIC = "basic"
+    PFS = "pfs"
 
 
 GAS_REQUIRED_FOR_CREATE_ERC20_TOKEN_NETWORK = 3_234_716
@@ -107,6 +109,6 @@ CHECK_NETWORK_ID_INTERVAL = 5 * 60
 
 DEFAULT_HTTP_REQUEST_TIMEOUT = 1.0  # seconds
 
-DISCOVERY_DEFAULT_ROOM = 'discovery'
-MONITORING_BROADCASTING_ROOM = 'monitoring'
-PATH_FINDING_BROADCASTING_ROOM = 'path_finding'
+DISCOVERY_DEFAULT_ROOM = "discovery"
+MONITORING_BROADCASTING_ROOM = "monitoring"
+PATH_FINDING_BROADCASTING_ROOM = "path_finding"

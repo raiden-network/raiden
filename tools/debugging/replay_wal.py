@@ -21,24 +21,21 @@ from raiden.utils import address_checksum_and_decode, pex, to_checksum_address
 
 
 def state_change_contains_secrethash(obj, secrethash):
-    return (
-        (hasattr(obj, 'secrethash') and obj.secrethash == secrethash) or
-        (hasattr(obj, 'transfer') and (
-            (
-                hasattr(obj.transfer, 'secrethash') and obj.transfer.secrethash == secrethash
-            ) or (
-                hasattr(obj.transfer, 'lock') and obj.transfer.lock.secrethash == secrethash
-            )
-        ))
+    return (hasattr(obj, "secrethash") and obj.secrethash == secrethash) or (
+        hasattr(obj, "transfer")
+        and (
+            (hasattr(obj.transfer, "secrethash") and obj.transfer.secrethash == secrethash)
+            or (hasattr(obj.transfer, "lock") and obj.transfer.lock.secrethash == secrethash)
+        )
     )
 
 
 def state_change_with_nonce(obj, nonce, channel_identifier, sender):
     return (
-        hasattr(obj, 'balance_proof') and
-        obj.balance_proof.nonce == nonce and
-        obj.balance_proof.channel_identifier == channel_identifier and
-        obj.balance_proof.sender == to_canonical_address(sender)
+        hasattr(obj, "balance_proof")
+        and obj.balance_proof.nonce == nonce
+        and obj.balance_proof.channel_identifier == channel_identifier
+        and obj.balance_proof.sender == to_canonical_address(sender)
     )
 
 
@@ -51,20 +48,20 @@ def print_attributes(data, translator=None):
         if isinstance(value, bytes):
             value = encode_hex(value)
 
-        click.echo('\t', nl=False)
-        click.echo(click.style(key, fg='blue'), nl=False)
-        click.echo(click.style('='), nl=False)
-        click.echo(click.style(trans(repr(value)), fg='yellow'))
+        click.echo("\t", nl=False)
+        click.echo(click.style(key, fg="blue"), nl=False)
+        click.echo(click.style("="), nl=False)
+        click.echo(click.style(trans(repr(value)), fg="yellow"))
 
 
 def print_state_change(state_change, translator=None):
-    click.echo(click.style(f'> {state_change.__class__.__name__}', fg='red', bold=True))
+    click.echo(click.style(f"> {state_change.__class__.__name__}", fg="red", bold=True))
     print_attributes(state_change.__dict__, translator=translator)
 
 
 def print_events(events, translator=None):
     for event in events:
-        click.echo(click.style(f'< {event.__class__.__name__}', fg='green', bold=True))
+        click.echo(click.style(f"< {event.__class__.__name__}", fg="green", bold=True))
         print_attributes(event.__dict__, translator=translator)
 
 
@@ -87,7 +84,7 @@ class Translator(dict):
         """
         try:
             addr = to_checksum_address(addr)
-            rxp = '(?:0x)?' + pex(address_checksum_and_decode(addr)) + f'(?:{addr.lower()[10:]})?'
+            rxp = "(?:0x)?" + pex(address_checksum_and_decode(addr)) + f"(?:{addr.lower()[10:]})?"
             self._extra_keys[pex(address_checksum_and_decode(addr))] = addr.lower()
             self._extra_keys[addr[2:].lower()] = addr.lower()
         except ValueError:
@@ -96,19 +93,14 @@ class Translator(dict):
 
     def _make_regex(self):
         """ Compile rxp with all keys concatenated. """
-        rxp = "|".join(
-            map(self._address_rxp, self.keys()),
-        )
-        self._regex = re.compile(
-            rxp,
-            re.IGNORECASE,
-        )
+        rxp = "|".join(map(self._address_rxp, self.keys()))
+        self._regex = re.compile(rxp, re.IGNORECASE)
 
     def __setitem__(self, key, value):
-        raise NotImplementedError(f'{self.__class__} must not dynamically modified')
+        raise NotImplementedError(f"{self.__class__} must not dynamically modified")
 
     def __pop__(self, key):
-        raise NotImplementedError(f'{self.__class__} must not dynamically modified')
+        raise NotImplementedError(f"{self.__class__} must not dynamically modified")
 
     def __getitem__(self, key):
         try:
@@ -119,12 +111,13 @@ class Translator(dict):
                 return dict.__getitem__(self, alt)
             except KeyError:
                 import pdb
+
                 pdb.set_trace()
                 raise e
 
     def __call__(self, match):
         """ Lookup for each rxp match. """
-        return '[{}]'.format(self[match.group(0).lower()])
+        return "[{}]".format(self[match.group(0).lower()])
 
     def translate(self, text):
         """ Translate text. """
@@ -133,8 +126,7 @@ class Translator(dict):
 
 def replay_wal(storage, token_network_identifier, partner_address, translator=None):
     all_state_changes = storage.get_statechanges_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
+        from_identifier=0, to_identifier="latest"
     )
 
     state_manager = StateManager(state_transition=node.state_transition, current_state=None)
@@ -165,21 +157,14 @@ def replay_wal(storage, token_network_identifier, partner_address, translator=No
 
 
 @click.command(help=__doc__)
-@click.argument(
-    'db-file',
-    type=click.Path(exists=True),
-)
-@click.argument(
-    'token-network-identifier',
-)
-@click.argument(
-    'partner-address',
-)
+@click.argument("db-file", type=click.Path(exists=True))
+@click.argument("token-network-identifier")
+@click.argument("partner-address")
 @click.option(
-    '-x',
-    '--names-translator',
+    "-x",
+    "--names-translator",
     type=click.File(),
-    help='A JSON file with replacement rules, e.g.:  '
+    help="A JSON file with replacement rules, e.g.:  "
     '\'{ "0xb4f44cd22a84DE0774B802e422D4c26A73Dd68d7": "Bob", '
     '"identifier": "XXX" }\' would replace all instances of the address (pex\'ed, lowercase, '
     'checksummed) with "[Bob]" and all mentions of "identifier" with "[XXX]. '
@@ -189,14 +174,8 @@ def main(db_file, token_network_identifier, partner_address, names_translator):
     if names_translator:
         translator = Translator(json.load(names_translator))
         lookup = {v: k for k, v in translator.items()}
-        token_network_identifier = lookup.get(
-            token_network_identifier,
-            token_network_identifier,
-        )
-        partner_address = lookup.get(
-            partner_address,
-            partner_address,
-        )
+        token_network_identifier = lookup.get(token_network_identifier, token_network_identifier)
+        partner_address = lookup.get(partner_address, partner_address)
     else:
         translator = None
 

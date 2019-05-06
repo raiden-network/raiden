@@ -38,9 +38,7 @@ class WaitForMessage(MessageHandler):
     def wait_for_message(self, message_type: type, attributes: dict) -> AsyncResult:
         assert not any(attributes == waiting.attributes for waiting in self.waiting[message_type])
         waiting = MessageWaiting(
-            attributes=attributes,
-            message_type=Message,
-            async_result=AsyncResult(),
+            attributes=attributes, message_type=Message, async_result=AsyncResult()
         )
         self.waiting[message_type].append(waiting)
         return waiting.async_result
@@ -69,22 +67,17 @@ class HoldRaidenEvent(RaidenEventHandler):
     def __init__(self):
         self.eventtype_to_holds = defaultdict(list)
 
-    def on_raiden_event(
-            self,
-            raiden: RaidenService,
-            chain_state: ChainState,
-            event: RaidenEvent,
-    ):
+    def on_raiden_event(self, raiden: RaidenService, chain_state: ChainState, event: RaidenEvent):
         holds = self.eventtype_to_holds[type(event)]
         found = None
 
         for pos, hold in enumerate(holds):
             if check_nested_attrs(event, hold.attributes):
                 msg = (
-                    'Same event emitted twice, should not happen. '
-                    'Either there is a bug in the state machine or '
-                    'the hold.attributes is too generic and multiple '
-                    'different events are matching.'
+                    "Same event emitted twice, should not happen. "
+                    "Either there is a bug in the state machine or "
+                    "the hold.attributes is too generic and multiple "
+                    "different events are matching."
                 )
                 assert hold.event is None, msg
 
@@ -108,7 +101,7 @@ class HoldRaidenEvent(RaidenEventHandler):
             attributes=attributes,
         )
         self.eventtype_to_holds[event_type].append(hold)
-        log.debug(f'Hold for {event_type.__name__} with {attributes} created.')
+        log.debug(f"Hold for {event_type.__name__} with {attributes} created.")
         return hold.async_result
 
     def release(self, raiden: RaidenService, event: RaidenEvent):
@@ -121,56 +114,53 @@ class HoldRaidenEvent(RaidenEventHandler):
                 break
 
         msg = (
-            'Cannot release unknown event. '
-            'Either it was never held, the event was not emited yet, '
-            'or it was released twice.'
+            "Cannot release unknown event. "
+            "Either it was never held, the event was not emited yet, "
+            "or it was released twice."
         )
         assert found is not None, msg
 
         hold = holds.pop(found[0])
         super().on_raiden_event(raiden, hold.chain_state, event)
-        log.debug(f'{event} released.', node=pex(raiden.address))
+        log.debug(f"{event} released.", node=pex(raiden.address))
 
     def hold_secretrequest_for(self, secrethash: typing.SecretHash) -> AsyncResult:
-        return self.hold(SendSecretRequest, {'secrethash': secrethash})
+        return self.hold(SendSecretRequest, {"secrethash": secrethash})
 
     def hold_unlock_for(self, secrethash: typing.SecretHash):
-        return self.hold(SendBalanceProof, {'secrethash': secrethash})
+        return self.hold(SendBalanceProof, {"secrethash": secrethash})
 
     def release_secretrequest_for(self, raiden: RaidenService, secrethash: typing.SecretHash):
         for hold in self.eventtype_to_holds[SendSecretRequest]:
-            if hold.attributes['secrethash'] == secrethash:
+            if hold.attributes["secrethash"] == secrethash:
                 self.release(raiden, hold.event)
 
     def release_unlock_for(self, raiden: RaidenService, secrethash: typing.SecretHash):
         for hold in self.eventtype_to_holds[SendBalanceProof]:
-            if hold.attributes['secrethash'] == secrethash:
+            if hold.attributes["secrethash"] == secrethash:
                 self.release(raiden, hold.event)
 
 
 def dont_handle_lock_expired_mock(app):
     """Takes in a raiden app and returns a mock context where lock_expired is not processed
     """
+
     def do_nothing(raiden, message):  # pylint: disable=unused-argument
         pass
 
     return patch.object(
-        app.raiden.message_handler,
-        'handle_message_lockexpired',
-        side_effect=do_nothing,
+        app.raiden.message_handler, "handle_message_lockexpired", side_effect=do_nothing
     )
 
 
 def dont_handle_node_change_network_state():
     """Returns a mock context where ActionChangeNodeNetworkState is not processed
     """
+
     def empty_state_transition(chain_state, state_change):  # pylint: disable=unused-argument
         return TransitionResult(chain_state, list())
 
-    return patch(
-        'raiden.transfer.node.handle_node_change_network_state',
-        empty_state_transition,
-    )
+    return patch("raiden.transfer.node.handle_node_change_network_state", empty_state_transition)
 
 
 # backwards compatibility

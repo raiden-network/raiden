@@ -44,26 +44,16 @@ def chain_state(our_address):
 
 @pytest.fixture
 def payment_network_state(chain_state, payment_network_id):
-    payment_network = PaymentNetworkState(
-        payment_network_id,
-        [],
-    )
+    payment_network = PaymentNetworkState(payment_network_id, [])
     chain_state.identifiers_to_paymentnetworks[payment_network_id] = payment_network
     return payment_network
 
 
 @pytest.fixture
 def token_network_state(
-        chain_state,
-        payment_network_state,
-        payment_network_id,
-        token_network_id,
-        token_id,
+    chain_state, payment_network_state, payment_network_id, token_network_id, token_id
 ):
-    token_network = TokenNetworkState(
-        token_network_id,
-        token_id,
-    )
+    token_network = TokenNetworkState(token_network_id, token_id)
     payment_network_state.tokenidentifiers_to_tokennetworks[token_network_id] = token_network
     payment_network_state.tokenaddresses_to_tokenidentifiers[token_id] = token_network_id
 
@@ -77,21 +67,19 @@ def token_network_state(
 def netting_channel_state(chain_state, token_network_state, payment_network_state):
     partner = factories.make_address()
     canonical_identifier = factories.make_canonical_identifier(
-        token_network_address=token_network_state.address,
+        token_network_address=token_network_state.address
     )
-    channel_state = factories.create(factories.NettingChannelStateProperties(
-        our_state=factories.NettingChannelEndStateProperties(
-            balance=10,
-            address=chain_state.our_address,
-        ),
-        partner_state=factories.NettingChannelEndStateProperties(
-            balance=10,
-            address=partner,
-        ),
-        token_address=token_network_state.token_address,
-        payment_network_identifier=payment_network_state.address,
-        canonical_identifier=canonical_identifier,
-    ))
+    channel_state = factories.create(
+        factories.NettingChannelStateProperties(
+            our_state=factories.NettingChannelEndStateProperties(
+                balance=10, address=chain_state.our_address
+            ),
+            partner_state=factories.NettingChannelEndStateProperties(balance=10, address=partner),
+            token_address=token_network_state.token_address,
+            payment_network_identifier=payment_network_state.address,
+            canonical_identifier=canonical_identifier,
+        )
+    )
 
     channel_id = canonical_identifier.channel_identifier
     token_network_state.partneraddresses_to_channelidentifiers[partner].append(channel_id)

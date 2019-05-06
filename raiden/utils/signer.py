@@ -14,16 +14,14 @@ def eth_sign_sha3(data: bytes) -> bytes:
     eth_sign/recover compatible hasher
     Prefixes data with "\x19Ethereum Signed Message:\n<len(data)>"
     """
-    prefix = b'\x19Ethereum Signed Message:\n'
+    prefix = b"\x19Ethereum Signed Message:\n"
     if not data.startswith(prefix):
-        data = prefix + b'%d%s' % (len(data), data)
+        data = prefix + b"%d%s" % (len(data), data)
     return keccak(data)
 
 
 def recover(
-        data: bytes,
-        signature: Signature,
-        hasher: Callable[[bytes], bytes] = eth_sign_sha3,
+    data: bytes, signature: Signature, hasher: Callable[[bytes], bytes] = eth_sign_sha3
 ) -> Address:
     """ eth_recover address from data hash and signature """
     _hash = hasher(data)
@@ -43,6 +41,7 @@ def recover(
 
 class Signer(ABC):
     """ ABC for Signer interface """
+
     # attribute or cached property which represents the address of the account of this Signer
     address: Address
 
@@ -69,11 +68,12 @@ class Signer(ABC):
         return to_checksum_address(self.address)
 
     def __repr__(self) -> str:
-        return f'<{self.__class__.__name__} for {self.address_hex}>'
+        return f"<{self.__class__.__name__} for {self.address_hex}>"
 
 
 class LocalSigner(Signer):
     """ Concrete Signer implementation using a local private key """
+
     private_key: keys.PrivateKey
 
     def __init__(self, private_key: bytes) -> None:
@@ -82,7 +82,7 @@ class LocalSigner(Signer):
 
     def sign(self, data: bytes, v: int = 27) -> Signature:
         """ Sign data hash with local private key """
-        assert v in (0, 27), 'Raiden is only signing messages with v in (0, 27)'
+        assert v in (0, 27), "Raiden is only signing messages with v in (0, 27)"
         _hash = eth_sign_sha3(data)
         signature = self.private_key.sign_msg_hash(message_hash=_hash)
         sig_bytes = signature.to_bytes()

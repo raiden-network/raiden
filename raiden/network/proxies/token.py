@@ -18,12 +18,7 @@ GAS_REQUIRED_FOR_APPROVE = 58792
 
 
 class Token:
-    def __init__(
-            self,
-            jsonrpc_client,
-            token_address,
-            contract_manager: ContractManager,
-    ):
+    def __init__(self, jsonrpc_client, token_address, contract_manager: ContractManager):
         contract = jsonrpc_client.new_contract(
             contract_manager.get_contract_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             to_normalized_address(token_address),
@@ -31,9 +26,9 @@ class Token:
         proxy = ContractProxy(jsonrpc_client, contract)
 
         if not is_binary_address(token_address):
-            raise ValueError('token_address must be a valid address')
+            raise ValueError("token_address must be a valid address")
 
-        check_address_has_code(jsonrpc_client, token_address, 'Token')
+        check_address_has_code(jsonrpc_client, token_address, "Token")
 
         self.address = token_address
         self.client = jsonrpc_client
@@ -42,15 +37,10 @@ class Token:
 
     def allowance(self, owner: Address, spender: Address, block_identifier: BlockSpecification):
         return self.proxy.contract.functions.allowance(
-            to_checksum_address(owner),
-            to_checksum_address(spender),
+            to_checksum_address(owner), to_checksum_address(spender)
         ).call(block_identifier=block_identifier)
 
-    def approve(
-            self,
-            allowed_address: Address,
-            allowance: TokenAmount,
-    ):
+    def approve(self, allowed_address: Address, allowance: TokenAmount):
         """ Aprove `allowed_address` to transfer up to `deposit` amount of token.
 
         Note:
@@ -62,26 +52,23 @@ class Token:
         # are no preconditions to check before sending the transaction
 
         log_details = {
-            'node': pex(self.node_address),
-            'contract': pex(self.address),
-            'allowed_address': pex(allowed_address),
-            'allowance': allowance,
+            "node": pex(self.node_address),
+            "contract": pex(self.address),
+            "allowed_address": pex(allowed_address),
+            "allowance": allowance,
         }
 
         checking_block = self.client.get_checking_block()
-        error_prefix = 'Call to approve will fail'
+        error_prefix = "Call to approve will fail"
         gas_limit = self.proxy.estimate_gas(
-            checking_block,
-            'approve',
-            to_checksum_address(allowed_address),
-            allowance,
+            checking_block, "approve", to_checksum_address(allowed_address), allowance
         )
 
         if gas_limit:
-            error_prefix = 'Call to approve failed'
-            log.debug('approve called', **log_details)
+            error_prefix = "Call to approve failed"
+            log.debug("approve called", **log_details)
             transaction_hash = self.proxy.transact(
-                'approve',
+                "approve",
                 safe_gas_limit(gas_limit),
                 to_checksum_address(allowed_address),
                 allowance,
@@ -93,32 +80,29 @@ class Token:
         transaction_executed = gas_limit is not None
         if not transaction_executed or receipt_or_none:
             if transaction_executed:
-                block = receipt_or_none['blockNumber']
+                block = receipt_or_none["blockNumber"]
             else:
                 block = checking_block
 
             self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                transaction_name='approve',
+                transaction_name="approve",
                 transaction_executed=transaction_executed,
                 required_gas=GAS_REQUIRED_FOR_APPROVE,
                 block_identifier=block,
             )
 
             msg = self._check_why_approved_failed(allowance, block)
-            error_msg = f'{error_prefix}. {msg}'
+            error_msg = f"{error_prefix}. {msg}"
             log.critical(error_msg, **log_details)
             raise RaidenUnrecoverableError(error_msg)
 
-        log.info('approve successful', **log_details)
+        log.info("approve successful", **log_details)
 
     def _check_why_approved_failed(
-            self,
-            allowance: TokenAmount,
-            block_identifier: BlockSpecification,
+        self, allowance: TokenAmount, block_identifier: BlockSpecification
     ) -> str:
         user_balance = self.balance_of(
-            address=self.client.address,
-            block_identifier=block_identifier,
+            address=self.client.address, block_identifier=block_identifier
         )
 
         # If the balance is zero, either the smart contract doesnt have a
@@ -136,63 +120,56 @@ class Token:
         # allowance, which is not necessarily the case)
         elif user_balance < allowance:
             msg = (
-                f'Approve failed. \n'
-                f'Your account balance is {user_balance}. '
-                f'The requested allowance is {allowance}. '
-                f'The smart contract may be rejecting your request due to the '
-                f'lack of balance.'
+                f"Approve failed. \n"
+                f"Your account balance is {user_balance}. "
+                f"The requested allowance is {allowance}. "
+                f"The smart contract may be rejecting your request due to the "
+                f"lack of balance."
             )
 
         # If the user has enough balance, warn the user the smart contract
         # may not have the approve function.
         else:
             msg = (
-                f'Approve failed. \n'
-                f'Your account balance is {user_balance}. Nevertheless the call to'
-                f'approve failed. Please make sure the corresponding smart '
-                f'contract is a valid ERC20 token.'
+                f"Approve failed. \n"
+                f"Your account balance is {user_balance}. Nevertheless the call to"
+                f"approve failed. Please make sure the corresponding smart "
+                f"contract is a valid ERC20 token."
             ).format(user_balance)
 
         return msg
 
-    def balance_of(self, address, block_identifier='latest'):
+    def balance_of(self, address, block_identifier="latest"):
         """ Return the balance of `address`. """
-        return self.proxy.contract.functions.balanceOf(
-            to_checksum_address(address),
-        ).call(block_identifier=block_identifier)
+        return self.proxy.contract.functions.balanceOf(to_checksum_address(address)).call(
+            block_identifier=block_identifier
+        )
 
-    def total_supply(self, block_identifier='latest'):
+    def total_supply(self, block_identifier="latest"):
         """ Return the total supply of the token at the given block identifier. """
         return self.proxy.contract.functions.totalSupply().call(block_identifier=block_identifier)
 
-    def transfer(
-            self,
-            to_address: Address,
-            amount: TokenAmount,
-    ):
+    def transfer(self, to_address: Address, amount: TokenAmount):
         # Note that given_block_identifier is not used here as there
         # are no preconditions to check before sending the transaction
         log_details = {
-            'node': pex(self.node_address),
-            'contract': pex(self.address),
-            'to_address': pex(to_address),
-            'amount': amount,
+            "node": pex(self.node_address),
+            "contract": pex(self.address),
+            "to_address": pex(to_address),
+            "amount": amount,
         }
-        log.debug('transfer called', **log_details)
+        log.debug("transfer called", **log_details)
 
         startgas = GAS_LIMIT_FOR_TOKEN_CONTRACT_CALL
         transaction_hash = self.proxy.transact(
-            'transfer',
-            safe_gas_limit(startgas),
-            to_checksum_address(to_address),
-            amount,
+            "transfer", safe_gas_limit(startgas), to_checksum_address(to_address), amount
         )
 
         self.client.poll(transaction_hash)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
-            log.critical('transfer failed', **log_details)
-            raise TransactionThrew('Transfer', receipt_or_none)
+            log.critical("transfer failed", **log_details)
+            raise TransactionThrew("Transfer", receipt_or_none)
 
         # TODO: check Transfer event (issue: #2598)
-        log.info('transfer successful', **log_details)
+        log.info("transfer successful", **log_details)

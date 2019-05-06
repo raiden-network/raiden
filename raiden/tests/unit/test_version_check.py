@@ -146,45 +146,45 @@ def test_version_check_regex():
     text4 = "asd[CRITICAL UPDATE]"
     text5 = "Other text [CRITICAL UPDATE:>>>>>>>]><<<<asdeqsffqwe qwe sss."
     text6 = "\n\n[CRITICAL UPDATE: U+1F00 1F62D ❎ 😀] some text goes here."
-    assert re.search(SECURITY_EXPRESSION, text1).group(0) == '[CRITICAL UPDATE Some text.:)]'
+    assert re.search(SECURITY_EXPRESSION, text1).group(0) == "[CRITICAL UPDATE Some text.:)]"
     assert re.search(SECURITY_EXPRESSION, text2) is None
     assert re.search(SECURITY_EXPRESSION, text3) is None
-    assert re.search(SECURITY_EXPRESSION, text4).group(0) == '[CRITICAL UPDATE]'
-    assert re.search(SECURITY_EXPRESSION, text5).group(0) == '[CRITICAL UPDATE:>>>>>>>]'
-    assert re.search(SECURITY_EXPRESSION, text6).group(0) == '[CRITICAL UPDATE: U+1F00 1F62D ❎ 😀]'
-    assert re.search(SECURITY_EXPRESSION, text6).group(0) != '[CRITICAL UPDATE: U+1F00 1F62D ❎'
+    assert re.search(SECURITY_EXPRESSION, text4).group(0) == "[CRITICAL UPDATE]"
+    assert re.search(SECURITY_EXPRESSION, text5).group(0) == "[CRITICAL UPDATE:>>>>>>>]"
+    assert re.search(SECURITY_EXPRESSION, text6).group(0) == "[CRITICAL UPDATE: U+1F00 1F62D ❎ 😀]"
+    assert re.search(SECURITY_EXPRESSION, text6).group(0) != "[CRITICAL UPDATE: U+1F00 1F62D ❎"
 
 
 def test_version_check_api_rate_limit_exceeded():
-    version = parse_version('0.17.1.dev205+ge7a0c6ad')
+    version = parse_version("0.17.1.dev205+ge7a0c6ad")
 
-    class Response():
+    class Response:
         @staticmethod
         def json():
             response = """{"message": "API rate limit exceeded for 62.96.232.178. (But here's the
              good news: Authenticated requests get a higher rate limit. Check out the
             documentation for more details.)", "documentation_url":
             "https://developer.github.com/v3/#rate-limiting"}"""
-            return json.loads(response.replace('\n', ''))
+            return json.loads(response.replace("\n", ""))
 
     def fake_request(endpoint):  # pylint: disable=unused-argument
         return Response()
 
-    with patch.object(requests, 'get', side_effect=fake_request):
+    with patch.object(requests, "get", side_effect=fake_request):
         assert not _do_check_version(version)
 
 
 def test_version_check():
-    version = parse_version('0.17.1.dev205+ge7a0c6ad')
+    version = parse_version("0.17.1.dev205+ge7a0c6ad")
 
-    class Response():
+    class Response:
         @staticmethod
         def json():
-            return json.loads(LATEST_RELEASE_RESPONSE.replace('\n', ''))
+            return json.loads(LATEST_RELEASE_RESPONSE.replace("\n", ""))
 
     def fake_request(endpoint):  # pylint: disable=unused-argument
         return Response()
 
-    with patch.object(requests, 'get', side_effect=fake_request):
+    with patch.object(requests, "get", side_effect=fake_request):
         assert not _do_check_version(version)
-        assert _do_check_version(parse_version('0.19.0'))
+        assert _do_check_version(parse_version("0.19.0"))

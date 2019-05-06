@@ -9,38 +9,31 @@ from requests.exceptions import RequestException
 from raiden.network.blockchain_service import BlockChainService
 
 
-def etherscan_query_with_retries(
-        url: str,
-        sleep: float,
-        retries: int = 3,
-) -> int:
+def etherscan_query_with_retries(url: str, sleep: float, retries: int = 3) -> int:
     for _ in range(retries - 1):
         try:
-            etherscan_block = to_int(hexstr=requests.get(url).json()['result'])
+            etherscan_block = to_int(hexstr=requests.get(url).json()["result"])
         except (RequestException, ValueError, KeyError):
             gevent.sleep(sleep)
         else:
             return etherscan_block
 
-    etherscan_block = to_int(hexstr=requests.get(url).json()['result'])
+    etherscan_block = to_int(hexstr=requests.get(url).json()["result"])
     return etherscan_block
 
 
 def wait_for_sync_etherscan(
-        blockchain_service: BlockChainService,
-        url: str,
-        tolerance: int,
-        sleep: float,
+    blockchain_service: BlockChainService, url: str, tolerance: int, sleep: float
 ) -> None:
     local_block = blockchain_service.client.block_number()
     etherscan_block = etherscan_query_with_retries(url, sleep)
-    syncing_str = '\rSyncing ... Current: {} / Target: ~{}'
+    syncing_str = "\rSyncing ... Current: {} / Target: ~{}"
 
     if local_block >= etherscan_block - tolerance:
         return
 
-    print('Waiting for the ethereum node to synchronize. [Use ^C to exit]')
-    print(syncing_str.format(local_block, etherscan_block), end='')
+    print("Waiting for the ethereum node to synchronize. [Use ^C to exit]")
+    print(syncing_str.format(local_block, etherscan_block), end="")
 
     for i in count():
         sys.stdout.flush()
@@ -54,26 +47,23 @@ def wait_for_sync_etherscan(
             if local_block >= etherscan_block - tolerance:
                 return
 
-        print(syncing_str.format(local_block, etherscan_block), end='')
+        print(syncing_str.format(local_block, etherscan_block), end="")
 
     # add a newline so that the next print will start have it's own line
-    print('')
+    print("")
 
 
-def wait_for_sync_rpc_api(
-        blockchain_service: BlockChainService,
-        sleep: float,
-) -> None:
+def wait_for_sync_rpc_api(blockchain_service: BlockChainService, sleep: float) -> None:
     if blockchain_service.is_synced():
         return
 
-    print('Waiting for the ethereum node to synchronize [Use ^C to exit].')
+    print("Waiting for the ethereum node to synchronize [Use ^C to exit].")
 
     for i in count():
         if i % 3 == 0:
-            print('\r', end='')
+            print("\r", end="")
 
-        print('.', end='')
+        print(".", end="")
         sys.stdout.flush()
 
         gevent.sleep(sleep)
@@ -82,23 +72,20 @@ def wait_for_sync_rpc_api(
             return
 
     # add a newline so that the next print will start have it's own line
-    print('')
+    print("")
 
 
 def wait_for_sync(
-        blockchain_service: BlockChainService,
-        url: str,
-        tolerance: int,
-        sleep: float,
+    blockchain_service: BlockChainService, url: str, tolerance: int, sleep: float
 ) -> None:
     # print something since the actual test may take a few moments for the first
     # iteration
-    print('Checking if the ethereum node is synchronized')
+    print("Checking if the ethereum node is synchronized")
 
     try:
         wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep)
     except (RequestException, ValueError, KeyError):
-        print('Cannot use {}. Request failed'.format(url))
-        print('Falling back to eth_sync api.')
+        print("Cannot use {}. Request failed".format(url))
+        print("Falling back to eth_sync api.")
 
         wait_for_sync_rpc_api(blockchain_service, sleep)

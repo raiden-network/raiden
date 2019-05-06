@@ -1,7 +1,6 @@
-
-
 class RaidenError(Exception):
     """ Base exception, used to catch all raiden related exceptions. """
+
     pass
 
 
@@ -15,23 +14,28 @@ class RaidenUnrecoverableError(RaidenError):
 
 # Exceptions raised due to programming errors
 
+
 class HashLengthNot32(RaidenError):
     """ Raised if the length of the provided element is not 32 bytes in length,
     a keccak hash is required to include the element in the merkle tree.
     """
+
     pass
 
 
 class UnknownEventType(RaidenError):
     """Raised if decoding of an event failed."""
+
     pass
 
 
 # Exceptions raised due to user interaction (the user may be another software)
 
+
 class ChannelNotFound(RaidenError):
     """ Raised when a provided channel via the REST api is not found in the
     internal data structures"""
+
     pass
 
 
@@ -39,6 +43,7 @@ class PaymentConflict(RaidenRecoverableError):
     """ Raised when there is another payment with the same identifier but the
     attributes of the payment don't match.
     """
+
     pass
 
 
@@ -49,6 +54,7 @@ class InsufficientFunds(RaidenError):
     Used when a *user* tries to deposit a given amount of token in a channel,
     but his account doesn't have enough funds to pay for the deposit.
     """
+
     pass
 
 
@@ -58,6 +64,7 @@ class DepositOverLimit(RaidenError):
     Used when a *user* tries to deposit a given amount of token in a channel,
     but the amount is over the testing limit.
     """
+
     pass
 
 
@@ -67,16 +74,19 @@ class DepositMismatch(RaidenRecoverableError):
     Used when a *user* tries to deposit a given amount of token in a channel,
     but the on-chain amount is already higher.
     """
+
     pass
 
 
 class InvalidAddress(RaidenError):
     """ Raised when the user provided value is not a valid address. """
+
     pass
 
 
 class InvalidSecretOrSecretHash(RaidenError):
     """ Raised when the user provided value is not a valid secret. """
+
     pass
 
 
@@ -84,17 +94,20 @@ class InvalidAmount(RaidenError):
     """ Raised when the user provided value is not a positive integer and
     cannot be used to define a transfer value.
     """
+
     pass
 
 
 class InvalidSettleTimeout(RaidenError):
     """ Raised when the user provided timeout value is less than the minimum
     settle timeout"""
+
     pass
 
 
 class InvalidSignature(RaidenError):
     """Raised on invalid signature recover/verify"""
+
     pass
 
 
@@ -107,26 +120,31 @@ class SamePeerAddress(RaidenError):
 class UnknownAddress(RaidenError):
     """ Raised when the user provided address is valid but is not from a known
     node. """
+
     pass
 
 
 class UnknownTokenAddress(RaidenError):
     """ Raised when the token address in unknown. """
+
     pass
 
 
 class TokenNotRegistered(RaidenError):
     """ Raised if there is no token network for token used when opening a channel  """
+
     pass
 
 
 class AlreadyRegisteredTokenAddress(RaidenError):
     """ Raised when the token address in already registered with the given network. """
+
     pass
 
 
 class InvalidToken(RaidenError):
     """ Raised if the token does not follow the ERC20 standard """
+
     pass
 
 
@@ -149,17 +167,20 @@ class EthNodeCommunicationError(RaidenError):
 
 class EthNodeInterfaceError(RaidenError):
     """ Raised when the underlying ETH node does not support an rpc interface"""
+
     pass
 
 
 class AddressWithoutCode(RaidenError):
     """Raised on attempt to execute contract on address without a code."""
+
     pass
 
 
 class AddressWrongContract(RaidenError):
     """Raised on attempt to execute contract on address that has code but
     is probably not the contract we wanted."""
+
     pass
 
 
@@ -176,9 +197,7 @@ class TransactionThrew(RaidenError):
     the receipt has a 0x0 status field"""
 
     def __init__(self, txname, receipt):
-        super().__init__(
-            '{} transaction threw. Receipt={}'.format(txname, receipt),
-        )
+        super().__init__("{} transaction threw. Receipt={}".format(txname, receipt))
 
 
 class InvalidProtocolMessage(RaidenError):
@@ -245,5 +264,5 @@ class ServiceRequestIOURejected(ServiceRequestFailed):
     """ Raised when a service request fails due to a problem with the iou. """
 
     def __init__(self, message, error_code):
-        super().__init__(f'{message} ({error_code})')
+        super().__init__(f"{message} ({error_code})")
         self.error_code = error_code

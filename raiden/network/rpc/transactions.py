@@ -8,12 +8,12 @@ def check_transaction_threw(client, transaction_hash: bytes):
     """
     receipt = client.get_transaction_receipt(transaction_hash)
 
-    if 'status' not in receipt:
+    if "status" not in receipt:
         raise ValueError(
-            'Transaction receipt does not contain a status field. Upgrade your client',
+            "Transaction receipt does not contain a status field. Upgrade your client"
         )
 
-    if receipt['status'] == RECEIPT_FAILURE_CODE:
+    if receipt["status"] == RECEIPT_FAILURE_CODE:
         return receipt
 
     return None

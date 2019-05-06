@@ -4,7 +4,7 @@ import sys
 
 import click
 
-ETH_RPC_ENDPOINT_ARG = '--eth-rpc-endpoint'
+ETH_RPC_ENDPOINT_ARG = "--eth-rpc-endpoint"
 
 
 @click.command()
