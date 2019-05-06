@@ -351,11 +351,10 @@ def test_events_for_refund():
                     "secrethash": received_transfer.lock.secrethash,
                 }
             },
+            # pylint: disable=E1101
             "recipient": refund_channel.partner_state.address,
         },
-        # pylint: disable=E1101
-        'recipient': refund_channel.partner_state.address,
-    })
+    )
     assert transfer_pair.payer_transfer == received_transfer
 
 
@@ -1941,11 +1940,10 @@ def test_backward_transfer_pair_with_fees_deducted():
                     "secrethash": received_transfer.lock.secrethash,
                 }
             },
+            # pylint: disable=E1101
             "recipient": refund_channel.partner_state.address,
         },
-        # pylint: disable=E1101
-        'recipient': refund_channel.partner_state.address,
-    })
+    )
     assert transfer_pair.payer_transfer == received_transfer
 
 

@@ -67,6 +67,7 @@ class State:
           objects as immutable.
     - This class is used as a marker for states.
     """
+
     pass
 
 
@@ -87,6 +88,7 @@ class StateChange:
     - These objects don't have logic by design.
     - This class is used as a marker for state changes.
     """
+
     pass
 
 
@@ -105,6 +107,7 @@ class Event:
     - Separate events are preferred because there is a decoupling of what the
       upper layer will use the events for.
     """
+
     pass
 
 
@@ -116,6 +119,7 @@ class SendMessageEvent(Event):
     Messages are sent only once, delivery is guaranteed by the transport and
     not by the state machine
     """
+
     recipient: Address
     channel_identifier: ChannelID
     message_identifier: MessageID
@@ -136,17 +140,19 @@ class SendMessageEvent(Event):
 @dataclass
 class AuthenticatedSenderStateChange(StateChange):
     """ Marker used for state changes for which the sender has been verified. """
+
     sender: Address
 
 
 @dataclass
 class ContractSendEvent(Event):
     """ Marker used for events which represent on-chain transactions. """
+
     triggered_by_block_hash: BlockHash
 
     def __post_init__(self) -> None:
         if not isinstance(self.triggered_by_block_hash, T_BlockHash):
-            raise ValueError('triggered_by_block_hash must be of type block_hash')
+            raise ValueError("triggered_by_block_hash must be of type block_hash")
 
 
 @dataclass
@@ -154,21 +160,23 @@ class ContractSendExpirableEvent(ContractSendEvent):
     """ Marker used for events which represent on-chain transactions which are
     time dependent.
     """
+
     expiration: BlockExpiration
 
 
 @dataclass
 class ContractReceiveStateChange(StateChange):
     """ Marker used for state changes which represent on-chain logs. """
+
     transaction_hash: TransactionHash
     block_number: BlockNumber
     block_hash: BlockHash
 
     def __post_init__(self) -> None:
         if not isinstance(self.block_number, T_BlockNumber):
-            raise ValueError('block_number must be of type block_number')
+            raise ValueError("block_number must be of type block_number")
         if not isinstance(self.block_hash, T_BlockHash):
-            raise ValueError('block_hash must be of type block_hash')
+            raise ValueError("block_hash must be of type block_hash")
 
 
 ST = TypeVar("ST", bound=State)

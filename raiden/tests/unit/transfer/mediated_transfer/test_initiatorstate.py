@@ -1115,7 +1115,8 @@ def test_secret_reveal_cancel_other_transfers():
     initiator_state = get_transfer_at_index(current_state, 0)
     original_transfer = initiator_state.transfer
 
-    refund_transfer = factories.create(factories.LockedTransferSignedStateProperties(
+    refund_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
             amount=amount,
             initiator=our_address,
             target=original_transfer.target,

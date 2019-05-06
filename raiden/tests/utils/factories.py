@@ -597,9 +597,9 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     params = {key: value for key, value in transfer.__dict__.items()}
 
     lock = Lock(
-        amount=params.pop('amount'),
-        expiration=params.pop('expiration'),
-        secrethash=sha3(params.pop('secret')),
+        amount=params.pop("amount"),
+        expiration=params.pop("expiration"),
+        secrethash=sha3(params.pop("secret")),
     )
 
     pkey = params.pop("pkey")
@@ -612,7 +612,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     if params["locksroot"] == EMPTY_MERKLE_ROOT:
         params["locksroot"] = lock.lockhash
 
-    locked_transfer = LockedTransfer(lock=lock, **params, signature=Signature(b''))
+    locked_transfer = LockedTransfer(lock=lock, **params, signature=Signature(b""))
     locked_transfer.sign(signer)
 
     assert locked_transfer.sender == sender

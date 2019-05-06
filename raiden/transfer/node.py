@@ -312,7 +312,8 @@ def subdispatch_initiatortask(
 
             if iteration.new_state:
                 sub_task = InitiatorTask(token_network_identifier, iteration.new_state)
-                chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+                if sub_task is not None:
+                    chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
             elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
                 del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
@@ -359,7 +360,8 @@ def subdispatch_mediatortask(
 
             if iteration.new_state:
                 sub_task = MediatorTask(token_network_identifier, iteration.new_state)
-                chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+                if sub_task is not None:
+                    chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
             elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
                 del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 
@@ -413,7 +415,8 @@ def subdispatch_targettask(
 
         if iteration.new_state:
             sub_task = TargetTask(channel_state.canonical_identifier, iteration.new_state)
-            chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
+            if sub_task is not None:
+                chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
         elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
             del chain_state.payment_mapping.secrethashes_to_task[secrethash]
 

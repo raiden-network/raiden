@@ -27,8 +27,8 @@ class QueueIdentifier:
 @dataclass
 class CanonicalIdentifier:
     chain_identifier: ChainID
-        # introducing the type as Union, to avoid casting for now.
-        # Should be only `..Address` later
+    # introducing the type as Union, to avoid casting for now.
+    # Should be only `..Address` later
     token_network_address: Union[TokenNetworkAddress, TokenNetworkID]
     channel_identifier: ChannelID
 
@@ -42,8 +42,5 @@ class CanonicalIdentifier:
         if not isinstance(self.chain_identifier, T_ChainID):
             raise ValueError("chain_id must be a ChainID instance")
 
-        if (
-                self.channel_identifier < 0 or
-                self.channel_identifier > constants.UINT256_MAX
-        ):
-            raise ValueError('channel id is invalid')
+        if self.channel_identifier < 0 or self.channel_identifier > constants.UINT256_MAX:
+            raise ValueError("channel id is invalid")

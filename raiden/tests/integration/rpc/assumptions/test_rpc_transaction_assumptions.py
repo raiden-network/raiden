@@ -29,7 +29,7 @@ def test_transact_throws_opcode(deploy_client):
     assert len(deploy_client.web3.eth.getCode(to_checksum_address(address))) > 0
 
     # the gas estimation returns 0 here, so hardcode a value
-    startgas = safe_gas_limit(22_000)
+    startgas = safe_gas_limit(22000)
 
     transaction = contract_proxy.transact("fail", startgas)
     deploy_client.poll(transaction)
