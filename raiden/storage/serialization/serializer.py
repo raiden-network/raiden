@@ -6,6 +6,7 @@ with sanitized input, to avoid the risk of exploits.
 """
 import importlib
 import json
+from dataclasses import is_dataclass
 
 from marshmallow_dataclass import class_schema
 
@@ -40,17 +41,35 @@ class SerializationBase:
         raise NotImplementedError
 
 
+class DictSerializer(SerializationBase):
+    @staticmethod
+    def serialize(obj):
+        # Default, in case this is not a dataclass
+        data = obj
+        if is_dataclass(obj):
+            schema = class_schema(obj.__class__)
+            data = schema().dump(obj).data
+            data["type"] = class_type(obj)
+        return data
+
+    @staticmethod
+    def deserialize(data):
+        if "type" in data:
+            klass = _import_type(data["type"])
+            del data["type"]
+            schema = class_schema(klass)
+            return schema().load(data).data
+        return data
+
+
 class JSONSerializer(SerializationBase):
     @staticmethod
     def serialize(obj):
-        schema = class_schema(obj.__class__)
-        data = schema().dump(obj).data
-        data["type"] = class_type(obj)
+        data = DictSerializer.serialize(obj)
         return json.dumps(data)
 
     @staticmethod
     def deserialize(data):
-        data = json.loads(data)
-        klass = _import_type(data["type"])
-        schema = class_schema(klass)
-        return schema().load(data).data
+        data = DictSerializer.deserialize(json.loads(data))
+
+        return data
