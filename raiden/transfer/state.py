@@ -523,7 +523,7 @@ class TransactionExecutionStatus(State):
             self.finished_block_number, T_BlockNumber
         )
         is_valid_result = self.result is None or self.result in self.VALID_RESULT_VALUES
-        is_valid_result = result is None or result in self.VALID_RESULT_VALUES
+        is_valid_result = self.result is None or self.result in self.VALID_RESULT_VALUES
 
         if not is_valid_start:
             raise ValueError("started_block_number must be None or a block_number")

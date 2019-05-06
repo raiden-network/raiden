@@ -521,6 +521,7 @@ def test_channelstate_receive_lockedtransfer():
         locked_amount=0,
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
+        signature=EMPTY_SIGNATURE,
     )
     unlock_message.sign(signer2)
     # Let's also create an invalid secret to test unlock with invalid chain id
@@ -535,6 +536,7 @@ def test_channelstate_receive_lockedtransfer():
         locked_amount=0,
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
+        signature=EMPTY_SIGNATURE,
     )
     invalid_unlock_message.sign(signer2)
 
@@ -874,6 +876,7 @@ def test_interwoven_transfers():
                 locked_amount=locked_amount,
                 locksroot=locksroot,
                 secret=lock_secret,
+                signature=EMPTY_SIGNATURE,
             )
             unlock_message.sign(signer2)
 
@@ -1490,7 +1493,7 @@ def test_update_transfer():
 
 
 def test_get_amount_locked():
-    state = NettingChannelEndState(address=make_address(), balance=0)
+    state = NettingChannelEndState(address=factories.make_address(), contract_balance=0)
 
     assert channel.get_amount_locked(state) == 0
 

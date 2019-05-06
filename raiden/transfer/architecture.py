@@ -122,11 +122,11 @@ class SendMessageEvent(Event):
     def __post_init__(self) -> None:
         # Note that here and only here channel identifier can also be 0 which stands
         # for the identifier of no channel (i.e. the global queue)
-        if not isinstance(channel_identifier, T_ChannelID):
+        if not isinstance(self.channel_identifier, T_ChannelID):
             raise ValueError("channel identifier must be of type T_ChannelIdentifier")
 
         self.queue_identifier = QueueIdentifier(
-            recipient=recipient, channel_identifier=channel_identifier
+            recipient=self.recipient, channel_identifier=self.channel_identifier
         )
         self.message_identifier = self.message_identifier
 

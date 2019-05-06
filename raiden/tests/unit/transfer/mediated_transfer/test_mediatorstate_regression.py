@@ -390,6 +390,7 @@ def test_regression_mediator_not_update_payer_state_twice():
     init_state_change = ActionInitMediator(
         routes=available_routes, from_route=payer_route, from_transfer=payer_transfer
     )
+
     iteration = mediator.state_transition(
         mediator_state=None,
         state_change=init_state_change,
