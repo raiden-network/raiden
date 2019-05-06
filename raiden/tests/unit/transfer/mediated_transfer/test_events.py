@@ -14,8 +14,6 @@ def test_send_refund_transfer_contains_balance_proof():
         transfer=transfer,
     )
 
-    assert hasattr(event, 'balance_proof')
+    assert hasattr(event, "balance_proof")
     # pylint: disable=E1101
-    assert SendRefundTransfer.schema().loads(
-        SendRefundTransfer.schema().dumps(event),
-    ) == event
+    assert SendRefundTransfer.schema().loads(SendRefundTransfer.schema().dumps(event)) == event

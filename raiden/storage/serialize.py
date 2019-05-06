@@ -37,7 +37,7 @@ class SerializationBase:
 class JSONSerializer(SerializationBase):
     @staticmethod
     def serialize(obj):
-        if hasattr(obj, 'schema'):
+        if hasattr(obj, "schema"):
             return obj.schema().dumps(obj)
 
         return json.dumps(obj)
@@ -45,5 +45,5 @@ class JSONSerializer(SerializationBase):
     @staticmethod
     def deserialize(data):
         obj_data = json.loads(data)
-        type_ = _import_type(obj_data['type_'])
+        type_ = _import_type(obj_data["type_"])
         return type_.schema().loads(data)

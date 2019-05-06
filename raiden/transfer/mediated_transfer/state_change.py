@@ -35,12 +35,13 @@ class ActionInitInitiator(StateChange):
         transfer_description: A state object containing the transfer details.
         routes: A list of possible routes provided by a routing service.
     """
+
     transfer: TransferDescriptionWithSecretState
     routes: List[RouteState]
 
     def __post_init__(self) -> None:
         if not isinstance(self.transfer, TransferDescriptionWithSecretState):
-            raise ValueError('transfer must be an TransferDescriptionWithSecretState instance.')
+            raise ValueError("transfer must be an TransferDescriptionWithSecretState instance.")
 
 
 @dataclass(init=False)
@@ -52,6 +53,7 @@ class ActionInitMediator(BalanceProofStateChange):
         from_route: The payee route.
         from_transfer: The payee transfer.
     """
+
     routes: List[RouteState] = field(repr=False)
     from_route: RouteState
     from_transfer: LockedTransferSignedState
@@ -70,8 +72,7 @@ class ActionInitMediator(BalanceProofStateChange):
             raise ValueError("from_transfer must be a LockedTransferSignedState instance")
 
         super().__init__(
-            sender=from_transfer.balance_proof.sender,
-            balance_proof=from_transfer.balance_proof,
+            sender=from_transfer.balance_proof.sender, balance_proof=from_transfer.balance_proof
         )
         self.routes = routes
         self.from_route = from_route
@@ -86,6 +87,7 @@ class ActionInitTarget(BalanceProofStateChange):
         route: The payee route.
         transfer: The payee transfer.
     """
+
     route: RouteState
     transfer: LockedTransferSignedState
 
@@ -97,8 +99,7 @@ class ActionInitTarget(BalanceProofStateChange):
             raise ValueError("transfer must be a LockedTransferSignedState instance")
 
         super().__init__(
-            sender=transfer.balance_proof.sender,
-            balance_proof=transfer.balance_proof,
+            sender=transfer.balance_proof.sender, balance_proof=transfer.balance_proof
         )
         self.route = route
         self.transfer = transfer
@@ -107,6 +108,7 @@ class ActionInitTarget(BalanceProofStateChange):
 @dataclass(init=False)
 class ReceiveLockExpired(BalanceProofStateChange):
     """ A LockExpired message received. """
+
     secrethash: SecretHash
     message_identifier: MessageID
 
@@ -116,10 +118,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
         secrethash: SecretHash,
         message_identifier: MessageID,
     ) -> None:
-        super().__init__(
-            sender=balance_proof.sender,
-            balance_proof=balance_proof,
-        )
+        super().__init__(sender=balance_proof.sender, balance_proof=balance_proof)
         self.secrethash = secrethash
         self.message_identifier = message_identifier
 
@@ -127,6 +126,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
 @dataclass(init=False)
 class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     """ A SecretRequest message received. """
+
     payment_identifier: PaymentID
     amount: PaymentAmount
     expiration: BlockExpiration = field(repr=False)
@@ -151,6 +151,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
 @dataclass(init=False)
 class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     """ A SecretReveal message received. """
+
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(init=False)
 
@@ -167,6 +168,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     """ A RefundTransfer message received by the initiator will cancel the current
     route.
     """
+
     routes: List[RouteState] = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Secret = field(repr=False)
@@ -179,8 +181,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
             raise ValueError("transfer must be an instance of LockedTransferSignedState")
 
         super().__init__(
-            sender=transfer.balance_proof.sender,
-            balance_proof=transfer.balance_proof,
+            sender=transfer.balance_proof.sender, balance_proof=transfer.balance_proof
         )
 
         self.transfer = transfer
@@ -192,6 +193,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
 @dataclass(init=False)
 class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
+
     transfer: LockedTransferSignedState
     routes: List[RouteState] = field(repr=False)
 
@@ -200,8 +202,7 @@ class ReceiveTransferRefund(BalanceProofStateChange):
             raise ValueError("transfer must be an instance of LockedTransferSignedState")
 
         super().__init__(
-            sender=transfer.balance_proof.sender,
-            balance_proof=transfer.balance_proof,
+            sender=transfer.balance_proof.sender, balance_proof=transfer.balance_proof
         )
         self.transfer = transfer
         self.routes = routes

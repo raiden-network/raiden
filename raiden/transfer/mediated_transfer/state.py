@@ -47,6 +47,7 @@ class LockedTransferUnsignedState(LockedTransferState):
     """ State for a transfer created by the local node which contains a hash
     time lock and may be sent.
     """
+
     payment_identifier: PaymentID
     token: TokenAddress
     balance_proof: BalanceProofUnsignedState
@@ -56,15 +57,15 @@ class LockedTransferUnsignedState(LockedTransferState):
 
     def __post_init__(self) -> None:
         if not isinstance(self.lock, HashTimeLockState):
-            raise ValueError('lock must be a HashTimeLockState instance')
+            raise ValueError("lock must be a HashTimeLockState instance")
 
         if not isinstance(self.balance_proof, BalanceProofUnsignedState):
-            raise ValueError('balance_proof must be a BalanceProofUnsignedState instance')
+            raise ValueError("balance_proof must be a BalanceProofUnsignedState instance")
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
         if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
-            raise ValueError('balance_proof must not be empty')
+            raise ValueError("balance_proof must not be empty")
 
 
 @dataclass
@@ -72,6 +73,7 @@ class LockedTransferSignedState(LockedTransferState):
     """ State for a received transfer which contains a hash time lock and a
     signed balance proof.
     """
+
     message_identifier: MessageID
     payment_identifier: PaymentID
     token: TokenAddress
@@ -82,16 +84,16 @@ class LockedTransferSignedState(LockedTransferState):
 
     def __post_init__(self) -> None:
         if not isinstance(self.lock, HashTimeLockState):
-            raise ValueError('lock must be a HashTimeLockState instance')
+            raise ValueError("lock must be a HashTimeLockState instance")
 
         if not isinstance(self.balance_proof, BalanceProofSignedState):
-            raise ValueError('balance_proof must be a BalanceProofSignedState instance')
+            raise ValueError("balance_proof must be a BalanceProofSignedState instance")
 
         # At least the lock for this transfer must be in the locksroot, so it
         # must not be empty
         # pylint: disable=E1101
         if self.balance_proof.locksroot == EMPTY_MERKLE_ROOT:
-            raise ValueError('balance_proof must not be empty')
+            raise ValueError("balance_proof must not be empty")
 
     @property
     def payer_address(self) -> Address:
@@ -106,12 +108,9 @@ class InitiatorPaymentState(State):
     transfers fails or timeouts another transfer will be started with a
     different secrethash.
     """
+
     initiator_transfers: InitiatorTransfersMap
-    cancelled_channels: List[ChannelID] = field(
-        init=False,
-        repr=False,
-        default_factory=list,
-    )
+    cancelled_channels: List[ChannelID] = field(init=False, repr=False, default_factory=list)
 
 
 @dataclass
@@ -119,6 +118,7 @@ class TransferDescriptionWithSecretState(State):
     """ Describes a transfer (target, amount, and token) and contains an
     additional secret that can be used with a hash-time-lock.
     """
+
     payment_network_identifier: PaymentNetworkID = field(repr=False)
     payment_identifier: PaymentID = field(repr=False)
     amount: PaymentAmount
@@ -136,26 +136,21 @@ class TransferDescriptionWithSecretState(State):
 @dataclass
 class InitiatorTransferState(State):
     """ State of a transfer for the initiator node. """
+
     transfer_description: TransferDescriptionWithSecretState = field(repr=False)
     channel_identifier: ChannelID
     transfer: LockedTransferUnsignedState
-    revealsecret: Optional['SendSecretReveal'] = field(repr=False)
+    revealsecret: Optional["SendSecretReveal"] = field(repr=False)
     received_secret_request: bool = field(default=False, repr=False)
-    transfer_state: str = field(
-        init=False,
-        default='transfer_pending',
-    )
+    transfer_state: str = field(init=False, default="transfer_pending")
 
-    valid_transfer_states = (
-        'transfer_pending',
-        'transfer_cancelled',
-        )
+    valid_transfer_states = ("transfer_pending", "transfer_cancelled")
 
 
 @dataclass
 class WaitingTransferState(State):
     transfer: LockedTransferSignedState
-    state: str = field(default='waiting')
+    state: str = field(default="waiting")
 
 
 @dataclass
@@ -165,17 +160,12 @@ class MediationPairState(State):
     the token expenses. This state keeps track of the routes and transfer for
     the payer and payee, and the current state of the payment.
     """
+
     payer_transfer: LockedTransferSignedState
     payee_address: Address
     payee_transfer: LockedTransferUnsignedState
-    payer_state: str = field(
-        init=False,
-        default='payer_pending',
-    )
-    payee_state: str = field(
-        init=False,
-        default='payer_pending',
-    )
+    payer_state: str = field(init=False, default="payer_pending")
+    payee_state: str = field(init=False, default="payer_pending")
     # payee_pending:
     #   Initial state.
     #
@@ -211,13 +201,13 @@ class MediationPairState(State):
 
     def __post_init__(self) -> None:
         if not isinstance(self.payer_transfer, LockedTransferSignedState):
-            raise ValueError('payer_transfer must be a LockedTransferSignedState instance')
+            raise ValueError("payer_transfer must be a LockedTransferSignedState instance")
 
         if not isinstance(self.payee_address, T_Address):
-            raise ValueError('payee_address must be an address')
+            raise ValueError("payee_address must be an address")
 
         if not isinstance(self.payee_transfer, LockedTransferUnsignedState):
-            raise ValueError('payee_transfer must be a LockedTransferUnsignedState instance')
+            raise ValueError("payee_transfer must be a LockedTransferUnsignedState instance")
 
     @property
     def payer_address(self) -> Address:
@@ -232,30 +222,23 @@ class MediatorTransferState(State):
     Args:
         secrethash: The secrethash used for this transfer.
     """
+
     secrethash: SecretHash
     routes: List[RouteState]
-    secret: Optional[Secret] = field(
-        init=False,
-        default=None,
-    )
-    transfers_pair: List[MediationPairState] = field(
-        init=False,
-        default_factory=list,
-    )
-    waiting_transfer: Optional[WaitingTransferState] = field(
-        init=False,
-        default=None,
-    )
+    secret: Optional[Secret] = field(init=False, default=None)
+    transfers_pair: List[MediationPairState] = field(init=False, default_factory=list)
+    waiting_transfer: Optional[WaitingTransferState] = field(init=False, default=None)
 
 
 @dataclass
 class TargetTransferState(State):
     """ State of a transfer for the target node. """
-    EXPIRED = 'expired'
-    OFFCHAIN_SECRET_REVEAL = 'reveal_secret'
-    ONCHAIN_SECRET_REVEAL = 'onchain_secret_reveal'
-    ONCHAIN_UNLOCK = 'onchain_unlock'
-    SECRET_REQUEST = 'secret_request'
+
+    EXPIRED = "expired"
+    OFFCHAIN_SECRET_REVEAL = "reveal_secret"
+    ONCHAIN_SECRET_REVEAL = "onchain_secret_reveal"
+    ONCHAIN_UNLOCK = "onchain_unlock"
+    SECRET_REQUEST = "secret_request"
 
     valid_states = (
         EXPIRED,
@@ -263,9 +246,9 @@ class TargetTransferState(State):
         ONCHAIN_SECRET_REVEAL,
         ONCHAIN_UNLOCK,
         SECRET_REQUEST,
-        )
+    )
 
     route: RouteState = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Optional[Secret] = field(repr=False, default=None)
-    state: str = field(init=False, default='secret_request')
+    state: str = field(init=False, default="secret_request")

@@ -39,6 +39,7 @@ class ContractSendChannelClose(ContractSendEvent):
     This event is used when a node needs to prepare the channel to unlock
     on-chain.
     """
+
     canonical_identifier: CanonicalIdentifier
     balance_proof: Optional[BalanceProofSignedState]
 
@@ -54,6 +55,7 @@ class ContractSendChannelClose(ContractSendEvent):
 @dataclass
 class ContractSendChannelSettle(ContractSendEvent):
     """ Event emitted if the netting channel must be settled. """
+
     canonical_identifier: CanonicalIdentifier
 
     @property
@@ -68,6 +70,7 @@ class ContractSendChannelSettle(ContractSendEvent):
 @dataclass
 class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     """ Event emitted if the netting channel balance proof must be updated. """
+
     balance_proof: BalanceProofSignedState
 
     @property
@@ -82,6 +85,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
 @dataclass
 class ContractSendChannelBatchUnlock(ContractSendEvent):
     """ Event emitted when the lock must be claimed on-chain. """
+
     canonical_identifier: CanonicalIdentifier
     participant: Address
 
@@ -97,13 +101,14 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
 @dataclass(repr=False)
 class ContractSendSecretReveal(ContractSendExpirableEvent):
     """ Event emitted when the lock must be claimed on-chain. """
+
     secret: Secret = field(repr=False)
 
     def __repr__(self):
         secrethash: SecretHash = SecretHash(sha3(self.secret))
-        return (
-            'ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})'
-        ).format(secrethash, pex(self.triggered_by_block_hash))
+        return ("ContractSendSecretReveal(secrethash={} triggered_by_block_hash={})").format(
+            secrethash, pex(self.triggered_by_block_hash)
+        )
 
 
 @dataclass
@@ -129,6 +134,7 @@ class EventPaymentSentSuccess(Event):
         Mediators cannot use this event, since an off-chain unlock may be locally
         successful but there is no knowledge about the global transfer.
     """
+
     payment_network_identifier: PaymentNetworkID
     token_network_identifier: TokenNetworkID
     identifier: PaymentID
@@ -145,6 +151,7 @@ class EventPaymentSentFailed(Event):
         Mediators cannot use this event since they don't know when a transfer
         has failed, they may infer about lock successes and failures.
     """
+
     payment_network_identifier: PaymentNetworkID
     token_network_identifier: TokenNetworkID
     identifier: PaymentID
@@ -162,6 +169,7 @@ class EventPaymentReceivedSuccess(Event):
         try again at a different time and/or with different routes, for this reason
         there is no correspoding `EventTransferReceivedFailed`.
     """
+
     payment_network_identifier: PaymentNetworkID
     token_network_identifier: TokenNetworkID
     identifier: PaymentID
@@ -170,15 +178,16 @@ class EventPaymentReceivedSuccess(Event):
 
     def __post_init__(self):
         if self.amount < 0:
-            raise ValueError('transferred_amount cannot be negative')
+            raise ValueError("transferred_amount cannot be negative")
 
         if self.amount > UINT256_MAX:
-            raise ValueError('transferred_amount is too large')
+            raise ValueError("transferred_amount is too large")
 
 
 @dataclass
 class EventInvalidReceivedTransferRefund(Event):
     """ Event emitted when an invalid refund transfer is received. """
+
     payment_identifier: PaymentID
     reason: str
 
@@ -186,6 +195,7 @@ class EventInvalidReceivedTransferRefund(Event):
 @dataclass
 class EventInvalidReceivedLockExpired(Event):
     """ Event emitted when an invalid lock expired message is received. """
+
     secrethash: SecretHash
     reason: str
 
@@ -193,6 +203,7 @@ class EventInvalidReceivedLockExpired(Event):
 @dataclass
 class EventInvalidReceivedLockedTransfer(Event):
     """ Event emitted when an invalid locked transfer is received. """
+
     payment_identifier: PaymentID
     reason: str
 
@@ -200,6 +211,7 @@ class EventInvalidReceivedLockedTransfer(Event):
 @dataclass
 class EventInvalidReceivedUnlock(Event):
     """ Event emitted when an invalid unlock message is received. """
+
     secrethash: SecretHash
     reason: str
 
