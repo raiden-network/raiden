@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from operator import attrgetter
 
 from cachetools import LRUCache, cached

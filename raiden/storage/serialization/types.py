@@ -1,5 +1,5 @@
-from dataclasses_json.mm import TYPES
 from marshmallow import fields
+from marshmallow_dataclass import _native_to_marshmallow
 
 from raiden.storage.serialization.fields import AddressField, BytesField
 from raiden.utils.typing import (
@@ -54,7 +54,7 @@ def determine_union_types(*args):
     return args[0]
 
 
-TYPES.update(
+_native_to_marshmallow.update(
     {
         # Addresses
         Address: AddressField,

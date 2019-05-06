@@ -45,7 +45,8 @@ from raiden.network.proxies.secret_registry import SecretRegistry
 from raiden.network.proxies.service_registry import ServiceRegistry
 from raiden.network.proxies.token_network_registry import TokenNetworkRegistry
 from raiden.settings import MEDIATION_FEE, MONITORING_MIN_CAPACITY, MONITORING_REWARD
-from raiden.storage import serialize, sqlite, wal
+from raiden.storage import sqlite, wal
+from raiden.storage.serialization import JSONSerializer
 from raiden.tasks import AlarmTask
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event as RaidenEvent, StateChange
@@ -417,7 +418,7 @@ class RaidenService(Runnable):
         self.maybe_upgrade_db()
 
         storage = sqlite.SerializedSQLiteStorage(
-            database_path=self.database_path, serializer=serialize.JSONSerializer()
+            database_path=self.database_path, serializer=JSONSerializer()
         )
         storage.update_version()
         storage.log_run()
@@ -658,7 +659,7 @@ class RaidenService(Runnable):
         log.debug(
             "State change",
             node=pex(self.address),
-            state_change=_redact_secret(serialize.JSONSerializer.serialize(state_change)),
+            state_change=_redact_secret(JSONSerializer.serialize(state_change)),
         )
 
         old_state = views.state_from_raiden(self)
@@ -671,8 +672,7 @@ class RaidenService(Runnable):
             "Raiden events",
             node=pex(self.address),
             raiden_events=[
-                _redact_secret(serialize.JSONSerializer.serialize(event))
-                for event in raiden_event_list
+                _redact_secret(JSONSerializer.serialize(event)) for event in raiden_event_list
             ],
         )
 

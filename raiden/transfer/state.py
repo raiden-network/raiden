@@ -1,6 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 import random
 from collections import defaultdict
+from dataclasses import dataclass, field
 from random import Random
 from typing import TYPE_CHECKING, Tuple
 
@@ -58,13 +59,9 @@ from raiden.utils.typing import (
 )
 
 if TYPE_CHECKING:
-    from dataclasses import dataclass, field
-
     # pylint: disable=unused-import
     from messages import EnvelopeMessage
-    from raiden.transfer.mediated_transfer.tasks import TransferTask
-else:
-    from raiden.storage.serialization import dataclass, field
+    from raiden.transfer.mediated_transfer.tasks import TransferTask  # noqa
 
 
 SecretHashToLock = Dict[SecretHash, "HashTimeLockState"]

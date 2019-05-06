@@ -6,7 +6,7 @@ from itertools import cycle
 
 import pytest
 
-from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX
+from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages import Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.events import search_for_item
