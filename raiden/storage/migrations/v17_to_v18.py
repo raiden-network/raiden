@@ -81,7 +81,10 @@ def _add_routes_to_mediator(storage: SQLiteStorage):
 
 
 def upgrade_v17_to_v18(
-    storage: SQLiteStorage, old_version: int, current_version: int, **kwargs
+    storage: SQLiteStorage,
+    old_version: int,
+    current_version: int,  # pylint: disable=unused-argument
+    **kwargs,  # pylint: disable=unused-argument
 ) -> int:
     if old_version == SOURCE_VERSION:
         _add_routes_to_mediator(storage)

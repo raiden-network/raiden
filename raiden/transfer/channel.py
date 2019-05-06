@@ -787,12 +787,11 @@ def get_batch_unlock_gain(channel_state: NettingChannelState,) -> UnlockGain:
         gain_from_partner_locks: locks amount received and unlocked on-chain
         gain_from_our_locks: locks amount which are unlocked or unclaimed
     """
-    gain_from_partner_locks = TokenAmount(
-        sum(
-            unlock.lock.amount
-            for unlock in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks.values()
-        )
+    sum_from_partner_locks = sum(
+        unlock.lock.amount
+        for unlock in channel_state.partner_state.secrethashes_to_onchain_unlockedlocks.values()
     )
+    gain_from_partner_locks = TokenAmount(sum_from_partner_locks)
 
     """
     The current participant will gain from unlocking its own locks when:

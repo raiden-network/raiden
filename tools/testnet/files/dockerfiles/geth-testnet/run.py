@@ -13,7 +13,7 @@ import structlog
 from web3 import IPCProvider, Web3
 from web3.utils.compat.compat_stdlib import Timeout
 
-log = struct.get_logger(__name__)
+log = structlog.get_logger(__name__)
 
 # Since this will run inside a docker container and is written for Python 3 we
 # have to disable flake8 since it will run with Python 2 and break on Travis-CI
@@ -203,4 +203,4 @@ def main(bootnode):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    main()
+    main()  # pylint: disable=no-value-for-parameter

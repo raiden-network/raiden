@@ -536,7 +536,7 @@ class TokenNetworkState(State):
             serialization.identity,
             data["partneraddresses_to_channelidentifiers"],
         )
-        restored.partneraddresses_to_channelidentifiers = defaultdict(  # type: ignore
+        restored.partneraddresses_to_channelidentifiers = defaultdict(
             list, restored_partneraddresses_to_channelidentifiers
         )
 

@@ -188,4 +188,4 @@ def main(db_file, token_network_identifier, partner_address, names_translator):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter

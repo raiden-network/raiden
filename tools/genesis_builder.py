@@ -4,6 +4,7 @@ from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.utils import privatekey_to_address, sha3
 
 CLUSTER_NAME = b"raiden"
+ETHER = denoms.ether
 
 
 def generate_accounts(seeds):
@@ -18,7 +19,7 @@ def generate_accounts(seeds):
     }
 
 
-def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
+def mk_genesis(accounts, initial_alloc=ETHER * 100000000):
     """
     Create a genesis-block dict with allocation for all `accounts`.
 
