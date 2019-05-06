@@ -96,4 +96,4 @@ def process_results(results_dir, plot_filename):
 
 
 if __name__ == "__main__":
-    process_results()
+    process_results()  # pylint: disable=no-value-for-parameter

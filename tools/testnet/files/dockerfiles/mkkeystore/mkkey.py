@@ -66,4 +66,4 @@ def make_keystore_json_patched(private_key, password):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.ERROR)
-    main()
+    main()  # pylint: disable=no-value-for-parameter

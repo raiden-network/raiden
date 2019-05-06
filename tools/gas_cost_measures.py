@@ -8,6 +8,7 @@ from web3 import EthereumTesterProvider, Web3
 
 from raiden.constants import TRANSACTION_GAS_LIMIT
 from raiden.transfer.balance_proof import pack_balance_proof
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.signer import LocalSigner
 from raiden_contracts.contract_manager import CONTRACTS_SOURCE_DIRS, ContractManager
@@ -39,28 +40,31 @@ class ContractTester:
         self.name_to_contract = dict()
 
     def deploy_contract(self, name, **kwargs):
-        data = self.contract_manager.get_contract(name)
-        contract = self.web3.eth.contract(abi=data["abi"], bytecode=data["bin"])
-        transaction = contract.constructor(**kwargs).buildTransaction(
-            {"from": self.accounts[0], "gas": 5900000}
-        )
-        self.name_to_creation_hash[name] = self.web3.eth.sendTransaction(transaction)
-        self.name_to_contract[name] = self.web3.eth.contract(
-            address=self.contract_address(name), abi=data["abi"]
-        )
+        raise NotImplementedError("needs refactoring")
+        # data = self.contract_manager.get_contract(name)
+        # contract = self.web3.eth.contract(abi=data["abi"], bytecode=data["bin"])
+        # transaction = contract.constructor(**kwargs).buildTransaction(
+        #     {"from": self.accounts[0], "gas": 5900000}
+        # )
+        # self.name_to_creation_hash[name] = self.web3.eth.sendTransaction(transaction)
+        # self.name_to_contract[name] = self.web3.eth.contract(
+        #     address=self.contract_address(name), abi=data["abi"]
+        # )
 
     def contract_address(self, name):
-        tx_hash = self.name_to_creation_hash[name]
-        return self.web3.eth.getTransactionReceipt(tx_hash)["contractAddress"]
+        raise NotImplementedError("needs refactoring")
+        # tx_hash = self.name_to_creation_hash[name]
+        # return self.web3.eth.getTransactionReceipt(tx_hash)["contractAddress"]
 
     def call_transaction(self, contract, function, **kwargs):
-        sender = kwargs.pop("sender", self.accounts[0])
-        tx_hash = (
-            self.name_to_contract[contract]
-            .functions[function](**kwargs)
-            .transact({"from": sender})
-        )
-        return self.web3.eth.getTransactionReceipt(tx_hash)
+        raise NotImplementedError("needs refactoring")
+        # sender = kwargs.pop("sender", self.accounts[0])
+        # tx_hash = (
+        #     self.name_to_contract[contract]
+        #     .functions[function](**kwargs)
+        #     .transact({"from": sender})
+        # )
+        # return self.web3.eth.getTransactionReceipt(tx_hash)
 
 
 def find_max_pending_transfers(gas_limit):
@@ -154,13 +158,16 @@ def find_max_pending_transfers(gas_limit):
         )
 
         balance_hash = hash_balance_data(3000, 2000, pending_transfers_tree.merkle_root)
+        # FIXME: outdated
         data_to_sign = pack_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
-            channel_identifier=channel_identifier,
-            token_network_identifier=token_network_identifier,
-            chain_id=1,
+            canonical_identifier=CanonicalIdentifier(
+                chain_identifier=1,
+                token_network_address=token_network_identifier,
+                channel_identifier=channel_identifier,
+            ),
         )
         signature = LocalSigner(tester.private_keys[1]).sign(data=data_to_sign)
 

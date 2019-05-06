@@ -26,4 +26,4 @@ def main(eth_nodes, seed, raiden_executable, raiden_args):
 
 
 if __name__ == "__main__":
-    main()
+    main()  # pylint: disable=no-value-for-parameter
