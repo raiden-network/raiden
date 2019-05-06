@@ -6,15 +6,19 @@ from eth_tester import EthereumTester, PyEVMBackend
 from eth_utils import encode_hex
 from web3 import EthereumTesterProvider, Web3
 
-from raiden.constants import TRANSACTION_GAS_LIMIT
+from raiden.constants import TRANSACTION_GAS_LIMIT_UPPER_BOUND
+from raiden.settings import DEVELOPMENT_CONTRACT_VERSION
 from raiden.transfer.balance_proof import pack_balance_proof
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils.signer import LocalSigner
-from raiden_contracts.contract_manager import CONTRACTS_SOURCE_DIRS, ContractManager
-from raiden_contracts.utils.utils import get_pending_transfers_tree
+from raiden.utils.typing import ChainID, Dict, TokenAmount
+from raiden_contracts.contract_manager import ContractManager, contracts_precompiled_path
+from raiden_contracts.utils.pending_transfers import get_pending_transfers_tree
 
 pyevm_main.GENESIS_GAS_LIMIT = 6 * 10 ** 6
+CHAIN_ID = ChainID(1)
+TEST_SETTLE_TIMEOUT_MIN = 65
 
 
 class ContractTester:
@@ -35,9 +39,11 @@ class ContractTester:
                 )
         else:
             self.accounts = self.tester.get_accounts()
-        self.contract_manager = ContractManager(CONTRACTS_SOURCE_DIRS)
-        self.name_to_creation_hash = dict()
-        self.name_to_contract = dict()
+        self.contract_manager = ContractManager(
+            contracts_precompiled_path(DEVELOPMENT_CONTRACT_VERSION)
+        )
+        self.name_to_creation_hash: Dict[str, bytes] = dict()
+        self.name_to_contract: Dict[str, str] = dict()
 
     def deploy_contract(self, name, **kwargs):
         raise NotImplementedError("needs refactoring")
@@ -88,9 +94,12 @@ def find_max_pending_transfers(gas_limit):
         "TokenNetwork",
         _token_address=tester.contract_address("HumanStandardToken"),
         _secret_registry=tester.contract_address("SecretRegistry"),
-        _chain_id=1,
+        _chain_id=CHAIN_ID,
         _settlement_timeout_min=100,
         _settlement_timeout_max=200,
+        _deprecation_executor=tester.accounts[0],
+        _channel_participant_deposit_limit=10000,
+        _token_network_deposit_limit=10000,
     )
 
     tester.call_transaction("HumanStandardToken", "transfer", _to=tester.accounts[1], _value=10000)
@@ -157,17 +166,21 @@ def find_max_pending_transfers(gas_limit):
             tester.web3, unlockable_amounts=[1] * tree_size
         )
 
-        balance_hash = hash_balance_data(3000, 2000, pending_transfers_tree.merkle_root)
-        # FIXME: outdated
+        balance_hash = hash_balance_data(
+            transferred_amount=TokenAmount(3000),
+            locked_amount=TokenAmount(2000),
+            locksroot=pending_transfers_tree.merkle_root,
+        )
+        canonical_identifier = CanonicalIdentifier(
+            chain_identifier=CHAIN_ID,
+            token_network_address=token_network_address,
+            channel_identifier=channel_identifier,
+        )
         data_to_sign = pack_balance_proof(
             nonce=nonce,
             balance_hash=balance_hash,
             additional_hash=additional_hash,
-            canonical_identifier=CanonicalIdentifier(
-                chain_identifier=1,
-                token_network_address=token_network_address,
-                channel_identifier=channel_identifier,
-            ),
+            canonical_identifier=canonical_identifier,
         )
         signature = LocalSigner(tester.private_keys[1]).sign(data=data_to_sign)
 
@@ -217,4 +230,4 @@ def find_max_pending_transfers(gas_limit):
 
 
 if __name__ == "__main__":
-    find_max_pending_transfers(TRANSACTION_GAS_LIMIT)
+    find_max_pending_transfers(TRANSACTION_GAS_LIMIT_UPPER_BOUND)

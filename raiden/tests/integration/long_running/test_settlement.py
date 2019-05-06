@@ -489,7 +489,7 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
     # unlock must fail.
     with pytest.raises(RaidenUnrecoverableError):
         netting_channel.unlock(
-            merkle_tree_leaves=batch_unlock,
+            merkle_tree_locks=batch_unlock,
             participant=channelstate_0_1.our_state.address,
             partner=channelstate_0_1.partner_state.address,
         )

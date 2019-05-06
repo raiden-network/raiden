@@ -710,7 +710,7 @@ def make_signed_transfer_for(
     elif properties.sender == channel_state.partner_state.address:
         recipient = channel_state.our_state.address
     else:
-        assert False, "Given sender does not participate in given channel."
+        raise RuntimeError("Given sender does not participate in given channel.")
 
     if compute_locksroot:
         lock = Lock(
