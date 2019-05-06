@@ -11,8 +11,8 @@ log = structlog.get_logger(__name__)
 
 
 class ProcessTask(Task):
-    _name = 'process'
-    _command = ''
+    _name = "process"
+    _command = ""
 
     def _run(self, *args, **kwargs):
         if self._runner.is_managed:
@@ -22,12 +22,12 @@ class ProcessTask(Task):
             command = self._runner.node_commands.get(self._command)
             if not command:
                 raise ScenarioError(
-                    'Invalid scenario definition. '
-                    f'The {self._command}_node task requires '
-                    f'nodes.commands.{self._command} to be set.',
+                    "Invalid scenario definition. "
+                    f"The {self._command}_node task requires "
+                    f"nodes.commands.{self._command} to be set."
                 )
             command = command.format(self._config)
-            log.debug('Command', type_=self._command, command=command)
+            log.debug("Command", type_=self._command, command=command)
             greenlet = gevent.spawn(subprocess.run, shlex.split(command), check=True)
             self._handle_process(greenlet)
 
@@ -37,8 +37,8 @@ class ProcessTask(Task):
 
 
 class StartNodeTask(ProcessTask):
-    _name = 'start_node'
-    _command = 'start'
+    _name = "start_node"
+    _command = "start"
 
     def _handle_process(self, greenlet):
         # FIXME: Wait for port to become available and then stop blocking on the greenlet
@@ -46,19 +46,19 @@ class StartNodeTask(ProcessTask):
 
 
 class StopNodeTask(ProcessTask):
-    _name = 'stop_node'
-    _command = 'stop'
+    _name = "stop_node"
+    _command = "stop"
 
 
 class KillNodeTask(ProcessTask):
-    _name = 'kill_node'
-    _command = 'kill'
+    _name = "kill_node"
+    _command = "kill"
 
 
 class UpdateNodeOptionsTask(Task):
-    _name = 'update_node_options'
+    _name = "update_node_options"
 
     def _run(self, *args, **kwargs):
         if not self._runner.is_managed:
             raise ScenarioError("Can't update node options in 'external' mode.")
-        self._runner.node_controller[self._config['node']].update_options(self._config['options'])
+        self._runner.node_controller[self._config["node"]].update_options(self._config["options"])

@@ -15,22 +15,23 @@ log = structlog.get_logger(__name__)
 
 class InvalidAccountFile(Exception):
     """ Thrown when a file is not a valid keystore account file """
+
     pass
 
 
 def _find_datadir() -> Optional[str]:
-    home = os.path.expanduser('~')
-    if home == '~':  # Could not expand user path
+    home = os.path.expanduser("~")
+    if home == "~":  # Could not expand user path
         return None
-    if sys.platform == 'darwin':
-        datadir = os.path.join(home, 'Library', 'Ethereum')
+    if sys.platform == "darwin":
+        datadir = os.path.join(home, "Library", "Ethereum")
     # NOTE: Not really sure about cygwin here
-    elif sys.platform == 'win32' or sys.platform == 'cygwin':
-        datadir = os.path.join(home, 'AppData', 'Roaming', 'Ethereum')
-    elif os.name == 'posix':
-        datadir = os.path.join(home, '.ethereum')
+    elif sys.platform == "win32" or sys.platform == "cygwin":
+        datadir = os.path.join(home, "AppData", "Roaming", "Ethereum")
+    elif os.name == "posix":
+        datadir = os.path.join(home, ".ethereum")
     else:
-        raise RuntimeError('Unsupported Operating System')
+        raise RuntimeError("Unsupported Operating System")
 
     if not os.path.isdir(datadir):
         return None
@@ -42,7 +43,7 @@ def _find_keystoredir() -> Optional[str]:
     if datadir is None:
         # can't find a data directory in the system
         return None
-    keystore_path = os.path.join(datadir, 'keystore')
+    keystore_path = os.path.join(datadir, "keystore")
     if not os.path.exists(keystore_path):
         # can't find a keystore under the found data directory
         return None
@@ -61,21 +62,21 @@ def check_keystore_json(jsondata: Dict) -> bool:
     Returns:
         `True` if the data appears to be valid, otherwise `False`
     """
-    if 'crypto' not in jsondata and 'Crypto' not in jsondata:
+    if "crypto" not in jsondata and "Crypto" not in jsondata:
         return False
-    if 'version' not in jsondata:
+    if "version" not in jsondata:
         return False
-    if jsondata['version'] != 3:
+    if jsondata["version"] != 3:
         return False
 
-    crypto = jsondata.get('crypto', jsondata.get('Crypto'))
-    if 'cipher' not in crypto:
+    crypto = jsondata.get("crypto", jsondata.get("Crypto"))
+    if "cipher" not in crypto:
         return False
-    if 'ciphertext' not in crypto:
+    if "ciphertext" not in crypto:
         return False
-    if 'kdf' not in crypto:
+    if "kdf" not in crypto:
         return False
-    if 'mac' not in crypto:
+    if "mac" not in crypto:
         return False
     return True
 
@@ -91,8 +92,8 @@ class AccountManager:
             try:
                 files = os.listdir(self.keystore_path)
             except OSError as ex:
-                msg = 'Unable to list the specified directory'
-                log.error('OsError', msg=msg, path=self.keystore_path, ex=ex)
+                msg = "Unable to list the specified directory"
+                log.error("OsError", msg=msg, path=self.keystore_path, ex=ex)
                 return
 
             for f in files:
@@ -101,27 +102,27 @@ class AccountManager:
                     try:
                         with open(fullpath) as data_file:
                             data = json.load(data_file)
-                            if not isinstance(data, dict) or 'address' not in data:
+                            if not isinstance(data, dict) or "address" not in data:
                                 # we expect a dict in specific format.
                                 # Anything else is not a keyfile
-                                raise InvalidAccountFile(f'Invalid keystore file {fullpath}')
-                            address = add_0x_prefix(str(data['address']).lower())
+                                raise InvalidAccountFile(f"Invalid keystore file {fullpath}")
+                            address = add_0x_prefix(str(data["address"]).lower())
                             self.accounts[address] = str(fullpath)
                     except OSError as ex:
-                        msg = 'Can not read account file (errno=%s)' % ex.errno
+                        msg = "Can not read account file (errno=%s)" % ex.errno
                         log.warning(msg, path=fullpath, ex=ex)
-                    except(
-                            json.JSONDecodeError,
-                            KeyError,
-                            UnicodeDecodeError,
-                            InvalidAccountFile,
+                    except (
+                        json.JSONDecodeError,
+                        KeyError,
+                        UnicodeDecodeError,
+                        InvalidAccountFile,
                     ) as ex:
                         # Invalid file - skip
-                        if f.startswith('UTC--'):
+                        if f.startswith("UTC--"):
                             # Should be a valid account file - warn user
-                            msg = 'Invalid account file'
+                            msg = "Invalid account file"
                             if isinstance(ex, json.decoder.JSONDecodeError):
-                                msg = 'The account file is not valid JSON format'
+                                msg = "The account file is not valid JSON format"
                             log.warning(msg, path=fullpath, ex=ex)
 
     def address_in_keystore(self, address: Optional[AddressHex]) -> bool:
@@ -147,7 +148,7 @@ class AccountManager:
         address = add_0x_prefix(address).lower()
 
         if not self.address_in_keystore(address):
-            raise ValueError('Keystore file not found for %s' % address)
+            raise ValueError("Keystore file not found for %s" % address)
 
         with open(self.accounts[address]) as data_file:
             data = json.load(data_file)
@@ -177,7 +178,7 @@ class Account:
         self._address = None
 
         try:
-            self._address = decode_hex(self.keystore['address'])
+            self._address = decode_hex(self.keystore["address"])
         except KeyError:
             pass
 
@@ -185,7 +186,7 @@ class Account:
             self.unlock(password)
 
     @classmethod
-    def load(cls, path: str, password: str = None) -> 'Account':
+    def load(cls, path: str, password: str = None) -> "Account":
         """Load an account from a keystore file.
 
         Args:
@@ -195,7 +196,7 @@ class Account:
         with open(path) as f:
             keystore = json.load(f)
         if not check_keystore_json(keystore):
-            raise ValueError('Invalid keystore file')
+            raise ValueError("Invalid keystore file")
         return Account(keystore, password, path=path)
 
     def dump(self, include_address=True, include_id=True) -> str:
@@ -211,14 +212,11 @@ class Account:
             include_address: flag denoting if the address should be included or not
             include_id: flag denoting if the id should be included or not
         """
-        d = {
-            'crypto': self.keystore['crypto'],
-            'version': self.keystore['version'],
-        }
+        d = {"crypto": self.keystore["crypto"], "version": self.keystore["version"]}
         if include_address and self.address is not None:
-            d['address'] = remove_0x_prefix(encode_hex(self.address))
+            d["address"] = remove_0x_prefix(encode_hex(self.address))
         if include_id and self.uuid is not None:
-            d['id'] = self.uuid
+            d["id"] = self.uuid
         return json.dumps(d)
 
     def unlock(self, password: str):
@@ -231,7 +229,7 @@ class Account:
             (and the account is locked)
         """
         if self.locked:
-            self._privkey = decode_keyfile_json(self.keystore, password.encode('UTF-8'))
+            self._privkey = decode_keyfile_json(self.keystore, password.encode("UTF-8"))
             self.locked = False
             # get address such that it stays accessible after a subsequent lock
             self._fill_address()
@@ -247,8 +245,8 @@ class Account:
         self.locked = True
 
     def _fill_address(self):
-        if 'address' in self.keystore:
-            self._address = decode_hex(self.keystore['address'])
+        if "address" in self.keystore:
+            self._address = decode_hex(self.keystore["address"])
         elif not self.locked:
             self._address = privatekey_to_address(self.privkey)
 
@@ -284,7 +282,7 @@ class Account:
         account does not have an id
         """
         try:
-            return self.keystore['id']
+            return self.keystore["id"]
         except KeyError:
             return None
 
@@ -292,13 +290,13 @@ class Account:
     def uuid(self, value):
         """Set the UUID. Set it to `None` in order to remove it."""
         if value is not None:
-            self.keystore['id'] = value
-        elif 'id' in self.keystore:
-            self.keystore.pop('id')
+            self.keystore["id"] = value
+        elif "id" in self.keystore:
+            self.keystore.pop("id")
 
     def __repr__(self):
         if self.address is not None:
             address = encode_hex(self.address)
         else:
-            address = '?'
-        return '<Account(address={address}, id={id})>'.format(address=address, id=self.uuid)
+            address = "?"
+        return "<Account(address={address}, id={id})>".format(address=address, id=self.uuid)

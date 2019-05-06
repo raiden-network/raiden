@@ -13,13 +13,13 @@ from raiden.utils import Address
 class DummyUser:
     def __init__(self, user_id: str):
         self.user_id = user_id
-        self.displayname = 'dummy'
+        self.displayname = "dummy"
 
     def __eq__(self, other):
         return isinstance(other, (DummyUser, User)) and self.user_id == other.user_id
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} user_id={self.user_id}>'
+        return f"<{self.__class__.__name__} user_id={self.user_id}>"
 
     def __hash__(self):
         return hash(self.user_id)
@@ -32,22 +32,20 @@ class DummyMatrixClient:
 
     def add_presence_listener(self, callback: Callable):
         if self._presence_callback is not None:
-            raise RuntimeError('Callback has already been registered')
+            raise RuntimeError("Callback has already been registered")
         self._presence_callback = callback
 
     # Test helper
     def trigger_presence_callback(self, user_states: Dict[str, UserPresence]):
         """Trigger the registered presence listener with the given user presence"""
         if self._presence_callback is None:
-            raise RuntimeError('No callback has been registered')
+            raise RuntimeError("No callback has been registered")
 
         for user_id, presence in user_states.items():
             event = {
-                'sender': user_id,
-                'type': 'm.presence',
-                'content': {
-                    'presence': presence.value,
-                },
+                "sender": user_id,
+                "type": "m.presence",
+                "content": {"presence": presence.value},
             }
             self._presence_callback(event)
 
@@ -67,14 +65,14 @@ def dummy_get_user(user_or_id: Union[str, User]) -> User:
     return DummyUser(user_id=user_or_id)
 
 
-ADDR1 = b'\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11'
+ADDR1 = b"\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11\x11"
 ADDR2 = b'""""""""""""""""""""'
-INVALID_USER_ID = 'bla:bla'
-USER0_ID = '@0x0000000000000000000000000000000000000000:server1'
-USER1_S1_ID = '@0x1111111111111111111111111111111111111111:server1'
-USER1_S2_ID = '@0x1111111111111111111111111111111111111111:server2'
-USER2_S1_ID = '@0x2222222222222222222222222222222222222222:server1'
-USER2_S2_ID = '@0x2222222222222222222222222222222222222222:server2'
+INVALID_USER_ID = "bla:bla"
+USER0_ID = "@0x0000000000000000000000000000000000000000:server1"
+USER1_S1_ID = "@0x1111111111111111111111111111111111111111:server1"
+USER1_S2_ID = "@0x1111111111111111111111111111111111111111:server2"
+USER2_S1_ID = "@0x2222222222222222222222222222222222222222:server1"
+USER2_S2_ID = "@0x2222222222222222222222222222222222222222:server2"
 USER1_S1 = DummyUser(USER1_S1_ID)
 USER1_S2 = DummyUser(USER1_S2_ID)
 USER2_S1 = DummyUser(USER2_S1_ID)
@@ -102,6 +100,7 @@ def address_reachability():
 def user_presence_callback(user_presence):
     def _callback(user, presence):
         user_presence[user] = presence
+
     return _callback
 
 
@@ -109,6 +108,7 @@ def user_presence_callback(user_presence):
 def address_reachability_callback(address_reachability):
     def _callback(address, reachability):
         address_reachability[address] = reachability
+
     return _callback
 
 
@@ -124,10 +124,7 @@ def user_addr_mgr(dummy_matrix_client, address_reachability_callback, user_prese
 
 
 def test_user_addr_mgr_basics(
-        user_addr_mgr,
-        dummy_matrix_client,
-        address_reachability,
-        user_presence,
+    user_addr_mgr, dummy_matrix_client, address_reachability, user_presence
 ):
     # This will do nothing since the address isn't known / whitelisted
     dummy_matrix_client.trigger_presence_callback({USER1_S1_ID: UserPresence.ONLINE})
@@ -158,10 +155,7 @@ def test_user_addr_mgr_basics(
 
 
 def test_user_addr_mgr_compound(
-        user_addr_mgr,
-        dummy_matrix_client,
-        address_reachability,
-        user_presence,
+    user_addr_mgr, dummy_matrix_client, address_reachability, user_presence
 ):
     user_addr_mgr.add_address(ADDR1)
     dummy_matrix_client.trigger_presence_callback({USER1_S1_ID: UserPresence.ONLINE})
@@ -199,11 +193,7 @@ def test_user_addr_mgr_compound(
     assert user_addr_mgr.get_address_reachability(ADDR2) is AddressReachability.UNKNOWN
 
 
-def test_user_addr_mgr_force(
-        user_addr_mgr,
-        address_reachability,
-        user_presence,
-):
+def test_user_addr_mgr_force(user_addr_mgr, address_reachability, user_presence):
     assert not user_addr_mgr.is_address_known(ADDR1)
     assert user_addr_mgr.known_addresses == set()
 
@@ -227,10 +217,7 @@ def test_user_addr_mgr_force(
 
 
 def test_user_addr_mgr_fetch_presence(
-        user_addr_mgr,
-        dummy_matrix_client,
-        address_reachability,
-        user_presence,
+    user_addr_mgr, dummy_matrix_client, address_reachability, user_presence
 ):
     dummy_matrix_client.get_user_presence = Mock(return_value=UserPresence.ONLINE.value)
 
@@ -248,10 +235,7 @@ def test_user_addr_mgr_fetch_presence(
 
 
 def test_user_addr_mgr_fetch_misc(
-        user_addr_mgr,
-        dummy_matrix_client,
-        address_reachability,
-        user_presence,
+    user_addr_mgr, dummy_matrix_client, address_reachability, user_presence
 ):
     user2s = {USER2_S1_ID, USER2_S2_ID}
     user_addr_mgr.add_userids_for_address(ADDR2, user2s)

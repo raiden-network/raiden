@@ -22,17 +22,16 @@ class ContractTester:
         self.web3 = Web3(EthereumTesterProvider(self.tester))
         if generate_keys > 0:
             self.private_keys = [urandom(32) for _ in range(generate_keys)]
-            self.accounts = [
-                self.tester.add_account(encode_hex(key))
-                for key in self.private_keys
-            ]
+            self.accounts = [self.tester.add_account(encode_hex(key)) for key in self.private_keys]
             for account in self.accounts:
-                self.tester.send_transaction({
-                    'from': self.tester.get_accounts()[0],
-                    'to': account,
-                    'value': 10 ** 21,
-                    'gas': 21000,
-                })
+                self.tester.send_transaction(
+                    {
+                        "from": self.tester.get_accounts()[0],
+                        "to": account,
+                        "value": 10 ** 21,
+                        "gas": 21000,
+                    }
+                )
         else:
             self.accounts = self.tester.get_accounts()
         self.contract_manager = ContractManager(CONTRACTS_SOURCE_DIRS)
@@ -41,26 +40,26 @@ class ContractTester:
 
     def deploy_contract(self, name, **kwargs):
         data = self.contract_manager.get_contract(name)
-        contract = self.web3.eth.contract(abi=data['abi'], bytecode=data['bin'])
-        transaction = contract.constructor(**kwargs).buildTransaction({
-            'from': self.accounts[0],
-            'gas': 5900000,
-        })
+        contract = self.web3.eth.contract(abi=data["abi"], bytecode=data["bin"])
+        transaction = contract.constructor(**kwargs).buildTransaction(
+            {"from": self.accounts[0], "gas": 5900000}
+        )
         self.name_to_creation_hash[name] = self.web3.eth.sendTransaction(transaction)
         self.name_to_contract[name] = self.web3.eth.contract(
-            address=self.contract_address(name),
-            abi=data['abi'],
+            address=self.contract_address(name), abi=data["abi"]
         )
 
     def contract_address(self, name):
         tx_hash = self.name_to_creation_hash[name]
-        return self.web3.eth.getTransactionReceipt(tx_hash)['contractAddress']
+        return self.web3.eth.getTransactionReceipt(tx_hash)["contractAddress"]
 
     def call_transaction(self, contract, function, **kwargs):
-        sender = kwargs.pop('sender', self.accounts[0])
-        tx_hash = self.name_to_contract[contract].functions[function](**kwargs).transact({
-            'from': sender,
-        })
+        sender = kwargs.pop("sender", self.accounts[0])
+        tx_hash = (
+            self.name_to_contract[contract]
+            .functions[function](**kwargs)
+            .transact({"from": sender})
+        )
         return self.web3.eth.getTransactionReceipt(tx_hash)
 
 
@@ -71,61 +70,56 @@ def find_max_pending_transfers(gas_limit):
 
     tester = ContractTester(generate_keys=2)
 
-    tester.deploy_contract('SecretRegistry')
+    tester.deploy_contract("SecretRegistry")
 
     tester.deploy_contract(
-        'HumanStandardToken',
+        "HumanStandardToken",
         _initialAmount=100000,
         _decimalUnits=3,
-        _tokenName='SomeToken',
-        _tokenSymbol='SMT',
+        _tokenName="SomeToken",
+        _tokenSymbol="SMT",
     )
 
     tester.deploy_contract(
-        'TokenNetwork',
-        _token_address=tester.contract_address('HumanStandardToken'),
-        _secret_registry=tester.contract_address('SecretRegistry'),
+        "TokenNetwork",
+        _token_address=tester.contract_address("HumanStandardToken"),
+        _secret_registry=tester.contract_address("SecretRegistry"),
         _chain_id=1,
         _settlement_timeout_min=100,
         _settlement_timeout_max=200,
     )
 
-    tester.call_transaction(
-        'HumanStandardToken',
-        'transfer',
-        _to=tester.accounts[1],
-        _value=10000,
-    )
+    tester.call_transaction("HumanStandardToken", "transfer", _to=tester.accounts[1], _value=10000)
 
     receipt = tester.call_transaction(
-        'TokenNetwork',
-        'openChannel',
+        "TokenNetwork",
+        "openChannel",
         participant1=tester.accounts[0],
         participant2=tester.accounts[1],
         settle_timeout=150,
     )
 
-    channel_identifier = int(encode_hex(receipt['logs'][0]['topics'][1]), 16)
+    channel_identifier = int(encode_hex(receipt["logs"][0]["topics"][1]), 16)
 
     tester.call_transaction(
-        'HumanStandardToken',
-        'approve',
+        "HumanStandardToken",
+        "approve",
         sender=tester.accounts[0],
-        _spender=tester.contract_address('TokenNetwork'),
+        _spender=tester.contract_address("TokenNetwork"),
         _value=10000,
     )
 
     tester.call_transaction(
-        'HumanStandardToken',
-        'approve',
+        "HumanStandardToken",
+        "approve",
         sender=tester.accounts[1],
-        _spender=tester.contract_address('TokenNetwork'),
+        _spender=tester.contract_address("TokenNetwork"),
         _value=5000,
     )
 
     tester.call_transaction(
-        'TokenNetwork',
-        'setTotalDeposit',
+        "TokenNetwork",
+        "setTotalDeposit",
         channel_identifier=channel_identifier,
         participant=tester.accounts[0],
         total_deposit=5000,
@@ -133,8 +127,8 @@ def find_max_pending_transfers(gas_limit):
     )
 
     tester.call_transaction(
-        'TokenNetwork',
-        'setTotalDeposit',
+        "TokenNetwork",
+        "setTotalDeposit",
         channel_identifier=channel_identifier,
         participant=tester.accounts[1],
         total_deposit=2000,
@@ -149,15 +143,14 @@ def find_max_pending_transfers(gas_limit):
 
     nonce = 10
     additional_hash = urandom(32)
-    token_network_identifier = tester.contract_address('TokenNetwork')
+    token_network_identifier = tester.contract_address("TokenNetwork")
 
     while enough + 1 < too_much:
         tree_size = (enough + too_much) // 2
         tester.tester.revert_to_snapshot(before_closing)
 
         pending_transfers_tree = get_pending_transfers_tree(
-            tester.web3,
-            unlockable_amounts=[1] * tree_size,
+            tester.web3, unlockable_amounts=[1] * tree_size
         )
 
         balance_hash = hash_balance_data(3000, 2000, pending_transfers_tree.merkle_root)
@@ -172,8 +165,8 @@ def find_max_pending_transfers(gas_limit):
         signature = LocalSigner(tester.private_keys[1]).sign(data=data_to_sign)
 
         tester.call_transaction(
-            'TokenNetwork',
-            'closeChannel',
+            "TokenNetwork",
+            "closeChannel",
             channel_identifier=channel_identifier,
             partner=tester.accounts[1],
             balance_hash=balance_hash,
@@ -185,13 +178,13 @@ def find_max_pending_transfers(gas_limit):
         tester.tester.mine_blocks(160)  # close settlement window
 
         tester.call_transaction(
-            'TokenNetwork',
-            'settleChannel',
+            "TokenNetwork",
+            "settleChannel",
             channel_identifier=channel_identifier,
             participant1=tester.accounts[0],
             participant1_transferred_amount=0,
             participant1_locked_amount=0,
-            participant1_locksroot=b'\x00' * 32,
+            participant1_locksroot=b"\x00" * 32,
             participant2=tester.accounts[1],
             participant2_transferred_amount=3000,
             participant2_locked_amount=2000,
@@ -199,22 +192,22 @@ def find_max_pending_transfers(gas_limit):
         )
 
         receipt = tester.call_transaction(
-            'TokenNetwork',
-            'unlock',
+            "TokenNetwork",
+            "unlock",
             channel_identifier=channel_identifier,
             participant=tester.accounts[0],
             partner=tester.accounts[1],
             merkle_tree_leaves=pending_transfers_tree.packed_transfers,
         )
-        gas_used = receipt['gasUsed']
+        gas_used = receipt["gasUsed"]
 
         if gas_used <= gas_limit:
             enough = tree_size
-            print(f'{tree_size} pending transfers work ({gas_used} gas needed to unlock)')
+            print(f"{tree_size} pending transfers work ({gas_used} gas needed to unlock)")
         else:
             too_much = tree_size
-            print(f'{tree_size} pending transfers are too much ({gas_used} gas needed to unlock)')
+            print(f"{tree_size} pending transfers are too much ({gas_used} gas needed to unlock)")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     find_max_pending_transfers(TRANSACTION_GAS_LIMIT)

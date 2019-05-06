@@ -33,7 +33,6 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class MessageHandler:
-
     def on_message(self, raiden: RaidenService, message: Message):
         # pylint: disable=unidiomatic-typecheck
 
@@ -69,7 +68,7 @@ class MessageHandler:
             assert isinstance(message, Processed), MYPY_ANNOTATION
             self.handle_message_processed(raiden, message)
         else:
-            log.error('Unknown message cmdid {}'.format(message.cmdid))
+            log.error("Unknown message cmdid {}".format(message.cmdid))
 
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest):
@@ -84,10 +83,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret):
-        state_change = ReceiveSecretReveal(
-            message.secret,
-            message.sender,
-        )
+        state_change = ReceiveSecretReveal(message.secret, message.sender)
         raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
@@ -128,16 +124,12 @@ class MessageHandler:
         )
 
         role = views.get_transfer_role(
-            chain_state=chain_state,
-            secrethash=from_transfer.lock.secrethash,
+            chain_state=chain_state, secrethash=from_transfer.lock.secrethash
         )
 
         state_change: StateChange
-        if role == 'initiator':
-            old_secret = views.get_transfer_secret(
-                chain_state,
-                from_transfer.lock.secrethash,
-            )
+        if role == "initiator":
+            old_secret = views.get_transfer_secret(chain_state, from_transfer.lock.secrethash)
             # We currently don't allow multi routes if the initiator does not
             # hold the secret. In such case we remove all other possible routes
             # which allow the API call to return with with an error message.
@@ -146,15 +138,10 @@ class MessageHandler:
 
             secret = random_secret()
             state_change = ReceiveTransferRefundCancelRoute(
-                routes=routes,
-                transfer=from_transfer,
-                secret=secret,
+                routes=routes, transfer=from_transfer, secret=secret
             )
         else:
-            state_change = ReceiveTransferRefund(
-                transfer=from_transfer,
-                routes=routes,
-            )
+            state_change = ReceiveTransferRefund(transfer=from_transfer, routes=routes)
 
         raiden.handle_and_track_state_change(state_change)
 
@@ -171,13 +158,12 @@ class MessageHandler:
         # having a specific block_hash, because it's preferable to know if the secret
         # was ever known, rather than having a consistent view of the blockchain.
         registered = raiden.default_secret_registry.is_secret_registered(
-            secrethash=secrethash,
-            block_identifier='latest',
+            secrethash=secrethash, block_identifier="latest"
         )
         if registered:
             log.warning(
-                f'Ignoring received locked transfer with secrethash {pex(secrethash)} '
-                f'since it is already registered in the secret registry',
+                f"Ignoring received locked transfer with secrethash {pex(secrethash)} "
+                f"since it is already registered in the secret registry"
             )
             return
 

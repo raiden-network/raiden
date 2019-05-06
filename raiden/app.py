@@ -38,63 +38,61 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 class App:  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
-        'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
-        'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
-        'contracts_path': contracts_precompiled_path(RED_EYES_CONTRACT_VERSION),
-        'database_path': '',
-        'transport_type': 'udp',
-        'blockchain': {
-            'confirmation_blocks': DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-        },
-        'transport': {
-            'udp': {
-                'external_ip': '',
-                'external_port': INITIAL_PORT,
-                'host': '',
-                'nat_invitation_timeout': DEFAULT_NAT_INVITATION_TIMEOUT,
-                'nat_keepalive_retries': DEFAULT_NAT_KEEPALIVE_RETRIES,
-                'nat_keepalive_timeout': DEFAULT_NAT_KEEPALIVE_TIMEOUT,
-                'port': INITIAL_PORT,
-                'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-                'retry_interval': DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL,
-                'throttle_capacity': DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
-                'throttle_fill_rate': DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
+        "reveal_timeout": DEFAULT_REVEAL_TIMEOUT,
+        "settle_timeout": DEFAULT_SETTLE_TIMEOUT,
+        "contracts_path": contracts_precompiled_path(RED_EYES_CONTRACT_VERSION),
+        "database_path": "",
+        "transport_type": "udp",
+        "blockchain": {"confirmation_blocks": DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS},
+        "transport": {
+            "udp": {
+                "external_ip": "",
+                "external_port": INITIAL_PORT,
+                "host": "",
+                "nat_invitation_timeout": DEFAULT_NAT_INVITATION_TIMEOUT,
+                "nat_keepalive_retries": DEFAULT_NAT_KEEPALIVE_RETRIES,
+                "nat_keepalive_timeout": DEFAULT_NAT_KEEPALIVE_TIMEOUT,
+                "port": INITIAL_PORT,
+                "retries_before_backoff": DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
+                "retry_interval": DEFAULT_TRANSPORT_UDP_RETRY_INTERVAL,
+                "throttle_capacity": DEFAULT_TRANSPORT_THROTTLE_CAPACITY,
+                "throttle_fill_rate": DEFAULT_TRANSPORT_THROTTLE_FILL_RATE,
             },
-            'matrix': {
+            "matrix": {
                 # None causes fetching from url in raiden.settings.py::DEFAULT_MATRIX_KNOWN_SERVERS
-                'available_servers': None,
-                'global_rooms': [DISCOVERY_DEFAULT_ROOM],
-                'retries_before_backoff': DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
-                'retry_interval': DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
-                'server': 'auto',
+                "available_servers": None,
+                "global_rooms": [DISCOVERY_DEFAULT_ROOM],
+                "retries_before_backoff": DEFAULT_TRANSPORT_RETRIES_BEFORE_BACKOFF,
+                "retry_interval": DEFAULT_TRANSPORT_MATRIX_RETRY_INTERVAL,
+                "server": "auto",
             },
         },
-        'rpc': True,
-        'console': False,
-        'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
-        'services': {
-            'pathfinding_service_address': None,
-            'pathfinding_eth_address': None,
-            'pathfinding_max_paths': DEFAULT_PATHFINDING_MAX_PATHS,
-            'pathfinding_max_fee': DEFAULT_PATHFINDING_MAX_FEE,
-            'pathfinding_iou_timeout': DEFAULT_PATHFINDING_IOU_TIMEOUT,
-            'monitoring_enabled': False,
+        "rpc": True,
+        "console": False,
+        "shutdown_timeout": DEFAULT_SHUTDOWN_TIMEOUT,
+        "services": {
+            "pathfinding_service_address": None,
+            "pathfinding_eth_address": None,
+            "pathfinding_max_paths": DEFAULT_PATHFINDING_MAX_PATHS,
+            "pathfinding_max_fee": DEFAULT_PATHFINDING_MAX_FEE,
+            "pathfinding_iou_timeout": DEFAULT_PATHFINDING_IOU_TIMEOUT,
+            "monitoring_enabled": False,
         },
     }
 
     def __init__(
-            self,
-            config: typing.Dict,
-            chain: BlockChainService,
-            query_start_block: typing.BlockNumber,
-            default_registry: TokenNetworkRegistry,
-            default_secret_registry: SecretRegistry,
-            default_service_registry: typing.Optional[ServiceRegistry],
-            transport,
-            raiden_event_handler,
-            message_handler,
-            discovery: Discovery = None,
-            user_deposit: UserDeposit = None,
+        self,
+        config: typing.Dict,
+        chain: BlockChainService,
+        query_start_block: typing.BlockNumber,
+        default_registry: TokenNetworkRegistry,
+        default_secret_registry: SecretRegistry,
+        default_service_registry: typing.Optional[ServiceRegistry],
+        transport,
+        raiden_event_handler,
+        message_handler,
+        discovery: Discovery = None,
+        user_deposit: UserDeposit = None,
     ):
         raiden = RaidenService(
             chain=chain,
@@ -112,38 +110,35 @@ class App:  # pylint: disable=too-few-public-methods
 
         # check that the settlement timeout fits the limits of the contract
         invalid_settle_timeout = (
-            config['settle_timeout'] < default_registry.settlement_timeout_min() or
-            config['settle_timeout'] > default_registry.settlement_timeout_max() or
-            config['settle_timeout'] < config['reveal_timeout'] * 2
+            config["settle_timeout"] < default_registry.settlement_timeout_min()
+            or config["settle_timeout"] > default_registry.settlement_timeout_max()
+            or config["settle_timeout"] < config["reveal_timeout"] * 2
         )
         if invalid_settle_timeout:
             raise InvalidSettleTimeout(
                 (
-                    'Settlement timeout for Registry contract {} must '
-                    'be in range [{}, {}], is {}'
+                    "Settlement timeout for Registry contract {} must "
+                    "be in range [{}, {}], is {}"
                 ).format(
                     to_checksum_address(default_registry.address),
                     default_registry.settlement_timeout_min(),
                     default_registry.settlement_timeout_max(),
-                    config['settle_timeout'],
-                ),
+                    config["settle_timeout"],
+                )
             )
 
         self.config = config
         self.discovery = discovery
         self.user_deposit = user_deposit
         self.raiden = raiden
-        self.start_console = self.config['console']
+        self.start_console = self.config["console"]
 
         # raiden.ui.console:Console assumes that a services
         # attribute is available for auto-registration
         self.services: Dict[str, Any] = dict()
 
     def __repr__(self):
-        return '<{} {}>'.format(
-            self.__class__.__name__,
-            pex(self.raiden.address),
-        )
+        return "<{} {}>".format(self.__class__.__name__, pex(self.raiden.address))
 
     def start(self):
         """ Start the raiden app. """

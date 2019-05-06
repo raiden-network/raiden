@@ -43,19 +43,19 @@ log = structlog.get_logger(__name__)
 
 class ScenarioRunner:
     def __init__(
-            self,
-            account: Account,
-            chain_urls: Dict[str, List[str]],
-            auth: str,
-            data_path: Path,
-            scenario_file: Path,
+        self,
+        account: Account,
+        chain_urls: Dict[str, List[str]],
+        auth: str,
+        data_path: Path,
+        scenario_file: Path,
     ):
         from scenario_player.node_support import RaidenReleaseKeeper, NodeController
 
         self.task_count = 0
         self.running_task_count = 0
         self.auth = auth
-        self.release_keeper = RaidenReleaseKeeper(data_path.joinpath('raiden_releases'))
+        self.release_keeper = RaidenReleaseKeeper(data_path.joinpath("raiden_releases"))
         self.task_cache = {}
         # Storage for arbitrary data tasks might need to persist
         self.task_storage = defaultdict(dict)
@@ -63,9 +63,9 @@ class ScenarioRunner:
         self.scenario = Scenario(pathlib.Path(scenario_file.name))
         self.scenario_name = self.scenario.name
 
-        self.data_path = data_path.joinpath('scenarios', self.scenario.name)
+        self.data_path = data_path.joinpath("scenarios", self.scenario.name)
         self.data_path.mkdir(exist_ok=True, parents=True)
-        log.debug('Data path', path=self.data_path)
+        log.debug("Data path", path=self.data_path)
 
         self.run_number = self.determine_run_number()
 
@@ -103,15 +103,15 @@ class ScenarioRunner:
         balance = self.client.balance(account.address)
         if balance < OWN_ACCOUNT_BALANCE_MIN:
             raise ScenarioError(
-                f'Insufficient balance ({balance / 10 ** 18} Eth) '
-                f'in account {to_checksum_address(account.address)} on chain "{self.chain_name}"',
+                f"Insufficient balance ({balance / 10 ** 18} Eth) "
+                f'in account {to_checksum_address(account.address)} on chain "{self.chain_name}"'
             )
 
         self.session = Session()
         if auth:
             self.session.auth = tuple(auth.split(":"))
-        self.session.mount('http', TimeOutHTTPAdapter(timeout=self.timeout))
-        self.session.mount('https', TimeOutHTTPAdapter(timeout=self.timeout))
+        self.session.mount("http", TimeOutHTTPAdapter(timeout=self.timeout))
+        self.session.mount("https", TimeOutHTTPAdapter(timeout=self.timeout))
 
         self._node_to_address = None
         self.token_address = None
@@ -129,11 +129,11 @@ class ScenarioRunner:
         there after incrementing it.
         """
         run_number = 0
-        run_number_file = self.data_path.joinpath('run_number.txt')
+        run_number_file = self.data_path.joinpath("run_number.txt")
         if run_number_file.exists():
             run_number = int(run_number_file.read_text()) + 1
         run_number_file.write_text(str(run_number))
-        log.info('Run number', run_number=run_number)
+        log.info("Run number", run_number=run_number)
         return run_number
 
     def select_chain(self, chain_urls: Dict[str, List[str]]) -> Tuple[str, List[str]]:
@@ -149,15 +149,15 @@ class ScenarioRunner:
             and it is not a key in `chain_urls`.
         """
         chain_name = self.scenario.chain_name
-        if chain_name in ('any', 'Any', 'ANY'):
+        if chain_name in ("any", "Any", "ANY"):
             chain_name = random.choice(list(chain_urls.keys()))
 
-        log.info('Using chain', chain=chain_name)
+        log.info("Using chain", chain=chain_name)
         try:
             return chain_name, chain_urls[chain_name]
         except KeyError:
             raise ScenarioError(
-                f'The scenario requested chain "{chain_name}" for which no RPC-URL is known.',
+                f'The scenario requested chain "{chain_name}" for which no RPC-URL is known.'
             )
 
     def run_scenario(self):
@@ -166,8 +166,7 @@ class ScenarioRunner:
         fund_tx, node_starter, node_addresses, node_count = self._initialize_nodes()
 
         ud_token_tx, udc_ctr, should_deposit_ud_token = self._initialize_udc(
-            gas_limit=mint_gas,
-            node_count=node_count,
+            gas_limit=mint_gas, node_count=node_count
         )
 
         mint_tx = self._initialize_scenario_token(
@@ -180,15 +179,15 @@ class ScenarioRunner:
         wait_for_txs(self.client, fund_tx | ud_token_tx | mint_tx)
 
         if node_starter is not None:
-            log.debug('Waiting for nodes to finish starting')
+            log.debug("Waiting for nodes to finish starting")
             node_starter.get(block=True)
 
         first_node = self.get_node_baseurl(0)
 
         registered_tokens = set(
             self.session.get(
-                API_URL_TOKENS.format(protocol=self.protocol, target_host=first_node),
-            ).json(),
+                API_URL_TOKENS.format(protocol=self.protocol, target_host=first_node)
+            ).json()
         )
         if self.token_address not in registered_tokens:
             code, msg = self.register_token(self.token_address, first_node)
@@ -199,18 +198,19 @@ class ScenarioRunner:
         # The nodes need some time to find the token, see
         # https://github.com/raiden-network/raiden/issues/3544
         # FIXME: Add proper check via API
-        log.info('Waiting till new network is found by nodes')
+        log.info("Waiting till new network is found by nodes")
         while self.token_network_address is None:
-            self.token_network_address = self.session.get(API_URL_TOKEN_NETWORK_ADDRESS.format(
-                protocol=self.protocol,
-                target_host=first_node,
-                token_address=self.token_address,
-            )).json()
+            self.token_network_address = self.session.get(
+                API_URL_TOKEN_NETWORK_ADDRESS.format(
+                    protocol=self.protocol,
+                    target_host=first_node,
+                    token_address=self.token_address,
+                )
+            ).json()
             gevent.sleep(1)
 
         log.info(
-            'Received token network address',
-            token_network_address=self.token_network_address,
+            "Received token network address", token_network_address=self.token_network_address
         )
 
         # Start root task
@@ -227,24 +227,18 @@ class ScenarioRunner:
             raise
 
     def _initialize_scenario_token(
-            self,
-            node_addresses: Set[ChecksumAddress],
-            udc_ctr: Optional[ContractProxy],
-            should_deposit_ud_token: bool,
-            gas_limit: int,
+        self,
+        node_addresses: Set[ChecksumAddress],
+        udc_ctr: Optional[ContractProxy],
+        should_deposit_ud_token: bool,
+        gas_limit: int,
     ) -> Set[TransactionHash]:
         token_ctr, token_block = get_or_deploy_token(self)
         self.token_address = to_checksum_address(token_ctr.contract_address)
         self.token_deployment_block = token_block
-        token_settings = self.scenario.get('token') or {}
-        token_balance_min = token_settings.get(
-            'balance_min',
-            DEFAULT_TOKEN_BALANCE_MIN,
-        )
-        token_balance_fund = token_settings.get(
-            'balance_fund',
-            DEFAULT_TOKEN_BALANCE_FUND,
-        )
+        token_settings = self.scenario.get("token") or {}
+        token_balance_min = token_settings.get("balance_min", DEFAULT_TOKEN_BALANCE_MIN)
+        token_balance_fund = token_settings.get("balance_fund", DEFAULT_TOKEN_BALANCE_FUND)
         mint_tx = set()
         for address in node_addresses:
             tx = mint_token_if_balance_low(
@@ -266,22 +260,17 @@ class ScenarioRunner:
                 log.debug("Depositing into UDC", address=address, amount=deposit_amount)
                 mint_tx.add(
                     udc_ctr.transact(
-                        'deposit',
-                        gas_limit,
-                        address,
-                        DEFAULT_TOKEN_BALANCE_FUND // 2,
-                    ),
+                        "deposit", gas_limit, address, DEFAULT_TOKEN_BALANCE_FUND // 2
+                    )
                 )
         return mint_tx
 
     def _initialize_udc(
-            self,
-            gas_limit: int,
-            node_count: int,
+        self, gas_limit: int, node_count: int
     ) -> Tuple[Set[TransactionHash], Optional[ContractProxy], bool]:
         our_address = to_checksum_address(self.client.address)
-        udc_settings = self.scenario.services.get('udc', {})
-        udc_enabled = udc_settings.get('enable')
+        udc_settings = self.scenario.services.get("udc", {})
+        udc_enabled = udc_settings.get("enable")
 
         ud_token_tx = set()
 
@@ -293,15 +282,10 @@ class ScenarioRunner:
         ud_token_address = to_checksum_address(ud_token_ctr.contract_address)
         udc_address = to_checksum_address(udc_ctr.contract_address)
 
-        log.info(
-            'UDC enabled',
-            contract_address=udc_address,
-            token_address=ud_token_address,
-        )
+        log.info("UDC enabled", contract_address=udc_address, token_address=ud_token_address)
 
-        should_deposit_ud_token = (
-            udc_enabled and
-            udc_settings.get('token', {}).get('deposit', False)
+        should_deposit_ud_token = udc_enabled and udc_settings.get("token", {}).get(
+            "deposit", False
         )
         if should_deposit_ud_token:
             tx = mint_token_if_balance_low(
@@ -316,47 +300,39 @@ class ScenarioRunner:
             if tx:
                 ud_token_tx.add(tx)
 
-            udt_allowance = (
-                ud_token_ctr.contract.functions.allowance(our_address, udc_address).call()
-            )
+            udt_allowance = ud_token_ctr.contract.functions.allowance(
+                our_address, udc_address
+            ).call()
             if udt_allowance < DEFAULT_TOKEN_BALANCE_FUND * node_count:
                 allow_amount = (DEFAULT_TOKEN_BALANCE_FUND * 10 * node_count) - udt_allowance
-                log.debug('Updating UD token allowance', allowance=allow_amount)
+                log.debug("Updating UD token allowance", allowance=allow_amount)
                 ud_token_tx.add(
-                    ud_token_ctr.transact('approve', gas_limit, udc_address, allow_amount),
+                    ud_token_ctr.transact("approve", gas_limit, udc_address, allow_amount)
                 )
             else:
-                log.debug('UD token allowance sufficient', allowance=udt_allowance)
+                log.debug("UD token allowance sufficient", allowance=udt_allowance)
         return ud_token_tx, udc_ctr, should_deposit_ud_token
 
-    def _initialize_nodes(self) -> Tuple[
-            Set[TransactionHash],
-            gevent.Greenlet,
-            Set[ChecksumAddress],
-            int,
-    ]:
+    def _initialize_nodes(
+        self
+    ) -> Tuple[Set[TransactionHash], gevent.Greenlet, Set[ChecksumAddress], int]:
         fund_tx = set()
         node_starter: gevent.Greenlet = None
         if self.is_managed:
             self.node_controller.initialize_nodes()
             node_addresses = self.node_controller.addresses
             node_count = len(self.node_controller)
-            node_balances = {
-                address: self.client.balance(address)
-                for address in node_addresses
-            }
+            node_balances = {address: self.client.balance(address) for address in node_addresses}
             low_balances = {
                 address: balance
                 for address, balance in node_balances.items()
                 if balance < NODE_ACCOUNT_BALANCE_MIN
             }
             if low_balances:
-                log.info('Funding nodes', nodes=low_balances.keys())
+                log.info("Funding nodes", nodes=low_balances.keys())
                 fund_tx = {
                     self.client.send_transaction(
-                        to=address,
-                        startgas=21_000,
-                        value=NODE_ACCOUNT_BALANCE_FUND - balance,
+                        to=address, startgas=21_000, value=NODE_ACCOUNT_BALANCE_FUND - balance
                     )
                     for address, balance in low_balances.items()
                 }
@@ -367,7 +343,7 @@ class ScenarioRunner:
             unreachable_nodes = [node for node, addr in self.node_to_address.items() if not addr]
             if not self.node_to_address or unreachable_nodes:
                 raise NodesUnreachableError(
-                    f"Raiden nodes unreachable: {','.join(unreachable_nodes)}",
+                    f"Raiden nodes unreachable: {','.join(unreachable_nodes)}"
                 )
             node_addresses = set(self.node_to_address.values())
             node_count = len(self.node_to_address)
@@ -420,15 +396,13 @@ class ScenarioRunner:
                 log.error("Error fetching node address", url=url, node=node)
                 return None
             try:
-                return to_checksum_address(resp.json().get('our_address', ''))
+                return to_checksum_address(resp.json().get("our_address", ""))
             except ValueError:
                 log.error(
-                    "Error decoding response",
-                    response=resp.text,
-                    code=resp.status_code,
-                    url=url,
+                    "Error decoding response", response=resp.text, code=resp.status_code, url=url
                 )
             return None
+
         ret = self._spawn_and_wait(nodes, cb)
         return ret
 
@@ -439,7 +413,6 @@ class ScenarioRunner:
         if self._node_to_address is None:
             self._node_to_address = {
                 node: address
-                for node, address
-                in self._get_node_addresses(self.raiden_nodes).items()
+                for node, address in self._get_node_addresses(self.raiden_nodes).items()
             }
         return self._node_to_address

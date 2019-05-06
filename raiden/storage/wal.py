@@ -11,45 +11,42 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def restore_to_state_change(
-        transition_function: Callable,
-        storage: SerializedSQLiteStorage,
-        state_change_identifier: int,
-) -> 'WriteAheadLog':
+    transition_function: Callable, storage: SerializedSQLiteStorage, state_change_identifier: int
+) -> "WriteAheadLog":
     msg = "state change identifier 'latest' or an integer greater than zero"
-    assert state_change_identifier == 'latest' or state_change_identifier > 0, msg
+    assert state_change_identifier == "latest" or state_change_identifier > 0, msg
 
     from_state_change_id, chain_state = storage.get_snapshot_closest_to_state_change(
-        state_change_identifier=state_change_identifier,
+        state_change_identifier=state_change_identifier
     )
 
     if chain_state is not None:
         log.debug(
-            'Restoring from snapshot',
+            "Restoring from snapshot",
             from_state_change_id=from_state_change_id,
             to_state_change_id=state_change_identifier,
         )
     else:
         log.debug(
-            'No snapshot found, replaying all state changes',
+            "No snapshot found, replaying all state changes",
             to_state_change_id=state_change_identifier,
         )
 
     unapplied_state_changes = storage.get_statechanges_by_identifier(
-        from_identifier=from_state_change_id,
-        to_identifier=state_change_identifier,
+        from_identifier=from_state_change_id, to_identifier=state_change_identifier
     )
 
     state_manager = StateManager(transition_function, chain_state)
     wal = WriteAheadLog(state_manager, storage)
 
-    log.debug('Replaying state changes', num_state_changes=len(unapplied_state_changes))
+    log.debug("Replaying state changes", num_state_changes=len(unapplied_state_changes))
     for state_change in unapplied_state_changes:
         wal.state_manager.dispatch(state_change)
 
     return wal
 
 
-ST = TypeVar('ST', bound=State)
+ST = TypeVar("ST", bound=State)
 
 
 class WriteAheadLog(Generic[ST]):
@@ -75,7 +72,7 @@ class WriteAheadLog(Generic[ST]):
         """
 
         with self._lock:
-            timestamp = datetime.utcnow().isoformat(timespec='milliseconds')
+            timestamp = datetime.utcnow().isoformat(timespec="milliseconds")
             state_change_id = self.storage.write_state_change(state_change, timestamp)
             self.state_change_id = state_change_id
 

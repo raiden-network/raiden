@@ -45,38 +45,38 @@ class NodesConfig(Mapping):
     def mode(self):
         if self._scenario_version == 2:
             try:
-                mode = self._config['mode'].upper()
+                mode = self._config["mode"].upper()
             except KeyError:
                 raise MissingNodesConfiguration(
-                    'Version 2 scenarios require a "mode" in the "nodes" section.',
+                    'Version 2 scenarios require a "mode" in the "nodes" section.'
                 )
             try:
                 return NodeMode[mode]
             except KeyError:
-                known_modes = ', '.join(mode.name.lower() for mode in NodeMode)
+                known_modes = ", ".join(mode.name.lower() for mode in NodeMode)
                 raise ScenarioError(
-                    f'Unknown node mode "{mode}". Expected one of {known_modes}',
+                    f'Unknown node mode "{mode}". Expected one of {known_modes}'
                 ) from None
         return NodeMode.EXTERNAL
 
     @property
     def raiden_version(self) -> str:
-        return self._config.get('raiden_version', 'LATEST')
+        return self._config.get("raiden_version", "LATEST")
 
     @property
     def count(self):
         try:
-            return self._config['count']
+            return self._config["count"]
         except KeyError:
             raise MissingNodesConfiguration('Must specify a "count" setting!')
 
     @property
     def default_options(self) -> dict:
-        return self._config.get('default_options', {})
+        return self._config.get("default_options", {})
 
     @property
     def node_options(self) -> dict:
-        return self._config.get('node_options', {})
+        return self._config.get("node_options", {})
 
     @property
     def nodes(self) -> List[str]:
@@ -96,34 +96,34 @@ class NodesConfig(Mapping):
             one of the keys 'first', 'last', 'template' are missing; *or* the
             scenario version is not 1 or the 'range' key and the 'list' are absent.
         """
-        if self._scenario_version == 1 and 'range' in self._config:
-            range_config = self._config['range']
+        if self._scenario_version == 1 and "range" in self._config:
+            range_config = self._config["range"]
 
             try:
-                start, stop = range_config['first'], range_config['last'] + 1
+                start, stop = range_config["first"], range_config["last"] + 1
             except KeyError:
                 raise MissingNodesConfiguration(
                     'Setting "range" must be a dict containing keys "first" and "last",'
-                    ' whose values are integers!',
+                    " whose values are integers!"
                 )
 
             try:
-                template = range_config['template']
+                template = range_config["template"]
             except KeyError:
                 raise MissingNodesConfiguration(
-                    'Must specify "template" setting when giving "range" setting.',
+                    'Must specify "template" setting when giving "range" setting.'
                 )
 
             return [template.format(i) for i in range(start, stop)]
         try:
-            return self._config['list']
+            return self._config["list"]
         except KeyError:
             raise MissingNodesConfiguration('Must specify nodes under "list" setting!')
 
     @property
     def commands(self) -> dict:
         """Return the commands configured for the nodes."""
-        return self._config.get('commands', {})
+        return self._config.get("commands", {})
 
 
 class Scenario(Mapping):
@@ -138,7 +138,7 @@ class Scenario(Mapping):
         self._yaml_path = yaml_path
         self._config = yaml.safe_load(yaml_path.open())
         try:
-            self._nodes = NodesConfig(self._config['nodes'], self.version)
+            self._nodes = NodesConfig(self._config["nodes"], self.version)
         except KeyError:
             raise MissingNodesConfiguration('Must supply a "nodes" setting!')
 
@@ -160,10 +160,10 @@ class Scenario(Mapping):
         :raises InvalidScenarioVersion:
             if the supplied version is not present in :var:`SUPPORTED_SCENARIO_VERSIONS`.
         """
-        version = self._config.get('version', 1)
+        version = self._config.get("version", 1)
 
         if version not in SUPPORTED_SCENARIO_VERSIONS:
-            raise InvalidScenarioVersion(f'Unexpected scenario version {version}')
+            raise InvalidScenarioVersion(f"Unexpected scenario version {version}")
         return version
 
     @property
@@ -174,7 +174,7 @@ class Scenario(Mapping):
     @property
     def settings(self):
         """Return the 'settings' dictionary for the scenario."""
-        return self._config.get('settings', {})
+        return self._config.get("settings", {})
 
     @property
     def protocol(self) -> str:
@@ -188,15 +188,15 @@ class Scenario(Mapping):
         'http' if it does not exist.
         """
         if self.nodes.mode is NodeMode.MANAGED:
-            if 'protocol' in self._config:
+            if "protocol" in self._config:
                 log.warning('The "protocol" setting is not supported in "managed" node mode.')
-            return 'http'
-        return self._config.get('protocol', 'http')
+            return "http"
+        return self._config.get("protocol", "http")
 
     @property
     def timeout(self) -> int:
         """Returns the scenario's set timeout in seconds."""
-        return self.settings.get('timeout', TIMEOUT)
+        return self.settings.get("timeout", TIMEOUT)
 
     @property
     def notification_email(self) -> Union[str, None]:
@@ -204,17 +204,17 @@ class Scenario(Mapping):
 
         If this isn't set, we return None.
         """
-        return self.settings.get('notify')
+        return self.settings.get("notify")
 
     @property
     def chain_name(self) -> str:
         """Return the name of the chain to be used for this scenario."""
-        return self.settings.get('chain', 'any')
+        return self.settings.get("chain", "any")
 
     @property
     def services(self):
         """ Return the """
-        return self.settings.get('services', {})
+        return self.settings.get("services", {})
 
     @property
     def gas_price(self) -> str:
@@ -222,7 +222,7 @@ class Scenario(Mapping):
 
         This defaults to 'fast'.
         """
-        return self._config.get('gas_price', 'fast')
+        return self._config.get("gas_price", "fast")
 
     @property
     def gas_price_strategy(self) -> Callable:
@@ -240,11 +240,9 @@ class Scenario(Mapping):
         :raises ScenarioError: if no 'scenario' key is present in the yaml file.
         """
         try:
-            return self._config['scenario']
+            return self._config["scenario"]
         except KeyError:
-            raise ScenarioError(
-                "Invalid scenario definition. Missing 'scenario' key.",
-            )
+            raise ScenarioError("Invalid scenario definition. Missing 'scenario' key.")
 
     @property
     def task(self) -> Tuple[str, Any]:
@@ -256,9 +254,7 @@ class Scenario(Mapping):
         try:
             items, = self.configuration.items()
         except ValueError:
-            raise MultipleTaskDefinitions(
-                'Multiple tasks defined in scenario configuration!',
-            )
+            raise MultipleTaskDefinitions("Multiple tasks defined in scenario configuration!")
         return items
 
     @property

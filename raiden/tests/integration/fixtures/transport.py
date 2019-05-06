@@ -12,7 +12,7 @@ def public_and_private_rooms():
     return True
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def synapse_config_generator():
     with generate_synapse_config() as generator:
         yield generator
@@ -25,11 +25,7 @@ def matrix_server_count():
 
 @pytest.fixture
 def local_matrix_servers(
-        request,
-        transport_protocol,
-        matrix_server_count,
-        synapse_config_generator,
-        port_generator,
+    request, transport_protocol, matrix_server_count, synapse_config_generator, port_generator
 ):
     if transport_protocol is not TransportProtocol.MATRIX:
         yield [None]
@@ -48,31 +44,33 @@ def local_matrix_servers(
 # Beware: the arguments to `global_rooms` should be lists
 @pytest.fixture
 def global_rooms():
-    return ['discovery']
+    return ["discovery"]
 
 
 @pytest.fixture
 def matrix_transports(
-        local_matrix_servers,
-        retries_before_backoff,
-        retry_interval,
-        private_rooms,
-        number_of_transports,
-        global_rooms,
+    local_matrix_servers,
+    retries_before_backoff,
+    retry_interval,
+    private_rooms,
+    number_of_transports,
+    global_rooms,
 ):
     transports = []
     for transport_index in range(number_of_transports):
         server = local_matrix_servers[transport_index % len(local_matrix_servers)]
         transports.append(
-            MatrixTransport({
-                'global_rooms': global_rooms,
-                'retries_before_backoff': retries_before_backoff,
-                'retry_interval': retry_interval,
-                'server': server,
-                'server_name': server.netloc,
-                'available_servers': local_matrix_servers,
-                'private_rooms': private_rooms[transport_index],
-            }),
+            MatrixTransport(
+                {
+                    "global_rooms": global_rooms,
+                    "retries_before_backoff": retries_before_backoff,
+                    "retry_interval": retry_interval,
+                    "server": server,
+                    "server_name": server.netloc,
+                    "available_servers": local_matrix_servers,
+                    "private_rooms": private_rooms[transport_index],
+                }
+            )
         )
 
     yield transports

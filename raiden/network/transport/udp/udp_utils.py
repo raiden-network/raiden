@@ -24,7 +24,7 @@ def event_first_of(*events: _AbstractLinkable) -> Event:
     first_finished = Event()
 
     if not all(isinstance(e, _AbstractLinkable) for e in events):
-        raise ValueError('all events must be linkable')
+        raise ValueError("all events must be linkable")
 
     for event in events:
         event.rawlink(lambda _: first_finished.set())
@@ -32,11 +32,7 @@ def event_first_of(*events: _AbstractLinkable) -> Event:
     return first_finished
 
 
-def timeout_exponential_backoff(
-        retries: int,
-        timeout: int,
-        maximum: int,
-) -> Iterator[int]:
+def timeout_exponential_backoff(retries: int, timeout: int, maximum: int) -> Iterator[int]:
     """ Timeouts generator with an exponential backoff strategy.
 
     Timeouts start spaced by `timeout`, after `retries` exponentially increase
@@ -57,11 +53,7 @@ def timeout_exponential_backoff(
         yield maximum
 
 
-def timeout_two_stage(
-        retries: int,
-        timeout1: int,
-        timeout2: int,
-) -> Iterable[int]:
+def timeout_two_stage(retries: int, timeout1: int, timeout2: int) -> Iterable[int]:
     """ Timeouts generator with a two stage strategy
 
     Timeouts start spaced by `timeout1`, after `retries` increase
@@ -74,12 +66,12 @@ def timeout_two_stage(
 
 
 def retry(
-        transport: 'UDPTransport',
-        messagedata: bytes,
-        message_id: UDPMessageID,
-        recipient: Address,
-        stop_event: Event,
-        timeout_backoff: Iterable[int],
+    transport: "UDPTransport",
+    messagedata: bytes,
+    message_id: UDPMessageID,
+    recipient: Address,
+    stop_event: Event,
+    timeout_backoff: Iterable[int],
 ) -> bool:
     """ Send messagedata until it's acknowledged.
 
@@ -93,16 +85,9 @@ def retry(
         bool: True if the message was acknowledged, False otherwise.
     """
 
-    async_result = transport.maybe_sendraw_with_result(
-        recipient,
-        messagedata,
-        message_id,
-    )
+    async_result = transport.maybe_sendraw_with_result(recipient, messagedata, message_id)
 
-    event_quit = event_first_of(
-        async_result,
-        stop_event,
-    )
+    event_quit = event_first_of(async_result, stop_event)
 
     for timeout in timeout_backoff:
 
@@ -110,26 +95,19 @@ def retry(
             break
 
         log.debug(
-            'retrying message',
+            "retrying message",
             node=pex(transport.raiden.address),
             recipient=pex(recipient),
             msgid=message_id,
         )
 
-        transport.maybe_sendraw_with_result(
-            recipient,
-            messagedata,
-            message_id,
-        )
+        transport.maybe_sendraw_with_result(recipient, messagedata, message_id)
 
     return async_result.ready()
 
 
 def wait_recovery(stop_event: Event, event_healthy: Event):
-    event_first_of(
-        stop_event,
-        event_healthy,
-    ).wait()
+    event_first_of(stop_event, event_healthy).wait()
 
     if stop_event.is_set():
         return
@@ -140,14 +118,14 @@ def wait_recovery(stop_event: Event, event_healthy: Event):
 
 
 def retry_with_recovery(
-        transport: 'UDPTransport',
-        messagedata: bytes,
-        message_id: UDPMessageID,
-        recipient: Address,
-        stop_event: Event,
-        event_healthy: Event,
-        event_unhealthy: Event,
-        backoff: Iterable[int],
+    transport: "UDPTransport",
+    messagedata: bytes,
+    message_id: UDPMessageID,
+    recipient: Address,
+    stop_event: Event,
+    event_healthy: Event,
+    event_unhealthy: Event,
+    backoff: Iterable[int],
 ) -> bool:
     """ Send messagedata while the node is healthy until it's acknowledged.
 
@@ -158,10 +136,7 @@ def retry_with_recovery(
 
     # The underlying unhealthy will be cleared, care must be taken to properly
     # clear stop_or_unhealthy too.
-    stop_or_unhealthy = event_first_of(
-        stop_event,
-        event_unhealthy,
-    )
+    stop_or_unhealthy = event_first_of(stop_event, event_unhealthy)
 
     acknowledged = False
     while not stop_event.is_set() and not acknowledged:
@@ -170,14 +145,11 @@ def retry_with_recovery(
         # wait for it to become available if the message has been acknowledged.
         if event_unhealthy.is_set():
             log.debug(
-                'waiting for recipient to become available',
+                "waiting for recipient to become available",
                 node=pex(transport.raiden.address),
                 recipient=pex(recipient),
             )
-            wait_recovery(
-                stop_event,
-                event_healthy,
-            )
+            wait_recovery(stop_event, event_healthy)
 
             # Assume wait_recovery returned because unhealthy was cleared and
             # continue execution, this is safe to do because stop_event is
@@ -192,12 +164,10 @@ def retry_with_recovery(
             messagedata,
             message_id,
             recipient,
-
             # retry will stop when this event is set, allowing this task to
             # wait for recovery when the node becomes unhealthy or to quit if
             # the stop event is set.
             stop_or_unhealthy,
-
             # Intentionally reusing backoff to restart from the last
             # timeout/number of iterations.
             backoff,

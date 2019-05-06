@@ -34,19 +34,15 @@ def test_v1_event_payment_sent_failed_schema():
         token_network_identifier=factories.make_address(),
         identifier=1,
         target=factories.make_address(),
-        reason='whatever',
+        reason="whatever",
     )
-    log_time = '2018-09-07T20:02:35.000'
+    log_time = "2018-09-07T20:02:35.000"
 
     timestamped = TimestampedEvent(event, log_time)
 
     dumped = EventPaymentSentFailedSchema().dump(timestamped)
 
-    expected = {
-        'event': 'EventPaymentSentFailed',
-        'log_time': log_time,
-        'reason': 'whatever',
-    }
+    expected = {"event": "EventPaymentSentFailed", "log_time": log_time, "reason": "whatever"}
 
     assert all(dumped.data.get(key) == value for key, value in expected.items())
 
@@ -83,7 +79,7 @@ def test_event_filter_for_payments():
         token_network_identifier=token_network_identifier,
         identifier=identifier,
         target=target,
-        reason='whatever',
+        reason="whatever",
     )
     assert event_filter_for_payments(event, token_network_identifier, None)
     assert event_filter_for_payments(event, token_network_identifier, target)

@@ -20,13 +20,11 @@ WEI_TO_ETH = 10 ** 18
 @click.argument("targets_file", type=click.File())
 def main(keystore_file, password, rpc_url, eth_amount, targets_file):
     web3 = Web3(HTTPProvider(rpc_url))
-    with open(keystore_file, 'r') as keystore:
+    with open(keystore_file, "r") as keystore:
         account = Account(json.load(keystore), password, keystore_file)
         print("Using account:", to_checksum_address(account.address))
     client = JSONRPCClient(
-        web3,
-        account.privkey,
-        block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
+        web3, account.privkey, block_num_confirmations=DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
     )
 
     targets = [t.strip() for t in targets_file]
@@ -34,21 +32,16 @@ def main(keystore_file, password, rpc_url, eth_amount, targets_file):
 
     balance_needed = len(targets) * eth_amount
     if balance_needed * WEI_TO_ETH > balance:
-        print("Not enough balance to fund {} accounts with {} eth each. Need {}, have {}".format(
-            len(targets),
-            eth_amount,
-            balance_needed,
-            balance / WEI_TO_ETH,
-        ))
+        print(
+            "Not enough balance to fund {} accounts with {} eth each. Need {}, have {}".format(
+                len(targets), eth_amount, balance_needed, balance / WEI_TO_ETH
+            )
+        )
 
     print("Sending {} eth to:".format(eth_amount))
     for target in targets:
         print("  - {}".format(target))
-        client.send_transaction(
-            to=target,
-            startgas=21000,
-            value=eth_amount * WEI_TO_ETH,
-        )
+        client.send_transaction(to=target, startgas=21000, value=eth_amount * WEI_TO_ETH)
 
 
 if __name__ == "__main__":

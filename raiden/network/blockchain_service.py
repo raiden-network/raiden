@@ -29,13 +29,10 @@ from raiden_contracts.contract_manager import ContractManager
 
 class BlockChainService:
     """ Exposes the blockchain's state through JSON-RPC. """
+
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(
-            self,
-            jsonrpc_client: JSONRPCClient,
-            contract_manager: ContractManager,
-    ):
+    def __init__(self, jsonrpc_client: JSONRPCClient, contract_manager: ContractManager):
         self.address_to_discovery: Dict[Address, Discovery] = dict()
         self.address_to_secret_registry: Dict[Address, SecretRegistry] = dict()
         self.address_to_token: Dict[Address, Token] = dict()
@@ -44,7 +41,7 @@ class BlockChainService:
         self.address_to_user_deposit: Dict[Address, UserDeposit] = dict()
         self.address_to_service_registry: Dict[Address, ServiceRegistry] = dict()
         self.identifier_to_payment_channel: Dict[
-            Tuple[TokenNetworkAddress, ChannelID], PaymentChannel,
+            Tuple[TokenNetworkAddress, ChannelID], PaymentChannel
         ] = dict()
 
         self.client = jsonrpc_client
@@ -70,7 +67,7 @@ class BlockChainService:
         return self.client.block_number()
 
     def block_hash(self) -> BlockHash:
-        return self.client.blockhash_from_blocknumber('latest')
+        return self.client.blockhash_from_blocknumber("latest")
 
     def get_block(self, block_identifier):
         return self.client.web3.eth.getBlock(block_identifier=block_identifier)
@@ -83,7 +80,7 @@ class BlockChainService:
             return True
 
         current_block = self.block_number()
-        highest_block = result['highestBlock']
+        highest_block = result["highestBlock"]
 
         if highest_block - current_block > 2:
             return False
@@ -107,8 +104,8 @@ class BlockChainService:
         else:
             interval = last_block_number - oldest
         assert interval > 0
-        last_timestamp = self.get_block_header(last_block_number)['timestamp']
-        first_timestamp = self.get_block_header(last_block_number - interval)['timestamp']
+        last_timestamp = self.get_block_header(last_block_number)["timestamp"]
+        first_timestamp = self.get_block_header(last_block_number - interval)["timestamp"]
         delta = last_timestamp - first_timestamp
         return delta / interval
 
@@ -132,7 +129,7 @@ class BlockChainService:
     def token(self, token_address: Address) -> Token:
         """ Return a proxy to interact with a token. """
         if not is_binary_address(token_address):
-            raise ValueError('token_address must be a valid address')
+            raise ValueError("token_address must be a valid address")
 
         with self._token_creation_lock:
             if token_address not in self.address_to_token:
@@ -147,7 +144,7 @@ class BlockChainService:
     def discovery(self, discovery_address: Address) -> Discovery:
         """ Return a proxy to interact with the discovery. """
         if not is_binary_address(discovery_address):
-            raise ValueError('discovery_address must be a valid address')
+            raise ValueError("discovery_address must be a valid address")
 
         with self._discovery_creation_lock:
             if discovery_address not in self.address_to_discovery:
@@ -161,7 +158,7 @@ class BlockChainService:
 
     def token_network_registry(self, address: Address) -> TokenNetworkRegistry:
         if not is_binary_address(address):
-            raise ValueError('address must be a valid address')
+            raise ValueError("address must be a valid address")
 
         with self._token_network_registry_creation_lock:
             if address not in self.address_to_token_network_registry:
@@ -175,7 +172,7 @@ class BlockChainService:
 
     def token_network(self, address: TokenNetworkAddress) -> TokenNetwork:
         if not is_binary_address(address):
-            raise ValueError('address must be a valid address')
+            raise ValueError("address must be a valid address")
 
         with self._token_network_creation_lock:
             if address not in self.address_to_token_network:
@@ -189,7 +186,7 @@ class BlockChainService:
 
     def secret_registry(self, address: Address) -> SecretRegistry:
         if not is_binary_address(address):
-            raise ValueError('address must be a valid address')
+            raise ValueError("address must be a valid address")
 
         with self._secret_registry_creation_lock:
             if address not in self.address_to_secret_registry:
@@ -212,18 +209,15 @@ class BlockChainService:
 
         return self.address_to_service_registry[address]
 
-    def payment_channel(
-            self,
-            canonical_identifier: CanonicalIdentifier,
-    ) -> PaymentChannel:
+    def payment_channel(self, canonical_identifier: CanonicalIdentifier) -> PaymentChannel:
 
         token_network_address = TokenNetworkAddress(canonical_identifier.token_network_address)
         channel_id = canonical_identifier.channel_identifier
 
         if not is_binary_address(token_network_address):
-            raise ValueError('address must be a valid address')
+            raise ValueError("address must be a valid address")
         if not isinstance(channel_id, T_ChannelID):
-            raise ValueError('channel identifier must be of type T_ChannelID')
+            raise ValueError("channel identifier must be of type T_ChannelID")
 
         with self._payment_channel_creation_lock:
             dict_key = (token_network_address, channel_id)
@@ -241,7 +235,7 @@ class BlockChainService:
 
     def user_deposit(self, address: Address) -> UserDeposit:
         if not is_binary_address(address):
-            raise ValueError('address must be a valid address')
+            raise ValueError("address must be a valid address")
 
         with self._user_deposit_creation_lock:
             if address not in self.address_to_user_deposit:

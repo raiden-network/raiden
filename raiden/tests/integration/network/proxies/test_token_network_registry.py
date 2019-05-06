@@ -15,11 +15,7 @@ from raiden.tests.utils.smartcontracts import deploy_token
 from raiden_contracts.constants import TEST_SETTLE_TIMEOUT_MAX, TEST_SETTLE_TIMEOUT_MIN
 
 
-def test_token_network_registry(
-        deploy_client,
-        contract_manager,
-        token_network_registry_address,
-):
+def test_token_network_registry(deploy_client, contract_manager, token_network_registry_address):
     registry_address = to_canonical_address(token_network_registry_address)
 
     token_network_registry_proxy = TokenNetworkRegistry(
@@ -45,14 +41,14 @@ def test_token_network_registry(
         contract_manager=contract_manager,
         initial_amount=1000,
         decimals=0,
-        token_name='TKN',
-        token_symbol='TKN',
+        token_name="TKN",
+        token_symbol="TKN",
     )
 
     test_token_address = to_canonical_address(test_token.contract.address)
     # try to register a token network not following ERC20 protocol
 
-    with patch.object(Token, 'total_supply', return_value=''):
+    with patch.object(Token, "total_supply", return_value=""):
         with pytest.raises(InvalidToken):
             token_network_registry_proxy.add_token_with_limits(
                 token_address=test_token_address,
@@ -74,21 +70,17 @@ def test_token_network_registry(
             token_network_deposit_limit=RED_EYES_PER_TOKEN_NETWORK_LIMIT,
         )
 
-        assert 'Token already registered' in str(exc)
+        assert "Token already registered" in str(exc)
 
     logs = event_filter.get_all_entries()
     assert len(logs) == 1
     decoded_event = token_network_registry_proxy.proxy.decode_event(logs[0])
-    assert is_same_address(decoded_event['args']['token_address'], test_token.contract.address)
-    assert is_same_address(
-        decoded_event['args']['token_network_address'],
-        token_network_address,
-    )
+    assert is_same_address(decoded_event["args"]["token_address"], test_token.contract.address)
+    assert is_same_address(decoded_event["args"]["token_network_address"], token_network_address)
     # test other getters
     assert token_network_registry_proxy.get_token_network(bad_token_address) is None
     assert is_same_address(
-        token_network_registry_proxy.get_token_network(test_token_address),
-        token_network_address,
+        token_network_registry_proxy.get_token_network(test_token_address), token_network_address
     )
 
     with pytest.raises(ValueError):

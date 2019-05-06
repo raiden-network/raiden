@@ -28,19 +28,19 @@ log = structlog.get_logger(__name__)
 def _url_for(apiserver, endpoint, **kwargs):
     # url_for() expects binary address so we have to convert here
     for key, val in kwargs.items():
-        if isinstance(val, str) and val.startswith('0x'):
+        if isinstance(val, str) and val.startswith("0x"):
             kwargs[key] = to_canonical_address(val)
 
     with apiserver.flask_app.app_context():
-        return url_for('v1_resources.{}'.format(endpoint), **kwargs)
+        return url_for("v1_resources.{}".format(endpoint), **kwargs)
 
 
 def _trimmed_logging(logger_level_config):
     structlog.reset_defaults()
 
     logger_level_config = logger_level_config or dict()
-    logger_level_config.setdefault('filelock', 'ERROR')
-    logger_level_config.setdefault('', 'DEBUG')
+    logger_level_config.setdefault("filelock", "ERROR")
+    logger_level_config.setdefault("", "DEBUG")
 
     processors = [
         structlog.stdlib.PositionalArgumentsFormatter(),
@@ -50,34 +50,27 @@ def _trimmed_logging(logger_level_config):
 
     logging.config.dictConfig(
         {
-            'version': 1,
-            'disable_existing_loggers': False,
-            'formatters': {
-                'plain': {
-                    '()': structlog.stdlib.ProcessorFormatter,
-                    'processor': structlog.dev.ConsoleRenderer(colors=False),
-                    'foreign_pre_chain': processors,
-                },
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "plain": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processor": structlog.dev.ConsoleRenderer(colors=False),
+                    "foreign_pre_chain": processors,
+                }
             },
-            'handlers': {
-                'default': {
-                    'class': 'logging.StreamHandler',
-                    'level': 'DEBUG',
-                    'formatter': 'plain',
-                },
+            "handlers": {
+                "default": {
+                    "class": "logging.StreamHandler",
+                    "level": "DEBUG",
+                    "formatter": "plain",
+                }
             },
-            'loggers': {
-                '': {
-                    'handlers': ['default'],
-                    'propagate': True,
-                },
-            },
-        },
+            "loggers": {"": {"handlers": ["default"], "propagate": True}},
+        }
     )
     structlog.configure(
-        processors=processors + [
-            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-        ],
+        processors=processors + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
@@ -87,10 +80,10 @@ def _trimmed_logging(logger_level_config):
 def start_apiserver(raiden_app, rest_api_port_number):
     raiden_api = RaidenAPI(raiden_app.raiden)
     rest_api = RestAPI(raiden_api)
-    api_server = APIServer(rest_api, config={'host': 'localhost', 'port': rest_api_port_number})
+    api_server = APIServer(rest_api, config={"host": "localhost", "port": rest_api_port_number})
 
     # required for url_for
-    api_server.flask_app.config['SERVER_NAME'] = 'localhost:{}'.format(rest_api_port_number)
+    api_server.flask_app.config["SERVER_NAME"] = "localhost:{}".format(rest_api_port_number)
 
     api_server.start()
 
@@ -100,16 +93,13 @@ def start_apiserver(raiden_app, rest_api_port_number):
 
 
 def start_apiserver_for_network(raiden_network, port_generator):
-    return [
-        start_apiserver(app, next(port_generator))
-        for app in raiden_network
-    ]
+    return [start_apiserver(app, next(port_generator)) for app in raiden_network]
 
 
 def restart_app(app):
     host_port = (
-        app.raiden.config['transport']['udp']['host'],
-        app.raiden.config['transport']['udp']['port'],
+        app.raiden.config["transport"]["udp"]["host"],
+        app.raiden.config["transport"]["udp"]["port"],
     )
     socket = server._udp_socket(host_port)  # pylint: disable=protected-access
     new_transport = UDPTransport(
@@ -117,7 +107,7 @@ def restart_app(app):
         app.discovery,
         socket,
         app.raiden.transport.throttle_policy,
-        app.raiden.config['transport']['udp'],
+        app.raiden.config["transport"]["udp"],
     )
     app = App(
         config=app.config,
@@ -141,25 +131,15 @@ def restart_network(raiden_network, retry_timeout):
     for app in raiden_network:
         app.stop()
 
-    wait_network = [
-        gevent.spawn(restart_app, app)
-        for app in raiden_network
-    ]
+    wait_network = [gevent.spawn(restart_app, app) for app in raiden_network]
 
     gevent.wait(wait_network)
 
-    new_network = [
-        greenlet.get()
-        for greenlet in wait_network
-    ]
+    new_network = [greenlet.get() for greenlet in wait_network]
 
     # The tests assume the nodes are available to transfer
     for app0, app1 in combinations(new_network, 2):
-        waiting.wait_for_healthy(
-            app0.raiden,
-            app1.raiden.address,
-            retry_timeout,
-        )
+        waiting.wait_for_healthy(app0.raiden, app1.raiden.address, retry_timeout)
 
     return new_network
 
@@ -182,31 +162,27 @@ def address_from_apiserver(apiserver):
 def transfer_and_assert(server_from, server_to, token_address, identifier, amount):
     url = _url_for(
         server_from,
-        'token_target_paymentresource',
+        "token_target_paymentresource",
         token_address=to_checksum_address(token_address),
         target_address=to_checksum_address(address_from_apiserver(server_to)),
     )
-    json = {'amount': amount, 'identifier': identifier}
+    json = {"amount": amount, "identifier": identifier}
 
-    log.debug('PAYMENT REQUEST', url=url, json=json)
+    log.debug("PAYMENT REQUEST", url=url, json=json)
 
     request = grequests.post(url, json=json)
     response = request.send().response
 
     assert (
-        getattr(request, 'exception', None) is None and
-        response is not None and
-        response.status_code == HTTPStatus.OK and
-        response.headers['Content-Type'] == 'application/json'
+        getattr(request, "exception", None) is None
+        and response is not None
+        and response.status_code == HTTPStatus.OK
+        and response.headers["Content-Type"] == "application/json"
     )
 
 
 def sequential_transfers(
-        server_from,
-        server_to,
-        number_of_transfers,
-        token_address,
-        identifier_generator,
+    server_from, server_to, number_of_transfers, token_address, identifier_generator
 ):
     for _ in range(number_of_transfers):
         transfer_and_assert(
@@ -261,50 +237,53 @@ def stress_send_parallel_transfers(rest_apis, token_address, identifier_generato
     pairs = list(zip(rest_apis, rest_apis[1:] + [rest_apis[0]]))
 
     # deplete the channels in one direction
-    gevent.wait([
-        gevent.spawn(
-            sequential_transfers,
-            server_from=server_from,
-            server_to=server_to,
-            number_of_transfers=deposit,
-            token_address=token_address,
-            identifier_generator=identifier_generator,
-        )
-        for server_from, server_to in pairs
-    ])
+    gevent.wait(
+        [
+            gevent.spawn(
+                sequential_transfers,
+                server_from=server_from,
+                server_to=server_to,
+                number_of_transfers=deposit,
+                token_address=token_address,
+                identifier_generator=identifier_generator,
+            )
+            for server_from, server_to in pairs
+        ]
+    )
 
     # deplete the channels in the backwards direction
-    gevent.wait([
-        gevent.spawn(
-            sequential_transfers,
-            server_from=server_from,
-            server_to=server_to,
-            number_of_transfers=deposit * 2,
-            token_address=token_address,
-            identifier_generator=identifier_generator,
-        )
-        for server_to, server_from in pairs
-    ])
+    gevent.wait(
+        [
+            gevent.spawn(
+                sequential_transfers,
+                server_from=server_from,
+                server_to=server_to,
+                number_of_transfers=deposit * 2,
+                token_address=token_address,
+                identifier_generator=identifier_generator,
+            )
+            for server_to, server_from in pairs
+        ]
+    )
 
     # reset the balances balances by sending the "extra" deposit forward
-    gevent.wait([
-        gevent.spawn(
-            sequential_transfers,
-            server_from=server_from,
-            server_to=server_to,
-            number_of_transfers=deposit,
-            token_address=token_address,
-            identifier_generator=identifier_generator,
-        )
-        for server_from, server_to in pairs
-    ])
+    gevent.wait(
+        [
+            gevent.spawn(
+                sequential_transfers,
+                server_from=server_from,
+                server_to=server_to,
+                number_of_transfers=deposit,
+                token_address=token_address,
+                identifier_generator=identifier_generator,
+            )
+            for server_from, server_to in pairs
+        ]
+    )
 
 
 def stress_send_and_receive_parallel_transfers(
-        rest_apis,
-        token_address,
-        identifier_generator,
-        deposit,
+    rest_apis, token_address, identifier_generator, deposit
 ):
     """Send transfers of value one in parallel"""
     pairs = list(zip(rest_apis, rest_apis[1:] + [rest_apis[0]]))
@@ -343,32 +322,34 @@ def assert_channels(raiden_network, token_network_identifier, deposit):
         wait_assert(
             assert_synced_channel_state,
             token_network_identifier,
-            first, deposit, [],
-            second, deposit, [],
+            first,
+            deposit,
+            [],
+            second,
+            deposit,
+            [],
         )
 
 
-@pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('number_of_tokens', [1])
-@pytest.mark.parametrize('channels_per_node', [2])
-@pytest.mark.parametrize('deposit', [5])
-@pytest.mark.parametrize('reveal_timeout', [15])
-@pytest.mark.parametrize('settle_timeout', [120])
+@pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.parametrize("channels_per_node", [2])
+@pytest.mark.parametrize("deposit", [5])
+@pytest.mark.parametrize("reveal_timeout", [15])
+@pytest.mark.parametrize("settle_timeout", [120])
 def test_stress(
-        request,
-        raiden_network,
-        deposit,
-        retry_timeout,
-        token_addresses,
-        port_generator,
-        skip_if_not_udp,  # pylint: disable=unused-argument
+    request,
+    raiden_network,
+    deposit,
+    retry_timeout,
+    token_addresses,
+    port_generator,
+    skip_if_not_udp,  # pylint: disable=unused-argument
 ):
 
     config_converter = LogLevelConfigType()
     logging_levels = config_converter.convert(
-        value=request.config.option.log_config or '',
-        param=None,
-        ctx=None,
+        value=request.config.option.log_config or "", param=None, ctx=None
     )
     _trimmed_logging(logging_levels)
 
@@ -383,64 +364,30 @@ def test_stress(
     )
 
     for _ in range(2):
-        assert_channels(
-            raiden_network,
-            token_network_identifier,
-            deposit,
-        )
+        assert_channels(raiden_network, token_network_identifier, deposit)
 
-        stress_send_serial_transfers(
-            rest_apis,
-            token_address,
-            identifier_generator,
-            deposit,
-        )
+        stress_send_serial_transfers(rest_apis, token_address, identifier_generator, deposit)
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network,
-            rest_apis,
-            port_generator,
-            retry_timeout,
+            raiden_network, rest_apis, port_generator, retry_timeout
         )
 
-        assert_channels(
-            raiden_network,
-            token_network_identifier,
-            deposit,
-        )
+        assert_channels(raiden_network, token_network_identifier, deposit)
 
-        stress_send_parallel_transfers(
-            rest_apis,
-            token_address,
-            identifier_generator,
-            deposit,
-        )
+        stress_send_parallel_transfers(rest_apis, token_address, identifier_generator, deposit)
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network,
-            rest_apis,
-            port_generator,
-            retry_timeout,
+            raiden_network, rest_apis, port_generator, retry_timeout
         )
 
-        assert_channels(
-            raiden_network,
-            token_network_identifier,
-            deposit,
-        )
+        assert_channels(raiden_network, token_network_identifier, deposit)
 
         stress_send_and_receive_parallel_transfers(
-            rest_apis,
-            token_address,
-            identifier_generator,
-            deposit,
+            rest_apis, token_address, identifier_generator, deposit
         )
 
         raiden_network, rest_apis = restart_network_and_apiservers(
-            raiden_network,
-            rest_apis,
-            port_generator,
-            retry_timeout,
+            raiden_network, rest_apis, port_generator, retry_timeout
         )
 
     restart_network(raiden_network, retry_timeout)

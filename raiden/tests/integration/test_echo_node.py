@@ -13,16 +13,13 @@ from raiden.utils import random_secret, sha3, wait_until
 from raiden.utils.echo_node import EchoNode
 
 
-@pytest.mark.parametrize('number_of_nodes', [4])
-@pytest.mark.parametrize('number_of_tokens', [1])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('reveal_timeout', [15])
-@pytest.mark.parametrize('settle_timeout', [120])
-@pytest.mark.skip('Issue: 3750')
-def test_event_transfer_received_success(
-        token_addresses,
-        raiden_chain,
-):
+@pytest.mark.parametrize("number_of_nodes", [4])
+@pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("reveal_timeout", [15])
+@pytest.mark.parametrize("settle_timeout", [120])
+@pytest.mark.skip("Issue: 3750")
+def test_event_transfer_received_success(token_addresses, raiden_chain):
     raise_on_failure(
         raiden_chain,
         run_test_event_transfer_received_success,
@@ -31,10 +28,7 @@ def test_event_transfer_received_success(
     )
 
 
-def run_test_event_transfer_received_success(
-        token_addresses,
-        raiden_chain,
-):
+def run_test_event_transfer_received_success(token_addresses, raiden_chain):
     sender_apps = raiden_chain[:-1]
     target_app = raiden_chain[-1]
 
@@ -49,10 +43,7 @@ def run_test_event_transfer_received_success(
     for amount, app in enumerate(sender_apps, 1):
         secret = random_secret()
 
-        wait = message_handler.wait_for_message(
-            Unlock,
-            {'secret': secret},
-        )
+        wait = message_handler.wait_for_message(Unlock, {"secret": secret})
         wait_for.append((wait, app.raiden.address, amount))
 
         RaidenAPI(app.raiden).transfer_async(
@@ -71,21 +62,21 @@ def run_test_event_transfer_received_success(
             target_app.raiden.wal.storage.get_events(),
             EventPaymentReceivedSuccess,
             {
-                'amount': amount,
-                'identifier': amount,
-                'initiator': sender,
-                'payment_network_identifier': registry_address,
+                "amount": amount,
+                "identifier": amount,
+                "initiator": sender,
+                "payment_network_identifier": registry_address,
                 # 'token_network_identifier': ,
             },
         )
 
 
-@pytest.mark.parametrize('number_of_nodes', [4])
-@pytest.mark.parametrize('number_of_tokens', [1])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('reveal_timeout', [15])
-@pytest.mark.parametrize('settle_timeout', [120])
-@pytest.mark.skip('Issue: 3750')
+@pytest.mark.parametrize("number_of_nodes", [4])
+@pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("reveal_timeout", [15])
+@pytest.mark.parametrize("settle_timeout", [120])
+@pytest.mark.skip("Issue: 3750")
 def test_echo_node_response(token_addresses, raiden_chain, network_wait):
     raise_on_failure(
         raiden_chain,
@@ -121,13 +112,13 @@ def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
         expected.append(amount)
 
     while echo_node.num_handled_transfers < len(expected):
-        gevent.sleep(.5)
+        gevent.sleep(0.5)
 
     # Check that all transfers were handled correctly
     def test_events(handled_transfer):
         app = address_to_app[handled_transfer.initiator]
         events = RaidenAPI(app.raiden).get_raiden_events_payment_history(
-            token_address=token_address,
+            token_address=token_address
         )
 
         received = {
@@ -141,8 +132,8 @@ def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
         transfer = received.popitem()[1]
 
         is_not_valid = (
-            transfer.initiator != echo_app.raiden.address or
-            transfer.identifier != handled_transfer.identifier + transfer.amount
+            transfer.initiator != echo_app.raiden.address
+            or transfer.identifier != handled_transfer.identifier + transfer.amount
         )
 
         if is_not_valid:
@@ -155,12 +146,12 @@ def run_test_echo_node_response(token_addresses, raiden_chain, network_wait):
     echo_node.stop()
 
 
-@pytest.mark.parametrize('number_of_nodes', [8])
-@pytest.mark.parametrize('number_of_tokens', [1])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('reveal_timeout', [15])
-@pytest.mark.parametrize('settle_timeout', [120])
-@pytest.mark.skip('Issue: 3750')
+@pytest.mark.parametrize("number_of_nodes", [8])
+@pytest.mark.parametrize("number_of_tokens", [1])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("reveal_timeout", [15])
+@pytest.mark.parametrize("settle_timeout", [120])
+@pytest.mark.skip("Issue: 3750")
 def test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
     raise_on_failure(
         raiden_chain,
@@ -197,57 +188,65 @@ def run_test_echo_node_lottery(token_addresses, raiden_chain, network_wait):
         expected.append(amount)
 
     # test duplicated identifier + amount is ignored
-    payment_status = RaidenAPI(app5.raiden).transfer_async(
-        app.raiden.default_registry.address,
-        token_address,
-        amount,  # same amount as before
-        echo_app.raiden.address,
-        10 ** 6,  # app5 used this identifier before
-    ).payment_done.wait(timeout=20)
+    payment_status = (
+        RaidenAPI(app5.raiden)
+        .transfer_async(
+            app.raiden.default_registry.address,
+            token_address,
+            amount,  # same amount as before
+            echo_app.raiden.address,
+            10 ** 6,  # app5 used this identifier before
+        )
+        .payment_done.wait(timeout=20)
+    )
 
     # test pool size querying
     pool_query_identifier = 77  # unused identifier different from previous one
-    payment_status = RaidenAPI(app5.raiden).transfer_async(
-        app.raiden.default_registry.address,
-        token_address,
-        amount,
-        echo_app.raiden.address,
-        pool_query_identifier,
-    ).payment_done.wait(timeout=20)
+    payment_status = (
+        RaidenAPI(app5.raiden)
+        .transfer_async(
+            app.raiden.default_registry.address,
+            token_address,
+            amount,
+            echo_app.raiden.address,
+            pool_query_identifier,
+        )
+        .payment_done.wait(timeout=20)
+    )
     expected.append(amount)
 
     # fill the pool
-    payment_status = RaidenAPI(app6.raiden).transfer_async(
-        app.raiden.default_registry.address,
-        token_address,
-        amount,
-        echo_app.raiden.address,
-        10 ** 7,
-    ).payment_done.wait(timeout=20)
+    payment_status = (
+        RaidenAPI(app6.raiden)
+        .transfer_async(
+            app.raiden.default_registry.address,
+            token_address,
+            amount,
+            echo_app.raiden.address,
+            10 ** 7,
+        )
+        .payment_done.wait(timeout=20)
+    )
     expected.append(amount)
 
     while echo_node.num_handled_transfers < len(expected):
-        gevent.sleep(.5)
+        gevent.sleep(0.5)
 
     def get_echoed_transfer(sent_transfer):
         """For a given transfer sent to echo node, get the corresponding echoed transfer"""
         app = address_to_app[sent_transfer.initiator]
         events = RaidenAPI(app.raiden).get_raiden_events_payment_history(
-            token_address=token_address,
+            token_address=token_address
         )
 
         def is_valid(event):
             return (
-                type(event) == EventPaymentReceivedSuccess and
-                event.initiator == echo_app.raiden.address and
-                event.identifier == sent_transfer.identifier + event.amount
+                type(event) == EventPaymentReceivedSuccess
+                and event.initiator == echo_app.raiden.address
+                and event.identifier == sent_transfer.identifier + event.amount
             )
 
-        received = {
-            event.identifier: event
-            for event in events
-            if is_valid(event)
-        }
+        received = {event.identifier: event for event in events if is_valid(event)}
 
         if len(received) != 1:
             return None

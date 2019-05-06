@@ -27,15 +27,15 @@ class HexAddressConverter(BaseConverter):
     @staticmethod
     def to_python(value):
         if not is_0x_prefixed(value):
-            raise InvalidEndpoint('Not a valid hex address, 0x prefix missing.')
+            raise InvalidEndpoint("Not a valid hex address, 0x prefix missing.")
 
         if not is_checksum_address(value):
-            raise InvalidEndpoint('Not a valid EIP55 encoded address.')
+            raise InvalidEndpoint("Not a valid EIP55 encoded address.")
 
         try:
             value = to_canonical_address(value)
         except ValueError:
-            raise InvalidEndpoint('Could not decode hex.')
+            raise InvalidEndpoint("Could not decode hex.")
 
         return value
 
@@ -46,10 +46,10 @@ class HexAddressConverter(BaseConverter):
 
 class AddressField(fields.Field):
     default_error_messages = {
-        'missing_prefix': 'Not a valid hex encoded address, must be 0x prefixed.',
-        'invalid_checksum': 'Not a valid EIP55 encoded address',
-        'invalid_data': 'Not a valid hex encoded address, contains invalid characters.',
-        'invalid_size': 'Not a valid hex encoded address, decoded address is not 20 bytes long.',
+        "missing_prefix": "Not a valid hex encoded address, must be 0x prefixed.",
+        "invalid_checksum": "Not a valid EIP55 encoded address",
+        "invalid_data": "Not a valid hex encoded address, contains invalid characters.",
+        "invalid_size": "Not a valid hex encoded address, decoded address is not 20 bytes long.",
     }
 
     @staticmethod
@@ -58,18 +58,18 @@ class AddressField(fields.Field):
 
     def _deserialize(self, value, attr, data):  # pylint: disable=unused-argument
         if not is_0x_prefixed(value):
-            self.fail('missing_prefix')
+            self.fail("missing_prefix")
 
         if not is_checksum_address(value):
-            self.fail('invalid_checksum')
+            self.fail("invalid_checksum")
 
         try:
             value = to_canonical_address(value)
         except ValueError:
-            self.fail('invalid_data')
+            self.fail("invalid_data")
 
         if len(value) != 20:
-            self.fail('invalid_size')
+            self.fail("invalid_size")
 
         return value
 
@@ -91,7 +91,7 @@ class BaseOpts(SchemaOpts):
 
     def __init__(self, meta):
         SchemaOpts.__init__(self, meta)
-        self.decoding_class = getattr(meta, 'decoding_class', None)
+        self.decoding_class = getattr(meta, "decoding_class", None)
 
 
 class BaseSchema(Schema):
@@ -118,12 +118,12 @@ class BaseListSchema(Schema):
 
     @post_dump
     def unwrap_data_envelope(self, data):  # pylint: disable=no-self-use
-        return data['data']
+        return data["data"]
 
     @post_load
     def make_object(self, data):
         decoding_class = self.opts.decoding_class  # pylint: disable=no-member
-        list_ = data['data']
+        list_ = data["data"]
         return decoding_class(list_)
 
 
@@ -181,15 +181,15 @@ class PartnersPerTokenListSchema(BaseListSchema):
 
 
 class ChannelStateSchema(BaseSchema):
-    channel_identifier = fields.Integer(attribute='identifier')
+    channel_identifier = fields.Integer(attribute="identifier")
     token_network_identifier = AddressField()
     token_address = AddressField()
-    partner_address = fields.Method('get_partner_address')
+    partner_address = fields.Method("get_partner_address")
     settle_timeout = fields.Integer()
     reveal_timeout = fields.Integer()
-    balance = fields.Method('get_balance')
-    state = fields.Method('get_state')
-    total_deposit = fields.Method('get_total_deposit')
+    balance = fields.Method("get_balance")
+    state = fields.Method("get_state")
+    total_deposit = fields.Method("get_total_deposit")
 
     @staticmethod
     def get_partner_address(channel_state):
@@ -197,10 +197,7 @@ class ChannelStateSchema(BaseSchema):
 
     @staticmethod
     def get_balance(channel_state):
-        return channel.get_distributable(
-            channel_state.our_state,
-            channel_state.partner_state,
-        )
+        return channel.get_distributable(channel_state.our_state, channel_state.partner_state)
 
     @staticmethod
     def get_state(channel_state):
@@ -233,11 +230,9 @@ class ChannelPatchSchema(BaseSchema):
     state = fields.String(
         default=None,
         missing=None,
-        validate=validate.OneOf([
-            CHANNEL_STATE_CLOSED,
-            CHANNEL_STATE_OPENED,
-            CHANNEL_STATE_SETTLED,
-        ]),
+        validate=validate.OneOf(
+            [CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED, CHANNEL_STATE_SETTLED]
+        ),
     )
 
     class Meta:
@@ -262,9 +257,7 @@ class PaymentSchema(BaseSchema):
 
 class ConnectionsConnectSchema(BaseSchema):
     funds = fields.Integer(required=True)
-    initial_channel_target = fields.Integer(
-        missing=DEFAULT_INITIAL_CHANNEL_TARGET,
-    )
+    initial_channel_target = fields.Integer(missing=DEFAULT_INITIAL_CHANNEL_TARGET)
     joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET)
 
     class Meta:
@@ -281,13 +274,13 @@ class ConnectionsLeaveSchema(BaseSchema):
 class EventPaymentSentFailedSchema(BaseSchema):
     block_number = fields.Integer()
     identifier = fields.Integer()
-    event = fields.Constant('EventPaymentSentFailed')
+    event = fields.Constant("EventPaymentSentFailed")
     reason = fields.Str()
     target = AddressField()
     log_time = fields.String()
 
     class Meta:
-        fields = ('block_number', 'event', 'reason', 'target', 'log_time')
+        fields = ("block_number", "event", "reason", "target", "log_time")
         strict = True
         decoding_class = dict
 
@@ -295,13 +288,13 @@ class EventPaymentSentFailedSchema(BaseSchema):
 class EventPaymentSentSuccessSchema(BaseSchema):
     block_number = fields.Integer()
     identifier = fields.Integer()
-    event = fields.Constant('EventPaymentSentSuccess')
+    event = fields.Constant("EventPaymentSentSuccess")
     amount = fields.Integer()
     target = AddressField()
     log_time = fields.String()
 
     class Meta:
-        fields = ('block_number', 'event', 'amount', 'target', 'identifier', 'log_time')
+        fields = ("block_number", "event", "amount", "target", "identifier", "log_time")
         strict = True
         decoding_class = dict
 
@@ -309,12 +302,12 @@ class EventPaymentSentSuccessSchema(BaseSchema):
 class EventPaymentReceivedSuccessSchema(BaseSchema):
     block_number = fields.Integer()
     identifier = fields.Integer()
-    event = fields.Constant('EventPaymentReceivedSuccess')
+    event = fields.Constant("EventPaymentReceivedSuccess")
     amount = fields.Integer()
     initiator = AddressField()
     log_time = fields.String()
 
     class Meta:
-        fields = ('block_number', 'event', 'amount', 'initiator', 'identifier', 'log_time')
+        fields = ("block_number", "event", "amount", "initiator", "identifier", "log_time")
         strict = True
         decoding_class = dict

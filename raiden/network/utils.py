@@ -12,11 +12,12 @@ from requests import RequestException
 
 from raiden.utils.typing import Iterable, Optional, Port
 
-LOOPBACK = '127.0.0.1'
+LOOPBACK = "127.0.0.1"
 
 # The solution based on psutils does not work on MacOS because it needs
 # root access
-if sys.platform == 'darwin':
+if sys.platform == "darwin":
+
     def _unused_ports(initial_port: Optional[int]) -> Iterable[Port]:
         socket_kind: SocketKind = SocketKind.SOCK_STREAM
 
@@ -54,7 +55,10 @@ if sys.platform == 'darwin':
                     sock.accept()
 
             yield Port(port)
+
+
 else:
+
     def _unused_ports(initial_port: Optional[int]) -> Iterable[Port]:
         initial_port = initial_port or 27854
 
@@ -62,9 +66,7 @@ else:
             connect_using_port = (
                 conn
                 for conn in psutil.net_connections()
-                if hasattr(conn, 'laddr') and
-                conn.laddr[0] == LOOPBACK and
-                conn.laddr[1] == port
+                if hasattr(conn, "laddr") and conn.laddr[0] == LOOPBACK and conn.laddr[1] == port
             )
 
             if not any(connect_using_port):
@@ -83,10 +85,7 @@ def get_free_port(initial_port: Optional[int] = None) -> Iterable[Port]:
 
 
 def get_http_rtt(
-        url: str,
-        samples: int = 3,
-        method: str = 'head',
-        timeout: int = 1,
+    url: str, samples: int = 3, method: str = "head", timeout: int = 1
 ) -> Optional[float]:
     """
     Determine the average HTTP RTT to `url` over the number of `samples`.
@@ -96,7 +95,7 @@ def get_http_rtt(
     for _ in range(samples):
         try:
             durations.append(
-                requests.request(method, url, timeout=timeout).elapsed.total_seconds(),
+                requests.request(method, url, timeout=timeout).elapsed.total_seconds()
             )
         except (RequestException, OSError):
             return None
@@ -104,5 +103,5 @@ def get_http_rtt(
             print(ex)
             return None
         # Slight delay to avoid overloading
-        sleep(.125)
+        sleep(0.125)
     return sum(durations) / samples

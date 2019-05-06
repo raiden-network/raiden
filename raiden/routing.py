@@ -25,18 +25,18 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def get_best_routes(
-        chain_state: ChainState,
-        token_network_id: TokenNetworkID,
-        from_address: InitiatorAddress,
-        to_address: TargetAddress,
-        amount: PaymentAmount,
-        previous_address: Optional[Address],
-        config: Dict[str, Any],
-        privkey: bytes,
+    chain_state: ChainState,
+    token_network_id: TokenNetworkID,
+    from_address: InitiatorAddress,
+    to_address: TargetAddress,
+    amount: PaymentAmount,
+    previous_address: Optional[Address],
+    config: Dict[str, Any],
+    privkey: bytes,
 ) -> List[RouteState]:
-    services_config = config.get('services', None)
+    services_config = config.get("services", None)
 
-    if services_config and services_config['pathfinding_service_address'] is not None:
+    if services_config and services_config["pathfinding_service_address"] is not None:
         pfs_answer_ok, pfs_routes = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_id=token_network_id,
@@ -49,15 +49,12 @@ def get_best_routes(
         )
 
         if pfs_answer_ok:
-            log.info(
-                'Received route(s) from PFS',
-                routes=pfs_routes,
-            )
+            log.info("Received route(s) from PFS", routes=pfs_routes)
             return pfs_routes
         else:
             log.warning(
-                'Request to Pathfinding Service was not successful, '
-                'falling back to internal routing.',
+                "Request to Pathfinding Service was not successful, "
+                "falling back to internal routing."
             )
 
     return get_best_routes_internal(
@@ -78,12 +75,12 @@ class Neighbour(NamedTuple):
 
 
 def get_best_routes_internal(
-        chain_state: ChainState,
-        token_network_id: TokenNetworkID,
-        from_address: InitiatorAddress,
-        to_address: TargetAddress,
-        amount: int,
-        previous_address: Optional[Address],
+    chain_state: ChainState,
+    token_network_id: TokenNetworkID,
+    from_address: InitiatorAddress,
+    to_address: TargetAddress,
+    amount: int,
+    previous_address: Optional[Address],
 ) -> List[RouteState]:
     """ Returns a list of channels that can be used to make a transfer.
 
@@ -96,10 +93,7 @@ def get_best_routes_internal(
 
     available_routes = list()
 
-    token_network = views.get_token_network_by_identifier(
-        chain_state,
-        token_network_id,
-    )
+    token_network = views.get_token_network_by_identifier(chain_state, token_network_id)
 
     if not token_network:
         return list()
@@ -118,9 +112,7 @@ def get_best_routes_internal(
             continue
 
         channel_state = views.get_channelstate_by_token_network_and_partner(
-            chain_state,
-            token_network_id,
-            partner_address,
+            chain_state, token_network_id, partner_address
         )
 
         if not channel_state:
@@ -128,23 +120,20 @@ def get_best_routes_internal(
 
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(
-                'Channel is not opened, ignoring',
+                "Channel is not opened, ignoring",
                 from_address=pex(from_address),
                 partner_address=pex(partner_address),
-                routing_source='Internal Routing',
+                routing_source="Internal Routing",
             )
             continue
 
         nonrefundable = amount > channel.get_distributable(
-            channel_state.partner_state,
-            channel_state.our_state,
+            channel_state.partner_state, channel_state.our_state
         )
 
         try:
             length = networkx.shortest_path_length(
-                token_network.network_graph.network,
-                partner_address,
-                to_address,
+                token_network.network_graph.network, partner_address, to_address
             )
             neighbour = Neighbour(
                 length=length,
@@ -158,31 +147,28 @@ def get_best_routes_internal(
 
     if not neighbors_heap:
         log.warning(
-            'No routes available',
-            from_address=pex(from_address),
-            to_address=pex(to_address),
+            "No routes available", from_address=pex(from_address), to_address=pex(to_address)
         )
         return list()
 
     while neighbors_heap:
         neighbour = heappop(neighbors_heap)
         route_state = RouteState(
-            node_address=neighbour.partner_address,
-            channel_identifier=neighbour.channelid,
+            node_address=neighbour.partner_address, channel_identifier=neighbour.channelid
         )
         available_routes.append(route_state)
     return available_routes
 
 
 def get_best_routes_pfs(
-        chain_state: ChainState,
-        token_network_id: TokenNetworkID,
-        from_address: InitiatorAddress,
-        to_address: TargetAddress,
-        amount: PaymentAmount,
-        previous_address: Optional[Address],
-        config: Dict[str, Any],
-        privkey: bytes,
+    chain_state: ChainState,
+    token_network_id: TokenNetworkID,
+    from_address: InitiatorAddress,
+    to_address: TargetAddress,
+    amount: PaymentAmount,
+    previous_address: Optional[Address],
+    config: Dict[str, Any],
+    privkey: bytes,
 ) -> Tuple[bool, List[RouteState]]:
 
     try:
@@ -204,7 +190,7 @@ def get_best_routes_pfs(
 
     paths = []
     for path_object in result:
-        path = path_object['path']
+        path = path_object["path"]
 
         # get the second entry, as the first one is the node itself
         # also needs to be converted to canonical representation
@@ -226,18 +212,15 @@ def get_best_routes_pfs(
         # check channel state
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(
-                'Channel is not opened, ignoring',
+                "Channel is not opened, ignoring",
                 from_address=pex(from_address),
                 partner_address=pex(partner_address),
-                routing_source='Pathfinding Service',
+                routing_source="Pathfinding Service",
             )
             continue
 
         paths.append(
-            RouteState(
-                node_address=partner_address,
-                channel_identifier=channel_state.identifier,
-            ),
+            RouteState(node_address=partner_address, channel_identifier=channel_state.identifier)
         )
 
     return True, paths

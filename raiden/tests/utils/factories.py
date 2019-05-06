@@ -39,8 +39,8 @@ from raiden.transfer.utils import hash_balance_data
 from raiden.utils import privatekey_to_address, random_secret, sha3, typing
 from raiden.utils.signer import LocalSigner, Signer
 
-EMPTY = 'empty'
-GENERATE = 'generate'
+EMPTY = "empty"
+GENERATE = "generate"
 
 
 def _partial_dict(full_dict: Dict, *args) -> Dict:
@@ -49,14 +49,15 @@ def _partial_dict(full_dict: Dict, *args) -> Dict:
 
 class Properties:
     """ Base class for all properties classes. """
-    DEFAULTS: ClassVar['Properties'] = None
+
+    DEFAULTS: ClassVar["Properties"] = None
     TARGET_TYPE: ClassVar[Type] = None
 
     @property
     def kwargs(self):
         return {key: value for key, value in self.__dict__.items() if value is not EMPTY}
 
-    def extract(self, subset_type: Type) -> 'Properties':
+    def extract(self, subset_type: Type) -> "Properties":
         field_names = [field.name for field in fields(subset_type)]
         return subset_type(**_partial_dict(self.__dict__, *field_names))
 
@@ -112,7 +113,7 @@ def make_message_identifier() -> typing.MessageID:
 
 
 def make_20bytes() -> bytes:
-    return bytes(''.join(random.choice(string.printable) for _ in range(20)), encoding='utf-8')
+    return bytes("".join(random.choice(string.printable) for _ in range(20)), encoding="utf-8")
 
 
 def make_address() -> typing.Address:
@@ -124,7 +125,7 @@ def make_checksum_address() -> str:
 
 
 def make_32bytes() -> bytes:
-    return bytes(''.join(random.choice(string.printable) for _ in range(32)), encoding='utf-8')
+    return bytes("".join(random.choice(string.printable) for _ in range(32)), encoding="utf-8")
 
 
 def make_transaction_hash() -> typing.TransactionHash:
@@ -149,7 +150,7 @@ def make_keccak_hash() -> typing.Keccak256:
 
 def make_secret(i: int = EMPTY) -> bytes:
     if i is not EMPTY:
-        return format(i, '>032').encode()
+        return format(i, ">032").encode()
     else:
         return make_32bytes()
 
@@ -158,9 +159,7 @@ def make_privatekey(privatekey_bin: bytes = EMPTY) -> bytes:
     return if_empty(privatekey_bin, make_privatekey_bin())
 
 
-def make_privatekey_address(
-        privatekey: bytes = EMPTY,
-) -> Tuple[bytes, typing.Address]:
+def make_privatekey_address(privatekey: bytes = EMPTY,) -> Tuple[bytes, typing.Address]:
     privatekey = if_empty(privatekey, make_privatekey())
     address = privatekey_to_address(privatekey)
     return privatekey, address
@@ -177,8 +176,7 @@ def make_route_from_channel(channel_state: NettingChannelState = EMPTY) -> Route
 
 
 def make_channel_endstate(
-        address: typing.Address = EMPTY,
-        balance: typing.Balance = EMPTY,
+    address: typing.Address = EMPTY, balance: typing.Balance = EMPTY
 ) -> NettingChannelEndState:
     address = if_empty(address, make_address())
     balance = if_empty(balance, 0)
@@ -186,16 +184,16 @@ def make_channel_endstate(
 
 
 def make_channel_state(
-        our_balance: typing.Balance = EMPTY,
-        partner_balance: typing.Balance = EMPTY,
-        our_address: typing.Address = EMPTY,
-        partner_address: typing.Address = EMPTY,
-        token_address: typing.TokenAddress = EMPTY,
-        payment_network_identifier: typing.PaymentNetworkID = EMPTY,
-        token_network_identifier: typing.TokenNetworkID = EMPTY,
-        channel_identifier: typing.ChannelID = EMPTY,
-        reveal_timeout: typing.BlockTimeout = EMPTY,
-        settle_timeout: int = EMPTY,
+    our_balance: typing.Balance = EMPTY,
+    partner_balance: typing.Balance = EMPTY,
+    our_address: typing.Address = EMPTY,
+    partner_address: typing.Address = EMPTY,
+    token_address: typing.TokenAddress = EMPTY,
+    payment_network_identifier: typing.PaymentNetworkID = EMPTY,
+    token_network_identifier: typing.TokenNetworkID = EMPTY,
+    channel_identifier: typing.ChannelID = EMPTY,
+    reveal_timeout: typing.BlockTimeout = EMPTY,
+    settle_timeout: int = EMPTY,
 ) -> NettingChannelState:
 
     our_balance = if_empty(our_balance, 0)
@@ -204,8 +202,7 @@ def make_channel_state(
     partner_address = if_empty(partner_address, make_address())
     token_address = if_empty(token_address, make_address())
     payment_network_identifier = if_empty(
-        payment_network_identifier,
-        make_payment_network_identifier(),
+        payment_network_identifier, make_payment_network_identifier()
     )
     token_network_identifier = if_empty(token_network_identifier, make_address())
     channel_identifier = if_empty(channel_identifier, make_channel_identifier())
@@ -215,14 +212,8 @@ def make_channel_state(
     opened_block_number = 10
     close_transaction: TransactionExecutionStatus = None
     settle_transaction: TransactionExecutionStatus = None
-    our_state = make_channel_endstate(
-        address=our_address,
-        balance=our_balance,
-    )
-    partner_state = make_channel_endstate(
-        address=partner_address,
-        balance=partner_balance,
-    )
+    our_state = make_channel_endstate(address=our_address, balance=our_balance)
+    partner_state = make_channel_endstate(address=partner_address, balance=partner_balance)
     open_transaction = TransactionExecutionStatus(
         started_block_number=None,
         finished_block_number=opened_block_number,
@@ -231,8 +222,7 @@ def make_channel_state(
 
     return NettingChannelState(
         canonical_identifier=make_canonical_identifier(
-            token_network_address=token_network_identifier,
-            channel_identifier=channel_identifier,
+            token_network_address=token_network_identifier, channel_identifier=channel_identifier
         ),
         token_address=token_address,
         payment_network_identifier=payment_network_identifier,
@@ -248,18 +238,17 @@ def make_channel_state(
 
 
 def make_transfer_description(
-        payment_network_identifier: typing.PaymentNetworkID = EMPTY,
-        payment_identifier: typing.PaymentID = EMPTY,
-        amount: typing.TokenAmount = EMPTY,
-        token_network: typing.TokenNetworkID = EMPTY,
-        initiator: typing.InitiatorAddress = EMPTY,
-        target: typing.TargetAddress = EMPTY,
-        secret: typing.Secret = EMPTY,
-        allocated_fee: typing.FeeAmount = EMPTY,
+    payment_network_identifier: typing.PaymentNetworkID = EMPTY,
+    payment_identifier: typing.PaymentID = EMPTY,
+    amount: typing.TokenAmount = EMPTY,
+    token_network: typing.TokenNetworkID = EMPTY,
+    initiator: typing.InitiatorAddress = EMPTY,
+    target: typing.TargetAddress = EMPTY,
+    secret: typing.Secret = EMPTY,
+    allocated_fee: typing.FeeAmount = EMPTY,
 ) -> TransferDescriptionWithSecretState:
     payment_network_identifier = if_empty(
-        payment_network_identifier,
-        UNIT_PAYMENT_NETWORK_IDENTIFIER,
+        payment_network_identifier, UNIT_PAYMENT_NETWORK_IDENTIFIER
     )
     payment_identifier = if_empty(payment_identifier, UNIT_TRANSFER_IDENTIFIER)
     amount = if_empty(amount, UNIT_TRANSFER_AMOUNT)
@@ -282,23 +271,23 @@ def make_transfer_description(
 
 
 def make_signed_transfer(
-        amount: typing.TokenAmount = EMPTY,
-        initiator: typing.InitiatorAddress = EMPTY,
-        target: typing.TargetAddress = EMPTY,
-        expiration: typing.BlockExpiration = EMPTY,
-        secret: typing.Secret = EMPTY,
-        payment_identifier: typing.PaymentID = EMPTY,
-        message_identifier: typing.MessageID = EMPTY,
-        nonce: typing.Nonce = EMPTY,
-        transferred_amount: typing.TokenAmount = EMPTY,
-        locked_amount: typing.TokenAmount = EMPTY,
-        locksroot: typing.Locksroot = EMPTY,
-        recipient: typing.Address = EMPTY,
-        channel_identifier: typing.ChannelID = EMPTY,
-        token_network_address: typing.TokenNetworkID = EMPTY,
-        token: typing.TargetAddress = EMPTY,
-        pkey: bytes = EMPTY,
-        sender: typing.Address = EMPTY,
+    amount: typing.TokenAmount = EMPTY,
+    initiator: typing.InitiatorAddress = EMPTY,
+    target: typing.TargetAddress = EMPTY,
+    expiration: typing.BlockExpiration = EMPTY,
+    secret: typing.Secret = EMPTY,
+    payment_identifier: typing.PaymentID = EMPTY,
+    message_identifier: typing.MessageID = EMPTY,
+    nonce: typing.Nonce = EMPTY,
+    transferred_amount: typing.TokenAmount = EMPTY,
+    locked_amount: typing.TokenAmount = EMPTY,
+    locksroot: typing.Locksroot = EMPTY,
+    recipient: typing.Address = EMPTY,
+    channel_identifier: typing.ChannelID = EMPTY,
+    token_network_address: typing.TokenNetworkID = EMPTY,
+    token: typing.TargetAddress = EMPTY,
+    pkey: bytes = EMPTY,
+    sender: typing.Address = EMPTY,
 ) -> LockedTransfer:
 
     amount = if_empty(amount, UNIT_TRANSFER_AMOUNT)
@@ -323,11 +312,7 @@ def make_signed_transfer(
     assert locked_amount >= amount
 
     secrethash = sha3(secret)
-    lock = Lock(
-        amount=amount,
-        expiration=expiration,
-        secrethash=secrethash,
-    )
+    lock = Lock(amount=amount, expiration=expiration, secrethash=secrethash)
 
     if locksroot == EMPTY_MERKLE_ROOT:
         locksroot = sha3(lock.as_bytes)
@@ -367,11 +352,11 @@ UNIT_SETTLE_TIMEOUT = 50
 UNIT_REVEAL_TIMEOUT = 5
 UNIT_TRANSFER_AMOUNT = 10
 UNIT_TRANSFER_FEE = 5
-UNIT_SECRET = b'secretsecretsecretsecretsecretse'
+UNIT_SECRET = b"secretsecretsecretsecretsecretse"
 UNIT_SECRETHASH = sha3(UNIT_SECRET)
-UNIT_REGISTRY_IDENTIFIER = b'registryregistryregi'
-UNIT_TOKEN_ADDRESS = b'tokentokentokentoken'
-UNIT_TOKEN_NETWORK_ADDRESS = b'networknetworknetwor'
+UNIT_REGISTRY_IDENTIFIER = b"registryregistryregi"
+UNIT_TOKEN_ADDRESS = b"tokentokentokentoken"
+UNIT_TOKEN_NETWORK_ADDRESS = b"networknetworknetwor"
 UNIT_CHANNEL_ID = 1338
 UNIT_CHAIN_ID = 337
 UNIT_CANONICAL_ID = CanonicalIdentifier(
@@ -379,26 +364,26 @@ UNIT_CANONICAL_ID = CanonicalIdentifier(
     token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
     channel_identifier=UNIT_CHANNEL_ID,
 )
-UNIT_PAYMENT_NETWORK_IDENTIFIER = b'paymentnetworkidentifier'
+UNIT_PAYMENT_NETWORK_IDENTIFIER = b"paymentnetworkidentifier"
 UNIT_TRANSFER_IDENTIFIER = 37
-UNIT_TRANSFER_INITIATOR = b'initiatorinitiatorin'
-UNIT_TRANSFER_TARGET = b'targettargettargetta'
-UNIT_TRANSFER_PKEY_BIN = sha3(b'transfer pkey')
+UNIT_TRANSFER_INITIATOR = b"initiatorinitiatorin"
+UNIT_TRANSFER_TARGET = b"targettargettargetta"
+UNIT_TRANSFER_PKEY_BIN = sha3(b"transfer pkey")
 UNIT_TRANSFER_PKEY = UNIT_TRANSFER_PKEY_BIN
-UNIT_TRANSFER_SENDER = privatekey_to_address(sha3(b'transfer pkey'))
-HOP1_KEY = b'11111111111111111111111111111111'
-HOP2_KEY = b'22222222222222222222222222222222'
-HOP3_KEY = b'33333333333333333333333333333333'
-HOP4_KEY = b'44444444444444444444444444444444'
-HOP5_KEY = b'55555555555555555555555555555555'
-HOP6_KEY = b'66666666666666666666666666666666'
+UNIT_TRANSFER_SENDER = privatekey_to_address(sha3(b"transfer pkey"))
+HOP1_KEY = b"11111111111111111111111111111111"
+HOP2_KEY = b"22222222222222222222222222222222"
+HOP3_KEY = b"33333333333333333333333333333333"
+HOP4_KEY = b"44444444444444444444444444444444"
+HOP5_KEY = b"55555555555555555555555555555555"
+HOP6_KEY = b"66666666666666666666666666666666"
 HOP1 = privatekey_to_address(HOP1_KEY)
 HOP2 = privatekey_to_address(HOP2_KEY)
 HOP3 = privatekey_to_address(HOP3_KEY)
 HOP4 = privatekey_to_address(HOP4_KEY)
 HOP5 = privatekey_to_address(HOP5_KEY)
 HOP6 = privatekey_to_address(HOP6_KEY)
-ADDR = b'addraddraddraddraddr'
+ADDR = b"addraddraddraddraddr"
 UNIT_TRANSFER_DESCRIPTION = make_transfer_description(secret=UNIT_SECRET)
 
 
@@ -416,9 +401,9 @@ RANDOM_FACTORIES = {
 
 
 def make_canonical_identifier(
-        chain_identifier=UNIT_CHAIN_ID,
-        token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
-        channel_identifier=None,
+    chain_identifier=UNIT_CHAIN_ID,
+    token_network_address=UNIT_TOKEN_NETWORK_ADDRESS,
+    channel_identifier=None,
 ) -> CanonicalIdentifier:
     return CanonicalIdentifier(
         chain_identifier=chain_identifier,
@@ -475,23 +460,17 @@ class NettingChannelEndStateProperties(Properties):
 
 
 NettingChannelEndStateProperties.DEFAULTS = NettingChannelEndStateProperties(
-    address=None,
-    privatekey=None,
-    balance=100,
-    merkletree_leaves=None,
-    merkletree_width=0,
+    address=None, privatekey=None, balance=100, merkletree_leaves=None, merkletree_width=0
 )
 
 
 @create.register(NettingChannelEndStateProperties)  # noqa: F811
 def _(properties, defaults=None) -> NettingChannelEndState:
     args = _properties_to_kwargs(properties, defaults or NettingChannelEndStateProperties.DEFAULTS)
-    state = NettingChannelEndState(args['address'] or make_address(), args['balance'])
+    state = NettingChannelEndState(args["address"] or make_address(), args["balance"])
 
     merkletree_leaves = (
-        args['merkletree_leaves'] or
-        make_merkletree_leaves(args['merkletree_width']) or
-        None
+        args["merkletree_leaves"] or make_merkletree_leaves(args["merkletree_width"]) or None
     )
     if merkletree_leaves:
         state.merkletree = MerkleTreeState(compute_layers(merkletree_leaves))
@@ -573,20 +552,20 @@ BalanceProofSignedStateProperties.DEFAULTS = BalanceProofSignedStateProperties(
 def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalanceProofSignedState:
     defaults = defaults or BalanceProofSignedStateProperties.DEFAULTS
     params = create_properties(properties, defaults).__dict__
-    signer = LocalSigner(params.pop('pkey'))
+    signer = LocalSigner(params.pop("pkey"))
 
-    if params['signature'] is GENERATE:
-        keys = ('transferred_amount', 'locked_amount', 'locksroot')
+    if params["signature"] is GENERATE:
+        keys = ("transferred_amount", "locked_amount", "locksroot")
         balance_hash = hash_balance_data(**_partial_dict(params, *keys))
 
         data_to_sign = balance_proof.pack_balance_proof(
             balance_hash=balance_hash,
-            additional_hash=params['message_hash'],
-            canonical_identifier=params['canonical_identifier'],
-            nonce=params.get('nonce'),
+            additional_hash=params["message_hash"],
+            canonical_identifier=params["canonical_identifier"],
+            nonce=params.get("nonce"),
         )
 
-        params['signature'] = signer.sign(data=data_to_sign)
+        params["signature"] = signer.sign(data=data_to_sign)
 
     return BalanceProofSignedState(**params)
 
@@ -609,7 +588,7 @@ class LockedTransferProperties(BalanceProofProperties):
 
 LockedTransferProperties.DEFAULTS = LockedTransferProperties(
     **create_properties(
-        BalanceProofProperties(locked_amount=UNIT_TRANSFER_AMOUNT, transferred_amount=0),
+        BalanceProofProperties(locked_amount=UNIT_TRANSFER_AMOUNT, transferred_amount=0)
     ).__dict__,
     amount=UNIT_TRANSFER_AMOUNT,
     expiration=UNIT_REVEAL_TIMEOUT,
@@ -625,9 +604,7 @@ LockedTransferProperties.DEFAULTS = LockedTransferProperties(
 def _(properties, defaults=None) -> LockedTransferUnsignedState:
     transfer: LockedTransferProperties = create_properties(properties, defaults)
     lock = HashTimeLockState(
-        amount=transfer.amount,
-        expiration=transfer.expiration,
-        secrethash=sha3(transfer.secret),
+        amount=transfer.amount, expiration=transfer.expiration, secrethash=sha3(transfer.secret)
     )
     if transfer.locksroot == EMPTY_MERKLE_ROOT:
         transfer = replace(transfer, locksroot=lock.lockhash)
@@ -635,7 +612,7 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
     return LockedTransferUnsignedState(
         balance_proof=create(transfer.balance_proof),
         lock=lock,
-        **transfer.partial_dict('initiator', 'target', 'payment_identifier', 'token'),
+        **transfer.partial_dict("initiator", "target", "payment_identifier", "token"),
     )
 
 
@@ -667,20 +644,18 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
     params = {key: value for key, value in transfer.__dict__.items()}
 
     lock = Lock(
-        amount=transfer.amount,
-        expiration=transfer.expiration,
-        secrethash=sha3(transfer.secret),
+        amount=transfer.amount, expiration=transfer.expiration, secrethash=sha3(transfer.secret)
     )
 
-    pkey = params.pop('pkey')
+    pkey = params.pop("pkey")
     signer = LocalSigner(pkey)
-    sender = params.pop('sender')
-    canonical_identifier = params.pop('canonical_identifier')
-    params['chain_id'] = int(canonical_identifier.chain_identifier)
-    params['channel_identifier'] = int(canonical_identifier.channel_identifier)
-    params['token_network_address'] = canonical_identifier.token_network_address
-    if params['locksroot'] == EMPTY_MERKLE_ROOT:
-        params['locksroot'] = lock.lockhash
+    sender = params.pop("sender")
+    canonical_identifier = params.pop("canonical_identifier")
+    params["chain_id"] = int(canonical_identifier.chain_identifier)
+    params["channel_identifier"] = int(canonical_identifier.channel_identifier)
+    params["token_network_address"] = canonical_identifier.token_network_address
+    if params["locksroot"] == EMPTY_MERKLE_ROOT:
+        params["locksroot"] = lock.lockhash
 
     locked_transfer = LockedTransfer(lock=lock, **params)
     locked_transfer.sign(signer)
@@ -691,17 +666,17 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
 
 
 SIGNED_TRANSFER_FOR_CHANNEL_DEFAULTS = create_properties(
-    LockedTransferSignedStateProperties(expiration=UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT),
+    LockedTransferSignedStateProperties(expiration=UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT)
 )
 
 
 def make_signed_transfer_for(
-        channel_state: NettingChannelState = EMPTY,
-        properties: LockedTransferSignedStateProperties = None,
-        defaults: LockedTransferSignedStateProperties = None,
-        compute_locksroot: bool = False,
-        allow_invalid: bool = False,
-        only_transfer: bool = True,
+    channel_state: NettingChannelState = EMPTY,
+    properties: LockedTransferSignedStateProperties = None,
+    defaults: LockedTransferSignedStateProperties = None,
+    compute_locksroot: bool = False,
+    allow_invalid: bool = False,
+    only_transfer: bool = True,
 ) -> LockedTransferSignedState:
     properties: LockedTransferSignedStateProperties = create_properties(
         properties or LockedTransferSignedStateProperties(),
@@ -713,7 +688,7 @@ def make_signed_transfer_for(
     if not allow_invalid:
         expiration = properties.transfer.expiration
         valid = channel_state.reveal_timeout < expiration < channel_state.settle_timeout
-        assert valid, 'Expiration must be between reveal_timeout and settle_timeout.'
+        assert valid, "Expiration must be between reveal_timeout and settle_timeout."
 
     assert privatekey_to_address(properties.pkey) == properties.sender
 
@@ -722,7 +697,7 @@ def make_signed_transfer_for(
     elif properties.sender == channel_state.partner_state.address:
         recipient = channel_state.our_state.address
     else:
-        assert False, 'Given sender does not participate in given channel.'
+        assert False, "Given sender does not participate in given channel."
 
     if compute_locksroot:
         lock = Lock(
@@ -730,10 +705,11 @@ def make_signed_transfer_for(
             expiration=properties.transfer.expiration,
             secrethash=sha3(properties.transfer.secret),
         )
-        locksroot = merkleroot(channel.compute_merkletree_with(
-            merkletree=channel_state.partner_state.merkletree,
-            lockhash=sha3(lock.as_bytes),
-        ))
+        locksroot = merkleroot(
+            channel.compute_merkletree_with(
+                merkletree=channel_state.partner_state.merkletree, lockhash=sha3(lock.as_bytes)
+            )
+        )
     else:
         locksroot = properties.transfer.balance_proof.locksroot
 
@@ -745,8 +721,7 @@ def make_signed_transfer_for(
         )
     else:
         transfer_properties = LockedTransferProperties(
-            locksroot=locksroot,
-            canonical_identifier=channel_state.canonical_identifier,
+            locksroot=locksroot, canonical_identifier=channel_state.canonical_identifier
         )
     transfer = create(
         LockedTransferSignedStateProperties(recipient=recipient, **transfer_properties.__dict__),
@@ -766,8 +741,8 @@ def make_signed_transfer_for(
 
 
 def pkeys_from_channel_state(
-        properties: NettingChannelStateProperties,
-        defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
+    properties: NettingChannelStateProperties,
+    defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
 ) -> Tuple[Optional[bytes], Optional[bytes]]:
     our_key = None
     if properties.our_state is not EMPTY:
@@ -786,14 +761,15 @@ def pkeys_from_channel_state(
 
 class ChannelSet:
     """Manage a list of channels. The channels can be accessed by subscript."""
+
     PKEYS = (HOP1_KEY, HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY)
     ADDRESSES = (HOP1, HOP2, HOP3, HOP4, HOP5)
 
     def __init__(
-            self,
-            channels: List[NettingChannelState],
-            our_privatekeys: List[bytes],
-            partner_privatekeys: List[bytes],
+        self,
+        channels: List[NettingChannelState],
+        our_privatekeys: List[bytes],
+        partner_privatekeys: List[bytes],
     ):
         self.channels = channels
         self.our_privatekeys = our_privatekeys
@@ -805,10 +781,7 @@ class ChannelSet:
 
     @property
     def nodeaddresses_to_networkstates(self) -> typing.NodeNetworkStateMap:
-        return {
-            channel.partner_state.address: NODE_NETWORK_REACHABLE
-            for channel in self.channels
-        }
+        return {channel.partner_state.address: NODE_NETWORK_REACHABLE for channel in self.channels}
 
     def our_address(self, index: int) -> typing.Address:
         return self.channels[index].our_state.address
@@ -827,9 +800,9 @@ class ChannelSet:
 
 
 def make_channel_set(
-        properties: List[NettingChannelStateProperties] = None,
-        defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
-        number_of_channels: int = None,
+    properties: List[NettingChannelStateProperties] = None,
+    defaults: NettingChannelStateProperties = NettingChannelStateProperties.DEFAULTS,
+    number_of_channels: int = None,
 ) -> ChannelSet:
     if number_of_channels is None:
         number_of_channels = len(properties)
@@ -851,15 +824,14 @@ def make_channel_set(
 
 
 def mediator_make_channel_pair(
-        defaults: NettingChannelStateProperties = None,
-        amount: typing.TokenAmount = UNIT_TRANSFER_AMOUNT,
+    defaults: NettingChannelStateProperties = None,
+    amount: typing.TokenAmount = UNIT_TRANSFER_AMOUNT,
 ) -> ChannelSet:
     properties_list = [
         NettingChannelStateProperties(
             canonical_identifier=make_canonical_identifier(channel_identifier=1),
             partner_state=NettingChannelEndStateProperties(
-                address=UNIT_TRANSFER_SENDER,
-                balance=amount,
+                address=UNIT_TRANSFER_SENDER, balance=amount
             ),
         ),
         NettingChannelStateProperties(
@@ -873,8 +845,7 @@ def mediator_make_channel_pair(
 
 
 def mediator_make_init_action(
-        channels: ChannelSet,
-        transfer: LockedTransferSignedState,
+    channels: ChannelSet, transfer: LockedTransferSignedState
 ) -> ActionInitMediator:
     return ActionInitMediator(channels.get_routes(1), channels.get_route(0), transfer)
 
@@ -892,27 +863,25 @@ class MediatorTransfersPair(NamedTuple):
 
 
 def make_transfers_pair(
-        number_of_channels: int,
-        amount: int = UNIT_TRANSFER_AMOUNT,
-        block_number: int = 5,
+    number_of_channels: int, amount: int = UNIT_TRANSFER_AMOUNT, block_number: int = 5
 ) -> MediatorTransfersPair:
 
     deposit = 5 * amount
-    defaults = create_properties(NettingChannelStateProperties(
-        our_state=NettingChannelEndStateProperties(balance=deposit),
-        partner_state=NettingChannelEndStateProperties(balance=deposit),
-        open_transaction=TransactionExecutionStatusProperties(finished_block_number=10),
-    ))
+    defaults = create_properties(
+        NettingChannelStateProperties(
+            our_state=NettingChannelEndStateProperties(balance=deposit),
+            partner_state=NettingChannelEndStateProperties(balance=deposit),
+            open_transaction=TransactionExecutionStatusProperties(finished_block_number=10),
+        )
+    )
     properties_list = [
         NettingChannelStateProperties(
             canonical_identifier=make_canonical_identifier(channel_identifier=i),
             our_state=NettingChannelEndStateProperties(
-                address=ChannelSet.ADDRESSES[0],
-                privatekey=ChannelSet.PKEYS[0],
+                address=ChannelSet.ADDRESSES[0], privatekey=ChannelSet.PKEYS[0]
             ),
             partner_state=NettingChannelEndStateProperties(
-                address=ChannelSet.ADDRESSES[i + 1],
-                privatekey=ChannelSet.PKEYS[i + 1],
+                address=ChannelSet.ADDRESSES[i + 1], privatekey=ChannelSet.PKEYS[i + 1]
             ),
         )
         for i in range(number_of_channels)
@@ -927,18 +896,19 @@ def make_transfers_pair(
         payee_index = payer_index + 1
 
         receiver_channel = channels[payer_index]
-        received_transfer = create(LockedTransferSignedStateProperties(
-            amount=amount,
-            expiration=lock_expiration,
-            payment_identifier=UNIT_TRANSFER_IDENTIFIER,
-            canonical_identifier=receiver_channel.canonical_identifier,
-            sender=channels.partner_address(payer_index),
-            pkey=channels.partner_privatekeys[payer_index],
-        ))
+        received_transfer = create(
+            LockedTransferSignedStateProperties(
+                amount=amount,
+                expiration=lock_expiration,
+                payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+                canonical_identifier=receiver_channel.canonical_identifier,
+                sender=channels.partner_address(payer_index),
+                pkey=channels.partner_privatekeys[payer_index],
+            )
+        )
 
         is_valid, _, msg = channel.handle_receive_lockedtransfer(
-            receiver_channel,
-            received_transfer,
+            receiver_channel, received_transfer
         )
         assert is_valid, msg
 
@@ -963,11 +933,7 @@ def make_transfers_pair(
         )
         sent_transfer = lockedtransfer_event.transfer
 
-        pair = MediationPairState(
-            received_transfer,
-            lockedtransfer_event.recipient,
-            sent_transfer,
-        )
+        pair = MediationPairState(received_transfer, lockedtransfer_event.recipient, sent_transfer)
         transfers_pairs.append(pair)
 
     return MediatorTransfersPair(
@@ -980,10 +946,7 @@ def make_transfers_pair(
 
 
 def make_node_availability_map(nodes):
-    return {
-        node: NODE_NETWORK_REACHABLE
-        for node in nodes
-    }
+    return {node: NODE_NETWORK_REACHABLE for node in nodes}
 
 
 @dataclass(frozen=True)
@@ -995,26 +958,26 @@ class RouteProperties(Properties):
 
 
 def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
-    channel = create(NettingChannelStateProperties(
-        canonical_identifier=make_canonical_identifier(),
-        our_state=NettingChannelEndStateProperties(
-            address=route.address1,
-            balance=route.capacity1to2,
-        ),
-        partner_state=NettingChannelEndStateProperties(
-            address=route.address2,
-            balance=route.capacity2to1,
-        ),
-    ))
+    channel = create(
+        NettingChannelStateProperties(
+            canonical_identifier=make_canonical_identifier(),
+            our_state=NettingChannelEndStateProperties(
+                address=route.address1, balance=route.capacity1to2
+            ),
+            partner_state=NettingChannelEndStateProperties(
+                address=route.address2, balance=route.capacity2to1
+            ),
+        )
+    )
     return channel  # type: ignore
 
 
 def create_network(
-        token_network_state: TokenNetworkState,
-        our_address: typing.Address,
-        routes: List[RouteProperties],
-        block_number: typing.BlockNumber,
-        block_hash: typing.BlockHash = None,
+    token_network_state: TokenNetworkState,
+    our_address: typing.Address,
+    routes: List[RouteProperties],
+    block_number: typing.BlockNumber,
+    block_hash: typing.BlockHash = None,
 ) -> Tuple[Any, List[NettingChannelState]]:
     """Creates a network from route properties.
 

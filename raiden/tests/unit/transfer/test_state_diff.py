@@ -36,35 +36,35 @@ def test_detect_balance_proof_change():
 
     assert len(diff()) == 0
 
-    payment_network = PaymentNetworkState(b'x', [])
+    payment_network = PaymentNetworkState(b"x", [])
     payment_network_copy = deepcopy(payment_network)
-    new.identifiers_to_paymentnetworks['a'] = payment_network
+    new.identifiers_to_paymentnetworks["a"] = payment_network
     assert len(diff()) == 0
 
-    token_network = TokenNetworkState(b'a', b'a')
+    token_network = TokenNetworkState(b"a", b"a")
     token_network_copy = deepcopy(token_network)
-    payment_network.tokenidentifiers_to_tokennetworks['a'] = token_network
+    payment_network.tokenidentifiers_to_tokennetworks["a"] = token_network
     assert len(diff()) == 0
 
     channel = NettingChannelState(
         canonical_identifier=factories.make_canonical_identifier(),
-        token_address=b'a',
+        token_address=b"a",
         payment_network_identifier=1,
         reveal_timeout=1,
         settle_timeout=2,
         mediation_fee=0,
         our_state=None,
         partner_state=None,
-        open_transaction=TransactionExecutionStatus(result='success'),
+        open_transaction=TransactionExecutionStatus(result="success"),
         settle_transaction=None,
         update_transaction=None,
         close_transaction=None,
     )
     channel_copy = deepcopy(channel)
-    token_network.channelidentifiers_to_channels['a'] = channel
-    our_state = NettingChannelEndState(address=b'b', balance=1)
+    token_network.channelidentifiers_to_channels["a"] = channel
+    our_state = NettingChannelEndState(address=b"b", balance=1)
     our_state_copy = deepcopy(our_state)
-    partner_state = NettingChannelEndState(address=b'a', balance=0)
+    partner_state = NettingChannelEndState(address=b"a", balance=0)
     partner_state_copy = deepcopy(partner_state)
 
     channel.our_state = our_state
@@ -75,13 +75,13 @@ def test_detect_balance_proof_change():
     partner_state.balance_proof = balance_proof
     assert len(diff()) == 1
 
-    old.identifiers_to_paymentnetworks['a'] = payment_network_copy
+    old.identifiers_to_paymentnetworks["a"] = payment_network_copy
     assert len(diff()) == 1
 
-    payment_network_copy.tokenidentifiers_to_tokennetworks['a'] = token_network_copy
+    payment_network_copy.tokenidentifiers_to_tokennetworks["a"] = token_network_copy
     assert len(diff()) == 1
 
-    token_network_copy.channelidentifiers_to_channels['a'] = channel_copy
+    token_network_copy.channelidentifiers_to_channels["a"] = channel_copy
     channel_copy.partner_state = partner_state_copy
     assert len(diff()) == 1
 

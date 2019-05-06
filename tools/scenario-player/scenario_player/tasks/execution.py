@@ -14,25 +14,21 @@ log = structlog.get_logger(__name__)
 
 
 class SerialTask(Task):
-    _name = 'serial'
+    _name = "serial"
 
     def __init__(
-            self,
-            runner: ScenarioRunner,
-            config: Any,
-            parent: 'Task' = None,
-            abort_on_fail=True,
+        self, runner: ScenarioRunner, config: Any, parent: "Task" = None, abort_on_fail=True
     ) -> None:
         super().__init__(runner, config, parent, abort_on_fail)
-        self._name = config.get('name')
+        self._name = config.get("name")
 
         self._tasks = []
-        for _ in range(config.get('repeat', 1)):
-            for task in self._config.get('tasks', []):
+        for _ in range(config.get("repeat", 1)):
+            for task in self._config.get("tasks", []):
                 for task_type, task_config in task.items():
                     task_class = get_task_class_for_type(task_type)
                     self._tasks.append(
-                        task_class(runner=self._runner, config=task_config, parent=self),
+                        task_class(runner=self._runner, config=task_config, parent=self)
                     )
 
     def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
@@ -45,20 +41,17 @@ class SerialTask(Task):
         if self._name:
             name = f' - {click.style(self._name, fg="blue")}'
         tasks = "\n".join(str(t) for t in self._tasks)
-        return f'{name}\n{tasks}'
+        return f"{name}\n{tasks}"
 
     @property
     def _urwid_details(self):
         if not self._name:
             return []
-        return [
-            ' - ',
-            ('task_name', self._name),
-        ]
+        return [" - ", ("task_name", self._name)]
 
 
 class ParallelTask(SerialTask):
-    _name = 'parallel'
+    _name = "parallel"
 
     def _run(self, *args, **kwargs):
         group = Group()
@@ -68,14 +61,14 @@ class ParallelTask(SerialTask):
 
 
 class WaitTask(Task):
-    _name = 'wait'
+    _name = "wait"
 
     def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         gevent.sleep(self._config)
 
 
 class WaitBlocksTask(Task):
-    _name = 'wait_blocks'
+    _name = "wait_blocks"
 
     def _run(self, *args, **kwargs):  # pylint: disable=unused-argument
         web3 = self._runner.client.web3

@@ -14,9 +14,9 @@ from raiden.tests.utils.transfer import transfer
 from raiden.transfer.state_change import Block
 
 
-@pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
+@pytest.mark.parametrize("number_of_tokens", [1])
 def test_regression_filters_must_be_installed_from_confirmed_block(raiden_network):
     """On restarts Raiden must install the filters from the last run's
     confirmed block instead of the latest known block.
@@ -37,41 +37,32 @@ def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_ne
     target_block_num = app0.raiden.chain.block_number() + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
     app0.raiden.chain.wait_until_block(target_block_num)
 
-    latest_block = app0.raiden.chain.get_block(block_identifier='latest')
+    latest_block = app0.raiden.chain.get_block(block_identifier="latest")
     app0.raiden._callback_new_block(latest_block=latest_block)
-    target_block_num = latest_block['number']
+    target_block_num = latest_block["number"]
 
     app0_state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
+        from_identifier=0, to_identifier="latest"
     )
 
     assert search_for_item(
         app0_state_changes,
         Block,
-        {
-            'block_number': target_block_num - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS,
-        },
+        {"block_number": target_block_num - DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS},
     )
-    assert not search_for_item(
-        app0_state_changes,
-        Block,
-        {
-            'block_number': target_block_num,
-        },
-    )
+    assert not search_for_item(app0_state_changes, Block, {"block_number": target_block_num})
 
 
-@pytest.mark.xfail(reason='flaky, see issue #3714')
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.xfail(reason="flaky, see issue #3714")
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_regression_transport_global_queues_are_initialized_on_restart_for_services(
-        raiden_network,
-        number_of_nodes,
-        token_addresses,
-        network_wait,
-        user_deposit_address,
-        skip_if_not_matrix,  # pylint: disable=unused-argument
+    raiden_network,
+    number_of_nodes,
+    token_addresses,
+    network_wait,
+    user_deposit_address,
+    skip_if_not_matrix,  # pylint: disable=unused-argument
 ):
     """On restarts, Raiden will restore state and publish new balance proof
     updates to the global matrix room. This test will check for regressions
@@ -91,15 +82,11 @@ def test_regression_transport_global_queues_are_initialized_on_restart_for_servi
 
 
 def run_test_regression_transport_global_queues_are_initialized_on_restart_for_services(
-        raiden_network,
-        number_of_nodes,
-        token_addresses,
-        network_wait,
-        user_deposit_address,
+    raiden_network, number_of_nodes, token_addresses, network_wait, user_deposit_address
 ):
     app0, app1 = raiden_network
 
-    app0.config['services']['monitoring_enabled'] = True
+    app0.config["services"]["monitoring_enabled"] = True
 
     # Send a transfer to make sure the state has a balance proof
     # to publish to the global matrix rooms
@@ -117,7 +104,7 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
 
     app0.stop()
 
-    transport = MatrixTransport(app0.config['transport']['matrix'])
+    transport = MatrixTransport(app0.config["transport"]["matrix"])
     transport.send_async = Mock()
     transport._send_raw = Mock()
 
