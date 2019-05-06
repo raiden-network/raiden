@@ -51,9 +51,7 @@ Raiden is also available as a PyPi package and can be installed with ``pip insta
 Raspberry Pi
 ************
 
-Download the latest :code:`raiden-<version>-linux-armv7l.tar.gz` for the Raspberry Pi Model 2B or
-download the latest :code:`raiden-<version>-linux-aarch64.tar.gz` for the Raspberry Pi Model 2B v 1.2 or later,
-and extract it::
+`Download <https://github.com/raiden-network/raiden/releases>`_ the latest :code:`raiden-<version>-linux-armv7l.tar.gz` or :code:`raiden-<version>-linux-aarch64.tar.gz` for the respective Raspberry Pi Model and extract it::
 
     tar -xvzf  raiden-<version>-linux-*.tar.gz
 
