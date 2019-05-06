@@ -1,6 +1,7 @@
+from dataclasses import dataclass
+
 from raiden import constants
 from raiden.utils.typing import (
-    TYPE_CHECKING,
     Address,
     ChainID,
     ChannelID,
@@ -11,11 +12,6 @@ from raiden.utils.typing import (
     TokenNetworkID,
     Union,
 )
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass
-else:
-    from raiden.storage.serialization import dataclass
 
 
 @dataclass

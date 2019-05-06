@@ -1,5 +1,5 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from dataclasses import InitVar
+from dataclasses import InitVar, dataclass
 from random import Random
 
 from raiden.transfer.architecture import (
@@ -17,7 +17,6 @@ from raiden.transfer.state import (
 )
 from raiden.utils import sha3
 from raiden.utils.typing import (
-    TYPE_CHECKING,
     Address,
     BlockGasLimit,
     BlockHash,
@@ -44,11 +43,6 @@ from raiden.utils.typing import (
     TokenNetworkID,
     TransferID,
 )
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass
-else:
-    from raiden.storage.serialization import dataclass
 
 
 @dataclass

@@ -1,10 +1,9 @@
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
-    TYPE_CHECKING,
     Address,
     Any,
     BlockExpiration,
@@ -23,11 +22,6 @@ from raiden.utils.typing import (
     Tuple,
     TypeVar,
 )
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass
-else:
-    from raiden.storage.serialization import dataclass
 
 # Quick overview
 # --------------

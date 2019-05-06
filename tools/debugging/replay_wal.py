@@ -13,7 +13,8 @@ import re
 import click
 from eth_utils import encode_hex, to_canonical_address
 
-from raiden.storage import serialize, sqlite
+from raiden.storage import sqlite
+from raiden.storage.serialization import JSONSerializer
 from raiden.storage.wal import WriteAheadLog
 from raiden.transfer import node, views
 from raiden.transfer.architecture import StateManager
@@ -180,7 +181,7 @@ def main(db_file, token_network_identifier, partner_address, names_translator):
         translator = None
 
     replay_wal(
-        storage=sqlite.SerializedSQLiteStorage(db_file, serialize.JSONSerializer()),
+        storage=sqlite.SerializedSQLiteStorage(db_file, JSONSerializer()),
         token_network_identifier=token_network_identifier,
         partner_address=partner_address,
         translator=translator,

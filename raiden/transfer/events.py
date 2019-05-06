@@ -1,3 +1,5 @@
+from dataclasses import dataclass, field
+
 from raiden.constants import UINT256_MAX
 from raiden.transfer.architecture import (
     ContractSendEvent,
@@ -9,7 +11,6 @@ from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state import BalanceProofSignedState
 from raiden.utils import pex, sha3
 from raiden.utils.typing import (
-    TYPE_CHECKING,
     Address,
     ChannelID,
     InitiatorAddress,
@@ -24,11 +25,6 @@ from raiden.utils.typing import (
     TokenNetworkAddress,
     TokenNetworkID,
 )
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass, field
-else:
-    from raiden.storage.serialization import dataclass, field
 
 # pylint: disable=too-many-arguments,too-few-public-methods
 

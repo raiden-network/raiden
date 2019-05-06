@@ -1,10 +1,11 @@
 # pylint: disable=too-many-arguments,too-few-public-methods
+from dataclasses import dataclass, field
+
 from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils import sha3
 from raiden.utils.typing import (
-    TYPE_CHECKING,
     Address,
     BlockExpiration,
     ChannelID,
@@ -15,11 +16,6 @@ from raiden.utils.typing import (
     SecretHash,
     TokenAddress,
 )
-
-if TYPE_CHECKING:
-    from dataclasses import dataclass, field
-else:
-    from raiden.storage.serialization import dataclass, field
 
 # According to the smart contracts as of 07/08:
 # https://github.com/raiden-network/raiden-contracts/blob/fff8646ebcf2c812f40891c2825e12ed03cc7628/raiden_contracts/contracts/TokenNetwork.sol#L213

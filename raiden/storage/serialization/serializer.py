@@ -7,6 +7,8 @@ with sanitized input, to avoid the risk of exploits.
 import importlib
 import json
 
+from marshmallow_dataclass import class_schema
+
 from raiden.utils.typing import Any
 
 
@@ -24,6 +26,10 @@ def _import_type(type_name):
     return klass
 
 
+def class_type(obj: Any) -> str:
+    return f"{obj.__class__.__module__}.{obj.__class__.__name__}"
+
+
 class SerializationBase:
     @staticmethod
     def serialize(obj: Any):
@@ -37,13 +43,14 @@ class SerializationBase:
 class JSONSerializer(SerializationBase):
     @staticmethod
     def serialize(obj):
-        if hasattr(obj, "schema"):
-            return obj.schema().dumps(obj)
-
-        return json.dumps(obj)
+        schema = class_schema(obj.__class__)
+        data = schema().dump(obj).data
+        data["type"] = class_type(obj)
+        return json.dumps(data)
 
     @staticmethod
     def deserialize(data):
-        obj_data = json.loads(data)
-        type_ = _import_type(obj_data["type_"])
-        return type_.schema().loads(data)
+        data = json.loads(data)
+        klass = _import_type(data["type"])
+        schema = class_schema(klass)
+        return schema().load(data).data

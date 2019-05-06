@@ -4,7 +4,7 @@ import pytest
 from eth_utils import to_canonical_address
 from networkx import Graph
 
-from raiden.storage.serialize import JSONSerializer
+from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.transfer import state, state_change
 from raiden.transfer.merkle_tree import compute_layers

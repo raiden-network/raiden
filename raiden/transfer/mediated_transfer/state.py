@@ -1,4 +1,6 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from dataclasses import dataclass, field
+
 from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.transfer.architecture import State
 from raiden.transfer.state import (
@@ -31,10 +33,7 @@ from raiden.utils.typing import (
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
-    from dataclasses import dataclass, field
     from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa
-else:
-    from raiden.storage.serialization import dataclass, field
 
 
 @dataclass
