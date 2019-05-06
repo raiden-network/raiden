@@ -25,30 +25,12 @@ class UpgradeRecord(NamedTuple):
 
 
 UPGRADES_LIST = [
-    UpgradeRecord(
-        from_version=16,
-        function=upgrade_v16_to_v17,
-    ),
-    UpgradeRecord(
-        from_version=17,
-        function=upgrade_v17_to_v18,
-    ),
-    UpgradeRecord(
-        from_version=18,
-        function=upgrade_v18_to_v19,
-    ),
-    UpgradeRecord(
-        from_version=19,
-        function=upgrade_v19_to_v20,
-    ),
-    UpgradeRecord(
-        from_version=20,
-        function=upgrade_v20_to_v21,
-    ),
-    UpgradeRecord(
-        from_version=21,
-        function=upgrade_v21_to_v22,
-    ),
+    UpgradeRecord(from_version=16, function=upgrade_v16_to_v17),
+    UpgradeRecord(from_version=17, function=upgrade_v17_to_v18),
+    UpgradeRecord(from_version=18, function=upgrade_v18_to_v19),
+    UpgradeRecord(from_version=19, function=upgrade_v19_to_v20),
+    UpgradeRecord(from_version=20, function=upgrade_v20_to_v21),
+    UpgradeRecord(from_version=21, function=upgrade_v21_to_v22),
 ]
 
 
@@ -56,15 +38,14 @@ log = structlog.get_logger(__name__)
 
 
 def get_file_lock(db_filename: Path):
-    lock_file_name = f'{db_filename}.lock'
+    lock_file_name = f"{db_filename}.lock"
     return filelock.FileLock(lock_file_name)
 
 
 def update_version(storage: SQLiteStorage, version: int):
     cursor = storage.conn.cursor()
     cursor.execute(
-        'INSERT OR REPLACE INTO settings(name, value) VALUES("version", ?)',
-        (str(version), ),
+        'INSERT OR REPLACE INTO settings(name, value) VALUES("version", ?)', (str(version),)
     )
 
 
@@ -84,37 +65,26 @@ def get_db_version(db_filename: Path) -> int:
     # storage.get_version()
     # as get_version will return the latest version if it doesn't
     # find a record in the database.
-    conn = sqlite3.connect(
-        str(db_filename),
-        detect_types=sqlite3.PARSE_DECLTYPES,
-    )
+    conn = sqlite3.connect(str(db_filename), detect_types=sqlite3.PARSE_DECLTYPES)
     cursor = conn.cursor()
 
     try:
         cursor.execute('SELECT value FROM settings WHERE name="version";')
         result = cursor.fetchone()
     except sqlite3.OperationalError:
-        raise RuntimeError(
-            'Corrupted database. Database does not the settings table.',
-        )
+        raise RuntimeError("Corrupted database. Database does not the settings table.")
 
     if not result:
         raise RuntimeError(
-            'Corrupted database. Settings table does not contain an entry the db version.',
+            "Corrupted database. Settings table does not contain an entry the db version."
         )
 
     return int(result[0])
 
 
 def _copy(old_db_filename, current_db_filename):
-    old_conn = sqlite3.connect(
-        old_db_filename,
-        detect_types=sqlite3.PARSE_DECLTYPES,
-    )
-    current_conn = sqlite3.connect(
-        current_db_filename,
-        detect_types=sqlite3.PARSE_DECLTYPES,
-    )
+    old_conn = sqlite3.connect(old_db_filename, detect_types=sqlite3.PARSE_DECLTYPES)
+    current_conn = sqlite3.connect(current_db_filename, detect_types=sqlite3.PARSE_DECLTYPES)
 
     with closing(old_conn), closing(current_conn):
         old_conn.backup(current_conn)
@@ -133,9 +103,9 @@ def delete_dbs_with_failed_migrations(valid_db_names: List[Path]) -> None:
 
             elif db_version > file_version:
                 raise RuntimeError(
-                    f'Impossible database version. '
-                    f'The database {db_path} has too high a version ({db_version}), '
-                    f'this should never happen.',
+                    f"Impossible database version. "
+                    f"The database {db_path} has too high a version ({db_version}), "
+                    f"this should never happen."
                 )
 
             # The version number in the database is smaller then the current
@@ -179,13 +149,13 @@ class UpgradeManager:
         # are executed inside a migration, however making a second copy of the
         # database does no harm.
         escaped_path = escape(str(self._current_db_filename.parent))
-        paths = glob(f'{escaped_path}/v*_log.db')
+        paths = glob(f"{escaped_path}/v*_log.db")
         valid_db_names = filter_db_names(paths)
         delete_dbs_with_failed_migrations(valid_db_names)
 
         # At this point we know every file version and db version match
         # (assuming there are no concurrent runs).
-        paths = glob(f'{escaped_path}/v*_log.db')
+        paths = glob(f"{escaped_path}/v*_log.db")
         valid_db_names = filter_db_names(paths)
         latest_db_path = latest_db_file(valid_db_names)
 
@@ -201,12 +171,12 @@ class UpgradeManager:
 
         if file_version > RAIDEN_DB_VERSION:
             raise RuntimeError(
-                f'Conflicting database versions detected, latest db version is v{file_version}, '
-                f'Raiden client version is v{RAIDEN_DB_VERSION}.'
-                f'\n\n'
-                f'Running a downgraded version of Raiden after an upgrade is not supported, '
-                f'because the transfers done with the new client are not understandable by the '
-                f'older.',
+                f"Conflicting database versions detected, latest db version is v{file_version}, "
+                f"Raiden client version is v{RAIDEN_DB_VERSION}."
+                f"\n\n"
+                f"Running a downgraded version of Raiden after an upgrade is not supported, "
+                f"because the transfers done with the new client are not understandable by the "
+                f"older."
             )
 
         self._upgrade(
@@ -221,7 +191,7 @@ class UpgradeManager:
 
             storage = SQLiteStorage(target_file)
 
-            log.debug(f'Upgrading database from v{from_version} to v{RAIDEN_DB_VERSION}')
+            log.debug(f"Upgrading database from v{from_version} to v{RAIDEN_DB_VERSION}")
 
             try:
                 version_iteration = from_version
@@ -240,7 +210,7 @@ class UpgradeManager:
 
                     update_version(storage, RAIDEN_DB_VERSION)
             except BaseException as e:
-                log.error(f'Failed to upgrade database: {e}')
+                log.error(f"Failed to upgrade database: {e}")
                 raise
 
             storage.conn.close()

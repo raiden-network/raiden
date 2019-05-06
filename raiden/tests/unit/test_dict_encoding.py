@@ -10,11 +10,11 @@ PRIVKEY, ADDRESS = make_privkey_address()
 signer = LocalSigner(PRIVKEY)
 
 
-@pytest.mark.parametrize('amount', [0, UINT256_MAX])
-@pytest.mark.parametrize('payment_identifier', [0, UINT64_MAX])
-@pytest.mark.parametrize('nonce', [1, UINT64_MAX])
-@pytest.mark.parametrize('transferred_amount', [0, UINT256_MAX])
-@pytest.mark.parametrize('fee', [0, UINT256_MAX])
+@pytest.mark.parametrize("amount", [0, UINT256_MAX])
+@pytest.mark.parametrize("payment_identifier", [0, UINT64_MAX])
+@pytest.mark.parametrize("nonce", [1, UINT64_MAX])
+@pytest.mark.parametrize("transferred_amount", [0, UINT256_MAX])
+@pytest.mark.parametrize("fee", [0, UINT256_MAX])
 def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, transferred_amount):
     mediated_transfer = make_mediated_transfer(
         amount=amount,
@@ -28,10 +28,10 @@ def test_mediated_transfer_min_max(amount, payment_identifier, fee, nonce, trans
     assert LockedTransfer.from_dict(mediated_transfer.to_dict()) == mediated_transfer
 
 
-@pytest.mark.parametrize('amount', [0, UINT256_MAX])
-@pytest.mark.parametrize('payment_identifier', [0, UINT64_MAX])
-@pytest.mark.parametrize('nonce', [1, UINT64_MAX])
-@pytest.mark.parametrize('transferred_amount', [0, UINT256_MAX])
+@pytest.mark.parametrize("amount", [0, UINT256_MAX])
+@pytest.mark.parametrize("payment_identifier", [0, UINT64_MAX])
+@pytest.mark.parametrize("nonce", [1, UINT64_MAX])
+@pytest.mark.parametrize("transferred_amount", [0, UINT256_MAX])
 def test_refund_transfer_min_max(amount, payment_identifier, nonce, transferred_amount):
     refund_transfer = make_refund_transfer(
         amount=amount,

@@ -11,22 +11,22 @@ from raiden.tests.utils.factories import ADDR, UNIT_SECRETHASH, make_address
 from raiden.tests.utils.mocks import MockRaidenService
 from raiden.tests.utils.transport import MockDiscovery
 
-pytestmark = pytest.mark.usefixtures('skip_if_not_udp')
+pytestmark = pytest.mark.usefixtures("skip_if_not_udp")
 
 
 @pytest.fixture
 def mock_udp(
-        raiden_udp_ports,
-        throttle_capacity,
-        throttle_fill_rate,
-        retry_interval,
-        retries_before_backoff,
-        nat_invitation_timeout,
-        nat_keepalive_retries,
-        nat_keepalive_timeout,
+    raiden_udp_ports,
+    throttle_capacity,
+    throttle_fill_rate,
+    retry_interval,
+    retries_before_backoff,
+    nat_invitation_timeout,
+    nat_keepalive_retries,
+    nat_keepalive_timeout,
 ):
     throttle_policy = TokenBucket(throttle_capacity, throttle_fill_rate)
-    host = '127.0.0.1'
+    host = "127.0.0.1"
     port = raiden_udp_ports[0]
     address = make_address()
 
@@ -54,16 +54,12 @@ def mock_udp(
 def test_token_bucket():
     capacity = 2
     fill_rate = 2
-    token_refill = 1. / fill_rate
+    token_refill = 1.0 / fill_rate
 
     # return constant time to have a predictable refill result
     time = lambda: 1
 
-    bucket = TokenBucket(
-        capacity,
-        fill_rate,
-        time,
-    )
+    bucket = TokenBucket(capacity, fill_rate, time)
 
     assert bucket.consume(1) == 0
     assert bucket.consume(1) == 0
@@ -87,7 +83,7 @@ def test_udp_decode_invalid_message(mock_udp):
         expiration=10,
     )
     data = message.encode()
-    wrong_command_id_data = b'\x99' + data[1:]
+    wrong_command_id_data = b"\x99" + data[1:]
     host_port = None
     assert not mock_udp.receive(wrong_command_id_data, host_port)
 

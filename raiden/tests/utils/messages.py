@@ -11,20 +11,10 @@ from raiden.utils import sha3
 from raiden.utils.signer import Signer
 
 PRIVKEY, ADDRESS = make_privkey_address()
-INVALID_ADDRESSES = [
-    b' ',
-    b' ' * 19,
-    b' ' * 21,
-]
+INVALID_ADDRESSES = [b" ", b" " * 19, b" " * 21]
 
-VALID_SECRETS = [
-    letter.encode() * 32
-    for letter in string.ascii_uppercase[:7]
-]
-SECRETHASHES_SECRESTS = {
-    sha3(secret): secret
-    for secret in VALID_SECRETS
-}
+VALID_SECRETS = [letter.encode() * 32 for letter in string.ascii_uppercase[:7]]
+SECRETHASHES_SECRESTS = {sha3(secret): secret for secret in VALID_SECRETS}
 VALID_SECRETHASHES = list(SECRETHASHES_SECRESTS.keys())
 SECRETHASHES_FOR_MERKLETREE = [
     VALID_SECRETHASHES[:1],
@@ -36,50 +26,54 @@ SECRETHASHES_FOR_MERKLETREE = [
 # zero is used to indicate novalue in solidity, that is why it's an invalid
 # nonce value
 
-REFUND_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
-    'nonce': [-1, 0, UINT64_MAX + 1],
-    'payment_identifier': [-1, UINT64_MAX + 1],
-    'token': INVALID_ADDRESSES,
-    'recipient': INVALID_ADDRESSES,
-    'transferred_amount': [-1, UINT256_MAX + 1],
-}))
+REFUND_TRANSFER_INVALID_VALUES = list(
+    fixture_all_combinations(
+        {
+            "nonce": [-1, 0, UINT64_MAX + 1],
+            "payment_identifier": [-1, UINT64_MAX + 1],
+            "token": INVALID_ADDRESSES,
+            "recipient": INVALID_ADDRESSES,
+            "transferred_amount": [-1, UINT256_MAX + 1],
+        }
+    )
+)
 
-MEDIATED_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
-    'nonce': [-1, 0, UINT64_MAX + 1],
-    'payment_identifier': [-1, UINT64_MAX + 1],
-    'token': INVALID_ADDRESSES,
-    'recipient': INVALID_ADDRESSES,
-    'target': INVALID_ADDRESSES,
-    'initiator': INVALID_ADDRESSES,
-    'transferred_amount': [-1, UINT256_MAX + 1],
-    'fee': [UINT256_MAX + 1],
-}))
+MEDIATED_TRANSFER_INVALID_VALUES = list(
+    fixture_all_combinations(
+        {
+            "nonce": [-1, 0, UINT64_MAX + 1],
+            "payment_identifier": [-1, UINT64_MAX + 1],
+            "token": INVALID_ADDRESSES,
+            "recipient": INVALID_ADDRESSES,
+            "target": INVALID_ADDRESSES,
+            "initiator": INVALID_ADDRESSES,
+            "transferred_amount": [-1, UINT256_MAX + 1],
+            "fee": [UINT256_MAX + 1],
+        }
+    )
+)
 
 
 def make_lock(amount=7, expiration=1, secrethash=VALID_SECRETHASHES[0]):
-    return Lock(
-        amount=amount,
-        expiration=expiration,
-        secrethash=secrethash,
-    )
+    return Lock(amount=amount, expiration=expiration, secrethash=secrethash)
 
 
 def make_refund_transfer(
-        message_identifier=None,
-        payment_identifier=0,
-        nonce=1,
-        token_network_address=ADDRESS,
-        token=ADDRESS,
-        channel_identifier=UNIT_CHANNEL_ID,
-        transferred_amount=0,
-        locked_amount=None,
-        amount=1,
-        locksroot=EMPTY_MERKLE_ROOT,
-        recipient=ADDRESS,
-        target=ADDRESS,
-        initiator=ADDRESS,
-        fee=0,
-        secrethash=VALID_SECRETHASHES[0],
+    message_identifier=None,
+    payment_identifier=0,
+    nonce=1,
+    token_network_address=ADDRESS,
+    token=ADDRESS,
+    channel_identifier=UNIT_CHANNEL_ID,
+    transferred_amount=0,
+    locked_amount=None,
+    amount=1,
+    locksroot=EMPTY_MERKLE_ROOT,
+    recipient=ADDRESS,
+    target=ADDRESS,
+    initiator=ADDRESS,
+    fee=0,
+    secrethash=VALID_SECRETHASHES[0],
 ):
 
     if message_identifier is None:
@@ -110,30 +104,27 @@ def make_refund_transfer(
 
 
 def make_mediated_transfer(
-        message_identifier=None,
-        payment_identifier=0,
-        nonce=1,
-        token_network_address=ADDRESS,
-        token=ADDRESS,
-        channel_identifier=UNIT_CHANNEL_ID,
-        transferred_amount=0,
-        locked_amount=None,
-        amount=1,
-        expiration=1,
-        locksroot=EMPTY_MERKLE_ROOT,
-        recipient=ADDRESS,
-        target=ADDRESS,
-        initiator=ADDRESS,
-        fee=0,
+    message_identifier=None,
+    payment_identifier=0,
+    nonce=1,
+    token_network_address=ADDRESS,
+    token=ADDRESS,
+    channel_identifier=UNIT_CHANNEL_ID,
+    transferred_amount=0,
+    locked_amount=None,
+    amount=1,
+    expiration=1,
+    locksroot=EMPTY_MERKLE_ROOT,
+    recipient=ADDRESS,
+    target=ADDRESS,
+    initiator=ADDRESS,
+    fee=0,
 ):
 
     if message_identifier is None:
         message_identifier = random.randint(0, UINT64_MAX)
 
-    lock = make_lock(
-        amount=amount,
-        expiration=expiration,
-    )
+    lock = make_lock(amount=amount, expiration=expiration)
 
     if locksroot == EMPTY_MERKLE_ROOT:
         locksroot = sha3(lock.as_bytes)
@@ -163,22 +154,22 @@ def make_mediated_transfer(
 
 
 def make_balance_proof(
-        signer: Signer = None,
-        message_identifier=None,
-        payment_identifier=0,
-        nonce=1,
-        token_network_address=ADDRESS,
-        token=ADDRESS,
-        channel_identifier=UNIT_CHANNEL_ID,
-        transferred_amount=0,
-        locked_amount=None,
-        amount=1,
-        expiration=1,
-        locksroot=EMPTY_MERKLE_ROOT,
-        recipient=ADDRESS,
-        target=ADDRESS,
-        initiator=ADDRESS,
-        fee=0,
+    signer: Signer = None,
+    message_identifier=None,
+    payment_identifier=0,
+    nonce=1,
+    token_network_address=ADDRESS,
+    token=ADDRESS,
+    channel_identifier=UNIT_CHANNEL_ID,
+    transferred_amount=0,
+    locked_amount=None,
+    amount=1,
+    expiration=1,
+    locksroot=EMPTY_MERKLE_ROOT,
+    recipient=ADDRESS,
+    target=ADDRESS,
+    initiator=ADDRESS,
+    fee=0,
 ):
     mediated_transfer = make_mediated_transfer(
         message_identifier=message_identifier,

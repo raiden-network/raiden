@@ -18,19 +18,17 @@ class BalanceProof:
     """
 
     def __init__(
-            self,
-            channel_identifier: ChannelID,
-            token_network_address: Address,
-
-            balance_hash: str = None,
-            nonce: int = 0,
-            additional_hash: str = '0x%064x' % 0,
-            chain_id: int = 1,
-            signature: str = None,
-
-            transferred_amount: int = None,
-            locked_amount: int = 0,
-            locksroot: str = '0x%064x' % 0,
+        self,
+        channel_identifier: ChannelID,
+        token_network_address: Address,
+        balance_hash: str = None,
+        nonce: int = 0,
+        additional_hash: str = "0x%064x" % 0,
+        chain_id: int = 1,
+        signature: str = None,
+        transferred_amount: int = None,
+        locked_amount: int = 0,
+        locksroot: str = "0x%064x" % 0,
     ):
         self.channel_identifier = channel_identifier
         self.token_network_address = token_network_address
@@ -44,11 +42,10 @@ class BalanceProof:
         if transferred_amount and locked_amount and locksroot and balance_hash:
             assert 0 <= transferred_amount <= UINT256_MAX
             assert 0 <= locked_amount <= UINT256_MAX
-            assert self.hash_balance_data(
-                transferred_amount,
-                locked_amount,
-                locksroot,
-            ) == balance_hash
+            assert (
+                self.hash_balance_data(transferred_amount, locked_amount, locksroot)
+                == balance_hash
+            )
 
         self.transferred_amount = transferred_amount
         self.locked_amount = locked_amount
@@ -56,15 +53,8 @@ class BalanceProof:
 
     def serialize_bin(self, msg_type: MessageTypeId = MessageTypeId.BALANCE_PROOF):
         return pack_data(
+            ["address", "uint256", "uint256", "uint256", "bytes32", "uint256", "bytes32"],
             [
-                'address',
-                'uint256',
-                'uint256',
-                'uint256',
-                'bytes32',
-                'uint256',
-                'bytes32',
-            ], [
                 self.token_network_address,
                 self.chain_id,
                 msg_type.value,
@@ -82,11 +72,7 @@ class BalanceProof:
         if None not in (self.transferred_amount, self.locked_amount, self.locksroot):
             assert isinstance(self.transferred_amount, int)
             return encode_hex(
-                self.hash_balance_data(
-                    self.transferred_amount,
-                    self.locked_amount,
-                    self.locksroot,
-                ),
+                self.hash_balance_data(self.transferred_amount, self.locked_amount, self.locksroot)
             )
         raise ValueError("Can't compute balance hash")
 
@@ -95,12 +81,7 @@ class BalanceProof:
         self._balance_hash = value
 
     @staticmethod
-    def hash_balance_data(
-            transferred_amount: int,
-            locked_amount: int,
-            locksroot: str,
-    ) -> str:
+    def hash_balance_data(transferred_amount: int, locked_amount: int, locksroot: str) -> str:
         return Web3.soliditySha3(  # pylint: disable=no-value-for-parameter
-            ['uint256', 'uint256', 'bytes32'],
-            [transferred_amount, locked_amount, locksroot],
+            ["uint256", "uint256", "bytes32"], [transferred_amount, locked_amount, locksroot]
         )

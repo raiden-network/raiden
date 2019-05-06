@@ -14,14 +14,14 @@ class DummyPolicy:
         pass
 
     def consume(self, tokens):  # pylint: disable=unused-argument,no-self-use
-        return 0.
+        return 0.0
 
 
 class TokenBucket:
     """Implementation of the token bucket throttling algorithm.
     """
 
-    def __init__(self, capacity=10., fill_rate=10., time_function=None):
+    def __init__(self, capacity=10.0, fill_rate=10.0, time_function=None):
         self.capacity = float(capacity)
         self.fill_rate = fill_rate
         self.tokens = float(capacity)
@@ -36,7 +36,7 @@ class TokenBucket:
         Returns:
             wait_time (float): waiting time for the consumer
         """
-        wait_time = 0.
+        wait_time = 0.0
         self.tokens -= tokens
         if self.tokens < 0:
             self._get_tokens()

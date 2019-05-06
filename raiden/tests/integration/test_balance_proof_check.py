@@ -12,14 +12,11 @@ from raiden.transfer import views
 from raiden.transfer.state_change import ContractReceiveChannelSettled
 
 
-@pytest.mark.parametrize('deposit', [10])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize("deposit", [10])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [2])
 def test_node_can_settle_if_close_didnt_use_any_balance_proof(
-        raiden_network,
-        number_of_nodes,
-        token_addresses,
-        network_wait,
+    raiden_network, number_of_nodes, token_addresses, network_wait
 ):
     """ A node must be able to settle a channel, even if the partner used an
     old balance proof to close it.
@@ -42,10 +39,7 @@ def test_node_can_settle_if_close_didnt_use_any_balance_proof(
 
 
 def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
-        raiden_network,
-        number_of_nodes,
-        token_addresses,
-        network_wait,
+    raiden_network, number_of_nodes, token_addresses, network_wait
 ):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
@@ -53,9 +47,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
     payment_network_id = app0.raiden.default_registry.address
     registry_address = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        chain_state=chain_state,
-        payment_network_id=payment_network_id,
-        token_address=token_address,
+        chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
     )
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
@@ -86,7 +78,7 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         nonce=0,
         additional_hash=EMPTY_HASH,
         signature=EMPTY_SIGNATURE,
-        given_block_identifier='latest',
+        given_block_identifier="latest",
     )
     waiting.wait_for_settle(
         raiden=app0.raiden,
@@ -96,25 +88,23 @@ def run_test_node_can_settle_if_close_didnt_use_any_balance_proof(
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
+        from_identifier=0, to_identifier="latest"
     )
     assert search_for_item(
-        state_changes, ContractReceiveChannelSettled, {
-            'token_network_identifier': token_network_identifier,
-            'channel_identifier': channel_identifier,
+        state_changes,
+        ContractReceiveChannelSettled,
+        {
+            "token_network_identifier": token_network_identifier,
+            "channel_identifier": channel_identifier,
         },
     )
 
 
-@pytest.mark.parametrize('deposit', [10])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize("deposit", [10])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [2])
 def test_node_can_settle_if_partner_does_not_call_update_transfer(
-        raiden_network,
-        number_of_nodes,
-        token_addresses,
-        network_wait,
+    raiden_network, number_of_nodes, token_addresses, network_wait
 ):
     """ A node must be able to settle a channel, even if the partner did not
     call update transfer.
@@ -138,10 +128,7 @@ def test_node_can_settle_if_partner_does_not_call_update_transfer(
 
 
 def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
-        raiden_network,
-        number_of_nodes,
-        token_addresses,
-        network_wait,
+    raiden_network, number_of_nodes, token_addresses, network_wait
 ):
     app0, app1 = raiden_network
     token_address = token_addresses[0]
@@ -149,9 +136,7 @@ def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
     payment_network_id = app0.raiden.default_registry.address
     registry_address = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        chain_state=chain_state,
-        payment_network_id=payment_network_id,
-        token_address=token_address,
+        chain_state=chain_state, payment_network_id=payment_network_id, token_address=token_address
     )
     channel_identifier = get_channelstate(app0, app1, token_network_identifier).identifier
 
@@ -181,12 +166,13 @@ def run_test_node_can_settle_if_partner_does_not_call_update_transfer(
         retry_timeout=app0.raiden.alarm.sleep_time,
     )
     state_changes = app0.raiden.wal.storage.get_statechanges_by_identifier(
-        from_identifier=0,
-        to_identifier='latest',
+        from_identifier=0, to_identifier="latest"
     )
     assert search_for_item(
-        state_changes, ContractReceiveChannelSettled, {
-            'token_network_identifier': token_network_identifier,
-            'channel_identifier': channel_identifier,
+        state_changes,
+        ContractReceiveChannelSettled,
+        {
+            "token_network_identifier": token_network_identifier,
+            "channel_identifier": channel_identifier,
         },
     )

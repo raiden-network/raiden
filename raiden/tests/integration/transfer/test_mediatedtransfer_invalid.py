@@ -25,12 +25,10 @@ from raiden.transfer import views
 from raiden.utils.signer import LocalSigner
 
 
-@pytest.mark.parametrize('channels_per_node', [1])
-@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize("channels_per_node", [1])
+@pytest.mark.parametrize("number_of_nodes", [2])
 def test_failsfast_lockedtransfer_exceeding_distributable(
-        raiden_network,
-        token_addresses,
-        deposit,
+    raiden_network, token_addresses, deposit
 ):
     raise_on_failure(
         raiden_network,
@@ -42,9 +40,7 @@ def test_failsfast_lockedtransfer_exceeding_distributable(
 
 
 def run_test_failsfast_lockedtransfer_exceeding_distributable(
-        raiden_network,
-        token_addresses,
-        deposit,
+    raiden_network, token_addresses, deposit
 ):
 
     app0, app1 = raiden_network
@@ -52,29 +48,20 @@ def run_test_failsfast_lockedtransfer_exceeding_distributable(
 
     payment_network_identifier = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        payment_network_identifier,
-        token_address,
+        views.state_from_app(app0), payment_network_identifier, token_address
     )
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier,
-        deposit * 2,
-        app1.raiden.address,
-        identifier=1,
+        token_network_identifier, deposit * 2, app1.raiden.address, identifier=1
     )
 
     assert payment_status.payment_done.get(timeout=5) is False
     assert payment_status.payment_done.successful()
 
-    assert_synced_channel_state(
-        token_network_identifier,
-        app0, deposit, [],
-        app1, deposit, [],
-    )
+    assert_synced_channel_state(token_network_identifier, app0, deposit, [], app1, deposit, [])
 
 
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [0])
 def test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
     raise_on_failure(
         raiden_network,
@@ -92,28 +79,18 @@ def run_test_failfast_lockedtransfer_nochannel(raiden_network, token_addresses):
     amount = 10
     payment_network_identifier = app0.raiden.default_registry.address
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        payment_network_identifier,
-        token_address,
+        views.state_from_app(app0), payment_network_identifier, token_address
     )
     payment_status = app0.raiden.mediated_transfer_async(
-        token_network_identifier,
-        amount,
-        app1.raiden.address,
-        identifier=1,
+        token_network_identifier, amount, app1.raiden.address, identifier=1
     )
     assert payment_status.payment_done.wait() is False
 
 
-@pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [3])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_receive_lockedtransfer_invalidnonce(
-        raiden_network,
-        number_of_nodes,
-        deposit,
-        token_addresses,
-        reveal_timeout,
-        network_wait,
+    raiden_network, number_of_nodes, deposit, token_addresses, reveal_timeout, network_wait
 ):
     raise_on_failure(
         raiden_network,
@@ -128,20 +105,13 @@ def test_receive_lockedtransfer_invalidnonce(
 
 
 def run_test_receive_lockedtransfer_invalidnonce(
-        raiden_network,
-        number_of_nodes,
-        deposit,
-        token_addresses,
-        reveal_timeout,
-        network_wait,
+    raiden_network, number_of_nodes, deposit, token_addresses, reveal_timeout, network_wait
 ):
 
     app0, app1, app2 = raiden_network
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_address,
+        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
     channel0 = get_channelstate(app0, app1, token_network_identifier)
 
@@ -177,28 +147,25 @@ def run_test_receive_lockedtransfer_invalidnonce(
         fee=0,
     )
 
-    sign_and_inject(
-        mediated_transfer_message,
-        app0.raiden.signer,
-        app1,
-    )
+    sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
 
     with gevent.Timeout(network_wait):
         wait_assert(
             assert_synced_channel_state,
             token_network_identifier,
-            app0, deposit - amount, [],
-            app1, deposit + amount, [],
+            app0,
+            deposit - amount,
+            [],
+            app1,
+            deposit + amount,
+            [],
         )
 
 
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [1])
 def test_receive_lockedtransfer_invalidsender(
-        raiden_network,
-        token_addresses,
-        deposit,
-        reveal_timeout,
+    raiden_network, token_addresses, deposit, reveal_timeout
 ):
     raise_on_failure(
         raiden_network,
@@ -211,10 +178,7 @@ def test_receive_lockedtransfer_invalidsender(
 
 
 def run_test_receive_lockedtransfer_invalidsender(
-        raiden_network,
-        token_addresses,
-        deposit,
-        reveal_timeout,
+    raiden_network, token_addresses, deposit, reveal_timeout
 ):
 
     app0, app1 = raiden_network
@@ -222,9 +186,7 @@ def run_test_receive_lockedtransfer_invalidsender(
     other_key, other_address = make_privkey_address()
 
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_address,
+        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
     channel0 = get_channelstate(app0, app1, token_network_identifier)
     lock_amount = 10
@@ -247,26 +209,15 @@ def run_test_receive_lockedtransfer_invalidsender(
         fee=0,
     )
 
-    sign_and_inject(
-        mediated_transfer_message,
-        LocalSigner(other_key),
-        app0,
-    )
+    sign_and_inject(mediated_transfer_message, LocalSigner(other_key), app0)
 
-    assert_synced_channel_state(
-        token_network_identifier,
-        app0, deposit, [],
-        app1, deposit, [],
-    )
+    assert_synced_channel_state(token_network_identifier, app0, deposit, [], app1, deposit, [])
 
 
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [CHAIN])
 def test_receive_lockedtransfer_invalidrecipient(
-        raiden_network,
-        token_addresses,
-        reveal_timeout,
-        deposit,
+    raiden_network, token_addresses, reveal_timeout, deposit
 ):
     raise_on_failure(
         raiden_network,
@@ -279,18 +230,13 @@ def test_receive_lockedtransfer_invalidrecipient(
 
 
 def run_test_receive_lockedtransfer_invalidrecipient(
-        raiden_network,
-        token_addresses,
-        reveal_timeout,
-        deposit,
+    raiden_network, token_addresses, reveal_timeout, deposit
 ):
 
     app0, app1 = raiden_network
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_address,
+        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
     channel0 = get_channelstate(app0, app1, token_network_identifier)
 
@@ -316,27 +262,16 @@ def run_test_receive_lockedtransfer_invalidrecipient(
         fee=0,
     )
 
-    sign_and_inject(
-        mediated_transfer_message,
-        app0.raiden.signer,
-        app1,
-    )
+    sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
 
-    assert_synced_channel_state(
-        token_network_identifier,
-        app0, deposit, [],
-        app1, deposit, [],
-    )
+    assert_synced_channel_state(token_network_identifier, app0, deposit, [], app1, deposit, [])
 
 
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('channels_per_node', [1])
-@pytest.mark.parametrize('settle_timeout', [30])
+@pytest.mark.parametrize("number_of_nodes", [2])
+@pytest.mark.parametrize("channels_per_node", [1])
+@pytest.mark.parametrize("settle_timeout", [30])
 def test_received_lockedtransfer_closedchannel(
-        raiden_network,
-        reveal_timeout,
-        token_addresses,
-        deposit,
+    raiden_network, reveal_timeout, token_addresses, deposit
 ):
     raise_on_failure(
         raiden_network,
@@ -349,31 +284,20 @@ def test_received_lockedtransfer_closedchannel(
 
 
 def run_test_received_lockedtransfer_closedchannel(
-        raiden_network,
-        reveal_timeout,
-        token_addresses,
-        deposit,
+    raiden_network, reveal_timeout, token_addresses, deposit
 ):
 
     app0, app1 = raiden_network
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]
     token_network_identifier = views.get_token_network_identifier_by_token_address(
-        views.state_from_app(app0),
-        app0.raiden.default_registry.address,
-        token_address,
+        views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
     channel0 = get_channelstate(app0, app1, token_network_identifier)
 
-    RaidenAPI(app1.raiden).channel_close(
-        registry_address,
-        token_address,
-        app0.raiden.address,
-    )
+    RaidenAPI(app1.raiden).channel_close(registry_address, token_address, app0.raiden.address)
 
-    app0.raiden.chain.wait_until_block(
-        target_block_number=app0.raiden.chain.block_number() + 1,
-    )
+    app0.raiden.chain.wait_until_block(target_block_number=app0.raiden.chain.block_number() + 1)
 
     # Now receive one mediated transfer for the closed channel
     lock_amount = 10
@@ -397,15 +321,7 @@ def run_test_received_lockedtransfer_closedchannel(
         fee=0,
     )
 
-    sign_and_inject(
-        mediated_transfer_message,
-        app0.raiden.signer,
-        app1,
-    )
+    sign_and_inject(mediated_transfer_message, app0.raiden.signer, app1)
 
     # The local state must not change since the channel is already closed
-    assert_synced_channel_state(
-        token_network_identifier,
-        app0, deposit, [],
-        app1, deposit, [],
-    )
+    assert_synced_channel_state(token_network_identifier, app0, deposit, [], app1, deposit, [])

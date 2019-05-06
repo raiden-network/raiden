@@ -6,14 +6,12 @@ from raiden_contracts.contract_manager import ContractManager
 
 
 def deploy_contract_web3(
-        contract_name: str,
-        deploy_client: JSONRPCClient,
-        contract_manager: ContractManager,
-        constructor_arguments: Tuple[Any] = None,
+    contract_name: str,
+    deploy_client: JSONRPCClient,
+    contract_manager: ContractManager,
+    constructor_arguments: Tuple[Any] = None,
 ) -> Address:
-    compiled = {
-        contract_name: ABI(contract_manager.get_contract(contract_name)),
-    }
+    compiled = {contract_name: ABI(contract_manager.get_contract(contract_name))}
     contract_proxy, _ = deploy_client.deploy_solidity_contract(
         contract_name=contract_name,
         all_contracts=compiled,

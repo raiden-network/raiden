@@ -28,10 +28,10 @@ StateChangeWithChannelID = Union[
 
 
 def subdispatch_to_channel_by_id(
-        token_network_state: TokenNetworkState,
-        state_change: StateChangeWithChannelID,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
+    token_network_state: TokenNetworkState,
+    state_change: StateChangeWithChannelID,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
 ) -> TransitionResult:
     events = list()
 
@@ -64,10 +64,10 @@ def subdispatch_to_channel_by_id(
 
 
 def handle_channel_close(
-        token_network_state: TokenNetworkState,
-        state_change: ActionChannelClose,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
+    token_network_state: TokenNetworkState,
+    state_change: ActionChannelClose,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -78,8 +78,7 @@ def handle_channel_close(
 
 
 def handle_channelnew(
-        token_network_state: TokenNetworkState,
-        state_change: ContractReceiveChannelNew,
+    token_network_state: TokenNetworkState, state_change: ContractReceiveChannelNew
 ) -> TransitionResult:
     events: List[Event] = list()
 
@@ -88,10 +87,7 @@ def handle_channelnew(
     our_address = channel_state.our_state.address
     partner_address = channel_state.partner_state.address
 
-    token_network_state.network_graph.network.add_edge(
-        our_address,
-        partner_address,
-    )
+    token_network_state.network_graph.network.add_edge(our_address, partner_address)
     token_network_state.network_graph.channel_identifier_to_participants[
         state_change.channel_identifier
     ] = (our_address, partner_address)
@@ -109,10 +105,10 @@ def handle_channelnew(
 
 
 def handle_balance(
-        token_network_state: TokenNetworkState,
-        state_change: ContractReceiveChannelNewBalance,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
+    token_network_state: TokenNetworkState,
+    state_change: ContractReceiveChannelNewBalance,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -123,10 +119,10 @@ def handle_balance(
 
 
 def handle_closed(
-        token_network_state: TokenNetworkState,
-        state_change: ContractReceiveChannelClosed,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
+    token_network_state: TokenNetworkState,
+    state_change: ContractReceiveChannelClosed,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
 ) -> TransitionResult:
     network_graph_state = token_network_state.network_graph
 
@@ -136,10 +132,7 @@ def handle_closed(
         participant1, participant2 = network_graph_state.channel_identifier_to_participants[
             state_change.channel_identifier
         ]
-        token_network_state.network_graph.network.remove_edge(
-            participant1,
-            participant2,
-        )
+        token_network_state.network_graph.network.remove_edge(participant1, participant2)
         del token_network_state.network_graph.channel_identifier_to_participants[
             state_change.channel_identifier
         ]
@@ -153,10 +146,10 @@ def handle_closed(
 
 
 def handle_settled(
-        token_network_state: TokenNetworkState,
-        state_change: ContractReceiveChannelSettled,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
+    token_network_state: TokenNetworkState,
+    state_change: ContractReceiveChannelSettled,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
 ) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -167,10 +160,10 @@ def handle_settled(
 
 
 def handle_updated_transfer(
-        token_network_state: TokenNetworkState,
-        state_change: ContractReceiveUpdateTransfer,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
+    token_network_state: TokenNetworkState,
+    state_change: ContractReceiveUpdateTransfer,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
 ):
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
@@ -181,14 +174,14 @@ def handle_updated_transfer(
 
 
 def handle_batch_unlock(
-        token_network_state: TokenNetworkState,
-        state_change: ContractReceiveChannelBatchUnlock,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
+    token_network_state: TokenNetworkState,
+    state_change: ContractReceiveChannelBatchUnlock,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
 ) -> TransitionResult:
     events = list()
     channel_state = token_network_state.channelidentifiers_to_channels.get(
-        state_change.canonical_identifier.channel_identifier,
+        state_change.canonical_identifier.channel_identifier
     )
     if channel_state is not None:
         sub_iteration = channel.state_transition(
@@ -205,22 +198,18 @@ def handle_batch_unlock(
                 channel_state.partner_state.address
             ].remove(channel_state.identifier)
 
-            del token_network_state.channelidentifiers_to_channels[
-                channel_state.identifier
-            ]
+            del token_network_state.channelidentifiers_to_channels[channel_state.identifier]
 
     return TransitionResult(token_network_state, events)
 
 
 def handle_newroute(
-        token_network_state: TokenNetworkState,
-        state_change: ContractReceiveRouteNew,
+    token_network_state: TokenNetworkState, state_change: ContractReceiveRouteNew
 ) -> TransitionResult:
     events: List[Event] = list()
 
     token_network_state.network_graph.network.add_edge(
-        state_change.participant1,
-        state_change.participant2,
+        state_change.participant1, state_change.participant2
     )
     token_network_state.network_graph.channel_identifier_to_participants[
         state_change.channel_identifier
@@ -230,8 +219,7 @@ def handle_newroute(
 
 
 def handle_closeroute(
-        token_network_state: TokenNetworkState,
-        state_change: ContractReceiveRouteClosed,
+    token_network_state: TokenNetworkState, state_change: ContractReceiveRouteClosed
 ) -> TransitionResult:
     events: List[Event] = list()
 
@@ -243,10 +231,7 @@ def handle_closeroute(
         participant1, participant2 = network_graph_state.channel_identifier_to_participants[
             state_change.channel_identifier
         ]
-        token_network_state.network_graph.network.remove_edge(
-            participant1,
-            participant2,
-        )
+        token_network_state.network_graph.network.remove_edge(participant1, participant2)
         del token_network_state.network_graph.channel_identifier_to_participants[
             state_change.channel_identifier
         ]
@@ -255,20 +240,17 @@ def handle_closeroute(
 
 
 def state_transition(
-        token_network_state: TokenNetworkState,
-        state_change: StateChange,
-        block_number: BlockNumber,
-        block_hash: BlockHash,
+    token_network_state: TokenNetworkState,
+    state_change: StateChange,
+    block_number: BlockNumber,
+    block_hash: BlockHash,
 ) -> TransitionResult:
     # pylint: disable=too-many-branches,unidiomatic-typecheck
 
     if type(state_change) == ActionChannelClose:
         assert isinstance(state_change, ActionChannelClose), MYPY_ANNOTATION
         iteration = handle_channel_close(
-            token_network_state,
-            state_change,
-            block_number,
-            block_hash,
+            token_network_state, state_change, block_number, block_hash
         )
     elif type(state_change) == ActionChannelSetFee:
         assert isinstance(state_change, ActionChannelSetFee), MYPY_ANNOTATION
@@ -280,61 +262,31 @@ def state_transition(
         )
     elif type(state_change) == ContractReceiveChannelNew:
         assert isinstance(state_change, ContractReceiveChannelNew), MYPY_ANNOTATION
-        iteration = handle_channelnew(
-            token_network_state,
-            state_change,
-        )
+        iteration = handle_channelnew(token_network_state, state_change)
     elif type(state_change) == ContractReceiveChannelNewBalance:
         assert isinstance(state_change, ContractReceiveChannelNewBalance), MYPY_ANNOTATION
-        iteration = handle_balance(
-            token_network_state,
-            state_change,
-            block_number,
-            block_hash,
-        )
+        iteration = handle_balance(token_network_state, state_change, block_number, block_hash)
     elif type(state_change) == ContractReceiveChannelClosed:
         assert isinstance(state_change, ContractReceiveChannelClosed), MYPY_ANNOTATION
-        iteration = handle_closed(
-            token_network_state,
-            state_change,
-            block_number,
-            block_hash,
-        )
+        iteration = handle_closed(token_network_state, state_change, block_number, block_hash)
     elif type(state_change) == ContractReceiveChannelSettled:
         assert isinstance(state_change, ContractReceiveChannelSettled), MYPY_ANNOTATION
-        iteration = handle_settled(
-            token_network_state,
-            state_change,
-            block_number,
-            block_hash,
-        )
+        iteration = handle_settled(token_network_state, state_change, block_number, block_hash)
     elif type(state_change) == ContractReceiveUpdateTransfer:
         assert isinstance(state_change, ContractReceiveUpdateTransfer), MYPY_ANNOTATION
         iteration = handle_updated_transfer(
-            token_network_state,
-            state_change,
-            block_number,
-            block_hash,
+            token_network_state, state_change, block_number, block_hash
         )
     elif type(state_change) == ContractReceiveChannelBatchUnlock:
         assert isinstance(state_change, ContractReceiveChannelBatchUnlock), MYPY_ANNOTATION
         iteration = handle_batch_unlock(
-            token_network_state,
-            state_change,
-            block_number,
-            block_hash,
+            token_network_state, state_change, block_number, block_hash
         )
     elif type(state_change) == ContractReceiveRouteNew:
         assert isinstance(state_change, ContractReceiveRouteNew), MYPY_ANNOTATION
-        iteration = handle_newroute(
-            token_network_state,
-            state_change,
-        )
+        iteration = handle_newroute(token_network_state, state_change)
     elif type(state_change) == ContractReceiveRouteClosed:
         assert isinstance(state_change, ContractReceiveRouteClosed), MYPY_ANNOTATION
-        iteration = handle_closeroute(
-            token_network_state,
-            state_change,
-        )
+        iteration = handle_closeroute(token_network_state, state_change)
 
     return iteration

@@ -20,7 +20,7 @@ from raiden_contracts.contract_manager import ContractManager, contracts_precomp
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
-_ETH_LOGDIR = os.environ.get('RAIDEN_TESTS_ETH_LOGSDIR')
+_ETH_LOGDIR = os.environ.get("RAIDEN_TESTS_ETH_LOGSDIR")
 
 
 @pytest.fixture
@@ -33,17 +33,17 @@ def endpoint_discovery_services(blockchain_services, endpoint_registry_address):
 
 @pytest.fixture
 def web3(
-        blockchain_p2p_ports,
-        blockchain_private_keys,
-        blockchain_rpc_ports,
-        blockchain_type,
-        blockchain_extra_config,
-        deploy_key,
-        private_keys,
-        random_marker,
-        request,
-        tmpdir,
-        chain_id,
+    blockchain_p2p_ports,
+    blockchain_private_keys,
+    blockchain_rpc_ports,
+    blockchain_type,
+    blockchain_extra_config,
+    deploy_key,
+    private_keys,
+    random_marker,
+    request,
+    tmpdir,
+    chain_id,
 ):
     """ Starts a private chain with accounts funded. """
     # include the deploy key in the list of funded accounts
@@ -52,11 +52,11 @@ def web3(
     keys_to_fund = sorted(keys_to_fund)
 
     if blockchain_type not in {client.value for client in EthClient}:
-        raise ValueError(f'unknown blockchain_type {blockchain_type}')
+        raise ValueError(f"unknown blockchain_type {blockchain_type}")
 
-    host = '127.0.0.1'
+    host = "127.0.0.1"
     rpc_port = blockchain_rpc_ports[0]
-    endpoint = f'http://{host}:{rpc_port}'
+    endpoint = f"http://{host}:{rpc_port}"
     web3 = Web3(HTTPProvider(endpoint))
 
     assert len(blockchain_private_keys) == len(blockchain_rpc_ports)
@@ -72,37 +72,28 @@ def web3(
             blockchain_type=blockchain_type,
         )
         for pos, (key, rpc, p2p) in enumerate(
-            zip(
-                blockchain_private_keys,
-                blockchain_rpc_ports,
-                blockchain_p2p_ports,
-            ),
+            zip(blockchain_private_keys, blockchain_rpc_ports, blockchain_p2p_ports)
         )
     ]
 
-    accounts_to_fund = [
-        privatekey_to_address(key)
-        for key in keys_to_fund
-    ]
+    accounts_to_fund = [privatekey_to_address(key) for key in keys_to_fund]
 
     base_datadir = str(tmpdir)
 
     if _ETH_LOGDIR:
         base_logdir = os.path.join(_ETH_LOGDIR, request.node.name, blockchain_type)
     else:
-        base_logdir = os.path.join(base_datadir, 'logs')
+        base_logdir = os.path.join(base_datadir, "logs")
 
     genesis_description = GenesisDescription(
-        prefunded_accounts=accounts_to_fund,
-        chain_id=chain_id,
-        random_marker=random_marker,
+        prefunded_accounts=accounts_to_fund, chain_id=chain_id, random_marker=random_marker
     )
     eth_node_runner = run_private_blockchain(
         web3=web3,
         eth_nodes=eth_nodes,
         base_datadir=base_datadir,
         log_dir=base_logdir,
-        verbosity='info',
+        verbosity="info",
         genesis_description=genesis_description,
     )
     with eth_node_runner:
@@ -113,7 +104,7 @@ def web3(
 
 @pytest.fixture
 def deploy_client(blockchain_rpc_ports, deploy_key, web3, blockchain_type):
-    if blockchain_type == 'parity':
+    if blockchain_type == "parity":
         return JSONRPCClient(web3, deploy_key, gas_estimate_correction=lambda gas: 2 * gas)
     return JSONRPCClient(web3, deploy_key)
 
@@ -134,21 +125,18 @@ def contract_manager(contracts_path):
 
 @pytest.fixture
 def deploy_service(deploy_key, deploy_client, contract_manager):
-    return BlockChainService(
-        jsonrpc_client=deploy_client,
-        contract_manager=contract_manager,
-    )
+    return BlockChainService(jsonrpc_client=deploy_client, contract_manager=contract_manager)
 
 
 @pytest.fixture
 def blockchain_services(
-        deploy_service,
-        private_keys,
-        secret_registry_address,
-        service_registry_address,
-        token_network_registry_address,
-        web3,
-        contract_manager,
+    deploy_service,
+    private_keys,
+    secret_registry_address,
+    service_registry_address,
+    token_network_registry_address,
+    web3,
+    contract_manager,
 ):
     return jsonrpc_services(
         deploy_service=deploy_service,

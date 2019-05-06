@@ -5,8 +5,8 @@ from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.transfer import views
 
 
-@pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize("number_of_nodes", [1])
+@pytest.mark.parametrize("channels_per_node", [0])
 def test_channel_with_self(raiden_network, settle_timeout, token_addresses):
     raise_on_failure(
         raiden_network,
@@ -24,9 +24,7 @@ def run_test_channel_with_self(raiden_network, settle_timeout, token_addresses):
     token_address = token_addresses[0]
 
     current_chanels = views.list_channelstate_for_tokennetwork(
-        views.state_from_app(app0),
-        registry_address,
-        token_address,
+        views.state_from_app(app0), registry_address, token_address
     )
     assert not current_chanels
 
@@ -37,7 +35,7 @@ def run_test_channel_with_self(raiden_network, settle_timeout, token_addresses):
         token_network0.new_netting_channel(
             partner=app0.raiden.address,
             settle_timeout=settle_timeout,
-            given_block_identifier='latest',
+            given_block_identifier="latest",
         )
 
-    assert 'The other peer must not have the same address as the client.' in str(excinfo.value)
+    assert "The other peer must not have the same address as the client." in str(excinfo.value)

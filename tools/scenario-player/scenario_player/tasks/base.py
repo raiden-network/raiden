@@ -20,17 +20,17 @@ NAME_TO_TASK = {}
 
 
 class TaskState(Enum):
-    INITIALIZED = ' '
-    RUNNING = '•'
-    FINISHED = '✔'
-    ERRORED = '✗'
+    INITIALIZED = " "
+    RUNNING = "•"
+    FINISHED = "✔"
+    ERRORED = "✗"
 
 
 TASK_STATE_COLOR = {
-    TaskState.INITIALIZED: '',
-    TaskState.RUNNING: click.style('', fg='yellow', reset=False),
-    TaskState.FINISHED: click.style('', fg='green', reset=False),
-    TaskState.ERRORED: click.style('', fg='red', reset=False),
+    TaskState.INITIALIZED: "",
+    TaskState.RUNNING: click.style("", fg="yellow", reset=False),
+    TaskState.FINISHED: click.style("", fg="green", reset=False),
+    TaskState.ERRORED: click.style("", fg="red", reset=False),
 }
 
 _TASK_ID = 0
@@ -38,11 +38,7 @@ _TASK_ID = 0
 
 class Task:
     def __init__(
-            self,
-            runner: ScenarioRunner,
-            config: Any,
-            parent: 'Task' = None,
-            abort_on_fail=True,
+        self, runner: ScenarioRunner, config: Any, parent: "Task" = None, abort_on_fail=True
     ) -> None:
         global _TASK_ID
 
@@ -62,7 +58,7 @@ class Task:
         runner.task_count += 1
 
     def __call__(self, *args, **kwargs):
-        log.info('Starting task', task=self)
+        log.info("Starting task", task=self)
         self.state = TaskState.RUNNING
         self._runner.running_task_count += 1
         self._start_time = time.monotonic()
@@ -70,7 +66,7 @@ class Task:
             return self._run(*args, **kwargs)
         except BaseException as ex:
             self.state = TaskState.ERRORED
-            log.exception('Task errored', task=self)
+            log.exception("Task errored", task=self)
             self.exception = ex
             if self._abort_on_fail:
                 raise
@@ -78,14 +74,14 @@ class Task:
             self._stop_time = time.monotonic()
             self._runner.running_task_count -= 1
             if self.state is TaskState.RUNNING:
-                log.info('Task successful', task=self)
+                log.info("Task successful", task=self)
                 self.state = TaskState.FINISHED
 
     def _run(self, *args, **kwargs):  # pylint: disable=unused-argument,no-self-use
         gevent.sleep(1)
 
     def __repr__(self):
-        return f'<{self.__class__.__name__}: {self._config}>'
+        return f"<{self.__class__.__name__}: {self._config}>"
 
     def __str__(self):
         color = TASK_STATE_COLOR[self.state]
@@ -93,21 +89,21 @@ class Task:
         return (
             f'{" " * self.level * 2}- [{color}{self.state.value}{reset}] '
             f'{color}{self.__class__.__name__.replace("Task", "")}{reset}'
-            f'{self._duration}{self._str_details}'
+            f"{self._duration}{self._str_details}"
         )
 
     @property
     def urwid_label(self):
-        task_state_style = f'task_state_{self.state.name.lower()}'
+        task_state_style = f"task_state_{self.state.name.lower()}"
         duration = self._duration
         label = [
-            ('default', '['),
+            ("default", "["),
             (task_state_style, self.state.value),
-            ('default', '] '),
+            ("default", "] "),
             (task_state_style, self.__class__.__name__.replace("Task", "")),
         ]
         if duration:
-            label.append(('task_duration', self._duration))
+            label.append(("task_duration", self._duration))
         label.extend(self._urwid_details)
         return label
 
@@ -116,11 +112,11 @@ class Task:
 
     @property
     def _str_details(self):
-        return f': {self._config}'
+        return f": {self._config}"
 
     @property
     def _urwid_details(self):
-        return [': ', str(self._config)]
+        return [": ", str(self._config)]
 
     @property
     def _duration(self):
@@ -132,15 +128,15 @@ class Task:
                 duration = time.monotonic() - self._start_time
         if duration:
             duration = str(timedelta(seconds=duration))
-            return f' ({duration})'
-        return ''
+            return f" ({duration})"
+        return ""
 
     @property
     def done(self):
         return self.state in {TaskState.FINISHED, TaskState.ERRORED}
 
 
-T_Task = TypeVar('T_Task', bound=Task)
+T_Task = TypeVar("T_Task", bound=Task)
 
 
 def get_task_class_for_type(task_type) -> T_Task:
@@ -170,8 +166,5 @@ def collect_tasks_from_submodule(submodule):
             collect_tasks(submodule)
             continue
         base_classes = inspect.getmro(member)
-        if Task in base_classes and hasattr(member, '_name'):
-            register_task(
-                member._name,
-                member,
-            )
+        if Task in base_classes and hasattr(member, "_name"):
+            register_task(member._name, member)

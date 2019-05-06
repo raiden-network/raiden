@@ -41,10 +41,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
     channel_state.partner_state.onchain_locksroot = EMPTY_MERKLE_ROOT
 
     def detail_participants(  # pylint: disable=unused-argument
-            participant1,
-            participant2,
-            block_identifier,
-            channel_identifier,
+        participant1, participant2, block_identifier, channel_identifier
     ):
         transferred_amount = 1
         locked_amount = 1
@@ -82,8 +79,7 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 
     event = ContractSendChannelBatchUnlock(
         canonical_identifier=make_canonical_identifier(
-            token_network_address=token_network_identifier,
-            channel_identifier=channel_identifier,
+            token_network_address=token_network_identifier, channel_identifier=channel_identifier
         ),
         participant=participant,
         triggered_by_block_hash=make_block_hash(),
@@ -91,7 +87,5 @@ def test_handle_contract_send_channelunlock_already_unlocked():
 
     # This should not throw an unrecoverable error
     RaidenEventHandler().on_raiden_event(
-        raiden=raiden,
-        chain_state=raiden.wal.state_manager.current_state,
-        event=event,
+        raiden=raiden, chain_state=raiden.wal.state_manager.current_state, event=event
     )

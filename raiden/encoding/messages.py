@@ -6,7 +6,7 @@ from raiden.encoding.format import make_field, namedbuffer, pad
 
 
 def cmdid(id_):
-    return make_field('cmdid', 1, 'B', integer(id_, id_))
+    return make_field("cmdid", 1, "B", integer(id_, id_))
 
 
 PROCESSED = 0
@@ -26,91 +26,57 @@ TODEVICE = 14
 log = structlog.get_logger(__name__)
 
 
-nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
-updating_nonce = make_field('updating_nonce', 8, '8s', integer(0, UINT64_MAX))
-other_nonce = make_field('other_nonce', 8, '8s', integer(0, UINT64_MAX))
-payment_identifier = make_field('payment_identifier', 8, '8s', integer(0, UINT64_MAX))
-chain_id = make_field('chain_id', 32, '32s', integer(0, UINT256_MAX))
-message_identifier = make_field('message_identifier', 8, '8s', integer(0, UINT64_MAX))
-current_protocol_version = make_field('current_protocol_version', 1, '1s', integer(0, 256))
+nonce = make_field("nonce", 8, "8s", integer(0, UINT64_MAX))
+updating_nonce = make_field("updating_nonce", 8, "8s", integer(0, UINT64_MAX))
+other_nonce = make_field("other_nonce", 8, "8s", integer(0, UINT64_MAX))
+payment_identifier = make_field("payment_identifier", 8, "8s", integer(0, UINT64_MAX))
+chain_id = make_field("chain_id", 32, "32s", integer(0, UINT256_MAX))
+message_identifier = make_field("message_identifier", 8, "8s", integer(0, UINT64_MAX))
+current_protocol_version = make_field("current_protocol_version", 1, "1s", integer(0, 256))
 delivered_message_identifier = make_field(
-    'delivered_message_identifier',
-    8,
-    '8s',
-    integer(0, UINT64_MAX),
+    "delivered_message_identifier", 8, "8s", integer(0, UINT64_MAX)
 )
-expiration = make_field('expiration', 32, '32s', integer(0, UINT256_MAX))
+expiration = make_field("expiration", 32, "32s", integer(0, UINT256_MAX))
 
-token_network_address = make_field('token_network_address', 20, '20s')
-token = make_field('token', 20, '20s')
-recipient = make_field('recipient', 20, '20s')
-target = make_field('target', 20, '20s')
-initiator = make_field('initiator', 20, '20s')
-updating_participant = make_field('updating_participant', 20, '20s')
-other_participant = make_field('other_participant', 20, '20s')
-channel_identifier = make_field('channel_identifier', 32, '32s', integer(0, UINT256_MAX))
+token_network_address = make_field("token_network_address", 20, "20s")
+token = make_field("token", 20, "20s")
+recipient = make_field("recipient", 20, "20s")
+target = make_field("target", 20, "20s")
+initiator = make_field("initiator", 20, "20s")
+updating_participant = make_field("updating_participant", 20, "20s")
+other_participant = make_field("other_participant", 20, "20s")
+channel_identifier = make_field("channel_identifier", 32, "32s", integer(0, UINT256_MAX))
 
-locksroot = make_field('locksroot', 32, '32s')
-secrethash = make_field('secrethash', 32, '32s')
-balance_hash = make_field('balance_hash', 32, '32s')
-additional_hash = make_field('additional_hash', 32, '32s')
-secret = make_field('secret', 32, '32s')
-transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, UINT256_MAX))
-locked_amount = make_field('locked_amount', 32, '32s', integer(0, UINT256_MAX))
-amount = make_field('amount', 32, '32s', integer(0, UINT256_MAX))
-reward_amount = make_field('reward_amount', 32, '32s', integer(0, UINT256_MAX))
-fee = make_field('fee', 32, '32s', integer(0, UINT256_MAX))
-reveal_timeout = make_field('reveal_timeout', 32, '32s', integer(0, UINT256_MAX))
-updating_capacity = make_field('updating_capacity', 32, '32s', integer(0, UINT256_MAX))
-other_capacity = make_field('other_capacity', 32, '32s', integer(0, UINT256_MAX))
+locksroot = make_field("locksroot", 32, "32s")
+secrethash = make_field("secrethash", 32, "32s")
+balance_hash = make_field("balance_hash", 32, "32s")
+additional_hash = make_field("additional_hash", 32, "32s")
+secret = make_field("secret", 32, "32s")
+transferred_amount = make_field("transferred_amount", 32, "32s", integer(0, UINT256_MAX))
+locked_amount = make_field("locked_amount", 32, "32s", integer(0, UINT256_MAX))
+amount = make_field("amount", 32, "32s", integer(0, UINT256_MAX))
+reward_amount = make_field("reward_amount", 32, "32s", integer(0, UINT256_MAX))
+fee = make_field("fee", 32, "32s", integer(0, UINT256_MAX))
+reveal_timeout = make_field("reveal_timeout", 32, "32s", integer(0, UINT256_MAX))
+updating_capacity = make_field("updating_capacity", 32, "32s", integer(0, UINT256_MAX))
+other_capacity = make_field("other_capacity", 32, "32s", integer(0, UINT256_MAX))
 
-signature = make_field('signature', 65, '65s')
-non_closing_signature = make_field('non_closing_signature', 65, '65s')
-reward_proof_signature = make_field('reward_proof_signature', 65, '65s')
+signature = make_field("signature", 65, "65s")
+non_closing_signature = make_field("non_closing_signature", 65, "65s")
+reward_proof_signature = make_field("reward_proof_signature", 65, "65s")
 
-Processed = namedbuffer(
-    'processed',
-    [
-        cmdid(PROCESSED),
-        pad(3),
-        message_identifier,
-        signature,
-    ],
-)
+Processed = namedbuffer("processed", [cmdid(PROCESSED), pad(3), message_identifier, signature])
 
 Delivered = namedbuffer(
-    'delivered',
-    [
-        cmdid(DELIVERED),
-        pad(3),
-        delivered_message_identifier,
-        signature,
-    ],
+    "delivered", [cmdid(DELIVERED), pad(3), delivered_message_identifier, signature]
 )
 
-Ping = namedbuffer(
-    'ping',
-    [
-        cmdid(PING),
-        pad(3),
-        nonce,
-        current_protocol_version,
-        signature,
-    ],
-)
+Ping = namedbuffer("ping", [cmdid(PING), pad(3), nonce, current_protocol_version, signature])
 
-Pong = namedbuffer(
-    'pong',
-    [
-        cmdid(PONG),
-        pad(3),
-        nonce,
-        signature,
-    ],
-)
+Pong = namedbuffer("pong", [cmdid(PONG), pad(3), nonce, signature])
 
 SecretRequest = namedbuffer(
-    'secret_request',
+    "secret_request",
     [
         cmdid(SECRETREQUEST),
         pad(3),
@@ -124,7 +90,7 @@ SecretRequest = namedbuffer(
 )
 
 Unlock = namedbuffer(
-    'unlock',
+    "unlock",
     [
         cmdid(UNLOCK),
         pad(3),
@@ -143,18 +109,11 @@ Unlock = namedbuffer(
 )
 
 RevealSecret = namedbuffer(
-    'reveal_secret',
-    [
-        cmdid(REVEALSECRET),
-        pad(3),
-        message_identifier,
-        secret,
-        signature,
-    ],
+    "reveal_secret", [cmdid(REVEALSECRET), pad(3), message_identifier, secret, signature]
 )
 
 LockedTransfer = namedbuffer(
-    'mediated_transfer',
+    "mediated_transfer",
     [
         cmdid(LOCKEDTRANSFER),
         pad(3),
@@ -180,7 +139,7 @@ LockedTransfer = namedbuffer(
 )
 
 RefundTransfer = namedbuffer(
-    'refund_transfer',
+    "refund_transfer",
     [
         cmdid(REFUNDTRANSFER),
         pad(3),
@@ -206,7 +165,7 @@ RefundTransfer = namedbuffer(
 )
 
 LockExpired = namedbuffer(
-    'lock_expired',
+    "lock_expired",
     [
         cmdid(LOCKEXPIRED),
         pad(3),
@@ -225,18 +184,11 @@ LockExpired = namedbuffer(
 )
 
 
-Lock = namedbuffer(
-    'lock',
-    [
-        expiration,
-        amount,
-        secrethash,
-    ],
-)
+Lock = namedbuffer("lock", [expiration, amount, secrethash])
 
 
 RequestMonitoring = namedbuffer(
-    'request_monitoring',
+    "request_monitoring",
     [
         nonce,
         chain_id,
@@ -253,7 +205,7 @@ RequestMonitoring = namedbuffer(
 
 
 UpdatePFS = namedbuffer(
-    'update_pfs',
+    "update_pfs",
     [
         chain_id,
         token_network_address,
@@ -270,15 +222,7 @@ UpdatePFS = namedbuffer(
     ],
 )
 
-ToDevice = namedbuffer(
-    'to_device',
-    [
-        cmdid(TODEVICE),
-        pad(3),
-        message_identifier,
-        signature,
-    ],
-)
+ToDevice = namedbuffer("to_device", [cmdid(TODEVICE), pad(3), message_identifier, signature])
 
 CMDID_MESSAGE = {
     PROCESSED: Processed,
@@ -300,19 +244,19 @@ def wrap(data):
     try:
         cmdid = data[0]
     except IndexError:
-        log.warning('data is empty')
+        log.warning("data is empty")
         return None
 
     try:
         message_type = CMDID_MESSAGE[cmdid]
     except KeyError:
-        log.error('unknown cmdid %s', cmdid)
+        log.error("unknown cmdid %s", cmdid)
         return None
 
     try:
         message = message_type(data)
     except ValueError:
-        log.error('trying to decode invalid message')
+        log.error("trying to decode invalid message")
         return None
 
     return message

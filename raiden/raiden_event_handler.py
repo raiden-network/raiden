@@ -70,30 +70,24 @@ UNEVENTFUL_EVENTS = (
 
 
 def unlock(
-        raiden: 'RaidenService',
-        payment_channel: PaymentChannel,
-        end_state: NettingChannelEndState,
-        participant: Address,
-        partner: Address,
+    raiden: "RaidenService",
+    payment_channel: PaymentChannel,
+    end_state: NettingChannelEndState,
+    participant: Address,
+    partner: Address,
 ) -> None:
     merkle_tree_leaves = get_batch_unlock(end_state)
 
     try:
         payment_channel.unlock(
-            participant=participant,
-            partner=partner,
-            merkle_tree_leaves=merkle_tree_leaves,
+            participant=participant, partner=partner, merkle_tree_leaves=merkle_tree_leaves
         )
     except ChannelOutdatedError as e:
-        log.error(
-            str(e),
-            node=pex(raiden.address),
-        )
+        log.error(str(e), node=pex(raiden.address))
 
 
 class RaidenEventHandler:
-
-    def on_raiden_event(self, raiden: 'RaidenService', chain_state: ChainState, event: Event):
+    def on_raiden_event(self, raiden: "RaidenService", chain_state: ChainState, event: Event):
         # pylint: disable=too-many-branches
         if type(event) == SendLockExpired:
             assert isinstance(event, SendLockExpired), MYPY_ANNOTATION
@@ -143,103 +137,66 @@ class RaidenEventHandler:
         elif type(event) in UNEVENTFUL_EVENTS:
             pass
         else:
-            log.error(
-                'Unknown event',
-                event_type=str(type(event)),
-                node=pex(raiden.address),
-            )
+            log.error("Unknown event", event_type=str(type(event)), node=pex(raiden.address))
 
     @staticmethod
-    def handle_send_lockexpired(
-            raiden: 'RaidenService',
-            send_lock_expired: SendLockExpired,
-    ):
+    def handle_send_lockexpired(raiden: "RaidenService", send_lock_expired: SendLockExpired):
         lock_expired_message = message_from_sendevent(send_lock_expired)
         raiden.sign(lock_expired_message)
-        raiden.transport.send_async(
-            send_lock_expired.queue_identifier,
-            lock_expired_message,
-        )
+        raiden.transport.send_async(send_lock_expired.queue_identifier, lock_expired_message)
 
     @staticmethod
     def handle_send_lockedtransfer(
-            raiden: 'RaidenService',
-            send_locked_transfer: SendLockedTransfer,
+        raiden: "RaidenService", send_locked_transfer: SendLockedTransfer
     ):
         mediated_transfer_message = message_from_sendevent(send_locked_transfer)
         raiden.sign(mediated_transfer_message)
         raiden.transport.send_async(
-            send_locked_transfer.queue_identifier,
-            mediated_transfer_message,
+            send_locked_transfer.queue_identifier, mediated_transfer_message
         )
 
     @staticmethod
-    def handle_send_secretreveal(
-            raiden: 'RaidenService',
-            reveal_secret_event: SendSecretReveal,
-    ):
+    def handle_send_secretreveal(raiden: "RaidenService", reveal_secret_event: SendSecretReveal):
         reveal_secret_message = message_from_sendevent(reveal_secret_event)
         raiden.sign(reveal_secret_message)
-        raiden.transport.send_async(
-            reveal_secret_event.queue_identifier,
-            reveal_secret_message,
-        )
+        raiden.transport.send_async(reveal_secret_event.queue_identifier, reveal_secret_message)
 
     @staticmethod
-    def handle_send_balanceproof(
-            raiden: 'RaidenService',
-            balance_proof_event: SendBalanceProof,
-    ):
+    def handle_send_balanceproof(raiden: "RaidenService", balance_proof_event: SendBalanceProof):
         unlock_message = message_from_sendevent(balance_proof_event)
         raiden.sign(unlock_message)
-        raiden.transport.send_async(
-            balance_proof_event.queue_identifier,
-            unlock_message,
-        )
+        raiden.transport.send_async(balance_proof_event.queue_identifier, unlock_message)
 
     @staticmethod
     def handle_send_secretrequest(
-            raiden: 'RaidenService',
-            secret_request_event: SendSecretRequest,
+        raiden: "RaidenService", secret_request_event: SendSecretRequest
     ):
         if reveal_secret_with_resolver(raiden, secret_request_event):
             return
 
         secret_request_message = message_from_sendevent(secret_request_event)
         raiden.sign(secret_request_message)
-        raiden.transport.send_async(
-            secret_request_event.queue_identifier,
-            secret_request_message,
-        )
+        raiden.transport.send_async(secret_request_event.queue_identifier, secret_request_message)
 
     @staticmethod
     def handle_send_refundtransfer(
-            raiden: 'RaidenService',
-            refund_transfer_event: SendRefundTransfer,
+        raiden: "RaidenService", refund_transfer_event: SendRefundTransfer
     ):
         refund_transfer_message = message_from_sendevent(refund_transfer_event)
         raiden.sign(refund_transfer_message)
         raiden.transport.send_async(
-            refund_transfer_event.queue_identifier,
-            refund_transfer_message,
+            refund_transfer_event.queue_identifier, refund_transfer_message
         )
 
     @staticmethod
-    def handle_send_processed(
-            raiden: 'RaidenService',
-            processed_event: SendProcessed,
-    ):
+    def handle_send_processed(raiden: "RaidenService", processed_event: SendProcessed):
         processed_message = message_from_sendevent(processed_event)
         raiden.sign(processed_message)
-        raiden.transport.send_async(
-            processed_event.queue_identifier,
-            processed_message,
-        )
+        raiden.transport.send_async(processed_event.queue_identifier, processed_message)
 
     @staticmethod
     def handle_paymentsentsuccess(
-            raiden: 'RaidenService',
-            payment_sent_success_event: EventPaymentSentSuccess,
+        raiden: "RaidenService", payment_sent_success_event: EventPaymentSentSuccess
     ):
         target = payment_sent_success_event.target
         payment_identifier = payment_sent_success_event.identifier
@@ -252,14 +209,12 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_paymentsentfailed(
-            raiden: 'RaidenService',
-            payment_sent_failed_event: EventPaymentSentFailed,
+        raiden: "RaidenService", payment_sent_failed_event: EventPaymentSentFailed
     ):
         target = payment_sent_failed_event.target
         payment_identifier = payment_sent_failed_event.identifier
         payment_status = raiden.targets_to_identifiers_to_statuses[target].pop(
-            payment_identifier,
-            None,
+            payment_identifier, None
         )
         # In the case of a refund transfer the payment fails earlier
         # but the lock expiration will generate a second
@@ -268,13 +223,10 @@ class RaidenEventHandler:
             payment_status.payment_done.set(False)
 
     @staticmethod
-    def handle_unlockfailed(
-            raiden: 'RaidenService',
-            unlock_failed_event: EventUnlockFailed,
-    ):
+    def handle_unlockfailed(raiden: "RaidenService", unlock_failed_event: EventUnlockFailed):
         # pylint: disable=unused-argument
         log.error(
-            'UnlockFailed!',
+            "UnlockFailed!",
             secrethash=pex(unlock_failed_event.secrethash),
             reason=unlock_failed_event.reason,
             node=pex(raiden.address),
@@ -282,16 +234,15 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_secretreveal(
-            raiden: 'RaidenService',
-            channel_reveal_secret_event: ContractSendSecretReveal,
+        raiden: "RaidenService", channel_reveal_secret_event: ContractSendSecretReveal
     ):
         raiden.default_secret_registry.register_secret(secret=channel_reveal_secret_event.secret)
 
     @staticmethod
     def handle_contract_send_channelclose(
-            raiden: 'RaidenService',
-            chain_state: ChainState,
-            channel_close_event: ContractSendChannelClose,
+        raiden: "RaidenService",
+        chain_state: ChainState,
+        channel_close_event: ContractSendChannelClose,
     ):
         balance_proof = channel_close_event.balance_proof
 
@@ -312,7 +263,7 @@ class RaidenEventHandler:
                 chain_identifier=chain_state.chain_id,
                 token_network_address=channel_close_event.token_network_identifier,
                 channel_identifier=channel_close_event.channel_identifier,
-            ),
+            )
         )
 
         channel_proxy.close(
@@ -325,16 +276,13 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_channelupdate(
-            raiden: 'RaidenService',
-            channel_update_event: ContractSendChannelUpdateTransfer,
+        raiden: "RaidenService", channel_update_event: ContractSendChannelUpdateTransfer
     ):
         balance_proof = channel_update_event.balance_proof
 
         if balance_proof:
             canonical_identifier = balance_proof.canonical_identifier
-            channel = raiden.chain.payment_channel(
-                canonical_identifier=canonical_identifier,
-            )
+            channel = raiden.chain.payment_channel(canonical_identifier=canonical_identifier)
 
             non_closing_data = pack_balance_proof_update(
                 nonce=balance_proof.nonce,
@@ -356,11 +304,11 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_channelunlock(
-            raiden: 'RaidenService',
-            chain_state: ChainState,
-            channel_unlock_event: ContractSendChannelBatchUnlock,
+        raiden: "RaidenService",
+        chain_state: ChainState,
+        channel_unlock_event: ContractSendChannelBatchUnlock,
     ):
-        assert raiden.wal, 'The Raiden Service must be initialize to handle events'
+        assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
         canonical_identifier = channel_unlock_event.canonical_identifier
         token_network_identifier = canonical_identifier.token_network_address
@@ -368,7 +316,7 @@ class RaidenEventHandler:
         participant = channel_unlock_event.participant
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            canonical_identifier=canonical_identifier,
+            canonical_identifier=canonical_identifier
         )
 
         channel_state = get_channelstate_by_token_network_and_partner(
@@ -380,8 +328,8 @@ class RaidenEventHandler:
         if not channel_state:
             # channel was cleaned up already due to an unlock
             raise RaidenUnrecoverableError(
-                f'Failed to find channel state with partner:'
-                f'{to_checksum_address(participant)}, token_network:pex(token_network_identifier)',
+                f"Failed to find channel state with partner:"
+                f"{to_checksum_address(participant)}, token_network:pex(token_network_identifier)"
             )
 
         our_address = channel_state.our_state.address
@@ -400,7 +348,7 @@ class RaidenEventHandler:
             # Check https://github.com/raiden-network/raiden/issues/3152
             # for more details
             log.warning(
-                'Onchain unlock already mined',
+                "Onchain unlock already mined",
                 canonical_identifier=canonical_identifier,
                 channel_identifier=canonical_identifier.channel_identifier,
                 participant=to_checksum_address(participant),
@@ -418,13 +366,13 @@ class RaidenEventHandler:
 
             if not state_change_identifier:
                 raise RaidenUnrecoverableError(
-                    f'Failed to find state that matches the current channel locksroots. '
-                    f'chain_id:{raiden.chain.network_id} '
-                    f'token_network:{to_checksum_address(token_network_identifier)} '
-                    f'channel:{channel_identifier} '
-                    f'participant:{to_checksum_address(participant)} '
-                    f'our_locksroot:{to_hex(our_locksroot)} '
-                    f'partner_locksroot:{to_hex(partner_locksroot)} ',
+                    f"Failed to find state that matches the current channel locksroots. "
+                    f"chain_id:{raiden.chain.network_id} "
+                    f"token_network:{to_checksum_address(token_network_identifier)} "
+                    f"channel:{channel_identifier} "
+                    f"participant:{to_checksum_address(participant)} "
+                    f"our_locksroot:{to_hex(our_locksroot)} "
+                    f"partner_locksroot:{to_hex(partner_locksroot)} "
                 )
 
             restored_channel_state = channel_state_until_state_change(
@@ -434,13 +382,11 @@ class RaidenEventHandler:
             )
             assert restored_channel_state is not None
 
-            gain = get_batch_unlock_gain(
-                restored_channel_state,
-            )
+            gain = get_batch_unlock_gain(restored_channel_state)
 
             skip_unlock = (
-                restored_channel_state.partner_state.address == participant and
-                gain.from_partner_locks == 0
+                restored_channel_state.partner_state.address == participant
+                and gain.from_partner_locks == 0
             )
             if not skip_unlock:
                 unlock(
@@ -462,13 +408,13 @@ class RaidenEventHandler:
 
             if not state_change_identifier:
                 raise RaidenUnrecoverableError(
-                    f'Failed to find event that match current channel locksroots. '
-                    f'chain_id:{raiden.chain.network_id} '
-                    f'token_network:{to_checksum_address(token_network_identifier)} '
-                    f'channel:{channel_identifier} '
-                    f'participant:{to_checksum_address(participant)} '
-                    f'our_locksroot:{to_hex(our_locksroot)} '
-                    f'partner_locksroot:{to_hex(partner_locksroot)} ',
+                    f"Failed to find event that match current channel locksroots. "
+                    f"chain_id:{raiden.chain.network_id} "
+                    f"token_network:{to_checksum_address(token_network_identifier)} "
+                    f"channel:{channel_identifier} "
+                    f"participant:{to_checksum_address(participant)} "
+                    f"our_locksroot:{to_hex(our_locksroot)} "
+                    f"partner_locksroot:{to_hex(partner_locksroot)} "
                 )
 
             restored_channel_state = channel_state_until_state_change(
@@ -478,13 +424,11 @@ class RaidenEventHandler:
             )
             assert restored_channel_state is not None
 
-            gain = get_batch_unlock_gain(
-                restored_channel_state,
-            )
+            gain = get_batch_unlock_gain(restored_channel_state)
 
             skip_unlock = (
-                restored_channel_state.our_state.address == participant and
-                gain.from_our_locks == 0
+                restored_channel_state.our_state.address == participant
+                and gain.from_our_locks == 0
             )
             if not skip_unlock:
                 unlock(
@@ -497,10 +441,9 @@ class RaidenEventHandler:
 
     @staticmethod
     def handle_contract_send_channelsettle(
-            raiden: 'RaidenService',
-            channel_settle_event: ContractSendChannelSettle,
+        raiden: "RaidenService", channel_settle_event: ContractSendChannelSettle
     ):
-        assert raiden.wal, 'The Raiden Service must be initialize to handle events'
+        assert raiden.wal, "The Raiden Service must be initialize to handle events"
 
         canonical_identifier = CanonicalIdentifier(
             chain_identifier=raiden.chain.network_id,
@@ -510,7 +453,7 @@ class RaidenEventHandler:
         triggered_by_block_hash = channel_settle_event.triggered_by_block_hash
 
         payment_channel: PaymentChannel = raiden.chain.payment_channel(
-            canonical_identifier=canonical_identifier,
+            canonical_identifier=canonical_identifier
         )
         token_network_proxy: TokenNetwork = payment_channel.token_network
 
@@ -520,7 +463,7 @@ class RaidenEventHandler:
             # In that case it's safe to just use the latest view of the chain to
             # query the on-chain participant/channel details
             triggered_by_block_hash = token_network_proxy.client.blockhash_from_blocknumber(
-                'latest',
+                "latest"
             )
 
         participants_details = token_network_proxy.detail_participants(
@@ -534,25 +477,25 @@ class RaidenEventHandler:
         partner_details = participants_details.partner_details
 
         log_details = {
-            'chain_id': canonical_identifier.chain_identifier,
-            'token_network_identifier': canonical_identifier.token_network_address,
-            'channel_identifier': canonical_identifier.channel_identifier,
-            'node': pex(raiden.address),
-            'partner': to_checksum_address(partner_details.address),
-            'our_deposit': our_details.deposit,
-            'our_withdrawn': our_details.withdrawn,
-            'our_is_closer': our_details.is_closer,
-            'our_balance_hash': to_hex(our_details.balance_hash),
-            'our_nonce': our_details.nonce,
-            'our_locksroot': to_hex(our_details.locksroot),
-            'our_locked_amount': our_details.locked_amount,
-            'partner_deposit': partner_details.deposit,
-            'partner_withdrawn': partner_details.withdrawn,
-            'partner_is_closer': partner_details.is_closer,
-            'partner_balance_hash': to_hex(partner_details.balance_hash),
-            'partner_nonce': partner_details.nonce,
-            'partner_locksroot': to_hex(partner_details.locksroot),
-            'partner_locked_amount': partner_details.locked_amount,
+            "chain_id": canonical_identifier.chain_identifier,
+            "token_network_identifier": canonical_identifier.token_network_address,
+            "channel_identifier": canonical_identifier.channel_identifier,
+            "node": pex(raiden.address),
+            "partner": to_checksum_address(partner_details.address),
+            "our_deposit": our_details.deposit,
+            "our_withdrawn": our_details.withdrawn,
+            "our_is_closer": our_details.is_closer,
+            "our_balance_hash": to_hex(our_details.balance_hash),
+            "our_nonce": our_details.nonce,
+            "our_locksroot": to_hex(our_details.locksroot),
+            "our_locked_amount": our_details.locked_amount,
+            "partner_deposit": partner_details.deposit,
+            "partner_withdrawn": partner_details.withdrawn,
+            "partner_is_closer": partner_details.is_closer,
+            "partner_balance_hash": to_hex(partner_details.balance_hash),
+            "partner_nonce": partner_details.nonce,
+            "partner_locksroot": to_hex(partner_details.locksroot),
+            "partner_locked_amount": partner_details.locked_amount,
         }
 
         if our_details.balance_hash != EMPTY_HASH:
@@ -563,12 +506,9 @@ class RaidenEventHandler:
             )
 
             if event_record.data is None:
-                log.critical(
-                    'our balance proof not found',
-                    **log_details,
-                )
+                log.critical("our balance proof not found", **log_details)
                 raise RaidenUnrecoverableError(
-                    'Our balance proof could not be found in the database',
+                    "Our balance proof could not be found in the database"
                 )
 
             our_balance_proof = event_record.data.balance_proof
@@ -588,12 +528,9 @@ class RaidenEventHandler:
                 sender=participants_details.partner_details.address,
             )
             if state_change_record.data is None:
-                log.critical(
-                    'partner balance proof not found',
-                    **log_details,
-                )
+                log.critical("partner balance proof not found", **log_details)
                 raise RaidenUnrecoverableError(
-                    'Partner balance proof could not be found in the database',
+                    "Partner balance proof could not be found in the database"
                 )
 
             partner_balance_proof = state_change_record.data.balance_proof

@@ -5,8 +5,7 @@ from raiden.tests.utils.factories import make_address
 
 
 def test_geth_discover_next_available_nonce(
-        deploy_client,
-        skip_if_parity,  # pylint: disable=unused-argument
+    deploy_client, skip_if_parity  # pylint: disable=unused-argument
 ):
     """ Test that geth_discover_next_available nonce works correctly
 
@@ -16,16 +15,13 @@ def test_geth_discover_next_available_nonce(
 
     greenlets = set()
     for _ in range(100):
-        greenlets.add(gevent.spawn(
-            deploy_client.send_transaction,
-            make_address(),  # to
-            50000,  # startgas
-        ))
-    gevent.sleep(.5)
+        greenlets.add(
+            gevent.spawn(deploy_client.send_transaction, make_address(), 50000)  # to  # startgas
+        )
+    gevent.sleep(0.5)
 
     nonce = geth_discover_next_available_nonce(
-        web3=deploy_client.web3,
-        address=deploy_client.address,
+        web3=deploy_client.web3, address=deploy_client.address
     )
     assert nonce > 0
     assert nonce < 100

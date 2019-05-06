@@ -32,16 +32,12 @@ class Room(MatrixRoom):
         """ Return a list of members of this room. """
         if force_resync:
             response = self.client.api.get_room_members(self.room_id)
-            for event in response['chunk']:
-                if event['content']['membership'] == 'join':
+            for event in response["chunk"]:
+                if event["content"]["membership"] == "join":
                     user_id = event["state_key"]
                     if user_id not in self._members:
                         self._mkmembers(
-                            User(
-                                self.client.api,
-                                user_id,
-                                event['content'].get('displayname'),
-                            ),
+                            User(self.client.api, user_id, event["content"].get("displayname"))
                         )
         return list(self._members.values())
 
@@ -54,8 +50,8 @@ class Room(MatrixRoom):
 
     def __repr__(self):
         if self.canonical_alias:
-            return f'<Room id={self.room_id!r} alias={self.canonical_alias!r}>'
-        return f'<Room id={self.room_id!r} aliases={self.aliases!r}>'
+            return f"<Room id={self.room_id!r} alias={self.canonical_alias!r}>"
+        return f"<Room id={self.room_id!r} aliases={self.aliases!r}>"
 
     def update_aliases(self):
         """ Get aliases information from room state
@@ -69,15 +65,15 @@ class Room(MatrixRoom):
         except MatrixRequestError:
             return False
         for chunk in response:
-            content = chunk.get('content')
+            content = chunk.get("content")
             if content:
-                if 'aliases' in content:
-                    aliases = content['aliases']
+                if "aliases" in content:
+                    aliases = content["aliases"]
                     if aliases != self.aliases:
                         self.aliases = aliases
                         changed = True
-                if chunk.get('type') == 'm.room.canonical_alias':
-                    canonical_alias = content['alias']
+                if chunk.get("type") == "m.room.canonical_alias":
+                    canonical_alias = content["alias"]
                     if self.canonical_alias != canonical_alias:
                         self.canonical_alias = canonical_alias
                         changed = True
@@ -88,10 +84,7 @@ class Room(MatrixRoom):
     def set_account_data(self, type_: str, content: Dict[str, Any]) -> dict:
         self.account_data[type_] = content
         return self.client.api.set_room_account_data(
-            quote(self.client.user_id),
-            quote(self.room_id),
-            quote(type_),
-            content,
+            quote(self.client.user_id), quote(self.room_id), quote(type_), content
         )
 
 
@@ -108,20 +101,20 @@ class GMatrixHttpApi(MatrixHttpApi):
     """
 
     def __init__(
-            self,
-            *args,
-            pool_maxsize: int = 10,
-            retry_timeout: int = 60,
-            retry_delay: Callable[[], Iterable[float]] = None,
-            long_paths: Container[str] = (),
-            **kwargs,
+        self,
+        *args,
+        pool_maxsize: int = 10,
+        retry_timeout: int = 60,
+        retry_delay: Callable[[], Iterable[float]] = None,
+        long_paths: Container[str] = (),
+        **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
 
         http_adapter = HTTPAdapter(pool_maxsize=pool_maxsize)
         https_adapter = HTTPAdapter(pool_maxsize=pool_maxsize)
-        self.session.mount('http://', http_adapter)
-        self.session.mount('https://', https_adapter)
+        self.session.mount("http://", http_adapter)
+        self.session.mount("https://", https_adapter)
 
         self._long_paths = long_paths
         if long_paths:
@@ -157,7 +150,7 @@ class GMatrixHttpApi(MatrixHttpApi):
                     raise
                 last_ex = ex
                 log.debug(
-                    'Got http _send exception, waiting then retrying',
+                    "Got http _send exception, waiting then retrying",
                     wait_for=delay,
                     _exception=ex,
                 )
@@ -165,12 +158,7 @@ class GMatrixHttpApi(MatrixHttpApi):
         else:
             raise last_ex
 
-    def send_to_device(
-            self,
-            event_type,
-            messages,
-            txn_id=None,  # pylint: disable=unused-argument
-    ):
+    def send_to_device(self, event_type, messages, txn_id=None):  # pylint: disable=unused-argument
         started = time.time()
         last_ex = None
         for delay in self.retry_delay():
@@ -185,7 +173,7 @@ class GMatrixHttpApi(MatrixHttpApi):
                     raise
                 last_ex = ex
                 log.debug(
-                    'Got http _send exception, waiting then retrying',
+                    "Got http _send exception, waiting then retrying",
                     wait_for=delay,
                     _exception=ex,
                 )
@@ -196,21 +184,22 @@ class GMatrixHttpApi(MatrixHttpApi):
 
 class GMatrixClient(MatrixClient):
     """ Gevent-compliant MatrixClient subclass """
+
     sync_filter: str
     sync_thread: gevent.Greenlet = None
     _handle_thread: gevent.Greenlet = None
 
     def __init__(
-            self,
-            base_url: str,
-            token: str = None,
-            user_id: str = None,
-            valid_cert_check: bool = True,
-            sync_filter_limit: int = 20,
-            cache_level: CACHE = CACHE.ALL,
-            http_pool_maxsize: int = 10,
-            http_retry_timeout: int = 60,
-            http_retry_delay: Callable[[], Iterable[float]] = lambda: repeat(1),
+        self,
+        base_url: str,
+        token: str = None,
+        user_id: str = None,
+        valid_cert_check: bool = True,
+        sync_filter_limit: int = 20,
+        cache_level: CACHE = CACHE.ALL,
+        http_pool_maxsize: int = 10,
+        http_retry_timeout: int = 60,
+        http_retry_delay: Callable[[], Iterable[float]] = lambda: repeat(1),
     ) -> None:
         # dict of 'type': 'content' key/value pairs
         self.account_data: Dict[str, Dict[str, Any]] = dict()
@@ -218,12 +207,7 @@ class GMatrixClient(MatrixClient):
         self.token: Optional[str] = None
 
         super().__init__(
-            base_url,
-            token,
-            user_id,
-            valid_cert_check,
-            sync_filter_limit,
-            cache_level,
+            base_url, token, user_id, valid_cert_check, sync_filter_limit, cache_level
         )
         self.api = GMatrixHttpApi(
             base_url,
@@ -231,14 +215,14 @@ class GMatrixClient(MatrixClient):
             pool_maxsize=http_pool_maxsize,
             retry_timeout=http_retry_timeout,
             retry_delay=http_retry_delay,
-            long_paths=('/sync',),
+            long_paths=("/sync",),
         )
 
     def listen_forever(
-            self,
-            timeout_ms: int = 30000,
-            exception_handler: Callable[[Exception], None] = None,
-            bad_sync_timeout: int = 5,
+        self,
+        timeout_ms: int = 30000,
+        exception_handler: Callable[[Exception], None] = None,
+        bad_sync_timeout: int = 5,
     ):
         """
         Keep listening for events forever.
@@ -257,23 +241,20 @@ class GMatrixClient(MatrixClient):
                 self._sync(timeout_ms)
                 _bad_sync_timeout = bad_sync_timeout
             except MatrixRequestError as e:
-                log.warning('A MatrixRequestError occured during sync.')
+                log.warning("A MatrixRequestError occured during sync.")
                 if e.code >= 500:
-                    log.warning(
-                        'Problem occured serverside. Waiting',
-                        wait_for=_bad_sync_timeout,
-                    )
+                    log.warning("Problem occured serverside. Waiting", wait_for=_bad_sync_timeout)
                     gevent.sleep(_bad_sync_timeout)
                     _bad_sync_timeout = min(_bad_sync_timeout * 2, self.bad_sync_timeout_limit)
                 else:
                     raise
             except MatrixHttpLibError:
-                log.exception('A MatrixHttpLibError occured during sync.')
+                log.exception("A MatrixHttpLibError occured during sync.")
                 if self.should_listen:
                     gevent.sleep(_bad_sync_timeout)
                     _bad_sync_timeout = min(_bad_sync_timeout * 2, self.bad_sync_timeout_limit)
             except Exception as e:
-                log.exception('Exception thrown during sync')
+                log.exception("Exception thrown during sync")
                 if exception_handler is not None:
                     exception_handler(e)
                 else:
@@ -287,10 +268,10 @@ class GMatrixClient(MatrixClient):
             exception_handler: Optional exception handler function which can
                 be used to handle exceptions in the caller thread.
         """
-        assert not self.should_listen and self.sync_thread is None, 'Already running'
+        assert not self.should_listen and self.sync_thread is None, "Already running"
         self.should_listen = True
         self.sync_thread = gevent.spawn(self.listen_forever, timeout_ms, exception_handler)
-        self.sync_thread.name = f'GMatrixClient.listen_forever user_id:{self.user_id}'
+        self.sync_thread.name = f"GMatrixClient.listen_forever user_id:{self.user_id}"
 
     def stop_listener_thread(self):
         """ Kills sync_thread greenlet before joining it """
@@ -317,17 +298,11 @@ class GMatrixClient(MatrixClient):
         Returns:
             user_list: list of users returned by server-side search
         """
-        response = self.api._send(
-            'POST',
-            '/user_directory/search',
-            {
-                'search_term': term,
-            },
-        )
+        response = self.api._send("POST", "/user_directory/search", {"search_term": term})
         try:
             return [
-                User(self.api, _user['user_id'], _user['display_name'])
-                for _user in response['results']
+                User(self.api, _user["user_id"], _user["display_name"])
+                for _user in response["results"]
             ]
         except KeyError:
             return []
@@ -335,56 +310,35 @@ class GMatrixClient(MatrixClient):
     def search_room_directory(self, filter_term: str = None, limit: int = 10) -> List[Room]:
         filter_options: dict = {}
         if filter_term:
-            filter_options = {
-                'filter': {
-                    'generic_search_term': filter_term,
-                },
-            }
+            filter_options = {"filter": {"generic_search_term": filter_term}}
 
-        response = self.api._send(
-            'POST',
-            '/publicRooms',
-            {
-                'limit': limit,
-                **filter_options,
-            },
-        )
+        response = self.api._send("POST", "/publicRooms", {"limit": limit, **filter_options})
         rooms = []
-        for room_info in response['chunk']:
-            room = Room(self, room_info['room_id'])
-            room.canonical_alias = room_info.get('canonical_alias')
+        for room_info in response["chunk"]:
+            room = Room(self, room_info["room_id"])
+            room.canonical_alias = room_info.get("canonical_alias")
             rooms.append(room)
         return rooms
 
     def modify_presence_list(
-            self,
-            add_user_ids: List[str] = None,
-            remove_user_ids: List[str] = None,
+        self, add_user_ids: List[str] = None, remove_user_ids: List[str] = None
     ):
         if add_user_ids is None:
             add_user_ids = []
         if remove_user_ids is None:
             remove_user_ids = []
         return self.api._send(
-            'POST',
-            f'/presence/list/{quote(self.user_id)}',
-            {
-                'invite': add_user_ids,
-                'drop': remove_user_ids,
-            },
+            "POST",
+            f"/presence/list/{quote(self.user_id)}",
+            {"invite": add_user_ids, "drop": remove_user_ids},
         )
 
     def get_presence_list(self) -> List[dict]:
-        return self.api._send(
-            'GET',
-            f'/presence/list/{quote(self.user_id)}',
-        )
+        return self.api._send("GET", f"/presence/list/{quote(self.user_id)}")
 
     def set_presence_state(self, state: str):
         return self.api._send(
-            'PUT',
-            f'/presence/{quote(self.user_id)}/status',
-            {'presence': state},
+            "PUT", f"/presence/{quote(self.user_id)}/status", {"presence": state}
         )
 
     def typing(self, room: Room, timeout: int = 5000):
@@ -395,8 +349,8 @@ class GMatrixClient(MatrixClient):
             room: room to send typing event to
             timeout: timeout for the event, in ms
         """
-        path = f'/rooms/{quote(room.room_id)}/typing/{quote(self.user_id)}'
-        return self.api._send('PUT', path, {'typing': True, 'timeout': timeout})
+        path = f"/rooms/{quote(room.room_id)}/typing/{quote(self.user_id)}"
+        return self.api._send("PUT", path, {"typing": True, "timeout": timeout})
 
     def _mkroom(self, room_id: str) -> Room:
         """ Uses a geventified Room subclass """
@@ -408,7 +362,7 @@ class GMatrixClient(MatrixClient):
         return room
 
     def get_user_presence(self, user_id: str) -> str:
-        return self.api._send('GET', f'/presence/{quote(user_id)}/status').get('presence')
+        return self.api._send("GET", f"/presence/{quote(user_id)}/status").get("presence")
 
     @staticmethod
     def call(callback, *args, **kwargs):
@@ -424,10 +378,10 @@ class GMatrixClient(MatrixClient):
             # if previous _handle_thread is still running, wait for it and re-raise if needed
             self._handle_thread.get()
 
-        is_first_sync = (prev_sync_token is None)
+        is_first_sync = prev_sync_token is None
         self._handle_thread = gevent.Greenlet(self._handle_response, response, is_first_sync)
         self._handle_thread.name = (
-            f'GMatrixClient._sync user_id:{self.user_id} sync_token:{prev_sync_token}'
+            f"GMatrixClient._sync user_id:{self.user_id} sync_token:{prev_sync_token}"
         )
         self._handle_thread.link_exception(lambda g: self.sync_thread.kill(g.exception))
         self._handle_thread.start()
@@ -437,26 +391,26 @@ class GMatrixClient(MatrixClient):
 
     def _handle_response(self, response, first_sync=False):
         # Handle presence after rooms
-        for presence_update in response['presence']['events']:
+        for presence_update in response["presence"]["events"]:
             for callback in self.presence_listeners.values():
                 self.call(callback, presence_update)
 
-        for to_device_message in response['to_device']['events']:
+        for to_device_message in response["to_device"]["events"]:
             for listener in self.listeners:
-                if listener['event_type'] == 'to_device':
-                    self.call(listener['callback'], to_device_message)
+                if listener["event_type"] == "to_device":
+                    self.call(listener["callback"], to_device_message)
 
-        for room_id, invite_room in response['rooms']['invite'].items():
+        for room_id, invite_room in response["rooms"]["invite"].items():
             for listener in self.invite_listeners:
-                self.call(listener, room_id, invite_room['invite_state'])
+                self.call(listener, room_id, invite_room["invite_state"])
 
-        for room_id, left_room in response['rooms']['leave'].items():
+        for room_id, left_room in response["rooms"]["leave"].items():
             for listener in self.left_listeners:
                 self.call(listener, room_id, left_room)
             if room_id in self.rooms:
                 del self.rooms[room_id]
 
-        for room_id, sync_room in response['rooms']['join'].items():
+        for room_id, sync_room in response["rooms"]["join"].items():
             if room_id not in self.rooms:
                 self._mkroom(room_id)
             room = self.rooms[room_id]
@@ -464,11 +418,11 @@ class GMatrixClient(MatrixClient):
             room.prev_batch = sync_room["timeline"]["prev_batch"]
 
             for event in sync_room["state"]["events"]:
-                event['room_id'] = room_id
+                event["room_id"] = room_id
                 self.call(room._process_state_event, event)
 
             for event in sync_room["timeline"]["events"]:
-                event['room_id'] = room_id
+                event["room_id"] = room_id
                 self.call(room._put_event, event)
 
                 # TODO: global listeners can still exist but work by each
@@ -477,34 +431,32 @@ class GMatrixClient(MatrixClient):
                 # Dispatch for client (global) listeners
                 for listener in self.listeners:
                     should_call = (
-                        listener['event_type'] is None or
-                        listener['event_type'] == event['type']
+                        listener["event_type"] is None or listener["event_type"] == event["type"]
                     )
                     if should_call:
-                        self.call(listener['callback'], event)
+                        self.call(listener["callback"], event)
 
-            for event in sync_room['ephemeral']['events']:
-                event['room_id'] = room_id
+            for event in sync_room["ephemeral"]["events"]:
+                event["room_id"] = room_id
                 self.call(room._put_ephemeral_event, event)
 
                 for listener in self.ephemeral_listeners:
                     should_call = (
-                        listener['event_type'] is None or
-                        listener['event_type'] == event['type']
+                        listener["event_type"] is None or listener["event_type"] == event["type"]
                     )
                     if should_call:
-                        self.call(listener['callback'], event)
+                        self.call(listener["callback"], event)
 
-            for event in sync_room['account_data']['events']:
-                room.account_data[event['type']] = event['content']
+            for event in sync_room["account_data"]["events"]:
+                room.account_data[event["type"]] = event["content"]
 
         if first_sync:
             # Only update the local account data on first sync to avoid races.
             # We don't support running multiple raiden nodes for the same eth account,
             # therefore no situation where we would need to be updated from the server
             # can happen.
-            for event in response['account_data']['events']:
-                self.account_data[event['type']] = event['content']
+            for event in response["account_data"]["events"]:
+                self.account_data[event["type"]] = event["content"]
 
     def set_account_data(self, type_: str, content: Dict[str, Any]) -> dict:
         """ Use this to set a key: value pair in account_data to keep it synced on server """
@@ -524,17 +476,17 @@ class GMatrixClient(MatrixClient):
     def set_sync_limit(self, limit: Optional[int]) -> Optional[int]:
         """ Sets the events limit per room for sync and return previous limit """
         try:
-            prev_limit = json.loads(self.sync_filter)['room']['timeline']['limit']
+            prev_limit = json.loads(self.sync_filter)["room"]["timeline"]["limit"]
         except (json.JSONDecodeError, KeyError):
             prev_limit = None
-        self.sync_filter = json.dumps({'room': {'timeline': {'limit': limit}}})
+        self.sync_filter = json.dumps({"room": {"timeline": {"limit": limit}}})
         return prev_limit
 
 
 # Monkey patch matrix User class to provide nicer repr
 @wraps(User.__repr__)
 def user__repr__(self):
-    return f'<User id={self.user_id!r}>'
+    return f"<User id={self.user_id!r}>"
 
 
 User.__repr__ = user__repr__

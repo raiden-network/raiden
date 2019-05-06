@@ -11,7 +11,7 @@ SOURCE_VERSION = 18
 TARGET_VERSION = 19
 
 
-class BlockHashCache():
+class BlockHashCache:
     """A small cache for blocknumber to blockhashes to optimize this migration a bit
 
     This cache lives only during the v18->v19 migration where numerous RPC calls are
@@ -29,7 +29,7 @@ class BlockHashCache():
         if block_number in self.mapping:
             return self.mapping[block_number]
 
-        block_hash = self.web3.eth.getBlock(block_number)['hash']
+        block_hash = self.web3.eth.getBlock(block_number)["hash"]
         block_hash = block_hash.hex()
         self.mapping[block_number] = block_hash
         return block_hash
@@ -43,10 +43,10 @@ class BlockQueryAndUpdateRecord(NamedTuple):
 
 
 def _query_blocknumber_and_update_statechange_data(
-        record: BlockQueryAndUpdateRecord,
+    record: BlockQueryAndUpdateRecord,
 ) -> Tuple[str, int]:
     data = record.data
-    data['block_hash'] = record.cache.get(record.block_number)
+    data["block_hash"] = record.cache.get(record.block_number)
     return (json.dumps(data), record.state_change_identifier)
 
 
@@ -57,8 +57,8 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
     batch_query = storage.batch_query_state_changes(
         batch_size=batch_size,
         filters=[
-            ('_type', 'raiden.transfer.state_change.ContractReceive%'),
-            ('_type', 'raiden.transfer.state_change.ActionInitChain'),
+            ("_type", "raiden.transfer.state_change.ContractReceive%"),
+            ("_type", "raiden.transfer.state_change.ActionInitChain"),
         ],
         logical_and=False,
     )
@@ -67,9 +67,9 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
         query_records = []
         for state_change in state_changes_batch:
             data = json.loads(state_change.data)
-            assert 'block_hash' not in data, 'v18 state changes cant contain blockhash'
+            assert "block_hash" not in data, "v18 state changes cant contain blockhash"
             record = BlockQueryAndUpdateRecord(
-                block_number=int(data['block_number']),
+                block_number=int(data["block_number"]),
                 data=data,
                 state_change_identifier=state_change.state_change_identifier,
                 cache=cache,
@@ -80,8 +80,7 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
         # updated tuple entries that will update the DB
         updated_state_changes = []
         pool_generator = Pool(batch_size).imap(
-            _query_blocknumber_and_update_statechange_data,
-            query_records,
+            _query_blocknumber_and_update_statechange_data, query_records
         )
         for entry in pool_generator:
             updated_state_changes.append(entry)
@@ -93,72 +92,62 @@ def _add_blockhash_to_state_changes(storage: SQLiteStorage, cache: BlockHashCach
 def _add_blockhash_to_events(storage: SQLiteStorage, cache: BlockHashCache) -> None:
     """Adds blockhash to all ContractSendXXX events"""
     batch_query = storage.batch_query_event_records(
-        batch_size=500,
-        filters=[('_type', 'raiden.transfer.events.ContractSend%')],
+        batch_size=500, filters=[("_type", "raiden.transfer.events.ContractSend%")]
     )
     for events_batch in batch_query:
         updated_events = []
         for event in events_batch:
             data = json.loads(event.data)
-            assert 'triggered_by_block_hash' not in data, 'v18 events cant contain blockhash'
+            assert "triggered_by_block_hash" not in data, "v18 events cant contain blockhash"
             # Get the state_change that triggered the event and get its hash
             matched_state_changes = storage.get_statechanges_by_identifier(
                 from_identifier=event.state_change_identifier,
                 to_identifier=event.state_change_identifier,
             )
             result_length = len(matched_state_changes)
-            msg = 'multiple state changes should not exist for the same identifier'
+            msg = "multiple state changes should not exist for the same identifier"
             assert result_length == 1, msg
 
             statechange_data = json.loads(matched_state_changes[0])
-            if 'block_hash' in statechange_data:
-                data['triggered_by_block_hash'] = statechange_data['block_hash']
-            elif 'block_number' in statechange_data:
-                block_number = int(statechange_data['block_number'])
-                data['triggered_by_block_hash'] = cache.get(block_number)
+            if "block_hash" in statechange_data:
+                data["triggered_by_block_hash"] = statechange_data["block_hash"]
+            elif "block_number" in statechange_data:
+                block_number = int(statechange_data["block_number"])
+                data["triggered_by_block_hash"] = cache.get(block_number)
 
-            updated_events.append((
-                json.dumps(data),
-                event.event_identifier,
-            ))
+            updated_events.append((json.dumps(data), event.event_identifier))
 
         storage.update_events(updated_events)
 
 
-def _transform_snapshot(
-        raw_snapshot: str,
-        storage: SQLiteStorage,
-        cache: BlockHashCache,
-) -> str:
+def _transform_snapshot(raw_snapshot: str, storage: SQLiteStorage, cache: BlockHashCache) -> str:
     """Upgrades a single snapshot by adding the blockhash to it and to any pending transactions"""
     snapshot = json.loads(raw_snapshot)
-    block_number = int(snapshot['block_number'])
-    snapshot['block_hash'] = cache.get(block_number)
+    block_number = int(snapshot["block_number"])
+    snapshot["block_hash"] = cache.get(block_number)
 
-    pending_transactions = snapshot['pending_transactions']
+    pending_transactions = snapshot["pending_transactions"]
     new_pending_transactions = []
     for transaction_data in pending_transactions:
-        if 'raiden.transfer.events.ContractSend' not in transaction_data['_type']:
+        if "raiden.transfer.events.ContractSend" not in transaction_data["_type"]:
             raise InvalidDBData(
                 "Error during v18 -> v19 upgrade. Chain state's pending transactions "
-                "should only contain ContractSend transactions",
+                "should only contain ContractSend transactions"
             )
 
         # For each pending transaction find the corresponding DB event record.
-        event_record = storage.get_latest_event_by_data_field(
-            filters=transaction_data,
-        )
+        event_record = storage.get_latest_event_by_data_field(filters=transaction_data)
         if not event_record.data:
             raise InvalidDBData(
-                'Error during v18 -> v19 upgrade. Could not find a database event '
-                'table entry for a pending transaction.',
+                "Error during v18 -> v19 upgrade. Could not find a database event "
+                "table entry for a pending transaction."
             )
 
         event_record_data = json.loads(event_record.data)
-        transaction_data['triggered_by_block_hash'] = event_record_data['triggered_by_block_hash']
+        transaction_data["triggered_by_block_hash"] = event_record_data["triggered_by_block_hash"]
         new_pending_transactions.append(transaction_data)
 
-    snapshot['pending_transactions'] = new_pending_transactions
+    snapshot["pending_transactions"] = new_pending_transactions
     return json.dumps(snapshot)
 
 
@@ -171,9 +160,7 @@ class TransformSnapshotRecord(NamedTuple):
 
 def _do_transform_snapshot(record: TransformSnapshotRecord) -> Tuple[Dict[str, Any], int]:
     new_snapshot = _transform_snapshot(
-        raw_snapshot=record.data,
-        storage=record.storage,
-        cache=record.cache,
+        raw_snapshot=record.data, storage=record.storage, cache=record.cache
     )
     return new_snapshot, record.identifier
 
@@ -184,10 +171,7 @@ def _transform_snapshots_for_blockhash(storage: SQLiteStorage, cache: BlockHashC
     snapshots = storage.get_snapshots()
     snapshot_records = [
         TransformSnapshotRecord(
-            data=snapshot.data,
-            identifier=snapshot.identifier,
-            storage=storage,
-            cache=cache,
+            data=snapshot.data, identifier=snapshot.identifier, storage=storage, cache=cache
         )
         for snapshot in snapshots
     ]
@@ -202,11 +186,11 @@ def _transform_snapshots_for_blockhash(storage: SQLiteStorage, cache: BlockHashC
 
 
 def upgrade_v18_to_v19(
-        storage: SQLiteStorage,
-        old_version: int,
-        current_version: int,  # pylint: disable=unused-argument
-        web3: Web3,
-        **kwargs,  # pylint: disable=unused-argument
+    storage: SQLiteStorage,
+    old_version: int,
+    current_version: int,  # pylint: disable=unused-argument
+    web3: Web3,
+    **kwargs,  # pylint: disable=unused-argument
 ) -> int:
     if old_version == SOURCE_VERSION:
         cache = BlockHashCache(web3)

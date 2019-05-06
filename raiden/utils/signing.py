@@ -11,13 +11,14 @@ def pack_data(abi_types, values) -> bytes:
     if len(abi_types) != len(values):
         raise ValueError(
             "Length mismatch between provided abi types and values.  Got "
-            "{0} types and {1} values.".format(len(abi_types), len(values)),
+            "{0} types and {1} values.".format(len(abi_types), len(values))
         )
 
     normalized_values = map_abi_data([abi_address_to_hex], abi_types, values)
 
-    return decode_hex(''.join(
-        remove_0x_prefix(hex_encode_abi_type(abi_type, value))
-        for abi_type, value
-        in zip(abi_types, normalized_values)
-    ))
+    return decode_hex(
+        "".join(
+            remove_0x_prefix(hex_encode_abi_type(abi_type, value))
+            for abi_type, value in zip(abi_types, normalized_values)
+        )
+    )

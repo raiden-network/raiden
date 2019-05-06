@@ -16,17 +16,17 @@ from raiden.utils.typing import (
 
 
 def get_channel_state(
-        token_address: TokenAddress,
-        payment_network_identifier: PaymentNetworkID,
-        token_network_address: TokenNetworkAddress,
-        reveal_timeout: BlockTimeout,
-        payment_channel_proxy,
-        opened_block_number: BlockNumber,
+    token_address: TokenAddress,
+    payment_network_identifier: PaymentNetworkID,
+    token_network_address: TokenNetworkAddress,
+    reveal_timeout: BlockTimeout,
+    payment_channel_proxy,
+    opened_block_number: BlockNumber,
 ):
     # Here we have to query the latest state because if we query with an older block
     # state (e.g. opened_block_number) the state may have been pruned which will
     # lead to an error.
-    latest_block_hash = payment_channel_proxy.client.blockhash_from_blocknumber('latest')
+    latest_block_hash = payment_channel_proxy.client.blockhash_from_blocknumber("latest")
     channel_details = payment_channel_proxy.detail(latest_block_hash)
 
     our_state = NettingChannelEndState(
@@ -47,17 +47,13 @@ def get_channel_state(
         return None
 
     open_transaction = TransactionExecutionStatus(
-        None,
-        opened_block_number,
-        TransactionExecutionStatus.SUCCESS,
+        None, opened_block_number, TransactionExecutionStatus.SUCCESS
     )
 
     close_transaction: Optional[TransactionExecutionStatus] = None
     if closed_block_number:
         close_transaction = TransactionExecutionStatus(
-            None,
-            closed_block_number,
-            TransactionExecutionStatus.SUCCESS,
+            None, closed_block_number, TransactionExecutionStatus.SUCCESS
         )
 
     # For the current implementation the channel is a smart contract that

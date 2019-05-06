@@ -25,15 +25,15 @@ def test_compute_layers_empty():
 
 def test_compute_layers_invalid_length():
     with pytest.raises(HashLengthNot32):
-        compute_layers([b'not32bytes', b'neither'])
+        compute_layers([b"not32bytes", b"neither"])
 
     with pytest.raises(HashLengthNot32):
-        compute_layers([b''])
+        compute_layers([b""])
 
 
 def test_compute_layers_duplicated():
-    hash_0 = sha3(b'x')
-    hash_1 = sha3(b'y')
+    hash_0 = sha3(b"x")
+    hash_1 = sha3(b"y")
 
     with pytest.raises(ValueError):
         compute_layers([hash_0, hash_0])
@@ -43,7 +43,7 @@ def test_compute_layers_duplicated():
 
 
 def test_compute_layers_single_entry():
-    hash_0 = sha3(b'x')
+    hash_0 = sha3(b"x")
     layers = compute_layers([hash_0])
     assert layers[MERKLEROOT][0] == hash_0
 
@@ -52,7 +52,7 @@ def test_compute_layers_single_entry():
 
 
 def test_one():
-    hash_0 = b'a' * 32
+    hash_0 = b"a" * 32
 
     leaves = [hash_0]
     layers = compute_layers(leaves)
@@ -66,8 +66,8 @@ def test_one():
 
 
 def test_two():
-    hash_0 = b'a' * 32
-    hash_1 = b'b' * 32
+    hash_0 = b"a" * 32
+    hash_1 = b"b" * 32
 
     leaves = [hash_0, hash_1]
     layers = compute_layers(leaves)
@@ -86,9 +86,9 @@ def test_two():
 
 
 def test_three():
-    hash_0 = b'a' * 32
-    hash_1 = b'b' * 32
-    hash_2 = b'c' * 32
+    hash_0 = b"a" * 32
+    hash_1 = b"b" * 32
+    hash_2 = b"c" * 32
 
     leaves = [hash_0, hash_1, hash_2]
     layers = compute_layers(leaves)
@@ -96,8 +96,8 @@ def test_three():
     root = merkleroot(tree)
 
     hash_01 = (
-        b'me\xef\x9c\xa9=5\x16\xa4\xd3\x8a\xb7\xd9\x89\xc2\xb5\x00'
-        b'\xe2\xfc\x89\xcc\xdc\xf8x\xf9\xc4m\xaa\xf6\xad\r['
+        b"me\xef\x9c\xa9=5\x16\xa4\xd3\x8a\xb7\xd9\x89\xc2\xb5\x00"
+        b"\xe2\xfc\x89\xcc\xdc\xf8x\xf9\xc4m\xaa\xf6\xad\r["
     )
     assert sha3(hash_0 + hash_1) == hash_01
     calculated_root = sha3(hash_2 + hash_01)
@@ -124,10 +124,7 @@ def test_three():
 def test_many(tree_up_to=10):
     for number_of_leaves in range(1, tree_up_to):  # skipping the empty tree
 
-        leaves = [
-            sha3(str(value).encode())
-            for value in range(number_of_leaves)
-        ]
+        leaves = [sha3(str(value).encode()) for value in range(number_of_leaves)]
 
         layers = compute_layers(leaves)
         tree = MerkleTreeState(layers)

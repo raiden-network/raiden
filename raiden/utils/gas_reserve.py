@@ -9,9 +9,7 @@ from raiden_contracts.constants import (
     GAS_REQUIRED_FOR_SETTLE_CHANNEL,
 )
 
-GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE = (
-    UNLOCK_TX_GAS_LIMIT
-)
+GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE = UNLOCK_TX_GAS_LIMIT
 GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE = (
     GAS_REQUIRED_FOR_SETTLE_CHANNEL + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_SETTLE
 )
@@ -19,22 +17,22 @@ GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN = (
     GAS_REQUIRED_FOR_CLOSE_CHANNEL + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_CLOSE
 )
 GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_COMPLETE = (
-    GAS_REQUIRED_FOR_OPEN_CHANNEL +
-    GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT +
-    GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN
+    GAS_REQUIRED_FOR_OPEN_CHANNEL
+    + GAS_REQUIRED_FOR_SET_TOTAL_DEPOSIT
+    + GAS_REQUIRED_FOR_CHANNEL_LIFECYCLE_AFTER_OPEN
 )
 
 GAS_RESERVE_ESTIMATE_SECURITY_FACTOR = 1.1
 
 
 def _get_required_gas_estimate(
-        new_channels: int = 0,
-        opening_channels: int = 0,
-        opened_channels: int = 0,
-        closing_channels: int = 0,
-        closed_channels: int = 0,
-        settling_channels: int = 0,
-        settled_channels: int = 0,
+    new_channels: int = 0,
+    opening_channels: int = 0,
+    opened_channels: int = 0,
+    closing_channels: int = 0,
+    closed_channels: int = 0,
+    settling_channels: int = 0,
+    settled_channels: int = 0,
 ) -> int:
     estimate = 0
 
@@ -63,33 +61,23 @@ def _get_required_gas_estimate_for_state(raiden) -> int:
             token_address=token_address,
         )
         num_opening_channels = len(
-            raiden.chain.token_network(token_network_address).open_channel_transactions,
+            raiden.chain.token_network(token_network_address).open_channel_transactions
         )
-        num_opened_channels = len(views.get_channelstate_open(
-            chain_state,
-            registry_address,
-            token_address,
-        ))
-        num_closing_channels = len(views.get_channelstate_closing(
-            chain_state,
-            registry_address,
-            token_address,
-        ))
-        num_closed_channels = len(views.get_channelstate_closed(
-            chain_state,
-            registry_address,
-            token_address,
-        ))
-        num_settling_channels = len(views.get_channelstate_settling(
-            chain_state,
-            registry_address,
-            token_address,
-        ))
-        num_settled_channels = len(views.get_channelstate_settled(
-            chain_state,
-            registry_address,
-            token_address,
-        ))
+        num_opened_channels = len(
+            views.get_channelstate_open(chain_state, registry_address, token_address)
+        )
+        num_closing_channels = len(
+            views.get_channelstate_closing(chain_state, registry_address, token_address)
+        )
+        num_closed_channels = len(
+            views.get_channelstate_closed(chain_state, registry_address, token_address)
+        )
+        num_settling_channels = len(
+            views.get_channelstate_settling(chain_state, registry_address, token_address)
+        )
+        num_settled_channels = len(
+            views.get_channelstate_settled(chain_state, registry_address, token_address)
+        )
 
         gas_estimate += _get_required_gas_estimate(
             opening_channels=num_opening_channels,
@@ -103,19 +91,13 @@ def _get_required_gas_estimate_for_state(raiden) -> int:
     return gas_estimate
 
 
-def get_required_gas_estimate(
-        raiden,
-        channels_to_open: int = 0,
-) -> int:
+def get_required_gas_estimate(raiden, channels_to_open: int = 0) -> int:
     gas_estimate = _get_required_gas_estimate_for_state(raiden)
     gas_estimate += _get_required_gas_estimate(new_channels=channels_to_open)
     return gas_estimate
 
 
-def get_reserve_estimate(
-        raiden,
-        channels_to_open: int = 0,
-) -> int:
+def get_reserve_estimate(raiden, channels_to_open: int = 0) -> int:
     gas_estimate = get_required_gas_estimate(raiden, channels_to_open)
     gas_price = raiden.chain.client.gas_price()
     reserve_amount = gas_estimate * gas_price
@@ -123,10 +105,7 @@ def get_reserve_estimate(
     return round(reserve_amount * GAS_RESERVE_ESTIMATE_SECURITY_FACTOR)
 
 
-def has_enough_gas_reserve(
-        raiden,
-        channels_to_open: int = 0,
-) -> Tuple[bool, int]:
+def has_enough_gas_reserve(raiden, channels_to_open: int = 0) -> Tuple[bool, int]:
     """ Checks if the account has enough balance to handle the lifecycles of all
     open channels as well as the to be created channels.
 

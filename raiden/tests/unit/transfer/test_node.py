@@ -8,11 +8,7 @@ from raiden.transfer.state_change import (
 )
 
 
-def test_is_transaction_effect_satisfied(
-        chain_state,
-        token_network_id,
-        netting_channel_state,
-):
+def test_is_transaction_effect_satisfied(chain_state, token_network_id, netting_channel_state):
     canonical_identifier = netting_channel_state.canonical_identifier
     assert token_network_id == canonical_identifier.token_network_address
     transaction = ContractSendChannelBatchUnlock(
@@ -55,9 +51,6 @@ def test_is_transaction_effect_satisfied(
         block_hash=make_block_hash(),
     )
 
-    iteration = state_transition(
-        chain_state=chain_state,
-        state_change=channel_settled,
-    )
+    iteration = state_transition(chain_state=chain_state, state_change=channel_settled)
 
     assert is_transaction_effect_satisfied(iteration.new_state, transaction, state_change)

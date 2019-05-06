@@ -21,18 +21,16 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 class UserDeposit:
     def __init__(
-            self,
-            jsonrpc_client: JSONRPCClient,
-            user_deposit_address: Address,
-            contract_manager: ContractManager,
+        self,
+        jsonrpc_client: JSONRPCClient,
+        user_deposit_address: Address,
+        contract_manager: ContractManager,
     ):
         if not is_binary_address(user_deposit_address):
-            raise InvalidAddress('Expected binary address format for token nework')
+            raise InvalidAddress("Expected binary address format for token nework")
 
         check_address_has_code(
-            jsonrpc_client,
-            Address(user_deposit_address),
-            CONTRACT_USER_DEPOSIT,
+            jsonrpc_client, Address(user_deposit_address), CONTRACT_USER_DEPOSIT
         )
 
         self.client = jsonrpc_client
@@ -48,28 +46,23 @@ class UserDeposit:
 
         self.deposit_lock = RLock()
 
-    def token_address(
-            self,
-            block_identifier: BlockSpecification,
-    ) -> Address:
-        return to_canonical_address(self.proxy.contract.functions.token().call(
-            block_identifier=block_identifier,
-        ))
+    def token_address(self, block_identifier: BlockSpecification) -> Address:
+        return to_canonical_address(
+            self.proxy.contract.functions.token().call(block_identifier=block_identifier)
+        )
 
     def get_total_deposit(
-            self,
-            address: Address,
-            block_identifier: BlockSpecification,
+        self, address: Address, block_identifier: BlockSpecification
     ) -> TokenAmount:
         return self.proxy.contract.functions.balances(address).call(
-            block_identifier=block_identifier,
+            block_identifier=block_identifier
         )
 
     def deposit(
-            self,
-            beneficiary: Address,
-            total_deposit: TokenAmount,
-            block_identifier: BlockSpecification,
+        self,
+        beneficiary: Address,
+        total_deposit: TokenAmount,
+        block_identifier: BlockSpecification,
     ) -> None:
         """ Deposit provided amount into the user-deposit contract
         to the beneficiary's account. """
@@ -82,13 +75,13 @@ class UserDeposit:
         )
 
         log_details = {
-            'beneficiary': pex(beneficiary),
-            'contract': pex(self.address),
-            'total_deposit': total_deposit,
+            "beneficiary": pex(beneficiary),
+            "contract": pex(self.address),
+            "total_deposit": total_deposit,
         }
 
         checking_block = self.client.get_checking_block()
-        error_prefix = 'Call to deposit will fail'
+        error_prefix = "Call to deposit will fail"
 
         with self.deposit_lock:
             amount_to_deposit, log_details = self._deposit_preconditions(
@@ -98,17 +91,14 @@ class UserDeposit:
                 block_identifier=block_identifier,
             )
             gas_limit = self.proxy.estimate_gas(
-                checking_block,
-                'deposit',
-                to_checksum_address(beneficiary),
-                total_deposit,
+                checking_block, "deposit", to_checksum_address(beneficiary), total_deposit
             )
 
             if gas_limit:
-                error_prefix = 'Call to deposit failed'
-                log.debug('deposit called', **log_details)
+                error_prefix = "Call to deposit failed"
+                log.debug("deposit called", **log_details)
                 transaction_hash = self.proxy.transact(
-                    'deposit',
+                    "deposit",
                     safe_gas_limit(gas_limit),
                     to_checksum_address(beneficiary),
                     total_deposit,
@@ -120,12 +110,12 @@ class UserDeposit:
             transaction_executed = gas_limit is not None
             if not transaction_executed or receipt_or_none:
                 if transaction_executed:
-                    block = receipt_or_none['blockNumber']
+                    block = receipt_or_none["blockNumber"]
                 else:
                     block = checking_block
 
                 self.proxy.jsonrpc_client.check_for_insufficient_eth(
-                    transaction_name='deposit',
+                    transaction_name="deposit",
                     transaction_executed=transaction_executed,
                     required_gas=GAS_REQUIRED_FOR_UDC_DEPOSIT,
                     block_identifier=block,
@@ -137,85 +127,79 @@ class UserDeposit:
                     total_deposit=total_deposit,
                     block_identifier=block,
                 )
-                error_msg = f'{error_prefix}. {msg}'
+                error_msg = f"{error_prefix}. {msg}"
                 log.critical(error_msg, **log_details)
                 raise RaidenUnrecoverableError(error_msg)
 
-        log.info('deposit successful', **log_details)
+        log.info("deposit successful", **log_details)
 
     def effective_balance(self, address: Address, block_identifier: BlockSpecification) -> Balance:
         """ The user's balance with planned withdrawals deducted. """
-        fn = getattr(self.proxy.contract.functions, 'effectiveBalance')
+        fn = getattr(self.proxy.contract.functions, "effectiveBalance")
         balance = fn(address).call(block_identifier=block_identifier)
 
-        if balance == b'':
+        if balance == b"":
             raise RuntimeError(f"Call to 'effectiveBalance' returned nothing")
 
         return balance
 
     def _deposit_preconditions(
-            self,
-            total_deposit: TokenAmount,
-            beneficiary: Address,
-            token: Token,
-            block_identifier: BlockSpecification,
+        self,
+        total_deposit: TokenAmount,
+        beneficiary: Address,
+        token: Token,
+        block_identifier: BlockSpecification,
     ) -> Tuple[TokenAmount, Dict]:
         if not isinstance(total_deposit, int):
-            raise ValueError('total_deposit needs to be an integer number.')
+            raise ValueError("total_deposit needs to be an integer number.")
 
         previous_total_deposit = self.get_total_deposit(
-            address=beneficiary,
-            block_identifier=block_identifier,
+            address=beneficiary, block_identifier=block_identifier
         )
         amount_to_deposit = TokenAmount(total_deposit - previous_total_deposit)
 
         log_details = {
-            'user_deposit_address': pex(self.address),
-            'node': pex(self.node_address),
-            'beneficiary': pex(beneficiary),
-            'new_total_deposit': total_deposit,
-            'previous_total_deposit': previous_total_deposit,
+            "user_deposit_address": pex(self.address),
+            "node": pex(self.node_address),
+            "beneficiary": pex(beneficiary),
+            "new_total_deposit": total_deposit,
+            "previous_total_deposit": previous_total_deposit,
         }
 
         if total_deposit <= previous_total_deposit:
             msg = (
-                f'Current total deposit {previous_total_deposit} is already larger '
-                f'than the requested total deposit amount {total_deposit}'
+                f"Current total deposit {previous_total_deposit} is already larger "
+                f"than the requested total deposit amount {total_deposit}"
             )
-            log.info('deposit failed', reason=msg, **log_details)
+            log.info("deposit failed", reason=msg, **log_details)
             raise DepositMismatch(msg)
 
         current_balance = token.balance_of(
-            address=self.node_address,
-            block_identifier=block_identifier,
+            address=self.node_address, block_identifier=block_identifier
         )
         if current_balance < amount_to_deposit:
             msg = (
-                f'new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not '
-                f'be larger than the available balance {current_balance}, '
-                f'for token at address {pex(token.address)}'
+                f"new_total_deposit - previous_total_deposit =  {amount_to_deposit} can not "
+                f"be larger than the available balance {current_balance}, "
+                f"for token at address {pex(token.address)}"
             )
-            log.info('deposit failed', reason=msg, **log_details)
+            log.info("deposit failed", reason=msg, **log_details)
             raise DepositMismatch(msg)
 
-        token.approve(
-            allowed_address=Address(self.address),
-            allowance=amount_to_deposit,
-        )
+        token.approve(allowed_address=Address(self.address), allowance=amount_to_deposit)
 
         return amount_to_deposit, log_details
 
     def _check_why_deposit_failed(
-            self,
-            token: Token,
-            amount_to_deposit: TokenAmount,
-            total_deposit: TokenAmount,
-            block_identifier: BlockSpecification,
+        self,
+        token: Token,
+        amount_to_deposit: TokenAmount,
+        total_deposit: TokenAmount,
+        block_identifier: BlockSpecification,
     ) -> str:
-        msg = ''
+        msg = ""
         latest_deposit = self.get_total_deposit(
-            address=self.node_address,
-            block_identifier=block_identifier,
+            address=self.node_address, block_identifier=block_identifier
         )
 
         allowance = token.allowance(
@@ -225,14 +209,14 @@ class UserDeposit:
         )
         if allowance < amount_to_deposit:
             msg = (
-                'The allowance is insufficient. Check concurrent deposits '
-                'for the same token network but different proxies.'
+                "The allowance is insufficient. Check concurrent deposits "
+                "for the same token network but different proxies."
             )
         elif token.balance_of(self.node_address, block_identifier) < amount_to_deposit:
-            msg = 'The address doesnt have enough tokens'
+            msg = "The address doesnt have enough tokens"
         elif latest_deposit < total_deposit:
-            msg = 'Deposit amount did not increase after deposit transaction'
+            msg = "Deposit amount did not increase after deposit transaction"
         else:
-            msg = 'Deposit failed of unknown reason'
+            msg = "Deposit failed of unknown reason"
 
         return msg

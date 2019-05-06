@@ -15,13 +15,13 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 class ServiceRegistry:
     def __init__(
-            self,
-            jsonrpc_client: JSONRPCClient,
-            service_registry_address: Address,
-            contract_manager: ContractManager,
+        self,
+        jsonrpc_client: JSONRPCClient,
+        service_registry_address: Address,
+        contract_manager: ContractManager,
     ):
         if not is_binary_address(service_registry_address):
-            raise InvalidAddress('Expected binary address for service registry')
+            raise InvalidAddress("Expected binary address for service registry")
 
         self.contract_manager = contract_manager
         check_address_has_code(jsonrpc_client, service_registry_address, CONTRACT_SERVICE_REGISTRY)
@@ -46,40 +46,36 @@ class ServiceRegistry:
     def service_count(self, block_identifier: BlockSpecification) -> int:
         """Get the number of registered services"""
         result = self.proxy.contract.functions.serviceCount().call(
-            block_identifier=block_identifier,
+            block_identifier=block_identifier
         )
         return result
 
     def get_service_address(
-            self,
-            block_identifier: BlockSpecification,
-            index: int,
+        self, block_identifier: BlockSpecification, index: int
     ) -> Optional[AddressHex]:
         """Gets the address of a service by index. If index is out of range return None"""
         try:
             result = self.proxy.contract.functions.service_addresses(index).call(
-                block_identifier=block_identifier,
+                block_identifier=block_identifier
             )
         except web3.exceptions.BadFunctionCallOutput:
             result = None
         return result
 
     def get_service_url(
-            self,
-            block_identifier: BlockSpecification,
-            service_hex_address: AddressHex,
+        self, block_identifier: BlockSpecification, service_hex_address: AddressHex
     ) -> Optional[str]:
         """Gets the URL of a service by address. If does not exist return None"""
         result = self.proxy.contract.functions.urls(service_hex_address).call(
-            block_identifier=block_identifier,
+            block_identifier=block_identifier
         )
-        if result == '':
+        if result == "":
             return None
         return result
 
     def set_url(self, url: str):
         """Sets the url needed to access the service via HTTP for the caller"""
-        gas_limit = self.proxy.estimate_gas('latest', 'setURL', url)
-        transaction_hash = self.proxy.transact('setURL', gas_limit, url)
+        gas_limit = self.proxy.estimate_gas("latest", "setURL", url)
+        transaction_hash = self.proxy.transact("setURL", gas_limit, url)
         self.client.poll(transaction_hash)
         assert not check_transaction_threw(self.client, transaction_hash)

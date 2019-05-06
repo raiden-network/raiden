@@ -41,14 +41,8 @@ def test_refund_transfer_out_of_bounds_values():
             make_refund_transfer(**args)
 
 
-@pytest.mark.parametrize('amount', [-1, 2 ** 256])
-@pytest.mark.parametrize(
-    'make',
-    [
-        make_lock,
-        make_mediated_transfer,
-    ],
-)
+@pytest.mark.parametrize("amount", [-1, 2 ** 256])
+@pytest.mark.parametrize("make", [make_lock, make_mediated_transfer])
 def test_amount_out_of_bounds(amount, make):
     with pytest.raises(ValueError):
         make(amount=amount)
@@ -58,11 +52,10 @@ def test_request_monitoring():
     partner_signer = LocalSigner(PARTNER_PRIVKEY)
     balance_proof = make_balance_proof(signer=partner_signer, amount=1)
     partner_signed_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
-        balance_proof,
+        balance_proof
     )
     request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof,
-        reward_amount=55,
+        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
     )
     assert request_monitoring
     with pytest.raises(ValueError):
@@ -75,8 +68,7 @@ def test_request_monitoring():
     assert RequestMonitoring.unpack(request_monitoring_packed) == request_monitoring
     # RequestMonitoring can be created directly from BalanceProofSignedState
     direct_created = RequestMonitoring.from_balance_proof_signed_state(
-        balance_proof,
-        reward_amount=55,
+        balance_proof, reward_amount=55
     )
     with pytest.raises(ValueError):
         # equality test uses `validated` packed format
@@ -87,8 +79,7 @@ def test_request_monitoring():
     assert direct_created == request_monitoring
     other_balance_proof = make_balance_proof(signer=partner_signer, amount=2)
     other_instance = RequestMonitoring.from_balance_proof_signed_state(
-        other_balance_proof,
-        reward_amount=55,
+        other_balance_proof, reward_amount=55
     )
     other_instance.sign(signer)
     # different balance proof ==> non-equality
@@ -130,10 +121,9 @@ def test_request_monitoring():
             channel_identifier=request_monitoring.balance_proof.channel_identifier,
         ),
     )
-    assert recover(
-        balance_proof_data,
-        request_monitoring.balance_proof.signature,
-    ) == PARTNER_ADDRESS
+    assert (
+        recover(balance_proof_data, request_monitoring.balance_proof.signature) == PARTNER_ADDRESS
+    )
 
     assert request_monitoring.verify_request_monitoring(PARTNER_ADDRESS, ADDRESS)
 
@@ -145,7 +135,7 @@ def test_update_pfs():
     channel_state.partner_state.balance_proof = balance_proof
     message = UpdatePFS.from_channel_state(channel_state=channel_state)
 
-    assert message.signature == b''
+    assert message.signature == b""
     privkey2, address2 = factories.make_privkey_address()
     signer2 = LocalSigner(privkey2)
     message.sign(signer2)
@@ -162,11 +152,10 @@ def test_tamper_request_monitoring():
 
     balance_proof = make_balance_proof(signer=partner_signer, amount=1)
     partner_signed_balance_proof = SignedBlindedBalanceProof.from_balance_proof_signed_state(
-        balance_proof,
+        balance_proof
     )
     request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof,
-        reward_amount=55,
+        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
     )
     request_monitoring.sign(signer)
 
@@ -186,11 +175,10 @@ def test_tamper_request_monitoring():
     )
 
     # An attacker might change the balance hash
-    partner_signed_balance_proof.balance_hash = 'tampered'.encode()
+    partner_signed_balance_proof.balance_hash = "tampered".encode()
 
     tampered_balance_hash_request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof,
-        reward_amount=55,
+        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
     )
 
     tampered_bp = tampered_balance_hash_request_monitoring.balance_proof
@@ -205,8 +193,7 @@ def test_tamper_request_monitoring():
     )
     # The signature works/is unaffected by that change...
     recovered_address_tampered = recover(
-        tampered_balance_hash_reward_proof_data,
-        exploited_signature,
+        tampered_balance_hash_reward_proof_data, exploited_signature
     )
 
     assert recover(reward_proof_data, exploited_signature) == recovered_address_tampered
@@ -214,16 +201,14 @@ def test_tamper_request_monitoring():
 
     # ...but overall verification fails
     assert not tampered_balance_hash_request_monitoring.verify_request_monitoring(
-        PARTNER_ADDRESS,
-        ADDRESS,
+        PARTNER_ADDRESS, ADDRESS
     )
 
     # An attacker might change the additional_hash
-    partner_signed_balance_proof.additional_hash = 'tampered'.encode()
+    partner_signed_balance_proof.additional_hash = "tampered".encode()
 
     tampered_additional_hash_request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof,
-        reward_amount=55,
+        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
     )
 
     tampered_bp = tampered_additional_hash_request_monitoring.balance_proof
@@ -240,8 +225,7 @@ def test_tamper_request_monitoring():
     # The signature works/is unaffected by that change...
 
     recovered_address_tampered = recover(
-        tampered_additional_hash_reward_proof_data,
-        exploited_signature,
+        tampered_additional_hash_reward_proof_data, exploited_signature
     )
 
     assert recover(reward_proof_data, exploited_signature) == recovered_address_tampered
@@ -249,15 +233,13 @@ def test_tamper_request_monitoring():
 
     # ...but overall verification fails
     assert not tampered_balance_hash_request_monitoring.verify_request_monitoring(
-        PARTNER_ADDRESS,
-        ADDRESS,
+        PARTNER_ADDRESS, ADDRESS
     )
     # An attacker can change the non_closing_signature
-    partner_signed_balance_proof.non_closing_signature = 'tampered'.encode()
+    partner_signed_balance_proof.non_closing_signature = "tampered".encode()
 
     tampered_non_closing_signature_request_monitoring = RequestMonitoring(
-        onchain_balance_proof=partner_signed_balance_proof,
-        reward_amount=55,
+        onchain_balance_proof=partner_signed_balance_proof, reward_amount=55
     )
 
     tampered_bp = tampered_non_closing_signature_request_monitoring.balance_proof
@@ -274,14 +256,12 @@ def test_tamper_request_monitoring():
     # The signature works/is unaffected by that change...
 
     recovered_address_tampered = recover(
-        tampered_non_closing_signature_reward_proof_data,
-        exploited_signature,
+        tampered_non_closing_signature_reward_proof_data, exploited_signature
     )
     assert recover(reward_proof_data, exploited_signature) == recovered_address_tampered
     assert recovered_address_tampered == ADDRESS
 
     # ...but overall verification fails
     assert not tampered_non_closing_signature_request_monitoring.verify_request_monitoring(
-        PARTNER_ADDRESS,
-        ADDRESS,
+        PARTNER_ADDRESS, ADDRESS
     )
