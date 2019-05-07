@@ -13,6 +13,7 @@ from raiden.utils.typing import (
     Address,
     Any,
     BalanceHash,
+    Dict,
     Locksroot,
     Secret,
     SecretHash,
@@ -96,20 +97,25 @@ def get_event_with_balance_proof_by_balance_hash(
     Use this function to find a balance proof for a call to settle, which only
     has the blinded balance proof data.
     """
-    return storage.get_latest_event_by_data_field(
-        {
-            "balance_proof.canonical_identifier.chain_identifier": str(
-                canonical_identifier.chain_identifier
-            ),
-            "balance_proof.canonical_identifier.token_network_address": to_checksum_address(
-                canonical_identifier.token_network_address
-            ),
-            "balance_proof.canonical_identifier.channel_identifier": str(
-                canonical_identifier.channel_identifier
-            ),
-            "balance_proof.balance_hash": serialize_bytes(balance_hash),
-        }
+    filters = {
+        "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
+        "canonical_identifier.token_network_address": to_checksum_address(
+            canonical_identifier.token_network_address
+        ),
+        "canonical_identifier.channel_identifier": str(canonical_identifier.channel_identifier),
+        "balance_hash": serialize_bytes(balance_hash),
+    }
+
+    event = storage.get_latest_event_by_data_field(
+        balance_proof_query_from_keys(prefix="", filters=filters)
     )
+    if event.data:
+        return event
+
+    event = storage.get_latest_event_by_data_field(
+        balance_proof_query_from_keys(prefix="transfer.", filters=filters)
+    )
+    return event
 
 
 def get_event_with_balance_proof_by_locksroot(
@@ -124,21 +130,32 @@ def get_event_with_balance_proof_by_locksroot(
     happens after settle, so the channel has the unblinded version of the
     balance proof.
     """
-    return storage.get_latest_event_by_data_field(
-        {
-            "balance_proof.canonical_identifier.chain_identifier": str(
-                canonical_identifier.chain_identifier
-            ),
-            "balance_proof.canonical_identifier.token_network_address": to_checksum_address(
-                canonical_identifier.token_network_address
-            ),
-            "balance_proof.canonical_identifier.channel_identifier": str(
-                canonical_identifier.channel_identifier
-            ),
-            "balance_proof.locksroot": serialize_bytes(locksroot),
-            "recipient": to_checksum_address(recipient),
-        }
+    filters = {
+        "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
+        "canonical_identifier.token_network_address": to_checksum_address(
+            canonical_identifier.token_network_address
+        ),
+        "canonical_identifier.channel_identifier": str(canonical_identifier.channel_identifier),
+        "locksroot": serialize_bytes(locksroot),
+        "recipient": to_checksum_address(recipient),
+    }
+    event = storage.get_latest_event_by_data_field(
+        balance_proof_query_from_keys(prefix="", filters=filters)
     )
+    if event.data:
+        return event
+
+    event = storage.get_latest_event_by_data_field(
+        balance_proof_query_from_keys(prefix="transfer.", filters=filters)
+    )
+    return event
+
+
+def balance_proof_query_from_keys(prefix: str, filters: Dict[str, Any]) -> Dict[str, Any]:
+    transformed_filters = {}
+    for key, value in filters.items():
+        transformed_filters[f"{prefix}balance_proof.{key}"] = value
+    return transformed_filters
 
 
 def hash_balance_data(
