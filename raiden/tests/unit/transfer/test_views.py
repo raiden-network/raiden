@@ -2,7 +2,7 @@ import pytest
 
 from raiden.tests.utils import factories
 from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
-from raiden.transfer.state import InitiatorTask
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.views import (
     count_token_network_channels,
     filter_channels_by_partneraddress,
