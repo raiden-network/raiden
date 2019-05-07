@@ -760,7 +760,7 @@ class ChannelSet:
         return make_route_from_channel(self.channels[channel_index])
 
     def get_routes(self, *args) -> List[RouteState]:
-        return [self.get_route(channel_index) for channel_index in args]
+        return [self.get_route(index) for index in (args or range(len(self.channels)))]
 
     def __getitem__(self, item: int) -> NettingChannelState:
         return self.channels[item]
@@ -788,6 +788,14 @@ def make_channel_set(
         channels.append(create(properties[i], defaults))
 
     return ChannelSet(channels, our_pkeys, partner_pkeys)
+
+
+def make_channel_set_from_amounts(amounts: List[typing.TokenAmount]) -> ChannelSet:
+    properties = [
+        NettingChannelStateProperties(our_state=NettingChannelEndStateProperties(balance=amount))
+        for amount in amounts
+    ]
+    return make_channel_set(properties)
 
 
 def mediator_make_channel_pair(
