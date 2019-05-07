@@ -641,6 +641,9 @@ jobs:
             twine upload -u $PYPI_USER -p $PYPI_PASSWORD dist/*.{tar.gz,whl}
 
   build-nightly-image:
+    executor:
+      name: machine
+
     steps:
       - run:
           name: Trigger nightly automated build on Docker Hub.
