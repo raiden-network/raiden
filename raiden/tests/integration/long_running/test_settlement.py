@@ -16,7 +16,6 @@ from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
-from raiden.transfer.state import UnlockProofState
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -629,8 +628,9 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     ).external_state.netting_channel.address
 
     # the attacker can create a merkle proof of the locked transfer
-    lock = attack_channel.partner_state.get_lock_by_secrethash(secrethash)
-    unlock_proof = attack_channel.partner_state.compute_proof_for_lock(secret, lock)
+    # <the commented code below is left for documentation purposes>
+    # lock = attack_channel.partner_state.get_lock_by_secrethash(secrethash)
+    # unlock_proof = attack_channel.partner_state.compute_proof_for_lock(secret, lock)
 
     # start the settle counter
     attack_balance_proof = attack_transfer.to_balanceproof()
@@ -641,9 +641,10 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
     app2.raiden.chain.wait_until_block(target_block_number=attack_transfer.lock.expiration - 1)
 
     # since the attacker knows the secret he can net the lock
-    attack_channel.netting_channel.unlock(
-        UnlockProofState(unlock_proof, attack_transfer.lock, secret)
-    )
+    # <the commented code below is left for documentation purposes>
+    # attack_channel.netting_channel.unlock(
+    #     UnlockProofState(unlock_proof, attack_transfer.lock, secret)
+    # )
     # XXX: verify that the secret was publicized
 
     # at this point the hub might not know the secret yet, and won't be able to

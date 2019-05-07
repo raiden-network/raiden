@@ -64,46 +64,6 @@ def compute_layers(elements: List[Keccak256]) -> List[List[Keccak256]]:
     return tree
 
 
-def compute_merkleproof_for(merkletree: "MerkleTreeState", element: Keccak256) -> List[Keccak256]:
-    """ Containment proof for element.
-
-    The proof contains only the entries that are sufficient to recompute the
-    merkleroot, from the leaf `element` up to `root`.
-
-    Raises:
-        IndexError: If the element is not part of the merkletree.
-    """
-    idx = merkletree.layers[LEAVES].index(element)
-
-    proof = []
-    for layer in merkletree.layers:
-        if idx % 2:
-            pair = idx - 1
-        else:
-            pair = idx + 1
-
-        # with an odd number of elements the rightmost one does not have a pair.
-        if pair < len(layer):
-            proof.append(layer[pair])
-
-        # the tree is binary and balanced
-        idx = idx // 2
-
-    return proof
-
-
-def validate_proof(proof: List[Keccak256], root: Keccak256, leaf_element: Keccak256) -> bool:
-    """ Checks that `leaf_element` was contained in the tree represented by
-    `merkleroot`.
-    """
-
-    hash_ = leaf_element
-    for pair in proof:
-        hash_ = hash_pair(hash_, pair)
-
-    return hash_ == root
-
-
 def merkleroot(merkletree: "MerkleTreeState") -> Locksroot:
     """ Return the root element of the merkle tree. """
     assert merkletree.layers, "the merkle tree layers are empty"
