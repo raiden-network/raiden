@@ -1161,10 +1161,9 @@ def create_unlock(
     assert get_status(channel_state) == CHANNEL_STATE_OPENED, msg
 
     our_balance_proof = our_state.balance_proof
-    if our_balance_proof:
-        transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
-    else:
-        transferred_amount = TokenAmount(lock.amount)
+    msg = "the lock is pending, it must be in the merkletree"
+    assert our_balance_proof is not None, msg
+    transferred_amount = TokenAmount(lock.amount + our_balance_proof.transferred_amount)
 
     merkletree = compute_merkletree_without(our_state.merkletree, lock.lockhash)
     msg = "the lock is pending, it must be in the merkletree"
@@ -1275,7 +1274,7 @@ def send_unlock(
     secrethash: SecretHash,
 ) -> SendBalanceProof:
     lock = get_lock(channel_state.our_state, secrethash)
-    assert lock
+    assert lock, "caller must ensure the lock exists"
 
     unlock, merkletree = create_unlock(
         channel_state, message_identifier, payment_identifier, secret, lock
