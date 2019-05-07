@@ -5,6 +5,7 @@ from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask
 from raiden.transfer.views import (
     count_token_network_channels,
+    detect_balance_proof_change,
     filter_channels_by_partneraddress,
     filter_channels_by_status,
     get_participants_addresses,
@@ -104,3 +105,9 @@ def test_get_transfer_secret_none_for_none_transfer_state(chain_state):
     )
     chain_state.payment_mapping.secrethashes_to_task[secrethash] = task
     assert get_transfer_secret(chain_state=chain_state, secrethash=secrethash) is None
+
+
+def test_detect_balance_proof_chain_handles_attribute_error(chain_state):
+    chain_state.identifiers_to_paymentnetworks["123"] = None
+    changes_iterator = detect_balance_proof_change(old_state=object(), current_state=chain_state)
+    assert len(list(changes_iterator)) == 0
