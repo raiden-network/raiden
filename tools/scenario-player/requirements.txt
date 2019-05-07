@@ -1,3 +1,0 @@
-urwid>=2.0.1
-raiden>=0.10.0
-pyyaml==4.2b4
