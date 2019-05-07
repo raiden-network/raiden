@@ -16,6 +16,7 @@ from raiden.tests.utils.factories import (
     UNIT_TRANSFER_INITIATOR,
     UNIT_TRANSFER_TARGET,
 )
+from raiden.tests.utils.transfer import assert_dropped
 from raiden.transfer import channel
 from raiden.transfer.architecture import State
 from raiden.transfer.events import (
@@ -1400,3 +1401,41 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
     )
 
     assert len(iteration2.events) == 0
+
+
+def test_initiator_manager_drops_invalid_state_changes():
+    channels = factories.make_channel_set_from_amounts([10])
+    transfer = factories.create(factories.LockedTransferSignedStateProperties())
+    secret = factories.UNIT_SECRET
+    cancel_route = ReceiveTransferRefundCancelRoute(channels.get_routes(), transfer, secret)
+
+    balance_proof = factories.create(factories.BalanceProofSignedStateProperties())
+    lock_expired = ReceiveLockExpired(balance_proof, factories.UNIT_SECRETHASH, 1)
+
+    prng = random.Random()
+
+    for state_change in (cancel_route, lock_expired):
+        state = InitiatorPaymentState(initiator_transfers=dict())
+        iteration = initiator_manager.state_transition(
+            state, state_change, channels.channel_map, prng, 1
+        )
+        assert_dropped(iteration, state, "no matching initiator_state")
+
+        initiator_state = InitiatorTransferState(
+            factories.UNIT_TRANSFER_DESCRIPTION,
+            channels[0].canonical_identifier.channel_identifier,
+            transfer,
+            revealsecret=None,
+        )
+        state = InitiatorPaymentState(
+            initiator_transfers={factories.UNIT_SECRETHASH: initiator_state}
+        )
+        iteration = initiator_manager.state_transition(state, state_change, dict(), prng, 1)
+        assert_dropped(iteration, state, "unknown channel identifier")
+
+    transfer2 = factories.create(factories.LockedTransferSignedStateProperties(amount=2))
+    cancel_route2 = ReceiveTransferRefundCancelRoute(channels.get_routes(), transfer2, secret)
+    iteration = initiator_manager.state_transition(
+        state, cancel_route2, channels.channel_map, prng, 1
+    )
+    assert_dropped(iteration, state, "invalid lock")
