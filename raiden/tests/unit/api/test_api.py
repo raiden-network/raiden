@@ -11,6 +11,7 @@ from raiden.transfer.mediated_transfer.state import (
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.views import list_channelstate_for_tokennetwork
+from raiden.utils import sha3
 
 
 def test_list_channelstate_for_tokennetwork(chain_state, payment_network_id, token_id):
@@ -39,6 +40,7 @@ def test_initiator_task_view():
         initiator=transfer.initiator,
         target=transfer.target,
         secret=secret,
+        secrethash=sha3(secret)
     )
     transfer_state = InitiatorTransferState(
         transfer_description=transfer_description,

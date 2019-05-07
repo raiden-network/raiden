@@ -1,4 +1,3 @@
-import json
 import random
 from unittest.mock import MagicMock
 
@@ -22,6 +21,7 @@ from raiden.raiden_service import (
     update_monitoring_service_from_balance_proof,
     update_path_finding_service_from_balance_proof,
 )
+from raiden.storage.serialization import JSONSerializer
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.mocks import MockRaidenService
@@ -204,7 +204,7 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
         if convert_to_hex:
             data = "0x" + data.hex()
         else:
-            data = json.dumps(message.to_dict())
+            data = JSONSerializer.serialize(message)
     else:
         data = overwrite_data
 

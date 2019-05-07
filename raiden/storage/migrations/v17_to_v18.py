@@ -3,7 +3,6 @@ import json
 from raiden.exceptions import ChannelNotFound
 from raiden.storage.serialization import DictSerializer
 from raiden.storage.sqlite import SQLiteStorage
-from raiden.transfer.state import RouteState
 from raiden.utils.typing import Any, Dict, Optional
 
 SOURCE_VERSION = 17

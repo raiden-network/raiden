@@ -34,11 +34,9 @@ def test_request_monitoring():
         balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
     )
     assert request_monitoring
-    with pytest.raises(ValueError):
-        request_monitoring.to_dict()
     request_monitoring.sign(signer)
-    as_dict = request_monitoring.to_dict()
-    assert RequestMonitoring.from_dict(as_dict) == request_monitoring
+    as_dict = DictSerializer.serialize(request_monitoring)
+    assert DictSerializer.deserialize(as_dict) == request_monitoring
     request_monitoring_packed = request_monitoring.packed()
     request_monitoring.pack(request_monitoring_packed)
     assert RequestMonitoring.unpack(request_monitoring_packed) == request_monitoring

@@ -1,5 +1,5 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from dataclasses import InitVar, dataclass
+from dataclasses import InitVar, dataclass, field
 from random import Random
 
 from raiden.transfer.architecture import (
@@ -257,8 +257,8 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
 
     payment_network: PaymentNetworkState
 
-    def __post_init__(self, payment_network: PaymentNetworkState):
-        if not isinstance(payment_network, PaymentNetworkState):
+    def __post_init__(self) -> None:
+        if not isinstance(self.payment_network, PaymentNetworkState):
             raise ValueError("payment_network must be a PaymentNetworkState instance")
 
 
@@ -379,14 +379,9 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
 class ReceiveUnlock(BalanceProofStateChange):
     message_identifier: MessageID
     secret: Secret
-    secrethash: SecretHash
+    secrethash: SecretHash = field(init=False)
 
-    def __init__(
-        self, message_identifier: MessageID, secret: Secret, balance_proof: BalanceProofSignedState
-    ) -> None:
-        super().__init__(balance_proof.sender, balance_proof)
-        self.message_identifier = message_identifier
-        self.secret = secret
+    def __post_init__(self) -> None:
         self.secrethash = SecretHash(sha3(self.secret))
 
 
