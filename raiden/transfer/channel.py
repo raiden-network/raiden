@@ -41,7 +41,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveLockExpired,
     ReceiveTransferRefund,
 )
-from raiden.transfer.merkle_tree import LEAVES, compute_layers, compute_merkleproof_for, merkleroot
+from raiden.transfer.merkle_tree import LEAVES, compute_layers, merkleroot
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_CLOSING,
@@ -60,7 +60,6 @@ from raiden.transfer.state import (
     TransactionExecutionStatus,
     TransactionOrder,
     UnlockPartialProofState,
-    UnlockProofState,
     make_empty_merkle_tree,
     message_identifier_from_prng,
 )
@@ -1035,15 +1034,6 @@ def set_settled(channel_state: NettingChannelState, block_number: BlockNumber) -
 def update_contract_balance(end_state: NettingChannelEndState, contract_balance: Balance) -> None:
     if contract_balance > end_state.contract_balance:
         end_state.contract_balance = contract_balance
-
-
-def compute_proof_for_lock(
-    end_state: NettingChannelEndState, secret: Secret, lock: HashTimeLockState
-) -> UnlockProofState:
-    # forcing bytes because ethereum.abi doesn't work with bytearray
-    merkle_proof = compute_merkleproof_for(end_state.merkletree, Keccak256(lock.lockhash))
-
-    return UnlockProofState(merkle_proof, lock.encoded, secret)
 
 
 def compute_merkletree_with(
