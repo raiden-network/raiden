@@ -1,3 +1,5 @@
+import pytest
+
 from raiden.tests.utils import factories
 from raiden.transfer.views import (
     count_token_network_channels,
@@ -7,6 +9,7 @@ from raiden.transfer.views import (
     get_token_identifiers,
     get_token_network_identifiers,
     get_token_network_registry_by_token_network_identifier,
+    role_from_transfer_task,
 )
 
 
@@ -81,3 +84,8 @@ def test_token_identifiers_empty_list_for_payment_network_none(chain_state):
         get_token_identifiers(chain_state=chain_state, payment_network_id=factories.make_address())
         == list()
     )
+
+
+def test_role_from_transfer_task_raises_value_error():
+    with pytest.raises(ValueError):
+        role_from_transfer_task(object())
