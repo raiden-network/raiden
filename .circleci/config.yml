@@ -642,7 +642,7 @@ jobs:
 
   build-nightly-image:
     executor:
-      name: machine
+      name: docker
 
     steps:
       - run:
