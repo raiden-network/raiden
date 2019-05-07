@@ -87,7 +87,12 @@ def make_target_state(
     expiration = expiration or channels[0].reveal_timeout + block_number + 1
     from_transfer = make_target_transfer(channels[0], amount, expiration, initiator)
 
-    state_change = ActionInitTarget(route=channels.get_route(0), transfer=from_transfer)
+    state_change = ActionInitTarget(
+        route=channels.get_route(0),
+        transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,
+    )
     iteration = target.handle_inittarget(
         state_change=state_change,
         channel_state=channels[0],
@@ -179,7 +184,12 @@ def test_handle_inittarget():
     )
     from_transfer = create(transfer_properties)
 
-    state_change = ActionInitTarget(channels.get_route(0), from_transfer)
+    state_change = ActionInitTarget(
+        route=channels.get_route(0),
+        transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,
+    )
 
     iteration = target.handle_inittarget(
         state_change, channels[0], pseudo_random_generator, block_number
@@ -209,7 +219,12 @@ def test_handle_inittarget_bad_expiration():
 
     channel.handle_receive_lockedtransfer(channels[0], from_transfer)
 
-    state_change = ActionInitTarget(channels.get_route(0), from_transfer)
+    state_change = ActionInitTarget(
+        route=channels.get_route(0),
+        transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,
+    )
     iteration = target.handle_inittarget(
         state_change, channels[0], pseudo_random_generator, block_number
     )
@@ -221,7 +236,7 @@ def test_handle_offchain_secretreveal():
     receive an updated balance proof.
     """
     setup = make_target_state()
-    state_change = ReceiveSecretReveal(UNIT_SECRET, setup.initiator)
+    state_change = ReceiveSecretReveal(secret=UNIT_SECRET, sender=setup.initiator)
     iteration = target.handle_offchain_secretreveal(
         target_state=setup.new_state,
         state_change=state_change,
@@ -313,7 +328,7 @@ def test_handle_onchain_secretreveal():
 
     offchain_secret_reveal_iteration = target.state_transition(
         target_state=setup.new_state,
-        state_change=ReceiveSecretReveal(UNIT_SECRET, setup.initiator),
+        state_change=ReceiveSecretReveal(secret=UNIT_SECRET, sender=setup.initiator),
         channel_state=setup.channel,
         pseudo_random_generator=setup.pseudo_random_generator,
         block_number=setup.block_number,
@@ -435,7 +450,12 @@ def test_state_transition():
     channels = make_channel_set([channel_properties2])
     from_transfer = make_target_transfer(channels[0], amount=lock_amount, initiator=initiator)
 
-    init = ActionInitTarget(channels.get_route(0), from_transfer)
+    init = ActionInitTarget(
+        route=channels.get_route(0),
+        transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,
+    )
 
     init_transition = target.state_transition(
         target_state=None,
@@ -459,7 +479,7 @@ def test_state_transition():
         block_number=first_new_block.block_number,
     )
 
-    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, initiator)
+    secret_reveal = ReceiveSecretReveal(secret=UNIT_SECRET, sender=initiator)
     reveal_iteration = target.state_transition(
         target_state=first_block_iteration.new_state,
         state_change=secret_reveal,
@@ -499,6 +519,7 @@ def test_state_transition():
         message_identifier=random.randint(0, UINT64_MAX),
         secret=UNIT_SECRET,
         balance_proof=balance_proof,
+        sender=balance_proof.sender,
     )
 
     proof_iteration = target.state_transition(
@@ -530,7 +551,12 @@ def test_target_reject_keccak_empty_hash():
         allow_invalid=True,
     )
 
-    init = ActionInitTarget(route=channels.get_route(0), transfer=from_transfer)
+    init = ActionInitTarget(
+        route=channels.get_route(0),
+        transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,
+    )
 
     init_transition = target.state_transition(
         target_state=None,
@@ -554,7 +580,12 @@ def test_target_receive_lock_expired():
         channels[0], amount=lock_amount, block_number=block_number
     )
 
-    init = ActionInitTarget(channels.get_route(0), from_transfer)
+    init = ActionInitTarget(
+        route=channels.get_route(0),
+        transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,
+    )
 
     init_transition = target.state_transition(
         target_state=None,
@@ -578,7 +609,10 @@ def test_target_receive_lock_expired():
     )
 
     lock_expired_state_change = ReceiveLockExpired(
-        balance_proof=balance_proof, secrethash=from_transfer.lock.secrethash, message_identifier=1
+        balance_proof=balance_proof,
+        secrethash=from_transfer.lock.secrethash,
+        message_identifier=1,
+        sender=balance_proof.sender,
     )
 
     block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS - 1
@@ -610,7 +644,12 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
     channels = make_channel_set([channel_properties2])
     from_transfer = make_target_transfer(channels[0], amount=lock_amount, block_number=1)
 
-    init = ActionInitTarget(channels.get_route(0), from_transfer)
+    init = ActionInitTarget(
+        route=channels.get_route(0),
+        transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,
+    )
 
     init_transition = target.state_transition(
         target_state=None,

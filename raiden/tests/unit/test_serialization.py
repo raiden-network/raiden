@@ -12,50 +12,6 @@ from raiden.transfer.state import make_empty_merkle_tree
 from raiden.utils import serialization
 
 
-class MockObject:
-    """ Used for testing JSON encoding/decoding """
-
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-    def to_dict(self):
-        return {key: value for key, value in self.__dict__.items()}
-
-    @classmethod
-    def from_dict(cls, data):
-        obj = cls()
-        for key, value in data.items():
-            setattr(obj, key, value)
-        return obj
-
-    def __eq__(self, other):
-        if not isinstance(other, MockObject):
-            return False
-        for key, value in self.__dict__.items():
-            if key not in other.__dict__ or value != other.__dict__[key]:
-                return False
-
-        return True
-
-
-def test_object_custom_serialization():
-    # Simple encode/decode
-    original_obj = MockObject(attr1="Hello", attr2="World")
-    decoded_obj = JSONSerializer.deserialize(JSONSerializer.serialize(original_obj))
-
-    assert original_obj == decoded_obj
-
-    # Encode/Decode with embedded objects
-    embedded_obj = MockObject(amount=1, identifier="123")
-    original_obj = MockObject(embedded=embedded_obj)
-    decoded_obj = JSONSerializer.deserialize(JSONSerializer.serialize(original_obj))
-
-    assert original_obj == decoded_obj
-    assert decoded_obj.embedded.amount == 1
-    assert decoded_obj.embedded.identifier == "123"
-
-
 def test_decode_with_unknown_type():
     test_str = """
 {

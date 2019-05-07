@@ -7,6 +7,14 @@ from raiden.utils.serialization import to_bytes, to_hex
 from raiden.utils.typing import Address, Any, Tuple
 
 
+class IntegerToStringField(marshmallow.fields.Field):
+    def _serialize(self, value: int, attr: Any, obj: Any) -> str:
+        return str(value)
+
+    def _deserialize(self, value: str, attr: Any, data: Any) -> int:
+        return int(value)
+
+
 class BytesField(marshmallow.fields.Field):
     """ Used for `bytes` in the dataclass, serialize to hex encoding"""
 

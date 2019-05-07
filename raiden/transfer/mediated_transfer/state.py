@@ -126,10 +126,11 @@ class TransferDescriptionWithSecretState(State):
     initiator: InitiatorAddress = field(repr=False)
     target: TargetAddress
     secret: Secret = field(repr=False)
-    secrethash: Optional[SecretHash] = field(default=None)
+    secrethash: SecretHash
 
     def __post_init__(self) -> None:
-        self.secrethash = sha3(self.secret)
+        if not self.secrethash and self.secret:
+            self.secrethash = sha3(self.secret)
 
 
 @dataclass
@@ -224,9 +225,9 @@ class MediatorTransferState(State):
 
     secrethash: SecretHash
     routes: List[RouteState]
-    secret: Optional[Secret] = field(init=False, default=None)
-    transfers_pair: List[MediationPairState] = field(init=False, default_factory=list)
-    waiting_transfer: Optional[WaitingTransferState] = field(init=False, default=None)
+    secret: Optional[Secret] = field(default=None)
+    transfers_pair: List[MediationPairState] = field(default_factory=list)
+    waiting_transfer: Optional[WaitingTransferState] = field(default=None)
 
 
 @dataclass
