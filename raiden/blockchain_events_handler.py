@@ -10,7 +10,11 @@ from raiden.network.proxies.utils import get_onchain_locksroots
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.state import TokenNetworkState, TransactionChannelNewBalance
+from raiden.transfer.state import (
+    TokenNetworkGraphState,
+    TokenNetworkState,
+    TransactionChannelNewBalance,
+)
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelClosed,
@@ -58,7 +62,12 @@ def handle_tokennetwork_new(raiden: "RaidenService", event: Event):
         from_block=block_number,
     )
 
-    token_network_state = TokenNetworkState(token_network_address, token_address)
+    token_network_graph_state = TokenNetworkGraphState(token_network_address)
+    token_network_state = TokenNetworkState(
+        address=token_network_address,
+        token_address=token_address,
+        network_graph=token_network_graph_state,
+    )
 
     transaction_hash = event.event_data["transaction_hash"]
 
