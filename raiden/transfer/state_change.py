@@ -243,13 +243,6 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
 
 
 @dataclass
-class ActionLeaveAllNetworks(StateChange):
-    """ User is quitting all payment networks. """
-
-    pass
-
-
-@dataclass
 class ActionChangeNodeNetworkState(StateChange):
     """ The network state of `node_address` changed. """
 
