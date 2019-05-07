@@ -3,6 +3,7 @@ from raiden.transfer.views import (
     count_token_network_channels,
     filter_channels_by_partneraddress,
     filter_channels_by_status,
+    get_participants_addresses,
 )
 
 
@@ -40,4 +41,15 @@ def test_count_token_network_channels_no_token_network(chain_state):
             token_address=factories.make_address(),
         )
         == 0
+    )
+
+
+def test_get_participants_addresses_no_token_network(chain_state):
+    assert (
+        get_participants_addresses(
+            chain_state=chain_state,
+            payment_network_id=factories.make_address(),
+            token_address=factories.make_address(),
+        )
+        == set()
     )
