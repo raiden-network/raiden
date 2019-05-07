@@ -39,7 +39,7 @@ clean-test:
 	rm -f .coverage
 	rm -fr htmlcov/
 
-LINT_PATHS = raiden/ tools/scenario-player/
+LINT_PATHS = raiden/ tools/
 ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' --recursive $(LINT_PATHS)
 BLACK_PATHS = raiden/ tools/
 
