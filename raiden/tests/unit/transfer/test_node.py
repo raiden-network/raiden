@@ -12,6 +12,7 @@ from raiden.tests.utils.factories import (
 from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.node import (
     get_networks,
+    handle_new_token_network,
     is_transaction_effect_satisfied,
     maybe_add_tokennetwork,
     state_transition,
@@ -20,6 +21,7 @@ from raiden.transfer.node import (
 )
 from raiden.transfer.state import PaymentNetworkState, TokenNetworkState
 from raiden.transfer.state_change import (
+    ActionNewTokenNetwork,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
 )
@@ -144,3 +146,24 @@ def test_maybe_add_tokennetwork_unknown_payment_network(chain_state, token_netwo
     # new payment network should have been added to chain_state
     payment_network_state = chain_state.identifiers_to_paymentnetworks[payment_network_identifier]
     assert payment_network_state.address == payment_network_identifier
+
+
+def test_handle_new_token_network(chain_state, token_network_id):
+    token_address = factories.make_address()
+    token_network = TokenNetworkState(address=token_network_id, token_address=token_address)
+    payment_network_identifier = factories.make_address()
+    state_change = ActionNewTokenNetwork(
+        payment_network_identifier=payment_network_identifier, token_network=token_network
+    )
+    transition_result = handle_new_token_network(
+        chain_state=chain_state, state_change=state_change
+    )
+    new_chain_state = transition_result.new_state
+    payment_network = new_chain_state.identifiers_to_paymentnetworks[payment_network_identifier]
+    assert payment_network.address == payment_network_identifier
+    assert not transition_result.events
+    assert get_networks(
+        chain_state=chain_state,
+        payment_network_identifier=payment_network_identifier,
+        token_address=token_address,
+    ) == (payment_network, token_network)
