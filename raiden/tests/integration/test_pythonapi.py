@@ -18,7 +18,7 @@ from raiden.exceptions import (
     InsufficientGasReserve,
     InvalidAddress,
 )
-from raiden.messages import RequestMonitoring
+from raiden.storage.serialization import DictSerializer
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, wait_for_state_change
@@ -580,6 +580,6 @@ def run_test_create_monitoring_request(raiden_network, token_addresses):
     api = RaidenAPI(app0.raiden)
     request = api.create_monitoring_request(balance_proof=balance_proof, reward_amount=1)
     assert request
-    as_dict = request.to_dict()
-    from_dict = RequestMonitoring.from_dict(as_dict)
-    assert from_dict.to_dict() == as_dict
+    as_dict = DictSerializer.serialize(request)
+    from_dict = DictSerializer.deserialize(as_dict)
+    assert DictSerializer.serialize(from_dict) == as_dict
