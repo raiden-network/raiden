@@ -1,6 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from dataclasses import dataclass, field
 
+from raiden.constants import EMPTY_HASH
 from raiden.transfer.architecture import AuthenticatedSenderStateChange, StateChange
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
@@ -114,7 +115,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     """ A SecretReveal message received. """
 
     secret: Secret = field(repr=False)
-    secrethash: SecretHash = field(init=False)
+    secrethash: SecretHash = field(default=EMPTY_HASH)
 
     def __post_init__(self) -> None:
         self.secrethash = sha3(self.secret)
@@ -129,7 +130,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     routes: List[RouteState] = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Secret = field(repr=False)
-    secrethash: SecretHash = field(init=False, repr=False)
+    secrethash: SecretHash = field(default=EMPTY_HASH)
 
     def __post_init__(self) -> None:
         super().__post_init__()

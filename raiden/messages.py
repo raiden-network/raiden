@@ -1447,7 +1447,7 @@ class SignedBlindedBalanceProof:
     chain_id: ChainID
     balance_hash: BalanceHash
     signature: Signature
-    non_closing_signature: Optional[Signature] = field(init=False, default=None)
+    non_closing_signature: Optional[Signature] = field(default=EMPTY_SIGNATURE)
 
     def __post_init__(self):
         if not self.signature:
