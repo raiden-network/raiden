@@ -4,7 +4,12 @@ import pytest
 
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.transfer.state import ChainState, PaymentNetworkState, TokenNetworkState
+from raiden.transfer.state import (
+    ChainState,
+    PaymentNetworkState,
+    TokenNetworkGraphState,
+    TokenNetworkState,
+)
 
 # pylint: disable=redefined-outer-name
 
@@ -58,7 +63,12 @@ def payment_network_state(chain_state, payment_network_id):
 def token_network_state(
     chain_state, payment_network_state, payment_network_id, token_network_id, token_id
 ):
-    token_network = TokenNetworkState(token_network_id, token_id)
+    token_network_graph_state = TokenNetworkGraphState(token_network_id)
+    token_network = TokenNetworkState(
+        address=token_network_id,
+        token_address=token_id,
+        network_graph=token_network_graph_state,
+    )
     payment_network_state.tokenidentifiers_to_tokennetworks[token_network_id] = token_network
     payment_network_state.tokenaddresses_to_tokenidentifiers[token_id] = token_network_id
 

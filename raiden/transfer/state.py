@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING, Tuple
 
 import networkx
 
-from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
+from raiden.constants import (
+    EMPTY_BALANCE_HASH,
+    EMPTY_HASH,
+    EMPTY_MERKLE_ROOT,
+    UINT64_MAX,
+    UINT256_MAX,
+)
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import ContractSendEvent, SendMessageEvent, State
@@ -156,13 +162,10 @@ class TokenNetworkGraphState(State):
     """
 
     token_network_id: TokenNetworkID
-    network: networkx.Graph = field(init=False, repr=False)
+    network: networkx.Graph = field(repr=False, default_factory=networkx.Graph)
     channel_identifier_to_participants: Dict[ChannelID, Tuple[Address, Address]] = field(
         init=False, repr=False, default_factory=dict
     )
-
-    def __post_init__(self) -> None:
-        self.network = networkx.Graph()
 
     def __repr__(self):
         return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
@@ -174,7 +177,7 @@ class TokenNetworkState(State):
 
     address: TokenNetworkID
     token_address: TokenAddress
-    network_graph: TokenNetworkGraphState = field(init=False, repr=False)
+    network_graph: TokenNetworkGraphState = field(repr=False)
     channelidentifiers_to_channels: ChannelMap = field(
         init=False, repr=False, default_factory=dict
     )
@@ -188,8 +191,6 @@ class TokenNetworkState(State):
 
         if not isinstance(self.token_address, T_Address):
             raise ValueError("token_address must be an address instance")
-
-        self.network_graph = TokenNetworkGraphState(self.address)
 
 
 @dataclass
@@ -244,11 +245,11 @@ class ChainState(State):
     pending_transactions: List[ContractSendEvent] = field(
         init=False, repr=False, default_factory=list
     )
-    queueids_to_queues: QueueIdsToQueues = field(init=False, repr=False, default_factory=dict)
-    last_transport_authdata: Optional[str] = field(init=False, repr=False, default=None)
+    queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
+    last_transport_authdata: Optional[str] = field(repr=False, default=None)
     tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
         TokenNetworkAddress, PaymentNetworkID
-    ] = field(init=False, repr=False, default_factory=dict)
+    ] = field(repr=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.block_number, T_BlockNumber):
@@ -468,11 +469,11 @@ class UnlockPartialProofState(State):
 
     lock: HashTimeLockState
     secret: Secret = field(repr=False)
-    amount: PaymentWithFeeAmount = field(init=False, repr=False)
-    expiration: BlockExpiration = field(init=False, repr=False)
-    secrethash: SecretHash = field(init=False, repr=False)
+    amount: PaymentWithFeeAmount = field(repr=False, default=0)
+    expiration: BlockExpiration = field(repr=False, default=0)
+    secrethash: SecretHash = field(repr=False, default=EMPTY_HASH)
     encoded: EncodedData = field(init=False, repr=False)
-    lockhash: LockHash = field(init=False, repr=False)
+    lockhash: LockHash = field(repr=False, default=EMPTY_HASH)
 
     def __post_init__(self) -> None:
         if not isinstance(self.lock, HashTimeLockState):
