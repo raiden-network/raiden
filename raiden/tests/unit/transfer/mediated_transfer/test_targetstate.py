@@ -91,7 +91,7 @@ def make_target_state(
         route=channels.get_route(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
     iteration = target.handle_inittarget(
         state_change=state_change,
@@ -188,7 +188,7 @@ def test_handle_inittarget():
         route=channels.get_route(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     iteration = target.handle_inittarget(
@@ -223,7 +223,7 @@ def test_handle_inittarget_bad_expiration():
         route=channels.get_route(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
     iteration = target.handle_inittarget(
         state_change, channels[0], pseudo_random_generator, block_number
@@ -454,7 +454,7 @@ def test_state_transition():
         route=channels.get_route(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     init_transition = target.state_transition(
@@ -519,7 +519,7 @@ def test_state_transition():
         message_identifier=random.randint(0, UINT64_MAX),
         secret=UNIT_SECRET,
         balance_proof=balance_proof,
-        sender=balance_proof.sender,
+        sender=balance_proof.sender,  # pylint: disable=no-member
     )
 
     proof_iteration = target.state_transition(
@@ -555,7 +555,7 @@ def test_target_reject_keccak_empty_hash():
         route=channels.get_route(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     init_transition = target.state_transition(
@@ -584,7 +584,7 @@ def test_target_receive_lock_expired():
         route=channels.get_route(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     init_transition = target.state_transition(
@@ -612,7 +612,7 @@ def test_target_receive_lock_expired():
         balance_proof=balance_proof,
         secrethash=from_transfer.lock.secrethash,
         message_identifier=1,
-        sender=balance_proof.sender,
+        sender=balance_proof.sender,  # pylint: disable=no-member
     )
 
     block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS - 1
@@ -648,7 +648,7 @@ def test_target_lock_is_expired_if_secret_is_not_registered_onchain():
         route=channels.get_route(0),
         transfer=from_transfer,
         balance_proof=from_transfer.balance_proof,
-        sender=from_transfer.balance_proof.sender,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     init_transition = target.state_transition(
