@@ -35,16 +35,43 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.state_change import ContractReceiveChannelNew, ContractReceiveRouteNew
 from raiden.transfer.utils import hash_balance_data
-from raiden.utils import privatekey_to_address, random_secret, sha3, typing
+from raiden.utils import privatekey_to_address, random_secret, sha3
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
+    AdditionalHash,
+    Address,
     Any,
+    Balance,
+    BlockExpiration,
+    BlockHash,
+    BlockNumber,
+    BlockTimeout,
+    ChainID,
+    ChannelID,
+    ChannelMap,
     ClassVar,
     Dict,
+    FeeAmount,
+    InitiatorAddress,
     Keccak256,
     List,
+    Locksroot,
+    MerkleTreeLeaves,
+    MessageID,
     NamedTuple,
+    NodeNetworkStateMap,
+    Nonce,
     Optional,
+    PaymentID,
+    PaymentNetworkID,
+    Secret,
+    Signature,
+    TargetAddress,
+    TokenAddress,
+    TokenAmount,
+    TokenNetworkAddress,
+    TokenNetworkID,
+    TransactionHash,
     Tuple,
     Type,
     TypeVar,
@@ -102,36 +129,36 @@ def make_uint256() -> int:
     return random.randint(0, UINT256_MAX)
 
 
-def make_channel_identifier() -> typing.ChannelID:
-    return typing.ChannelID(make_uint256())
+def make_channel_identifier() -> ChannelID:
+    return ChannelID(make_uint256())
 
 
 def make_uint64() -> int:
     return random.randint(0, UINT64_MAX)
 
 
-def make_balance() -> typing.Balance:
-    return typing.Balance(random.randint(0, UINT256_MAX))
+def make_balance() -> Balance:
+    return Balance(random.randint(0, UINT256_MAX))
 
 
-def make_block_number() -> typing.BlockNumber:
-    return typing.BlockNumber(random.randint(0, UINT256_MAX))
+def make_block_number() -> BlockNumber:
+    return BlockNumber(random.randint(0, UINT256_MAX))
 
 
-def make_chain_id() -> typing.ChainID:
-    return typing.ChainID(random.randint(0, UINT64_MAX))
+def make_chain_id() -> ChainID:
+    return ChainID(random.randint(0, UINT64_MAX))
 
 
-def make_message_identifier() -> typing.MessageID:
-    return typing.MessageID(random.randint(0, UINT64_MAX))
+def make_message_identifier() -> MessageID:
+    return MessageID(random.randint(0, UINT64_MAX))
 
 
 def make_20bytes() -> bytes:
     return bytes("".join(random.choice(string.printable) for _ in range(20)), encoding="utf-8")
 
 
-def make_address() -> typing.Address:
-    return typing.Address(make_20bytes())
+def make_address() -> Address:
+    return Address(make_20bytes())
 
 
 def make_checksum_address() -> str:
@@ -142,24 +169,24 @@ def make_32bytes() -> bytes:
     return bytes("".join(random.choice(string.printable) for _ in range(32)), encoding="utf-8")
 
 
-def make_transaction_hash() -> typing.TransactionHash:
-    return typing.TransactionHash(make_32bytes())
+def make_transaction_hash() -> TransactionHash:
+    return TransactionHash(make_32bytes())
 
 
-def make_block_hash() -> typing.BlockHash:
-    return typing.BlockHash(make_32bytes())
+def make_block_hash() -> BlockHash:
+    return BlockHash(make_32bytes())
 
 
 def make_privatekey_bin() -> bin:
     return make_32bytes()
 
 
-def make_payment_network_identifier() -> typing.PaymentNetworkID:
-    return typing.PaymentNetworkID(make_address())
+def make_payment_network_identifier() -> PaymentNetworkID:
+    return PaymentNetworkID(make_address())
 
 
-def make_keccak_hash() -> typing.Keccak256:
-    return typing.Keccak256(make_32bytes())
+def make_keccak_hash() -> Keccak256:
+    return Keccak256(make_32bytes())
 
 
 def make_secret(i: int = EMPTY) -> bytes:
@@ -169,7 +196,7 @@ def make_secret(i: int = EMPTY) -> bytes:
         return make_32bytes()
 
 
-def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[bytes, typing.Address]:
+def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[bytes, Address]:
     privatekey = if_empty(privatekey, make_privatekey_bin())
     address = privatekey_to_address(privatekey)
     return privatekey, address
@@ -228,14 +255,14 @@ ADDR = b"addraddraddraddraddr"
 
 
 RANDOM_FACTORIES = {
-    typing.Address: make_address,
-    typing.Balance: make_balance,
-    typing.BlockNumber: make_block_number,
-    typing.BlockTimeout: make_block_number,
-    typing.ChainID: make_chain_id,
-    typing.ChannelID: make_channel_identifier,
-    typing.PaymentNetworkID: make_payment_network_identifier,
-    typing.TokenNetworkID: make_payment_network_identifier,
+    Address: make_address,
+    Balance: make_balance,
+    BlockNumber: make_block_number,
+    BlockTimeout: make_block_number,
+    ChainID: make_chain_id,
+    ChannelID: make_channel_identifier,
+    PaymentNetworkID: make_payment_network_identifier,
+    TokenNetworkID: make_payment_network_identifier,
 }
 
 
@@ -263,9 +290,9 @@ def _properties_to_kwargs(properties: Properties, defaults: Properties) -> Dict:
 
 @dataclass(frozen=True)
 class CanonicalIdentifierProperties(Properties):
-    chain_identifier: typing.ChainID = EMPTY
-    token_network_address: typing.TokenNetworkAddress = EMPTY
-    channel_identifier: typing.ChannelID = EMPTY
+    chain_identifier: ChainID = EMPTY
+    token_network_address: TokenNetworkAddress = EMPTY
+    channel_identifier: ChannelID = EMPTY
     TARGET_TYPE = CanonicalIdentifier
 
 
@@ -299,8 +326,8 @@ def make_canonical_identifier(
 
 @dataclass(frozen=True)
 class TransactionExecutionStatusProperties(Properties):
-    started_block_number: typing.BlockNumber = EMPTY
-    finished_block_number: typing.BlockNumber = EMPTY
+    started_block_number: BlockNumber = EMPTY
+    finished_block_number: BlockNumber = EMPTY
     result: str = EMPTY
     TARGET_TYPE = TransactionExecutionStatus
 
@@ -314,10 +341,10 @@ TransactionExecutionStatusProperties.DEFAULTS = TransactionExecutionStatusProper
 
 @dataclass(frozen=True)
 class NettingChannelEndStateProperties(Properties):
-    address: typing.Address = EMPTY
+    address: Address = EMPTY
     privatekey: bytes = EMPTY
-    balance: typing.TokenAmount = EMPTY
-    merkletree_leaves: typing.MerkleTreeLeaves = EMPTY
+    balance: TokenAmount = EMPTY
+    merkletree_leaves: MerkleTreeLeaves = EMPTY
     merkletree_width: int = EMPTY
     TARGET_TYPE = NettingChannelEndState
 
@@ -344,12 +371,12 @@ def _(properties, defaults=None) -> NettingChannelEndState:
 @dataclass(frozen=True)
 class NettingChannelStateProperties(Properties):
     canonical_identifier: CanonicalIdentifier = EMPTY
-    token_address: typing.TokenAddress = EMPTY
-    payment_network_identifier: typing.PaymentNetworkID = EMPTY
+    token_address: TokenAddress = EMPTY
+    payment_network_identifier: PaymentNetworkID = EMPTY
 
-    reveal_timeout: typing.BlockTimeout = EMPTY
-    settle_timeout: typing.BlockTimeout = EMPTY
-    mediation_fee: typing.FeeAmount = EMPTY
+    reveal_timeout: BlockTimeout = EMPTY
+    settle_timeout: BlockTimeout = EMPTY
+    mediation_fee: FeeAmount = EMPTY
 
     our_state: NettingChannelEndStateProperties = EMPTY
     partner_state: NettingChannelEndStateProperties = EMPTY
@@ -378,14 +405,14 @@ NettingChannelStateProperties.DEFAULTS = NettingChannelStateProperties(
 
 @dataclass(frozen=True)
 class TransferDescriptionProperties(Properties):
-    payment_network_identifier: typing.PaymentNetworkID = EMPTY
-    payment_identifier: typing.PaymentID = EMPTY
-    amount: typing.TokenAmount = EMPTY
-    token_network_identifier: typing.TokenNetworkID = EMPTY
-    initiator: typing.InitiatorAddress = EMPTY
-    target: typing.TargetAddress = EMPTY
-    secret: typing.Secret = EMPTY
-    allocated_fee: typing.FeeAmount = EMPTY
+    payment_network_identifier: PaymentNetworkID = EMPTY
+    payment_identifier: PaymentID = EMPTY
+    amount: TokenAmount = EMPTY
+    token_network_identifier: TokenNetworkID = EMPTY
+    initiator: InitiatorAddress = EMPTY
+    target: TargetAddress = EMPTY
+    secret: Secret = EMPTY
+    allocated_fee: FeeAmount = EMPTY
     TARGET_TYPE = TransferDescriptionWithSecretState
 
 
@@ -415,10 +442,10 @@ UNIT_TRANSFER_DESCRIPTION = create(TransferDescriptionProperties(secret=UNIT_SEC
 
 @dataclass(frozen=True)
 class BalanceProofProperties(Properties):
-    nonce: typing.Nonce = EMPTY
-    transferred_amount: typing.TokenAmount = EMPTY
-    locked_amount: typing.TokenAmount = EMPTY
-    locksroot: typing.Locksroot = EMPTY
+    nonce: Nonce = EMPTY
+    transferred_amount: TokenAmount = EMPTY
+    locked_amount: TokenAmount = EMPTY
+    locksroot: Locksroot = EMPTY
     canonical_identifier: CanonicalIdentifier = EMPTY
     TARGET_TYPE = BalanceProofUnsignedState
 
@@ -434,9 +461,9 @@ BalanceProofProperties.DEFAULTS = BalanceProofProperties(
 
 @dataclass(frozen=True)
 class BalanceProofSignedStateProperties(BalanceProofProperties):
-    message_hash: typing.AdditionalHash = EMPTY
-    signature: typing.Signature = GENERATE
-    sender: typing.Address = EMPTY
+    message_hash: AdditionalHash = EMPTY
+    signature: Signature = GENERATE
+    sender: Address = EMPTY
     pkey: bytes = EMPTY
     TARGET_TYPE = BalanceProofSignedState
 
@@ -473,13 +500,13 @@ def _(properties: BalanceProofSignedStateProperties, defaults=None) -> BalancePr
 
 @dataclass(frozen=True)
 class LockedTransferUnsignedStateProperties(BalanceProofProperties):
-    amount: typing.TokenAmount = EMPTY
-    expiration: typing.BlockExpiration = EMPTY
-    initiator: typing.InitiatorAddress = EMPTY
-    target: typing.TargetAddress = EMPTY
-    payment_identifier: typing.PaymentID = EMPTY
-    token: typing.TokenAddress = EMPTY
-    secret: typing.Secret = EMPTY
+    amount: TokenAmount = EMPTY
+    expiration: BlockExpiration = EMPTY
+    initiator: InitiatorAddress = EMPTY
+    target: TargetAddress = EMPTY
+    payment_identifier: PaymentID = EMPTY
+    token: TokenAddress = EMPTY
+    secret: Secret = EMPTY
     TARGET_TYPE = LockedTransferUnsignedState
 
 
@@ -515,10 +542,10 @@ def _(properties, defaults=None) -> LockedTransferUnsignedState:
 
 @dataclass(frozen=True)
 class LockedTransferSignedStateProperties(LockedTransferUnsignedStateProperties):
-    sender: typing.Address = EMPTY
-    recipient: typing.Address = EMPTY
+    sender: Address = EMPTY
+    recipient: Address = EMPTY
     pkey: bytes = EMPTY
-    message_identifier: typing.MessageID = EMPTY
+    message_identifier: MessageID = EMPTY
     TARGET_TYPE = LockedTransferSignedState
 
 
@@ -560,7 +587,7 @@ def _(properties, defaults=None) -> LockedTransferSignedState:
 
 @dataclass(frozen=True)
 class LockedTransferProperties(LockedTransferSignedStateProperties):
-    fee: typing.FeeAmount = EMPTY
+    fee: FeeAmount = EMPTY
     TARGET_TYPE = LockedTransfer
 
 
@@ -728,17 +755,17 @@ class ChannelSet:
         self.partner_privatekeys = partner_privatekeys
 
     @property
-    def channel_map(self) -> typing.ChannelMap:
+    def channel_map(self) -> ChannelMap:
         return {channel.identifier: channel for channel in self.channels}
 
     @property
-    def nodeaddresses_to_networkstates(self) -> typing.NodeNetworkStateMap:
+    def nodeaddresses_to_networkstates(self) -> NodeNetworkStateMap:
         return {channel.partner_state.address: NODE_NETWORK_REACHABLE for channel in self.channels}
 
-    def our_address(self, index: int) -> typing.Address:
+    def our_address(self, index: int) -> Address:
         return self.channels[index].our_state.address
 
-    def partner_address(self, index: int) -> typing.Address:
+    def partner_address(self, index: int) -> Address:
         return self.channels[index].partner_state.address
 
     def get_route(self, channel_index: int) -> RouteState:
@@ -777,7 +804,7 @@ def make_channel_set(
 
 def mediator_make_channel_pair(
     defaults: NettingChannelStateProperties = None,
-    amount: typing.TokenAmount = UNIT_TRANSFER_AMOUNT,
+    amount: TokenAmount = UNIT_TRANSFER_AMOUNT,
 ) -> ChannelSet:
     properties_list = [
         NettingChannelStateProperties(
@@ -806,11 +833,11 @@ class MediatorTransfersPair(NamedTuple):
     channels: ChannelSet
     transfers_pair: List[MediationPairState]
     amount: int
-    block_number: typing.BlockNumber
-    block_hash: typing.BlockHash
+    block_number: BlockNumber
+    block_hash: BlockHash
 
     @property
-    def channel_map(self) -> typing.ChannelMap:
+    def channel_map(self) -> ChannelMap:
         return self.channels.channel_map
 
 
@@ -903,10 +930,10 @@ def make_node_availability_map(nodes):
 
 @dataclass(frozen=True)
 class RouteProperties(Properties):
-    address1: typing.Address
-    address2: typing.Address
-    capacity1to2: typing.TokenAmount
-    capacity2to1: typing.TokenAmount = 0
+    address1: Address
+    address2: Address
+    capacity1to2: TokenAmount
+    capacity2to1: TokenAmount = 0
 
 
 def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
@@ -926,10 +953,10 @@ def route_properties_to_channel(route: RouteProperties) -> NettingChannelState:
 
 def create_network(
     token_network_state: TokenNetworkState,
-    our_address: typing.Address,
+    our_address: Address,
     routes: List[RouteProperties],
-    block_number: typing.BlockNumber,
-    block_hash: typing.BlockHash = None,
+    block_number: BlockNumber,
+    block_hash: BlockHash = None,
 ) -> Tuple[Any, List[NettingChannelState]]:
     """Creates a network from route properties.
 
