@@ -1339,6 +1339,7 @@ def create_sendexpiredlock(
 
     send_lock_expired = SendLockExpired(
         recipient=recipient,
+        channel_identifier=balance_proof.channel_identifier,
         message_identifier=message_identifier_from_prng(pseudo_random_generator),
         balance_proof=balance_proof,
         secrethash=locked_lock.secrethash,

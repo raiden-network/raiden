@@ -153,7 +153,7 @@ def test_tamper_request_monitoring():
     partner_signed_balance_proof.balance_hash = "tampered".encode()
 
     tampered_balance_hash_request_monitoring = RequestMonitoring(
-        balance_proof=partner_signed_balance_proof, reward_amount=55
+        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
     )
 
     tampered_bp = tampered_balance_hash_request_monitoring.balance_proof
@@ -183,7 +183,7 @@ def test_tamper_request_monitoring():
     partner_signed_balance_proof.additional_hash = "tampered".encode()
 
     tampered_additional_hash_request_monitoring = RequestMonitoring(
-        balance_proof=partner_signed_balance_proof, reward_amount=55
+        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
     )
 
     tampered_bp = tampered_additional_hash_request_monitoring.balance_proof
@@ -214,7 +214,7 @@ def test_tamper_request_monitoring():
     partner_signed_balance_proof.non_closing_signature = "tampered".encode()
 
     tampered_non_closing_signature_request_monitoring = RequestMonitoring(
-        balance_proof=partner_signed_balance_proof, reward_amount=55
+        balance_proof=partner_signed_balance_proof, reward_amount=55, signature=EMPTY_SIGNATURE
     )
 
     tampered_bp = tampered_non_closing_signature_request_monitoring.balance_proof

@@ -225,11 +225,11 @@ def test_state_wait_secretrequest_valid():
     setup = setup_initiator_tests()
 
     state_change = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount,
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_TARGET,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount,
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_TARGET,
     )
 
     iteration = initiator_manager.state_transition(
@@ -243,11 +243,11 @@ def test_state_wait_secretrequest_valid():
     assert initiator_state.received_secret_request is True
 
     state_change_2 = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount,
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_TARGET,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount,
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_TARGET,
     )
 
     iteration2 = initiator_manager.state_transition(
@@ -261,11 +261,11 @@ def test_state_wait_secretrequest_invalid_amount():
     setup = setup_initiator_tests()
 
     state_change = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount + 1,
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_TARGET,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount + 1,
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_TARGET,
     )
 
     iteration = initiator_manager.state_transition(
@@ -279,11 +279,11 @@ def test_state_wait_secretrequest_invalid_amount():
     assert initiator_state.received_secret_request is True
 
     state_change_2 = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount,
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_TARGET,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount,
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_TARGET,
     )
 
     iteration2 = initiator_manager.state_transition(
@@ -297,11 +297,11 @@ def test_state_wait_secretrequest_invalid_amount_and_sender():
     setup = setup_initiator_tests()
 
     state_change = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount + 1,
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_INITIATOR,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount + 1,
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_INITIATOR,
     )
 
     iteration = initiator_manager.state_transition(
@@ -314,11 +314,11 @@ def test_state_wait_secretrequest_invalid_amount_and_sender():
 
     # Now the proper target sends the message, this should be applied
     state_change_2 = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount,
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_TARGET,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount,
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_TARGET,
     )
 
     iteration2 = initiator_manager.state_transition(
@@ -434,7 +434,11 @@ def test_refund_transfer_next_route():
     assert channels[0].partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(), transfer=refund_transfer, secret=random_secret()
+        routes=channels.get_routes(),
+        transfer=refund_transfer,
+        secret=random_secret(),
+        balance_proof=refund_transfer.balance_proof,
+        sender=refund_transfer.balance_proof.sender,
     )
 
     iteration = initiator_manager.state_transition(
@@ -483,7 +487,11 @@ def test_refund_transfer_no_more_routes():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=setup.available_routes, transfer=refund_transfer, secret=random_secret()
+        routes=setup.available_routes,
+        transfer=refund_transfer,
+        secret=random_secret(),
+        balance_proof=refund_transfer.balance_proof,
+        sender=refund_transfer.balance_proof.sender,
     )
 
     iteration = initiator_manager.state_transition(
@@ -518,10 +526,16 @@ def test_refund_transfer_no_more_routes():
     invalid_balance_proof = factories.create(missing_pkey)
     balance_proof = factories.create(complete)
     invalid_lock_expired_state_change = ReceiveLockExpired(
-        invalid_balance_proof, secrethash=original_transfer.lock.secrethash, message_identifier=5
+        sender=invalid_balance_proof.sender,
+        balance_proof=invalid_balance_proof,
+        secrethash=original_transfer.lock.secrethash,
+        message_identifier=5,
     )
     lock_expired_state_change = ReceiveLockExpired(
-        balance_proof, secrethash=original_transfer.lock.secrethash, message_identifier=5
+        balance_proof=balance_proof,
+        sender=balance_proof.sender,
+        secrethash=original_transfer.lock.secrethash,
+        message_identifier=5,
     )
     before_expiry_block = original_transfer.lock.expiration - 1
     expiry_block = channel.get_sender_expiration_threshold(original_transfer.lock)
@@ -661,11 +675,11 @@ def test_invalid_cancelpayment():
     """
     setup = setup_initiator_tests(amount=2 * MAXIMUM_PENDING_TRANSFERS * UNIT_TRANSFER_AMOUNT)
     receive_secret_request = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount,
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_TARGET,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount,
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_TARGET,
     )
     secret_transition = initiator_manager.state_transition(
         payment_state=setup.current_state,
@@ -1131,7 +1145,11 @@ def test_secret_reveal_cancel_other_transfers():
     assert channels[0].partner_state.address == refund_address
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(), transfer=refund_transfer, secret=random_secret()
+        routes=channels.get_routes(),
+        transfer=refund_transfer,
+        secret=random_secret(),
+        balance_proof=refund_transfer.balance_proof,
+        sender=refund_transfer.balance_proof.sender,
     )
 
     iteration = initiator_manager.state_transition(
@@ -1240,7 +1258,11 @@ def test_refund_after_secret_request():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=setup.available_routes, transfer=refund_transfer, secret=random_secret()
+        routes=setup.available_routes,
+        transfer=refund_transfer,
+        secret=random_secret(),
+        balance_proof=refund_transfer.balance_proof,
+        sender=refund_transfer.balance_proof.sender,
     )
 
     iteration = initiator_manager.state_transition(
@@ -1299,7 +1321,11 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     )
 
     state_change = ReceiveTransferRefundCancelRoute(
-        routes=channels.get_routes(), transfer=refund_transfer, secret=random_secret()
+        routes=channels.get_routes(),
+        transfer=refund_transfer,
+        secret=random_secret(),
+        balance_proof=refund_transfer.balance_proof,
+        sender=refund_transfer.balance_proof.sender,
     )
 
     iteration = initiator_manager.state_transition(
@@ -1336,7 +1362,10 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         )
     )
     lock_expired_state_change = ReceiveLockExpired(
-        balance_proof, secrethash=initial_transfer.lock.secrethash, message_identifier=5
+        balance_proof=balance_proof,
+        sender=balance_proof.sender,
+        secrethash=initial_transfer.lock.secrethash,
+        message_identifier=5,
     )
 
     expiry_block = channel.get_sender_expiration_threshold(initial_transfer.lock)
@@ -1388,11 +1417,11 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
     setup = setup_initiator_tests(allocated_fee=fee_amount)
 
     state_change = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount - 1,  # Assuming 1 is the fee amount that was deducted
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_TARGET,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount - 1,  # Assuming 1 is the fee amount that was deducted
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_TARGET,
     )
 
     iteration = initiator_manager.state_transition(
@@ -1407,11 +1436,11 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
     initiator_state.received_secret_request = False
 
     state_change_2 = ReceiveSecretRequest(
-        UNIT_TRANSFER_IDENTIFIER,
-        setup.lock.amount - fee_amount - 1,
-        setup.lock.expiration,
-        setup.lock.secrethash,
-        UNIT_TRANSFER_TARGET,
+        payment_identifier=UNIT_TRANSFER_IDENTIFIER,
+        amount=setup.lock.amount - fee_amount - 1,
+        expiration=setup.lock.expiration,
+        secrethash=setup.lock.secrethash,
+        sender=UNIT_TRANSFER_TARGET,
     )
 
     iteration2 = initiator_manager.state_transition(

@@ -2,13 +2,7 @@ from dataclasses import dataclass, field
 from operator import attrgetter
 
 from cachetools import LRUCache, cached
-from eth_utils import (
-    big_endian_to_int,
-    decode_hex,
-    encode_hex,
-    to_canonical_address,
-    to_normalized_address,
-)
+from eth_utils import big_endian_to_int
 
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
@@ -197,12 +191,27 @@ def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
     return message
 
 
+@dataclass(repr=False, eq=False)
 class Message:
     # Needs to be set by a subclass
     cmdid: Optional[int] = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.hash == other.hash
+
+    def __hash__(self):
+        return big_endian_to_int(self.hash)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__(self):
+        return "<{klass} [msghash={msghash}]>".format(
+            klass=self.__class__.__name__, msghash=pex(self.hash)
+        )
 
     @property
     def hash(self):
@@ -249,6 +258,7 @@ class Message:
         raise NotImplementedError("Method needs to be implemented in a subclass.")
 
 
+@dataclass(repr=False, eq=False)
 class AuthenticatedMessage(Message):
     """ Message, that has a sender. """
 
@@ -256,6 +266,7 @@ class AuthenticatedMessage(Message):
         raise NotImplementedError("Property needs to be implemented in subclass.")
 
 
+@dataclass(repr=False, eq=False)
 class SignedMessage(AuthenticatedMessage):
     # signing is a bit problematic, we need to pack the data to sign, but the
     # current API assumes that signing is called before, this can be improved
@@ -303,18 +314,21 @@ class SignedMessage(AuthenticatedMessage):
         return cls.unpack(packed)
 
 
+@dataclass(repr=False, eq=False)
 class RetrieableMessage:
     """ Message, that supports a retry-queue. """
 
     message_identifier: MessageID
 
 
+@dataclass(repr=False, eq=False)
 class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
     """ Mixin of SignedMessage and RetrieableMessage. """
 
     message_identifier: MessageID
 
 
+@dataclass(repr=False, eq=False)
 class EnvelopeMessage(SignedRetrieableMessage):
     def __init__(
         self,
@@ -372,6 +386,7 @@ class EnvelopeMessage(SignedRetrieableMessage):
         return balance_proof_packed
 
 
+@dataclass(repr=False, eq=False)
 class Processed(SignedRetrieableMessage):
     """ All accepted messages should be confirmed by a `Processed` message which echoes the
     orginals Message hash.
@@ -416,6 +431,7 @@ class Processed(SignedRetrieableMessage):
         return processed
 
 
+@dataclass(repr=False, eq=False)
 class ToDevice(SignedMessage):
     """
     Message, which can be directly sent to all devices of a node known by matrix,
@@ -460,6 +476,7 @@ class ToDevice(SignedMessage):
         return to_device
 
 
+@dataclass(repr=False, eq=False)
 class Delivered(SignedMessage):
     """ Message used to inform the partner node that a message was received *and*
     persisted.
@@ -507,6 +524,7 @@ class Delivered(SignedMessage):
         return delivered
 
 
+@dataclass(repr=False, eq=False)
 class Pong(SignedMessage):
     """ Response to a Ping message. """
 
@@ -528,6 +546,7 @@ class Pong(SignedMessage):
         packed.signature = self.signature
 
 
+@dataclass(repr=False, eq=False)
 class Ping(SignedMessage):
     """ Healthcheck message. """
 
@@ -557,6 +576,7 @@ class Ping(SignedMessage):
         packed.signature = self.signature
 
 
+@dataclass(repr=False, eq=False)
 class SecretRequest(SignedRetrieableMessage):
     """ Requests the secret which unlocks a secrethash. """
 
@@ -651,6 +671,7 @@ class SecretRequest(SignedRetrieableMessage):
         return secret_request
 
 
+@dataclass(repr=False, eq=False)
 class Unlock(EnvelopeMessage):
     """ Message used to do state changes on a partner Raiden Channel.
 
@@ -691,6 +712,7 @@ class Unlock(EnvelopeMessage):
         )
 
     def __post_init__(self):
+        super().__post_init__()
         if self.payment_identifier < 0:
             raise ValueError("payment_identifier cannot be negative")
 
@@ -789,6 +811,7 @@ class Unlock(EnvelopeMessage):
         return message
 
 
+@dataclass(repr=False, eq=False)
 class RevealSecret(SignedRetrieableMessage):
     """Message used to reveal a secret to party known to have interest in it.
 
@@ -835,6 +858,7 @@ class RevealSecret(SignedRetrieableMessage):
         return cls(message_identifier=event.message_identifier, secret=event.secret)
 
 
+@dataclass(repr=False, eq=False)
 class Lock:
     """ Describes a locked `amount`.
 
@@ -920,6 +944,7 @@ class Lock:
         )
 
 
+@dataclass(repr=False, eq=False)
 class LockedTransferBase(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
     she knows the secret to `secrethash`.
@@ -942,40 +967,9 @@ class LockedTransferBase(EnvelopeMessage):
     recipient: Address
     lock: Lock
 
-    def __init__(
-        self,
-        *,
-        chain_id: ChainID,
-        message_identifier: MessageID,
-        payment_identifier: PaymentID,
-        nonce: Nonce,
-        token_network_address: TokenNetworkAddress,
-        token: TokenAddress,
-        channel_identifier: ChannelID,
-        transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
-        recipient: Address,
-        locksroot: Locksroot,
-        lock: Lock,
-        **kwargs,
-    ):
-        super().__init__(
-            chain_id=chain_id,
-            nonce=nonce,
-            transferred_amount=transferred_amount,
-            message_identifier=message_identifier,
-            locked_amount=locked_amount,
-            locksroot=locksroot,
-            channel_identifier=channel_identifier,
-            token_network_address=token_network_address,
-            **kwargs,
-        )
-        assert_transfer_values(payment_identifier, token, recipient)
-        self.message_identifier = message_identifier
-        self.payment_identifier = payment_identifier
-        self.token = token
-        self.recipient = recipient
-        self.lock = lock
+    def __post_init__(self):
+        super().__post_init__()
+        assert_transfer_values(self.payment_identifier, self.token, self.recipient)
 
     @classmethod
     def unpack(cls, packed):
@@ -1022,6 +1016,7 @@ class LockedTransferBase(EnvelopeMessage):
         packed.signature = self.signature
 
 
+@dataclass(repr=False, eq=False)
 class LockedTransfer(LockedTransferBase):
     """
     A LockedTransfer has a `target` address to which a chain of transfers shall
@@ -1049,6 +1044,8 @@ class LockedTransfer(LockedTransferBase):
     fee: int
 
     def __post_init__(self):
+        super().__post_init__()
+
         if len(self.target) != 20:
             raise ValueError("target is an invalid address")
 
@@ -1182,6 +1179,7 @@ class LockedTransfer(LockedTransferBase):
         return message
 
 
+@dataclass(repr=False, eq=False)
 class RefundTransfer(LockedTransfer):
     """ A special LockedTransfer sent from a payee to a payer indicating that
     no route is available, this transfer will effectively refund the payer the
@@ -1290,6 +1288,7 @@ class RefundTransfer(LockedTransfer):
         return message
 
 
+@dataclass(repr=False, eq=False)
 class LockExpired(EnvelopeMessage):
     """Message used to notify opposite channel participant that a lock has
     expired.
@@ -1436,6 +1435,7 @@ class LockExpired(EnvelopeMessage):
         return expired_lock
 
 
+@dataclass(repr=False, eq=False)
 class SignedBlindedBalanceProof:
     """Message sub-field `onchain_balance_proof` for `RequestMonitoring`.
     """
@@ -1525,6 +1525,7 @@ class SignedBlindedBalanceProof:
         )
 
 
+@dataclass(repr=False, eq=False)
 class RequestMonitoring(SignedMessage):
     """Message to request channel watching from a monitoring service.
     Spec:
@@ -1704,6 +1705,7 @@ class RequestMonitoring(SignedMessage):
         )
 
 
+@dataclass(repr=False, eq=False)
 class UpdatePFS(SignedMessage):
     """ Message to inform a pathfinding service about a capacity change. """
 

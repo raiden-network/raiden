@@ -258,6 +258,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
     payment_network: PaymentNetworkState
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if not isinstance(self.payment_network, PaymentNetworkState):
             raise ValueError("payment_network must be a PaymentNetworkState instance")
 
@@ -270,6 +271,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
     token_network: TokenNetworkState
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if not isinstance(self.token_network, TokenNetworkState):
             raise ValueError("token_network must be a TokenNetworkState instance")
 
@@ -283,6 +285,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
     secret: Secret
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if not isinstance(self.secret_registry_address, T_SecretRegistryAddress):
             raise ValueError("secret_registry_address must be of type SecretRegistryAddress")
         if not isinstance(self.secrethash, T_SecretHash):
@@ -311,6 +314,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     returned_tokens: TokenAmount
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if not isinstance(self.participant, T_Address):
             raise ValueError("participant must be of type address")
 
@@ -331,6 +335,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     participant2: Address
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         if not isinstance(self.participant1, T_Address):
             raise ValueError("participant1 must be of type address")
 
@@ -382,6 +387,7 @@ class ReceiveUnlock(BalanceProofStateChange):
     secrethash: SecretHash = field(init=False)
 
     def __post_init__(self) -> None:
+        super().__post_init__()
         self.secrethash = SecretHash(sha3(self.secret))
 
 

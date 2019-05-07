@@ -306,6 +306,7 @@ def handle_transferrefundcancelroute(
         initiator=old_description.initiator,
         target=old_description.target,
         secret=state_change.secret,
+        secrethash=state_change.secrethash,
     )
 
     sub_iteration = maybe_try_new_route(

@@ -11,7 +11,7 @@ from gevent.lock import Semaphore
 from gevent.queue import JoinableQueue
 from matrix_client.errors import MatrixRequestError
 
-from raiden.constants import DISCOVERY_DEFAULT_ROOM
+from raiden.constants import DISCOVERY_DEFAULT_ROOM, EMPTY_SIGNATURE
 from raiden.exceptions import InvalidAddress, TransportError, UnknownAddress, UnknownTokenAddress
 from raiden.message_handler import MessageHandler
 from raiden.messages import (
@@ -850,7 +850,9 @@ class MatrixTransport(Runnable):
             #       which means that message order is important which isn't guaranteed between
             #       federated servers.
             #       See: https://matrix.org/docs/spec/client_server/r0.3.0.html#id57
-            delivered_message = Delivered(delivered_message_identifier=message.message_identifier)
+            delivered_message = Delivered(
+                delivered_message_identifier=message.message_identifier, signature=EMPTY_SIGNATURE
+            )
             self._raiden_service.sign(delivered_message)
             retrier = self._get_retrier(message.sender)
             retrier.enqueue_global(delivered_message)

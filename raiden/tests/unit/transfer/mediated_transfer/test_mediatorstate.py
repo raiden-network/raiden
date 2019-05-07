@@ -782,7 +782,7 @@ def test_secret_learned_with_refund():
     # Which means that hop5 sent a SecretReveal -> hop4 -> HOP1 (Us)
     transition_result = mediator.state_transition(
         mediator_state=mediator_state,
-        state_change=ReceiveSecretReveal(UNIT_SECRET, hop5),
+        state_change=ReceiveSecretReveal(secret=UNIT_SECRET, sender=hop5),
         channelidentifiers_to_channels=channel_map,
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=random.Random(),
@@ -1135,7 +1135,13 @@ def test_do_not_claim_an_almost_expiring_lock_if_a_payment_didnt_occur():
         attacked_channel.identifier: attacked_channel,
     }
 
-    init_state_change = ActionInitMediator(available_routes, from_route, from_transfer)
+    init_state_change = ActionInitMediator(
+        routes=available_routes,
+        from_route=from_route,
+        from_transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,
+    )
 
     nodeaddresses_to_networkstates = {UNIT_TRANSFER_TARGET: NODE_NETWORK_REACHABLE}
 
@@ -1560,7 +1566,10 @@ def test_mediator_lock_expired_with_receive_lock_expired():
     )
 
     lock_expired_state_change = ReceiveLockExpired(
-        balance_proof=balance_proof, secrethash=transfer.lock.secrethash, message_identifier=1
+        balance_proof=balance_proof,
+        secrethash=transfer.lock.secrethash,
+        message_identifier=1,
+        sender=balance_proof.sender,
     )
 
     block_before_confirmed_expiration = expiration + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS - 1
@@ -1624,7 +1633,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     assert secrethash in channels[0].partner_state.secrethashes_to_lockedlocks
 
     # Reveal secret just before the lock expires
-    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, UNIT_TRANSFER_TARGET)
+    secret_reveal = ReceiveSecretReveal(secret=UNIT_SECRET, sender=UNIT_TRANSFER_TARGET)
 
     iteration = mediator.state_transition(
         mediator_state=iteration.new_state,
@@ -1641,7 +1650,10 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
     assert secrethash in channels[0].partner_state.secrethashes_to_unlockedlocks
 
     lock_expired_state_change = ReceiveLockExpired(
-        balance_proof=balance_proof, secrethash=transfer.lock.secrethash, message_identifier=1
+        sender=balance_proof.sender,
+        balance_proof=balance_proof,
+        secrethash=transfer.lock.secrethash,
+        message_identifier=1
     )
 
     iteration = mediator.state_transition(
@@ -1696,7 +1708,7 @@ def test_mediator_lock_expired_after_receive_secret_reveal():
     assert secrethash in channels[0].partner_state.secrethashes_to_lockedlocks
 
     # Reveal secret just before the lock expires
-    secret_reveal = ReceiveSecretReveal(UNIT_SECRET, UNIT_TRANSFER_TARGET)
+    secret_reveal = ReceiveSecretReveal(secret=UNIT_SECRET, sender=UNIT_TRANSFER_TARGET)
 
     iteration = mediator.state_transition(
         mediator_state=iteration.new_state,

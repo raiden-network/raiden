@@ -188,8 +188,13 @@ def test_channel_data_removed_after_unlock(
         channel_state=channel_state, privkey=pkey, nonce=1, transferred_amount=0, lock=lock
     )
 
-    from_route = factories.make_route_from_channel(channel_state)
-    init_target = ActionInitTarget(from_route, mediated_transfer)
+    from_route = factories.route_from_channel(channel_state)
+    init_target = ActionInitTarget(
+        sender=mediated_transfer.balance_proof.sender,
+        balance_proof=mediated_transfer.balance_proof,
+        route=from_route,
+        transfer=mediated_transfer,
+    )
 
     node.state_transition(chain_state, init_target)
 
@@ -299,7 +304,11 @@ def test_mediator_clear_pairs_after_batch_unlock(
 
     from_route = factories.make_route_from_channel(channel_state)
     init_mediator = ActionInitMediator(
-        routes=[from_route], from_route=from_route, from_transfer=mediated_transfer
+        routes=[from_route],
+        from_route=from_route,
+        from_transfer=mediated_transfer,
+        balance_proof=mediated_transfer.balance_proof,
+        sender=mediated_transfer.balance_proof.sender,
     )
 
     node.state_transition(chain_state, init_mediator)
@@ -409,8 +418,13 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         channel_state=channel_state, privkey=pkey, nonce=1, transferred_amount=0, lock=lock
     )
 
-    from_route = factories.make_route_from_channel(channel_state)
-    init_target = ActionInitTarget(from_route, mediated_transfer)
+    from_route = factories.route_from_channel(channel_state)
+    init_target = ActionInitTarget(
+        route=from_route,
+        transfer=mediated_transfer,
+        balance_proof=mediated_transfer.balance_proof,
+        sender=mediated_transfer.balance_proof.sender,
+    )
 
     node.state_transition(chain_state, init_target)
 

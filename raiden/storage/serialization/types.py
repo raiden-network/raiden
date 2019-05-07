@@ -1,7 +1,7 @@
 from marshmallow import fields
 from marshmallow_dataclass import _native_to_marshmallow
 
-from raiden.storage.serialization.fields import AddressField, BytesField
+from raiden.storage.serialization.fields import AddressField, BytesField, IntegerToStringField
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -82,8 +82,6 @@ _native_to_marshmallow.update(
         # Ints
         BlockExpiration: fields.Int,
         BlockNumber: fields.Int,
-        ChainID: fields.Int,
-        ChannelID: fields.Int,
         FeeAmount: fields.Int,
         LockedAmount: fields.Int,
         BlockGasLimit: fields.Int,
@@ -93,8 +91,13 @@ _native_to_marshmallow.update(
         PaymentID: fields.Int,
         PaymentWithFeeAmount: fields.Int,
         TransferID: fields.Int,
+        # Integers which should be converted to strings
+        # This is done for querying purposes as sqlite
+        # integer type is smaller than python's.
+        ChainID: IntegerToStringField,
+        ChannelID: IntegerToStringField,
         # Union
         # Union: determine_union_types,
-        Union[TokenNetworkAddress, TokenNetworkID]: BytesField
+        Union[TokenNetworkAddress, TokenNetworkID]: AddressField,
     }
 )

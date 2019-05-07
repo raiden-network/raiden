@@ -175,7 +175,7 @@ def test_get_state_change_with_balance_proof():
         transfer=transfer,
         balance_proof=transfer.balance_proof,
         sender=transfer.balance_proof.sender,
-        routes=list()
+        routes=list(),
     )
     transfer = make_signed_transfer_from_counter(counter)
     transfer_refund_cancel_route = ReceiveTransferRefundCancelRoute(
@@ -253,7 +253,7 @@ def test_get_event_with_balance_proof():
         message_identifier=next(counter),
         balance_proof=balance_proof,
         secrethash=sha3(factories.make_secret(next(counter))),
-        channel_identifier=balance_proof.channel_identifier
+        channel_identifier=balance_proof.channel_identifier,
     )
     locked_transfer = SendLockedTransfer(
         recipient=factories.make_address(),
