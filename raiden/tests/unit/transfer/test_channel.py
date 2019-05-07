@@ -6,8 +6,10 @@ from raiden.tests.unit.test_channelstate import (
     create_model,
     make_receive_transfer_mediated,
 )
+from raiden.tests.utils import factories
 from raiden.tests.utils.factories import make_block_hash, make_transaction_hash
 from raiden.transfer import channel
+from raiden.transfer.channel import handle_receive_lockedtransfer, is_balance_proof_usable_onchain
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.state import HashTimeLockState
 from raiden.transfer.state_change import (
@@ -49,8 +51,8 @@ def test_handle_receive_lockedtransfer_enforces_transfer_limit():
     assert is_valid, msg
 
     state, transfer = _channel_and_transfer(merkletree_width=MAXIMUM_PENDING_TRANSFERS)
-    is_valid, _, msg = channel.handle_receive_lockedtransfer(state, transfer)
-    assert not is_valid, msg
+    is_valid, _, _ = handle_receive_lockedtransfer(state, transfer)
+    assert not is_valid
 
 
 def test_channel_cleared_after_two_unlocks():
@@ -159,3 +161,48 @@ def test_channel_cleared_after_our_unlock():
     )
     msg = "partner did not have any locks in the merkletree, channel should have been cleaned"
     assert iteration.new_state is None, msg
+
+
+def test_is_balance_proof_usable_onchain_answer_is_false():
+    channel_state = factories.make_channel_set(number_of_channels=1).channels[0]
+    balance_proof_wrong_channel = factories.create(factories.BalanceProofSignedStateProperties())
+    result, msg = is_balance_proof_usable_onchain(
+        received_balance_proof=balance_proof_wrong_channel,
+        channel_state=channel_state,
+        sender_state=channel_state.partner_state,
+    )
+    assert result is False, result
+    assert msg.startswith("channel_identifier does not match. "), msg
+
+    wrong_token_network_canonical_identifier = deepcopy(channel_state.canonical_identifier)
+    wrong_token_network_canonical_identifier.token_network_address = factories.make_address()
+
+    balance_proof_wrong_token_network = factories.create(
+        factories.BalanceProofSignedStateProperties(
+            canonical_identifier=wrong_token_network_canonical_identifier
+        )
+    )
+    result, msg = is_balance_proof_usable_onchain(
+        received_balance_proof=balance_proof_wrong_token_network,
+        channel_state=channel_state,
+        sender_state=channel_state.partner_state,
+    )
+    assert result is False, result
+    assert msg.startswith("token_network_identifier does not match. "), msg
+
+    balance_proof_overflow = factories.create(
+        factories.BalanceProofSignedStateProperties(
+            transferred_amount=factories.UINT256_MAX,
+            locked_amount=1,
+            canonical_identifier=channel_state.canonical_identifier,
+        )
+    )
+    result, msg = is_balance_proof_usable_onchain(
+        received_balance_proof=balance_proof_overflow,
+        channel_state=channel_state,
+        sender_state=channel_state.partner_state,
+    )
+    assert result is False, result
+    assert msg.startswith("Balance proof total transferred amount would overflow "), msg
+    assert str(factories.UINT256_MAX) in msg, msg
+    assert str(factories.UINT256_MAX + 1) in msg, msg
