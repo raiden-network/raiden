@@ -13,6 +13,7 @@ from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.node import (
     get_networks,
     is_transaction_effect_satisfied,
+    maybe_add_tokennetwork,
     state_transition,
     subdispatch_initiatortask,
     subdispatch_targettask,
@@ -127,3 +128,19 @@ def test_subdispatch_invalid_targettask(chain_state, token_network_id):
     )
     assert transition_result.new_state == chain_state
     assert not transition_result.events
+
+
+def test_maybe_add_tokennetwork_unknown_payment_network(chain_state, token_network_id):
+    payment_network_identifier = factories.make_address()
+    token_address = factories.make_address()
+    token_network = TokenNetworkState(address=token_network_id, token_address=token_address)
+    msg = "test state invalid, payment_network already in chain_state"
+    assert payment_network_identifier not in chain_state.identifiers_to_paymentnetworks, msg
+    maybe_add_tokennetwork(
+        chain_state=chain_state,
+        payment_network_identifier=payment_network_identifier,
+        token_network_state=token_network,
+    )
+    # new payment network should have been added to chain_state
+    payment_network_state = chain_state.identifiers_to_paymentnetworks[payment_network_identifier]
+    assert payment_network_state.address == payment_network_identifier
