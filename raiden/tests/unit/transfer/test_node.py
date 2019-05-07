@@ -2,14 +2,20 @@ from copy import deepcopy
 
 from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.tests.utils import factories
-from raiden.tests.utils.factories import HOP1, HOP2, UNIT_SECRETHASH, make_block_hash
-from raiden.transfer.architecture import TransitionResult
+from raiden.tests.utils.factories import (
+    HOP1,
+    HOP2,
+    UNIT_CHANNEL_ID,
+    UNIT_SECRETHASH,
+    make_block_hash,
+)
 from raiden.transfer.events import ContractSendChannelBatchUnlock
 from raiden.transfer.node import (
     get_networks,
     is_transaction_effect_satisfied,
     state_transition,
     subdispatch_initiatortask,
+    subdispatch_targettask,
 )
 from raiden.transfer.state import PaymentNetworkState, TokenNetworkState
 from raiden.transfer.state_change import (
@@ -103,6 +109,20 @@ def test_subdispatch_invalid_initiatortask(chain_state, token_network_id):
         chain_state=chain_state,
         state_change=None,
         token_network_identifier=token_network_id,
+        secrethash=UNIT_SECRETHASH,
+    )
+    assert transition_result.new_state == chain_state
+    assert not transition_result.events
+
+
+def test_subdispatch_invalid_targettask(chain_state, token_network_id):
+    subtask = object()
+    chain_state.payment_mapping.secrethashes_to_task[UNIT_SECRETHASH] = subtask
+    transition_result = subdispatch_targettask(
+        chain_state=chain_state,
+        state_change=None,
+        token_network_identifier=token_network_id,
+        channel_identifier=UNIT_CHANNEL_ID,
         secrethash=UNIT_SECRETHASH,
     )
     assert transition_result.new_state == chain_state
