@@ -13,10 +13,7 @@ from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
-from raiden.transfer.mediated_transfer.state import (
-    LockedTransferSignedState,
-    lockedtransfersigned_from_message,
-)
+from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import MERKLEROOT, compute_layers
 from raiden.transfer.state import (
@@ -229,10 +226,10 @@ def _transfer_secret_not_requested(
         timeout = 10
 
     secret = make_secret()
-    secret_hash = sha3(secret)
+    secrethash = sha3(secret)
 
     hold_secret_request = target_app.raiden.raiden_event_handler.hold(
-        SendSecretRequest, {"secrethash": secret_hash}
+        SendSecretRequest, {"secrethash": secrethash}
     )
 
     payment_network_identifier = initiator_app.raiden.default_registry.address
@@ -248,7 +245,7 @@ def _transfer_secret_not_requested(
         target=target_app.raiden.address,
         identifier=identifier,
         secret=secret,
-        secret_hash=secret_hash,
+        secrethash=secrethash,
     )
 
     with Timeout(seconds=timeout):
