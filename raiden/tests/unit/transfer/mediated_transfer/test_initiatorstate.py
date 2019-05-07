@@ -189,7 +189,7 @@ def test_next_route():
         block_number=block_number,
     )
 
-    # HOP3 should be ignored because it doesnt have enough balance
+    # hop3 should be ignored because it doesnt have enough balance
     assert iteration.new_state.cancelled_channels == [channel1.identifier]
 
 
@@ -394,7 +394,7 @@ def test_state_wait_unlock_valid():
 def test_state_wait_unlock_invalid():
     setup = setup_initiator_tests()
     identifier = setup.channel.identifier
-    target_address = factories.HOP2
+    target_address = factories.make_address()
 
     # setup the state for the wait unlock
     initiator_state = get_transfer_at_index(setup.current_state, 0)

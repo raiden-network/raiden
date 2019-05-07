@@ -12,7 +12,6 @@ from raiden.tests.utils.factories import (
     ADDR,
     HOP1,
     HOP2,
-    HOP5,
     UNIT_CHAIN_ID,
     UNIT_REVEAL_TIMEOUT,
     UNIT_SECRET,
@@ -747,9 +746,10 @@ def test_secret_learned():
 
 
 def test_secret_learned_with_refund():
-    #                                             /-> HOP3
+    hop5 = factories.make_address()
+    #                                             /-> hop3
     # Emulate HOP2(Initiator) -> HOP1 (This node)
-    #                                             \-> HOP4 -> HOP5
+    #                                             \-> hop4 -> hop5
     setup = factories.make_transfers_pair(3, block_number=1)
     channel_map, transfers_pair = setup.channel_map, setup.transfers_pair
 
@@ -765,10 +765,10 @@ def test_secret_learned_with_refund():
     )
 
     # Emulate a ReceiveSecretReveal state transition_result
-    # Which means that HOP5 sent a SecretReveal -> HOP4 -> HOP1 (Us)
+    # Which means that hop5 sent a SecretReveal -> hop4 -> HOP1 (Us)
     transition_result = mediator.state_transition(
         mediator_state=mediator_state,
-        state_change=ReceiveSecretReveal(UNIT_SECRET, HOP5),
+        state_change=ReceiveSecretReveal(UNIT_SECRET, hop5),
         channelidentifiers_to_channels=channel_map,
         nodeaddresses_to_networkstates=nodeaddresses_to_networkstates,
         pseudo_random_generator=random.Random(),
