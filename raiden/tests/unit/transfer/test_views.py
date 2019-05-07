@@ -1,6 +1,8 @@
 import pytest
 
 from raiden.tests.utils import factories
+from raiden.transfer.mediated_transfer.state import InitiatorPaymentState
+from raiden.transfer.state import InitiatorTask
 from raiden.transfer.views import (
     count_token_network_channels,
     filter_channels_by_partneraddress,
@@ -9,6 +11,7 @@ from raiden.transfer.views import (
     get_token_identifiers,
     get_token_network_identifiers,
     get_token_network_registry_by_token_network_identifier,
+    get_transfer_secret,
     role_from_transfer_task,
 )
 
@@ -89,3 +92,15 @@ def test_token_identifiers_empty_list_for_payment_network_none(chain_state):
 def test_role_from_transfer_task_raises_value_error():
     with pytest.raises(ValueError):
         role_from_transfer_task(object())
+
+
+def test_get_transfer_secret_none_for_none_transfer_state(chain_state):
+    secret = factories.make_secret()
+    transfer = factories.create(factories.LockedTransferUnsignedStateProperties(secret=secret))
+    secrethash = transfer.lock.secrethash
+    payment_state = InitiatorPaymentState({secrethash: None})
+    task = InitiatorTask(
+        token_network_identifier=factories.UNIT_TOKEN_NETWORK_ADDRESS, manager_state=payment_state
+    )
+    chain_state.payment_mapping.secrethashes_to_task[secrethash] = task
+    assert get_transfer_secret(chain_state=chain_state, secrethash=secrethash) is None
