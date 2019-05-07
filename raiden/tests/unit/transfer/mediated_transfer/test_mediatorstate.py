@@ -1653,7 +1653,7 @@ def test_mediator_receive_lock_expired_after_secret_reveal():
         sender=balance_proof.sender,
         balance_proof=balance_proof,
         secrethash=transfer.lock.secrethash,
-        message_identifier=1
+        message_identifier=1,
     )
 
     iteration = mediator.state_transition(

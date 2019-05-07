@@ -9,8 +9,9 @@ import networkx
 
 from raiden.constants import (
     EMPTY_BALANCE_HASH,
-    EMPTY_HASH,
+    EMPTY_LOCK_HASH,
     EMPTY_MERKLE_ROOT,
+    EMPTY_SECRETHASH,
     UINT64_MAX,
     UINT256_MAX,
 )
@@ -168,6 +169,7 @@ class TokenNetworkGraphState(State):
     )
 
     def __repr__(self):
+        # pylint: disable=no-member
         return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
 
 
@@ -469,11 +471,11 @@ class UnlockPartialProofState(State):
 
     lock: HashTimeLockState
     secret: Secret = field(repr=False)
-    amount: PaymentWithFeeAmount = field(repr=False, default=0)
-    expiration: BlockExpiration = field(repr=False, default=0)
-    secrethash: SecretHash = field(repr=False, default=EMPTY_HASH)
+    amount: PaymentWithFeeAmount = field(repr=False, default=PaymentWithFeeAmount(0))
+    expiration: BlockExpiration = field(repr=False, default=BlockExpiration(0))
+    secrethash: SecretHash = field(repr=False, default=EMPTY_SECRETHASH)
     encoded: EncodedData = field(init=False, repr=False)
-    lockhash: LockHash = field(repr=False, default=EMPTY_HASH)
+    lockhash: LockHash = field(repr=False, default=EMPTY_LOCK_HASH)
 
     def __post_init__(self) -> None:
         if not isinstance(self.lock, HashTimeLockState):

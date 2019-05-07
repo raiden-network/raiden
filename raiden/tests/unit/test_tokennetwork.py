@@ -50,7 +50,7 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
     token_network_state = TokenNetworkState(
         address=token_network_id,
         token_address=token_id,
-        network_graph=TokenNetworkGraphState(token_network_id)
+        network_graph=TokenNetworkGraphState(token_network_id),
     )
 
     properties, _ = channel_properties
@@ -104,7 +104,7 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
     token_network_state = TokenNetworkState(
         address=token_network_id,
         token_address=token_id,
-        network_graph=TokenNetworkGraphState(token_network_id)
+        network_graph=TokenNetworkGraphState(token_network_id),
     )
 
     properties, _ = channel_properties
@@ -199,7 +199,7 @@ def test_channel_data_removed_after_unlock(
 
     from_route = factories.route_from_channel(channel_state)
     init_target = ActionInitTarget(
-        sender=mediated_transfer.balance_proof.sender,
+        sender=mediated_transfer.balance_proof.sender,  # pylint: disable=no-member
         balance_proof=mediated_transfer.balance_proof,
         route=from_route,
         transfer=mediated_transfer,
@@ -317,7 +317,7 @@ def test_mediator_clear_pairs_after_batch_unlock(
         from_route=from_route,
         from_transfer=mediated_transfer,
         balance_proof=mediated_transfer.balance_proof,
-        sender=mediated_transfer.balance_proof.sender,
+        sender=mediated_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     node.state_transition(chain_state, init_mediator)
@@ -432,7 +432,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         route=from_route,
         transfer=mediated_transfer,
         balance_proof=mediated_transfer.balance_proof,
-        sender=mediated_transfer.balance_proof.sender,
+        sender=mediated_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     node.state_transition(chain_state, init_target)

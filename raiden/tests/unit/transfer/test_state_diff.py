@@ -43,9 +43,7 @@ def test_detect_balance_proof_change():
     assert len(diff()) == 0
 
     token_network = TokenNetworkState(
-        address=b"a",
-        token_address=b"a",
-        network_graph=TokenNetworkGraphState(b"a")
+        address=b"a", token_address=b"a", network_graph=TokenNetworkGraphState(b"a")
     )
     token_network_copy = deepcopy(token_network)
     payment_network.tokenidentifiers_to_tokennetworks["a"] = token_network

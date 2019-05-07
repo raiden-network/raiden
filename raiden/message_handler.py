@@ -73,17 +73,17 @@ class MessageHandler:
     @staticmethod
     def handle_message_secretrequest(raiden: RaidenService, message: SecretRequest) -> None:
         secret_request = ReceiveSecretRequest(
-            message.payment_identifier,
-            message.amount,
-            message.expiration,
-            message.secrethash,
-            message.sender,
+            payment_identifier=message.payment_identifier,
+            amount=message.amount,
+            expiration=message.expiration,
+            secrethash=message.secrethash,
+            sender=message.sender,
         )
         raiden.handle_and_track_state_change(secret_request)
 
     @staticmethod
     def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret) -> None:
-        state_change = ReceiveSecretReveal(message.secret, message.sender)
+        state_change = ReceiveSecretReveal(secret=message.secret, sender=message.sender)
         raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
@@ -93,6 +93,7 @@ class MessageHandler:
             message_identifier=message.message_identifier,
             secret=message.secret,
             balance_proof=balance_proof,
+            sender=balance_proof.sender,
         )
         raiden.handle_and_track_state_change(state_change)
 
@@ -100,6 +101,7 @@ class MessageHandler:
     def handle_message_lockexpired(raiden: RaidenService, message: LockExpired) -> None:
         balance_proof = balanceproof_from_envelope(message)
         state_change = ReceiveLockExpired(
+            sender=balance_proof.sender,
             balance_proof=balance_proof,
             secrethash=message.secrethash,
             message_identifier=message.message_identifier,
@@ -140,10 +142,19 @@ class MessageHandler:
 
             secret = random_secret()
             state_change = ReceiveTransferRefundCancelRoute(
-                routes=routes, transfer=from_transfer, secret=secret
+                routes=routes,
+                transfer=from_transfer,
+                balance_proof=from_transfer.balance_proof,
+                sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
+                secret=secret,
             )
         else:
-            state_change = ReceiveTransferRefund(transfer=from_transfer, routes=routes)
+            state_change = ReceiveTransferRefund(
+                transfer=from_transfer,
+                balance_proof=from_transfer.balance_proof,
+                sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
+                routes=routes,
+            )
 
         raiden.handle_and_track_state_change(state_change)
 
