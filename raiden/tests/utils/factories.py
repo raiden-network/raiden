@@ -159,18 +159,14 @@ def make_secret(i: int = EMPTY) -> bytes:
         return make_32bytes()
 
 
-def make_privatekey(privatekey_bin: bytes = EMPTY) -> bytes:
-    return if_empty(privatekey_bin, make_privatekey_bin())
-
-
 def make_privkey_address(privatekey: bytes = EMPTY,) -> Tuple[bytes, typing.Address]:
-    privatekey = if_empty(privatekey, make_privatekey())
+    privatekey = if_empty(privatekey, make_privatekey_bin())
     address = privatekey_to_address(privatekey)
     return privatekey, address
 
 
-def make_signer(privatekey: bytes = EMPTY) -> Signer:
-    privatekey = if_empty(privatekey, make_privatekey())
+def make_signer() -> Signer:
+    privatekey = make_privatekey_bin()
     return LocalSigner(privatekey)
 
 
