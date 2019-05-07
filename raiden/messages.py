@@ -1,4 +1,4 @@
-from dataclasses import MISSING, dataclass, field
+from dataclasses import dataclass, field
 from operator import attrgetter
 
 from cachetools import LRUCache, cached
@@ -14,6 +14,7 @@ from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
+from raiden.storage.serialization import DictSerializer
 from raiden.transfer import channel
 from raiden.transfer.architecture import SendMessageEvent
 from raiden.transfer.balance_proof import (
@@ -155,7 +156,7 @@ def decode(data: bytes) -> "Message":
 
 def from_dict(data: dict) -> "Message":
     try:
-        klass = CLASSNAME_TO_CLASS[data["type"]]
+        CLASSNAME_TO_CLASS[data["type"]]
     except KeyError:
         if "type" in data:
             raise InvalidProtocolMessage(
@@ -165,7 +166,7 @@ def from_dict(data: dict) -> "Message":
             raise InvalidProtocolMessage(
                 "Invalid message data. Can not find the data type"
             ) from None
-    return klass.from_dict(data)
+    return DictSerializer.serialize(data)
 
 
 def message_from_sendevent(send_event: SendMessageEvent) -> "Message":

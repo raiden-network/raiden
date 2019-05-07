@@ -12,6 +12,9 @@ from marshmallow_dataclass import class_schema
 
 from raiden.utils.typing import Any
 
+# pylint: disable=unused-import
+import raiden.storage.serialization.types  # noqa # isort:skip
+
 
 def _import_type(type_name):
     module_name, _, klass_name = type_name.rpartition(".")
