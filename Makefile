@@ -49,9 +49,7 @@ lint:
 	black --check $(BLACK_PATHS)
 	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc $(LINT_PATHS)
 	python setup.py check --restructuredtext --strict
-	mypy raiden --ignore-missing-imports
-	./.circleci/check_dependencies.sh
-
+	mypy raiden
 	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
 	# Remaining errors in tests:
 	mypy --config-file /dev/null raiden --ignore-missing-imports|grep error|wc -l
