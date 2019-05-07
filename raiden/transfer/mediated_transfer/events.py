@@ -1,6 +1,7 @@
 # pylint: disable=too-many-arguments,too-few-public-methods
 from dataclasses import dataclass, field
 
+from raiden.constants import EMPTY_HASH
 from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
@@ -87,7 +88,7 @@ class SendSecretReveal(SendMessageEvent):
     """
 
     secret: Secret = field(repr=False)
-    secrethash: SecretHash = field(init=False)
+    secrethash: SecretHash = field(default=EMPTY_HASH)
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -115,9 +116,9 @@ class SendBalanceProof(SendMessageEvent):
 
     payment_identifier: PaymentID
     token_address: TokenAddress
-    secret: Secret = field(repr=False)
-    secrethash: SecretHash = field(init=False)
     balance_proof: BalanceProofUnsignedState = field(repr=False)
+    secret: Secret = field(repr=False)
+    secrethash: SecretHash = field(default=EMPTY_HASH)
 
     def __post_init__(self) -> None:
         super().__post_init__()

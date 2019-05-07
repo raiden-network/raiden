@@ -109,7 +109,7 @@ class InitiatorPaymentState(State):
     """
 
     initiator_transfers: InitiatorTransfersMap
-    cancelled_channels: List[ChannelID] = field(init=False, repr=False, default_factory=list)
+    cancelled_channels: List[ChannelID] = field(repr=False, default_factory=list)
 
 
 @dataclass
@@ -142,7 +142,7 @@ class InitiatorTransferState(State):
     transfer: LockedTransferUnsignedState
     revealsecret: Optional["SendSecretReveal"] = field(repr=False)
     received_secret_request: bool = field(default=False, repr=False)
-    transfer_state: str = field(init=False, default="transfer_pending")
+    transfer_state: str = field(default="transfer_pending")
 
     valid_transfer_states = ("transfer_pending", "transfer_cancelled")
 
@@ -164,8 +164,8 @@ class MediationPairState(State):
     payer_transfer: LockedTransferSignedState
     payee_address: Address
     payee_transfer: LockedTransferUnsignedState
-    payer_state: str = field(init=False, default="payer_pending")
-    payee_state: str = field(init=False, default="payee_pending")
+    payer_state: str = field(default="payer_pending")
+    payee_state: str = field(default="payee_pending")
     # payee_pending:
     #   Initial state.
     #
@@ -251,4 +251,4 @@ class TargetTransferState(State):
     route: RouteState = field(repr=False)
     transfer: LockedTransferSignedState
     secret: Optional[Secret] = field(repr=False, default=None)
-    state: str = field(init=False, default="secret_request")
+    state: str = field(default="secret_request")

@@ -2,6 +2,7 @@
 from dataclasses import InitVar, dataclass, field
 from random import Random
 
+from raiden.constants import EMPTY_HASH
 from raiden.transfer.architecture import (
     AuthenticatedSenderStateChange,
     ContractReceiveStateChange,
@@ -384,7 +385,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
 class ReceiveUnlock(BalanceProofStateChange):
     message_identifier: MessageID
     secret: Secret
-    secrethash: SecretHash = field(init=False)
+    secrethash: SecretHash = field(default=EMPTY_HASH)
 
     def __post_init__(self) -> None:
         super().__post_init__()

@@ -13,6 +13,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
     HashTimeLockState,
+    TokenNetworkGraphState,
     TokenNetworkState,
 )
 from raiden.transfer.state_change import (
@@ -46,7 +47,11 @@ def test_contract_receive_channelnew_must_be_idempotent(channel_properties):
 
     token_network_id = factories.make_address()
     token_id = factories.make_address()
-    token_network_state = TokenNetworkState(token_network_id, token_id)
+    token_network_state = TokenNetworkState(
+        address=token_network_id,
+        token_address=token_id,
+        network_graph=TokenNetworkGraphState(token_network_id)
+    )
 
     properties, _ = channel_properties
     channel_state1 = factories.create(properties)
@@ -96,7 +101,11 @@ def test_channel_settle_must_properly_cleanup(channel_properties):
 
     token_network_id = factories.make_address()
     token_id = factories.make_address()
-    token_network_state = TokenNetworkState(token_network_id, token_id)
+    token_network_state = TokenNetworkState(
+        address=token_network_id,
+        token_address=token_id,
+        network_graph=TokenNetworkGraphState(token_network_id)
+    )
 
     properties, _ = channel_properties
     channel_state = factories.create(properties)
