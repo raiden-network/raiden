@@ -255,18 +255,6 @@ HOP6 = privatekey_to_address(HOP6_KEY)
 ADDR = b"addraddraddraddraddr"
 
 
-RANDOM_FACTORIES = {
-    Address: make_address,
-    Balance: make_balance,
-    BlockNumber: make_block_number,
-    BlockTimeout: make_block_number,
-    ChainID: make_chain_id,
-    ChannelID: make_channel_identifier,
-    PaymentNetworkID: make_payment_network_identifier,
-    TokenNetworkID: make_payment_network_identifier,
-}
-
-
 def make_merkletree_leaves(width: int) -> List[Keccak256]:
     return [make_secret() for _ in range(width)]
 
