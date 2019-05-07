@@ -6,19 +6,24 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferSignedState,
     TransferDescriptionWithSecretState,
 )
-from raiden.transfer.state import BalanceProofSignedState, RouteState
+from raiden.transfer.state import RouteState
 from raiden.transfer.state_change import BalanceProofStateChange
 from raiden.utils import sha3
 from raiden.utils.typing import (
-    Address,
+    TYPE_CHECKING,
     BlockExpiration,
     List,
     MessageID,
+    Optional,
     PaymentAmount,
     PaymentID,
     Secret,
     SecretHash,
 )
+
+if TYPE_CHECKING:
+    # pylint: disable=unused-import
+    from raiden.transfer.mediated_transfer.events import SendSecretReveal  # noqa
 
 
 # Note: The init states must contain all the required data for trying doing
@@ -40,7 +45,7 @@ class ActionInitInitiator(StateChange):
             raise ValueError("transfer must be an TransferDescriptionWithSecretState instance.")
 
 
-@dataclass(init=False)
+@dataclass
 class ActionInitMediator(BalanceProofStateChange):
     """ Initial state for a new mediator.
 
@@ -54,28 +59,16 @@ class ActionInitMediator(BalanceProofStateChange):
     from_route: RouteState
     from_transfer: LockedTransferSignedState
 
-    def __init__(
-        self,
-        routes: List[RouteState],
-        from_route: RouteState,
-        from_transfer: LockedTransferSignedState,
-    ) -> None:
-
-        if not isinstance(from_route, RouteState):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if not isinstance(self.from_route, RouteState):
             raise ValueError("from_route must be a RouteState instance")
 
-        if not isinstance(from_transfer, LockedTransferSignedState):
+        if not isinstance(self.from_transfer, LockedTransferSignedState):
             raise ValueError("from_transfer must be a LockedTransferSignedState instance")
 
-        super().__init__(
-            sender=from_transfer.balance_proof.sender, balance_proof=from_transfer.balance_proof
-        )
-        self.routes = routes
-        self.from_route = from_route
-        self.from_transfer = from_transfer
 
-
-@dataclass(init=False)
+@dataclass
 class ActionInitTarget(BalanceProofStateChange):
     """ Initial state for a new target.
 
@@ -87,39 +80,25 @@ class ActionInitTarget(BalanceProofStateChange):
     route: RouteState
     transfer: LockedTransferSignedState
 
-    def __init__(self, route: RouteState, transfer: LockedTransferSignedState) -> None:
-        if not isinstance(route, RouteState):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        if not isinstance(self.route, RouteState):
             raise ValueError("route must be a RouteState instance")
 
-        if not isinstance(transfer, LockedTransferSignedState):
+        if not isinstance(self.transfer, LockedTransferSignedState):
             raise ValueError("transfer must be a LockedTransferSignedState instance")
 
-        super().__init__(
-            sender=transfer.balance_proof.sender, balance_proof=transfer.balance_proof
-        )
-        self.route = route
-        self.transfer = transfer
 
-
-@dataclass(init=False)
+@dataclass
 class ReceiveLockExpired(BalanceProofStateChange):
     """ A LockExpired message received. """
 
     secrethash: SecretHash
     message_identifier: MessageID
 
-    def __init__(
-        self,
-        balance_proof: BalanceProofSignedState,
-        secrethash: SecretHash,
-        message_identifier: MessageID,
-    ) -> None:
-        super().__init__(sender=balance_proof.sender, balance_proof=balance_proof)
-        self.secrethash = secrethash
-        self.message_identifier = message_identifier
 
-
-@dataclass(init=False)
+@dataclass
 class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     """ A SecretRequest message received. """
 
@@ -127,39 +106,21 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
     amount: PaymentAmount
     expiration: BlockExpiration = field(repr=False)
     secrethash: SecretHash
-
-    def __init__(
-        self,
-        payment_identifier: PaymentID,
-        amount: PaymentAmount,
-        expiration: BlockExpiration,
-        secrethash: SecretHash,
-        sender: Address,
-    ) -> None:
-        super().__init__(sender)
-        self.payment_identifier = payment_identifier
-        self.amount = amount
-        self.expiration = expiration
-        self.secrethash = secrethash
-        self.revealsecret = None
+    revealsecret: Optional["SendSecretReveal"] = field(default=None)
 
 
-@dataclass(init=False)
+@dataclass
 class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     """ A SecretReveal message received. """
 
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(init=False)
 
-    def __init__(self, secret: Secret, sender: Address) -> None:
-        super().__init__(sender)
-        secrethash = sha3(secret)
-
-        self.secret = secret
-        self.secrethash = secrethash
+    def __post_init__(self) -> None:
+        self.secrethash = sha3(self.secret)
 
 
-@dataclass(init=False)
+@dataclass
 class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     """ A RefundTransfer message received by the initiator will cancel the current
     route.
@@ -170,35 +131,22 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
     secret: Secret = field(repr=False)
     secrethash: SecretHash = field(init=False, repr=False)
 
-    def __init__(
-        self, routes: List[RouteState], transfer: LockedTransferSignedState, secret: Secret
-    ) -> None:
-        if not isinstance(transfer, LockedTransferSignedState):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if not isinstance(self.transfer, LockedTransferSignedState):
             raise ValueError("transfer must be an instance of LockedTransferSignedState")
 
-        super().__init__(
-            sender=transfer.balance_proof.sender, balance_proof=transfer.balance_proof
-        )
-
-        self.transfer = transfer
-        self.routes = routes
-        self.secrethash = sha3(secret)
-        self.secret = secret
+        self.secrethash = sha3(self.secret)
 
 
-@dataclass(init=False)
+@dataclass
 class ReceiveTransferRefund(BalanceProofStateChange):
     """ A RefundTransfer message received. """
 
     transfer: LockedTransferSignedState
     routes: List[RouteState] = field(repr=False)
 
-    def __init__(self, transfer: LockedTransferSignedState, routes: List[RouteState]) -> None:
-        if not isinstance(transfer, LockedTransferSignedState):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if not isinstance(self.transfer, LockedTransferSignedState):
             raise ValueError("transfer must be an instance of LockedTransferSignedState")
-
-        super().__init__(
-            sender=transfer.balance_proof.sender, balance_proof=transfer.balance_proof
-        )
-        self.transfer = transfer
-        self.routes = routes

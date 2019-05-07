@@ -40,7 +40,7 @@ def test_initiator_task_view():
         initiator=transfer.initiator,
         target=transfer.target,
         secret=secret,
-        secrethash=sha3(secret)
+        secrethash=sha3(secret),
     )
     transfer_state = InitiatorTransferState(
         transfer_description=transfer_description,

@@ -6,10 +6,8 @@ from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.utils import sha3
 from raiden.utils.typing import (
-    Address,
     BlockExpiration,
     ChannelID,
-    MessageID,
     PaymentID,
     PaymentWithFeeAmount,
     Secret,
@@ -36,50 +34,29 @@ def refund_from_sendmediated(
     )
 
 
-@dataclass(init=False)
+@dataclass
 class SendLockExpired(SendMessageEvent):
     balance_proof: BalanceProofUnsignedState
     secrethash: SecretHash
 
-    def __init__(
-        self,
-        recipient: Address,
-        message_identifier: MessageID,
-        balance_proof: BalanceProofUnsignedState,
-        secrethash: SecretHash,
-    ) -> None:
-        super().__init__(recipient, balance_proof.channel_identifier, message_identifier)
 
-        self.balance_proof = balance_proof
-        self.secrethash = secrethash
-
-
-@dataclass(init=False)
+@dataclass
 class SendLockedTransfer(SendMessageEvent):
     """ A locked transfer that must be sent to `recipient`. """
 
     transfer: LockedTransferUnsignedState
 
-    def __init__(
-        self,
-        recipient: Address,
-        channel_identifier: ChannelID,
-        message_identifier: MessageID,
-        transfer: LockedTransferUnsignedState,
-    ) -> None:
-        if not isinstance(transfer, LockedTransferUnsignedState):
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if not isinstance(self.transfer, LockedTransferUnsignedState):
             raise ValueError("transfer must be a LockedTransferUnsignedState instance")
-
-        super().__init__(recipient, channel_identifier, message_identifier)
-
-        self.transfer = transfer
 
     @property
     def balance_proof(self) -> BalanceProofUnsignedState:
         return self.transfer.balance_proof
 
 
-@dataclass(init=False)
+@dataclass
 class SendSecretReveal(SendMessageEvent):
     """ Sends a SecretReveal to another node.
 
@@ -110,24 +87,14 @@ class SendSecretReveal(SendMessageEvent):
     """
 
     secret: Secret = field(repr=False)
-    secrethash: SecretHash
+    secrethash: SecretHash = field(init=False)
 
-    def __init__(
-        self,
-        recipient: Address,
-        channel_identifier: ChannelID,
-        message_identifier: MessageID,
-        secret: Secret,
-    ) -> None:
-        secrethash = sha3(secret)
-
-        super().__init__(recipient, channel_identifier, message_identifier)
-
-        self.secret = secret
-        self.secrethash = secrethash
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.secrethash = sha3(self.secret)
 
 
-@dataclass(init=False)
+@dataclass
 class SendBalanceProof(SendMessageEvent):
     """ Event to send a balance-proof to the counter-party, used after a lock
     is unlocked locally allowing the counter-party to claim it.
@@ -149,28 +116,15 @@ class SendBalanceProof(SendMessageEvent):
     payment_identifier: PaymentID
     token_address: TokenAddress
     secret: Secret = field(repr=False)
+    secrethash: SecretHash = field(init=False)
     balance_proof: BalanceProofUnsignedState = field(repr=False)
 
-    def __init__(
-        self,
-        recipient: Address,
-        channel_identifier: ChannelID,
-        message_identifier: MessageID,
-        payment_identifier: PaymentID,
-        token_address: TokenAddress,
-        secret: Secret,
-        balance_proof: BalanceProofUnsignedState,
-    ) -> None:
-        super().__init__(recipient, channel_identifier, message_identifier)
-
-        self.payment_identifier = payment_identifier
-        self.token = token_address
-        self.secret = secret
-        self.secrethash = sha3(secret)
-        self.balance_proof = balance_proof
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.secrethash = sha3(self.secret)
 
 
-@dataclass(init=False)
+@dataclass
 class SendSecretRequest(SendMessageEvent):
     """ Event used by a target node to request the secret from the initiator
     (`recipient`).
@@ -181,26 +135,8 @@ class SendSecretRequest(SendMessageEvent):
     expiration: BlockExpiration
     secrethash: SecretHash
 
-    def __init__(
-        self,
-        recipient: Address,
-        channel_identifier: ChannelID,
-        message_identifier: MessageID,
-        payment_identifier: PaymentID,
-        amount: PaymentWithFeeAmount,
-        expiration: BlockExpiration,
-        secrethash: SecretHash,
-    ) -> None:
 
-        super().__init__(recipient, channel_identifier, message_identifier)
-
-        self.payment_identifier = payment_identifier
-        self.amount = amount
-        self.expiration = expiration
-        self.secrethash = secrethash
-
-
-@dataclass(init=False)
+@dataclass
 class SendRefundTransfer(SendMessageEvent):
     """ Event used to cleanly backtrack the current node in the route.
     This message will pay back the same amount of token from the recipient to
@@ -209,18 +145,6 @@ class SendRefundTransfer(SendMessageEvent):
     """
 
     transfer: LockedTransferUnsignedState
-
-    def __init__(
-        self,
-        recipient: Address,
-        channel_identifier: ChannelID,
-        message_identifier: MessageID,
-        transfer: LockedTransferUnsignedState,
-    ) -> None:
-
-        super().__init__(recipient, channel_identifier, message_identifier)
-
-        self.transfer = transfer
 
     @property
     def balance_proof(self) -> BalanceProofUnsignedState:

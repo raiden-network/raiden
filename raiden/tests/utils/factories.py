@@ -873,7 +873,13 @@ def mediator_make_channel_pair(
 def mediator_make_init_action(
     channels: ChannelSet, transfer: LockedTransferSignedState
 ) -> ActionInitMediator:
-    return ActionInitMediator(channels.get_routes(1), channels.get_route(0), transfer)
+    return ActionInitMediator(
+        routes=channels.get_routes(1),
+        from_route=channels.get_route(0),
+        from_transfer=transfer,
+        balance_proof=transfer.balance_proof,
+        sender=transfer.balance_proof.sender,
+    )
 
 
 class MediatorTransfersPair(NamedTuple):
