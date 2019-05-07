@@ -1,7 +1,11 @@
+from copy import deepcopy
+
 from raiden.constants import EMPTY_MERKLE_ROOT
+from raiden.tests.utils import factories
 from raiden.tests.utils.factories import HOP1, HOP2, UNIT_SECRETHASH, make_block_hash
 from raiden.transfer.events import ContractSendChannelBatchUnlock
-from raiden.transfer.node import is_transaction_effect_satisfied, state_transition
+from raiden.transfer.node import get_networks, is_transaction_effect_satisfied, state_transition
+from raiden.transfer.state import PaymentNetworkState, TokenNetworkState
 from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
@@ -56,3 +60,31 @@ def test_is_transaction_effect_satisfied(
     iteration = state_transition(chain_state=chain_state, state_change=channel_settled)
 
     assert is_transaction_effect_satisfied(iteration.new_state, transaction, state_change)
+
+
+def test_get_networks(chain_state, token_network_id):
+    orig_chain_state = deepcopy(chain_state)
+    token_address = factories.make_address()
+    payment_network_empty = PaymentNetworkState(
+        address=factories.make_address(), token_network_list=[]
+    )
+    chain_state.identifiers_to_paymentnetworks[
+        payment_network_empty.address
+    ] = payment_network_empty
+    assert get_networks(
+        chain_state=chain_state,
+        payment_network_identifier=payment_network_empty.address,
+        token_address=token_address,
+    ) == (payment_network_empty, None)
+
+    chain_state = orig_chain_state
+    token_network = TokenNetworkState(address=token_network_id, token_address=token_address)
+    payment_network = PaymentNetworkState(
+        address=factories.make_address(), token_network_list=[token_network]
+    )
+    chain_state.identifiers_to_paymentnetworks[payment_network.address] = payment_network
+    assert get_networks(
+        chain_state=chain_state,
+        payment_network_identifier=payment_network.address,
+        token_address=token_address,
+    ) == (payment_network, token_network)
