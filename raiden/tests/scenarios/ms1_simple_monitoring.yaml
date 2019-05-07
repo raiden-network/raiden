@@ -1,0 +1,48 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  # Adapt to chain used
+  chain: kovan
+  services:
+    udc:
+      enable: true
+      token:
+        deposit: true
+token:
+
+nodes:
+  mode: managed
+  count: 2
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    enable-monitoring: true
+
+# This is the MS1 scenario. A channel between two nodes is opened, a transfer is made. Then, node 1 goes offline
+# and node 0 closes the channel. The last assert checks whether the monitoring service interferes and received its reward
+
+scenario:
+  serial:
+    tasks:
+      - open_channel: {from: 0, to: 1, total_deposit: 1000}
+      - transfer: {from: 0, to: 1, amount: 500, expected_http_status: 200}
+      ## Wait for Monitor Request to be sent
+      - wait: 10
+      - store_channel_info: {from: 0, to: 1, key: "MS Test Channel"}
+      - stop_node: 1
+      - close_channel: {from: 0, to: 1}
+      ## Wait for channel to be closed
+      - wait: 50
+      - assert: {from: 0 ,to: 1, total_deposit: 1000, balance: 500, state: "closed"}
+      - assert_events: {contract_name: "TokenNetwork", event_name: "ChannelClosed", num_events: 1}
+
+      ## Current blocktime Kovan 15s, so monitoring service reacts after 0.3 * 500 * 15 seconds
+      - wait: 3000
+      - assert_events: {contract_name: "TokenNetwork", event_name: "NonClosingBalanceProofUpdated", num_events: 1}
+
+      ## Monitored channel must be settled before the monitoring service can claim its reward
+      ## Settlement timeout is 500 blocks -> 500 * 15s in Kovan = 7500s
+      - wait: 8000
+      - assert_ms_claim: {channel_info_key: "MS Test Channel"}
