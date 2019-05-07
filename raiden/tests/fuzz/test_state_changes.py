@@ -183,8 +183,7 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             self.token_network_id
         ] = self.payment_network_id
         channels = [
-            self.new_channel_with_transaction()
-            for _ in range(self.initial_number_of_channels)
+            self.new_channel_with_transaction() for _ in range(self.initial_number_of_channels)
         ]
         return multiple(*channels)
 
@@ -223,7 +222,8 @@ class ChainStateStateMachine(RuleBasedStateMachine):
             )
             assert (
                 partner_unclaimed + partner_transferred
-                >= self.partner_previous_transferred[address] + self.partner_previous_unclaimed[address]
+                >= self.partner_previous_transferred[address]
+                + self.partner_previous_unclaimed[address]
             )
             self.our_previous_transferred[address] = our_transferred
             self.partner_previous_transferred[address] = partner_transferred
@@ -470,7 +470,6 @@ class BalanceProofData:
 
 
 class MediatorMixin:
-
     def __init__(self):
         super().__init__()
         self.partner_to_balance_proof_data = dict()
@@ -482,7 +481,7 @@ class MediatorMixin:
         if partner not in self.partner_to_balance_proof_data:
             partner_channel = self.address_to_channel[partner]
             self.partner_to_balance_proof_data[partner] = BalanceProofData(
-                canonical_identifier=partner_channel.canonical_identifier,
+                canonical_identifier=partner_channel.canonical_identifier
             )
         return self.partner_to_balance_proof_data[partner]
 
@@ -492,41 +491,35 @@ class MediatorMixin:
         expected.update(amount, lock.lockhash)
         return expected
 
-    init_mediators = Bundle('init_mediators')
-    secret_requests = Bundle('secret_requests')
-    unlocks = Bundle('unlocks')
+    init_mediators = Bundle("init_mediators")
+    secret_requests = Bundle("secret_requests")
+    unlocks = Bundle("unlocks")
 
     def _new_mediator_transfer(
-            self,
-            initiator_address,
-            target_address,
-            payment_id,
-            amount,
-            secret,
+        self, initiator_address, target_address, payment_id, amount, secret
     ) -> LockedTransferSignedState:
         initiator_pkey = self.address_to_privkey[initiator_address]
         balance_proof_data = self._update_balance_proof_data(
-            initiator_address,
-            amount,
-            self.block_number + 10,
-            secret,
+            initiator_address, amount, self.block_number + 10, secret
         )
         self.secrethash_to_secret[sha3(secret)] = secret
 
-        return factories.create(factories.LockedTransferSignedStateProperties(
-            **balance_proof_data.properties.__dict__,
-            amount=amount,
-            expiration=self.block_number + 10,
-            payment_identifier=payment_id,
-            secret=secret,
-            initiator=initiator_address,
-            target=target_address,
-            token=self.token_id,
-            sender=initiator_address,
-            recipient=self.address,
-            pkey=initiator_pkey,
-            message_identifier=1,
-        ))
+        return factories.create(
+            factories.LockedTransferSignedStateProperties(
+                **balance_proof_data.properties.__dict__,
+                amount=amount,
+                expiration=self.block_number + 10,
+                payment_identifier=payment_id,
+                secret=secret,
+                initiator=initiator_address,
+                target=target_address,
+                token=self.token_id,
+                sender=initiator_address,
+                recipient=self.address,
+                pkey=initiator_pkey,
+                message_identifier=1,
+            )
+        )
 
     def _action_init_mediator(self, transfer: LockedTransferSignedState) -> ActionInitMediator:
         initiator_channel = self.address_to_channel[transfer.initiator]
@@ -546,22 +539,11 @@ class MediatorMixin:
         amount=integers(min_value=1, max_value=100),
         secret=secret(),
     )
-    def valid_init_mediator(
-            self,
-            initiator_address,
-            target_address,
-            payment_id,
-            amount,
-            secret,
-    ):
+    def valid_init_mediator(self, initiator_address, target_address, payment_id, amount, secret):
         assume(initiator_address != target_address)
 
         transfer = self._new_mediator_transfer(
-            initiator_address,
-            target_address,
-            payment_id,
-            amount,
-            secret,
+            initiator_address, target_address, payment_id, amount, secret
         )
         action = self._action_init_mediator(transfer)
         result = node.state_transition(self.chain_state, action)
@@ -585,19 +567,16 @@ class MediatorMixin:
 
         if in_time and self.channel_opened(sender) and self.channel_opened(recipient):
             assert event_types_match(
-                result.events,
-                SendSecretReveal,
-                SendBalanceProof,
-                EventUnlockSuccess,
+                result.events, SendSecretReveal, SendBalanceProof, EventUnlockSuccess
             )
-            self.event('Unlock successful.')
+            self.event("Unlock successful.")
             self.waiting_for_unlock[secret] = recipient
         elif still_waiting and self.channel_opened(recipient):
             assert event_types_match(result.events, SendSecretReveal)
-            self.event('Unlock failed, secret revealed too late.')
+            self.event("Unlock failed, secret revealed too late.")
         else:
             assert not result.events
-            self.event('ReceiveSecretRevealed after removal of lock - dropped.')
+            self.event("ReceiveSecretRevealed after removal of lock - dropped.")
         return action
 
     @rule(previous_action=secret_requests)
@@ -619,9 +598,7 @@ class MediatorMixin:
         assert not result.events
 
     @rule(
-        target=secret_requests,
-        previous_action=consumes(init_mediators),
-        invalid_sender=address(),
+        target=secret_requests, previous_action=consumes(init_mediators), invalid_sender=address()
     )
     def wrong_address_receive_secret_reveal(self, previous_action, invalid_sender):
         secret = self.secrethash_to_secret[previous_action.from_transfer.lock.secrethash]
@@ -697,12 +674,7 @@ class MultiChannelMediatorStateMachine(MediatorMixin, OnChainMixin, ChainStateSt
     pass
 
 
-class FullStateMachine(
-    InitiatorMixin,
-    MediatorMixin,
-    OnChainMixin,
-    ChainStateStateMachine,
-):
+class FullStateMachine(InitiatorMixin, MediatorMixin, OnChainMixin, ChainStateStateMachine):
     pass
 
 
@@ -719,7 +691,7 @@ def test_regression_malicious_secret_request_handled_properly():
     state.replay_path = True
 
     v1 = unwrap_multiple(state.initialize(block_number=1, random=Random(), random_seed=None))
-    v2 = state.valid_init_initiator(partner=v1, amount=1, payment_id=1, secret=b'\x00' * 32)
+    v2 = state.valid_init_initiator(partner=v1, amount=1, payment_id=1, secret=b"\x00" * 32)
     state.wrong_amount_secret_request(amount=0, previous_action=v2)
     state.replay_init_initator(previous_action=v2)
 
