@@ -41,7 +41,6 @@ from raiden.transfer.state_change import (
     ActionChannelSetFee,
     ActionChannelWithdraw,
     ActionInitChain,
-    ActionLeaveAllNetworks,
     ActionNewTokenNetwork,
     ActionUpdateTransportAuthData,
     Block,
@@ -623,17 +622,6 @@ def handle_node_change_network_state(
     return TransitionResult(chain_state, events)
 
 
-def handle_leave_all_networks(chain_state: ChainState) -> TransitionResult[ChainState]:
-    events = list()
-
-    for payment_network_state in chain_state.identifiers_to_paymentnetworks.values():
-        all_token_networks = payment_network_state.tokennetworkaddresses_to_tokennetworks.values()
-        for token_network_state in all_token_networks:
-            events.extend(_get_channels_close_events(chain_state, token_network_state))
-
-    return TransitionResult(chain_state, events)
-
-
 def handle_new_payment_network(
     chain_state: ChainState, state_change: ContractReceiveNewPaymentNetwork
 ) -> TransitionResult[ChainState]:
@@ -818,9 +806,6 @@ def handle_state_change(
     elif type(state_change) == ActionChangeNodeNetworkState:
         assert isinstance(state_change, ActionChangeNodeNetworkState), MYPY_ANNOTATION
         iteration = handle_node_change_network_state(chain_state, state_change)
-    elif type(state_change) == ActionLeaveAllNetworks:
-        assert isinstance(state_change, ActionLeaveAllNetworks), MYPY_ANNOTATION
-        iteration = handle_leave_all_networks(chain_state)
     elif type(state_change) == ActionInitInitiator:
         assert isinstance(state_change, ActionInitInitiator), MYPY_ANNOTATION
         iteration = handle_init_initiator(chain_state, state_change)
@@ -1159,26 +1144,3 @@ def state_transition(
     sanity_check(iteration)
 
     return iteration
-
-
-def _get_channels_close_events(
-    chain_state: ChainState, token_network_state: TokenNetworkState
-) -> List[Event]:
-    events = []
-    for channel_identifiers in token_network_state.partneraddresses_to_channelidentifiers.values():
-        channel_states = [
-            token_network_state.channelidentifiers_to_channels[channel_id]
-            for channel_id in channel_identifiers
-        ]
-        filtered_channel_states = views.filter_channels_by_status(
-            channel_states, [channel.CHANNEL_STATE_UNUSABLE]
-        )
-        for channel_state in filtered_channel_states:
-            events.extend(
-                channel.events_for_close(
-                    channel_state=channel_state,
-                    block_number=chain_state.block_number,
-                    block_hash=chain_state.block_hash,
-                )
-            )
-    return events
