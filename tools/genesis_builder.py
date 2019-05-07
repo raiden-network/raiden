@@ -1,10 +1,11 @@
-from eth_utils import denoms, encode_hex
+from eth_utils import encode_hex
+from eth_utils.currency import denoms
 
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.utils import privatekey_to_address, sha3
 
 CLUSTER_NAME = b"raiden"
-ETHER = denoms.ether
+ETHER = denoms.ether  # pylint: disable=no-member
 
 
 def generate_accounts(seeds):
