@@ -491,7 +491,7 @@ def test_refund_transfer_no_more_routes():
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
-        sender=refund_transfer.balance_proof.sender,
+        sender=refund_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     iteration = initiator_manager.state_transition(
@@ -526,14 +526,14 @@ def test_refund_transfer_no_more_routes():
     invalid_balance_proof = factories.create(missing_pkey)
     balance_proof = factories.create(complete)
     invalid_lock_expired_state_change = ReceiveLockExpired(
-        sender=invalid_balance_proof.sender,
+        sender=invalid_balance_proof.sender,  # pylint: disable=no-member
         balance_proof=invalid_balance_proof,
         secrethash=original_transfer.lock.secrethash,
         message_identifier=5,
     )
     lock_expired_state_change = ReceiveLockExpired(
         balance_proof=balance_proof,
-        sender=balance_proof.sender,
+        sender=balance_proof.sender,  # pylint: disable=no-member
         secrethash=original_transfer.lock.secrethash,
         message_identifier=5,
     )
@@ -1149,7 +1149,7 @@ def test_secret_reveal_cancel_other_transfers():
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
-        sender=refund_transfer.balance_proof.sender,
+        sender=refund_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     iteration = initiator_manager.state_transition(
@@ -1262,7 +1262,7 @@ def test_refund_after_secret_request():
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
-        sender=refund_transfer.balance_proof.sender,
+        sender=refund_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     iteration = initiator_manager.state_transition(
@@ -1325,7 +1325,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
         transfer=refund_transfer,
         secret=random_secret(),
         balance_proof=refund_transfer.balance_proof,
-        sender=refund_transfer.balance_proof.sender,
+        sender=refund_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     iteration = initiator_manager.state_transition(
@@ -1363,7 +1363,7 @@ def test_clearing_payment_state_on_lock_expires_with_refunded_transfers():
     )
     lock_expired_state_change = ReceiveLockExpired(
         balance_proof=balance_proof,
-        sender=balance_proof.sender,
+        sender=balance_proof.sender,  # pylint: disable=no-member
         secrethash=initial_transfer.lock.secrethash,
         message_identifier=5,
     )

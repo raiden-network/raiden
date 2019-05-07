@@ -175,18 +175,29 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
         # pylint: disable=E1101
         from_transfer.balance_proof.channel_identifier,
     )
-    init_mediator_statechange = ActionInitMediator(routes, from_route, from_transfer)
+    init_mediator_statechange = ActionInitMediator(
+        routes=routes,
+        from_route=from_route,
+        from_transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
+    )
     return init_mediator_statechange
 
 
 def target_init(transfer: LockedTransfer) -> ActionInitTarget:
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_route = RouteState(
-        transfer.sender,
+        node_address=transfer.sender,
         # pylint: disable=E1101
-        from_transfer.balance_proof.channel_identifier,
+        channel_identifier=from_transfer.balance_proof.channel_identifier,
     )
-    init_target_statechange = ActionInitTarget(from_route, from_transfer)
+    init_target_statechange = ActionInitTarget(
+        route=from_route,
+        transfer=from_transfer,
+        balance_proof=from_transfer.balance_proof,
+        sender=from_transfer.balance_proof.sender,  # pylint: disable=no-member
+    )
     return init_target_statechange
 
 

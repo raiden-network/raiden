@@ -174,7 +174,7 @@ def test_get_state_change_with_balance_proof():
     transfer_refund = ReceiveTransferRefund(
         transfer=transfer,
         balance_proof=transfer.balance_proof,
-        sender=transfer.balance_proof.sender,
+        sender=transfer.balance_proof.sender,  # pylint: disable=no-member
         routes=list(),
     )
     transfer = make_signed_transfer_from_counter(counter)
@@ -182,7 +182,7 @@ def test_get_state_change_with_balance_proof():
         routes=list(),
         transfer=transfer,
         balance_proof=transfer.balance_proof,
-        sender=transfer.balance_proof.sender,
+        sender=transfer.balance_proof.sender,  # pylint: disable=no-member
         secret=sha3(factories.make_secret(next(counter))),
     )
     mediator_from_route, mediator_signed_transfer = make_from_route_from_counter(counter)
@@ -191,14 +191,14 @@ def test_get_state_change_with_balance_proof():
         from_route=mediator_from_route,
         from_transfer=mediator_signed_transfer,
         balance_proof=mediator_signed_transfer.balance_proof,
-        sender=mediator_signed_transfer.balance_proof.sender,
+        sender=mediator_signed_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
     target_from_route, target_signed_transfer = make_from_route_from_counter(counter)
     action_init_target = ActionInitTarget(
         route=target_from_route,
         transfer=target_signed_transfer,
         balance_proof=target_signed_transfer.balance_proof,
-        sender=target_signed_transfer.balance_proof.sender,
+        sender=target_signed_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     statechanges_balanceproofs = [

@@ -88,7 +88,9 @@ def test_payer_enter_danger_zone_with_transfer_payed():
 
     # send the balance proof, transitioning the payee state to paid
     assert new_state.transfers_pair[0].payee_state == "payee_pending"
-    receive_secret = ReceiveSecretReveal(secret=UNIT_SECRET, sender=channels[1].partner_state.address)
+    receive_secret = ReceiveSecretReveal(
+        secret=UNIT_SECRET, sender=channels[1].partner_state.address
+    )
     paid_iteration = mediator.state_transition(
         mediator_state=new_state,
         state_change=receive_secret,
@@ -159,7 +161,7 @@ def test_regression_send_refund():
     refund_state_change = ReceiveTransferRefund(
         transfer=received_transfer,
         balance_proof=received_transfer.balance_proof,
-        sender=received_transfer.balance_proof.sender,
+        sender=received_transfer.balance_proof.sender,  # pylint: disable=no-member
         routes=routes,
     )
 
@@ -311,7 +313,7 @@ def test_regression_mediator_task_no_routes():
         from_route=channels.get_route(0),
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
-        sender=payer_transfer.balance_proof.sender,
+        sender=payer_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
     init_iteration = mediator.state_transition(
         mediator_state=None,
@@ -367,7 +369,7 @@ def test_regression_mediator_task_no_routes():
     receive_expired_iteration = mediator.state_transition(
         mediator_state=expire_block_iteration.new_state,
         state_change=ReceiveLockExpired(
-            sender=balance_proof.sender,
+            sender=balance_proof.sender,  # pylint: disable=no-member
             balance_proof=balance_proof,
             secrethash=secrethash,
             message_identifier=message_identifier,
@@ -402,7 +404,7 @@ def test_regression_mediator_not_update_payer_state_twice():
         from_route=payer_route,
         from_transfer=payer_transfer,
         balance_proof=payer_transfer.balance_proof,
-        sender=payer_transfer.balance_proof.sender,
+        sender=payer_transfer.balance_proof.sender,  # pylint: disable=no-member
     )
 
     iteration = mediator.state_transition(
@@ -510,7 +512,9 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
 
     mediator.state_transition(
         mediator_state=mediator_state,
-        state_change=ReceiveSecretReveal(secret=secret, sender=payee_channel.partner_state.address),
+        state_change=ReceiveSecretReveal(
+            secret=secret, sender=payee_channel.partner_state.address
+        ),
         channelidentifiers_to_channels=setup.channel_map,
         nodeaddresses_to_networkstates=setup.channels.nodeaddresses_to_networkstates,
         pseudo_random_generator=pseudo_random_generator,
@@ -559,7 +563,7 @@ def test_regression_onchain_secret_reveal_must_update_channel_state():
     mediator.state_transition(
         mediator_state=mediator_state,
         state_change=ReceiveLockExpired(
-            sender=balance_proof.sender,
+            sender=balance_proof.sender,  # pylint: disable=no-member
             balance_proof=balance_proof,
             secrethash=secrethash,
             message_identifier=message_identifier,
