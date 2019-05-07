@@ -429,7 +429,7 @@ def test_state_transition():
     """ Happy case testing. """
     lock_amount = 7
     block_number = 1
-    initiator = factories.HOP6
+    initiator = factories.make_address()
     pseudo_random_generator = random.Random()
 
     channels = make_channel_set([channel_properties2])
