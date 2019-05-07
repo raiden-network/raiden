@@ -38,12 +38,16 @@ from raiden.transfer.state_change import ContractReceiveChannelNew, ContractRece
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import privatekey_to_address, random_secret, sha3, typing
 from raiden.utils.signer import LocalSigner, Signer
+from raiden.utils.typing import TypeVar
 
 EMPTY = "empty"
 GENERATE = "generate"
 
+K = TypeVar('K')
+V = TypeVar('V')
 
-def _partial_dict(full_dict: Dict, *args) -> Dict:
+
+def _partial_dict(full_dict: Dict[K, V], *args) -> Dict[K, V]:
     return {key: full_dict[key] for key in args}
 
 
