@@ -40,6 +40,7 @@ from raiden.network.transport.matrix.utils import (
 )
 from raiden.network.transport.udp import udp_utils
 from raiden.raiden_service import RaidenService
+from raiden.storage.serialization import JSONSerializer
 from raiden.transfer import views
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
@@ -148,7 +149,7 @@ class _RetryQueue(Runnable):
                 _RetryQueue._MessageData(
                     queue_identifier=queue_identifier,
                     message=message,
-                    text=json.dumps(message.to_dict()),
+                    text=JSONSerializer.serialize(message),
                     expiration_generator=expiration_generator,
                 )
             )
@@ -577,7 +578,7 @@ class MatrixTransport(Runnable):
                 messages[room_name].append(message)
             for room_name, messages_for_room in messages.items():
                 message_text = "\n".join(
-                    json.dumps(message.to_dict()) for message in messages_for_room
+                    JSONSerializer.serialize(message) for message in messages_for_room
                 )
                 _send_global(room_name, message_text)
                 self._global_send_queue.task_done()
@@ -1270,7 +1271,7 @@ class MatrixTransport(Runnable):
         """ Sends send-to-device events to a all known devices of a peer without retries. """
         user_ids = self._address_mgr.get_userids_for_address(address)
 
-        data = {user_id: {"*": json.dumps(message.to_dict())} for user_id in user_ids}
+        data = {user_id: {"*": JSONSerializer.serialize(message)} for user_id in user_ids}
 
         return self._client.api.send_to_device("m.to_device_message", data)
 
