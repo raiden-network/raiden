@@ -154,30 +154,52 @@ def test_get_state_change_with_balance_proof():
     storage = SerializedSQLiteStorage(":memory:", serializer)
     counter = itertools.count()
 
+    balance_proof = make_signed_balance_proof_from_counter(counter)
+
     lock_expired = ReceiveLockExpired(
-        balance_proof=make_signed_balance_proof_from_counter(counter),
+        sender=balance_proof.sender,
+        balance_proof=balance_proof,
         secrethash=sha3(factories.make_secret(next(counter))),
         message_identifier=next(counter),
     )
+
+    received_balance_proof = make_signed_balance_proof_from_counter(counter)
     unlock = ReceiveUnlock(
+        sender=received_balance_proof.sender,
         message_identifier=next(counter),
         secret=sha3(factories.make_secret(next(counter))),
-        balance_proof=make_signed_balance_proof_from_counter(counter),
+        balance_proof=received_balance_proof,
     )
+    transfer = make_signed_transfer_from_counter(counter)
     transfer_refund = ReceiveTransferRefund(
-        transfer=make_signed_transfer_from_counter(counter), routes=list()
+        transfer=transfer,
+        balance_proof=transfer.balance_proof,
+        sender=transfer.balance_proof.sender,
+        routes=list()
     )
+    transfer = make_signed_transfer_from_counter(counter)
     transfer_refund_cancel_route = ReceiveTransferRefundCancelRoute(
         routes=list(),
-        transfer=make_signed_transfer_from_counter(counter),
+        transfer=transfer,
+        balance_proof=transfer.balance_proof,
+        sender=transfer.balance_proof.sender,
         secret=sha3(factories.make_secret(next(counter))),
     )
     mediator_from_route, mediator_signed_transfer = make_from_route_from_counter(counter)
     action_init_mediator = ActionInitMediator(
-        routes=list(), from_route=mediator_from_route, from_transfer=mediator_signed_transfer
+        routes=list(),
+        from_route=mediator_from_route,
+        from_transfer=mediator_signed_transfer,
+        balance_proof=mediator_signed_transfer.balance_proof,
+        sender=mediator_signed_transfer.balance_proof.sender,
     )
     target_from_route, target_signed_transfer = make_from_route_from_counter(counter)
-    action_init_target = ActionInitTarget(route=target_from_route, transfer=target_signed_transfer)
+    action_init_target = ActionInitTarget(
+        route=target_from_route,
+        transfer=target_signed_transfer,
+        balance_proof=target_signed_transfer.balance_proof,
+        sender=target_signed_transfer.balance_proof.sender,
+    )
 
     statechanges_balanceproofs = [
         (lock_expired, lock_expired.balance_proof),
@@ -223,13 +245,15 @@ def test_get_event_with_balance_proof():
     """
     serializer = JSONSerializer
     storage = SerializedSQLiteStorage(":memory:", serializer)
-    counter = itertools.count()
+    counter = itertools.count(1)
 
+    balance_proof = make_balance_proof_from_counter(counter)
     lock_expired = SendLockExpired(
         recipient=factories.make_address(),
         message_identifier=next(counter),
-        balance_proof=make_balance_proof_from_counter(counter),
+        balance_proof=balance_proof,
         secrethash=sha3(factories.make_secret(next(counter))),
+        channel_identifier=balance_proof.channel_identifier
     )
     locked_transfer = SendLockedTransfer(
         recipient=factories.make_address(),
