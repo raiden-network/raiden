@@ -4,6 +4,7 @@ from raiden.transfer.views import (
     filter_channels_by_partneraddress,
     filter_channels_by_status,
     get_participants_addresses,
+    get_token_network_registry_by_token_network_identifier,
 )
 
 
@@ -52,4 +53,13 @@ def test_get_participants_addresses_no_token_network(chain_state):
             token_address=factories.make_address(),
         )
         == set()
+    )
+
+
+def test_get_token_network_registry_by_token_network_identifier_is_none(chain_state):
+    assert (
+        get_token_network_registry_by_token_network_identifier(
+            chain_state=chain_state, token_network_identifier=factories.make_address()
+        )
+        is None
     )
