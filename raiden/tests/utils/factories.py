@@ -3,7 +3,6 @@ import random
 import string
 from dataclasses import dataclass, fields, replace
 from functools import singledispatch
-from typing import Any, ClassVar, Dict, List, NamedTuple, Optional, Tuple, Type
 
 from eth_utils import to_checksum_address
 
@@ -38,7 +37,18 @@ from raiden.transfer.state_change import ContractReceiveChannelNew, ContractRece
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import privatekey_to_address, random_secret, sha3, typing
 from raiden.utils.signer import LocalSigner, Signer
-from raiden.utils.typing import TypeVar
+from raiden.utils.typing import (
+    Any,
+    ClassVar,
+    Dict,
+    Keccak256,
+    List,
+    NamedTuple,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 EMPTY = "empty"
 GENERATE = "generate"
@@ -229,7 +239,7 @@ RANDOM_FACTORIES = {
 }
 
 
-def make_merkletree_leaves(width: int) -> List[typing.Secret]:
+def make_merkletree_leaves(width: int) -> List[Keccak256]:
     return [make_secret() for _ in range(width)]
 
 
