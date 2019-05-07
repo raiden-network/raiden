@@ -12,6 +12,7 @@ from raiden.messages import LockedTransfer, LockExpired, Message, Unlock
 from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
+from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
@@ -27,6 +28,7 @@ from raiden.transfer.state import (
 from raiden.utils import lpex, pex, random_secret, sha3
 from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
+    Any,
     Balance,
     Callable,
     ChainID,
@@ -492,6 +494,12 @@ def assert_balance(
         f"did not equal the balance ({balance})"
     )
     assert balance == locked + distributable, msg
+
+
+def assert_dropped(iteration: TransitionResult, old_state: Any, reason: Optional[str] = None):
+    msg = f"State change expected to be dropped ({reason or 'reason unknown'})."
+    assert iteration.new_state is None or iteration.new_state == old_state, msg
+    assert not iteration.events, msg
 
 
 def make_receive_transfer_mediated(
