@@ -1,9 +1,9 @@
 # pylint: disable=too-many-arguments
 import random
 import string
-from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 
+from dataclasses import dataclass, fields, replace
 from eth_utils import to_checksum_address
 
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
@@ -81,8 +81,8 @@ from raiden.utils.typing import (
 EMPTY = "empty"
 GENERATE = "generate"
 
-K = TypeVar('K')
-V = TypeVar('V')
+K = TypeVar("K")
+V = TypeVar("V")
 
 
 def _partial_dict(full_dict: Dict[K, V], *args) -> Dict[K, V]:
@@ -247,9 +247,6 @@ HOP4_KEY = b"44444444444444444444444444444444"
 HOP5_KEY = b"55555555555555555555555555555555"
 HOP1 = privatekey_to_address(HOP1_KEY)
 HOP2 = privatekey_to_address(HOP2_KEY)
-HOP3 = privatekey_to_address(HOP3_KEY)
-HOP4 = privatekey_to_address(HOP4_KEY)
-HOP5 = privatekey_to_address(HOP5_KEY)
 ADDR = b"addraddraddraddraddr"
 
 
@@ -728,6 +725,10 @@ def pkeys_from_channel_state(
 class ChannelSet:
     """Manage a list of channels. The channels can be accessed by subscript."""
 
+    HOP3_KEY, HOP3 = make_privkey_address()
+    HOP4_KEY, HOP4 = make_privkey_address()
+    HOP5_KEY, HOP5 = make_privkey_address()
+
     PKEYS = (HOP1_KEY, HOP2_KEY, HOP3_KEY, HOP4_KEY, HOP5_KEY)
     ADDRESSES = (HOP1, HOP2, HOP3, HOP4, HOP5)
 
@@ -790,8 +791,7 @@ def make_channel_set(
 
 
 def mediator_make_channel_pair(
-    defaults: NettingChannelStateProperties = None,
-    amount: TokenAmount = UNIT_TRANSFER_AMOUNT,
+    defaults: NettingChannelStateProperties = None, amount: TokenAmount = UNIT_TRANSFER_AMOUNT
 ) -> ChannelSet:
     properties_list = [
         NettingChannelStateProperties(
