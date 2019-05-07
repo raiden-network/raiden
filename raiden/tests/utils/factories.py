@@ -40,6 +40,7 @@ from raiden.utils.signer import LocalSigner, Signer
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
+    AddressHex,
     Any,
     Balance,
     BlockExpiration,
@@ -161,7 +162,7 @@ def make_address() -> Address:
     return Address(make_20bytes())
 
 
-def make_checksum_address() -> str:
+def make_checksum_address() -> AddressHex:
     return to_checksum_address(make_address())
 
 
@@ -189,7 +190,7 @@ def make_keccak_hash() -> Keccak256:
     return Keccak256(make_32bytes())
 
 
-def make_secret(i: int = EMPTY) -> bytes:
+def make_secret(i: int = EMPTY) -> Secret:
     if i is not EMPTY:
         return format(i, ">032").encode()
     else:
