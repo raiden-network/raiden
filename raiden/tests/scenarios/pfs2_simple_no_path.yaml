@@ -1,0 +1,52 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: kovan
+  services:
+    pfs:
+      # url: https://pfs-kovan.services-dev.raiden.network
+      url: http://localhost:6000
+    udc:
+      enable: true
+      token:
+        deposit: true
+
+token:
+
+nodes:
+  mode: managed
+  count: 4
+  ## add path to Raiden virtual env
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-eth-address: "0x0bae0289aaa26845224f528f9b9defe69e01606e"
+    pathfinding-max-fee: 10
+
+## This is the PFS1 scenario. It creates a network with topology A <-> B <-> C <-> D and checks
+## whether a path is returned.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1000}
+      - serial:
+          name: "Test providing routes"
+          tasks:
+            # Check that the PFS returns a path from A to D
+            - assert_pfs_routes: {from: 3, to: 0, amount: 10, expected_paths: 0}
+
+            ## Check that the path is indeed the expected one
+            - assert_pfs_history:
+                source: 3
+                request_count: 1
+                target: 0
