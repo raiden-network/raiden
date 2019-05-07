@@ -628,6 +628,7 @@ def make_receive_expired_lock(
         balance_proof=balance_proof,
         secrethash=lock.secrethash,
         message_identifier=random.randint(0, UINT64_MAX),
+        sender=balance_proof.sender,
     )
 
     return receive_lockedtransfer

@@ -520,7 +520,10 @@ class UDPTransport(Runnable):
         #   state change
         # - Decode it, save to the WAL, and process it (the current
         #   implementation)
-        delivered_message = Delivered(delivered_message_identifier=message.message_identifier)
+        delivered_message = Delivered(
+            delivered_message_identifier=message.message_identifier,
+            signature=constants.EMPTY_SIGNATURE,
+        )
         self.raiden.sign(delivered_message)
 
         self.maybe_send(message.sender, delivered_message)
@@ -555,7 +558,7 @@ class UDPTransport(Runnable):
             "Ping received", message_id=ping.nonce, message=ping, sender=pex(ping.sender)
         )
 
-        pong = Pong(nonce=ping.nonce)
+        pong = Pong(nonce=ping.nonce, signature=constants.EMPTY_SIGNATURE)
         self.raiden.sign(pong)
 
         try:
@@ -585,7 +588,11 @@ class UDPTransport(Runnable):
         Note: Ping messages don't have an enforced ordering, so a Ping message
         with a higher nonce may be acknowledged first.
         """
-        message = Ping(nonce=nonce, current_protocol_version=constants.PROTOCOL_VERSION)
+        message = Ping(
+            nonce=nonce,
+            current_protocol_version=constants.PROTOCOL_VERSION,
+            signature=constants.EMPTY_SIGNATURE,
+        )
         self.raiden.sign(message)
         return message.encode()
 

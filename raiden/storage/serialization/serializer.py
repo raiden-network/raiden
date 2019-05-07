@@ -52,14 +52,14 @@ class DictSerializer(SerializationBase):
         if is_dataclass(obj):
             schema = class_schema(obj.__class__)
             data = schema().dump(obj).data
-            data["type"] = class_type(obj)
+            data["_type"] = class_type(obj)
         return data
 
     @staticmethod
     def deserialize(data):
-        if "type" in data:
-            klass = _import_type(data["type"])
-            del data["type"]
+        if "_type" in data:
+            klass = _import_type(data["_type"])
+            del data["_type"]
             schema = class_schema(klass)
             return schema().load(data).data
         return data

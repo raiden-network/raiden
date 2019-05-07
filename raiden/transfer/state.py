@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Tuple
 
 import networkx
 
-from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_BALANCE_HASH, EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.transfer.architecture import ContractSendEvent, SendMessageEvent, State
@@ -300,8 +300,9 @@ class BalanceProofUnsignedState(State):
     locked_amount: TokenAmount
     locksroot: Locksroot
     canonical_identifier: CanonicalIdentifier
+    balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
 
-    def __self_init__(self) -> None:
+    def __post_init__(self) -> None:
         if not isinstance(self.nonce, int):
             raise ValueError("nonce must be int")
 
@@ -331,6 +332,12 @@ class BalanceProofUnsignedState(State):
 
         self.canonical_identifier.validate()
 
+        self.balance_hash = hash_balance_data(
+            transferred_amount=self.transferred_amount,
+            locked_amount=self.locked_amount,
+            locksroot=self.locksroot,
+        )
+
     @property
     def chain_id(self) -> ChainID:
         return self.canonical_identifier.chain_identifier
@@ -342,14 +349,6 @@ class BalanceProofUnsignedState(State):
     @property
     def channel_identifier(self) -> ChannelID:
         return self.canonical_identifier.channel_identifier
-
-    @property
-    def balance_hash(self) -> BalanceHash:
-        return hash_balance_data(
-            transferred_amount=self.transferred_amount,
-            locked_amount=self.locked_amount,
-            locksroot=self.locksroot,
-        )
 
 
 @dataclass
@@ -366,6 +365,7 @@ class BalanceProofSignedState(State):
     signature: Signature
     sender: Address
     canonical_identifier: CanonicalIdentifier
+    balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
 
     def __post_init__(self) -> None:
         if not isinstance(self.nonce, int):
@@ -412,9 +412,7 @@ class BalanceProofSignedState(State):
 
         self.canonical_identifier.validate()
 
-    @property
-    def balance_hash(self) -> BalanceHash:
-        return hash_balance_data(
+        self.balance_hash = hash_balance_data(
             transferred_amount=self.transferred_amount,
             locked_amount=self.locked_amount,
             locksroot=self.locksroot,

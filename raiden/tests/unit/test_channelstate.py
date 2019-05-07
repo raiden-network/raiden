@@ -545,6 +545,7 @@ def test_channelstate_receive_lockedtransfer():
         message_identifier=random.randint(0, UINT64_MAX),
         secret=lock_secret,
         balance_proof=balance_proof,
+        sender=balance_proof.sender,
     )
 
     # First test that unlock with invalid chain_id fails
@@ -553,6 +554,7 @@ def test_channelstate_receive_lockedtransfer():
         message_identifier=random.randint(0, UINT64_MAX),
         secret=lock_secret,
         balance_proof=invalid_balance_proof,
+        sender=invalid_balance_proof.sender,
     )
     is_valid, _, _ = channel.handle_unlock(channel_state, invalid_unlock_state_change)
     assert not is_valid, "Unlock message with chain_id different than the " "channel's should fail"
@@ -885,6 +887,7 @@ def test_interwoven_transfers():
                 message_identifier=random.randint(0, UINT64_MAX),
                 secret=lock_secret,
                 balance_proof=balance_proof,
+                sender=balance_proof.sender,
             )
 
             is_valid, _, msg = channel.handle_unlock(channel_state, unlock_state_change)
@@ -1063,6 +1066,7 @@ def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain()
 
     lock_expired = ReceiveLockExpired(
         balance_proof=receive_lockedtransfer.balance_proof,
+        sender=receive_lockedtransfer.balance_proof.sender,
         secrethash=lock_secrethash,
         message_identifier=1,
     )
@@ -1563,6 +1567,7 @@ def test_valid_lock_expired_for_unlocked_lock():
 
     lock_expired = ReceiveLockExpired(
         balance_proof=receive_lockedtransfer.balance_proof,
+        sender=receive_lockedtransfer.balance_proof.sender,
         secrethash=lock_secrethash,
         message_identifier=1,
     )
