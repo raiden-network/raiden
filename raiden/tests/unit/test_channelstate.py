@@ -9,18 +9,28 @@ import pytest
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX
 from raiden.messages import Unlock
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
-from raiden.tests.utils import factories
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.factories import (
     HOP1,
     UNIT_CHAIN_ID,
     UNIT_TRANSFER_SENDER,
+    BalanceProofProperties,
+    LockedTransferSignedStateProperties,
+    LockedTransferUnsignedStateProperties,
     NettingChannelEndStateProperties,
     NettingChannelStateProperties,
     TransactionExecutionStatusProperties,
     create,
+    make_32bytes,
+    make_address,
+    make_block_hash,
     make_canonical_identifier,
+    make_payment_network_identifier,
+    make_privkey_address,
     make_secret,
+    make_signed_balance_proof_from_unsigned,
+    make_transaction_hash,
+    replace,
 )
 from raiden.tests.utils.transfer import make_receive_expired_lock, make_receive_transfer_mediated
 from raiden.transfer import channel
@@ -86,7 +96,7 @@ def assert_partner_state(end_state, partner_state, model):
 
 
 def create_model(balance, merkletree_width=0):
-    privkey, address = factories.make_privkey_address()
+    privkey, address = make_privkey_address()
 
     merkletree_leaves = [random_secret() for _ in range(merkletree_width)]
 
@@ -95,7 +105,7 @@ def create_model(balance, merkletree_width=0):
         amount_locked=0,
         balance=balance,
         distributable=balance,
-        next_nonce=1,
+        next_nonce=len(merkletree_leaves) + 1,
         merkletree_leaves=merkletree_leaves,
         contract_balance=balance,
     )
@@ -103,7 +113,7 @@ def create_model(balance, merkletree_width=0):
     return our_model, privkey
 
 
-def create_channel_from_models(our_model, partner_model):
+def create_channel_from_models(our_model, partner_model, partner_pkey):
     """Utility to instantiate state objects used throughout the tests."""
     channel_state = create(
         NettingChannelStateProperties(
@@ -123,6 +133,31 @@ def create_channel_from_models(our_model, partner_model):
         )
     )
 
+    our_unsigned = create(
+        BalanceProofProperties(
+            nonce=our_model.next_nonce - 1,
+            transferred_amount=0,
+            locked_amount=len(our_model.merkletree_leaves),
+            locksroot=merkleroot(channel_state.our_state.merkletree),
+            canonical_identifier=channel_state.canonical_identifier,
+        )
+    )
+    partner_unsigned = create(
+        BalanceProofProperties(
+            nonce=partner_model.next_nonce - 1,
+            transferred_amount=0,
+            locked_amount=len(partner_model.merkletree_leaves),
+            locksroot=merkleroot(channel_state.partner_state.merkletree),
+            canonical_identifier=channel_state.canonical_identifier,
+        )
+    )
+    partner_signed = make_signed_balance_proof_from_unsigned(
+        partner_unsigned, LocalSigner(partner_pkey)
+    )
+
+    channel_state.our_state.balance_proof = our_unsigned
+    channel_state.partner_state.balance_proof = partner_signed
+
     assert channel_state.our_total_deposit == our_model.contract_balance
     assert channel_state.partner_total_deposit == partner_model.contract_balance
 
@@ -136,7 +171,7 @@ def create_channel_from_models(our_model, partner_model):
 def test_new_end_state():
     """Test the defaults for an end state object."""
     balance1 = 101
-    node_address = factories.make_address()
+    node_address = make_address()
     end_state = NettingChannelEndState(node_address, balance1)
 
     lock_secret = sha3(b"test_end_state")
@@ -156,7 +191,7 @@ def test_new_end_state():
 def test_endstate_update_contract_balance():
     """The balance must be monotonic."""
     balance1 = 101
-    node_address = factories.make_address()
+    node_address = make_address()
 
     end_state = NettingChannelEndState(node_address, balance1)
     assert end_state.contract_balance == balance1
@@ -174,11 +209,11 @@ def test_channelstate_update_contract_balance():
     """
     deposit_block_number = 10
     block_number = deposit_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
-    block_hash = factories.make_block_hash()
+    block_hash = make_block_hash()
 
     our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_pkey1 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_pkey1)
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -187,7 +222,7 @@ def test_channelstate_update_contract_balance():
         our_model1.participant_address, balance1_new, deposit_block_number
     )
     state_change = ContractReceiveChannelNewBalance(
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
         block_number=block_number,
@@ -217,11 +252,11 @@ def test_channelstate_decreasing_contract_balance():
     """
     deposit_block_number = 10
     block_number = deposit_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
-    deposit_block_hash = factories.make_block_hash()
+    deposit_block_hash = make_block_hash()
 
     our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_pkey1 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_pkey1)
 
     amount = 10
     balance1_new = our_model1.balance - amount
@@ -230,7 +265,7 @@ def test_channelstate_decreasing_contract_balance():
         our_model1.participant_address, balance1_new, deposit_block_number
     )
     state_change = ContractReceiveChannelNewBalance(
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
         block_number=deposit_block_number,
@@ -241,7 +276,7 @@ def test_channelstate_decreasing_contract_balance():
         channel_state=deepcopy(channel_state),
         state_change=state_change,
         block_number=block_number,
-        block_hash=factories.make_block_hash(),
+        block_hash=make_block_hash(),
     )
     new_state = iteration.new_state
 
@@ -255,11 +290,11 @@ def test_channelstate_repeated_contract_balance():
     """
     deposit_block_number = 10
     block_number = deposit_block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
-    deposit_block_hash = factories.make_block_hash()
+    deposit_block_hash = make_block_hash()
 
     our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_pkey1 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_pkey1)
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -268,7 +303,7 @@ def test_channelstate_repeated_contract_balance():
         our_model1.participant_address, balance1_new, deposit_block_number
     )
     state_change = ContractReceiveChannelNewBalance(
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
         block_number=deposit_block_number,
@@ -285,7 +320,7 @@ def test_channelstate_repeated_contract_balance():
             channel_state=deepcopy(channel_state),
             state_change=state_change,
             block_number=block_number,
-            block_hash=factories.make_block_hash(),
+            block_hash=make_block_hash(),
         )
         new_state = iteration.new_state
 
@@ -295,12 +330,12 @@ def test_channelstate_repeated_contract_balance():
 
 def test_deposit_must_wait_for_confirmation():
     block_number = 10
-    block_hash = factories.make_block_hash()
+    block_hash = make_block_hash()
     confirmed_deposit_block_number = block_number + DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS + 1
 
     our_model1, _ = create_model(0)
-    partner_model1, _ = create_model(0)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_key1 = create_model(0)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_key1)
 
     deposit_amount = 10
     balance1_new = our_model1.balance + deposit_amount
@@ -316,7 +351,7 @@ def test_deposit_must_wait_for_confirmation():
         channel_state.our_state.address, deposit_amount, block_number
     )
     new_balance = ContractReceiveChannelNewBalance(
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         canonical_identifier=channel_state.canonical_identifier,
         deposit_transaction=deposit_transaction,
         block_number=block_number,
@@ -331,7 +366,7 @@ def test_deposit_must_wait_for_confirmation():
     unconfirmed_state = iteration.new_state
 
     for block_number in range(block_number, confirmed_deposit_block_number):
-        block_hash = factories.make_transaction_hash()
+        block_hash = make_transaction_hash()
         unconfirmed_block = Block(block_number=block_number, gas_limit=1, block_hash=block_hash)
         iteration = channel.state_transition(
             channel_state=deepcopy(unconfirmed_state),
@@ -348,7 +383,7 @@ def test_deposit_must_wait_for_confirmation():
             unconfirmed_state.partner_state, unconfirmed_state.our_state, partner_model1
         )
 
-    confirmed_block_hash = factories.make_transaction_hash()
+    confirmed_block_hash = make_transaction_hash()
     confirmed_block = Block(
         block_number=confirmed_deposit_block_number, gas_limit=1, block_hash=confirmed_block_hash
     )
@@ -370,8 +405,8 @@ def test_channelstate_send_lockedtransfer():
     This tests only the state of the sending node, without synchronisation.
     """
     our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_key1 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_key1)
 
     lock_amount = 30
     lock_expiration = 10
@@ -382,8 +417,8 @@ def test_channelstate_send_lockedtransfer():
 
     payment_identifier = 1
     message_identifier = random.randint(0, UINT64_MAX)
-    transfer_target = factories.make_address()
-    transfer_initiator = factories.make_address()
+    transfer_target = make_address()
+    transfer_initiator = make_address()
 
     channel.send_lockedtransfer(
         channel_state,
@@ -419,7 +454,7 @@ def test_channelstate_receive_lockedtransfer():
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
     signer2 = LocalSigner(privkey2)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     # Step 1: Simulate receiving a transfer
     # - The receiver end state doesnt change
@@ -529,7 +564,7 @@ def test_channelstate_lockedtransfer_overspent():
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
 
@@ -557,7 +592,7 @@ def test_channelstate_lockedtransfer_invalid_chainid():
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     distributable = channel.get_distributable(channel_state.partner_state, channel_state.our_state)
 
@@ -585,7 +620,7 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     # Step 1: Create a lock with an amount of 1
     # - this wont be unlocked
@@ -642,15 +677,15 @@ def test_channelstate_lockedtransfer_overspend_with_multiple_pending_transfers()
 
 
 def test_invalid_timeouts():
-    token_address = factories.make_address()
-    token_network_identifier = factories.make_address()
-    payment_network_identifier = factories.make_payment_network_identifier()
+    token_address = make_address()
+    token_network_identifier = make_address()
+    payment_network_identifier = make_payment_network_identifier()
     reveal_timeout = 5
     settle_timeout = 10
-    identifier = factories.make_address()
+    identifier = make_address()
 
-    address1 = factories.make_address()
-    address2 = factories.make_address()
+    address1 = make_address()
+    address2 = make_address()
     balance1 = 10
     balance2 = 10
 
@@ -730,7 +765,7 @@ def test_interwoven_transfers():
     our_model, _ = create_model(70)
     partner_model, privkey2 = create_model(balance_for_all_transfers)
     signer2 = LocalSigner(privkey2)
-    channel_state = create_channel_from_models(our_model, partner_model)
+    channel_state = create_channel_from_models(our_model, partner_model, privkey2)
 
     block_number = 1000
     nonce = 0
@@ -851,8 +886,8 @@ def test_channel_never_expires_lock_with_secret_onchain():
     The lock must be moved into secrethashes_to_onchain_unlockedlocks
     """
     our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_key1 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_key1)
 
     lock_amount = 30
     lock_expiration = 10
@@ -865,8 +900,8 @@ def test_channel_never_expires_lock_with_secret_onchain():
 
     payment_identifier = 1
     message_identifier = random.randint(0, UINT64_MAX)
-    transfer_target = factories.make_address()
-    transfer_initiator = factories.make_address()
+    transfer_target = make_address()
+    transfer_initiator = make_address()
 
     channel.send_lockedtransfer(
         channel_state=channel_state,
@@ -899,7 +934,7 @@ def test_regression_must_update_balanceproof_remove_expired_lock():
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     block_number = 100
 
@@ -964,7 +999,7 @@ def test_channel_must_ignore_remove_expired_locks_if_secret_registered_onchain()
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     block_number = 100
 
@@ -1044,7 +1079,7 @@ def test_channel_must_accept_expired_locks():
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     block_number = 100
 
@@ -1082,7 +1117,7 @@ def test_channel_rejects_onchain_secret_reveal_with_expired_locks():
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     # On-Chain secret registration happens between
     # Lock expiration & Lock expiration + required confirmation
@@ -1145,7 +1180,7 @@ def test_receive_lockedtransfer_before_deposit():
     """
     our_model1, _ = create_model(0)  # our deposit is 0
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     lock_amount = 30
     lock_expiration = 10
@@ -1168,15 +1203,15 @@ def test_receive_lockedtransfer_before_deposit():
 def test_channelstate_unlock_without_locks():
     """Event close must be properly handled if there are no locks to unlock"""
     our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_key1 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_key1)
 
     state_change = ContractReceiveChannelClosed(
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         transaction_from=our_model1.participant_address,
         canonical_identifier=channel_state.canonical_identifier,
         block_number=77,
-        block_hash=factories.make_block_hash(),
+        block_hash=make_block_hash(),
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
     assert not iteration.events
@@ -1230,7 +1265,7 @@ def test_channelstate_unlock_unlocked_onchain():
     """The node must call unlock after the channel is settled"""
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     lock_amount = 10
     lock_expiration = 100
@@ -1255,9 +1290,9 @@ def test_channelstate_unlock_unlocked_onchain():
     )
 
     closed_block_number = lock_expiration - channel_state.reveal_timeout - 1
-    closed_block_hash = factories.make_block_hash()
+    closed_block_hash = make_block_hash()
     close_state_change = ContractReceiveChannelClosed(
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         transaction_from=partner_model1.participant_address,
         canonical_identifier=channel_state.canonical_identifier,
         block_number=closed_block_number,
@@ -1272,10 +1307,10 @@ def test_channelstate_unlock_unlocked_onchain():
             token_network_address=channel_state.token_network_identifier,
             channel_identifier=channel_state.identifier,
         ),
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         block_number=settle_block_number,
-        block_hash=factories.make_block_hash(),
-        partner_onchain_locksroot=factories.make_32bytes(),  # non empty
+        block_hash=make_block_hash(),
+        partner_onchain_locksroot=make_32bytes(),  # non empty
         our_onchain_locksroot=EMPTY_MERKLE_ROOT,
     )
 
@@ -1284,12 +1319,12 @@ def test_channelstate_unlock_unlocked_onchain():
 
 
 def test_refund_transfer_matches_received():
-    same = factories.LockedTransferSignedStateProperties(amount=30, expiration=50)
-    lower = factories.replace(same, expiration=49)
+    same = LockedTransferSignedStateProperties(amount=30, expiration=50)
+    lower = replace(same, expiration=49)
 
-    refund_lower_expiration = factories.create(lower)
-    refund_same_expiration = factories.create(same)
-    transfer = create(same.extract(factories.LockedTransferUnsignedStateProperties))
+    refund_lower_expiration = create(lower)
+    refund_same_expiration = create(same)
+    transfer = create(same.extract(LockedTransferUnsignedStateProperties))
 
     assert channel.refund_transfer_matches_transfer(refund_lower_expiration, transfer) is False
     assert channel.refund_transfer_matches_transfer(refund_same_expiration, transfer) is True
@@ -1299,14 +1334,12 @@ def test_refund_transfer_does_not_match_received():
     amount = 30
     expiration = 50
     target = UNIT_TRANSFER_SENDER
-    transfer = factories.create(
-        factories.LockedTransferUnsignedStateProperties(
-            amount=amount, target=target, expiration=expiration
-        )
+    transfer = create(
+        LockedTransferUnsignedStateProperties(amount=amount, target=target, expiration=expiration)
     )
 
-    refund_from_target = factories.create(
-        factories.LockedTransferSignedStateProperties(amount=amount, expiration=expiration - 1)
+    refund_from_target = create(
+        LockedTransferSignedStateProperties(amount=amount, expiration=expiration - 1)
     )
     # target cannot refund
     assert not channel.refund_transfer_matches_transfer(refund_from_target, transfer)
@@ -1317,8 +1350,8 @@ def test_action_close_must_change_the_channel_state():
     transaction was not confirmed on-chain.
     """
     our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_key1 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_key1)
 
     block_number = 10
     state_change = ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
@@ -1326,7 +1359,7 @@ def test_action_close_must_change_the_channel_state():
         channel_state=channel_state,
         state_change=state_change,
         block_number=block_number,
-        block_hash=factories.make_block_hash(),
+        block_hash=make_block_hash(),
     )
     assert channel.get_status(iteration.new_state) == CHANNEL_STATE_CLOSING
 
@@ -1337,7 +1370,7 @@ def test_update_must_be_called_if_close_lost_race():
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     lock_amount = 30
     lock_expiration = 10
@@ -1360,15 +1393,15 @@ def test_update_must_be_called_if_close_lost_race():
         channel_state=channel_state,
         state_change=state_change,
         block_number=block_number,
-        block_hash=factories.make_block_hash(),
+        block_hash=make_block_hash(),
     )
 
     state_change = ContractReceiveChannelClosed(
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         transaction_from=partner_model1.participant_address,
         canonical_identifier=channel_state.canonical_identifier,
         block_number=77,
-        block_hash=factories.make_block_hash(),
+        block_hash=make_block_hash(),
     )
     iteration = channel.handle_channel_closed(channel_state, state_change)
     assert search_for_item(iteration.events, ContractSendChannelUpdateTransfer, {}) is not None
@@ -1379,8 +1412,8 @@ def test_update_transfer():
     closed channel sets the update_transaction member
     """
     our_model1, _ = create_model(70)
-    partner_model1, _ = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    partner_model1, partner_key1 = create_model(100)
+    channel_state = create_channel_from_models(our_model1, partner_model1, partner_key1)
 
     block_number = 10
     state_change = ActionChannelClose(canonical_identifier=channel_state.canonical_identifier)
@@ -1388,7 +1421,7 @@ def test_update_transfer():
         channel_state=channel_state,
         state_change=state_change,
         block_number=block_number,
-        block_hash=factories.make_block_hash(),
+        block_hash=make_block_hash(),
     )
 
     # update_transaction in channel state should not be set
@@ -1396,9 +1429,9 @@ def test_update_transfer():
     assert channel_state.update_transaction is None
 
     closed_block_number = 15
-    closed_block_hash = factories.make_block_hash()
+    closed_block_hash = make_block_hash()
     channel_close_state_change = ContractReceiveChannelClosed(
-        transaction_hash=factories.make_transaction_hash(),
+        transaction_hash=make_transaction_hash(),
         transaction_from=partner_model1.participant_address,
         canonical_identifier=channel_state.canonical_identifier,
         block_number=closed_block_number,
@@ -1415,7 +1448,7 @@ def test_update_transfer():
         canonical_identifier=channel_state.canonical_identifier,
         nonce=23,
         block_number=closed_block_number + 1,
-        block_hash=factories.make_block_hash(),
+        block_hash=make_block_hash(),
     )
 
     update_block_number = 20
@@ -1433,17 +1466,17 @@ def test_update_transfer():
 
 
 def test_get_amount_locked():
-    state = NettingChannelEndState(address=factories.make_address(), balance=0)
+    state = NettingChannelEndState(address=make_address(), balance=0)
 
     assert channel.get_amount_locked(state) == 0
 
-    secrethash = sha3(factories.make_secret(1))
+    secrethash = sha3(make_secret(1))
     state.secrethashes_to_lockedlocks[secrethash] = HashTimeLockState(
         amount=23, expiration=100, secrethash=secrethash
     )
     assert channel.get_amount_locked(state) == 23
 
-    secret = factories.make_secret(1)
+    secret = make_secret(1)
     secrethash = sha3(secret)
     lock = HashTimeLockState(amount=21, expiration=100, secrethash=secrethash)
     state.secrethashes_to_unlockedlocks[secrethash] = UnlockPartialProofState(
@@ -1451,7 +1484,7 @@ def test_get_amount_locked():
     )
     assert channel.get_amount_locked(state) == 44
 
-    secret = factories.make_secret(2)
+    secret = make_secret(2)
     secrethash = sha3(secret)
     lock = HashTimeLockState(amount=19, expiration=100, secrethash=secrethash)
     state.secrethashes_to_onchain_unlockedlocks[secrethash] = UnlockPartialProofState(
@@ -1467,7 +1500,7 @@ def test_valid_lock_expired_for_unlocked_lock():
     """
     our_model1, _ = create_model(70)
     partner_model1, privkey2 = create_model(100)
-    channel_state = create_channel_from_models(our_model1, partner_model1)
+    channel_state = create_channel_from_models(our_model1, partner_model1, privkey2)
 
     block_number = 100
 
