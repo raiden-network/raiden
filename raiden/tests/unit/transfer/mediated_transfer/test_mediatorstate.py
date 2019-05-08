@@ -704,11 +704,9 @@ def test_events_for_onchain_secretreveal_once():
         assert pair.payer_state == "payer_waiting_secret_reveal"
 
 
-def test_secret_learned():
+def secret_learned_setup():
     pseudo_random_generator = random.Random()
-
     channels = mediator_make_channel_pair()
-
     from_transfer = factories.make_signed_transfer_for(channels[0])
 
     nodeaddresses_to_networkstates = factories.make_node_availability_map([UNIT_TRANSFER_TARGET])
@@ -721,6 +719,12 @@ def test_secret_learned():
         block_number=1,
         block_hash=factories.make_block_hash(),
     )
+
+    return pseudo_random_generator, channels, from_transfer, iteration
+
+
+def test_secret_learned():
+    pseudo_random_generator, channels, from_transfer, iteration = secret_learned_setup()
 
     iteration = mediator.secret_learned(
         state=iteration.new_state,
@@ -792,6 +796,24 @@ def test_secret_learned_with_refund():
     assert channel.is_secret_known(setup.channels[1].partner_state, UNIT_SECRETHASH)
     assert channel.is_secret_known(setup.channels[1].our_state, UNIT_SECRETHASH)
     assert channel.is_secret_known(setup.channels[2].our_state, UNIT_SECRETHASH)
+
+
+def test_secret_learned_for_closed_channel():
+    pseudo_random_generator, channels, _, iteration = secret_learned_setup()
+    close_transaction = factories.create(factories.TransactionExecutionStatusProperties())
+    channels[0].close_transaction = close_transaction
+
+    iteration = mediator.secret_learned(
+        state=iteration.new_state,
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=1,
+        block_hash=factories.make_block_hash(),
+        secret=UNIT_SECRET,
+        secrethash=UNIT_SECRETHASH,
+        payee_address=channels[1].partner_state.address,
+    )
+    assert search_for_item(iteration.events, ContractSendSecretReveal, {"secret": UNIT_SECRET})
 
 
 def test_mediate_transfer():

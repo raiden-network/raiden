@@ -160,7 +160,7 @@ def test_next_route():
     )
 
     # HOP3 should be ignored because it doesn't have enough balance
-    assert iteration.new_state.cancelled_channels == [channel1.identifier]
+    assert iteration.new_state.cancelled_channels == [channels[0].identifier]
 
 
 def test_init_with_usable_routes():

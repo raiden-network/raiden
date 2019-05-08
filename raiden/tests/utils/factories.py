@@ -66,6 +66,7 @@ from raiden.utils.typing import (
     PaymentID,
     PaymentNetworkID,
     Secret,
+    SecretHash,
     Signature,
     TargetAddress,
     TokenAddress,
@@ -254,7 +255,7 @@ def make_merkletree_leaves(width: int) -> List[Keccak256]:
     return [make_secret() for _ in range(width)]
 
 
-def make_merkletree(leaves: List[typing.SecretHash]) -> MerkleTreeState:
+def make_merkletree(leaves: List[SecretHash]) -> MerkleTreeState:
     return MerkleTreeState(compute_layers(leaves))
 
 
@@ -794,7 +795,7 @@ def make_channel_set(
     return ChannelSet(channels, our_pkeys, partner_pkeys)
 
 
-def make_channel_set_from_amounts(amounts: List[typing.TokenAmount]) -> ChannelSet:
+def make_channel_set_from_amounts(amounts: List[TokenAmount]) -> ChannelSet:
     properties = [
         NettingChannelStateProperties(our_state=NettingChannelEndStateProperties(balance=amount))
         for amount in amounts
