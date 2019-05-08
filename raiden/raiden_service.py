@@ -187,9 +187,19 @@ class PaymentStatus(NamedTuple):
     amount: PaymentAmount
     token_network_identifier: TokenNetworkID
     payment_done: AsyncResult
+    secrethash: SecretHash
 
-    def matches(self, token_network_identifier: TokenNetworkID, amount: PaymentAmount):
-        return token_network_identifier == self.token_network_identifier and amount == self.amount
+    def matches(
+            self,
+            token_network_identifier: TokenNetworkID,
+            amount: PaymentAmount,
+            secrethash: SecretHash,
+    ):
+        return (
+            token_network_identifier == self.token_network_identifier and
+            amount == self.amount and
+            secrethash == self.secrethash
+        )
 
 
 def update_services_from_balance_proof(
@@ -857,6 +867,7 @@ class RaidenService(Runnable):
                         balance_proof.token_network_identifier
                     ),
                     payment_done=AsyncResult(),
+                    secrethash=transfer_description.secrethash,
                 )
 
     def _initialize_messages_queues(self, chain_state: ChainState):
@@ -1087,7 +1098,11 @@ class RaidenService(Runnable):
         with self.payment_identifier_lock:
             payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
             if payment_status:
-                payment_status_matches = payment_status.matches(token_network_identifier, amount)
+                payment_status_matches = payment_status.matches(
+                    token_network_identifier,
+                    amount,
+                    secrethash,
+                )
                 if not payment_status_matches:
                     raise PaymentConflict("Another payment with the same id is in flight")
 
@@ -1098,6 +1113,7 @@ class RaidenService(Runnable):
                 amount=amount,
                 token_network_identifier=token_network_identifier,
                 payment_done=AsyncResult(),
+                secrethash=secrethash,
             )
             self.targets_to_identifiers_to_statuses[target][identifier] = payment_status
 
