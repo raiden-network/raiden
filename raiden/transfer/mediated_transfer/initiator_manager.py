@@ -4,7 +4,11 @@ from raiden.transfer import channel
 from raiden.transfer.architecture import Event, StateChange, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed
 from raiden.transfer.mediated_transfer import initiator
-from raiden.transfer.mediated_transfer.events import EventUnlockClaimFailed, EventUnlockFailed
+from raiden.transfer.mediated_transfer.events import (
+    EventRouteFailed,
+    EventUnlockClaimFailed,
+    EventUnlockFailed,
+)
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
     InitiatorTransferState,
@@ -279,6 +283,7 @@ def handle_transferrefundcancelroute(
         and refund_transfer.lock.expiration == original_transfer.lock.expiration
     )
 
+    # Weird naming, what do others think?
     is_valid_refund = channel.refund_transfer_matches_received(refund_transfer, original_transfer)
 
     events = list()
@@ -293,6 +298,9 @@ def handle_transferrefundcancelroute(
 
     if not is_valid:
         return TransitionResult(payment_state, list())
+
+    route_failed_event = EventRouteFailed(secrethash=original_transfer.lock.secrethash)
+    events.append(route_failed_event)
 
     old_description = initiator_state.transfer_description
     transfer_description = TransferDescriptionWithSecretState(

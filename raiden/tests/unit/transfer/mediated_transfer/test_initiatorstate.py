@@ -27,6 +27,7 @@ from raiden.transfer.events import (
 from raiden.transfer.mediated_transfer import initiator, initiator_manager
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    EventRouteFailed,
     EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
@@ -487,9 +488,11 @@ def test_refund_transfer_next_route():
     assert iteration.new_state is not None
 
     route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
+    route_failed = next(e for e in iteration.events if isinstance(e, EventRouteFailed))
     new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransfer))
 
     assert route_cancelled, "The previous transfer must be cancelled"
+    assert route_failed, "Must emit event that the first route failed"
     assert new_transfer, "No mediated transfer event emitted, should have tried a new route"
     msg = "the new transfer must use a new secret / secrethash"
     assert new_transfer.transfer.lock.secrethash != refund_transfer.lock.secrethash, msg
@@ -531,7 +534,6 @@ def test_refund_transfer_no_more_routes():
     iteration = initiator_manager.state_transition(
         setup.current_state, state_change, setup.channel_map, setup.prng, setup.block_number
     )
-    current_state = iteration.new_state
     # As per the description of the issue here:
     # https://github.com/raiden-network/raiden/issues/3146#issuecomment-447378046
     # We can fail the payment but can't delete the payment task if there are no
@@ -539,9 +541,11 @@ def test_refund_transfer_no_more_routes():
     assert iteration.new_state is not None
 
     unlocked_failed = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
+    route_failed = next(e for e in iteration.events if isinstance(e, EventRouteFailed))
     sent_failed = next(e for e in iteration.events if isinstance(e, EventPaymentSentFailed))
 
     assert unlocked_failed
+    assert route_failed, "Must emit event that the first route failed"
     assert sent_failed
 
     missing_pkey = factories.create_properties(

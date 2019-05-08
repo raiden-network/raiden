@@ -671,3 +671,31 @@ class EventUnexpectedSecretReveal(Event):
         )
 
         return restored
+
+
+class EventRouteFailed(Event):
+    """ Event emitted when a route failed.
+
+    A route fails, when a RefundTransfer reaches the initator.
+    """
+
+    def __init__(self, secrethash: SecretHash):
+        self.secrethash = secrethash
+
+    def __repr__(self):
+        return f"<" f"EventRouteFailed " f"secrethash:{pex(self.secrethash)} " f">"
+
+    def __eq__(self, other: Any) -> bool:
+        return (
+            isinstance(other, EventUnexpectedSecretReveal) and self.secrethash == other.secrethash
+        )
+
+    def __ne__(self, other: Any) -> bool:
+        return not self.__eq__(other)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"secrethash": serialize_bytes(self.secrethash)}
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "EventRouteFailed":
+        return cls(secrethash=deserialize_secret_hash(data["secrethash"]))
