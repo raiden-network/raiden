@@ -197,7 +197,7 @@ def test_channel_data_removed_after_unlock(
         channel_state=channel_state, privkey=pkey, nonce=1, transferred_amount=0, lock=lock
     )
 
-    from_route = factories.route_from_channel(channel_state)
+    from_route = factories.make_route_from_channel(channel_state)
     init_target = ActionInitTarget(
         sender=mediated_transfer.balance_proof.sender,  # pylint: disable=no-member
         balance_proof=mediated_transfer.balance_proof,
@@ -427,7 +427,7 @@ def test_multiple_channel_states(chain_state, token_network_state, channel_prope
         channel_state=channel_state, privkey=pkey, nonce=1, transferred_amount=0, lock=lock
     )
 
-    from_route = factories.route_from_channel(channel_state)
+    from_route = factories.make_route_from_channel(channel_state)
     init_target = ActionInitTarget(
         route=from_route,
         transfer=mediated_transfer,

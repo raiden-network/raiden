@@ -503,7 +503,7 @@ def test_state_transition():
 
     balance_proof = create(
         BalanceProofSignedStateProperties(
-            nonce=from_transfer.balance_proof.nonce + 1,
+            nonce=from_transfer.balance_proof.nonce + 1,  # pylint: disable=no-member
             transferred_amount=lock_amount,
             locked_amount=0,
             canonical_identifier=factories.make_canonical_identifier(
@@ -601,6 +601,7 @@ def test_target_receive_lock_expired():
     balance_proof = create(
         BalanceProofSignedStateProperties(
             nonce=2,
+            # pylint: disable=no-member
             transferred_amount=from_transfer.balance_proof.transferred_amount,
             locked_amount=0,
             canonical_identifier=channels[0].canonical_identifier,
