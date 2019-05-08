@@ -166,12 +166,20 @@ def make_checksum_address() -> AddressHex:
     return to_checksum_address(make_address())
 
 
+def make_additional_hash() -> AdditionalHash:
+    return AdditionalHash(make_32bytes())
+
+
 def make_32bytes() -> bytes:
     return bytes("".join(random.choice(string.printable) for _ in range(32)), encoding="utf-8")
 
 
 def make_transaction_hash() -> TransactionHash:
     return TransactionHash(make_32bytes())
+
+
+def make_locksroot() -> Locksroot:
+    return Locksroot(make_32bytes())
 
 
 def make_block_hash() -> BlockHash:
@@ -463,6 +471,38 @@ BalanceProofSignedStateProperties.DEFAULTS = BalanceProofSignedStateProperties(
     sender=UNIT_TRANSFER_SENDER,
     pkey=UNIT_TRANSFER_PKEY,
 )
+
+
+def make_signed_balance_proof_from_unsigned(
+    unsigned: BalanceProofUnsignedState, signer: Signer
+) -> BalanceProofSignedState:
+    balance_hash = hash_balance_data(
+        transferred_amount=unsigned.transferred_amount,
+        locked_amount=unsigned.locked_amount,
+        locksroot=unsigned.locksroot,
+    )
+
+    additional_hash = make_additional_hash()
+    data_to_sign = balance_proof.pack_balance_proof(
+        balance_hash=balance_hash,
+        additional_hash=additional_hash,
+        canonical_identifier=unsigned.canonical_identifier,
+        nonce=unsigned.nonce,
+    )
+
+    signature = signer.sign(data=data_to_sign)
+    sender = signer.address
+
+    return BalanceProofSignedState(
+        nonce=unsigned.nonce,
+        transferred_amount=unsigned.transferred_amount,
+        locked_amount=unsigned.locked_amount,
+        locksroot=unsigned.locksroot,
+        message_hash=additional_hash,
+        signature=signature,
+        sender=sender,
+        canonical_identifier=unsigned.canonical_identifier,
+    )
 
 
 @create.register(BalanceProofSignedStateProperties)  # noqa: F811
