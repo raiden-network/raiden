@@ -1,15 +1,23 @@
 from copy import deepcopy
 
+import pytest
+
 from raiden.constants import EMPTY_MERKLE_ROOT
+from raiden.settings import GAS_LIMIT
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     HOP1,
     HOP2,
     UNIT_CHANNEL_ID,
+    UNIT_SECRET,
     UNIT_SECRETHASH,
     make_block_hash,
 )
+from raiden.transfer.channel import compute_merkletree_with
 from raiden.transfer.events import ContractSendChannelBatchUnlock
+from raiden.transfer.mediated_transfer.state import TargetTransferState
+from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
+from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.node import (
     get_networks,
     handle_new_token_network,
@@ -18,10 +26,19 @@ from raiden.transfer.node import (
     state_transition,
     subdispatch_initiatortask,
     subdispatch_targettask,
+    subdispatch_to_paymenttask,
 )
-from raiden.transfer.state import PaymentNetworkState, TokenNetworkState
+from raiden.transfer.state import (
+    BalanceProofSignedState,
+    PaymentNetworkState,
+    RouteState,
+    TargetTask,
+    TokenNetworkState,
+    make_empty_merkle_tree,
+)
 from raiden.transfer.state_change import (
     ActionNewTokenNetwork,
+    Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
 )
@@ -130,6 +147,63 @@ def test_subdispatch_invalid_targettask(chain_state, token_network_id):
     )
     assert transition_result.new_state == chain_state
     assert not transition_result.events
+
+
+@pytest.mark.parametrize("partner", [factories.UNIT_TRANSFER_SENDER])
+def test_subdispatch_to_paymenttask_target(chain_state, netting_channel_state):
+    target_state = TargetTransferState(
+        route=RouteState(
+            node_address=netting_channel_state.partner_state.address,
+            channel_identifier=netting_channel_state.canonical_identifier.channel_identifier,
+        ),
+        transfer=factories.create(factories.LockedTransferSignedStateProperties()),
+        secret=UNIT_SECRET,
+    )
+    subtask = TargetTask(
+        canonical_identifier=netting_channel_state.canonical_identifier, target_state=target_state
+    )
+    chain_state.payment_mapping.secrethashes_to_task[UNIT_SECRETHASH] = subtask
+
+    lock = factories.HashTimeLockState(amount=0, expiration=2, secrethash=UNIT_SECRETHASH)
+
+    netting_channel_state.partner_state.secrethashes_to_lockedlocks[UNIT_SECRETHASH] = lock
+    netting_channel_state.partner_state.merkletree = compute_merkletree_with(
+        merkletree=make_empty_merkle_tree(), lockhash=lock.lockhash
+    )
+    state_change = Block(
+        block_number=chain_state.block_number,
+        gas_limit=GAS_LIMIT,
+        block_hash=chain_state.block_hash,
+    )
+    transition_result = subdispatch_to_paymenttask(
+        chain_state=chain_state, state_change=state_change, secrethash=UNIT_SECRETHASH
+    )
+    assert transition_result.events == []
+    assert transition_result.new_state == chain_state
+
+    chain_state.block_number = 20
+
+    balance_proof: BalanceProofSignedState = factories.create(
+        factories.BalanceProofSignedStateProperties(
+            canonical_identifier=netting_channel_state.canonical_identifier,
+            sender=netting_channel_state.partner_state.address,
+            transferred_amount=0,
+            pkey=factories.UNIT_TRANSFER_PKEY,
+            locksroot=merkleroot(make_empty_merkle_tree()),
+        )
+    )
+    state_change = ReceiveLockExpired(
+        balance_proof=balance_proof,
+        secrethash=UNIT_SECRETHASH,
+        message_identifier=factories.make_message_identifier(),
+    )
+    transition_result = subdispatch_to_paymenttask(
+        chain_state=chain_state, state_change=state_change, secrethash=UNIT_SECRETHASH
+    )
+    msg = "ReceiveLockExpired should have cleared the task"
+    assert UNIT_SECRETHASH not in chain_state.payment_mapping.secrethashes_to_task, msg
+    assert len(transition_result.events), "ReceiveLockExpired should generate events"
+    assert transition_result.new_state == chain_state
 
 
 def test_maybe_add_tokennetwork_unknown_payment_network(chain_state, token_network_id):

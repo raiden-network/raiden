@@ -81,8 +81,14 @@ def token_network_state(
 
 
 @pytest.fixture
-def netting_channel_state(chain_state, token_network_state, payment_network_state):
-    partner = factories.make_address()
+def partner():
+    return None
+
+
+@pytest.fixture
+def netting_channel_state(chain_state, token_network_state, payment_network_state, partner):
+    if partner is None:
+        partner = factories.make_address()
     canonical_identifier = factories.make_canonical_identifier(
         token_network_address=token_network_state.address
     )
