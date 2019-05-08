@@ -2,7 +2,7 @@ version: 2
 
 settings:
   gas_price: "fast"
-  chain: kovan
+  chain: any
 
 token:
   ##address: "0xabEE20bdA7476337ea051Dac011763F6D7eD8d9c"
