@@ -8,9 +8,10 @@ import importlib
 import json
 from dataclasses import is_dataclass
 
+from marshmallow import Schema
 from marshmallow_dataclass import class_schema
 
-from raiden.utils.typing import Any
+from raiden.utils.typing import Any, Dict
 
 # pylint: disable=unused-import
 import raiden.storage.serialization.types  # noqa # isort:skip
@@ -45,13 +46,23 @@ class SerializationBase:
 
 
 class DictSerializer(SerializationBase):
+    SCHEMA_CACHE: Dict[str, Schema] = {}
+
+    @staticmethod
+    def get_or_create_schema(clazz: type) -> Schema:
+        class_name = clazz.__name__
+        if class_name not in DictSerializer.SCHEMA_CACHE:
+            schema = class_schema(clazz)
+            DictSerializer.SCHEMA_CACHE[class_name] = schema
+        return DictSerializer.SCHEMA_CACHE[class_name]
+
     @staticmethod
     def serialize(obj):
         # Default, in case this is not a dataclass
         data = obj
         if is_dataclass(obj):
-            schema = class_schema(obj.__class__)
-            data = schema().dump(obj).data
+            schema = DictSerializer.get_or_create_schema(obj.__class__)
+            data = schema().dump(obj)
             data["_type"] = class_type(obj)
         return data
 
@@ -60,8 +71,8 @@ class DictSerializer(SerializationBase):
         if "_type" in data:
             klass = _import_type(data["_type"])
             del data["_type"]
-            schema = class_schema(klass)
-            return schema().load(data).data
+            schema = DictSerializer.get_or_create_schema(klass)
+            return schema().load(data)
         return data
 
 
@@ -74,5 +85,4 @@ class JSONSerializer(SerializationBase):
     @staticmethod
     def deserialize(data):
         data = DictSerializer.deserialize(json.loads(data))
-
         return data
