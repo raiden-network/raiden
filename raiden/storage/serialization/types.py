@@ -5,7 +5,6 @@ from raiden.storage.serialization.fields import AddressField, BytesField, Intege
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
-    Any,
     BalanceHash,
     BlockExpiration,
     BlockGasLimit,
@@ -21,7 +20,6 @@ from raiden.utils.typing import (
     Locksroot,
     MessageID,
     Nonce,
-    Optional,
     PaymentAmount,
     PaymentID,
     PaymentNetworkID,
@@ -36,26 +34,9 @@ from raiden.utils.typing import (
     TokenNetworkID,
     TransactionHash,
     TransferID,
-    Type,
+    Tuple,
     Union,
 )
-
-
-def determine_union_types(*args) -> Optional[Type[Any]]:
-    """
-    Handle case where the type is a Union of:
-    1. [X, X] (example TokenNetworkID, TokenNetworkAddress),
-       in this case we use the same field.
-    2. [X, None] for Optional types, we use the field
-       of X type.
-    """
-    first_type = type(args[0])
-
-    for arg in args:
-        if type(arg) != first_type:
-            return None
-    return args[0]
-
 
 _native_to_marshmallow.update(
     {
@@ -97,7 +78,7 @@ _native_to_marshmallow.update(
         ChainID: IntegerToStringField,
         ChannelID: IntegerToStringField,
         # Union
-        # Union: determine_union_types,
         Union[TokenNetworkAddress, TokenNetworkID]: AddressField,
+        Tuple[Address, Address]: AddressField,
     }
 )
