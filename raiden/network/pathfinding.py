@@ -7,7 +7,7 @@ from enum import IntEnum, unique
 import click
 import requests
 import structlog
-from eth_utils import to_checksum_address, to_hex
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
 from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
@@ -184,9 +184,7 @@ def get_last_iou(
 ) -> Optional[Dict]:
 
     timestamp = datetime.utcnow().isoformat(timespec="seconds")
-    signature_data = (
-        Web3.toBytes(hexstr=sender) + Web3.toBytes(hexstr=receiver) + Web3.toBytes(text=timestamp)
-    )
+    signature_data = sender + receiver + Web3.toBytes(text=timestamp)
     signature = to_hex(LocalSigner(privkey).sign(signature_data))
 
     try:
@@ -194,7 +192,10 @@ def get_last_iou(
             requests.get(
                 f"{url}/api/v1/{to_checksum_address(token_network_address)}/payment/iou",
                 params=dict(
-                    sender=sender, receiver=receiver, timestamp=timestamp, signature=signature
+                    sender=to_checksum_address(sender),
+                    receiver=to_checksum_address(receiver),
+                    timestamp=timestamp,
+                    signature=signature,
                 ),
                 timeout=DEFAULT_HTTP_REQUEST_TIMEOUT,
             )
@@ -286,7 +287,7 @@ def create_current_iou(
             url=url,
             token_network_address=token_network_address,
             sender=our_address,
-            receiver=config["pathfinding_eth_address"],
+            receiver=to_canonical_address(config["pathfinding_eth_address"]),
             privkey=privkey,
         )
 
