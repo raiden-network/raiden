@@ -45,7 +45,6 @@ from raiden.storage import serialize, sqlite, wal
 from raiden.tasks import AlarmTask
 from raiden.transfer import channel, node, views
 from raiden.transfer.architecture import Event as RaidenEvent, StateChange
-from raiden.transfer.mediated_transfer.events import SendLockedTransfer
 from raiden.transfer.mediated_transfer.state import (
     TransferDescriptionWithSecretState,
     lockedtransfersigned_from_message,
@@ -492,7 +491,6 @@ class RaidenService(Runnable):
         self._initialize_payment_statuses(chain_state)
         self._initialize_transactions_queues(chain_state)
         self._initialize_messages_queues(chain_state)
-        self._initialize_whitelists(chain_state)
         self._initialize_monitoring_services_queue(chain_state)
         self._initialize_ready_to_processed_events()
 
@@ -932,23 +930,6 @@ class RaidenService(Runnable):
         )
         for balance_proof in current_balance_proofs:
             update_services_from_balance_proof(self, chain_state, balance_proof)
-
-    def _initialize_whitelists(self, chain_state: ChainState):
-        """ Whitelist neighbors and mediated transfer targets on transport """
-
-        for neighbour in views.all_neighbour_nodes(chain_state):
-            if neighbour == ConnectionManager.BOOTSTRAP_ADDR:
-                continue
-            self.transport.whitelist(neighbour)
-
-        events_queues = views.get_all_messagequeues(chain_state)
-
-        for event_queue in events_queues.values():
-            for event in event_queue:
-                if isinstance(event, SendLockedTransfer):
-                    transfer = event.transfer
-                    if transfer.initiator == self.address:
-                        self.transport.whitelist(address=transfer.target)
 
     def sign(self, message: Message):
         """ Sign message inplace. """

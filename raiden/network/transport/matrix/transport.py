@@ -252,10 +252,11 @@ class _RetryQueue(Runnable):
             f"node:{pex(self.transport._raiden_service.address)} "
             f"recipient:{pex(self.receiver)}"
         )
-        # run while transport parent is running
-        while not self.transport._stop_event.ready():
+        # run while transport parent is running and transport.start is done
+        while not self.transport._stop_event.ready() and self.transport._started:
             # once entered the critical section, block any other enqueue or notify attempt
-            with self._lock:
+            # Also wait for transport to finish healthchecks after client was synced
+            with self._lock, self.transport._health_lock:
                 self._notify_event.clear()
                 if self._message_queue:
                     self._check_and_send()
@@ -463,15 +464,6 @@ class MatrixTransport(Runnable):
         self.greenlets.append(greenlet)
         return greenlet
 
-    def whitelist(self, address: Address):
-        """Whitelist peer address to receive communications from
-
-        This may be called before transport is started, to ensure events generated during
-        start are handled properly.
-        """
-        self.log.debug("Whitelist", address=to_normalized_address(address))
-        self._address_mgr.add_address(address)
-
     def start_health_check(self, node_address):
         """Start healthcheck (status monitoring) for a peer
 
@@ -496,7 +488,7 @@ class MatrixTransport(Runnable):
                 for user in candidates
                 if validate_userid_signature(user) == node_address
             }
-            self.whitelist(node_address)
+            self._address_mgr.add_address(node_address)
             self._address_mgr.add_userids_for_address(node_address, user_ids)
 
             # Ensure network state is updated in case we already know about the user presences
@@ -899,6 +891,7 @@ class MatrixTransport(Runnable):
         address_hex = to_normalized_address(address)
         msg = f"address not health checked: me: {self._user_id}, peer: {address_hex}"
         assert address and self._address_mgr.is_address_known(address), msg
+        assert self._raiden_service is not None
 
         # filter_private is done in _get_room_ids_for_address
         room_ids = self._get_room_ids_for_address(address)
@@ -914,7 +907,6 @@ class MatrixTransport(Runnable):
                     return room
                 self.log.warning("Ignoring global room for peer", room=room, peer=address_hex)
 
-        assert self._raiden_service is not None
         address_pair = sorted(
             [to_normalized_address(address) for address in [address, self._raiden_service.address]]
         )
