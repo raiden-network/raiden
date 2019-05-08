@@ -353,7 +353,19 @@ def handle_secretrequest(
 
     elif not is_valid_secretrequest and is_message_from_target:
         initiator_state.received_secret_request = True
-        iteration = TransitionResult(initiator_state, list())
+
+        if initiator_state.transfer_description.secret == EMPTY_SECRET:
+            transfer_description = initiator_state.transfer_description
+            payment_failed = EventPaymentSentFailed(
+                payment_network_identifier=transfer_description.payment_network_identifier,
+                token_network_identifier=transfer_description.token_network_identifier,
+                identifier=transfer_description.payment_identifier,
+                target=transfer_description.target,
+                reason='Target requested the secret but secret is unknown to the Initiator',
+            )
+            iteration = TransitionResult(initiator_state, [payment_failed])
+        else:
+            iteration = TransitionResult(initiator_state, list())
 
     else:
         iteration = TransitionResult(initiator_state, list())
