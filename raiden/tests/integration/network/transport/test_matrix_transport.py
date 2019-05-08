@@ -14,7 +14,7 @@ from raiden.constants import (
     UINT64_MAX,
 )
 from raiden.exceptions import InsufficientFunds
-from raiden.messages import Processed, SecretRequest, ToDevice
+from raiden.messages import Delivered, Processed, SecretRequest, ToDevice
 from raiden.network.transport.matrix import AddressReachability, MatrixTransport, _RetryQueue
 from raiden.network.transport.matrix.client import Room
 from raiden.network.transport.matrix.utils import make_room_alias
@@ -120,32 +120,39 @@ def ping_pong_message_success(transport0, transport1):
 
     received_messages0 = transport0._raiden_service.message_handler.bag
     received_messages1 = transport1._raiden_service.message_handler.bag
-    number_of_received_messages0 = len(received_messages0)
-    number_of_received_messages1 = len(received_messages1)
 
-    message = Processed(message_identifier=number_of_received_messages0)
-    transport0._raiden_service.sign(message)
-    transport0.send_async(queueid1, message)
-    with Timeout(30):
+    msg_id = random.randint(1e5, 9e5)
+
+    ping_message = Processed(message_identifier=msg_id)
+    pong_message = Delivered(delivered_message_identifier=msg_id)
+
+    transport0._raiden_service.sign(ping_message)
+    transport1._raiden_service.sign(pong_message)
+    transport0.send_async(queueid1, ping_message)
+
+    with Timeout(20, exception=False):
         all_messages_received = False
         while not all_messages_received:
             all_messages_received = (
-                len(received_messages0) == number_of_received_messages0 + 1
-                and len(received_messages1) == number_of_received_messages1 + 1
+                ping_message in received_messages1 and pong_message in received_messages0
             )
             gevent.sleep(0.1)
+    assert ping_message in received_messages1
+    assert pong_message in received_messages0
 
-    transport1._raiden_service.sign(message)
-    transport1.send_async(queueid0, message)
+    transport0._raiden_service.sign(pong_message)
+    transport1._raiden_service.sign(ping_message)
+    transport1.send_async(queueid0, ping_message)
 
-    with Timeout(30):
+    with Timeout(20, exception=False):
         all_messages_received = False
         while not all_messages_received:
             all_messages_received = (
-                len(received_messages0) == number_of_received_messages0 + 2
-                and len(received_messages1) == number_of_received_messages1 + 2
+                ping_message in received_messages0 and pong_message in received_messages1
             )
             gevent.sleep(0.1)
+    assert ping_message in received_messages0
+    assert pong_message in received_messages1
 
     return all_messages_received
 
@@ -1015,11 +1022,12 @@ def test_matrix_user_roaming(matrix_transports):
     assert ping_pong_message_success(transport0, transport1)
 
 
+@pytest.mark.xfail(reason="XFail until raiden-network/raiden#4030 is fixed")
 @pytest.mark.parametrize("matrix_server_count", [3])
 @pytest.mark.parametrize("number_of_transports", [6])
 def test_matrix_multi_user_roaming(matrix_transports):
 
-    # 6 transports on 3 servers, where 0,3, 1,4, etc is one the same server
+    # 6 transports on 3 servers, where 0,3, 1,4, etc are one the same server
     transport0, transport1, transport2, transport3, transport4, transport5 = matrix_transports
     received_messages0 = set()
     received_messages1 = set()
@@ -1110,7 +1118,6 @@ def test_matrix_multi_user_roaming(matrix_transports):
     assert ping_pong_message_success(transport2, transport5)
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize("private_rooms", [[True, True]])
 @pytest.mark.parametrize("matrix_server_count", [2])
 @pytest.mark.parametrize("number_of_transports", [2])
