@@ -62,7 +62,6 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChainState,
-    InitiatorTask,
     PaymentNetworkState,
     RouteState,
 )

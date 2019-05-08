@@ -35,6 +35,7 @@ from raiden.utils.typing import (
     ChannelID,
     ChannelMap,
     Dict,
+    EncodedData,
     FeeAmount,
     Keccak256,
     List,
@@ -460,7 +461,7 @@ class HashTimeLockState(State):
         packed.expiration = self.expiration
         packed.secrethash = self.secrethash
 
-        self.encoded = bytes(packed.data)
+        self.encoded = EncodedData(packed.data)
 
         self.lockhash = LockHash(sha3(self.encoded))
 

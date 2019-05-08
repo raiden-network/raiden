@@ -8,13 +8,7 @@ from gevent.timeout import Timeout
 from raiden.app import App
 from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.message_handler import MessageHandler
-from raiden.messages import (
-    LockedTransfer,
-    LockExpired,
-    Message,
-    Unlock,
-    lockedtransfersigned_from_message,
-)
+from raiden.messages import LockedTransfer, LockExpired, Message, Unlock
 from raiden.tests.utils.factories import make_address, make_secret
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.transfer import channel, views
