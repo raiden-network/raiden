@@ -338,7 +338,7 @@ def subdispatch_initiatortask(
             token_network_identifier=transfer_description.token_network_identifier,
             identifier=transfer_description.payment_identifier,
             target=transfer_description.target,
-            reason='Task with the same secrethash but different identifier is still pending',
+            reason="Task with the same secrethash but different identifier is still pending",
         )
         events.append(payment_failed)
 

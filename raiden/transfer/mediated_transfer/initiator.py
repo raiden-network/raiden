@@ -361,7 +361,7 @@ def handle_secretrequest(
                 token_network_identifier=transfer_description.token_network_identifier,
                 identifier=transfer_description.payment_identifier,
                 target=transfer_description.target,
-                reason='Target requested the secret but secret is unknown to the Initiator',
+                reason="Target requested the secret but secret is unknown to the Initiator",
             )
             iteration = TransitionResult(initiator_state, [payment_failed])
         else:
