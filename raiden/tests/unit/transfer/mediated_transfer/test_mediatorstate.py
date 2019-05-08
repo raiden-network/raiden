@@ -1520,6 +1520,7 @@ def setup():
     balance_proof = create(
         BalanceProofSignedStateProperties(
             nonce=2,
+            # pylint: disable=no-member
             transferred_amount=transfer.balance_proof.transferred_amount,
             canonical_identifier=channels[0].canonical_identifier,
             message_hash=transfer.lock.secrethash,
@@ -1559,6 +1560,7 @@ def test_mediator_lock_expired_with_receive_lock_expired():
                     "nonce": 1,
                     "transferred_amount": 0,
                     "locked_amount": 10,
+                    # pylint: disable=no-member
                     "locksroot": transfer.balance_proof.locksroot,
                 },
             },
