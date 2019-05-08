@@ -151,13 +151,13 @@ class PaymentMappingState(State):
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
     secrethashes_to_task: Dict[SecretHash, "TransferTask"] = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
 
 
 # This is necessary for the routing only, maybe it should be transient state
 # outside of the state tree.
-@dataclass
+@dataclass(repr=False)
 class TokenNetworkGraphState(State):
     """ Stores the existing channels in the channel manager contract, used for
     route finding.
@@ -166,7 +166,7 @@ class TokenNetworkGraphState(State):
     token_network_id: TokenNetworkID
     network: networkx.Graph = field(repr=False, default_factory=networkx.Graph)
     channel_identifier_to_participants: Dict[ChannelID, Tuple[Address, Address]] = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
 
     def __repr__(self):
@@ -182,10 +182,10 @@ class TokenNetworkState(State):
     token_address: TokenAddress
     network_graph: TokenNetworkGraphState = field(repr=False)
     channelidentifiers_to_channels: ChannelMap = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
     partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = field(
-        init=False, repr=False, default_factory=lambda: defaultdict(list)
+        repr=False, default_factory=lambda: defaultdict(list)
     )
 
     def __post_init__(self) -> None:
@@ -203,10 +203,10 @@ class PaymentNetworkState(State):
     address: PaymentNetworkID
     token_network_list: List[TokenNetworkState]
     tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
     tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
 
     def __post_init__(self) -> None:
@@ -237,16 +237,16 @@ class ChainState(State):
     our_address: Address
     chain_id: ChainID
     identifiers_to_paymentnetworks: Dict[PaymentNetworkID, PaymentNetworkState] = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
     nodeaddresses_to_networkstates: Dict[Address, str] = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
     payment_mapping: PaymentMappingState = field(
-        init=False, repr=False, default_factory=PaymentMappingState
+        repr=False, default_factory=PaymentMappingState
     )
     pending_transactions: List[ContractSendEvent] = field(
-        init=False, repr=False, default_factory=list
+        repr=False, default_factory=list
     )
     queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
     last_transport_authdata: Optional[str] = field(repr=False, default=None)
@@ -443,7 +443,7 @@ class HashTimeLockState(State):
     expiration: BlockExpiration
     secrethash: SecretHash
     encoded: EncodedData = field(init=False, repr=False)
-    lockhash: LockHash = field(init=False, repr=False)
+    lockhash: LockHash = field(repr=False, default=EMPTY_LOCK_HASH)
 
     def __post_init__(self) -> None:
         if not isinstance(self.amount, T_PaymentWithFeeAmount):
@@ -575,21 +575,21 @@ class NettingChannelEndState(State):
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
     secrethashes_to_lockedlocks: SecretHashToLock = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
     #: Locks for which the secret is known, but the partner has not sent an
     #: unlock off chain yet.
     secrethashes_to_unlockedlocks: SecretHashToPartialUnlockProof = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
     #: Locks for which the secret is known, the partner has not sent an
     #: unlocked off chain yet, and the secret has been registered onchain
     #: before the lock has expired.
     secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = field(
-        init=False, repr=False, default_factory=dict
+        repr=False, default_factory=dict
     )
     merkletree: MerkleTreeState = field(
-        init=False, repr=False, default_factory=make_empty_merkle_tree
+        repr=False, default_factory=make_empty_merkle_tree
     )
     balance_proof: OptionalBalanceProofState = None
     onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
@@ -619,7 +619,7 @@ class NettingChannelState(State):
     settle_transaction: Optional[TransactionExecutionStatus] = None
     update_transaction: Optional[TransactionExecutionStatus] = None
     deposit_transaction_queue: List[TransactionOrder] = field(
-        init=False, repr=False, default_factory=list
+        repr=False, default_factory=list
     )
 
     def __post_init__(self) -> None:
