@@ -44,7 +44,7 @@ def test_v1_event_payment_sent_failed_schema():
 
     expected = {"event": "EventPaymentSentFailed", "log_time": log_time, "reason": "whatever"}
 
-    assert all(dumped.data.get(key) == value for key, value in expected.items())
+    assert all(dumped.get(key) == value for key, value in expected.items())
 
 
 def test_event_filter_for_payments():
