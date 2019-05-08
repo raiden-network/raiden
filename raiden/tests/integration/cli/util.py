@@ -19,5 +19,4 @@ def expect_cli_successful_connected(child, mode):
 
 def expect_cli_normal_startup(child, mode):
     expect_cli_until_acknowledgment(child)
-    expect_cli_until_account_selection(child)
     expect_cli_successful_connected(child, mode)
