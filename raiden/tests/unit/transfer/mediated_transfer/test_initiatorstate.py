@@ -1412,52 +1412,11 @@ def test_state_wait_secretrequest_valid_amount_and_fee():
     assert len(iteration2.events) == 0
 
 
-def test_initiator_manager_drops_invalid_state_changes():
-    channels = factories.make_channel_set_from_amounts([10])
-    transfer = factories.create(factories.LockedTransferSignedStateProperties())
-    secret = factories.UNIT_SECRET
-    cancel_route = ReceiveTransferRefundCancelRoute(channels.get_routes(), transfer, secret)
-
-    balance_proof = factories.create(factories.BalanceProofSignedStateProperties())
-    lock_expired = ReceiveLockExpired(balance_proof, factories.UNIT_SECRETHASH, 1)
-
-    prng = random.Random()
-
-    for state_change in (cancel_route, lock_expired):
-        state = InitiatorPaymentState(initiator_transfers=dict())
-        iteration = initiator_manager.state_transition(
-            state, state_change, channels.channel_map, prng, 1
-        )
-        assert_dropped(iteration, state, "no matching initiator_state")
-
-        initiator_state = InitiatorTransferState(
-            factories.UNIT_TRANSFER_DESCRIPTION,
-            channels[0].canonical_identifier.channel_identifier,
-            transfer,
-            revealsecret=None,
-        )
-        state = InitiatorPaymentState(
-            initiator_transfers={factories.UNIT_SECRETHASH: initiator_state}
-        )
-        iteration = initiator_manager.state_transition(state, state_change, dict(), prng, 1)
-        assert_dropped(iteration, state, "unknown channel identifier")
-
-    transfer2 = factories.create(factories.LockedTransferSignedStateProperties(amount=2))
-    cancel_route2 = ReceiveTransferRefundCancelRoute(channels.get_routes(), transfer2, secret)
-    iteration = initiator_manager.state_transition(
-        state, cancel_route2, channels.channel_map, prng, 1
-    )
-    assert_dropped(iteration, state, "invalid lock")
-
-
 def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
     amount = UNIT_TRANSFER_AMOUNT
     our_address = factories.ADDR
     refund_pkey, refund_address = factories.make_privkey_address()
     pseudo_random_generator = random.Random()
-
-    our_state = factories.NettingChannelEndStateProperties(balance=amount, address=our_address)
-    partner_state = factories.replace(our_state, address=refund_address)
 
     our_state = factories.NettingChannelEndStateProperties(balance=amount, address=our_address)
     partner_state = factories.replace(our_state, address=refund_address)
