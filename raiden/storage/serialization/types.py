@@ -1,7 +1,14 @@
+from random import Random
+
 from marshmallow import fields
 from marshmallow_dataclass import _native_to_marshmallow
 
-from raiden.storage.serialization.fields import AddressField, BytesField, IntegerToStringField
+from raiden.storage.serialization.fields import (
+    AddressField,
+    BytesField,
+    IntegerToStringField,
+    PRNGField,
+)
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
@@ -35,7 +42,6 @@ from raiden.utils.typing import (
     TokenNetworkID,
     TransactionHash,
     TransferID,
-    Tuple,
     Union,
 )
 
@@ -81,6 +87,7 @@ _native_to_marshmallow.update(
         ChannelID: IntegerToStringField,
         # Union
         Union[TokenNetworkAddress, TokenNetworkID]: AddressField,
-        Tuple[Address, Address]: AddressField,
+        # Other
+        Random: PRNGField,
     }
 )
