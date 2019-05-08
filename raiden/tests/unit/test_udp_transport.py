@@ -3,7 +3,7 @@ import random
 import pytest
 from gevent import server
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import EMPTY_SIGNATURE, UINT64_MAX
 from raiden.messages import SecretRequest
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport.udp import UDPTransport
@@ -81,6 +81,7 @@ def test_udp_decode_invalid_message(mock_udp):
         secrethash=UNIT_SECRETHASH,
         amount=1,
         expiration=10,
+        signature=EMPTY_SIGNATURE,
     )
     data = message.encode()
     wrong_command_id_data = b"\x99" + data[1:]
@@ -95,6 +96,7 @@ def test_udp_decode_invalid_size_message(mock_udp):
         secrethash=UNIT_SECRETHASH,
         amount=1,
         expiration=10,
+        signature=EMPTY_SIGNATURE,
     )
     data = message.encode()
     wrong_command_id_data = data[:-1]
