@@ -40,6 +40,7 @@ from raiden.transfer.state import (
     NODE_NETWORK_REACHABLE,
     ChainState,
     PaymentNetworkState,
+    TokenNetworkGraphState,
     TokenNetworkState,
     make_empty_merkle_tree,
 )
@@ -168,7 +169,11 @@ class ChainStateStateMachine(RuleBasedStateMachine):
 
         self.token_network_id = factories.UNIT_TOKEN_NETWORK_ADDRESS
         self.token_id = factories.UNIT_TOKEN_ADDRESS
-        self.token_network_state = TokenNetworkState(self.token_network_id, self.token_id)
+        self.token_network_state = TokenNetworkState(
+            address=self.token_network_id,
+            token_address=self.token_id,
+            network_graph=TokenNetworkGraphState(self.token_network_id),
+        )
 
         self.payment_network_id = factories.make_payment_network_identifier()
         self.payment_network_state = PaymentNetworkState(
