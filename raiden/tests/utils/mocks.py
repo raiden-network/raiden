@@ -11,6 +11,7 @@ from raiden.transfer import node
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.state_change import ActionInitChain
+from raiden.utils import privatekey_to_address
 from raiden.utils.signer import LocalSigner
 from raiden.utils.typing import (
     Address,
@@ -111,12 +112,16 @@ class MockChainState:
 
 
 class MockRaidenService:
-    def __init__(self, message_handler=None, state_transition=None):
-        self.chain = MockChain(network_id=17, node_address=factories.make_address())
-        self.private_key, self.address = factories.make_privkey_address()
+    def __init__(self, message_handler=None, state_transition=None, private_key=None):
+        if private_key is None:
+            self.private_key, self.address = factories.make_privkey_address()
+        else:
+            self.private_key = private_key
+            self.address = privatekey_to_address(private_key)
+
+        self.chain = MockChain(network_id=17, node_address=self.address)
         self.signer = LocalSigner(self.private_key)
 
-        self.chain.node_address = self.address
         self.message_handler = message_handler
 
         self.user_deposit = Mock()

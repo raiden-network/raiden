@@ -87,6 +87,8 @@ def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
         args += [
             "--service-registry-contract-address",
             initial_args["service_registry_contract_address"],
+            "--environment-type",
+            environment_type,
         ]
 
     for arg_name, arg_value in initial_args.items():
@@ -103,18 +105,21 @@ def cli_args(raiden_testchain, removed_args, changed_args, environment_type):
 
 
 @pytest.fixture
-def raiden_spawner(tmp_path):
+def raiden_spawner(tmp_path, request):
     def spawn_raiden(args):
         # Remove any possibly defined `RAIDEN_*` environment variables from outer scope
         new_env = {k: copy(v) for k, v in os.environ.items() if not k.startswith("RAIDEN")}
         new_env["HOME"] = str(tmp_path)
 
-        return pexpect.spawn(
+        child = pexpect.spawn(
             sys.executable,
             ["-m", "raiden"] + args,
             logfile=sys.stdout,
             encoding="utf-8",
             env=new_env,
+            timeout=None,
         )
+        request.addfinalizer(child.close)
+        return child
 
     return spawn_raiden
