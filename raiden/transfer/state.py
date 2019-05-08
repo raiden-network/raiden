@@ -75,7 +75,6 @@ if TYPE_CHECKING:
 SecretHashToLock = Dict[SecretHash, "HashTimeLockState"]
 SecretHashToPartialUnlockProof = Dict[SecretHash, "UnlockPartialProofState"]
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
-OptionalBalanceProofState = Optional[Union["BalanceProofSignedState", "BalanceProofUnsignedState"]]
 
 CHANNEL_STATE_CLOSED = "closed"
 CHANNEL_STATE_CLOSING = "waiting_for_close"
@@ -181,9 +180,7 @@ class TokenNetworkState(State):
     address: TokenNetworkID
     token_address: TokenAddress
     network_graph: TokenNetworkGraphState = field(repr=False)
-    channelidentifiers_to_channels: ChannelMap = field(
-        repr=False, default_factory=dict
-    )
+    channelidentifiers_to_channels: ChannelMap = field(repr=False, default_factory=dict)
     partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = field(
         repr=False, default_factory=lambda: defaultdict(list)
     )
@@ -239,15 +236,9 @@ class ChainState(State):
     identifiers_to_paymentnetworks: Dict[PaymentNetworkID, PaymentNetworkState] = field(
         repr=False, default_factory=dict
     )
-    nodeaddresses_to_networkstates: Dict[Address, str] = field(
-        repr=False, default_factory=dict
-    )
-    payment_mapping: PaymentMappingState = field(
-        repr=False, default_factory=PaymentMappingState
-    )
-    pending_transactions: List[ContractSendEvent] = field(
-        repr=False, default_factory=list
-    )
+    nodeaddresses_to_networkstates: Dict[Address, str] = field(repr=False, default_factory=dict)
+    payment_mapping: PaymentMappingState = field(repr=False, default_factory=PaymentMappingState)
+    pending_transactions: List[ContractSendEvent] = field(repr=False, default_factory=list)
     queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
     last_transport_authdata: Optional[str] = field(repr=False, default=None)
     tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
@@ -574,9 +565,7 @@ class NettingChannelEndState(State):
 
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
-    secrethashes_to_lockedlocks: SecretHashToLock = field(
-        repr=False, default_factory=dict
-    )
+    secrethashes_to_lockedlocks: SecretHashToLock = field(repr=False, default_factory=dict)
     #: Locks for which the secret is known, but the partner has not sent an
     #: unlock off chain yet.
     secrethashes_to_unlockedlocks: SecretHashToPartialUnlockProof = field(
@@ -588,10 +577,8 @@ class NettingChannelEndState(State):
     secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = field(
         repr=False, default_factory=dict
     )
-    merkletree: MerkleTreeState = field(
-        repr=False, default_factory=make_empty_merkle_tree
-    )
-    balance_proof: OptionalBalanceProofState = None
+    merkletree: MerkleTreeState = field(repr=False, default_factory=make_empty_merkle_tree)
+    balance_proof: Optional[Union[BalanceProofSignedState, BalanceProofUnsignedState]] = None
     onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
 
     def __post_init__(self) -> None:
@@ -618,9 +605,7 @@ class NettingChannelState(State):
     close_transaction: Optional[TransactionExecutionStatus] = None
     settle_transaction: Optional[TransactionExecutionStatus] = None
     update_transaction: Optional[TransactionExecutionStatus] = None
-    deposit_transaction_queue: List[TransactionOrder] = field(
-        repr=False, default_factory=list
-    )
+    deposit_transaction_queue: List[TransactionOrder] = field(repr=False, default_factory=list)
 
     def __post_init__(self) -> None:
         if self.reveal_timeout >= self.settle_timeout:
