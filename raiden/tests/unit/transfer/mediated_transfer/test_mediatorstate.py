@@ -34,15 +34,18 @@ from raiden.tests.utils.factories import (
     mediator_make_channel_pair,
     mediator_make_init_action,
 )
+from raiden.tests.utils.transfer import assert_dropped
 from raiden.transfer import channel
 from raiden.transfer.events import (
     ContractSendChannelClose,
     ContractSendSecretReveal,
     EventInvalidReceivedLockedTransfer,
+    EventInvalidReceivedUnlock,
     SendProcessed,
 )
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.events import (
+    EventUnlockClaimSuccess,
     EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
@@ -52,7 +55,11 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.transfer.mediated_transfer.mediator import get_payee_channel, set_offchain_secret
-from raiden.transfer.mediated_transfer.state import MediatorTransferState, WaitingTransferState
+from raiden.transfer.mediated_transfer.state import (
+    MediationPairState,
+    MediatorTransferState,
+    WaitingTransferState,
+)
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
     ReceiveLockExpired,
@@ -63,6 +70,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNREACHABLE,
+    HashTimeLockState,
     RouteState,
     message_identifier_from_prng,
 )
@@ -71,6 +79,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelClosed,
     ContractReceiveSecretReveal,
+    ReceiveUnlock,
 )
 from raiden.utils import random_secret
 
@@ -1961,3 +1970,58 @@ def test_sanity_check_for_refund_transfer_with_fees():
         )
         is not None
     )
+
+
+def test_receive_unlock():
+    channels = mediator_make_channel_pair()
+    state = MediatorTransferState(secrethash=factories.UNIT_SECRETHASH, routes=[])
+    balance_proof = factories.create(
+        factories.BalanceProofSignedStateProperties(
+            canonical_identifier=channels[0].canonical_identifier, nonce=2
+        )
+    )
+    state_change = ReceiveUnlock(1, factories.UNIT_SECRET, balance_proof)
+    prng = random.Random()
+    block_hash = factories.make_block_hash()
+
+    iteration = mediator.state_transition(
+        state, state_change, channels.channel_map, dict(), prng, 1, block_hash
+    )
+    assert_dropped(iteration, state_change, "no transfer pairs in mediator state")
+
+    payer_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(sender=HOP1, pkey=factories.HOP1_KEY)
+    )
+    payee_transfer = factories.create(factories.LockedTransferUnsignedStateProperties())
+    wrong_pair = MediationPairState(payer_transfer, HOP2, payee_transfer)
+    state.transfers_pair = [wrong_pair]
+    iteration = mediator.state_transition(
+        state, state_change, channels.channel_map, dict(), prng, 1, block_hash
+    )
+    assert_dropped(iteration, state_change, "no matching transfer pair in mediator state")
+
+    payer_transfer = factories.create(factories.LockedTransferSignedStateProperties())
+    pair = MediationPairState(payer_transfer, UNIT_TRANSFER_TARGET, payee_transfer)
+    state.transfers_pair = [pair]
+    iteration = mediator.state_transition(state, state_change, dict(), dict(), prng, 1, block_hash)
+    assert_dropped(iteration, state_change, "channel identifier unknown")
+
+    iteration = mediator.state_transition(
+        state, state_change, channels.channel_map, dict(), prng, 1, block_hash
+    )
+    msg = "Expected rejection due to no corresponding lock"
+    assert search_for_item(iteration.events, EventInvalidReceivedUnlock, {}), msg
+
+    sender_state = channels[0].partner_state
+    lock = HashTimeLockState(amount=10, expiration=10, secrethash=UNIT_SECRETHASH)
+    sender_state.secrethashes_to_lockedlocks[factories.UNIT_SECRETHASH] = lock
+    sender_state.merkletree = factories.make_merkletree([lock.lockhash])
+    sender_state.balance_proof = factories.create(
+        factories.BalanceProofProperties(transferred_amount=0, locked_amount=10)
+    )
+    state.secret = UNIT_SECRET
+    iteration = mediator.state_transition(
+        state, state_change, channels.channel_map, dict(), prng, 1, block_hash
+    )
+    assert search_for_item(iteration.events, EventUnlockClaimSuccess, {})
+    assert iteration.new_state is None, "Only transfer has been cleared."
