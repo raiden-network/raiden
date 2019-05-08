@@ -1,9 +1,9 @@
 # pylint: disable=too-many-arguments
 import random
 import string
+from dataclasses import dataclass, fields, replace
 from functools import singledispatch
 
-from dataclasses import dataclass, fields, replace
 from eth_utils import to_checksum_address
 
 from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
