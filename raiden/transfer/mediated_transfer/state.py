@@ -1,7 +1,7 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 from dataclasses import dataclass, field
 
-from raiden.constants import EMPTY_MERKLE_ROOT
+from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SECRETHASH
 from raiden.transfer.architecture import State
 from raiden.transfer.state import (
     BalanceProofSignedState,
@@ -126,7 +126,7 @@ class TransferDescriptionWithSecretState(State):
     initiator: InitiatorAddress = field(repr=False)
     target: TargetAddress
     secret: Secret = field(repr=False)
-    secrethash: SecretHash
+    secrethash: SecretHash = field(default=EMPTY_SECRETHASH)
 
     def __post_init__(self) -> None:
         if not self.secrethash and self.secret:

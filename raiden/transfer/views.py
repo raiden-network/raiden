@@ -18,12 +18,9 @@ from raiden.transfer.state import (
     BalanceProofSignedState,
     BalanceProofUnsignedState,
     ChainState,
-    InitiatorTask,
-    MediatorTask,
     NettingChannelState,
     PaymentNetworkState,
     QueueIdsToQueues,
-    TargetTask,
     TokenNetworkState,
 )
 from raiden.utils.typing import (
