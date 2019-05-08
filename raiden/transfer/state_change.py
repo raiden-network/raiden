@@ -167,7 +167,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
 
 @dataclass
 class ActionInitChain(StateChange):
-    pseudo_random_generator: Random
+    pseudo_random_generator: Random = field(compare=False)
     block_number: BlockNumber
     block_hash: BlockHash
     our_address: Address
