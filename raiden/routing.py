@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Tuple
 
 import networkx
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address
 
 from raiden.exceptions import ServiceRequestFailed
 from raiden.network.pathfinding import query_paths
@@ -174,7 +174,7 @@ def get_best_routes_pfs(
     try:
         result = query_paths(
             service_config=config,
-            our_address=to_checksum_address(chain_state.our_address),
+            our_address=chain_state.our_address,
             privkey=privkey,
             current_block_number=chain_state.block_number,
             token_network_address=token_network_id,

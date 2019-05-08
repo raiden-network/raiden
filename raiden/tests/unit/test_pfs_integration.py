@@ -3,14 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-from eth_utils import (
-    encode_hex,
-    is_checksum_address,
-    is_hex,
-    is_hex_address,
-    to_checksum_address,
-    to_hex,
-)
+from eth_utils import encode_hex, is_checksum_address, is_hex, is_hex_address, to_checksum_address
 
 from raiden.exceptions import ServiceRequestFailed, ServiceRequestIOURejected
 from raiden.network.pathfinding import (
@@ -443,8 +436,8 @@ def test_get_and_update_iou():
     request_args = dict(
         url="url",
         token_network_address=factories.UNIT_TOKEN_NETWORK_ADDRESS,
-        sender=factories.make_checksum_address(),
-        receiver=factories.make_checksum_address(),
+        sender=factories.make_address(),
+        receiver=factories.make_address(),
         privkey=PRIVKEY,
     )
     # RequestExceptions should be reraised as ServiceRequestFailed
@@ -501,8 +494,8 @@ def test_get_and_update_iou():
 def test_get_pfs_iou():
     token_network_address = TokenNetworkAddress(bytes([1] * 20))
     privkey = bytes([2] * 32)
-    sender = to_checksum_address(privatekey_to_address(privkey))
-    receiver = factories.make_checksum_address()
+    sender = privatekey_to_address(privkey)
+    receiver = factories.make_address()
     with patch("raiden.network.pathfinding.requests.get") as get_mock:
         # No previous IOU
         get_mock.return_value.json.return_value = {"last_iou": None}
@@ -515,8 +508,8 @@ def test_get_pfs_iou():
         iou = dict(sender=sender, receiver=receiver, amount=10, expiration_block=1000)
         iou["signature"] = sign_one_to_n_iou(
             privatekey=encode_hex(privkey),
-            sender=sender,
-            receiver=receiver,
+            sender=to_checksum_address(sender),
+            receiver=to_checksum_address(receiver),
             amount=iou["amount"],
             expiration=iou["expiration_block"],
         )
@@ -626,14 +619,14 @@ def pfs_max_fee():
 def query_paths_args(token_network_state, our_address, pfs_max_fee):
     service_config = dict(
         pathfinding_service_address="mock.pathservice",
-        pathfinding_eth_address="0x22222222222222222222",
+        pathfinding_eth_address="0x2222222222222222222222222222222222222222",
         pathfinding_max_fee=pfs_max_fee,
         pathfinding_max_paths=3,
         pathfinding_iou_timeout=500,
     )
     return dict(
         service_config=service_config,
-        our_address=to_hex(our_address),
+        our_address=our_address,
         privkey=PRIVKEY,
         current_block_number=10,
         token_network_address=token_network_state.address,
