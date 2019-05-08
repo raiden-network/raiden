@@ -29,14 +29,10 @@ from gevent.lock import Semaphore
 from matrix_client.errors import MatrixError, MatrixRequestError
 
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature, TransportError
-from raiden.messages import (
-    Message,
-    SignedMessage,
-    decode as message_from_bytes,
-    from_dict as message_from_dict,
-)
+from raiden.messages import Message, SignedMessage, decode as message_from_bytes
 from raiden.network.transport.matrix.client import GMatrixClient, Room, User
 from raiden.network.utils import get_http_rtt
+from raiden.storage.serialization import JSONSerializer
 from raiden.utils import pex
 from raiden.utils.signer import Signer, recover
 from raiden.utils.typing import Address, ChainID
@@ -567,8 +563,7 @@ def validate_and_parse_message(data, peer_address) -> List[Message]:
             if not line:
                 continue
             try:
-                message_dict = json.loads(line)
-                message = message_from_dict(message_dict)
+                message = JSONSerializer.deserialize(line)
             except (UnicodeDecodeError, json.JSONDecodeError) as ex:
                 log.warning(
                     "Can't parse ToDevice Message data JSON",
