@@ -3,7 +3,7 @@ version: 2
 
 settings:
   gas_price: "fast"
-  chain: kovan
+  chain: any
   services:
     pfs:
       # url: https://pfs-kovan.services-dev.raiden.network

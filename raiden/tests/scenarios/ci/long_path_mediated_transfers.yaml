@@ -5,7 +5,7 @@ settings:
   ## Gas price to use, either `fast`, `medium` or an integer (in gwei)
   gas_price: "fast"
 
-  chain: kovan
+  chain: any
 
 token:
   decimals: 18
