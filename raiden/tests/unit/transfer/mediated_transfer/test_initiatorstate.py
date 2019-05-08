@@ -1448,3 +1448,91 @@ def test_initiator_manager_drops_invalid_state_changes():
         state, cancel_route2, channels.channel_map, prng, 1
     )
     assert_dropped(iteration, state, "invalid lock")
+
+
+def test_regression_payment_unlock_failed_event_must_be_emitted_only_once():
+    amount = UNIT_TRANSFER_AMOUNT
+    our_address = factories.ADDR
+    refund_pkey, refund_address = factories.make_privkey_address()
+    pseudo_random_generator = random.Random()
+
+    our_state = factories.NettingChannelEndStateProperties(balance=amount, address=our_address)
+    partner_state = factories.replace(our_state, address=refund_address)
+
+    our_state = factories.NettingChannelEndStateProperties(balance=amount, address=our_address)
+    partner_state = factories.replace(our_state, address=refund_address)
+
+    properties = [
+        factories.NettingChannelStateProperties(our_state=our_state, partner_state=partner_state),
+        factories.NettingChannelStateProperties(our_state=our_state),
+    ]
+    channels = factories.make_channel_set(properties)
+
+    block_number = 10
+    current_state = make_initiator_manager_state(
+        channels=channels,
+        transfer_description=factories.UNIT_TRANSFER_DESCRIPTION,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number,
+    )
+
+    initiator_state = get_transfer_at_index(current_state, 0)
+    original_transfer = initiator_state.transfer
+
+    refund_transfer = factories.create(
+        factories.LockedTransferSignedStateProperties(
+            amount=amount,
+            initiator=our_address,
+            target=original_transfer.target,
+            expiration=original_transfer.lock.expiration,
+            payment_identifier=original_transfer.payment_identifier,
+            canonical_identifier=channels.channels[0].canonical_identifier,
+            sender=refund_address,
+            pkey=refund_pkey,
+        )
+    )
+
+    state_change = ReceiveTransferRefundCancelRoute(
+        routes=channels.get_routes(), transfer=refund_transfer, secret=random_secret()
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=current_state,
+        state_change=state_change,
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=block_number + 10,
+    )
+    assert iteration.new_state is not None
+
+    initial_transfer_state = get_transfer_at_index(iteration.new_state, 0)
+    initial_transfer = initial_transfer_state.transfer
+    expiry_block = channel.get_sender_expiration_threshold(initial_transfer.lock)
+
+    initial_transfer_expiry_block_state_change = Block(
+        block_number=expiry_block, gas_limit=1, block_hash=factories.make_transaction_hash()
+    )
+
+    iteration = initiator_manager.state_transition(
+        payment_state=iteration.new_state,
+        state_change=initial_transfer_expiry_block_state_change,
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=expiry_block,
+    )
+    assert search_for_item(iteration.events, EventPaymentSentFailed, {})
+    assert search_for_item(iteration.events, EventUnlockFailed, {})
+
+    next_block_after_expiry = Block(
+        block_number=expiry_block, gas_limit=1, block_hash=factories.make_transaction_hash()
+    )
+    iteration = initiator_manager.state_transition(
+        payment_state=iteration.new_state,
+        state_change=initial_transfer_expiry_block_state_change,
+        channelidentifiers_to_channels=channels.channel_map,
+        pseudo_random_generator=pseudo_random_generator,
+        block_number=next_block_after_expiry,
+    )
+    msg = "failed event must not be emitted twice"
+    assert search_for_item(iteration.events, EventPaymentSentFailed, {}) is None, msg
+    assert search_for_item(iteration.events, EventUnlockFailed, {}) is None, msg

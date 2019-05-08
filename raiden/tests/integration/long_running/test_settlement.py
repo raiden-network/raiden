@@ -11,7 +11,7 @@ from raiden.messages import LockedTransfer, LockExpired, RevealSecret
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
-from raiden.tests.utils.events import search_for_item
+from raiden.tests.utils.events import raiden_state_changes_search_for_item, search_for_item
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
@@ -23,6 +23,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import sha3
+from raiden.utils.gevent import BlockTimeout
 
 
 def wait_for_batch_unlock(app, token_network_id, participant, partner):
@@ -796,10 +797,7 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
         payment_network_id=alice_app.raiden.default_registry.address,
         token_address=token_address,
     )
-
-    bob_app.raiden.raiden_event_handler = (
-        hold_event_handler
-    ) = alice_app.raiden.raiden_event_handler
+    timeout = 10
 
     token_network = views.get_token_network_by_identifier(
         chain_state=views.state_from_app(alice_app), token_network_id=token_network_identifier
@@ -821,10 +819,10 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
     bob_transfer_secret = sha3(bob_app.raiden.address)
     bob_transfer_secrethash = sha3(bob_transfer_secret)
 
-    alice_transfer_hold = hold_event_handler.hold_secretrequest_for(
+    alice_transfer_hold = bob_app.raiden.raiden_event_handler.hold_secretrequest_for(
         secrethash=alice_transfer_secrethash
     )
-    bob_transfer_hold = hold_event_handler.hold_secretrequest_for(
+    bob_transfer_hold = alice_app.raiden.raiden_event_handler.hold_secretrequest_for(
         secrethash=bob_transfer_secrethash
     )
 
@@ -846,8 +844,8 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
         secret=bob_transfer_secret,
     )
 
-    alice_transfer_hold.wait()
-    bob_transfer_hold.wait()
+    alice_transfer_hold.wait(timeout=timeout)
+    bob_transfer_hold.wait(timeout=timeout)
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     alice_lock = channel.get_lock(alice_bob_channel_state.our_state, alice_transfer_secrethash)
@@ -875,18 +873,46 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
         partner_address=alice_app.raiden.address,
     )
 
-    alice_app.stop()
+    # wait for the close transaction to be mined, this is necessary to compute
+    # the timeout for the settle
+    with gevent.Timeout(timeout):
+        waiting.wait_for_close(
+            raiden=alice_app.raiden,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            channel_ids=[alice_bob_channel_state.identifier],
+            retry_timeout=alice_app.raiden.alarm.sleep_time,
+        )
 
-    waiting.wait_for_settle(
-        raiden=alice_app.raiden,
-        payment_network_id=registry_address,
-        token_address=token_address,
-        channel_ids=[alice_bob_channel_state.identifier],
-        retry_timeout=alice_app.raiden.alarm.sleep_time,
+    channel_closed = raiden_state_changes_search_for_item(
+        bob_app.raiden,
+        ContractReceiveChannelClosed,
+        {
+            "canonical_identifier": {
+                "token_network_address": token_network_identifier,
+                "channel_identifier": alice_bob_channel_state.identifier,
+            }
+        },
+    )
+    settle_max_wait_block = (
+        channel_closed.block_number + alice_bob_channel_state.settle_timeout * 2
     )
 
-    # wait for the node to call batch unlock
-    timeout = 10
+    settle_timeout = BlockTimeout(
+        RuntimeError("settle did not happen"),
+        bob_app.raiden,
+        settle_max_wait_block,
+        alice_app.raiden.alarm.sleep_time,
+    )
+    with settle_timeout:
+        waiting.wait_for_settle(
+            raiden=alice_app.raiden,
+            payment_network_id=registry_address,
+            token_address=token_address,
+            channel_ids=[alice_bob_channel_state.identifier],
+            retry_timeout=alice_app.raiden.alarm.sleep_time,
+        )
+
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
             app=bob_app,
