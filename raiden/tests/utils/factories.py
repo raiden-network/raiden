@@ -267,6 +267,10 @@ def make_merkletree_leaves(width: int) -> List[Keccak256]:
     return [make_secret() for _ in range(width)]
 
 
+def make_merkletree(leaves: List[typing.SecretHash]) -> MerkleTreeState:
+    return MerkleTreeState(compute_layers(leaves))
+
+
 @singledispatch
 def create(properties: Any, defaults: Optional[Properties] = None) -> Any:
     """Create objects from their associated property class.
