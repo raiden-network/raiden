@@ -14,7 +14,11 @@ from raiden.tests.utils.factories import (
     make_block_hash,
 )
 from raiden.transfer.channel import compute_merkletree_with
-from raiden.transfer.events import ContractSendChannelBatchUnlock
+from raiden.transfer.events import (
+    ContractSendChannelBatchUnlock,
+    ContractSendChannelUpdateTransfer,
+    ContractSendSecretReveal,
+)
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import merkleroot
@@ -22,6 +26,7 @@ from raiden.transfer.node import (
     get_networks,
     handle_new_token_network,
     is_transaction_effect_satisfied,
+    is_transaction_expired,
     maybe_add_tokennetwork,
     state_transition,
     subdispatch_initiatortask,
@@ -241,3 +246,27 @@ def test_handle_new_token_network(chain_state, token_network_id):
         payment_network_identifier=payment_network_identifier,
         token_address=token_address,
     ) == (payment_network, token_network)
+
+
+def test_is_transaction_expired():
+    expiration = 24
+    block_number = expiration + 1
+    transaction = ContractSendChannelUpdateTransfer(
+        expiration=expiration,
+        balance_proof=None,
+        triggered_by_block_hash=factories.make_block_hash(),
+    )
+    assert is_transaction_expired(transaction, block_number)
+    transaction = ContractSendSecretReveal(
+        expiration=expiration,
+        secret=factories.UNIT_SECRET,
+        triggered_by_block_hash=factories.make_block_hash(),
+    )
+    assert is_transaction_expired(transaction, block_number)
+
+    transaction = ContractSendSecretReveal(
+        expiration=block_number,
+        secret=factories.UNIT_SECRET,
+        triggered_by_block_hash=factories.make_block_hash(),
+    )
+    assert not is_transaction_expired(transaction, block_number)
