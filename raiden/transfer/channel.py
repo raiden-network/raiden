@@ -1790,17 +1790,28 @@ def apply_channel_newbalance(
 
 
 def handle_channel_batch_unlock(
-    given_channel_state: NettingChannelState, state_change: ContractReceiveChannelBatchUnlock
+    channel_state: NettingChannelState, state_change: ContractReceiveChannelBatchUnlock
 ) -> TransitionResult[NettingChannelState]:
     events: List[Event] = list()
 
-    new_channel_state: Optional[NettingChannelState] = given_channel_state
+    new_channel_state: Optional[NettingChannelState] = channel_state
     # Unlock is allowed by the smart contract only on a settled channel.
     # Ignore the unlock if the channel was not closed yet.
-    if get_status(given_channel_state) == CHANNEL_STATE_SETTLED:
+    if get_status(channel_state) == CHANNEL_STATE_SETTLED:
 
-        # Once our half of the channel is unlocked we can clean-up the channel
-        if state_change.participant == given_channel_state.our_state.address:
+        our_state = channel_state.our_state
+        partner_state = channel_state.partner_state
+        if state_change.participant == our_state.address:
+            our_state.onchain_locksroot = EMPTY_MERKLE_ROOT
+        elif state_change.participant == partner_state.address:
+            partner_state.onchain_locksroot = EMPTY_MERKLE_ROOT
+
+        # only clear the channel state once all unlocks have been done
+        no_unlock_left_to_do = (
+            our_state.onchain_locksroot == EMPTY_MERKLE_ROOT
+            and partner_state.onchain_locksroot == EMPTY_MERKLE_ROOT
+        )
+        if no_unlock_left_to_do:
             new_channel_state = None
 
     return TransitionResult(new_channel_state, events)
