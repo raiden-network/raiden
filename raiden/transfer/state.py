@@ -228,7 +228,7 @@ class ChainState(State):
     TODO: Split the node specific attributes to a "NodeState" class
     """
 
-    pseudo_random_generator: random.Random
+    pseudo_random_generator: random.Random = field(compare=False)
     block_number: BlockNumber
     block_hash: BlockHash
     our_address: Address
