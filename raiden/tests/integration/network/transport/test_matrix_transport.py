@@ -8,6 +8,7 @@ from matrix_client.errors import MatrixRequestError
 
 import raiden
 from raiden.constants import (
+    EMPTY_SIGNATURE,
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
     UINT64_MAX,
@@ -123,8 +124,8 @@ def ping_pong_message_success(transport0, transport1):
 
     msg_id = random.randint(1e5, 9e5)
 
-    ping_message = Processed(message_identifier=msg_id)
-    pong_message = Delivered(delivered_message_identifier=msg_id)
+    ping_message = Processed(message_identifier=msg_id, signature=EMPTY_SIGNATURE)
+    pong_message = Delivered(delivered_message_identifier=msg_id, signature=EMPTY_SIGNATURE)
 
     transport0._raiden_service.sign(ping_message)
     transport1._raiden_service.sign(pong_message)
@@ -198,6 +199,7 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
             secrethash=factories.UNIT_SECRETHASH,
             amount=1,
             expiration=10,
+            signature=EMPTY_SIGNATURE
         )
         message.sign(LocalSigner(factories.HOP1_KEY))
         data = message.encode()
@@ -326,7 +328,7 @@ def test_matrix_message_sync(matrix_transports):
     )
 
     for i in range(5):
-        message = Processed(message_identifier=i)
+        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         transport0._raiden_service.sign(message)
         transport0.send_async(queue_identifier, message)
     with Timeout(40):
@@ -344,7 +346,7 @@ def test_matrix_message_sync(matrix_transports):
 
     # Send more messages while the other end is offline
     for i in range(10, 15):
-        message = Processed(message_identifier=i)
+        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         transport0._raiden_service.sign(message)
         transport0.send_async(queue_identifier, message)
 
@@ -432,7 +434,7 @@ def test_matrix_message_retry(
     assert bool(retry_queue), "retry_queue not running"
 
     # Send the initial message
-    message = Processed(message_identifier=0)
+    message = Processed(message_identifier=0, signature=EMPTY_SIGNATURE)
     transport._raiden_service.sign(message)
     chain_state.queueids_to_queues[queueid] = [message]
     retry_queue.enqueue_global(message)
@@ -590,7 +592,7 @@ def test_matrix_send_global(
     ms_room.send_text = MagicMock(spec=ms_room.send_text)
 
     for i in range(5):
-        message = Processed(message_identifier=i)
+        message = Processed(message_identifier=i, signature=EMPTY_SIGNATURE)
         transport._raiden_service.sign(message)
         transport.send_global(MONITORING_BROADCASTING_ROOM, message)
     transport._spawn(transport._global_send_worker)
@@ -1159,12 +1161,12 @@ def test_send_to_device(matrix_transports):
 
     transport0.start_health_check(raiden_service1.address)
     transport1.start_health_check(raiden_service0.address)
-    message = Processed(message_identifier=1)
+    message = Processed(message_identifier=1, signature=EMPTY_SIGNATURE)
     transport0._raiden_service.sign(message)
     transport0.send_to_device(raiden_service1.address, message)
     gevent.sleep(0.5)
     transport1._receive_to_device.assert_not_called()
-    message = ToDevice(message_identifier=1)
+    message = ToDevice(message_identifier=1, signature=EMPTY_SIGNATURE)
     transport0._raiden_service.sign(message)
     transport0.send_to_device(raiden_service1.address, message)
     gevent.sleep(0.5)
