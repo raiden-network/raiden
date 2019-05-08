@@ -43,22 +43,23 @@ LINT_PATHS = raiden/ tools/
 ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' --recursive $(LINT_PATHS)
 BLACK_PATHS = raiden/ tools/
 
-lint:
+lint: mypy mypy-all
 	flake8 raiden/ tools/
 	isort $(ISORT_PARAMS) --diff --check-only
 	black --check $(BLACK_PATHS)
 	pylint --load-plugins=tools.pylint.gevent_checker --rcfile .pylint.rc $(LINT_PATHS)
 	python setup.py check --restructuredtext --strict
-	mypy raiden
-	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
-	# Remaining errors in tests:
-	mypy --config-file /dev/null raiden --ignore-missing-imports|grep error|wc -l
 
 isort:
 	isort $(ISORT_PARAMS)
 
 mypy:
 	mypy raiden
+
+mypy-all:
+	# Be aware, that we currently ignore all mypy errors in `raiden.tests.*` through `setup.cfg`.
+	# Remaining errors in tests:
+	mypy --config-file /dev/null raiden --ignore-missing-imports | grep error | wc -l
 
 black:
 	black $(BLACK_PATHS)
