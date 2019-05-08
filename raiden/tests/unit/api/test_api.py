@@ -154,5 +154,6 @@ def test_target_task_view():
     assert len(view) == 1
     pending_transfer = view[0]
     assert pending_transfer.get("role") == "target"
+    # pylint: disable=no-member
     assert pending_transfer.get("locked_amount") == str(transfer.balance_proof.locked_amount)
     assert pending_transfer.get("payment_identifier") == str(transfer.payment_identifier)

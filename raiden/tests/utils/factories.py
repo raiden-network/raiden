@@ -6,7 +6,7 @@ from functools import singledispatch
 
 from eth_utils import to_checksum_address
 
-from raiden.constants import EMPTY_MERKLE_ROOT, UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_MERKLE_ROOT, EMPTY_SIGNATURE, UINT64_MAX, UINT256_MAX
 from raiden.messages import Lock, LockedTransfer, RefundTransfer, lockedtransfersigned_from_message
 from raiden.transfer import balance_proof, channel, token_network
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -647,6 +647,7 @@ def prepare_locked_transfer(properties, defaults):
     if params["locksroot"] == GENERATE:
         params["locksroot"] = sha3(params["lock"].as_bytes)
 
+    params["signature"] = EMPTY_SIGNATURE
     return params, LocalSigner(params.pop("pkey")), params.pop("sender")
 
 

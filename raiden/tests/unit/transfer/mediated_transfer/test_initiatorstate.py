@@ -73,7 +73,8 @@ def make_initiator_manager_state(
     block_number: typing.BlockNumber = 1,
 ):
     init = ActionInitInitiator(
-        transfer_description or factories.UNIT_TRANSFER_DESCRIPTION, channels.get_routes()
+        transfer=transfer_description or factories.UNIT_TRANSFER_DESCRIPTION,
+        routes=channels.get_routes()
     )
     initial_state = None
     iteration = initiator_manager.state_transition(
@@ -345,6 +346,7 @@ def test_state_wait_unlock_valid():
     state_change = ReceiveSecretReveal(
         secret=UNIT_SECRET, sender=setup.channel.partner_state.address
     )
+
     iteration = initiator_manager.state_transition(
         setup.current_state, state_change, setup.channel_map, setup.prng, setup.block_number
     )
