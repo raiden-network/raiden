@@ -13,6 +13,7 @@ from raiden.transfer.events import (
     ContractSendChannelSettle,
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
+    EventPaymentSentFailed,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.mediated_transfer import initiator_manager, mediator, target
@@ -287,6 +288,8 @@ def subdispatch_initiatortask(
     secrethash: SecretHash,
 ) -> TransitionResult[ChainState]:
 
+    assert isinstance(state_change, ActionInitInitiator)
+
     block_number = chain_state.block_number
     sub_task = chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
@@ -295,7 +298,13 @@ def subdispatch_initiatortask(
         manager_state = None
 
     elif sub_task and isinstance(sub_task, InitiatorTask):
-        is_valid_subtask = token_network_identifier == sub_task.token_network_identifier
+        transfer = sub_task.manager_state.initiator_transfers.get(secrethash)
+        is_valid_subtask = (
+            transfer is not None and
+            token_network_identifier == sub_task.token_network_identifier and
+            state_change.transfer.payment_identifier ==
+            transfer.transfer_description.payment_identifier
+        )
         manager_state = sub_task.manager_state
     else:
         is_valid_subtask = False
@@ -321,6 +330,17 @@ def subdispatch_initiatortask(
                 chain_state.payment_mapping.secrethashes_to_task[secrethash] = sub_task
             elif secrethash in chain_state.payment_mapping.secrethashes_to_task:
                 del chain_state.payment_mapping.secrethashes_to_task[secrethash]
+
+    else:
+        transfer_description = state_change.transfer
+        payment_failed = EventPaymentSentFailed(
+            payment_network_identifier=transfer_description.payment_network_identifier,
+            token_network_identifier=transfer_description.token_network_identifier,
+            identifier=transfer_description.payment_identifier,
+            target=transfer_description.target,
+            reason='Task with the same secrethash but different identifier is still pending',
+        )
+        events.append(payment_failed)
 
     return TransitionResult(chain_state, events)
 
