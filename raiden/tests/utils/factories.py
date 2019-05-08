@@ -642,21 +642,20 @@ def prepare_locked_transfer(properties, defaults):
 
     secrethash = sha3(params.pop("secret"))
     params["lock"] = Lock(
-        amount=properties.amount, expiration=properties.expiration, secrethash=secrethash
+        amount=params.pop("amount"), expiration=params.pop("expiration"), secrethash=secrethash
     )
     if params["locksroot"] == GENERATE:
         params["locksroot"] = sha3(params["lock"].as_bytes)
 
-    return params, LocalSigner(params.pop("pkey"))
+    return params, LocalSigner(params.pop("pkey")), params.pop("sender")
 
 
 @create.register(LockedTransferProperties)
 def _(properties, defaults=None) -> LockedTransfer:
-    params, signer = prepare_locked_transfer(properties, defaults)
+    params, signer, expected_sender = prepare_locked_transfer(properties, defaults)
     transfer = LockedTransfer(**params)
     transfer.sign(signer)
-
-    assert params["sender"] == transfer.sender
+    assert transfer.sender == expected_sender
     return transfer
 
 
@@ -672,11 +671,10 @@ RefundTransferProperties.DEFAULTS = RefundTransferProperties(
 
 @create.register(RefundTransferProperties)
 def _(properties, defaults=None) -> RefundTransfer:
-    params, signer = prepare_locked_transfer(properties, defaults)
+    params, signer, expected_sender = prepare_locked_transfer(properties, defaults)
     transfer = RefundTransfer(**params)
     transfer.sign(signer)
-
-    assert params["sender"] == transfer.sender
+    assert transfer.sender == expected_sender
     return transfer
 
 
