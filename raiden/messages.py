@@ -26,7 +26,13 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
     SendSecretReveal,
 )
-from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
+from raiden.transfer.mediated_transfer.state import LockedTransferSignedState
+from raiden.transfer.state import (
+    BalanceProofSignedState,
+    HashTimeLockState,
+    NettingChannelState,
+    balanceproof_from_envelope,
+)
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import ishash, pex, sha3
 from raiden.utils.signer import Signer, recover
@@ -34,11 +40,11 @@ from raiden.utils.typing import (
     MYPY_ANNOTATION,
     AdditionalHash,
     Address,
-    Any,
     BalanceHash,
     BlockExpiration,
     ChainID,
     ChannelID,
+    ClassVar,
     Dict,
     FeeAmount,
     InitiatorAddress,
@@ -85,6 +91,7 @@ __all__ = (
     "from_dict",
     "message_from_sendevent",
 )
+
 
 _senders_cache = LRUCache(maxsize=128)
 _hashes_cache = LRUCache(maxsize=128)
@@ -194,10 +201,7 @@ def message_from_sendevent(send_event: SendMessageEvent) -> "Message":
 @dataclass(repr=False, eq=False)
 class Message:
     # Needs to be set by a subclass
-    cmdid: Optional[int] = None
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    cmdid: ClassVar[Optional[int]]
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.hash == other.hash
@@ -217,20 +221,6 @@ class Message:
     def hash(self):
         packed = self.packed()
         return sha3(packed.data)
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.hash == other.hash
-
-    def __hash__(self):
-        return big_endian_to_int(self.hash)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __repr__(self):
-        return "<{klass} [msghash={msghash}]>".format(
-            klass=self.__class__.__name__, msghash=pex(self.hash)
-        )
 
     @classmethod
     def decode(cls, data):
@@ -330,30 +320,22 @@ class SignedRetrieableMessage(SignedMessage, RetrieableMessage):
 
 @dataclass(repr=False, eq=False)
 class EnvelopeMessage(SignedRetrieableMessage):
-    def __init__(
-        self,
-        *,
-        chain_id: ChainID,
-        message_identifier: MessageID,
-        nonce: Nonce,
-        transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
-        locksroot: Locksroot,
-        channel_identifier: ChannelID,
-        token_network_address: TokenNetworkAddress,
-        **kwargs,
-    ):
-        super().__init__(message_identifier=message_identifier, **kwargs)
+    chain_id: ChainID
+    nonce: Nonce
+    transferred_amount: TokenAmount
+    locked_amount: TokenAmount
+    locksroot: Locksroot
+    channel_identifier: ChannelID
+    token_network_address: TokenNetworkAddress
+
+    def __post_init__(self):
         assert_envelope_values(
-            nonce, channel_identifier, transferred_amount, locked_amount, locksroot
+            self.nonce,
+            self.channel_identifier,
+            self.transferred_amount,
+            self.locked_amount,
+            self.locksroot,
         )
-        self.nonce = nonce
-        self.transferred_amount = transferred_amount
-        self.locked_amount = locked_amount
-        self.locksroot = locksroot
-        self.channel_identifier = channel_identifier
-        self.token_network_address = token_network_address
-        self.chain_id = chain_id
 
     @property
     def message_hash(self):
@@ -393,10 +375,9 @@ class Processed(SignedRetrieableMessage):
     """
 
     # FIXME: Processed should _not_ be SignedRetrieableMessage, but only SignedMessage
-    cmdid = messages.PROCESSED
+    cmdid: ClassVar[Optional[int]] = messages.PROCESSED
 
-    def __init__(self, *, message_identifier: MessageID, **kwargs):
-        super().__init__(message_identifier=message_identifier, **kwargs)
+    message_identifier: MessageID
 
     @classmethod
     def unpack(cls, packed):
@@ -412,24 +393,6 @@ class Processed(SignedRetrieableMessage):
     def from_event(cls, event):
         return cls(message_identifier=event.message_identifier, signature=EMPTY_SIGNATURE)
 
-    def __repr__(self):
-        return "<{} [msgid:{}]>".format(self.__class__.__name__, self.message_identifier)
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "message_identifier": self.message_identifier,
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-        processed = cls(message_identifier=data["message_identifier"])
-        processed.signature = decode_hex(data["signature"])
-        return processed
-
 
 @dataclass(repr=False, eq=False)
 class ToDevice(SignedMessage):
@@ -441,9 +404,7 @@ class ToDevice(SignedMessage):
 
     cmdid: ClassVar[Optional[int]] = messages.TODEVICE
 
-    def __init__(self, *, message_identifier: MessageID, **kwargs):
-        super().__init__(**kwargs)
-        self.message_identifier = message_identifier
+    message_identifier: MessageID
 
     @classmethod
     def unpack(cls, packed):
@@ -455,26 +416,6 @@ class ToDevice(SignedMessage):
         packed.message_identifier = self.message_identifier
         packed.signature = self.signature
 
-    def __repr__(self):
-        return "<{} [message_identifier:{}]>".format(
-            self.__class__.__name__, self.message_identifier
-        )
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "message_identifier": self.message_identifier,
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-        to_device = cls(message_identifier=data["message_identifier"])
-        to_device.signature = decode_hex(data["signature"])
-        return to_device
-
 
 @dataclass(repr=False, eq=False)
 class Delivered(SignedMessage):
@@ -484,11 +425,7 @@ class Delivered(SignedMessage):
 
     cmdid: ClassVar[Optional[int]] = messages.DELIVERED
 
-    cmdid = messages.DELIVERED
-
-    def __init__(self, *, delivered_message_identifier: MessageID, **kwargs):
-        super().__init__(**kwargs)
-        self.delivered_message_identifier = delivered_message_identifier
+    delivered_message_identifier: MessageID
 
     @classmethod
     def unpack(cls, packed):
@@ -503,26 +440,6 @@ class Delivered(SignedMessage):
         packed.delivered_message_identifier = self.delivered_message_identifier
         packed.signature = self.signature
 
-    def __repr__(self):
-        return "<{} [delivered_msgid:{}]>".format(
-            self.__class__.__name__, self.delivered_message_identifier
-        )
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "delivered_message_identifier": self.delivered_message_identifier,
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-        delivered = cls(delivered_message_identifier=data["delivered_message_identifier"])
-        delivered.signature = decode_hex(data["signature"])
-        return delivered
-
 
 @dataclass(repr=False, eq=False)
 class Pong(SignedMessage):
@@ -530,11 +447,7 @@ class Pong(SignedMessage):
 
     cmdid: ClassVar[Optional[int]] = messages.PONG
 
-    cmdid = messages.PONG
-
-    def __init__(self, *, nonce: int, **kwargs):
-        super().__init__(**kwargs)
-        self.nonce = nonce
+    nonce: Nonce
 
     @staticmethod
     def unpack(packed):
@@ -552,12 +465,8 @@ class Ping(SignedMessage):
 
     cmdid: ClassVar[Optional[int]] = messages.PING
 
-    cmdid = messages.PING
-
-    def __init__(self, nonce: Nonce, current_protocol_version: RaidenProtocolVersion, **kwargs):
-        super().__init__(**kwargs)
-        self.nonce = nonce
-        self.current_protocol_version = current_protocol_version
+    nonce: Nonce
+    current_protocol_version: RaidenProtocolVersion
 
     @classmethod
     def unpack(cls, packed):
@@ -582,36 +491,10 @@ class SecretRequest(SignedRetrieableMessage):
 
     cmdid: ClassVar[Optional[int]] = messages.SECRETREQUEST
 
-    cmdid = messages.SECRETREQUEST
-
-    def __init__(
-        self,
-        *,
-        message_identifier: MessageID,
-        payment_identifier: PaymentID,
-        secrethash: SecretHash,
-        amount: PaymentAmount,
-        expiration: BlockExpiration,
-        **kwargs,
-    ):
-        super().__init__(message_identifier=message_identifier, **kwargs)
-        self.payment_identifier = payment_identifier
-        self.secrethash = secrethash
-        self.amount = amount
-        self.expiration = expiration
-
-    def __repr__(self):
-        return (
-            "<{} " "[msgid:{} paymentid:{} secrethash:{} amount:{} expiration:{} hash:{}" "]>"
-        ).format(
-            self.__class__.__name__,
-            self.message_identifier,
-            self.payment_identifier,
-            pex(self.secrethash),
-            self.amount,
-            self.expiration,
-            pex(self.hash),
-        )
+    payment_identifier: PaymentID
+    secrethash: SecretHash
+    amount: PaymentAmount
+    expiration: BlockExpiration
 
     @classmethod
     def unpack(cls, packed):
@@ -636,6 +519,7 @@ class SecretRequest(SignedRetrieableMessage):
 
     @classmethod
     def from_event(cls, event):
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             message_identifier=event.message_identifier,
             payment_identifier=event.payment_identifier,
@@ -644,31 +528,6 @@ class SecretRequest(SignedRetrieableMessage):
             expiration=event.expiration,
             signature=EMPTY_SIGNATURE,
         )
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "message_identifier": self.message_identifier,
-            "payment_identifier": self.payment_identifier,
-            "secrethash": encode_hex(self.secrethash),
-            "amount": self.amount,
-            "expiration": self.expiration,
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-        secret_request = cls(
-            message_identifier=data["message_identifier"],
-            payment_identifier=data["payment_identifier"],
-            secrethash=decode_hex(data["secrethash"]),
-            amount=data["amount"],
-            expiration=data["expiration"],
-        )
-        secret_request.signature = decode_hex(data["signature"])
-        return secret_request
 
 
 @dataclass(repr=False, eq=False)
@@ -682,34 +541,8 @@ class Unlock(EnvelopeMessage):
 
     cmdid: ClassVar[Optional[int]] = messages.UNLOCK
 
-    cmdid = messages.UNLOCK
-
-    def __init__(
-        self,
-        *,
-        chain_id: ChainID,
-        message_identifier: MessageID,
-        payment_identifier: PaymentID,
-        nonce: Nonce,
-        token_network_address: TokenNetworkAddress,
-        channel_identifier: ChannelID,
-        transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
-        locksroot: Locksroot,
-        secret: Secret,
-        **kwargs,
-    ):
-        super().__init__(
-            chain_id=chain_id,
-            nonce=nonce,
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount,
-            locksroot=locksroot,
-            channel_identifier=channel_identifier,
-            token_network_address=token_network_address,
-            message_identifier=message_identifier,
-            **kwargs,
-        )
+    payment_identifier: PaymentID
+    secret: Secret = field(repr=False)
 
     def __post_init__(self):
         super().__post_init__()
@@ -729,6 +562,7 @@ class Unlock(EnvelopeMessage):
 
     @classmethod
     def unpack(cls, packed):
+        # pylint: disable=unexpected-keyword-arg
         secret = cls(
             chain_id=packed.chain_id,
             message_identifier=packed.message_identifier,
@@ -761,6 +595,7 @@ class Unlock(EnvelopeMessage):
     @classmethod
     def from_event(cls, event):
         balance_proof = event.balance_proof
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             chain_id=balance_proof.chain_id,
             message_identifier=event.message_identifier,
@@ -775,41 +610,6 @@ class Unlock(EnvelopeMessage):
             signature=EMPTY_SIGNATURE,
         )
 
-    def to_dict(self):
-        return {
-            "type": "Secret",
-            "chain_id": self.chain_id,
-            "message_identifier": self.message_identifier,
-            "payment_identifier": self.payment_identifier,
-            "secret": encode_hex(self.secret),
-            "nonce": self.nonce,
-            "token_network_address": to_normalized_address(self.token_network_address),
-            "channel_identifier": self.channel_identifier,
-            "transferred_amount": self.transferred_amount,
-            "locked_amount": self.locked_amount,
-            "locksroot": encode_hex(self.locksroot),
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected Secret'
-        assert data["type"] == "Secret", msg
-        message = cls(
-            chain_id=data["chain_id"],
-            message_identifier=data["message_identifier"],
-            payment_identifier=data["payment_identifier"],
-            secret=decode_hex(data["secret"]),
-            nonce=data["nonce"],
-            token_network_address=to_canonical_address(data["token_network_address"]),
-            channel_identifier=data["channel_identifier"],
-            transferred_amount=data["transferred_amount"],
-            locked_amount=data["locked_amount"],
-            locksroot=decode_hex(data["locksroot"]),
-        )
-        message.signature = decode_hex(data["signature"])
-        return message
-
 
 @dataclass(repr=False, eq=False)
 class RevealSecret(SignedRetrieableMessage):
@@ -823,16 +623,7 @@ class RevealSecret(SignedRetrieableMessage):
 
     cmdid: ClassVar[Optional[int]] = messages.REVEALSECRET
 
-    cmdid = messages.REVEALSECRET
-
-    def __init__(self, *, message_identifier: MessageID, secret: Secret, **kwargs):
-        super().__init__(message_identifier=message_identifier, **kwargs)
-        self.secret = secret
-
-    def __repr__(self):
-        return "<{} [msgid:{} secrethash:{} hash:{}]>".format(
-            self.__class__.__name__, self.message_identifier, pex(self.secrethash), pex(self.hash)
-        )
+    secret: Secret = field(repr=False)
 
     @property  # type: ignore
     @cached(_hashes_cache, key=attrgetter("secret"))
@@ -871,11 +662,11 @@ class Lock:
 
     # Lock is not a message, it is a serializable structure that is reused in
     # some messages
+    amount: PaymentWithFeeAmount
+    expiration: BlockExpiration
+    secrethash: SecretHash
 
-    def __init__(
-        self, *, amount: PaymentWithFeeAmount, expiration: BlockExpiration, secrethash: SecretHash
-    ):
-        super().__init__()
+    def __post_init__(self):
         # guarantee that `amount` can be serialized using the available bytes
         # in the fixed length format
         if self.amount < 0:
@@ -913,34 +704,9 @@ class Lock:
     def from_bytes(cls, serialized):
         packed = messages.Lock(serialized)
 
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             amount=packed.amount, expiration=packed.expiration, secrethash=packed.secrethash
-        )
-
-    def __eq__(self, other):
-        if isinstance(other, Lock):
-            return self.as_bytes == other.as_bytes
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "amount": self.amount,
-            "expiration": self.expiration,
-            "secrethash": encode_hex(self.secrethash),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-        return cls(
-            amount=data["amount"],
-            expiration=data["expiration"],
-            secrethash=decode_hex(data["secrethash"]),
         )
 
 
@@ -977,6 +743,7 @@ class LockedTransferBase(EnvelopeMessage):
             amount=packed.amount, expiration=packed.expiration, secrethash=packed.secrethash
         )
 
+        # pylint: disable=unexpected-keyword-arg
         locked_transfer = cls(
             chain_id=packed.chain_id,
             message_identifier=packed.message_identifier,
@@ -1061,6 +828,7 @@ class LockedTransfer(LockedTransferBase):
             amount=packed.amount, expiration=packed.expiration, secrethash=packed.secrethash
         )
 
+        # pylint: disable=unexpected-keyword-arg
         mediated_transfer = cls(
             chain_id=packed.chain_id,
             message_identifier=packed.message_identifier,
@@ -1116,6 +884,7 @@ class LockedTransfer(LockedTransferBase):
         )
         fee = 0
 
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             chain_id=balance_proof.chain_id,
             message_identifier=event.message_identifier,
@@ -1135,49 +904,6 @@ class LockedTransfer(LockedTransferBase):
             signature=Signature(b""),
         )
 
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "chain_id": self.chain_id,
-            "message_identifier": self.message_identifier,
-            "payment_identifier": self.payment_identifier,
-            "nonce": self.nonce,
-            "token_network_address": to_normalized_address(self.token_network_address),
-            "token": to_normalized_address(self.token),
-            "channel_identifier": self.channel_identifier,
-            "transferred_amount": self.transferred_amount,
-            "locked_amount": self.locked_amount,
-            "recipient": to_normalized_address(self.recipient),
-            "locksroot": encode_hex(self.locksroot),
-            "lock": self.lock.to_dict(),
-            "target": to_normalized_address(self.target),
-            "initiator": to_normalized_address(self.initiator),
-            "fee": self.fee,
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        message = cls(
-            chain_id=data["chain_id"],
-            message_identifier=data["message_identifier"],
-            payment_identifier=data["payment_identifier"],
-            nonce=data["nonce"],
-            token_network_address=to_canonical_address(data["token_network_address"]),
-            token=to_canonical_address(data["token"]),
-            channel_identifier=data["channel_identifier"],
-            transferred_amount=data["transferred_amount"],
-            locked_amount=data["locked_amount"],
-            recipient=to_canonical_address(data["recipient"]),
-            locksroot=decode_hex(data["locksroot"]),
-            lock=Lock.from_dict(data["lock"]),
-            target=to_canonical_address(data["target"]),
-            initiator=to_canonical_address(data["initiator"]),
-            fee=data["fee"],
-        )
-        message.signature = decode_hex(data["signature"])
-        return message
-
 
 @dataclass(repr=False, eq=False)
 class RefundTransfer(LockedTransfer):
@@ -1194,6 +920,7 @@ class RefundTransfer(LockedTransfer):
             amount=packed.amount, expiration=packed.expiration, secrethash=packed.secrethash
         )
 
+        # pylint: disable=unexpected-keyword-arg
         locked_transfer = cls(
             chain_id=packed.chain_id,
             message_identifier=packed.message_identifier,
@@ -1226,6 +953,7 @@ class RefundTransfer(LockedTransfer):
         )
         fee = 0
 
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             chain_id=balance_proof.chain_id,
             message_identifier=event.message_identifier,
@@ -1244,49 +972,6 @@ class RefundTransfer(LockedTransfer):
             fee=fee,
         )
 
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "chain_id": self.chain_id,
-            "message_identifier": self.message_identifier,
-            "payment_identifier": self.payment_identifier,
-            "nonce": self.nonce,
-            "token_network_address": to_normalized_address(self.token_network_address),
-            "token": to_normalized_address(self.token),
-            "channel_identifier": self.channel_identifier,
-            "transferred_amount": self.transferred_amount,
-            "locked_amount": self.locked_amount,
-            "recipient": to_normalized_address(self.recipient),
-            "locksroot": encode_hex(self.locksroot),
-            "lock": self.lock.to_dict(),
-            "target": to_normalized_address(self.target),
-            "initiator": to_normalized_address(self.initiator),
-            "fee": self.fee,
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        message = cls(
-            chain_id=data["chain_id"],
-            message_identifier=data["message_identifier"],
-            payment_identifier=data["payment_identifier"],
-            nonce=data["nonce"],
-            token_network_address=to_canonical_address(data["token_network_address"]),
-            token=to_canonical_address(data["token"]),
-            channel_identifier=data["channel_identifier"],
-            transferred_amount=data["transferred_amount"],
-            locked_amount=data["locked_amount"],
-            recipient=to_canonical_address(data["recipient"]),
-            locksroot=decode_hex(data["locksroot"]),
-            lock=Lock.from_dict(data["lock"]),
-            target=to_canonical_address(data["target"]),
-            initiator=to_canonical_address(data["initiator"]),
-            fee=data["fee"],
-        )
-        message.signature = decode_hex(data["signature"])
-        return message
-
 
 @dataclass(repr=False, eq=False)
 class LockExpired(EnvelopeMessage):
@@ -1296,41 +981,12 @@ class LockExpired(EnvelopeMessage):
 
     cmdid: ClassVar[Optional[int]] = messages.LOCKEXPIRED
 
-    cmdid = messages.LOCKEXPIRED
-
-    def __init__(
-        self,
-        *,
-        chain_id: ChainID,
-        nonce: Nonce,
-        message_identifier: MessageID,
-        transferred_amount: TokenAmount,
-        locked_amount: TokenAmount,
-        locksroot: Locksroot,
-        channel_identifier: ChannelID,
-        token_network_address: TokenNetworkAddress,
-        recipient: Address,
-        secrethash: SecretHash,
-        **kwargs,
-    ):
-
-        super().__init__(
-            chain_id=chain_id,
-            nonce=nonce,
-            transferred_amount=transferred_amount,
-            locked_amount=locked_amount,
-            locksroot=locksroot,
-            channel_identifier=channel_identifier,
-            token_network_address=token_network_address,
-            message_identifier=message_identifier,
-            **kwargs,
-        )
-        self.message_identifier = message_identifier
-        self.recipient = recipient
-        self.secrethash = secrethash
+    recipient: Address
+    secrethash: SecretHash
 
     @classmethod
     def unpack(cls, packed):
+        # pylint: disable=unexpected-keyword-arg
         transfer = cls(
             chain_id=packed.chain_id,
             nonce=packed.nonce,
@@ -1364,6 +1020,7 @@ class LockExpired(EnvelopeMessage):
     def from_event(cls, event):
         balance_proof = event.balance_proof
 
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             chain_id=balance_proof.chain_id,
             nonce=balance_proof.nonce,
@@ -1377,62 +1034,6 @@ class LockExpired(EnvelopeMessage):
             secrethash=event.secrethash,
             signature=EMPTY_SIGNATURE,
         )
-
-    def __repr__(self):
-        representation = (
-            "<{} ["
-            "chainid:{} token_network_address:{} msg_id:{} channel_identifier:{} nonce:{} "
-            "transferred_amount:{} locked_amount:{} locksroot:{} secrethash:{}"
-            "]>"
-        ).format(
-            self.__class__.__name__,
-            self.chain_id,
-            pex(self.token_network_address),
-            self.message_identifier,
-            self.channel_identifier,
-            self.nonce,
-            self.transferred_amount,
-            self.locked_amount,
-            pex(self.locksroot),
-            pex(self.secrethash),
-        )
-
-        return representation
-
-    def to_dict(self):
-        return {
-            "type": self.__class__.__name__,
-            "chain_id": self.chain_id,
-            "nonce": self.nonce,
-            "token_network_address": to_normalized_address(self.token_network_address),
-            "message_identifier": self.message_identifier,
-            "channel_identifier": self.channel_identifier,
-            "secrethash": encode_hex(self.secrethash),
-            "transferred_amount": self.transferred_amount,
-            "locked_amount": self.locked_amount,
-            "recipient": to_normalized_address(self.recipient),
-            "locksroot": encode_hex(self.locksroot),
-            "signature": encode_hex(self.signature),
-        }
-
-    @classmethod
-    def from_dict(cls, data):
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-        expired_lock = cls(
-            chain_id=data["chain_id"],
-            nonce=data["nonce"],
-            message_identifier=data["message_identifier"],
-            token_network_address=to_canonical_address(data["token_network_address"]),
-            channel_identifier=data["channel_identifier"],
-            transferred_amount=data["transferred_amount"],
-            secrethash=decode_hex(data["secrethash"]),
-            recipient=to_canonical_address(data["recipient"]),
-            locked_amount=data["locked_amount"],
-            locksroot=decode_hex(data["locksroot"]),
-        )
-        expired_lock.signature = decode_hex(data["signature"])
-        return expired_lock
 
 
 @dataclass(repr=False, eq=False)
@@ -1462,6 +1063,7 @@ class SignedBlindedBalanceProof:
                 "balance_proof is not an instance of the type BalanceProofSignedState"
             )
 
+        # pylint: disable=unexpected-keyword-arg
         return cls(
             channel_identifier=balance_proof.channel_identifier,
             token_network_address=TokenNetworkID(balance_proof.token_network_identifier),
@@ -1496,33 +1098,6 @@ class SignedBlindedBalanceProof:
         # Important: we don't write the signature to `.signature`
         data = self._data_to_sign()
         return signer.sign(data)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Message format according to monitoring service spec"""
-        return {
-            "type": self.__class__.__name__,
-            "channel_identifier": self.channel_identifier,
-            "token_network_address": to_normalized_address(self.token_network_address),
-            "balance_hash": encode_hex(self.balance_hash),
-            "nonce": self.nonce,
-            "additional_hash": encode_hex(self.additional_hash),
-            "signature": encode_hex(self.signature),
-            "chain_id": self.chain_id,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict) -> "SignedBlindedBalanceProof":
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-        return cls(
-            channel_identifier=data["channel_identifier"],
-            token_network_address=decode_hex(data["token_network_address"]),
-            balance_hash=decode_hex(data["balance_hash"]),
-            nonce=Nonce(int(data["nonce"])),
-            additional_hash=decode_hex(data["additional_hash"]),
-            signature=decode_hex(data["signature"]),
-            chain_id=ChainID(int(data["chain_id"])),
-        )
 
 
 @dataclass(repr=False, eq=False)
@@ -1562,38 +1137,11 @@ class RequestMonitoring(SignedMessage):
             reward_amount=reward_amount,
             signature=Signature(b""),
         )
+        return cls(onchain_balance_proof=onchain_balance_proof, reward_amount=reward_amount)
 
     @property
-    def reward_proof_signature(self) -> Signature:
+    def reward_proof_signature(self) -> Optional[Signature]:
         return self.signature
-
-    @classmethod
-    def from_dict(cls, data: Dict) -> "RequestMonitoring":
-        msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
-        assert data["type"] == cls.__name__, msg
-
-        onchain_balance_proof = SignedBlindedBalanceProof.from_dict(data["onchain_balance_proof"])
-
-        return cls(
-            onchain_balance_proof=onchain_balance_proof,
-            reward_amount=TokenAmount(int(data["reward_amount"])),
-            non_closing_signature=decode_hex(data["non_closing_signature"]),
-            reward_proof_signature=decode_hex(data["reward_proof_signature"]),
-        )
-
-    def to_dict(self) -> Dict:
-        """Message format according to monitoring service spec"""
-        if not self.non_closing_signature:
-            raise ValueError("onchain_balance_proof needs to be signed")
-        if not self.reward_proof_signature:
-            raise ValueError("monitoring request needs to be signed")
-        return {
-            "type": self.__class__.__name__,
-            "onchain_balance_proof": self.balance_proof.to_dict(),
-            "reward_amount": str(self.reward_amount),
-            "non_closing_signature": encode_hex(self.non_closing_signature),
-            "reward_proof_signature": encode_hex(self.reward_proof_signature),
-        }
 
     def _data_to_sign(self) -> bytes:
         """ Return the binary data to be/which was signed """
@@ -1651,11 +1199,12 @@ class RequestMonitoring(SignedMessage):
             additional_hash=packed.additional_hash,
             signature=packed.signature,
         )
+        # pylint: disable=unexpected-keyword-arg
         monitoring_request = cls(
-            onchain_balance_proof=onchain_balance_proof,
+            balance_proof=onchain_balance_proof,
             non_closing_signature=packed.non_closing_signature,
             reward_amount=packed.reward_amount,
-            reward_proof_signature=packed.reward_proof_signature,
+            signature=packed.reward_proof_signature,
         )
         return monitoring_request
 
