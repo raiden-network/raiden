@@ -1,0 +1,82 @@
+version: 2
+
+settings:
+  gas_price: "fast"
+  chain: kovan
+  services:
+    pfs:
+      # url: https://pfs-kovan.services-dev.raiden.network
+      url: http://localhost:6000
+    udc:
+      enable: true
+      token:
+        deposit: true
+
+token:
+
+nodes:
+  mode: managed
+  count: 5
+  ## add path to Raiden virtual env
+
+  default_options:
+    gas-price: fast
+    environment-type: development
+    routing-mode: pfs
+    pathfinding-max-paths: 5
+    pathfinding-eth-address: "0x0bae0289aaa26845224f528f9b9defe69e01606e"
+    pathfinding-max-fee: 10
+
+## This is the PFS7 scenario. It creates a network with topology A <-> B <-> C <-> D and
+## performs some transfers in order to check that IOUs are created for the PFS that provides
+## the path.
+
+scenario:
+  serial:
+    tasks:
+      - parallel:
+          name: "Open channels"
+          tasks:
+            - open_channel: {from: 0, to: 1, total_deposit: 1000}
+            - open_channel: {from: 1, to: 2, total_deposit: 1000}
+            - open_channel: {from: 2, to: 3, total_deposit: 1000}
+      - serial:
+          name: "Check that no IOUs exist and create one"
+          tasks:
+            - assert_pfs_iou: {source: 3, iou_exists: false}
+            - assert_pfs_history: {source: 3, request_count: 0}
+
+            # Node 3 cannot send tokens to Node 0 due to imbalanced channels
+            # We expect the pfs not to send any route but to charge for the information
+            - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 409}
+            - assert_pfs_history: {source: 3, target: 0, request_count: 1}
+            - assert_pfs_iou: {source: 3, amount: 10}
+
+      - parallel:
+          name: "Deposit in the other directions"
+          tasks:
+            - deposit: {from: 1, to: 0, total_deposit: 1000}
+            - deposit: {from: 2, to: 1, total_deposit: 1000}
+            - deposit: {from: 3, to: 2, total_deposit: 1000}
+
+      - serial:
+          name: "More transfers and IOUs"
+          tasks:
+            # Now that there is a path with capacity the transfer should go through 
+            # and another IOU should exist
+            - transfer: {from: 3, to: 0, amount: 10, expected_http_status: 200}
+            - assert_pfs_history: {source: 3, target: 0, request_count: 2}
+            - assert_pfs_iou: {source: 3, amount: 20}
+
+            # Perform a couple of more transfers
+            - assert_pfs_iou: {source: 0, iou_exists: false}
+            - assert_pfs_history: {source: 0, request_count: 0}
+            - transfer: {from: 0, to: 3, amount: 100, expected_http_status: 200}
+            - assert_pfs_history: {source: 0, target: 3, request_count: 1}
+            - assert_pfs_iou: {source: 0, amount: 10}
+
+            - assert_pfs_iou: {source: 2, iou_exists: false}
+            - assert_pfs_history: {source: 2, request_count: 0}
+            - transfer: {from: 2, to: 0, amount: 100, expected_http_status: 200}
+            - assert_pfs_history: {source: 2, target: 1, request_count: 1}
+            - assert_pfs_iou: {source: 2, amount: 10}
