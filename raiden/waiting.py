@@ -28,11 +28,19 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
+ALARM_TASK_ERROR_MSG = (
+    "Waiting relies on alarm task polling to update the node's internal state."
+)
+TRANSPORT_ERROR_MSG = "Waiting for protocol messags requires a running transport."
+
 
 def wait_for_block(
     raiden: "RaidenService", block_number: BlockNumber, retry_timeout: float
 ) -> None:
     while raiden.get_block_number() < block_number:
+        assert raiden, ALARM_TASK_ERROR_MSG
+        assert raiden.alarm, ALARM_TASK_ERROR_MSG
+
         gevent.sleep(retry_timeout)
 
 
@@ -53,6 +61,9 @@ def wait_for_newchannel(
     )
 
     while channel_state is None:
+        assert raiden, ALARM_TASK_ERROR_MSG
+        assert raiden.alarm, ALARM_TASK_ERROR_MSG
+
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden), payment_network_id, token_address, partner_address
@@ -85,6 +96,9 @@ def wait_for_participant_newbalance(
     )
 
     while balance(channel_state) < target_balance:
+        assert raiden, ALARM_TASK_ERROR_MSG
+        assert raiden.alarm, ALARM_TASK_ERROR_MSG
+
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
             views.state_from_raiden(raiden), payment_network_id, token_address, partner_address
@@ -124,6 +138,9 @@ def wait_for_payment_balance(
     )
 
     while balance(channel_state) < target_balance:
+        assert raiden, ALARM_TASK_ERROR_MSG
+        assert raiden.alarm, ALARM_TASK_ERROR_MSG
+
         log.critical("wait", b=balance(channel_state), t=target_balance)
         gevent.sleep(retry_timeout)
         channel_state = views.get_channelstate_for(
@@ -170,6 +187,9 @@ def wait_for_channel_in_states(
     ]
 
     while list_cannonical_ids:
+        assert raiden, ALARM_TASK_ERROR_MSG
+        assert raiden.alarm, ALARM_TASK_ERROR_MSG
+
         canonical_id = list_cannonical_ids[-1]
         chain_state = views.state_from_raiden(raiden)
 
@@ -219,6 +239,9 @@ def wait_for_payment_network(
         views.state_from_raiden(raiden), payment_network_id, token_address
     )
     while token_network is None:
+        assert raiden, ALARM_TASK_ERROR_MSG
+        assert raiden.alarm, ALARM_TASK_ERROR_MSG
+
         gevent.sleep(retry_timeout)
         token_network = views.get_token_network_by_token_address(
             views.state_from_raiden(raiden), payment_network_id, token_address
@@ -282,6 +305,9 @@ def wait_for_healthy(raiden: "RaidenService", node_address: Address, retry_timeo
     network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
 
     while network_statuses.get(node_address) != NODE_NETWORK_REACHABLE:
+        assert raiden, TRANSPORT_ERROR_MSG
+        assert raiden.transport, TRANSPORT_ERROR_MSG
+
         gevent.sleep(retry_timeout)
         network_statuses = views.get_networkstatuses(views.state_from_raiden(raiden))
 
@@ -298,10 +324,12 @@ def wait_for_transfer_success(
     Note:
         This does not time out, use gevent.Timeout.
     """
-    assert raiden.wal, "The Raiden Service must be initialize to handle events"
-
     found = False
     while not found:
+        assert raiden, TRANSPORT_ERROR_MSG
+        assert raiden.wal, TRANSPORT_ERROR_MSG
+        assert raiden.transport, TRANSPORT_ERROR_MSG
+
         state_events = raiden.wal.storage.get_events()
         for event in state_events:
             found = (

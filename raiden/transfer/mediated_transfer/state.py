@@ -123,7 +123,7 @@ class InitiatorTransferState(State):
         "transfer_state",
     )
 
-    valid_transfer_states = ("transfer_pending", "transfer_cancelled")
+    valid_transfer_states = ("transfer_pending", "transfer_cancelled", "transfer_expired")
 
     def __init__(
         self,
