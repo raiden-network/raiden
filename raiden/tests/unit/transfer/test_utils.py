@@ -1,5 +1,5 @@
 import pytest
-from eth_utils import decode_hex
+from eth_utils import decode_hex, to_checksum_address
 
 from raiden.constants import EMPTY_HASH, EMPTY_MERKLE_ROOT
 from raiden.tests.utils import factories
@@ -43,3 +43,23 @@ def test_events_for_onchain_secretreveal_typechecks_secret():
     block_hash = factories.make_block_hash()
     with pytest.raises(ValueError):
         events_for_onchain_secretreveal(channel, "This is an invalid secret", 10, block_hash)
+
+
+def test_canonical_identifier_validation():
+    invalid_chain_id = factories.make_canonical_identifier(chain_identifier="337")
+    with pytest.raises(ValueError):
+        invalid_chain_id.validate()
+
+    wrong_type_channel_id = factories.make_canonical_identifier(channel_identifier="1")
+    with pytest.raises(ValueError):
+        wrong_type_channel_id.validate()
+
+    negative_channel_id = factories.make_canonical_identifier(channel_identifier=-5)
+    with pytest.raises(ValueError):
+        negative_channel_id.validate()
+
+    wrong_format_token_network_address = factories.make_canonical_identifier(
+        token_network_address=to_checksum_address(factories.UNIT_TOKEN_NETWORK_ADDRESS)
+    )
+    with pytest.raises(ValueError):
+        wrong_format_token_network_address.validate()
