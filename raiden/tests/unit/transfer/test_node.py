@@ -4,6 +4,7 @@ import pytest
 
 from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.settings import GAS_LIMIT
+from raiden.tests.unit.test_channelstate import create_channel_from_models, create_model
 from raiden.tests.utils import factories
 from raiden.tests.utils.factories import (
     HOP1,
@@ -13,12 +14,13 @@ from raiden.tests.utils.factories import (
     UNIT_SECRETHASH,
     make_block_hash,
 )
-from raiden.transfer.channel import compute_merkletree_with
+from raiden.transfer.channel import compute_merkletree_with, get_status
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
 )
+from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import merkleroot
@@ -29,11 +31,13 @@ from raiden.transfer.node import (
     is_transaction_expired,
     maybe_add_tokennetwork,
     state_transition,
+    subdispatch_by_canonical_id,
     subdispatch_initiatortask,
     subdispatch_targettask,
     subdispatch_to_paymenttask,
 )
 from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
     BalanceProofSignedState,
     PaymentNetworkState,
     RouteState,
@@ -42,6 +46,7 @@ from raiden.transfer.state import (
     make_empty_merkle_tree,
 )
 from raiden.transfer.state_change import (
+    ActionChannelClose,
     ActionNewTokenNetwork,
     Block,
     ContractReceiveChannelBatchUnlock,
@@ -270,3 +275,64 @@ def test_is_transaction_expired():
         triggered_by_block_hash=factories.make_block_hash(),
     )
     assert not is_transaction_expired(transaction, block_number)
+
+
+def test_subdispatch_by_canonical_id(chain_state):
+    our_model, _ = create_model(balance=10, merkletree_width=1)
+    partner_model, _ = create_model(balance=0, merkletree_width=0)
+    channel_state = create_channel_from_models(
+        our_model, partner_model, factories.make_privatekey_bin()
+    )
+    canonical_identifier = channel_state.canonical_identifier
+    token_network = TokenNetworkState(
+        address=canonical_identifier.token_network_address, token_address=factories.make_address()
+    )
+    token_network.partneraddresses_to_channelidentifiers[
+        partner_model.participant_address
+    ] = canonical_identifier.channel_identifier
+    token_network.channelidentifiers_to_channels[
+        canonical_identifier.channel_identifier
+    ] = channel_state
+    payment_network = PaymentNetworkState(
+        address=factories.make_address(), token_network_list=[token_network]
+    )
+    chain_state.identifiers_to_paymentnetworks[payment_network.address] = payment_network
+    chain_state.tokennetworkaddresses_to_paymentnetworkaddresses[
+        canonical_identifier.token_network_address
+    ] = payment_network.address
+    # dispatching a Block will raise an assertion error
+    with pytest.raises(AssertionError):
+        state_change = Block(
+            block_number=chain_state.block_number,
+            gas_limit=GAS_LIMIT,
+            block_hash=chain_state.block_hash,
+        )
+        subdispatch_by_canonical_id(
+            chain_state=chain_state,
+            canonical_identifier=canonical_identifier,
+            state_change=state_change,
+        )
+
+    state_change = ActionChannelClose(canonical_identifier=canonical_identifier)
+
+    # dispatching for an unknown canonical_identifier will not emit events
+    transition_result = subdispatch_by_canonical_id(
+        chain_state=chain_state,
+        canonical_identifier=CanonicalIdentifier(
+            chain_identifier=chain_state.chain_id,
+            token_network_address=factories.make_address(),
+            channel_identifier=factories.make_channel_identifier(),
+        ),
+        state_change=state_change,
+    )
+    assert not transition_result.events, transition_result
+
+    assert get_status(channel_state) == CHANNEL_STATE_OPENED
+    transition_result = subdispatch_by_canonical_id(
+        chain_state=chain_state,
+        canonical_identifier=canonical_identifier,
+        state_change=state_change,
+    )
+
+    assert get_status(channel_state) != CHANNEL_STATE_OPENED
+    assert transition_result.new_state == chain_state, transition_result

@@ -450,5 +450,10 @@ def state_transition(
             block_hash=block_hash,
             pseudo_random_generator=pseudo_random_generator,
         )
+    else:
+        raise AssertionError(
+            f"Illegal dispatch: state_change {state_change} "
+            "must not be dispatched to token_network."
+        )
 
     return iteration
