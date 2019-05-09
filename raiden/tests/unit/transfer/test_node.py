@@ -2,6 +2,7 @@ from copy import deepcopy
 
 import pytest
 
+import raiden.transfer.node
 from raiden.constants import EMPTY_MERKLE_ROOT
 from raiden.settings import GAS_LIMIT
 from raiden.tests.unit.test_channelstate import create_channel_from_models, create_model
@@ -14,6 +15,7 @@ from raiden.tests.utils.factories import (
     UNIT_SECRETHASH,
     make_block_hash,
 )
+from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.channel import compute_merkletree_with, get_status
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
@@ -21,12 +23,13 @@ from raiden.transfer.events import (
     ContractSendSecretReveal,
 )
 from raiden.transfer.identifiers import CanonicalIdentifier
-from raiden.transfer.mediated_transfer.state import TargetTransferState
+from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.node import (
     get_networks,
     handle_new_token_network,
+    handle_node_change_network_state,
     is_transaction_effect_satisfied,
     is_transaction_expired,
     maybe_add_tokennetwork,
@@ -38,7 +41,9 @@ from raiden.transfer.node import (
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
+    NODE_NETWORK_REACHABLE,
     BalanceProofSignedState,
+    MediatorTask,
     PaymentNetworkState,
     RouteState,
     TargetTask,
@@ -46,6 +51,7 @@ from raiden.transfer.state import (
     make_empty_merkle_tree,
 )
 from raiden.transfer.state_change import (
+    ActionChangeNodeNetworkState,
     ActionChannelClose,
     ActionNewTokenNetwork,
     Block,
@@ -336,3 +342,43 @@ def test_subdispatch_by_canonical_id(chain_state):
 
     assert get_status(channel_state) != CHANNEL_STATE_OPENED
     assert transition_result.new_state == chain_state, transition_result
+
+
+def test_handle_node_change_network_state(chain_state, netting_channel_state, monkeypatch):
+    state_change = ActionChangeNodeNetworkState(
+        node_address=factories.make_address(), network_state=NODE_NETWORK_REACHABLE
+    )
+    transition_result = handle_node_change_network_state(chain_state, state_change)
+    # no events if no mediator tasks are there to apply to
+    assert not transition_result.events
+
+    mediator_state = MediatorTransferState(
+        secrethash=UNIT_SECRETHASH,
+        routes=[
+            RouteState(
+                node_address=netting_channel_state.partner_state.address,
+                channel_identifier=netting_channel_state.canonical_identifier.channel_identifier,
+            )
+        ],
+    )
+    subtask = MediatorTask(
+        token_network_identifier=netting_channel_state.canonical_identifier.token_network_address,
+        mediator_state=mediator_state,
+    )
+    chain_state.payment_mapping.secrethashes_to_task[UNIT_SECRETHASH] = subtask
+
+    lock = factories.HashTimeLockState(amount=0, expiration=2, secrethash=UNIT_SECRETHASH)
+
+    netting_channel_state.partner_state.secrethashes_to_lockedlocks[UNIT_SECRETHASH] = lock
+    netting_channel_state.partner_state.merkletree = compute_merkletree_with(
+        merkletree=make_empty_merkle_tree(), lockhash=lock.lockhash
+    )
+    result = object()
+    monkeypatch.setattr(
+        raiden.transfer.node,
+        "subdispatch_mediatortask",
+        lambda *args, **kwargs: TransitionResult(chain_state, [result]),
+    )
+    transition_result = handle_node_change_network_state(chain_state, state_change)
+
+    assert transition_result.events == [result]
