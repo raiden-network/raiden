@@ -35,7 +35,7 @@ itsdangerous==0.24
 Jinja2==2.10
 lru-dict==1.1.6
 MarkupSafe==1.0
-marshmallow-polyfield==3.2
+marshmallow-polyfield==5.5
 marshmallow-dataclass==6.0.0c1
 marshmallow==3.0.0rc6
 matrix-client==0.3.2
