@@ -2,6 +2,7 @@ from random import Random
 
 import marshmallow
 from eth_utils import to_canonical_address, to_checksum_address
+from marshmallow_polyfield import PolyField
 
 from raiden.utils.serialization import to_bytes, to_hex
 from raiden.utils.typing import Address, Any, Tuple
@@ -53,3 +54,23 @@ class PRNGField(marshmallow.fields.Field):
 
     def _deserialize(self, value: str, attr: Any, data: Any) -> Random:
         return self.pseudo_random_generator_from_json(data)
+
+
+class CallablePolyField(PolyField):
+    def __init__(
+        self,
+        serialization_schema_selector=None,
+        deserialization_schema_selector=None,
+        many=False,
+        **metadata
+    ):
+        super().__init__(
+            serialization_schema_selector=serialization_schema_selector,
+            deserialization_schema_selector=deserialization_schema_selector,
+            many=many,
+            **metadata
+        )
+
+    def __call__(self, **metadata):
+        self.metadata = metadata
+        return self
