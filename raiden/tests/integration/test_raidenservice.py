@@ -3,6 +3,11 @@ from unittest.mock import Mock
 import pytest
 
 from raiden.app import App
+from raiden.constants import (
+    DISCOVERY_DEFAULT_ROOM,
+    MONITORING_BROADCASTING_ROOM,
+    PATH_FINDING_BROADCASTING_ROOM,
+)
 from raiden.message_handler import MessageHandler
 from raiden.network.transport import MatrixTransport
 from raiden.raiden_event_handler import RaidenEventHandler
@@ -56,6 +61,10 @@ def run_test_regression_filters_must_be_installed_from_confirmed_block(raiden_ne
 @pytest.mark.xfail(reason="flaky, see issue #3714")
 @pytest.mark.parametrize("number_of_nodes", [2])
 @pytest.mark.parametrize("channels_per_node", [CHAIN])
+@pytest.mark.parametrize(
+    "global_rooms",
+    [[DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM, MONITORING_BROADCASTING_ROOM]],
+)
 def test_regression_transport_global_queues_are_initialized_on_restart_for_services(
     raiden_network,
     number_of_nodes,

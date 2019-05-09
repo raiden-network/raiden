@@ -1,5 +1,6 @@
 """ Utilities to set-up a Raiden network. """
 from collections import namedtuple
+from copy import deepcopy
 
 import gevent
 from gevent import server
@@ -341,7 +342,7 @@ def create_apps(
                 },
             )
 
-        config_copy = App.DEFAULT_CONFIG.copy()
+        config_copy = deepcopy(App.DEFAULT_CONFIG)
         config_copy.update(config)
 
         registry = blockchain.token_network_registry(token_network_registry_address)
