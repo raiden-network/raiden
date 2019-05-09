@@ -283,8 +283,7 @@ def handle_transferrefundcancelroute(
         and refund_transfer.lock.expiration == original_transfer.lock.expiration
     )
 
-    # Weird naming, what do others think?
-    is_valid_refund = channel.refund_transfer_matches_received(refund_transfer, original_transfer)
+    is_valid_refund = channel.refund_transfer_matches_transfer(refund_transfer, original_transfer)
 
     events = list()
     if not is_valid_lock or not is_valid_refund:
