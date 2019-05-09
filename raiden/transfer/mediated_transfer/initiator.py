@@ -35,7 +35,8 @@ from raiden.utils.typing import (
     BlockExpiration,
     BlockNumber,
     BlockTimeout,
-    ChannelMap,
+    ChannelID,
+    Dict,
     List,
     MessageID,
     Optional,
@@ -177,7 +178,7 @@ def get_initial_lock_expiration(
 
 def next_channel_from_routes(
     available_routes: List[RouteState],
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     transfer_amount: PaymentAmount,
 ) -> Optional[NettingChannelState]:
     """ Returns the first channel that can be used to start the transfer.
@@ -211,7 +212,7 @@ def next_channel_from_routes(
 
 
 def try_new_route(
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     available_routes: List[RouteState],
     transfer_description: TransferDescriptionWithSecretState,
     pseudo_random_generator: random.Random,
@@ -256,7 +257,6 @@ def try_new_route(
             transfer_description=transfer_description,
             channel_identifier=channel_state.identifier,
             transfer=lockedtransfer_event.transfer,
-            revealsecret=None,
         )
         events.append(lockedtransfer_event)
 
@@ -350,7 +350,7 @@ def handle_secretrequest(
             secret=transfer_description.secret,
         )
 
-        initiator_state.revealsecret = revealsecret
+        initiator_state.transfer_state = "transfer_secret_revealed"
         initiator_state.received_secret_request = True
         iteration = TransitionResult(initiator_state, [revealsecret])
 
