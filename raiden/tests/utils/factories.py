@@ -48,7 +48,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChainID,
     ChannelID,
-    ChannelMap,
     ClassVar,
     Dict,
     FeeAmount,
@@ -793,7 +792,7 @@ class ChannelSet:
         self.partner_privatekeys = partner_privatekeys
 
     @property
-    def channel_map(self) -> ChannelMap:
+    def channel_map(self) -> Dict[ChannelID, NettingChannelState]:
         return {channel.identifier: channel for channel in self.channels}
 
     @property
@@ -888,7 +887,7 @@ class MediatorTransfersPair(NamedTuple):
     block_hash: BlockHash
 
     @property
-    def channel_map(self) -> ChannelMap:
+    def channel_map(self) -> Dict[ChannelID, NettingChannelState]:
         return self.channels.channel_map
 
 

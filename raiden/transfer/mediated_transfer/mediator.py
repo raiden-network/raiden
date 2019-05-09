@@ -51,7 +51,7 @@ from raiden.utils.typing import (
     BlockHash,
     BlockNumber,
     BlockTimeout,
-    ChannelMap,
+    ChannelID,
     Dict,
     List,
     LockType,
@@ -227,7 +227,8 @@ def filter_used_routes(
 
 
 def get_payee_channel(
-    channelidentifiers_to_channels: ChannelMap, transfer_pair: MediationPairState
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    transfer_pair: MediationPairState,
 ) -> Optional[NettingChannelState]:
     """ Returns the payee channel of a given transfer pair or None if it's not found """
     payee_channel_identifier = transfer_pair.payee_transfer.balance_proof.channel_identifier
@@ -235,7 +236,8 @@ def get_payee_channel(
 
 
 def get_payer_channel(
-    channelidentifiers_to_channels: ChannelMap, transfer_pair: MediationPairState
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+    transfer_pair: MediationPairState,
 ) -> Optional[NettingChannelState]:
     """ Returns the payer channel of a given transfer pair or None if it's not found """
     payer_channel_identifier = transfer_pair.payer_transfer.balance_proof.channel_identifier
@@ -267,7 +269,10 @@ def get_lock_amount_after_fees(
     return PaymentWithFeeAmount(lock.amount - payee_channel.mediation_fee)
 
 
-def sanity_check(state: MediatorTransferState, channelidentifiers_to_channels: ChannelMap) -> None:
+def sanity_check(
+    state: MediatorTransferState,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
+) -> None:
     """ Check invariants that must hold. """
 
     # if a transfer is paid we must know the secret
@@ -332,7 +337,8 @@ def sanity_check(state: MediatorTransferState, channelidentifiers_to_channels: C
 
 
 def clear_if_finalized(
-    iteration: TransitionResult, channelidentifiers_to_channels: ChannelMap
+    iteration: TransitionResult,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
 ) -> TransitionResult[MediatorTransferState]:
     """Clear the mediator task if all the locks have been finalized.
 
@@ -511,7 +517,7 @@ def backward_transfer_pair(
 
 def set_offchain_secret(
     state: MediatorTransferState,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     secret: Secret,
     secrethash: SecretHash,
 ) -> List[Event]:
@@ -556,7 +562,7 @@ def set_offchain_secret(
 
 def set_onchain_secret(
     state: MediatorTransferState,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     secret: Secret,
     secrethash: SecretHash,
     block_number: BlockNumber,
@@ -617,7 +623,7 @@ def set_offchain_reveal_state(
 
 
 def events_for_expired_pairs(
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     transfers_pair: List[MediationPairState],
     waiting_transfer: Optional[WaitingTransferState],
     block_number: BlockNumber,
@@ -727,7 +733,7 @@ def events_for_secretreveal(
 
 
 def events_for_balanceproof(
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     transfers_pair: List[MediationPairState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -792,7 +798,7 @@ def events_for_balanceproof(
 
 
 def events_for_onchain_secretreveal_if_dangerzone(
-    channelmap: ChannelMap,
+    channelmap: Dict[ChannelID, NettingChannelState],
     secrethash: SecretHash,
     transfers_pair: List[MediationPairState],
     block_number: BlockNumber,
@@ -855,7 +861,7 @@ def events_for_onchain_secretreveal_if_dangerzone(
 
 
 def events_for_onchain_secretreveal_if_closed(
-    channelmap: ChannelMap,
+    channelmap: Dict[ChannelID, NettingChannelState],
     transfers_pair: List[MediationPairState],
     secret: Secret,
     secrethash: SecretHash,
@@ -916,7 +922,7 @@ def events_for_onchain_secretreveal_if_closed(
 
 def events_to_remove_expired_locks(
     mediator_state: MediatorTransferState,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     block_number: BlockNumber,
     pseudo_random_generator: random.Random,
 ) -> List[Event]:
@@ -974,7 +980,7 @@ def events_to_remove_expired_locks(
 
 def secret_learned(
     state: MediatorTransferState,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
     block_hash: BlockHash,
@@ -1022,7 +1028,7 @@ def mediate_transfer(
     state: MediatorTransferState,
     possible_routes: List["RouteState"],
     payer_channel: NettingChannelState,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     payer_transfer: LockedTransferSignedState,
@@ -1081,7 +1087,7 @@ def mediate_transfer(
 
 def handle_init(
     state_change: ActionInitMediator,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -1123,7 +1129,7 @@ def handle_init(
 def handle_block(
     mediator_state: MediatorTransferState,
     state_change: Block,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[MediatorTransferState]:
     """ After Raiden learns about a new block this function must be called to
@@ -1165,7 +1171,7 @@ def handle_block(
 def handle_refundtransfer(
     mediator_state: MediatorTransferState,
     mediator_state_change: ReceiveTransferRefund,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
@@ -1226,7 +1232,7 @@ def handle_refundtransfer(
 def handle_offchain_secretreveal(
     mediator_state: MediatorTransferState,
     mediator_state_change: ReceiveSecretReveal,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
     block_hash: BlockHash,
@@ -1276,7 +1282,7 @@ def handle_offchain_secretreveal(
 def handle_onchain_secretreveal(
     mediator_state: MediatorTransferState,
     onchain_secret_reveal: ContractReceiveSecretReveal,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
@@ -1321,7 +1327,7 @@ def handle_onchain_secretreveal(
 def handle_unlock(
     mediator_state: MediatorTransferState,
     state_change: ReceiveUnlock,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
 ) -> TransitionResult[MediatorTransferState]:
     """ Handle a ReceiveUnlock state change. """
     events = list()
@@ -1358,7 +1364,7 @@ def handle_unlock(
 def handle_lock_expired(
     mediator_state: MediatorTransferState,
     state_change: ReceiveLockExpired,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     block_number: BlockNumber,
 ) -> TransitionResult[MediatorTransferState]:
     events = list()
@@ -1396,7 +1402,7 @@ def handle_lock_expired(
 def handle_node_change_network_state(
     mediator_state: MediatorTransferState,
     state_change: ActionChangeNodeNetworkState,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult:
@@ -1448,7 +1454,7 @@ def handle_node_change_network_state(
 def state_transition(
     mediator_state: Optional[MediatorTransferState],
     state_change: StateChange,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     nodeaddresses_to_networkstates: NodeNetworkStateMap,
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
