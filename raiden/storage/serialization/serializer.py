@@ -31,8 +31,34 @@ def _import_type(type_name):
     return klass
 
 
-def class_type(obj: Any) -> str:
-    return f"{obj.__class__.__module__}.{obj.__class__.__name__}"
+def class_type(clazz: type) -> str:
+    return f"{clazz.__module__}.{clazz.__name__}"
+
+
+def set_class_type(self, data, many):
+    data["_type"] = self.schema_parent_class_name
+    return data
+
+
+def remove_class_type(self, data, many):
+    if "_type" in data:
+        del data["_type"]
+    return data
+
+
+def inject_type_resolver_hook(schema: Schema, clazz: type):
+    key = ("post_dump", False)
+    schema._hooks[key].append("attach_type")
+    schema.attach_type = set_class_type
+    setattr(schema.attach_type, "__marshmallow_hook__", {key: {"pass_original": True}})
+    schema.schema_parent_class_name = class_type(clazz)
+
+
+def inject_remove_type_field_hook(schema: Schema):
+    key = ("pre_load", False)
+    schema._hooks[key].append("remove_type")
+    schema.remove_type = remove_class_type
+    setattr(schema.remove_type, "__marshmallow_hook__", {key: {"pass_original": True}})
 
 
 class SerializationBase:
@@ -53,6 +79,9 @@ class DictSerializer(SerializationBase):
         class_name = clazz.__name__
         if class_name not in DictSerializer.SCHEMA_CACHE:
             schema = class_schema(clazz)
+            inject_type_resolver_hook(schema, clazz)
+            inject_remove_type_field_hook(schema)
+
             DictSerializer.SCHEMA_CACHE[class_name] = schema
         return DictSerializer.SCHEMA_CACHE[class_name]
 
@@ -63,14 +92,12 @@ class DictSerializer(SerializationBase):
         if is_dataclass(obj):
             schema = DictSerializer.get_or_create_schema(obj.__class__)
             data = schema().dump(obj)
-            data["_type"] = class_type(obj)
         return data
 
     @staticmethod
     def deserialize(data):
         if "_type" in data:
             klass = _import_type(data["_type"])
-            del data["_type"]
             schema = DictSerializer.get_or_create_schema(klass)
             return schema().load(data)
         return data
