@@ -1291,8 +1291,8 @@ def test_refund_transfer_matches_received():
     refund_same_expiration = factories.create(same)
     transfer = create(same.extract(factories.LockedTransferUnsignedStateProperties))
 
-    assert channel.refund_transfer_matches_received(refund_lower_expiration, transfer) is False
-    assert channel.refund_transfer_matches_received(refund_same_expiration, transfer) is True
+    assert channel.refund_transfer_matches_transfer(refund_lower_expiration, transfer) is False
+    assert channel.refund_transfer_matches_transfer(refund_same_expiration, transfer) is True
 
 
 def test_refund_transfer_does_not_match_received():
@@ -1309,7 +1309,7 @@ def test_refund_transfer_does_not_match_received():
         factories.LockedTransferSignedStateProperties(amount=amount, expiration=expiration - 1)
     )
     # target cannot refund
-    assert not channel.refund_transfer_matches_received(refund_from_target, transfer)
+    assert not channel.refund_transfer_matches_transfer(refund_from_target, transfer)
 
 
 def test_action_close_must_change_the_channel_state():
