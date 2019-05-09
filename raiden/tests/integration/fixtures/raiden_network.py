@@ -52,6 +52,7 @@ def raiden_chain(
     blockchain_type,
     contracts_path,
     user_deposit_address,
+    global_rooms,
     tmpdir,
     request,
 ):
@@ -96,6 +97,7 @@ def raiden_chain(
         local_matrix_url=local_matrix_servers[0],
         private_rooms=private_rooms,
         contracts_path=contracts_path,
+        global_rooms=global_rooms,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
@@ -163,6 +165,7 @@ def raiden_network(
     blockchain_type,
     contracts_path,
     user_deposit_address,
+    global_rooms,
     tmpdir,
     request,
 ):
@@ -199,6 +202,7 @@ def raiden_network(
         unrecoverable_error_should_crash=unrecoverable_error_should_crash,
         local_matrix_url=local_matrix_servers[0],
         private_rooms=private_rooms,
+        global_rooms=global_rooms,
     )
 
     confirmed_block = raiden_apps[0].raiden.confirmation_blocks + 1
