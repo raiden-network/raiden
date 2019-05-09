@@ -1,20 +1,13 @@
 from dataclasses import dataclass, field
 
-from raiden.transfer.architecture import State
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
     MediatorTransferState,
     TargetTransferState,
 )
+from raiden.transfer.state import TransferTask
 from raiden.utils.typing import ChannelID, TokenNetworkID
-
-
-@dataclass
-class TransferTask(State):
-    # TODO: When we turn these into dataclasses it would be a good time to move common attributes
-    # of all transfer tasks like the `token_network_identifier` into the common subclass
-    pass
 
 
 @dataclass

@@ -36,13 +36,8 @@ from raiden.transfer.events import (
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
-from raiden.transfer.mediated_transfer.tasks import (
-    InitiatorTask,
-    MediatorTask,
-    TargetTask,
-    TransferTask,
-)
-from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
+from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+from raiden.transfer.state import BalanceProofSignedState, NettingChannelState, TransferTask
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
