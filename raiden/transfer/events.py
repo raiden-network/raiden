@@ -57,7 +57,7 @@ class ContractSendChannelClose(ContractSendEvent):
         self.canonical_identifier = canonical_identifier
         self.balance_proof = balance_proof
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractSendChannelClose channel:{} token:{} token_network:{} "
             "balance_proof:{} triggered_by_block_hash:{}>"
@@ -125,7 +125,7 @@ class ContractSendChannelSettle(ContractSendEvent):
     def channel_identifier(self) -> ChannelID:
         return self.canonical_identifier.channel_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractSendChannelSettle channel:{} token_network:{} "
             "triggered_by_block_hash:{}>".format(
@@ -181,7 +181,7 @@ class ContractSendChannelUpdateTransfer(ContractSendExpirableEvent):
     def channel_identifier(self) -> ChannelID:
         return self.balance_proof.channel_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractSendChannelUpdateTransfer channel:{} token_network:{} "
             "balance_proof:{} triggered_by_block_hash:{}>"
@@ -243,7 +243,7 @@ class ContractSendChannelBatchUnlock(ContractSendEvent):
     def channel_identifier(self) -> ChannelID:
         return self.canonical_identifier.channel_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractSendChannelBatchUnlock token_network_id:{} "
             "channel:{} participant:{} triggered_by_block_hash:{}"
@@ -298,7 +298,7 @@ class ContractSendSecretReveal(ContractSendExpirableEvent):
         super().__init__(triggered_by_block_hash, expiration)
         self.secret = secret
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         secrethash: SecretHash = SecretHash(sha3(self.secret))
         return ("<ContractSendSecretReveal secrethash:{} triggered_by_block_hash:{}>").format(
             secrethash, pex(self.triggered_by_block_hash)
@@ -373,7 +373,7 @@ class EventPaymentSentSuccess(Event):
         self.target = target
         self.secret = secret
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<"
             "EventPaymentSentSuccess payment_network_identifier:{} "
@@ -387,7 +387,7 @@ class EventPaymentSentSuccess(Event):
             self.identifier,
             self.amount,
             pex(self.target),
-            pex(self.secret),
+            to_hex(self.secret),
         )
 
     def __eq__(self, other: Any) -> bool:
@@ -458,7 +458,7 @@ class EventPaymentSentFailed(Event):
         self.target = target
         self.reason = reason
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<"
             "EventPaymentSentFailed payment_network_identifier:{} "
@@ -540,7 +540,7 @@ class EventPaymentReceivedSuccess(Event):
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<"
             "EventPaymentReceivedSuccess payment_network_identifier:{} "
@@ -599,7 +599,7 @@ class EventInvalidReceivedTransferRefund(Event):
         self.payment_identifier = payment_identifier
         self.reason = reason
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<"
             f"EventInvalidReceivedTransferRefund "
@@ -639,7 +639,7 @@ class EventInvalidReceivedLockExpired(Event):
         self.secrethash = secrethash
         self.reason = reason
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<"
             f"EventInvalidReceivedLockExpired "
@@ -683,7 +683,7 @@ class EventInvalidReceivedLockedTransfer(Event):
         self.payment_identifier = payment_identifier
         self.reason = reason
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<"
             f"EventInvalidReceivedLockedTransfer "
@@ -723,7 +723,7 @@ class EventInvalidReceivedUnlock(Event):
         self.secrethash = secrethash
         self.reason = reason
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<"
             f"EventInvalidReceivedUnlock "
@@ -761,7 +761,7 @@ class EventInvalidReceivedUnlock(Event):
 
 
 class SendProcessed(SendMessageEvent):
-    def __repr__(self):
+    def __repr__(self) -> str:
         return ("<SendProcessed confirmed_msgid:{} recipient:{}>").format(
             self.message_identifier, pex(self.recipient)
         )

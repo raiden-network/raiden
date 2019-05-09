@@ -430,7 +430,7 @@ def maybe_add_tokennetwork(
     chain_state: ChainState,
     payment_network_identifier: PaymentNetworkID,
     token_network_state: TokenNetworkState,
-):
+) -> None:
     token_network_identifier = token_network_state.address
     token_address = token_network_state.token_address
 
@@ -996,7 +996,7 @@ def is_transaction_effect_satisfied(
     return False
 
 
-def is_transaction_invalidated(transaction, state_change):
+def is_transaction_invalidated(transaction: ContractSendEvent, state_change: StateChange) -> bool:
     """ True if the `transaction` is made invalid by `state_change`.
 
     Some transactions will fail due to race conditions. The races are:
@@ -1048,7 +1048,7 @@ def is_transaction_invalidated(transaction, state_change):
     return False
 
 
-def is_transaction_expired(transaction, block_number):
+def is_transaction_expired(transaction: ContractSendEvent, block_number: BlockNumber) -> bool:
     """ True if transaction cannot be mined because it has expired.
 
     Some transactions are time dependent, e.g. the secret registration must be
@@ -1074,7 +1074,9 @@ def is_transaction_expired(transaction, block_number):
     return False
 
 
-def is_transaction_pending(chain_state, transaction, state_change):
+def is_transaction_pending(
+    chain_state: ChainState, transaction: ContractSendEvent, state_change: StateChange
+) -> bool:
     return not (
         is_transaction_effect_satisfied(chain_state, transaction, state_change)
         or is_transaction_invalidated(transaction, state_change)

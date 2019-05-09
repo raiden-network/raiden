@@ -76,7 +76,7 @@ class Block(StateChange):
         self.gas_limit = gas_limit
         self.block_hash = block_hash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<Block "
             f"number={self.block_number} gas_limit={self.gas_limit} "
@@ -149,7 +149,7 @@ class ActionCancelPayment(StateChange):
     def __init__(self, payment_identifier: PaymentID) -> None:
         self.payment_identifier = payment_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionCancelPayment identifier:{}>".format(self.payment_identifier)
 
     def __eq__(self, other: Any) -> bool:
@@ -187,7 +187,7 @@ class ActionChannelClose(StateChange):
     def channel_identifier(self) -> ChannelID:
         return self.canonical_identifier.channel_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionChannelClose channel_identifier:{}>".format(self.channel_identifier)
 
     def __eq__(self, other: Any) -> bool:
@@ -203,7 +203,7 @@ class ActionChannelClose(StateChange):
         return {"canonical_identifier": self.canonical_identifier.to_dict()}
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data: Dict[str, Any]) -> "ActionChannelClose":
         return cls(
             canonical_identifier=CanonicalIdentifier.from_dict(data["canonical_identifier"])
         )
@@ -214,17 +214,17 @@ class ActionChannelSetFee(StateChange):
         self.canonical_identifier = canonical_identifier
         self.mediation_fee = mediation_fee
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ActionChannelSetFee id:{self.canonical_identifier} fee:{self.mediation_fee}>"
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return (
             isinstance(other, ActionChannelSetFee)
             and self.canonical_identifier == other.canonical_identifier
             and self.mediation_fee == other.mediation_fee
         )
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self.__eq__(other)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -238,7 +238,7 @@ class ActionChannelSetFee(StateChange):
         )
 
     @property
-    def channel_identifier(self):
+    def channel_identifier(self) -> ChannelID:
         return self.canonical_identifier.channel_identifier
 
 
@@ -252,7 +252,7 @@ class ActionCancelTransfer(StateChange):
     def __init__(self, transfer_identifier: TransferID) -> None:
         self.transfer_identifier = transfer_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionCancelTransfer identifier:{}>".format(self.transfer_identifier)
 
     def __eq__(self, other: Any) -> bool:
@@ -294,7 +294,7 @@ class ContractReceiveChannelNew(ContractReceiveStateChange):
     def channel_identifier(self) -> ChannelID:
         return self.channel_state.canonical_identifier.channel_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ContractReceiveChannelNew token_network:{} state:{} block:{}>".format(
             pex(self.token_network_identifier), self.channel_state, self.block_number
         )
@@ -351,7 +351,7 @@ class ContractReceiveChannelClosed(ContractReceiveStateChange):
     def token_network_identifier(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractReceiveChannelClosed"
             " token_network:{} channel:{} closer:{} closed_at:{}"
@@ -418,7 +418,7 @@ class ActionInitChain(StateChange):
         self.our_address = our_address
         self.pseudo_random_generator = pseudo_random_generator
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionInitChain block_number:{} block_hash:{} chain_id:{}>".format(
             self.block_number, pex(self.block_hash), self.chain_id
         )
@@ -472,7 +472,7 @@ class ActionNewTokenNetwork(StateChange):
         self.payment_network_identifier = payment_network_identifier
         self.token_network = token_network
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionNewTokenNetwork network:{} token:{}>".format(
             pex(self.payment_network_identifier), self.token_network
         )
@@ -525,7 +525,7 @@ class ContractReceiveChannelNewBalance(ContractReceiveStateChange):
     def token_network_identifier(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractReceiveChannelNewBalance"
             " token_network:{} channel:{} transaction:{} block_number:{}"
@@ -594,7 +594,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
     def token_network_identifier(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractReceiveChannelSettled token_network:{} channel:{} settle_block:{}>"
         ).format(pex(self.token_network_identifier), self.channel_identifier, self.block_number)
@@ -636,7 +636,7 @@ class ContractReceiveChannelSettled(ContractReceiveStateChange):
 class ActionLeaveAllNetworks(StateChange):
     """ User is quitting all payment networks. """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionLeaveAllNetworks>"
 
     def __eq__(self, other: Any) -> bool:
@@ -660,7 +660,7 @@ class ActionChangeNodeNetworkState(StateChange):
         self.node_address = node_address
         self.network_state = network_state
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionChangeNodeNetworkState node:{} state:{}>".format(
             pex(self.node_address), self.network_state
         )
@@ -708,7 +708,7 @@ class ContractReceiveNewPaymentNetwork(ContractReceiveStateChange):
 
         self.payment_network = payment_network
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ContractReceiveNewPaymentNetwork network:{} block:{}>".format(
             self.payment_network, self.block_number
         )
@@ -760,7 +760,7 @@ class ContractReceiveNewTokenNetwork(ContractReceiveStateChange):
         self.payment_network_identifier = payment_network_identifier
         self.token_network = token_network
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ContractReceiveNewTokenNetwork payment_network:{} network:{} block:{}>".format(
             pex(self.payment_network_identifier), self.token_network, self.block_number
         )
@@ -821,7 +821,7 @@ class ContractReceiveSecretReveal(ContractReceiveStateChange):
         self.secrethash = secrethash
         self.secret = secret
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractReceiveSecretReveal"
             " secret_registry:{} secrethash:{} secret:{} block:{}"
@@ -911,7 +911,7 @@ class ContractReceiveChannelBatchUnlock(ContractReceiveStateChange):
     def token_network_identifier(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractReceiveChannelBatchUnlock "
             " token_network:{} participant:{} partner:{}"
@@ -1004,7 +1004,7 @@ class ContractReceiveRouteNew(ContractReceiveStateChange):
     def token_network_identifier(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ContractReceiveRouteNew" " token_network:{} id:{} node1:{}" " node2:{} block:{}>"
         ).format(
@@ -1071,7 +1071,7 @@ class ContractReceiveRouteClosed(ContractReceiveStateChange):
     def token_network_identifier(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ContractReceiveRouteClosed token_network:{} id:{} block:{}>".format(
             pex(self.token_network_identifier), self.channel_identifier, self.block_number
         )
@@ -1126,7 +1126,7 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
     def token_network_identifier(self) -> TokenNetworkAddress:
         return TokenNetworkAddress(self.canonical_identifier.token_network_address)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ContractReceiveUpdateTransfer nonce:{self.nonce} block:{self.block_number}>"
 
     def __eq__(self, other: Any) -> bool:
@@ -1175,7 +1175,7 @@ class ReceiveUnlock(BalanceProofStateChange):
         self.secret = secret
         self.secrethash = secrethash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ReceiveUnlock msgid:{} secrethash:{} balance_proof:{}>".format(
             self.message_identifier, pex(self.secrethash), self.balance_proof
         )
@@ -1214,7 +1214,7 @@ class ReceiveDelivered(AuthenticatedSenderStateChange):
 
         self.message_identifier = message_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ReceiveDelivered msgid:{} sender:{}>".format(
             self.message_identifier, pex(self.sender)
         )
@@ -1248,7 +1248,7 @@ class ReceiveProcessed(AuthenticatedSenderStateChange):
         super().__init__(sender)
         self.message_identifier = message_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ReceiveProcessed msgid:{} sender:{}>".format(
             self.message_identifier, pex(self.sender)
         )

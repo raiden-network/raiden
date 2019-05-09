@@ -143,7 +143,7 @@ class InitiatorTask(TransferTask):
         self.token_network_identifier = token_network_identifier
         self.manager_state = manager_state
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<InitiatorTask token_network_identifier:{} state:{}>".format(
             pex(self.token_network_identifier), self.manager_state
         )
@@ -181,7 +181,7 @@ class MediatorTask(TransferTask):
         self.token_network_identifier = token_network_identifier
         self.mediator_state = mediator_state
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<MediatorTask token_network_identifier:{} state:{}>".format(
             pex(self.token_network_identifier), self.mediator_state
         )
@@ -221,7 +221,7 @@ class TargetTask(TransferTask):
         self.canonical_identifier = canonical_identifier
         self.target_state = target_state
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<TargetTask token_network_identifier:{} channel_identifier:{} state:{}>".format(
             pex(self.token_network_identifier), self.channel_identifier, self.target_state
         )
@@ -301,7 +301,7 @@ class ChainState(State):
             TokenNetworkAddress, PaymentNetworkID
         ] = {}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<ChainState block_number:{} block_hash:{} networks:{} "
             "qty_transfers:{} chain_id:{}>"
@@ -420,7 +420,7 @@ class PaymentNetworkState(State):
             for token_network in token_network_list
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<PaymentNetworkState id:{}>".format(pex(self.address))
 
     def __eq__(self, other: Any) -> bool:
@@ -480,7 +480,7 @@ class TokenNetworkState(State):
             list
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<TokenNetworkState id:{} token:{}>".format(
             pex(self.address), pex(self.token_address)
         )
@@ -557,7 +557,7 @@ class TokenNetworkGraphState(State):
         self.network = networkx.Graph()
         self.channel_identifier_to_participants: Dict[ChannelID, Tuple[Address, Address]] = {}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<TokenNetworkGraphState num_edges:{}>".format(len(self.network.edges))
 
     def __eq__(self, other: Any) -> bool:
@@ -616,7 +616,7 @@ class PaymentMappingState(State):
     def __init__(self) -> None:
         self.secrethashes_to_task: Dict[SecretHash, TransferTask] = dict()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<PaymentMappingState qtd_transfers:{}>".format(len(self.secrethashes_to_task))
 
     def __eq__(self, other: Any) -> bool:
@@ -761,7 +761,7 @@ class BalanceProofUnsignedState(State):
     def channel_identifier(self) -> ChannelID:
         return self.canonical_identifier.channel_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<"
             "BalanceProofUnsignedState nonce:{} transferred_amount:{} "
@@ -902,7 +902,7 @@ class BalanceProofSignedState(State):
         self.sender = sender
         self.canonical_identifier = canonical_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<"
             "BalanceProofSignedState nonce:{} transferred_amount:{} "
@@ -1027,7 +1027,7 @@ class HashTimeLockState(State):
         self.encoded = encoded
         self.lockhash: LockHash = LockHash(sha3(encoded))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<HashTimeLockState amount:{} expiration:{} secrethash:{}>".format(
             self.amount, self.expiration, pex(self.secrethash)
         )
@@ -1084,7 +1084,7 @@ class UnlockPartialProofState(State):
         self.encoded = lock.encoded
         self.lockhash = lock.lockhash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<UnlockPartialProofState lock:{}>".format(self.lock)
 
     def __eq__(self, other: Any) -> bool:
@@ -1123,7 +1123,7 @@ class UnlockProofState(State):
         self.lock_encoded = lock_encoded
         self.secret = secret
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         full_proof = [encode_hex(entry) for entry in self.merkle_proof]
         return f"<UnlockProofState proof:{full_proof} lock:{encode_hex(self.lock_encoded)}>"
 
@@ -1191,7 +1191,7 @@ class TransactionExecutionStatus(State):
         self.finished_block_number = finished_block_number
         self.result = result
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<TransactionExecutionStatus started:{} finished:{} result:{}>".format(
             self.started_block_number, self.finished_block_number, self.result
         )
@@ -1240,7 +1240,7 @@ class MerkleTreeState(State):
     def __init__(self, layers: List[List[Keccak256]]) -> None:
         self.layers = layers
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<MerkleTreeState root:{}>".format(pex(merkleroot(self)))
 
     def __eq__(self, other: Any) -> bool:
@@ -1297,7 +1297,7 @@ class NettingChannelEndState(State):
         self.balance_proof: OptionalBalanceProofState = None
         self.onchain_locksroot: Locksroot = EMPTY_MERKLE_ROOT
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<NettingChannelEndState address:{} contract_balance:{} merkletree:{}>".format(
             pex(self.address), self.contract_balance, self.merkletree
         )
@@ -1470,7 +1470,7 @@ class NettingChannelState(State):
         self.update_transaction = update_transaction
         self.mediation_fee = mediation_fee
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<NettingChannelState id:{} opened:{} closed:{} settled:{} updated:{}>".format(
             self.canonical_identifier.channel_identifier,
             self.open_transaction,
@@ -1596,7 +1596,7 @@ class TransactionChannelNewBalance(State):
         self.contract_balance = contract_balance
         self.deposit_block_number = deposit_block_number
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<TransactionChannelNewBalance participant:{} balance:{} at_block:{}>".format(
             pex(self.participant_address), self.contract_balance, self.deposit_block_number
         )
@@ -1645,7 +1645,7 @@ class TransactionOrder(State):
         self.block_number = block_number
         self.transaction = transaction
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<TransactionOrder block_number:{} transaction:{}>".format(
             self.block_number, self.transaction
         )

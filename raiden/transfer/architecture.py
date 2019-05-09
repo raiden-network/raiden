@@ -1,6 +1,6 @@
 # pylint: disable=too-few-public-methods
 from copy import deepcopy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 from raiden.transfer.identifiers import QueueIdentifier
 from raiden.utils.typing import (
@@ -87,7 +87,7 @@ class StateChange:
 
     __slots__ = ()
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         return {attr: value for attr, value in self.__dict__.items() if not attr.startswith("_")}
 
 
