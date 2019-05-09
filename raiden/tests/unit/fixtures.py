@@ -25,6 +25,11 @@ def token_network_id():
 
 
 @pytest.fixture
+def one_to_n_address():
+    return factories.make_address()
+
+
+@pytest.fixture
 def payment_network_id():
     return factories.make_address()
 

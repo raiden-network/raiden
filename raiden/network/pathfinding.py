@@ -218,8 +218,10 @@ def get_last_iou(
 def make_iou(
     config: Dict[str, Any],
     our_address: Address,
+    one_to_n_address: Address,
     privkey: bytes,
     block_number: BlockNumber,
+    chain_id: int,
     offered_fee: TokenAmount = None,
 ) -> Dict:
     expiration = block_number + config["pathfinding_iou_timeout"]
@@ -228,12 +230,14 @@ def make_iou(
         sender=to_checksum_address(our_address),
         receiver=config["pathfinding_eth_address"],
         amount=offered_fee or config["pathfinding_max_fee"],
+        expiration_block=expiration,
+        one_to_n_address=to_checksum_address(one_to_n_address),
+        chain_id=chain_id,
     )
 
     iou.update(
-        expiration_block=expiration,
         signature=to_hex(
-            sign_one_to_n_iou(privatekey=to_hex(privkey), expiration=expiration, **iou)
+            sign_one_to_n_iou(privatekey=to_hex(privkey), **iou)
         ),
     )
 
@@ -250,10 +254,12 @@ def update_iou(
     expected_signature = to_hex(
         sign_one_to_n_iou(
             privatekey=to_hex(privkey),
-            expiration=iou["expiration_block"],
+            expiration_block=iou["expiration_block"],
             sender=iou["sender"],
             receiver=iou["receiver"],
             amount=iou["amount"],
+            one_to_n_address=iou["one_to_n_address"],
+            chain_id=iou["chain_id"],
         )
     )
     if iou.get("signature") != expected_signature:
@@ -268,10 +274,12 @@ def update_iou(
     iou["signature"] = to_hex(
         sign_one_to_n_iou(
             privatekey=to_hex(privkey),
-            expiration=iou["expiration_block"],
+            expiration_block=iou["expiration_block"],
             sender=iou["sender"],
             receiver=iou["receiver"],
             amount=iou["amount"],
+            chain_id=iou["chain_id"],
+            one_to_n_address=iou["one_to_n_address"],
         )
     )
 
@@ -281,9 +289,11 @@ def update_iou(
 def create_current_iou(
     config: Dict[str, Any],
     token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    one_to_n_address: Address,
     our_address: Address,
     privkey: bytes,
     block_number: BlockNumber,
+    chain_id: int,
     offered_fee: TokenAmount = None,
     scrap_existing_iou: bool = False,
 ) -> Dict[str, Any]:
@@ -306,7 +316,9 @@ def create_current_iou(
             our_address=our_address,
             privkey=privkey,
             block_number=block_number,
+            chain_id=chain_id,
             offered_fee=offered_fee,
+            one_to_n_address=one_to_n_address,
         )
     else:
         added_amount = offered_fee or config["pathfinding_max_fee"]
@@ -367,6 +379,8 @@ def query_paths(
     privkey: bytes,
     current_block_number: BlockNumber,
     token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    one_to_n_address: Address,
+    chain_id: int,
     route_from: InitiatorAddress,
     route_to: TargetAddress,
     value: PaymentAmount,
@@ -392,8 +406,10 @@ def query_paths(
         payload["iou"] = create_current_iou(
             config=service_config,
             token_network_address=token_network_address,
+            one_to_n_address=one_to_n_address,
             our_address=our_address,
             privkey=privkey,
+            chain_id=chain_id,
             block_number=current_block_number,
             offered_fee=offered_fee,
             scrap_existing_iou=scrap_existing_iou,

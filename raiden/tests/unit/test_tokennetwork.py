@@ -632,7 +632,7 @@ def test_routing_updates(token_network_state, our_address, channel_properties):
     assert len(graph_state.network.edges()) == 0
 
 
-def test_routing_issue2663(chain_state, token_network_state, our_address):
+def test_routing_issue2663(chain_state, token_network_state, one_to_n_address, our_address):
     open_block_number = 10
     open_block_number_hash = factories.make_block_hash()
     address1 = factories.make_address()
@@ -771,6 +771,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
+        one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address4,
         amount=50,
@@ -792,6 +793,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
+        one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address4,
         amount=50,
@@ -813,6 +815,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
+        one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address4,
         amount=50,
@@ -834,6 +837,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
+        one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address3,
         amount=50,
@@ -845,7 +849,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     assert routes1[0].node_address == address2
 
 
-def test_routing_priority(chain_state, token_network_state, our_address):
+def test_routing_priority(chain_state, token_network_state, one_to_n_address, our_address):
     open_block_number = 10
     open_block_number_hash = factories.make_block_hash()
     address1 = factories.make_address()
@@ -993,6 +997,7 @@ def test_routing_priority(chain_state, token_network_state, our_address):
     routes, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
+        one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address3,
         amount=1,
@@ -1014,6 +1019,7 @@ def test_routing_priority(chain_state, token_network_state, our_address):
     routes, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
+        one_to_n_address=one_to_n_address,
         from_address=our_address,
         to_address=address4,
         amount=1,
