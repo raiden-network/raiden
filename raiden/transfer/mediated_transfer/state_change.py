@@ -49,7 +49,7 @@ class ActionInitInitiator(StateChange):
         self.transfer = transfer_description
         self.routes = routes
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionInitInitiator transfer:{}>".format(self.transfer)
 
     def __eq__(self, other: Any) -> bool:
@@ -97,7 +97,7 @@ class ActionInitMediator(BalanceProofStateChange):
         self.from_route = from_route
         self.from_transfer = from_transfer
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionInitMediator from_route:{} from_transfer:{}>".format(
             self.from_route, self.from_transfer
         )
@@ -149,7 +149,7 @@ class ActionInitTarget(BalanceProofStateChange):
         self.route = route
         self.transfer = transfer
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ActionInitTarget route:{} transfer:{}>".format(self.route, self.transfer)
 
     def __eq__(self, other: Any) -> bool:
@@ -187,7 +187,7 @@ class ReceiveLockExpired(BalanceProofStateChange):
         self.secrethash = secrethash
         self.message_identifier = message_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ReceiveLockExpired sender:{} balance_proof:{}>".format(
             pex(self.sender), self.balance_proof
         )
@@ -237,7 +237,7 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
         self.secrethash = secrethash
         self.revealsecret = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ReceiveSecretRequest paymentid:{} amount:{} secrethash:{} sender:{}>".format(
             self.payment_identifier, self.amount, pex(self.secrethash), pex(self.sender)
         )
@@ -289,7 +289,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
         self.secret = secret
         self.secrethash = secrethash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ReceiveSecretReveal secrethash:{} sender:{}>".format(
             pex(self.secrethash), pex(self.sender)
         )
@@ -341,7 +341,7 @@ class ReceiveTransferRefundCancelRoute(BalanceProofStateChange):
         self.secrethash = secrethash
         self.secret = secret
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ReceiveTransferRefundCancelRoute sender:{} transfer:{}>".format(
             pex(self.sender), self.transfer
         )
@@ -389,7 +389,7 @@ class ReceiveTransferRefund(BalanceProofStateChange):
         self.transfer = transfer
         self.routes = routes
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<ReceiveTransferRefund sender:{} transfer:{}>".format(
             pex(self.sender), self.transfer
         )

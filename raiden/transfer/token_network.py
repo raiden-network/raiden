@@ -68,7 +68,7 @@ def handle_channel_close(
     state_change: ActionChannelClose,
     block_number: BlockNumber,
     block_hash: BlockHash,
-):
+) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
@@ -109,7 +109,7 @@ def handle_balance(
     state_change: ContractReceiveChannelNewBalance,
     block_number: BlockNumber,
     block_hash: BlockHash,
-):
+) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,
@@ -164,7 +164,7 @@ def handle_updated_transfer(
     state_change: ContractReceiveUpdateTransfer,
     block_number: BlockNumber,
     block_hash: BlockHash,
-):
+) -> TransitionResult:
     return subdispatch_to_channel_by_id(
         token_network_state=token_network_state,
         state_change=state_change,

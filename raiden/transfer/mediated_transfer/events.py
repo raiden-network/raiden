@@ -52,7 +52,7 @@ class SendLockExpired(SendMessageEvent):
         self.balance_proof = balance_proof
         self.secrethash = secrethash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SendLockExpired msgid:{} balance_proof:{} secrethash:{} recipient:{}>".format(
             self.message_identifier, self.balance_proof, pex(self.secrethash), pex(self.recipient)
         )
@@ -112,7 +112,7 @@ class SendLockedTransfer(SendMessageEvent):
     def balance_proof(self) -> BalanceProofUnsignedState:
         return self.transfer.balance_proof
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SendLockedTransfer msgid:{} transfer:{} recipient:{}>".format(
             self.message_identifier, self.transfer, pex(self.recipient)
         )
@@ -193,7 +193,7 @@ class SendSecretReveal(SendMessageEvent):
         self.secret = secret
         self.secrethash = secrethash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<SendSecretReveal msgid:{} secrethash:{} recipient:{}>".format(
             self.message_identifier, pex(self.secrethash), pex(self.recipient)
         )
@@ -267,7 +267,7 @@ class SendBalanceProof(SendMessageEvent):
         self.secrethash = sha3(secret)
         self.balance_proof = balance_proof
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<"
             "SendBalanceProof msgid:{} paymentid:{} token:{} secrethash:{} recipient:{} "
@@ -347,7 +347,7 @@ class SendSecretRequest(SendMessageEvent):
         self.expiration = expiration
         self.secrethash = secrethash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<SendSecretRequest "
             "msgid:{} paymentid:{} amount:{} expiration:{} secrethash:{} recipient:{}"
@@ -426,7 +426,7 @@ class SendRefundTransfer(SendMessageEvent):
     def balance_proof(self) -> BalanceProofUnsignedState:
         return self.transfer.balance_proof
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<"
             f"SendRefundTransfer msgid:{self.message_identifier} transfer:{self.transfer} "
@@ -474,7 +474,7 @@ class EventUnlockSuccess(Event):
         self.identifier = identifier
         self.secrethash = secrethash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<EventUnlockSuccess id:{} secrethash:{}>".format(
             self.identifier, pex(self.secrethash)
         )
@@ -515,7 +515,7 @@ class EventUnlockFailed(Event):
         self.secrethash = secrethash
         self.reason = reason
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<EventUnlockFailed id:{} secrethash:{} reason:{}>".format(
             self.identifier, pex(self.secrethash), self.reason
         )
@@ -557,7 +557,7 @@ class EventUnlockClaimSuccess(Event):
         self.identifier = identifier
         self.secrethash = secrethash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<EventUnlockClaimSuccess id:{} secrethash:{}>".format(
             self.identifier, pex(self.secrethash)
         )
@@ -598,7 +598,7 @@ class EventUnlockClaimFailed(Event):
         self.secrethash = secrethash
         self.reason = reason
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<EventUnlockClaimFailed id:{} secrethash:{} reason:{}>".format(
             self.identifier, pex(self.secrethash), self.reason
         )
@@ -640,7 +640,7 @@ class EventUnexpectedSecretReveal(Event):
         self.secrethash = secrethash
         self.reason = reason
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<"
             f"EventUnexpectedSecretReveal "

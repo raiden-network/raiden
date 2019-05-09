@@ -22,7 +22,7 @@ class QueueIdentifier:
         self.recipient = recipient
         self.channel_identifier = channel_identifier
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<QueueIdentifier recipient:{} channel_identifier:{}>".format(
             pex(self.recipient), self.channel_identifier
         )
@@ -69,7 +69,7 @@ class CanonicalIdentifier:
         self.token_network_address = token_network_address
         self.channel_identifier = channel_identifier
 
-    def __str__(self):
+    def __repr__(self) -> str:
         return (
             f"<CanonicalIdentifier "
             f"chain_id:{self.chain_identifier} "
@@ -77,7 +77,7 @@ class CanonicalIdentifier:
             f"channel_id:{self.channel_identifier}>"
         )
 
-    def validate(self):
+    def validate(self) -> None:
         if not isinstance(self.token_network_address, T_Address):
             raise ValueError("token_network_identifier must be an address instance")
 
