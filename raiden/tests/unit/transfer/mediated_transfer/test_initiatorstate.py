@@ -336,12 +336,7 @@ def test_state_wait_unlock_valid():
 
     # setup the state for the wait unlock
     initiator_state = get_transfer_at_index(setup.current_state, 0)
-    initiator_state.revealsecret = SendSecretReveal(
-        recipient=UNIT_TRANSFER_TARGET,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-        message_identifier=UNIT_TRANSFER_IDENTIFIER,
-        secret=UNIT_SECRET,
-    )
+    initiator_state.transfer_state = "transfer_secret_revealed"
 
     state_change = ReceiveSecretReveal(
         secret=UNIT_SECRET, sender=setup.channel.partner_state.address
@@ -366,17 +361,10 @@ def test_state_wait_unlock_valid():
 
 def test_state_wait_unlock_invalid():
     setup = setup_initiator_tests()
-    identifier = setup.channel.identifier
-    target_address = factories.make_address()
 
     # setup the state for the wait unlock
     initiator_state = get_transfer_at_index(setup.current_state, 0)
-    initiator_state.revealsecret = SendSecretReveal(
-        recipient=target_address,
-        channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
-        message_identifier=identifier,
-        secret=UNIT_SECRET,
-    )
+    initiator_state.transfer_state = "transfer_secret_revealed"
 
     before_state = deepcopy(setup.current_state)
 

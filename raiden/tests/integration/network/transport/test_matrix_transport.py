@@ -199,7 +199,7 @@ def make_message(convert_to_hex: bool = False, overwrite_data=None):
             secrethash=factories.UNIT_SECRETHASH,
             amount=1,
             expiration=10,
-            signature=EMPTY_SIGNATURE
+            signature=EMPTY_SIGNATURE,
         )
         message.sign(LocalSigner(factories.HOP1_KEY))
         data = message.encode()
