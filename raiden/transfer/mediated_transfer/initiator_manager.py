@@ -21,12 +21,13 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefundCancelRoute,
 )
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import NettingChannelState, RouteState
 from raiden.transfer.state_change import ActionCancelPayment, Block, ContractReceiveSecretReveal
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     BlockNumber,
-    ChannelMap,
+    ChannelID,
+    Dict,
     List,
     Optional,
     SecretHash,
@@ -60,7 +61,7 @@ def cancel_other_transfers(payment_state: InitiatorPaymentState) -> None:
 
 def can_cancel(initiator: InitiatorTransferState) -> bool:
     """ A transfer is only cancellable until the secret is revealed. """
-    return initiator is None or initiator.revealsecret is None
+    return initiator is None or initiator.transfer_state != "transfer_secret_revealed"
 
 
 def events_for_cancel_current_route(
@@ -95,7 +96,7 @@ def maybe_try_new_route(
     initiator_state: InitiatorTransferState,
     transfer_description: TransferDescriptionWithSecretState,
     available_routes: List[RouteState],
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorPaymentState]:
@@ -132,7 +133,7 @@ def subdispatch_to_initiatortransfer(
     payment_state: InitiatorPaymentState,
     initiator_state: InitiatorTransferState,
     state_change: StateChange,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[InitiatorTransferState]:
     channel_identifier = initiator_state.channel_identifier
@@ -156,7 +157,7 @@ def subdispatch_to_initiatortransfer(
 def subdispatch_to_all_initiatortransfer(
     payment_state: InitiatorPaymentState,
     state_change: StateChange,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[InitiatorPaymentState]:
     events = list()
@@ -180,7 +181,7 @@ def subdispatch_to_all_initiatortransfer(
 def handle_block(
     payment_state: InitiatorPaymentState,
     state_change: Block,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[InitiatorPaymentState]:
     return subdispatch_to_all_initiatortransfer(
@@ -194,7 +195,7 @@ def handle_block(
 def handle_init(
     payment_state: Optional[InitiatorPaymentState],
     state_change: ActionInitInitiator,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorPaymentState]:
@@ -220,7 +221,8 @@ def handle_init(
 
 
 def handle_cancelpayment(
-    payment_state: InitiatorPaymentState, channelidentifiers_to_channels: ChannelMap
+    payment_state: InitiatorPaymentState,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
 ) -> TransitionResult[InitiatorPaymentState]:
     """ Cancel the payment and all related transfers. """
     # Cannot cancel a transfer after the secret is revealed
@@ -255,7 +257,7 @@ def handle_cancelpayment(
 def handle_transferrefundcancelroute(
     payment_state: InitiatorPaymentState,
     state_change: ReceiveTransferRefundCancelRoute,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorPaymentState]:
@@ -327,7 +329,7 @@ def handle_transferrefundcancelroute(
 def handle_lock_expired(
     payment_state: InitiatorPaymentState,
     state_change: ReceiveLockExpired,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorPaymentState]:
     """Initiator also needs to handle LockExpired messages when refund transfers are involved.
@@ -373,7 +375,7 @@ def handle_lock_expired(
 def handle_offchain_secretreveal(
     payment_state: InitiatorPaymentState,
     state_change: ReceiveSecretReveal,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
 ) -> TransitionResult:
     initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
@@ -401,7 +403,7 @@ def handle_offchain_secretreveal(
 def handle_onchain_secretreveal(
     payment_state: InitiatorPaymentState,
     state_change: ContractReceiveSecretReveal,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[InitiatorPaymentState]:
     initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
@@ -429,7 +431,7 @@ def handle_onchain_secretreveal(
 def handle_secretrequest(
     payment_state: InitiatorPaymentState,
     state_change: ReceiveSecretRequest,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
 ) -> TransitionResult[InitiatorPaymentState]:
     initiator_state = payment_state.initiator_transfers.get(state_change.secrethash)
@@ -454,7 +456,7 @@ def handle_secretrequest(
 def state_transition(
     payment_state: Optional[InitiatorPaymentState],
     state_change: StateChange,
-    channelidentifiers_to_channels: ChannelMap,
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState],
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorPaymentState]:

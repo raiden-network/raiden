@@ -33,7 +33,6 @@ from raiden.utils.typing import (
     BlockTimeout,
     ChainID,
     ChannelID,
-    ChannelMap,
     Dict,
     EncodedData,
     FeeAmount,
