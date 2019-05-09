@@ -14,9 +14,9 @@ from raiden.utils.typing import (
     TYPE_CHECKING,
     Address,
     ChannelID,
+    Dict,
     FeeAmount,
     InitiatorAddress,
-    InitiatorTransfersMap,
     List,
     MessageID,
     Optional,
@@ -101,18 +101,6 @@ class LockedTransferSignedState(LockedTransferState):
 
 
 @dataclass
-class InitiatorPaymentState(State):
-    """ State of a payment for the initiator node.
-    A single payment may have multiple transfers. E.g. because if one of the
-    transfers fails or timeouts another transfer will be started with a
-    different secrethash.
-    """
-
-    initiator_transfers: InitiatorTransfersMap
-    cancelled_channels: List[ChannelID] = field(repr=False, default_factory=list)
-
-
-@dataclass
 class TransferDescriptionWithSecretState(State):
     """ Describes a transfer (target, amount, and token) and contains an
     additional secret that can be used with a hash-time-lock.
@@ -134,23 +122,34 @@ class TransferDescriptionWithSecretState(State):
 
 
 @dataclass
+class WaitingTransferState(State):
+    transfer: LockedTransferSignedState
+    state: str = field(default="waiting")
+
+
+@dataclass
 class InitiatorTransferState(State):
     """ State of a transfer for the initiator node. """
 
     transfer_description: TransferDescriptionWithSecretState = field(repr=False)
     channel_identifier: ChannelID
     transfer: LockedTransferUnsignedState
-    revealsecret: Optional["SendSecretReveal"] = field(repr=False)
     received_secret_request: bool = field(default=False, repr=False)
     transfer_state: str = field(default="transfer_pending")
 
-    valid_transfer_states = ("transfer_pending", "transfer_cancelled")
+    valid_transfer_states = ("transfer_pending", "transfer_cancelled", "transfer_secret_revealed")
 
 
 @dataclass
-class WaitingTransferState(State):
-    transfer: LockedTransferSignedState
-    state: str = field(default="waiting")
+class InitiatorPaymentState(State):
+    """ State of a payment for the initiator node.
+    A single payment may have multiple transfers. E.g. because if one of the
+    transfers fails or timeouts another transfer will be started with a
+    different secrethash.
+    """
+
+    initiator_transfers: Dict[SecretHash, InitiatorTransferState]
+    cancelled_channels: List[ChannelID] = field(repr=False, default_factory=list)
 
 
 @dataclass

@@ -70,8 +70,6 @@ if TYPE_CHECKING:
     from messages import EnvelopeMessage
 
 
-SecretHashToLock = Dict[SecretHash, "HashTimeLockState"]
-SecretHashToPartialUnlockProof = Dict[SecretHash, "UnlockPartialProofState"]
 QueueIdsToQueues = Dict[QueueIdentifier, List[SendMessageEvent]]
 
 CHANNEL_STATE_CLOSED = "closed"
@@ -147,9 +145,7 @@ class PaymentMappingState(State):
     # Because token swaps span multiple token networks, the state of the
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
-    secrethashes_to_task: Dict[SecretHash, TransferTask] = field(
-        repr=False, default_factory=dict
-    )
+    secrethashes_to_task: Dict[SecretHash, TransferTask] = field(repr=False, default_factory=dict)
 
 
 # This is necessary for the routing only, maybe it should be transient state
@@ -169,102 +165,6 @@ class TokenNetworkGraphState(State):
     def __repr__(self):
         # pylint: disable=no-member
         return "TokenNetworkGraphState(num_edges:{})".format(len(self.network.edges))
-
-
-@dataclass
-class TokenNetworkState(State):
-    """ Corresponds to a token network smart contract. """
-
-    address: TokenNetworkID
-    token_address: TokenAddress
-    network_graph: TokenNetworkGraphState = field(repr=False)
-    channelidentifiers_to_channels: ChannelMap = field(repr=False, default_factory=dict)
-    partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = field(
-        repr=False, default_factory=lambda: defaultdict(list)
-    )
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.address, T_Address):
-            raise ValueError("address must be an address instance")
-
-        if not isinstance(self.token_address, T_Address):
-            raise ValueError("token_address must be an address instance")
-
-
-@dataclass
-class PaymentNetworkState(State):
-    """ Corresponds to a registry smart contract. """
-
-    address: PaymentNetworkID
-    token_network_list: List[TokenNetworkState]
-    tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = field(
-        repr=False, default_factory=dict
-    )
-    tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = field(
-        repr=False, default_factory=dict
-    )
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.address, T_Address):
-            raise ValueError("address must be an address instance")
-
-        self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = {
-            token_network.address: token_network for token_network in self.token_network_list
-        }
-        self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = {
-            token_network.token_address: token_network.address
-            for token_network in self.token_network_list
-        }
-
-
-@dataclass(repr=False)
-class ChainState(State):
-    """ Umbrella object that stores the per blockchain state.
-    For each registry smart contract there must be a payment network. Within the
-    payment network the existing token networks and channels are registered.
-
-    TODO: Split the node specific attributes to a "NodeState" class
-    """
-
-    pseudo_random_generator: random.Random = field(compare=False)
-    block_number: BlockNumber
-    block_hash: BlockHash
-    our_address: Address
-    chain_id: ChainID
-    identifiers_to_paymentnetworks: Dict[PaymentNetworkID, PaymentNetworkState] = field(
-        repr=False, default_factory=dict
-    )
-    nodeaddresses_to_networkstates: Dict[Address, str] = field(repr=False, default_factory=dict)
-    payment_mapping: PaymentMappingState = field(repr=False, default_factory=PaymentMappingState)
-    pending_transactions: List[ContractSendEvent] = field(repr=False, default_factory=list)
-    queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
-    last_transport_authdata: Optional[str] = field(repr=False, default=None)
-    tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
-        TokenNetworkAddress, PaymentNetworkID
-    ] = field(repr=False, default_factory=dict)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.block_number, T_BlockNumber):
-            raise ValueError("block_number must be of BlockNumber type")
-
-        if not isinstance(self.block_hash, T_BlockHash):
-            raise ValueError("block_hash must be of BlockHash type")
-
-        if not isinstance(self.chain_id, T_ChainID):
-            raise ValueError("chain_id must be of ChainID type")
-
-    def __repr__(self):
-        return (
-            "ChainState(block_number={} block_hash={} networks={} " "qty_transfers={} chain_id={})"
-        ).format(
-            self.block_number,
-            pex(self.block_hash),
-            # pylint: disable=E1101
-            lpex(self.identifiers_to_paymentnetworks.keys()),
-            # pylint: disable=E1101
-            len(self.payment_mapping.secrethashes_to_task),
-            self.chain_id,
-        )
 
 
 @dataclass
@@ -563,16 +463,18 @@ class NettingChannelEndState(State):
 
     #: Locks which have been introduced with a locked transfer, however the
     #: secret is not known yet
-    secrethashes_to_lockedlocks: SecretHashToLock = field(repr=False, default_factory=dict)
+    secrethashes_to_lockedlocks: Dict[SecretHash, HashTimeLockState] = field(
+        repr=False, default_factory=dict
+    )
     #: Locks for which the secret is known, but the partner has not sent an
     #: unlock off chain yet.
-    secrethashes_to_unlockedlocks: SecretHashToPartialUnlockProof = field(
+    secrethashes_to_unlockedlocks: Dict[SecretHash, UnlockPartialProofState] = field(
         repr=False, default_factory=dict
     )
     #: Locks for which the secret is known, the partner has not sent an
     #: unlocked off chain yet, and the secret has been registered onchain
     #: before the lock has expired.
-    secrethashes_to_onchain_unlockedlocks: SecretHashToPartialUnlockProof = field(
+    secrethashes_to_onchain_unlockedlocks: Dict[SecretHash, UnlockPartialProofState] = field(
         repr=False, default_factory=dict
     )
     merkletree: MerkleTreeState = field(repr=False, default_factory=make_empty_merkle_tree)
@@ -667,3 +569,101 @@ class NettingChannelState(State):
     def partner_total_deposit(self) -> Balance:
         # pylint: disable=E1101
         return self.partner_state.contract_balance
+
+
+@dataclass
+class TokenNetworkState(State):
+    """ Corresponds to a token network smart contract. """
+
+    address: TokenNetworkID
+    token_address: TokenAddress
+    network_graph: TokenNetworkGraphState = field(repr=False)
+    channelidentifiers_to_channels: Dict[ChannelID, NettingChannelState] = field(
+        repr=False, default_factory=dict
+    )
+    partneraddresses_to_channelidentifiers: Dict[Address, List[ChannelID]] = field(
+        repr=False, default_factory=lambda: defaultdict(list)
+    )
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.address, T_Address):
+            raise ValueError("address must be an address instance")
+
+        if not isinstance(self.token_address, T_Address):
+            raise ValueError("token_address must be an address instance")
+
+
+@dataclass
+class PaymentNetworkState(State):
+    """ Corresponds to a registry smart contract. """
+
+    address: PaymentNetworkID
+    token_network_list: List[TokenNetworkState]
+    tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = field(
+        repr=False, default_factory=dict
+    )
+    tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = field(
+        repr=False, default_factory=dict
+    )
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.address, T_Address):
+            raise ValueError("address must be an address instance")
+
+        self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = {
+            token_network.address: token_network for token_network in self.token_network_list
+        }
+        self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = {
+            token_network.token_address: token_network.address
+            for token_network in self.token_network_list
+        }
+
+
+@dataclass(repr=False)
+class ChainState(State):
+    """ Umbrella object that stores the per blockchain state.
+    For each registry smart contract there must be a payment network. Within the
+    payment network the existing token networks and channels are registered.
+
+    TODO: Split the node specific attributes to a "NodeState" class
+    """
+
+    pseudo_random_generator: random.Random = field(compare=False)
+    block_number: BlockNumber
+    block_hash: BlockHash
+    our_address: Address
+    chain_id: ChainID
+    identifiers_to_paymentnetworks: Dict[PaymentNetworkID, PaymentNetworkState] = field(
+        repr=False, default_factory=dict
+    )
+    nodeaddresses_to_networkstates: Dict[Address, str] = field(repr=False, default_factory=dict)
+    payment_mapping: PaymentMappingState = field(repr=False, default_factory=PaymentMappingState)
+    pending_transactions: List[ContractSendEvent] = field(repr=False, default_factory=list)
+    queueids_to_queues: QueueIdsToQueues = field(repr=False, default_factory=dict)
+    last_transport_authdata: Optional[str] = field(repr=False, default=None)
+    tokennetworkaddresses_to_paymentnetworkaddresses: Dict[
+        TokenNetworkAddress, PaymentNetworkID
+    ] = field(repr=False, default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.block_number, T_BlockNumber):
+            raise ValueError("block_number must be of BlockNumber type")
+
+        if not isinstance(self.block_hash, T_BlockHash):
+            raise ValueError("block_hash must be of BlockHash type")
+
+        if not isinstance(self.chain_id, T_ChainID):
+            raise ValueError("chain_id must be of ChainID type")
+
+    def __repr__(self):
+        return (
+            "ChainState(block_number={} block_hash={} networks={} " "qty_transfers={} chain_id={})"
+        ).format(
+            self.block_number,
+            pex(self.block_hash),
+            # pylint: disable=E1101
+            lpex(self.identifiers_to_paymentnetworks.keys()),
+            # pylint: disable=E1101
+            len(self.payment_mapping.secrethashes_to_task),
+            self.chain_id,
+        )
