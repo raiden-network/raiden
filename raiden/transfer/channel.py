@@ -633,26 +633,26 @@ def valid_lockedtransfer_check(
     return result
 
 
-def refund_transfer_matches_received(
-    refund_transfer: LockedTransferSignedState, received_transfer: LockedTransferUnsignedState
+def refund_transfer_matches_transfer(
+    refund_transfer: LockedTransferSignedState, transfer: LockedTransferUnsignedState
 ) -> bool:
     refund_transfer_sender = refund_transfer.balance_proof.sender
     # Ignore a refund from the target
-    if refund_transfer_sender == received_transfer.target:
+    if refund_transfer_sender == transfer.target:
         return False
 
     return (
-        received_transfer.payment_identifier == refund_transfer.payment_identifier
-        and received_transfer.lock.amount == refund_transfer.lock.amount
-        and received_transfer.lock.secrethash == refund_transfer.lock.secrethash
-        and received_transfer.target == refund_transfer.target
-        and received_transfer.lock.expiration == refund_transfer.lock.expiration
+        transfer.payment_identifier == refund_transfer.payment_identifier
+        and transfer.lock.amount == refund_transfer.lock.amount
+        and transfer.lock.secrethash == refund_transfer.lock.secrethash
+        and transfer.target == refund_transfer.target
+        and transfer.lock.expiration == refund_transfer.lock.expiration
         and
         # The refund transfer is not tied to the other direction of the same
         # channel, it may reach this node through a different route depending
         # on the path finding strategy
         # original_receiver == refund_transfer_sender and
-        received_transfer.token == refund_transfer.token
+        transfer.token == refund_transfer.token
     )
 
 
@@ -675,7 +675,7 @@ def is_valid_refund(
     if not is_valid_locked_transfer:
         return False, msg, None
 
-    if not refund_transfer_matches_received(refund.transfer, received_transfer):
+    if not refund_transfer_matches_transfer(refund.transfer, received_transfer):
         return False, "Refund transfer did not match the received transfer", None
 
     return True, "", merkletree
