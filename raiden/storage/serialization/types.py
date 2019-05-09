@@ -1,17 +1,20 @@
 from random import Random
 
-from marshmallow import fields
-from marshmallow_dataclass import _native_to_marshmallow
+from marshmallow import Schema, fields
+from marshmallow_dataclass import _native_to_marshmallow, class_schema
 
 from raiden.storage.serialization.fields import (
     AddressField,
     BytesField,
+    CallablePolyField,
     IntegerToStringField,
     PRNGField,
 )
+from raiden.transfer.architecture import TransferTask
 from raiden.utils.typing import (
     AdditionalHash,
     Address,
+    Any,
     BalanceHash,
     BlockExpiration,
     BlockGasLimit,
@@ -19,6 +22,7 @@ from raiden.utils.typing import (
     BlockNumber,
     ChainID,
     ChannelID,
+    Dict,
     EncodedData,
     FeeAmount,
     InitiatorAddress,
@@ -28,6 +32,7 @@ from raiden.utils.typing import (
     Locksroot,
     MessageID,
     Nonce,
+    Optional,
     PaymentAmount,
     PaymentID,
     PaymentNetworkID,
@@ -44,6 +49,33 @@ from raiden.utils.typing import (
     TransferID,
     Union,
 )
+
+
+def transfer_task_schema_serialization(task: TransferTask, parent: Any) -> Schema:
+    # pylint: disable=unused-argument
+    return class_schema(task.__class__)()
+
+
+def transfer_task_schema_deserialization(
+    task_dict: Dict[str, Any], parent: Dict[str, Any]
+) -> Optional[Schema]:
+    # pylint: disable=unused-argument
+    # Avoid cyclic dependencies
+    from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
+
+    task_type = task_dict.get("type")
+    if task_type is None:
+        return None
+
+    if task_type.endswith("InitiatorTask"):
+        return class_schema(InitiatorTask)()
+    if task_type.endswith("MediatorTask"):
+        return class_schema(MediatorTask)()
+    if task_type.endswith("TargetTask"):
+        return class_schema(TargetTask)()
+
+    return None
+
 
 _native_to_marshmallow.update(
     {
@@ -87,6 +119,11 @@ _native_to_marshmallow.update(
         ChannelID: IntegerToStringField,
         # Union
         Union[TokenNetworkAddress, TokenNetworkID]: AddressField,
+        # Polymorphic fields
+        TransferTask: CallablePolyField(
+            serialization_schema_selector=transfer_task_schema_serialization,
+            deserialization_schema_selector=transfer_task_schema_deserialization,
+        ),
         # Other
         Random: PRNGField,
     }
