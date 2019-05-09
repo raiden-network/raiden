@@ -618,6 +618,8 @@ def test_refund_transfer_no_more_routes():
         current_state, state_change, setup.channel_map, setup.prng, expiry_block
     )
     assert search_for_item(iteration.events, SendLockExpired, {}) is not None
+    # The lock expired, so the route failed
+    assert search_for_item(iteration.events, EventRouteFailed, {}) is not None
     # Since there was a refund transfer the payment task must not have been deleted
     assert iteration.new_state is not None
 
@@ -696,6 +698,8 @@ def test_cancelpayment():
         pseudo_random_generator=setup.prng,
         block_number=expiry_block,
     )
+    # The lock expired, so the route failed
+    assert search_for_item(iteration.events, EventRouteFailed, {}) is not None
     assert not iteration.new_state, "payment task should be deleted at this block"
 
 
@@ -861,6 +865,8 @@ def test_initiator_lock_expired():
         },
     )
     assert lock_expired is not None
+    # The lock expired, so the route failed
+    assert search_for_item(iteration.events, EventRouteFailed, {}) is not None
 
     assert search_for_item(iteration.events, EventUnlockFailed, {})
 
@@ -963,6 +969,8 @@ def test_initiator_lock_expired_must_not_be_sent_if_channel_is_closed():
         setup.current_state, block, channel_map, setup.prng, expiration_block_number
     )
     assert search_for_item(iteration.events, SendLockExpired, {}) is None
+    # The lock expired, so the route failed
+    assert search_for_item(iteration.events, EventRouteFailed, {}) is not None
 
 
 def test_initiator_handle_contract_receive_secret_reveal():
