@@ -163,10 +163,6 @@ SuccessOrError = Tuple[bool, Optional[str]]
 
 BlockSpecification = Union[str, T_BlockNumber, T_BlockHash]
 
-ChannelMap = Dict[ChannelID, "NettingChannelState"]
-
-InitiatorTransfersMap = Dict[SecretHash, "InitiatorTransferState"]
-
 NodeNetworkStateMap = Dict[Address, str]
 
 Host = NewType("Host", str)
