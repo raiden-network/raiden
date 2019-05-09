@@ -80,7 +80,7 @@ class InitiatorPaymentState(State):
         self.initiator_transfers = initiator_transfers
         self.cancelled_channels: List[ChannelID] = list()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<InitiatorPaymentState transfers:{}>".format(self.initiator_transfers)
 
     def __eq__(self, other: Any) -> bool:
@@ -150,7 +150,7 @@ class InitiatorTransferState(State):
         self.received_secret_request = received_secret_request
         self.transfer_state = "transfer_pending"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<InitiatorTransferState transfer:{} channel:{} state:{}>".format(
             self.transfer, self.channel_identifier, self.transfer_state
         )
@@ -200,7 +200,7 @@ class WaitingTransferState(State):
         self.transfer = transfer
         self.state = state
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<WaitingTransferState state:{self.state} transfer:{self.transfer}>"
 
     def __eq__(self, other: Any) -> bool:
@@ -242,7 +242,7 @@ class MediatorTransferState(State):
         self.waiting_transfer: Optional[WaitingTransferState] = None
         self.routes = routes
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<MediatorTransferState secrethash:{} qtd_transfers:{}>".format(
             pex(self.secrethash), len(self.transfers_pair)
         )
@@ -316,7 +316,7 @@ class TargetTransferState(State):
         self.secret = secret
         self.state = "secret_request"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<TargetTransferState transfer:{} state:{}>".format(self.transfer, self.state)
 
     def __eq__(self, other: Any) -> bool:
@@ -389,7 +389,7 @@ class LockedTransferUnsignedState(LockedTransferState):
         self.initiator = initiator
         self.target = target
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<"
             "LockedTransferUnsignedState id:{} token:{} balance_proof:{} "
@@ -485,7 +485,7 @@ class LockedTransferSignedState(LockedTransferState):
         self.initiator = initiator
         self.target = target
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             "<" "LockedTransferSignedState msgid:{} id:{} token:{} lock:{}" " target:{}" ">"
         ).format(
@@ -584,7 +584,7 @@ class TransferDescriptionWithSecretState(State):
         self.secret = secret
         self.secrethash = secrethash
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<"
             f"TransferDescriptionWithSecretState "
@@ -707,7 +707,7 @@ class MediationPairState(State):
         self.payer_state = "payer_pending"
         self.payee_state = "payee_pending"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<MediationPairState payee_address:{} payee_transfer:{} payer_transfer{}>".format(
             pex(self.payee_address), self.payer_transfer, self.payee_transfer
         )

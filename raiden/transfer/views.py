@@ -129,7 +129,7 @@ def get_our_capacity_for_token_network(
     return total_deposit
 
 
-def get_payment_network_identifiers(chain_state: ChainState,) -> List[PaymentNetworkID]:
+def get_payment_network_identifiers(chain_state: ChainState) -> List[PaymentNetworkID]:
     return list(chain_state.identifiers_to_paymentnetworks.keys())
 
 
@@ -417,7 +417,7 @@ def get_transfer_secret(chain_state: ChainState, secrethash: SecretHash) -> Opti
     )
 
 
-def get_transfer_task(chain_state: ChainState, secrethash: SecretHash):
+def get_transfer_task(chain_state: ChainState, secrethash: SecretHash) -> Optional[TransferTask]:
     return chain_state.payment_mapping.secrethashes_to_task.get(secrethash)
 
 
