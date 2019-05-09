@@ -634,16 +634,17 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     address1 = factories.make_address()
     address2 = factories.make_address()
     address3 = factories.make_address()
+    address4 = factories.make_address()
 
     # Create a network with the following topology
     #
-    # our  ----- 50 ---->  (1)
-    #  |                    ^
-    #  |                    |
-    # 100                  100
-    #  |                    |
-    #  v                    |
-    # (2)  ----- 100 --->  (3)
+    # our  ----- 50 ---->  (1) <------50------
+    #  |                                    |
+    #  |                                    |
+    # 100                                  (4)
+    #  |                                    ^
+    #  v                                    |
+    # (2)  ----- 100 --->  (3) <-------100---
 
     channel_state1 = factories.create(
         factories.NettingChannelStateProperties(
@@ -719,7 +720,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
             token_network_address=token_network_state.address, channel_identifier=4
         ),
         participant1=address3,
-        participant2=address1,
+        participant2=address4,
         block_number=open_block_number,
         block_hash=open_block_number_hash,
     )
@@ -734,18 +735,40 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     assert len(graph_state.channel_identifier_to_participants) == 4
     assert len(graph_state.network.edges()) == 4
 
+    channel_new_state_change5 = ContractReceiveRouteNew(
+        transaction_hash=factories.make_transaction_hash(),
+        canonical_identifier=factories.make_canonical_identifier(
+            token_network_address=token_network_state.address, channel_identifier=5
+        ),
+        participant1=address1,
+        participant2=address4,
+        block_number=open_block_number,
+        block_hash=open_block_number_hash,
+    )
+    channel_new_iteration5 = token_network.state_transition(
+        token_network_state=channel_new_iteration4.new_state,
+        state_change=channel_new_state_change5,
+        block_number=open_block_number + 10,
+        block_hash=factories.make_block_hash(),
+    )
+
+    graph_state = channel_new_iteration5.new_state.network_graph
+    assert len(graph_state.channel_identifier_to_participants) == 5
+    assert len(graph_state.network.edges()) == 5
+
     # test routing with all nodes available
     chain_state.nodeaddresses_to_networkstates = {
         address1: NODE_NETWORK_REACHABLE,
         address2: NODE_NETWORK_REACHABLE,
         address3: NODE_NETWORK_REACHABLE,
+        address4: NODE_NETWORK_REACHABLE,
     }
 
     routes1 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
-        to_address=address1,
+        to_address=address4,
         amount=50,
         previous_address=None,
         config={},
@@ -754,30 +777,19 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     assert routes1[0].node_address == address1
     assert routes1[1].node_address == address2
 
-    routes2 = get_best_routes(
-        chain_state=chain_state,
-        token_network_id=token_network_state.address,
-        from_address=our_address,
-        to_address=address1,
-        amount=51,
-        previous_address=None,
-        config={},
-        privkey=b"",
-    )
-    assert routes2[0].node_address == address1
-
     # test routing with node 2 offline
     chain_state.nodeaddresses_to_networkstates = {
         address1: NODE_NETWORK_REACHABLE,
         address2: NODE_NETWORK_UNREACHABLE,
         address3: NODE_NETWORK_REACHABLE,
+        address4: NODE_NETWORK_REACHABLE,
     }
 
     routes1 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
-        to_address=address1,
+        to_address=address4,
         amount=50,
         previous_address=None,
         config={},
@@ -785,31 +797,20 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     )
     assert routes1[0].node_address == address1
 
-    routes2 = get_best_routes(
-        chain_state=chain_state,
-        token_network_id=token_network_state.address,
-        from_address=our_address,
-        to_address=address1,
-        amount=51,
-        previous_address=None,
-        config={},
-        privkey=b"",
-    )
-    assert routes2[0].node_address == address1
-
     # test routing with node 3 offline
     # the routing doesn't care as node 3 is not directly connected
     chain_state.nodeaddresses_to_networkstates = {
         address1: NODE_NETWORK_REACHABLE,
         address2: NODE_NETWORK_REACHABLE,
         address3: NODE_NETWORK_UNREACHABLE,
+        address4: NODE_NETWORK_REACHABLE,
     }
 
     routes1 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
-        to_address=address1,
+        to_address=address4,
         amount=50,
         previous_address=None,
         config={},
@@ -818,49 +819,26 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
     assert routes1[0].node_address == address1
     assert routes1[1].node_address == address2
 
-    routes2 = get_best_routes(
-        chain_state=chain_state,
-        token_network_id=token_network_state.address,
-        from_address=our_address,
-        to_address=address1,
-        amount=51,
-        previous_address=None,
-        config={},
-        privkey=b"",
-    )
-    assert routes2[0].node_address == address1
-
     # test routing with node 1 offline
     chain_state.nodeaddresses_to_networkstates = {
         address1: NODE_NETWORK_UNREACHABLE,
         address2: NODE_NETWORK_REACHABLE,
         address3: NODE_NETWORK_REACHABLE,
+        address4: NODE_NETWORK_REACHABLE,
     }
 
     routes1 = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
-        to_address=address1,
+        to_address=address3,
         amount=50,
         previous_address=None,
         config={},
         privkey=b"",
     )
     # right now the channel to 1 gets filtered out as it is offline
-    assert routes1[0].node_address == address1
-
-    routes2 = get_best_routes(
-        chain_state=chain_state,
-        token_network_id=token_network_state.address,
-        from_address=our_address,
-        to_address=address1,
-        amount=51,
-        previous_address=None,
-        config={},
-        privkey=b"",
-    )
-    assert routes2[0].node_address == address1
+    assert routes1[0].node_address == address2
 
 
 def test_routing_priority(chain_state, token_network_state, our_address):
