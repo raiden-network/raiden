@@ -27,6 +27,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def get_best_routes(
     chain_state: ChainState,
     token_network_id: TokenNetworkID,
+    one_to_n_address: Address,
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: PaymentAmount,
@@ -67,6 +68,7 @@ def get_best_routes(
         pfs_answer_ok, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_id=token_network_id,
+            one_to_n_address=one_to_n_address,
             from_address=from_address,
             to_address=to_address,
             amount=amount,
@@ -197,6 +199,7 @@ def get_best_routes_internal(
 def get_best_routes_pfs(
     chain_state: ChainState,
     token_network_id: TokenNetworkID,
+    one_to_n_address: Address,
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: PaymentAmount,
@@ -211,6 +214,8 @@ def get_best_routes_pfs(
             privkey=privkey,
             current_block_number=chain_state.block_number,
             token_network_address=token_network_id,
+            one_to_n_address=one_to_n_address,
+            chain_id=chain_state.chain_id,
             route_from=from_address,
             route_to=to_address,
             value=amount,
