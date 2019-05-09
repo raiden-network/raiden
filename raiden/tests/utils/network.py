@@ -6,7 +6,6 @@ from gevent import server
 
 from raiden import waiting
 from raiden.app import App
-from raiden.constants import DISCOVERY_DEFAULT_ROOM, PATH_FINDING_BROADCASTING_ROOM
 from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
@@ -281,6 +280,7 @@ def create_apps(
     unrecoverable_error_should_crash,
     local_matrix_url=None,
     private_rooms=None,
+    global_rooms=None,
 ):
     """ Create the apps."""
     # pylint: disable=too-many-locals
@@ -329,11 +329,7 @@ def create_apps(
                     "transport_type": "matrix",
                     "transport": {
                         "matrix": {
-                            # FIXME: #3735
-                            "global_rooms": [
-                                DISCOVERY_DEFAULT_ROOM,
-                                PATH_FINDING_BROADCASTING_ROOM,
-                            ],
+                            "global_rooms": global_rooms,
                             "retries_before_backoff": retries_before_backoff,
                             "retry_interval": retry_interval,
                             "server": local_matrix_url,
