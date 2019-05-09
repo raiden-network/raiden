@@ -69,7 +69,6 @@ from raiden.utils.typing import (
 if TYPE_CHECKING:
     # pylint: disable=unused-import
     from messages import EnvelopeMessage
-    from raiden.transfer.mediated_transfer.tasks import TransferTask  # noqa
 
 
 SecretHashToLock = Dict[SecretHash, "HashTimeLockState"]
@@ -133,6 +132,13 @@ def to_comparable_graph(network: networkx.Graph) -> List[List[Any]]:
 
 
 @dataclass
+class TransferTask(State):
+    # TODO: When we turn these into dataclasses it would be a good time to move common attributes
+    # of all transfer tasks like the `token_network_identifier` into the common subclass
+    pass
+
+
+@dataclass
 class PaymentMappingState(State):
     """ Global map from secrethash to a transfer task.
     This mapping is used to quickly dispatch state changes by secrethash, for
@@ -149,7 +155,7 @@ class PaymentMappingState(State):
     # Because token swaps span multiple token networks, the state of the
     # payment task is kept in this mapping, instead of inside an arbitrary
     # token network.
-    secrethashes_to_task: Dict[SecretHash, "TransferTask"] = field(
+    secrethashes_to_task: Dict[SecretHash, TransferTask] = field(
         repr=False, default_factory=dict
     )
 
