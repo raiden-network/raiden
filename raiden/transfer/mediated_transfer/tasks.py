@@ -1,12 +1,12 @@
 from dataclasses import dataclass, field
 
+from raiden.transfer.architecture import TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.state import (
     InitiatorPaymentState,
     MediatorTransferState,
     TargetTransferState,
 )
-from raiden.transfer.state import TransferTask
 from raiden.utils.typing import ChannelID, TokenNetworkID
 
 

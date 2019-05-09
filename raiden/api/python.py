@@ -31,13 +31,14 @@ from raiden.exceptions import (
 from raiden.messages import RequestMonitoring
 from raiden.settings import DEFAULT_RETRY_TIMEOUT, DEVELOPMENT_CONTRACT_VERSION
 from raiden.transfer import architecture, views
+from raiden.transfer.architecture import TransferTask
 from raiden.transfer.events import (
     EventPaymentReceivedSuccess,
     EventPaymentSentFailed,
     EventPaymentSentSuccess,
 )
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
-from raiden.transfer.state import BalanceProofSignedState, NettingChannelState, TransferTask
+from raiden.transfer.state import BalanceProofSignedState, NettingChannelState
 from raiden.transfer.state_change import ActionChannelClose
 from raiden.utils import pex, typing
 from raiden.utils.gas_reserve import has_enough_gas_reserve
