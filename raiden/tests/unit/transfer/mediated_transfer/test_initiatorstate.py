@@ -27,7 +27,6 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer import initiator, initiator_manager
 from raiden.transfer.mediated_transfer.events import (
-    CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
     EventRouteFailed,
     EventUnlockFailed,
     EventUnlockSuccess,
@@ -87,7 +86,7 @@ class InitiatorSetup(NamedTuple):
     current_state: State
     block_number: typing.BlockNumber
     channel: NettingChannelState
-    channel_map: typing.ChannelMap
+    channel_map: typing.Dict[typing.ChannelID, NettingChannelState]
     available_routes: typing.List[RouteState]
     prng: random.Random
     lock: HashTimeLockState
