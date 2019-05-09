@@ -449,24 +449,27 @@ class InitiatorMixin:
 
 class BalanceProofData:
     def __init__(self, canonical_identifier):
+        self._canonical_identifier = canonical_identifier
         self._merkletree = make_empty_merkle_tree()
-        self.properties = factories.BalanceProofProperties(
-            transferred_amount=0,
-            locked_amount=0,
-            nonce=0,
-            canonical_identifier=canonical_identifier,
-        )
+        self.properties = None
 
     def update(self, amount, lockhash):
         self._merkletree = channel.compute_merkletree_with(self._merkletree, lockhash)
-        self.properties = factories.create_properties(
-            factories.BalanceProofProperties(
+        if self.properties:
+            self.properties = factories.replace(
+                self.properties,
                 locked_amount=self.properties.locked_amount + amount,
                 locksroot=merkleroot(self._merkletree),
                 nonce=self.properties.nonce + 1,
-            ),
-            self.properties,
-        )
+            )
+        else:
+            self.properties = factories.BalanceProofProperties(
+                transferred_amount=0,
+                locked_amount=amount,
+                nonce=1,
+                locksroot=merkleroot(self._merkletree),
+                canonical_identifier=self._canonical_identifier,
+            )
 
 
 class MediatorMixin:
