@@ -607,8 +607,8 @@ def handle_node_change_network_state(
     network_state = state_change.network_state
     chain_state.nodeaddresses_to_networkstates[node_address] = network_state
 
-    for secrethash, subtask in chain_state.payment_mapping.secrethashes_to_task.items():
-        # This assert would not have been needed if token_network_address, a common attribute
+    for secrethash, subtask in list(chain_state.payment_mapping.secrethashes_to_task.items()):
+        # This assert would not have been needed if token_network_identifier, a common attribute
         # for all TransferTasks was part of the TransferTasks superclass.
         assert isinstance(subtask, (InitiatorTask, MediatorTask, TargetTask))
         result = subdispatch_mediatortask(
