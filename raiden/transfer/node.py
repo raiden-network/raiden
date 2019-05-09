@@ -300,10 +300,10 @@ def subdispatch_initiatortask(
     elif sub_task and isinstance(sub_task, InitiatorTask):
         transfer = sub_task.manager_state.initiator_transfers.get(secrethash)
         is_valid_subtask = (
-            transfer is not None and
-            token_network_identifier == sub_task.token_network_identifier and
-            state_change.transfer.payment_identifier ==
-            transfer.transfer_description.payment_identifier
+            transfer is not None
+            and token_network_identifier == sub_task.token_network_identifier
+            and state_change.transfer.payment_identifier
+            == transfer.transfer_description.payment_identifier
         )
         manager_state = sub_task.manager_state
     else:

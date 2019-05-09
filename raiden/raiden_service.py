@@ -190,15 +190,15 @@ class PaymentStatus(NamedTuple):
     secrethash: SecretHash
 
     def matches(
-            self,
-            token_network_identifier: TokenNetworkID,
-            amount: PaymentAmount,
-            secrethash: SecretHash,
+        self,
+        token_network_identifier: TokenNetworkID,
+        amount: PaymentAmount,
+        secrethash: SecretHash,
     ):
         return (
-            token_network_identifier == self.token_network_identifier and
-            amount == self.amount and
-            secrethash == self.secrethash
+            token_network_identifier == self.token_network_identifier
+            and amount == self.amount
+            and secrethash == self.secrethash
         )
 
 
@@ -1099,9 +1099,7 @@ class RaidenService(Runnable):
             payment_status = self.targets_to_identifiers_to_statuses[target].get(identifier)
             if payment_status:
                 payment_status_matches = payment_status.matches(
-                    token_network_identifier,
-                    amount,
-                    secrethash,
+                    token_network_identifier, amount, secrethash
                 )
                 if not payment_status_matches:
                     raise PaymentConflict("Another payment with the same id is in flight")
