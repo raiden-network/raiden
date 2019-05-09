@@ -7,6 +7,7 @@ from raiden.transfer.architecture import Event, TransitionResult
 from raiden.transfer.events import EventPaymentSentFailed, EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import (
     CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
+    EventRouteFailed,
     EventUnlockFailed,
     EventUnlockSuccess,
     SendLockedTransfer,
@@ -144,6 +145,7 @@ def handle_block(
             target=transfer_description.target,
             reason=reason,
         )
+        route_failed = EventRouteFailed(secrethash=secrethash)
         unlock_failed = EventUnlockFailed(
             identifier=payment_identifier,
             secrethash=initiator_state.transfer_description.secrethash,
@@ -159,7 +161,7 @@ def handle_block(
             # task around to wait for the LockExpired messages to sync.
             # Check https://github.com/raiden-network/raiden/issues/3183
             initiator_state if lock_exists else None,
-            events + [payment_failed, unlock_failed],
+            events + [payment_failed, route_failed, unlock_failed],
         )
     else:
         return TransitionResult(initiator_state, events)
