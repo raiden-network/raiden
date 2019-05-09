@@ -1,5 +1,5 @@
 from raiden.transfer import channel
-from raiden.transfer.architecture import ContractSendEvent
+from raiden.transfer.architecture import ContractSendEvent, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.mediated_transfer.tasks import InitiatorTask, MediatorTask, TargetTask
 from raiden.transfer.state import (
@@ -17,7 +17,6 @@ from raiden.transfer.state import (
     PaymentNetworkState,
     QueueIdsToQueues,
     TokenNetworkState,
-    TransferTask,
 )
 from raiden.utils.typing import (
     MYPY_ANNOTATION,

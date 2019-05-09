@@ -17,7 +17,7 @@ from raiden.constants import (
 )
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
-from raiden.transfer.architecture import ContractSendEvent, SendMessageEvent, State
+from raiden.transfer.architecture import ContractSendEvent, SendMessageEvent, State, TransferTask
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
 from raiden.transfer.utils import hash_balance_data
 from raiden.utils import lpex, pex, sha3
@@ -129,13 +129,6 @@ def message_identifier_from_prng(prng: Random) -> MessageID:
 
 def to_comparable_graph(network: networkx.Graph) -> List[List[Any]]:
     return sorted(sorted(edge) for edge in network.edges())
-
-
-@dataclass
-class TransferTask(State):
-    # TODO: When we turn these into dataclasses it would be a good time to move common attributes
-    # of all transfer tasks like the `token_network_identifier` into the common subclass
-    pass
 
 
 @dataclass
