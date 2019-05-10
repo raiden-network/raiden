@@ -16,18 +16,19 @@ from raiden.tests.fixtures.constants import DEFAULT_BALANCE_BIN, DEFAULT_PASSPHR
 from raiden.tests.utils.genesis import GENESIS_STUB, PARITY_CHAIN_SPEC_STUB
 from raiden.utils import privatekey_to_address, privatekey_to_publickey
 from raiden.utils.http import JSONRPCExecutor
-from raiden.utils.typing import Any, Dict, List, NamedTuple
+from raiden.utils.typing import Any, Dict, List, NamedTuple, Address, PrivateKey, Port, ChainID
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+Command = List[str]
 _GETH_VERBOSITY_LEVEL = {"error": 1, "warn": 2, "info": 3, "debug": 4}
 
 
 class EthNodeDescription(NamedTuple):
-    private_key: bytes
-    rpc_port: int
-    p2p_port: int
+    private_key: PrivateKey
+    rpc_port: Port
+    p2p_port: Port
     miner: bool
     extra_config: Dict[str, Any]
     blockchain_type: str = "geth"
@@ -46,12 +47,12 @@ class GenesisDescription(NamedTuple):
         chain_id: The id of the private chain.
     """
 
-    prefunded_accounts: List[bytes]
+    prefunded_accounts: List[Address]
     random_marker: str
-    chain_id: int
+    chain_id: ChainID
 
 
-def geth_clique_extradata(extra_vanity, extra_seal):
+def geth_clique_extradata(extra_vanity: str, extra_seal: str) -> str:
     if len(extra_vanity) > 64:
         raise ValueError("extra_vanity length must be smaller-or-equal to 64")
 
@@ -62,11 +63,11 @@ def geth_clique_extradata(extra_vanity, extra_seal):
     return "0x{:0<64}{:0<170}".format(extra_vanity, extra_seal)
 
 
-def parity_extradata(random_marker):
+def parity_extradata(random_marker: str) -> str:
     return f"0x{random_marker:0<64}"
 
 
-def geth_to_cmd(node: Dict, datadir: str, chain_id: int, verbosity: str) -> List[str]:
+def geth_to_cmd(node: Dict, datadir: str, chain_id: ChainID, verbosity: str) -> Command:
     """
     Transform a node configuration into a cmd-args list for `subprocess.Popen`.
 
@@ -123,7 +124,7 @@ def geth_to_cmd(node: Dict, datadir: str, chain_id: int, verbosity: str) -> List
 
 def parity_to_cmd(
     node: Dict, datadir: str, chain_id: int, chain_spec: str, verbosity: str
-) -> List[str]:
+) -> Command:
 
     node_config = {
         "nodekeyhex": "node-key",
@@ -197,8 +198,8 @@ def geth_create_account(datadir: str, privkey: bytes):
 
 
 def parity_generate_chain_spec(
-    genesis_path: str, genesis_description: GenesisDescription, seal_account: bytes
-):
+    genesis_path: str, genesis_description: GenesisDescription, seal_account: Address
+) -> None:
     alloc = {
         to_checksum_address(address): {"balance": 1000000000000000000}
         for address in genesis_description.prefunded_accounts
@@ -216,7 +217,7 @@ def parity_generate_chain_spec(
 
 
 def geth_generate_poa_genesis(
-    genesis_path: str, genesis_description: GenesisDescription, seal_account: bytes
+    genesis_path: str, genesis_description: GenesisDescription, seal_account: Address
 ) -> None:
     """Writes a bare genesis to `genesis_path`."""
 
@@ -303,7 +304,7 @@ def parity_create_account(
     return path
 
 
-def eth_check_balance(web3: Web3, accounts_addresses: List[bytes], retries: int = 10) -> None:
+def eth_check_balance(web3: Web3, accounts_addresses: List[Address], retries: int = 10) -> None:
     """ Wait until the given addresses have a balance.
 
     Raises a ValueError if any of the addresses still have no balance after ``retries``.
@@ -320,7 +321,7 @@ def eth_check_balance(web3: Web3, accounts_addresses: List[bytes], retries: int 
 
 
 def eth_node_config(
-    miner_pkey: bytes, p2p_port: int, rpc_port: int, **extra_config: Dict[str, Any]
+    miner_pkey: PrivateKey, p2p_port: Port, rpc_port: Port, **extra_config: Dict[str, Any]
 ) -> Dict[str, Any]:
     address = privatekey_to_address(miner_pkey)
     pub = privatekey_to_publickey(miner_pkey).hex()
@@ -348,17 +349,17 @@ def eth_node_config_set_bootnodes(nodes_configuration: List[Dict[str, Any]]) -> 
         config["bootnodes"] = bootnodes
 
 
-def eth_node_to_datadir(node_config, base_datadir):
+def eth_node_to_datadir(nodekeyhex: str, base_datadir: str) -> str:
     # HACK: Use only the first 8 characters to avoid golang's issue
     # https://github.com/golang/go/issues/6895 (IPC bind fails with path
     # longer than 108 characters).
     # BSD (and therefore macOS) socket path length limit is 104 chars
-    nodekey_part = node_config["nodekeyhex"][:8]
+    nodekey_part = nodekeyhex[:8]
     datadir = os.path.join(base_datadir, nodekey_part)
     return datadir
 
 
-def eth_node_to_logpath(node_config, base_logdir):
+def eth_node_to_logpath(node_config: Dict[str, Any], base_logdir: str) -> str:
     # HACK: Use only the first 8 characters to avoid golang's issue
     # https://github.com/golang/go/issues/6895 (IPC bind fails with path
     # longer than 108 characters).
@@ -368,7 +369,7 @@ def eth_node_to_logpath(node_config, base_logdir):
     return logpath
 
 
-def geth_prepare_datadir(datadir, genesis_file):
+def geth_prepare_datadir(datadir: str, genesis_file: str) -> None:
     node_genesis_path = os.path.join(datadir, "custom_genesis.json")
     ipc_path = datadir + "/geth.ipc"
     assert len(ipc_path) <= 104, f'geth data path "{ipc_path}" is too large'
@@ -379,8 +380,13 @@ def geth_prepare_datadir(datadir, genesis_file):
 
 
 def eth_nodes_to_cmds(
-    nodes_configuration, eth_node_descs, base_datadir, genesis_file, chain_id, verbosity
-):
+    nodes_configuration: List[Dict[str, Any]],
+    eth_node_descs: List[EthNodeDescription],
+    base_datadir: str,
+    genesis_file: str,
+    chain_id: ChainID,
+    verbosity: str,
+) -> List[Command]:
     cmds = []
     for config, node_desc in zip(nodes_configuration, eth_node_descs):
         datadir = eth_node_to_datadir(config, base_datadir)
@@ -407,7 +413,7 @@ def eth_run_nodes(
     nodes_configuration: List[Dict],
     base_datadir: str,
     genesis_file: str,
-    chain_id: int,
+    chain_id: ChainID,
     random_marker: str,
     verbosity: str,
     logdir: str,
@@ -464,7 +470,7 @@ def run_private_blockchain(
     log_dir: str,
     verbosity: str,
     genesis_description: GenesisDescription,
-):
+) -> ContextManager[List[JSONRPCExecutor]]:
     """ Starts a private network with private_keys accounts funded.
 
     Args:
