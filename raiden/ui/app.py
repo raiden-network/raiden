@@ -100,7 +100,7 @@ def get_account_and_private_key(
     return to_canonical_address(address_hex), privatekey_bin
 
 
-def rpc_normalized_endpoint(eth_rpc_endpoint):
+def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> str:
     parsed_eth_rpc_endpoint = urlparse(eth_rpc_endpoint)
 
     if parsed_eth_rpc_endpoint.scheme:
