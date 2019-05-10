@@ -200,7 +200,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
-        default_one_to_n_address=app0.raiden.default_one_to_n_address,
+        default_one_to_n_address=app0.raiden.default_one_to_n,
         transport=MatrixTransport(app0.raiden.config["transport"]["matrix"]),
         raiden_event_handler=raiden_event_handler,
         message_handler=message_handler,
