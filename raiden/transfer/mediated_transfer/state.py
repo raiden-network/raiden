@@ -623,10 +623,16 @@ class TransferDescriptionWithSecretState(State):
             "initiator": to_checksum_address(self.initiator),
             "target": to_checksum_address(self.target),
             "secret": serialize_bytes(self.secret),
+            "secrethash": serialize_bytes(self.secrethash),
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TransferDescriptionWithSecretState":
+        if "secrethash" in data:
+            secrethash = deserialize_secret_hash(data["secrethash"])
+        else:
+            secrethash = sha3(deserialize_secret(data["secret"]))
+
         restored = cls(
             payment_network_identifier=to_canonical_address(data["payment_network_identifier"]),
             payment_identifier=PaymentID(int(data["payment_identifier"])),
@@ -636,6 +642,7 @@ class TransferDescriptionWithSecretState(State):
             initiator=to_canonical_address(data["initiator"]),
             target=to_canonical_address(data["target"]),
             secret=deserialize_secret(data["secret"]),
+            secrethash=secrethash,
         )
 
         return restored
