@@ -81,7 +81,6 @@ from raiden.utils.signer import recover
 from raiden.utils.typing import (
     MYPY_ANNOTATION,
     Address,
-    Any,
     Balance,
     BlockExpiration,
     BlockHash,
@@ -114,8 +113,8 @@ from raiden.utils.typing import (
 )
 
 # This should be changed to `Union[str, MerkleTreeState]`
-MerkletreeOrError = Tuple[bool, Optional[str], Optional[Any]]
-EventsOrError = Tuple[bool, List[Event], Any]
+MerkletreeOrError = Tuple[bool, Optional[str], Optional[MerkleTreeState]]
+EventsOrError = Tuple[bool, List[Event], Optional[str]]
 BalanceProofData = Tuple[Locksroot, Nonce, TokenAmount, TokenAmount]
 SendUnlockAndMerkleTree = Tuple[SendBalanceProof, MerkleTreeState]
 
