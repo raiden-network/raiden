@@ -133,27 +133,39 @@ def create_channel_from_models(our_model, partner_model, partner_pkey):
         )
     )
 
-    our_unsigned = create(
-        BalanceProofProperties(
-            nonce=our_model.next_nonce - 1,
-            transferred_amount=0,
-            locked_amount=len(our_model.merkletree_leaves),
-            locksroot=merkleroot(channel_state.our_state.merkletree),
-            canonical_identifier=channel_state.canonical_identifier,
+    our_nonce = our_model.next_nonce - 1
+    assert our_nonce >= 0, "nonce cannot be negative"
+    if our_nonce > 0:
+        our_unsigned = create(
+            BalanceProofProperties(
+                nonce=our_nonce,
+                transferred_amount=0,
+                locked_amount=len(our_model.merkletree_leaves),
+                locksroot=merkleroot(channel_state.our_state.merkletree),
+                canonical_identifier=channel_state.canonical_identifier,
+            )
         )
-    )
-    partner_unsigned = create(
-        BalanceProofProperties(
-            nonce=partner_model.next_nonce - 1,
-            transferred_amount=0,
-            locked_amount=len(partner_model.merkletree_leaves),
-            locksroot=merkleroot(channel_state.partner_state.merkletree),
-            canonical_identifier=channel_state.canonical_identifier,
+    else:
+        our_unsigned = None
+
+    partner_nonce = partner_model.next_nonce - 1
+    assert partner_nonce >= 0, "nonce cannot be negative"
+    if partner_nonce > 0:
+        partner_unsigned = create(
+            BalanceProofProperties(
+                nonce=partner_nonce,
+                transferred_amount=0,
+                locked_amount=len(partner_model.merkletree_leaves),
+                locksroot=merkleroot(channel_state.partner_state.merkletree),
+                canonical_identifier=channel_state.canonical_identifier,
+            )
         )
-    )
-    partner_signed = make_signed_balance_proof_from_unsigned(
-        partner_unsigned, LocalSigner(partner_pkey)
-    )
+
+        partner_signed = make_signed_balance_proof_from_unsigned(
+            partner_unsigned, LocalSigner(partner_pkey)
+        )
+    else:
+        partner_signed = None
 
     channel_state.our_state.balance_proof = our_unsigned
     channel_state.partner_state.balance_proof = partner_signed
