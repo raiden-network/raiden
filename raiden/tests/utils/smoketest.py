@@ -1,5 +1,6 @@
 import contextlib
 import os
+import random
 import shutil
 import signal
 import sys
@@ -45,12 +46,10 @@ from raiden.tests.fixtures.constants import DEFAULT_PASSPHRASE
 from raiden.tests.utils.eth_node import (
     EthNodeDescription,
     GenesisDescription,
-    eth_node_config,
     eth_node_to_datadir,
-    eth_run_nodes,
-    geth_generate_poa_genesis,
-    parity_create_account,
-    parity_generate_chain_spec,
+    geth_keystore,
+    parity_keystore,
+    run_private_blockchain,
 )
 from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
@@ -240,8 +239,6 @@ def setup_testchain_and_raiden(
 def setup_testchain(
     eth_client: EthClient, print_step: Callable, free_port_generator: Iterator[int]
 ) -> ContextManager[Dict[str, Any]]:
-    # TODO: This has a lot of overlap with `raiden.tests.utils.eth_node.run_private_blockchain` -
-    #       refactor into a unified utility
     print_step("Starting Ethereum node")
 
     ensure_executable(eth_client.value)
@@ -250,67 +247,44 @@ def setup_testchain(
     p2p_port = next(free_port_generator)
     base_datadir = os.environ["RST_DATADIR"]
 
-    description = EthNodeDescription(
-        private_key=TEST_PRIVKEY,
-        rpc_port=rpc_port,
-        p2p_port=p2p_port,
-        miner=True,
-        extra_config={},
-        blockchain_type=eth_client.value,
-    )
-
     eth_rpc_endpoint = f"http://127.0.0.1:{rpc_port}"
     web3 = Web3(HTTPProvider(endpoint_uri=eth_rpc_endpoint))
     web3.middleware_stack.inject(geth_poa_middleware, layer=0)
 
-    config = eth_node_config(description.private_key, description.p2p_port, description.rpc_port)
+    eth_nodes = [
+        EthNodeDescription(
+            private_key=TEST_PRIVKEY,
+            rpc_port=rpc_port,
+            p2p_port=p2p_port,
+            miner=True,
+            extra_config={},
+            blockchain_type=eth_client.value,
+        )
+    ]
 
-    config.update({"unlock": 0, "mine": True, "password": os.path.join(base_datadir, "pw")})
-
-    nodes_configuration = [config]
-    logdir = os.path.join(base_datadir, "logs")
-
-    # the marker is hardcoded in the genesis file
-    random_marker = remove_0x_prefix(encode_hex(b"raiden"))
-    seal_account = privatekey_to_address(description.private_key)
-    accounts_to_fund = [TEST_ACCOUNT_ADDRESS, TEST_PARTNER_ADDRESS]
-
+    random_marker = remove_0x_prefix(hex(random.getrandbits(100)))
     genesis_description = GenesisDescription(
-        prefunded_accounts=accounts_to_fund,
+        prefunded_accounts=[TEST_ACCOUNT_ADDRESS, TEST_PARTNER_ADDRESS],
         random_marker=random_marker,
         chain_id=NETWORKNAME_TO_ID["smoketest"],
     )
 
+    nodekeyhex = remove_0x_prefix(encode_hex(TEST_PRIVKEY))
+    datadir = eth_node_to_datadir(nodekeyhex, base_datadir)
     if eth_client is EthClient.GETH:
-        keystore = os.path.join(eth_node_to_datadir(config, base_datadir), "keystore")
-        genesis_path = os.path.join(base_datadir, "custom_genesis.json")
-        geth_generate_poa_genesis(
-            genesis_path=genesis_path,
-            genesis_description=genesis_description,
-            seal_account=seal_account,
-        )
+        keystore = geth_keystore(datadir)
     elif eth_client is EthClient.PARITY:
-        genesis_path = f"{base_datadir}/chainspec.json"
-        parity_generate_chain_spec(
-            genesis_path=genesis_path,
-            genesis_description=genesis_description,
-            seal_account=seal_account,
-        )
-        keystore = parity_create_account(nodes_configuration[0], base_datadir, genesis_path)
-    else:
-        raise RuntimeError(f"Invalid eth client type: {eth_client.value}")
+        keystore = parity_keystore(datadir)
 
-    node_runner = eth_run_nodes(
-        eth_node_descs=[description],
-        nodes_configuration=nodes_configuration,
+    eth_node_runner = run_private_blockchain(
+        web3=web3,
+        eth_nodes=eth_nodes,
         base_datadir=base_datadir,
-        genesis_file=genesis_path,
-        chain_id=NETWORKNAME_TO_ID["smoketest"],
-        random_marker=random_marker,
+        log_dir=os.path.join(base_datadir, "logs"),
         verbosity="info",
-        logdir=logdir,
+        genesis_description=genesis_description,
     )
-    with node_runner as node_executors:
+    with eth_node_runner as node_executors:
         yield dict(
             eth_client=eth_client,
             base_datadir=base_datadir,
