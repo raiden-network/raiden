@@ -22,7 +22,7 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelSettled,
 )
 from raiden.utils import sha3
-from raiden.utils.gevent import BlockTimeout
+from raiden.utils.timeout import BlockTimeout
 
 
 def wait_for_batch_unlock(app, token_network_id, participant, partner):
