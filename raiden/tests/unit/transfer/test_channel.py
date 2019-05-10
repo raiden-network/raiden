@@ -22,13 +22,13 @@ def _channel_and_transfer(merkletree_width):
     partner_model, privkey = create_model(700, merkletree_width)
     reverse_channel_state = create_channel_from_models(partner_model, our_model, privkey)
 
-    lock_secret = sha3(b"some secret")
+    lock_secret = sha3(b"some secret seed")
     lock = HashTimeLockState(30, 10, sha3(lock_secret))
 
     mediated_transfer = make_receive_transfer_mediated(
         reverse_channel_state,
         privkey,
-        nonce=1,
+        nonce=partner_model.next_nonce,
         transferred_amount=0,
         lock=lock,
         merkletree_leaves=partner_model.merkletree_leaves + [lock.lockhash],
@@ -45,12 +45,12 @@ def _channel_and_transfer(merkletree_width):
 def test_handle_receive_lockedtransfer_enforces_transfer_limit():
 
     state, transfer = _channel_and_transfer(merkletree_width=MAXIMUM_PENDING_TRANSFERS - 1)
-    is_valid, _, _ = channel.handle_receive_lockedtransfer(state, transfer)
-    assert is_valid
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(state, transfer)
+    assert is_valid, msg
 
     state, transfer = _channel_and_transfer(merkletree_width=MAXIMUM_PENDING_TRANSFERS)
-    is_valid, _, _ = channel.handle_receive_lockedtransfer(state, transfer)
-    assert not is_valid
+    is_valid, _, msg = channel.handle_receive_lockedtransfer(state, transfer)
+    assert not is_valid, msg
 
 
 def test_channel_cleared_after_all_unlocks():
