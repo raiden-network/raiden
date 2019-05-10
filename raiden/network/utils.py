@@ -63,10 +63,12 @@ else:
         initial_port = initial_port or 27854
 
         for port in count(initial_port):
+            # Because it is not know which interface the socket will bind to,
+            # if there is any socket in the target port it must be skiped.
             connect_using_port = (
                 conn
                 for conn in psutil.net_connections()
-                if hasattr(conn, "laddr") and conn.laddr[0] == LOOPBACK and conn.laddr[1] == port
+                if hasattr(conn, "laddr") and conn.laddr[1] == port
             )
 
             if not any(connect_using_port):
