@@ -36,6 +36,33 @@ def get_best_routes(
 ) -> List[RouteState]:
     services_config = config.get("services", None)
 
+    # the pfs should not be requested when the target is linked via a direct channel
+    if to_address in views.all_neighbour_nodes(chain_state):
+        neighbours = get_best_routes_internal(
+            chain_state=chain_state,
+            token_network_id=token_network_id,
+            from_address=from_address,
+            to_address=to_address,
+            amount=amount,
+            previous_address=previous_address,
+        )
+        channel_state = views.get_channelstate_by_token_network_and_partner(
+            chain_state=chain_state,
+            token_network_id=token_network_id,
+            partner_address=Address(to_address),
+        )
+
+        for route_state in neighbours:
+            if to_address == route_state.node_address and (
+                channel_state
+                # other conditions about e.g. channel state are checked in best routes internal
+                and channel.get_distributable(
+                    sender=channel_state.our_state, receiver=channel_state.partner_state
+                )
+                >= amount
+            ):
+                return [route_state]
+
     if services_config and services_config["pathfinding_service_address"] is not None:
         pfs_answer_ok, pfs_routes = get_best_routes_pfs(
             chain_state=chain_state,
