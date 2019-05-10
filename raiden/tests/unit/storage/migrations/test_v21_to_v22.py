@@ -58,11 +58,12 @@ def setup_storage(db_path):
 
 
 def test_upgrade_v21_to_v22(tmp_path):
+    tmp_path = '/home/jochen/bb/data/issue4041/db' #
     address = to_canonical_address("0x87A749D9b9c0c91AC009AeeBd74313D1a736A24C")
     with patch("raiden.utils.upgrades.latest_db_file") as latest_db_file:
         old_db_filename = tmp_path / Path(f"v{SOURCE_VERSION}_log.db")
         latest_db_file.return_value = str(old_db_filename)
-        storage = setup_storage(str(old_db_filename))
+        storage = SQLiteStorage(str(old_db_filename)) #setup_storage(str(old_db_filename))
         with patch("raiden.storage.sqlite.RAIDEN_DB_VERSION", new=SOURCE_VERSION):
             storage.update_version()
         storage.conn.close()
