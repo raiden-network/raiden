@@ -19,6 +19,7 @@ from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
 from raiden.utils import BlockNumber, merge_dict, pex
+from raiden.utils.typing import Address, Optional
 from raiden.waiting import wait_for_payment_network
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
@@ -264,6 +265,7 @@ def create_apps(
     blockchain_services,
     endpoint_discovery_services,
     token_network_registry_address,
+    one_to_n_address: Optional[Address],
     secret_registry_address,
     service_registry_address,
     user_deposit_address,
@@ -382,6 +384,7 @@ def create_apps(
             chain=blockchain,
             query_start_block=BlockNumber(0),
             default_registry=registry,
+            default_one_to_n_address=one_to_n_address,
             default_secret_registry=secret_registry,
             default_service_registry=service_registry,
             transport=transport,

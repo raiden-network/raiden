@@ -74,11 +74,10 @@ def setup_contracts_or_exit(config: Dict[str, Any], network_id: int) -> Dict[str
     config["contracts_path"] = contracts_precompiled_path(contracts_version)
 
     if network_id in ID_TO_NETWORKNAME and ID_TO_NETWORKNAME[network_id] != "smoketest":
-        try:
-            deployment_data = get_contracts_deployment_info(
-                chain_id=network_id, version=contracts_version
-            )
-        except ValueError:
+        deployment_data = get_contracts_deployment_info(
+            chain_id=network_id, version=contracts_version
+        )
+        if not deployment_data:
             return contracts
 
         contracts = deployment_data["contracts"]

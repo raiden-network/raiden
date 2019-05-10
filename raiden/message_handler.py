@@ -116,6 +116,7 @@ class MessageHandler:
         routes, _ = get_best_routes(
             chain_state=chain_state,
             token_network_id=TokenNetworkID(token_network_address),
+            one_to_n_address=raiden.default_one_to_n,
             from_address=InitiatorAddress(raiden.address),
             to_address=from_transfer.target,
             amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated by #3863
