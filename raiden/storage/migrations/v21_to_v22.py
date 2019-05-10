@@ -236,7 +236,7 @@ def _add_canonical_identifier_to_statechanges(
             )
 
             if should_delete:
-                delete_state_changes.append(state_change_record.identifier)
+                delete_state_changes.append(state_change_record.state_change_identifier)
             else:
                 channel_id = None
                 if is_unlock:
