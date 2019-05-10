@@ -676,14 +676,23 @@ class EventUnexpectedSecretReveal(Event):
 class EventRouteFailed(Event):
     """ Event emitted when a route failed.
 
-    A route fails, when a RefundTransfer reaches the initator.
+    As a payment can try different routes to reach the intended target
+    some of the routes can fail. This event is emitted when a route failed.
+
+    This means that multiple EventRouteFailed for a given payment and it's
+    therefore different to EventPaymentSentFailed.
+
+    A route can fail for two reasons:
+    - A refund transfer reaches the initiator (it's not important if this
+        refund transfer is unlocked or not)
+    - A lock expires
     """
 
     def __init__(self, secrethash: SecretHash):
         self.secrethash = secrethash
 
     def __repr__(self):
-        return f"<" f"EventRouteFailed " f"secrethash:{pex(self.secrethash)} " f">"
+        return f"<EventRouteFailed secrethash:{pex(self.secrethash)}>"
 
     def __eq__(self, other: Any) -> bool:
         return (
