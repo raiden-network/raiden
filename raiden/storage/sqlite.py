@@ -523,12 +523,15 @@ class SQLiteStorage:
     def transaction(self):
         cursor = self.conn.cursor()
         self.in_transaction = True
+        commit_in_progress = False
         try:
             cursor.execute("BEGIN")
             yield
+            commit_in_progress = True
             cursor.execute("COMMIT")
         except:  # noqa
-            cursor.execute("ROLLBACK")
+            if commit_in_progress:
+                cursor.execute("ROLLBACK")
             raise
         finally:
             self.in_transaction = False
