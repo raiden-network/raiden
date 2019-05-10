@@ -82,6 +82,7 @@ def test_participant_selection(raiden_network, token_addresses):
 def run_test_participant_selection(raiden_network, token_addresses):
     # pylint: disable=too-many-locals
     registry_address = raiden_network[0].raiden.default_registry.address
+    one_to_n_address = raiden_network[0].raiden.default_one_to_n_address
     token_address = token_addresses[0]
 
     # connect the first node (will register the token if necessary)
@@ -154,6 +155,7 @@ def run_test_participant_selection(raiden_network, token_addresses):
             routes, _ = routing.get_best_routes(
                 chain_state=node_state,
                 token_network_id=network_state.address,
+                one_to_n_address=one_to_n_address,
                 from_address=app.raiden.address,
                 to_address=target.raiden.address,
                 amount=1,

@@ -139,6 +139,7 @@ def run_test_regression_transport_global_queues_are_initialized_on_restart_for_s
         chain=app0.raiden.chain,
         query_start_block=0,
         default_registry=app0.raiden.default_registry,
+        default_one_to_n_address=app0.raiden.default_one_to_n_address,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
         transport=transport,

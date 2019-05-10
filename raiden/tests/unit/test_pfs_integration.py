@@ -91,7 +91,13 @@ PRIVKEY = b"privkeyprivkeyprivkeyprivkeypriv"
 
 
 def get_best_routes_with_iou_request_mocked(
-    chain_state, token_network_state, one_to_n_address, from_address, to_address, amount, iou_json_data=None
+    chain_state,
+    token_network_state,
+    one_to_n_address,
+    from_address,
+    to_address,
+    amount,
+    iou_json_data=None,
 ):
     def iou_side_effect(*_, **kwargs):
         assert "params" in kwargs
@@ -226,7 +232,9 @@ def test_routing_mocked_pfs_happy_path(happy_path_fixture, one_to_n_address, our
     assert iou["expiration_block"] <= latest_expected_expiration
 
 
-def test_routing_mocked_pfs_happy_path_with_updated_iou(happy_path_fixture, one_to_n_address, our_address):
+def test_routing_mocked_pfs_happy_path_with_updated_iou(
+    happy_path_fixture, one_to_n_address, our_address
+):
     addresses, chain_state, channel_states, response, token_network_state = happy_path_fixture
     _, address2, _, address4 = addresses
     _, channel_state2 = channel_states
@@ -272,7 +280,9 @@ def test_routing_mocked_pfs_happy_path_with_updated_iou(happy_path_fixture, one_
     assert "signature" in payload["iou"]
 
 
-def test_routing_mocked_pfs_request_error(chain_state, token_network_state, one_to_n_address, our_address):
+def test_routing_mocked_pfs_request_error(
+    chain_state, token_network_state, one_to_n_address, our_address
+):
     token_network_state, addresses, channel_states = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
@@ -305,7 +315,9 @@ def test_routing_mocked_pfs_request_error(chain_state, token_network_state, one_
         assert feedback_token is None
 
 
-def test_routing_mocked_pfs_bad_http_code(chain_state, token_network_state, one_to_n_address, our_address):
+def test_routing_mocked_pfs_bad_http_code(
+    chain_state, token_network_state, one_to_n_address, our_address
+):
     token_network_state, addresses, channel_states = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
@@ -358,7 +370,9 @@ def test_routing_mocked_pfs_bad_http_code(chain_state, token_network_state, one_
         assert feedback_token is None
 
 
-def test_routing_mocked_pfs_invalid_json(chain_state, token_network_state, one_to_n_address, our_address):
+def test_routing_mocked_pfs_invalid_json(
+    chain_state, token_network_state, one_to_n_address, our_address
+):
     token_network_state, addresses, channel_states = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
@@ -396,7 +410,9 @@ def test_routing_mocked_pfs_invalid_json(chain_state, token_network_state, one_t
         assert feedback_token is None
 
 
-def test_routing_mocked_pfs_invalid_json_structure(chain_state, one_to_n_address, token_network_state, our_address):
+def test_routing_mocked_pfs_invalid_json_structure(
+    chain_state, one_to_n_address, token_network_state, our_address
+):
     token_network_state, addresses, channel_states = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
@@ -434,7 +450,9 @@ def test_routing_mocked_pfs_invalid_json_structure(chain_state, one_to_n_address
         assert feedback_token is None
 
 
-def test_routing_mocked_pfs_unavailable_peer(chain_state, token_network_state, one_to_n_address, our_address):
+def test_routing_mocked_pfs_unavailable_peer(
+    chain_state, token_network_state, one_to_n_address, our_address
+):
     token_network_state, addresses, channel_states = create_square_network_topology(
         token_network_state=token_network_state, our_address=our_address
     )
@@ -558,7 +576,14 @@ def test_get_pfs_iou(one_to_n_address):
         )
 
         # Previous IOU
-        iou = dict(sender=sender, receiver=receiver, amount=10, expiration_block=1000, one_to_n_address=to_checksum_address(one_to_n_address), chain_id=4)
+        iou = dict(
+            sender=sender,
+            receiver=receiver,
+            amount=10,
+            expiration_block=1000,
+            one_to_n_address=to_checksum_address(one_to_n_address),
+            chain_id=4,
+        )
         iou["signature"] = sign_one_to_n_iou(
             privatekey=encode_hex(privkey),
             sender=to_checksum_address(sender),
@@ -587,7 +612,14 @@ def test_make_iou():
         "pathfinding_max_fee": 100,
     }
 
-    iou = make_iou(config, our_address=sender, privkey=privkey, block_number=10, one_to_n_address=one_to_n_address, chain_id=chain_id)
+    iou = make_iou(
+        config,
+        our_address=sender,
+        privkey=privkey,
+        block_number=10,
+        one_to_n_address=one_to_n_address,
+        chain_id=chain_id,
+    )
 
     assert iou["sender"] == to_checksum_address(sender)
     assert iou["receiver"] == encode_hex(receiver)
@@ -672,7 +704,7 @@ def assert_failed_pfs_request(
             assert post_paths.call_count == expected_requests
 
 
-def test_routing_in_direct_channel(happy_path_fixture, our_address):
+def test_routing_in_direct_channel(happy_path_fixture, our_address, one_to_n_address):
     addresses, chain_state, channel_states, _, token_network_state = happy_path_fixture
     address1, _, _, _ = addresses
     channel_state1, _ = channel_states
@@ -684,6 +716,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address):
         routes, _ = get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
+            one_to_n_address=one_to_n_address,
             from_address=our_address,
             to_address=address1,
             amount=PaymentAmount(50),
@@ -702,6 +735,7 @@ def test_routing_in_direct_channel(happy_path_fixture, our_address):
         get_best_routes(
             chain_state=chain_state,
             token_network_id=token_network_state.address,
+            one_to_n_address=one_to_n_address,
             from_address=our_address,
             to_address=address1,
             amount=PaymentAmount(51),

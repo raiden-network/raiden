@@ -27,7 +27,7 @@ log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 def get_best_routes(
     chain_state: ChainState,
     token_network_id: TokenNetworkID,
-    one_to_n_address: Address,
+    one_to_n_address: Optional[Address],
     from_address: InitiatorAddress,
     to_address: TargetAddress,
     amount: PaymentAmount,
@@ -64,7 +64,11 @@ def get_best_routes(
             ):
                 return [route_state], None
 
-    if services_config and services_config["pathfinding_service_address"] is not None:
+    if (
+        services_config
+        and services_config["pathfinding_service_address"] is not None
+        and one_to_n_address is not None
+    ):
         pfs_answer_ok, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_id=token_network_id,

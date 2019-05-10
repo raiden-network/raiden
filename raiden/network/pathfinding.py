@@ -236,11 +236,7 @@ def make_iou(
         chain_id=chain_id,
     )
 
-    iou.update(
-        signature=to_hex(
-            sign_one_to_n_iou(privatekey=to_hex(privkey), **iou)
-        ),
-    )
+    iou.update(signature=to_hex(sign_one_to_n_iou(privatekey=to_hex(privkey), **iou)))
 
     return iou
 

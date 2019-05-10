@@ -30,6 +30,7 @@ def timeout(blockchain_type: str):
 def raiden_chain(
     token_addresses,
     token_network_registry_address,
+    one_to_n_address,
     channels_per_node,
     deposit,
     settle_timeout,
@@ -78,6 +79,7 @@ def raiden_chain(
         blockchain_services=blockchain_services.blockchain_services,
         endpoint_discovery_services=endpoint_discovery_services,
         token_network_registry_address=token_network_registry_address,
+        one_to_n_address=one_to_n_address,
         secret_registry_address=blockchain_services.secret_registry.address,
         service_registry_address=service_registry_address,
         user_deposit_address=user_deposit_address,
@@ -143,6 +145,7 @@ def raiden_chain(
 def raiden_network(
     token_addresses,
     token_network_registry_address,
+    one_to_n_address,
     channels_per_node,
     deposit,
     settle_timeout,
@@ -186,6 +189,7 @@ def raiden_network(
         token_network_registry_address=token_network_registry_address,
         secret_registry_address=blockchain_services.secret_registry.address,
         service_registry_address=service_registry_address,
+        one_to_n_address=one_to_n_address,
         user_deposit_address=user_deposit_address,
         raiden_udp_ports=raiden_udp_ports,
         reveal_timeout=reveal_timeout,
