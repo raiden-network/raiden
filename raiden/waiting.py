@@ -28,9 +28,7 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger(__name__)  # pylint: disable=invalid-name
 
-ALARM_TASK_ERROR_MSG = (
-    "Waiting relies on alarm task polling to update the node's internal state."
-)
+ALARM_TASK_ERROR_MSG = "Waiting relies on alarm task polling to update the node's internal state."
 TRANSPORT_ERROR_MSG = "Waiting for protocol messags requires a running transport."
 
 
