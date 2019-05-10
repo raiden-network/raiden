@@ -117,7 +117,7 @@ def maybe_deploy_service_registry_and_return_address(
 def deploy_user_deposit_and_return_address(
     deploy_service, deploy_client, contract_manager, token_proxy, private_keys, environment_type
 ) -> typing.Optional[typing.Address]:
-    """ Deploy a token to emulate RDN and fund accounts with some balances."""
+    """ Deploy UserDeposit and fund accounts with some balances """
     if environment_type != Environment.DEVELOPMENT:
         return None
 
