@@ -380,12 +380,12 @@ def test_state_wait_unlock_valid():
     )
 
     assert len(iteration.events) == 3
-    assert any(isinstance(e, SendBalanceProof) for e in iteration.events)
-    assert any(isinstance(e, EventPaymentSentSuccess) for e in iteration.events)
-    assert any(isinstance(e, EventUnlockSuccess) for e in iteration.events)
 
-    balance_proof = next(e for e in iteration.events if isinstance(e, SendBalanceProof))
-    complete = next(e for e in iteration.events if isinstance(e, EventPaymentSentSuccess))
+    balance_proof = search_for_item(iteration.events, SendBalanceProof, {})
+    complete = search_for_item(iteration.events, EventPaymentSentSuccess, {})
+    assert search_for_item(iteration.events, EventUnlockSuccess, {})
+    assert balance_proof
+    assert complete
 
     assert balance_proof.recipient == setup.channel.partner_state.address
     assert complete.identifier == UNIT_TRANSFER_IDENTIFIER
@@ -487,9 +487,9 @@ def test_refund_transfer_next_route():
     )
     assert iteration.new_state is not None
 
-    route_cancelled = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    route_failed = next(e for e in iteration.events if isinstance(e, EventRouteFailed))
-    new_transfer = next(e for e in iteration.events if isinstance(e, SendLockedTransfer))
+    route_cancelled = search_for_item(iteration.events, EventUnlockFailed, {})
+    route_failed = search_for_item(iteration.events, EventRouteFailed, {})
+    new_transfer = search_for_item(iteration.events, SendLockedTransfer, {})
 
     assert route_cancelled, "The previous transfer must be cancelled"
     assert route_failed, "Must emit event that the first route failed"
@@ -540,9 +540,9 @@ def test_refund_transfer_no_more_routes():
     # more routes, but we have to wait for the lock expiration
     assert iteration.new_state is not None
 
-    unlocked_failed = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    route_failed = next(e for e in iteration.events if isinstance(e, EventRouteFailed))
-    sent_failed = next(e for e in iteration.events if isinstance(e, EventPaymentSentFailed))
+    unlocked_failed = search_for_item(iteration.events, EventUnlockFailed, {})
+    route_failed = search_for_item(iteration.events, EventRouteFailed, {})
+    sent_failed = search_for_item(iteration.events, EventPaymentSentFailed, {})
 
     assert unlocked_failed
     assert route_failed, "Must emit event that the first route failed"
@@ -657,11 +657,8 @@ def test_cancel_transfer():
     assert iteration.new_state is not None
     assert len(iteration.events) == 2
 
-    unlocked_failed = next(e for e in iteration.events if isinstance(e, EventUnlockFailed))
-    sent_failed = next(e for e in iteration.events if isinstance(e, EventPaymentSentFailed))
-
-    assert unlocked_failed
-    assert sent_failed
+    assert search_for_item(iteration.events, EventUnlockFailed, {})
+    assert search_for_item(iteration.events, EventPaymentSentFailed, {})
 
 
 def test_cancelpayment():
