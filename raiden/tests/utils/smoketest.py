@@ -426,6 +426,7 @@ def run_smoketest(
     #     need to use the deployed service registry, register the
     #     PFS service there and then change this argument.
     args["routing_mode"] = RoutingMode.BASIC
+    args["one_to_n_contract_address"] = None
 
     raiden_stdout = StringIO()
     maybe_redirect_stdout = contextlib.redirect_stdout(raiden_stdout)
