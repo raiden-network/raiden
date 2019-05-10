@@ -113,6 +113,7 @@ def restart_app(app):
         config=app.config,
         chain=app.raiden.chain,
         query_start_block=0,
+        default_one_to_n_address=app.raiden.default_one_to_n_address,
         default_registry=app.raiden.default_registry,
         default_secret_registry=app.raiden.default_secret_registry,
         default_service_registry=app.raiden.default_service_registry,

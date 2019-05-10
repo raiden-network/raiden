@@ -141,6 +141,7 @@ def initiator_init(
     routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         token_network_id=token_network_identifier,
+        one_to_n_address=raiden.default_one_to_n,
         from_address=InitiatorAddress(raiden.address),
         to_address=target_address,
         amount=transfer_amount,
@@ -157,6 +158,7 @@ def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
     routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         token_network_id=TokenNetworkID(from_transfer.balance_proof.token_network_identifier),
+        one_to_n_address=raiden.default_one_to_n,
         from_address=raiden.address,
         to_address=from_transfer.target,
         amount=PaymentAmount(from_transfer.lock.amount),  # FIXME: mypy; deprecated through #3863
@@ -291,6 +293,7 @@ class RaidenService(Runnable):
         default_registry: TokenNetworkRegistry,
         default_secret_registry: SecretRegistry,
         default_service_registry: Optional[ServiceRegistry],
+        default_one_to_n: Optional[Address],
         transport,
         raiden_event_handler,
         message_handler,
@@ -305,6 +308,7 @@ class RaidenService(Runnable):
         self.chain: BlockChainService = chain
         self.default_registry = default_registry
         self.query_start_block = query_start_block
+        self.default_one_to_n = default_one_to_n
         self.default_secret_registry = default_secret_registry
         self.default_service_registry = default_service_registry
         self.config = config
