@@ -134,6 +134,11 @@ def options(func):
             type=ADDRESS_TYPE,
         ),
         option(
+            "--one-to-n-contract-address",
+            help="hex encoded address of the OneToN contract.",
+            type=ADDRESS_TYPE,
+        ),
+        option(
             "--endpoint-registry-contract-address",
             help="hex encoded address of the Endpoint Registry contract.",
             type=ADDRESS_TYPE,
