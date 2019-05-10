@@ -138,6 +138,7 @@ def handle_inittarget(
         # If the balance proof is not valid, do *not* create a task. Otherwise it's
         # possible for an attacker to send multiple invalid transfers, and increase
         # the memory usage of this Node.
+        assert errormsg, "handle_receive_lockedtransfer should return error msg if not valid"
         unlock_failed = EventUnlockClaimFailed(
             identifier=transfer.payment_identifier,
             secrethash=transfer.lock.secrethash,
