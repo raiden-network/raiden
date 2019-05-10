@@ -1,6 +1,6 @@
 from copy import deepcopy
 
-from raiden.constants import MAXIMUM_PENDING_TRANSFERS
+from raiden.constants import EMPTY_MERKLE_ROOT, MAXIMUM_PENDING_TRANSFERS
 from raiden.tests.unit.test_channelstate import (
     create_channel_from_models,
     create_model,
@@ -53,10 +53,10 @@ def test_handle_receive_lockedtransfer_enforces_transfer_limit():
     assert not is_valid, msg
 
 
-def test_channel_cleared_after_all_unlocks():
+def test_channel_cleared_after_two_unlocks():
     our_model, _ = create_model(balance=700, merkletree_width=1)
     partner_model, partner_key1 = create_model(balance=700, merkletree_width=1)
-    channel_state = create_channel_from_models(partner_model, our_model, partner_key1)
+    channel_state = create_channel_from_models(our_model, partner_model, partner_key1)
     block_number = 1
     block_hash = make_block_hash()
 
@@ -64,8 +64,8 @@ def test_channel_cleared_after_all_unlocks():
         batch_unlock = ContractReceiveChannelBatchUnlock(
             transaction_hash=make_transaction_hash(),
             canonical_identifier=channel_state.canonical_identifier,
-            participant=unlock_end.address,
-            partner=partner_end.address,
+            participant=partner_end.address,
+            partner=unlock_end.address,
             locksroot=unlock_end.balance_proof.locksroot,
             unlocked_amount=10,
             returned_tokens=0,
@@ -84,10 +84,18 @@ def test_channel_cleared_after_all_unlocks():
     )
     iteration = channel.state_transition(channel_state, settle_channel, block_number, block_hash)
 
+    msg = "both participants have pending locks, merkleroot must not be empty"
+    assert iteration.new_state.our_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
+    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
+
     batch_unlock = make_unlock(channel_state.our_state, channel_state.partner_state)
     iteration = channel.state_transition(
         iteration.new_state, batch_unlock, block_number, block_hash
     )
+    msg = "all of our locks has been unlocked, onchain state must be updated"
+    assert iteration.new_state.our_state.onchain_locksroot is EMPTY_MERKLE_ROOT, msg
+    msg = "partner has pending locks, the merkleroot must not be cleared"
+    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
     msg = "partner locksroot is not unlocked, channel should not have been cleaned"
     assert iteration.new_state is not None, msg
 
@@ -95,6 +103,8 @@ def test_channel_cleared_after_all_unlocks():
     iteration = channel.state_transition(
         iteration.new_state, batch_unlock, block_number, block_hash
     )
+    msg = "partner has pending locks, the merkleroot must not be cleared"
+    assert iteration.new_state.partner_state.onchain_locksroot is not EMPTY_MERKLE_ROOT, msg
     msg = "partner locksroot is not unlocked, channel should not have been cleaned"
     assert iteration.new_state is not None, msg
 
@@ -105,4 +115,47 @@ def test_channel_cleared_after_all_unlocks():
         block_hash,
     )
     msg = "all unlocks have been done, channel must be cleared"
+    assert iteration.new_state is None, msg
+
+
+def test_channel_cleared_after_our_unlock():
+    our_model, _ = create_model(balance=700, merkletree_width=1)
+    partner_model, partner_key1 = create_model(balance=700, merkletree_width=0)
+    channel_state = create_channel_from_models(our_model, partner_model, partner_key1)
+    block_number = 1
+    block_hash = make_block_hash()
+
+    def make_unlock(unlock_end, partner_end):
+        batch_unlock = ContractReceiveChannelBatchUnlock(
+            transaction_hash=make_transaction_hash(),
+            canonical_identifier=channel_state.canonical_identifier,
+            participant=partner_end.address,
+            partner=unlock_end.address,
+            locksroot=unlock_end.balance_proof.locksroot,
+            unlocked_amount=10,
+            returned_tokens=0,
+            block_number=block_number,
+            block_hash=block_hash,
+        )
+        return batch_unlock
+
+    settle_channel = ContractReceiveChannelSettled(
+        transaction_hash=make_transaction_hash(),
+        canonical_identifier=channel_state.canonical_identifier,
+        our_onchain_locksroot=merkleroot(channel_state.our_state.merkletree),
+        partner_onchain_locksroot=merkleroot(channel_state.partner_state.merkletree),
+        block_number=1,
+        block_hash=make_block_hash(),
+    )
+
+    assert settle_channel.our_onchain_locksroot is not EMPTY_MERKLE_ROOT
+    assert settle_channel.partner_onchain_locksroot is EMPTY_MERKLE_ROOT
+
+    iteration = channel.state_transition(channel_state, settle_channel, block_number, block_hash)
+
+    batch_unlock = make_unlock(channel_state.our_state, channel_state.partner_state)
+    iteration = channel.state_transition(
+        iteration.new_state, batch_unlock, block_number, block_hash
+    )
+    msg = "partner did not have any locks in the merkletree, channel should have been cleaned"
     assert iteration.new_state is None, msg

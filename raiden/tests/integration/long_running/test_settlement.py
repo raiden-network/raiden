@@ -282,8 +282,7 @@ def run_test_batch_unlock(
         views.state_from_app(alice_app), alice_app.raiden.default_registry.address, token_address
     )
 
-    hold_event_handler = HoldOffChainSecretRequest()
-    bob_app.raiden.raiden_event_handler = hold_event_handler
+    hold_event_handler = bob_app.raiden.raiden_event_handler
 
     # Take a snapshot early on
     alice_app.raiden.wal.snapshot()
@@ -311,7 +310,7 @@ def run_test_batch_unlock(
     secret = sha3(target)
     secrethash = sha3(secret)
 
-    hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
+    secret_request_event = hold_event_handler.hold_secretrequest_for(secrethash=secrethash)
 
     alice_app.raiden.start_mediated_transfer_with_secret(
         token_network_identifier=token_network_identifier,
@@ -322,7 +321,7 @@ def run_test_batch_unlock(
         secret=secret,
     )
 
-    gevent.sleep(1)  # wait for the messages to be exchanged
+    secret_request_event.get()  # wait for the messages to be exchanged
 
     alice_bob_channel_state = get_channelstate(alice_app, bob_app, token_network_identifier)
     lock = channel.get_lock(alice_bob_channel_state.our_state, secrethash)
@@ -382,14 +381,14 @@ def run_test_batch_unlock(
         in token_network.partneraddresses_to_channelidentifiers[alice_app.raiden.address]
     )
 
-    # wait for the node to call batch unlock
+    # Wait for both nodes to call batch unlock
     timeout = 30 if blockchain_type == "parity" else 10
     with gevent.Timeout(timeout):
         wait_for_batch_unlock(
-            bob_app,
-            token_network_identifier,
-            alice_bob_channel_state.partner_state.address,
-            alice_bob_channel_state.our_state.address,
+            app=bob_app,
+            token_network_id=token_network_identifier,
+            participant=alice_bob_channel_state.partner_state.address,
+            partner=alice_bob_channel_state.our_state.address,
         )
 
     token_network = views.get_token_network_by_identifier(
