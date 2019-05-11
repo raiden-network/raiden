@@ -19,6 +19,7 @@ from raiden.utils.typing import (
     BlockHash,
     ChannelID,
     Dict,
+    HashAlgo,
     InitiatorAddress,
     MessageID,
     Optional,
@@ -365,6 +366,8 @@ class EventPaymentSentSuccess(Event):
         amount: PaymentAmount,
         target: TargetAddress,
         secret: Secret = None,
+        secrethash: SecretHash = None,
+        hashalgo: HashAlgo = HashAlgo.SHA3,
     ) -> None:
         self.payment_network_identifier = payment_network_identifier
         self.token_network_identifier = token_network_identifier
@@ -372,6 +375,8 @@ class EventPaymentSentSuccess(Event):
         self.amount = amount
         self.target = target
         self.secret = secret
+        self.secrethash = secrethash
+        self.hashalgo = hashalgo
 
     def __repr__(self):
         return (
@@ -399,6 +404,8 @@ class EventPaymentSentSuccess(Event):
             and self.payment_network_identifier == other.payment_network_identifier
             and self.token_network_identifier == other.token_network_identifier
             and self.secret == other.secret
+            and self.secrethash == other.secrethash
+            and self.hashalgo == other.hashalgo
         )
 
     def __ne__(self, other: Any) -> bool:
@@ -414,6 +421,8 @@ class EventPaymentSentSuccess(Event):
         }
         if self.secret is not None:
             result["secret"] = to_hex(self.secret)
+            result["secrethash"] = to_hex(self.secrethash)
+            result["hashalgo"] = self.hashalgo.value
 
         return result
 
@@ -421,8 +430,12 @@ class EventPaymentSentSuccess(Event):
     def from_dict(cls, data: Dict[str, Any]) -> "EventPaymentSentSuccess":
         if "secret" in data:
             secret = to_bytes(hexstr=data["secret"])
+            secrethash = to_bytes(hexstr=data["secrethash"])
+            hashalgo = HashAlgo(data["hashalgo"])
         else:
             secret = None
+            secrethash = None
+            hashalgo = HashAlgo.SHA3
 
         restored = cls(
             payment_network_identifier=to_canonical_address(data["payment_network_identifier"]),
@@ -431,6 +444,8 @@ class EventPaymentSentSuccess(Event):
             amount=PaymentAmount(int(data["amount"])),
             target=to_canonical_address(data["target"]),
             secret=secret,
+            secrethash=secrethash,
+            hashalgo=hashalgo,
         )
 
         return restored

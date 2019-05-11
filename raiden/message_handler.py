@@ -83,7 +83,7 @@ class MessageHandler:
 
     @staticmethod
     def handle_message_revealsecret(raiden: RaidenService, message: RevealSecret):
-        state_change = ReceiveSecretReveal(message.secret, message.sender)
+        state_change = ReceiveSecretReveal(message.secret, message.sender, message.hashalgo)
         raiden.handle_and_track_state_change(state_change)
 
     @staticmethod
@@ -93,6 +93,7 @@ class MessageHandler:
             message_identifier=message.message_identifier,
             secret=message.secret,
             balance_proof=balance_proof,
+            hashalgo=message.hashalgo,
         )
         raiden.handle_and_track_state_change(state_change)
 

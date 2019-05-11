@@ -1,5 +1,6 @@
 from typing import *  # NOQA pylint:disable=wildcard-import,unused-wildcard-import
 from typing import TYPE_CHECKING, Dict, List, NewType, Optional, Tuple, Type, Union
+from enum import Enum
 
 if TYPE_CHECKING:
     # pylint: disable=unused-import
@@ -172,3 +173,8 @@ HostPort = Tuple[Host, Optional[Port]]
 LockType = Union["HashTimeLockState", "UnlockPartialProofState"]
 ErrorType = Union[Type["RaidenRecoverableError"], Type["RaidenUnrecoverableError"]]
 LockedTransferType = Union["LockedTransferUnsignedState", "LockedTransferSignedState"]
+
+
+class HashAlgo(Enum):
+    SHA3 = "1"
+    SHA256 = "2"

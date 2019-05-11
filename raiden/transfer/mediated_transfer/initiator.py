@@ -35,6 +35,7 @@ from raiden.utils.typing import (
     BlockNumber,
     BlockTimeout,
     ChannelMap,
+    HashAlgo,
     List,
     MessageID,
     Optional,
@@ -52,6 +53,7 @@ def events_for_unlock_lock(
     secret: Secret,
     secrethash: SecretHash,
     pseudo_random_generator: random.Random,
+    hashalgo: HashAlgo = HashAlgo.SHA3,
 ) -> List[Event]:
     """ Unlocks the lock offchain, and emits the events for the successful payment. """
     # next hop learned the secret, unlock the token locally and send the
@@ -65,6 +67,7 @@ def events_for_unlock_lock(
         payment_identifier=transfer_description.payment_identifier,
         secret=secret,
         secrethash=secrethash,
+        hashalgo=hashalgo,
     )
 
     payment_sent_success = EventPaymentSentSuccess(
@@ -74,6 +77,8 @@ def events_for_unlock_lock(
         amount=transfer_description.amount,
         target=transfer_description.target,
         secret=secret,
+        secrethash=secrethash,
+        hashalgo=hashalgo,
     )
 
     unlock_success = EventUnlockSuccess(
@@ -402,6 +407,7 @@ def handle_offchain_secretreveal(
             secret=state_change.secret,
             secrethash=state_change.secrethash,
             pseudo_random_generator=pseudo_random_generator,
+            hashalgo=state_change.hashalgo,
         )
         iteration = TransitionResult(None, events)
     else:

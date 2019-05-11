@@ -1,6 +1,8 @@
 # pylint: disable=too-many-arguments,too-few-public-methods
-from eth_utils import to_canonical_address, to_checksum_address
+from hashlib import sha256
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
 
+from raiden.constants import EMPTY_HASH
 from raiden.transfer.architecture import Event, SendMessageEvent
 from raiden.transfer.mediated_transfer.state import LockedTransferUnsignedState
 from raiden.transfer.state import BalanceProofUnsignedState
@@ -12,6 +14,7 @@ from raiden.utils.typing import (
     BlockExpiration,
     ChannelID,
     Dict,
+    HashAlgo,
     MessageID,
     PaymentID,
     PaymentWithFeeAmount,
@@ -185,13 +188,20 @@ class SendSecretReveal(SendMessageEvent):
         channel_identifier: ChannelID,
         message_identifier: MessageID,
         secret: Secret,
+        hashalgo: HashAlgo = HashAlgo.SHA3,
     ) -> None:
-        secrethash = sha3(secret)
+        if hashalgo == HashAlgo.SHA3:
+            secrethash = sha3(secret)
+        elif hashalgo == HashAlgo.SHA256:
+            secrethash = sha256(to_hex(secret)[2:].encode()).digest()
+        else:
+            secrethash = EMPTY_HASH
 
         super().__init__(recipient, channel_identifier, message_identifier)
 
         self.secret = secret
         self.secrethash = secrethash
+        self.hashalgo = hashalgo
 
     def __repr__(self):
         return "<SendSecretReveal msgid:{} secrethash:{} recipient:{}>".format(
@@ -203,6 +213,7 @@ class SendSecretReveal(SendMessageEvent):
             isinstance(other, SendSecretReveal)
             and self.secret == other.secret
             and self.secrethash == other.secrethash
+            and self.hashalgo == other.hashalgo
             and super().__eq__(other)
         )
 
@@ -215,6 +226,7 @@ class SendSecretReveal(SendMessageEvent):
             "channel_identifier": str(self.queue_identifier.channel_identifier),
             "message_identifier": str(self.message_identifier),
             "secret": serialize_bytes(self.secret),
+            "hashalgo": self.hashalgo.value,
         }
 
         return result
@@ -226,6 +238,7 @@ class SendSecretReveal(SendMessageEvent):
             channel_identifier=ChannelID(int(data["channel_identifier"])),
             message_identifier=MessageID(int(data["message_identifier"])),
             secret=deserialize_secret(data["secret"]),
+            hashalgo=HashAlgo(data["hashalgo"]),
         )
 
         return restored
@@ -258,14 +271,23 @@ class SendBalanceProof(SendMessageEvent):
         token_address: TokenAddress,
         secret: Secret,
         balance_proof: BalanceProofUnsignedState,
+        hashalgo: HashAlgo = HashAlgo.SHA3,
     ) -> None:
         super().__init__(recipient, channel_identifier, message_identifier)
+
+        if hashalgo == HashAlgo.SHA3:
+            secrethash = sha3(secret)
+        elif hashalgo == HashAlgo.SHA256:
+            secrethash = sha256(to_hex(secret)[2:].encode()).digest()
+        else:
+            secrethash = EMPTY_HASH
 
         self.payment_identifier = payment_identifier
         self.token = token_address
         self.secret = secret
-        self.secrethash = sha3(secret)
+        self.secrethash = secrethash
         self.balance_proof = balance_proof
+        self.hashalgo = hashalgo
 
     def __repr__(self):
         return (
@@ -290,6 +312,7 @@ class SendBalanceProof(SendMessageEvent):
             and self.recipient == other.recipient
             and self.secret == other.secret
             and self.balance_proof == other.balance_proof
+            and self.hashalgo == other.hashalgo
             and super().__eq__(other)
         )
 
@@ -305,6 +328,7 @@ class SendBalanceProof(SendMessageEvent):
             "token_address": to_checksum_address(self.token),
             "secret": serialize_bytes(self.secret),
             "balance_proof": self.balance_proof,
+            "hashalgo": self.hashalgo.value,
         }
 
         return result
@@ -319,6 +343,7 @@ class SendBalanceProof(SendMessageEvent):
             token_address=to_canonical_address(data["token_address"]),
             secret=deserialize_secret(data["secret"]),
             balance_proof=data["balance_proof"],
+            hashalgo=HashAlgo(data["hashalgo"]),
         )
 
         return restored

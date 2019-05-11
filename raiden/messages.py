@@ -1,4 +1,5 @@
 from operator import attrgetter
+from hashlib import sha256
 
 from cachetools import LRUCache, cached
 from eth_utils import (
@@ -7,9 +8,10 @@ from eth_utils import (
     encode_hex,
     to_canonical_address,
     to_normalized_address,
+    to_hex,
 )
 
-from raiden.constants import UINT64_MAX, UINT256_MAX
+from raiden.constants import EMPTY_HASH, UINT64_MAX, UINT256_MAX
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
 from raiden.exceptions import InvalidProtocolMessage, InvalidSignature
@@ -45,6 +47,7 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     FeeAmount,
+    HashAlgo,
     InitiatorAddress,
     Locksroot,
     MessageID,
@@ -668,6 +671,7 @@ class Unlock(EnvelopeMessage):
         locked_amount: TokenAmount,
         locksroot: Locksroot,
         secret: Secret,
+        hashalgo: HashAlgo = HashAlgo.SHA3,
         **kwargs,
     ):
         super().__init__(
@@ -694,6 +698,7 @@ class Unlock(EnvelopeMessage):
         self.message_identifier = message_identifier
         self.payment_identifier = payment_identifier
         self.secret = secret
+        self.hashalgo = hashalgo
 
     def __repr__(self):
         return (
@@ -720,7 +725,12 @@ class Unlock(EnvelopeMessage):
     @property  # type: ignore
     @cached(_hashes_cache, key=attrgetter("secret"))
     def secrethash(self):
-        return sha3(self.secret)
+        if self.hashalgo == HashAlgo.SHA3:
+            return sha3(self.secret)
+        elif self.hashalgo == HashAlgo.SHA256:
+            return sha256(to_hex(self.secret)[2:].encode()).digest()
+        else:
+            return EMPTY_HASH
 
     @classmethod
     def unpack(cls, packed):
@@ -735,6 +745,7 @@ class Unlock(EnvelopeMessage):
             locked_amount=packed.locked_amount,
             locksroot=packed.locksroot,
             secret=packed.secret,
+            hashalgo=packed.hashalgo,
         )
         secret.signature = packed.signature
         return secret
@@ -750,6 +761,7 @@ class Unlock(EnvelopeMessage):
         packed.locked_amount = self.locked_amount
         packed.locksroot = self.locksroot
         packed.secret = self.secret
+        packed.hashalgo = self.hashalgo.value
         packed.signature = self.signature
 
     @classmethod
@@ -766,6 +778,7 @@ class Unlock(EnvelopeMessage):
             locked_amount=balance_proof.locked_amount,
             locksroot=balance_proof.locksroot,
             secret=event.secret,
+            hashalgo=event.hashalgo,
         )
 
     def to_dict(self):
@@ -782,6 +795,7 @@ class Unlock(EnvelopeMessage):
             "locked_amount": self.locked_amount,
             "locksroot": encode_hex(self.locksroot),
             "signature": encode_hex(self.signature),
+            "hashalgo": self.hashalgo.value
         }
 
     @classmethod
@@ -799,6 +813,7 @@ class Unlock(EnvelopeMessage):
             transferred_amount=data["transferred_amount"],
             locked_amount=data["locked_amount"],
             locksroot=decode_hex(data["locksroot"]),
+            hashalgo=HashAlgo(data["hashalgo"])
         )
         message.signature = decode_hex(data["signature"])
         return message
@@ -815,9 +830,11 @@ class RevealSecret(SignedRetrieableMessage):
 
     cmdid = messages.REVEALSECRET
 
-    def __init__(self, *, message_identifier: MessageID, secret: Secret, **kwargs):
+    def __init__(self, *, message_identifier: MessageID, secret: Secret,
+                 hashalgo: HashAlgo = HashAlgo.SHA3,  **kwargs):
         super().__init__(message_identifier=message_identifier, **kwargs)
         self.secret = secret
+        self.hashalgo = hashalgo
 
     def __repr__(self):
         return "<{} [msgid:{} secrethash:{} hash:{}]>".format(
@@ -827,12 +844,18 @@ class RevealSecret(SignedRetrieableMessage):
     @property  # type: ignore
     @cached(_hashes_cache, key=attrgetter("secret"))
     def secrethash(self):
-        return sha3(self.secret)
+        if self.hashalgo == HashAlgo.SHA3:
+            return sha3(self.secret)
+        elif hashalgo == HashAlgo.SHA256:
+            return sha256(to_hex(self.secret)[2:].encode()).digest()
+        else:
+            return EMPTY_HASH
+
 
     @classmethod
     def unpack(cls, packed):
         reveal_secret = RevealSecret(
-            message_identifier=packed.message_identifier, secret=packed.secret
+            message_identifier=packed.message_identifier, secret=packed.secret, hashalgo=packed.hashalgo,
         )
         reveal_secret.signature = packed.signature
         return reveal_secret
@@ -840,11 +863,16 @@ class RevealSecret(SignedRetrieableMessage):
     def pack(self, packed) -> None:
         packed.message_identifier = self.message_identifier
         packed.secret = self.secret
+        packed.hashalgo = self.hashalgo.value
         packed.signature = self.signature
 
     @classmethod
     def from_event(cls, event):
-        return cls(message_identifier=event.message_identifier, secret=event.secret)
+        return cls(
+            message_identifier=event.message_identifier,
+            secret=event.secret,
+            hashalgo=event.hashalgo,
+        )
 
     def to_dict(self):
         return {
@@ -852,6 +880,7 @@ class RevealSecret(SignedRetrieableMessage):
             "message_identifier": self.message_identifier,
             "secret": encode_hex(self.secret),
             "signature": encode_hex(self.signature),
+            "hashalgo": self.hashalgo.value,
         }
 
     @classmethod
@@ -859,7 +888,9 @@ class RevealSecret(SignedRetrieableMessage):
         msg = f'Cannot decode data. Provided type is {data["type"]}, expected {cls.__name__}'
         assert data["type"] == cls.__name__, msg
         reveal_secret = cls(
-            message_identifier=data["message_identifier"], secret=decode_hex(data["secret"])
+            message_identifier=data["message_identifier"],
+            secret=decode_hex(data["secret"]),
+            hashalgo=HashAlgo(data["hashalgo"]),
         )
         reveal_secret.signature = decode_hex(data["signature"])
         return reveal_secret

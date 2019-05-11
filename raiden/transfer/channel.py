@@ -88,6 +88,7 @@ from raiden.utils.typing import (
     BlockNumber,
     ChainID,
     ChannelID,
+    HashAlgo,
     InitiatorAddress,
     Keccak256,
     List,
@@ -1152,6 +1153,7 @@ def create_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     lock: HashTimeLockState,
+    hashalgo: HashAlgo = HashAlgo.SHA3,
 ) -> SendUnlockAndMerkleTree:
     our_state = channel_state.our_state
 
@@ -1195,6 +1197,7 @@ def create_unlock(
         token_address=token_address,
         secret=secret,
         balance_proof=balance_proof,
+        hashalgo=hashalgo,
     )
 
     return unlock_lock, merkletree
@@ -1274,12 +1277,13 @@ def send_unlock(
     payment_identifier: PaymentID,
     secret: Secret,
     secrethash: SecretHash,
+    hashalgo: HashAlgo = HashAlgo.SHA3,
 ) -> SendBalanceProof:
     lock = get_lock(channel_state.our_state, secrethash)
     assert lock
 
     unlock, merkletree = create_unlock(
-        channel_state, message_identifier, payment_identifier, secret, lock
+        channel_state, message_identifier, payment_identifier, secret, lock, hashalgo
     )
 
     channel_state.our_state.balance_proof = unlock.balance_proof

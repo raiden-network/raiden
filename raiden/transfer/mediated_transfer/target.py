@@ -184,6 +184,7 @@ def handle_offchain_secretreveal(
             channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE,
             message_identifier=message_identifier,
             secret=target_state.secret,
+            hashalgo=state_change.hashalgo,
         )
 
         iteration = TransitionResult(target_state, [reveal])

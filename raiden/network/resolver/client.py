@@ -1,3 +1,4 @@
+from hashlib import sha256
 from http import HTTPStatus
 
 import requests
@@ -6,6 +7,8 @@ from eth_utils import to_bytes, to_hex
 from raiden.raiden_service import RaidenService
 from raiden.transfer.mediated_transfer.events import SendSecretRequest
 from raiden.transfer.mediated_transfer.state_change import ReceiveSecretReveal
+from raiden.utils import sha3
+from raiden.utils.typing import HashAlgo
 
 
 def reveal_secret_with_resolver(
@@ -39,8 +42,19 @@ def reveal_secret_with_resolver(
     if response is None or response.status_code != HTTPStatus.OK:
         return False
 
+    hexsecret = response.json()["secret"]
+    secret = hexsecret[2:].encode()
+    secrethash = secret_request_event.secrethash
+
+    if sha3(secret) == secrethash:
+        hashalgo = HashAlgo.SHA3
+    elif sha256(secret).digest() == secrethash:
+        hashalgo = HashAlgo.SHA256
+    else:
+        return False
+
     state_change = ReceiveSecretReveal(
-        to_bytes(hexstr=response.json()["secret"]), secret_request_event.recipient
+        to_bytes(hexstr=hexsecret), secret_request_event.recipient, hashalgo
     )
     raiden.handle_and_track_state_change(state_change)
     return True

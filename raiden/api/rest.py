@@ -999,7 +999,8 @@ class RestAPI:
             "amount": amount,
             "identifier": identifier,
             "secret": to_hex(result.secret),
-            "secret_hash": to_hex(sha3(result.secret)),
+            "secret_hash": to_hex(result.secrethash),
+            "hashalgo": result.hashalgo.name,
         }
         result = self.payment_schema.dump(payment)
         return api_response(result=result.data)

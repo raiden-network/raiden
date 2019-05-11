@@ -1,7 +1,9 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
-from eth_utils import to_canonical_address, to_checksum_address
+from hashlib import sha256
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
 
+from raiden.constants import EMPTY_HASH
 from raiden.transfer.architecture import (
     AuthenticatedSenderStateChange,
     BalanceProofStateChange,
@@ -19,6 +21,7 @@ from raiden.utils.typing import (
     Any,
     BlockExpiration,
     Dict,
+    HashAlgo,
     List,
     MessageID,
     PaymentAmount,
@@ -282,12 +285,19 @@ class ReceiveSecretRequest(AuthenticatedSenderStateChange):
 class ReceiveSecretReveal(AuthenticatedSenderStateChange):
     """ A SecretReveal message received. """
 
-    def __init__(self, secret: Secret, sender: Address) -> None:
+    def __init__(self, secret: Secret, sender: Address, hashalgo: HashAlgo = HashAlgo.SHA3) -> None:
         super().__init__(sender)
-        secrethash = sha3(secret)
+
+        if hashalgo == HashAlgo.SHA3:
+            secrethash = sha3(secret)
+        elif hashalgo == HashAlgo.SHA256:
+            secrethash = sha256(to_hex(secret)[2:].encode()).digest()
+        else:
+            secrethash = EMPTY_HASH
 
         self.secret = secret
         self.secrethash = secrethash
+        self.hashalgo = hashalgo
 
     def __repr__(self):
         return "<ReceiveSecretReveal secrethash:{} sender:{}>".format(
@@ -299,6 +309,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
             isinstance(other, ReceiveSecretReveal)
             and self.secret == other.secret
             and self.secrethash == other.secrethash
+            and self.hashalgo == other.hashalgo
             and super().__eq__(other)
         )
 
@@ -310,6 +321,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
             "secret": serialize_bytes(self.secret),
             "secrethash": serialize_bytes(self.secrethash),
             "sender": to_checksum_address(self.sender),
+            "hashalgo": self.hashalgo.value,
         }
 
     @classmethod
@@ -317,6 +329,7 @@ class ReceiveSecretReveal(AuthenticatedSenderStateChange):
         instance = cls(
             secret=Secret(deserialize_bytes(data["secret"])),
             sender=to_canonical_address(data["sender"]),
+            hashalgo=data["hashalgo"],
         )
         instance.secrethash = deserialize_bytes(data["secrethash"])
         return instance

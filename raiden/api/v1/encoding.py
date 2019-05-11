@@ -249,6 +249,7 @@ class PaymentSchema(BaseSchema):
     identifier = fields.Integer(missing=None)
     secret = fields.String(missing=None)
     secret_hash = fields.String(missing=None)
+    hashalgo = fields.String(missing=None)
 
     class Meta:
         strict = True

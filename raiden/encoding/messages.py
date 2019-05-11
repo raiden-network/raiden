@@ -52,6 +52,7 @@ secrethash = make_field("secrethash", 32, "32s")
 balance_hash = make_field("balance_hash", 32, "32s")
 additional_hash = make_field("additional_hash", 32, "32s")
 secret = make_field("secret", 32, "32s")
+hashalgo = make_field("hashalgo", 1, "1s")
 transferred_amount = make_field("transferred_amount", 32, "32s", integer(0, UINT256_MAX))
 locked_amount = make_field("locked_amount", 32, "32s", integer(0, UINT256_MAX))
 amount = make_field("amount", 32, "32s", integer(0, UINT256_MAX))
@@ -104,12 +105,14 @@ Unlock = namedbuffer(
         transferred_amount,
         locked_amount,
         locksroot,
+        hashalgo,
+        pad(3),
         signature,
     ],
 )
 
 RevealSecret = namedbuffer(
-    "reveal_secret", [cmdid(REVEALSECRET), pad(3), message_identifier, secret, signature]
+    "reveal_secret", [cmdid(REVEALSECRET), pad(3), message_identifier, secret, hashalgo, pad(3), signature]
 )
 
 LockedTransfer = namedbuffer(

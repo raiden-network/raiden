@@ -1,7 +1,10 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from hashlib import sha256
 from random import Random
 
-from eth_utils import to_canonical_address, to_checksum_address
+from eth_utils import to_canonical_address, to_checksum_address, to_hex
+
+from raiden.constants import EMPTY_HASH
 
 from raiden.transfer.architecture import (
     AuthenticatedSenderStateChange,
@@ -38,6 +41,7 @@ from raiden.utils.typing import (
     ChannelID,
     Dict,
     FeeAmount,
+    HashAlgo,
     Locksroot,
     MessageID,
     Nonce,
@@ -1162,18 +1166,28 @@ class ContractReceiveUpdateTransfer(ContractReceiveStateChange):
 
 class ReceiveUnlock(BalanceProofStateChange):
     def __init__(
-        self, message_identifier: MessageID, secret: Secret, balance_proof: BalanceProofSignedState
+        self,
+        message_identifier: MessageID,
+        secret: Secret,
+        balance_proof: BalanceProofSignedState,
+        hashalgo: HashAlgo = HashAlgo.SHA3,
     ) -> None:
         if not isinstance(balance_proof, BalanceProofSignedState):
             raise ValueError("balance_proof must be an instance of BalanceProofSignedState")
 
         super().__init__(balance_proof)
 
-        secrethash: SecretHash = SecretHash(sha3(secret))
+        if hashalgo == HashAlgo.SHA3:
+            secrethash = sha3(secret)
+        elif hashalgo == HashAlgo.SHA256:
+            secrethash = sha256(to_hex(secret)[2:].encode()).digest()
+        else:
+            secrethash = EMPTY_HASH
 
         self.message_identifier = message_identifier
         self.secret = secret
-        self.secrethash = secrethash
+        self.secrethash = SecretHash(secrethash)
+        self.hashalgo = hashalgo
 
     def __repr__(self):
         return "<ReceiveUnlock msgid:{} secrethash:{} balance_proof:{}>".format(
@@ -1186,6 +1200,7 @@ class ReceiveUnlock(BalanceProofStateChange):
             and self.message_identifier == other.message_identifier
             and self.secret == other.secret
             and self.secrethash == other.secrethash
+            and self.hashalgo == other.hashalgo
             and super().__eq__(other)
         )
 
@@ -1197,6 +1212,7 @@ class ReceiveUnlock(BalanceProofStateChange):
             "message_identifier": str(self.message_identifier),
             "secret": serialize_bytes(self.secret),
             "balance_proof": self.balance_proof,
+            "hashalgo": self.hashalgo.value,
         }
 
     @classmethod
@@ -1205,6 +1221,7 @@ class ReceiveUnlock(BalanceProofStateChange):
             message_identifier=MessageID(int(data["message_identifier"])),
             secret=deserialize_secret(data["secret"]),
             balance_proof=data["balance_proof"],
+            hashalgo=HashAlgo(data["hashalgo"]),
         )
 
 
