@@ -7,6 +7,8 @@ from raiden.constants import EMPTY_HASH, EMPTY_SIGNATURE, STATE_PRUNING_AFTER_BL
 from raiden.exceptions import (
     DepositMismatch,
     DuplicatedChannelError,
+    InvalidAddress,
+    InvalidChannelID,
     InvalidSettleTimeout,
     NoStateForBlockIdentifier,
     RaidenRecoverableError,
@@ -108,16 +110,16 @@ def test_token_network_proxy(
         is False
     )
 
-    channel_identifier = c1_token_network_proxy._call_and_check_result(
-        "latest",
-        "getChannelIdentifier",
-        to_checksum_address(c1_client.address),
-        to_checksum_address(c2_client.address),
-    )
-    assert channel_identifier == 0
+    msg = "Hex encoded addresses are not supported, an exception must be raised"
+    with pytest.raises(InvalidAddress):
+        c1_token_network_proxy.get_channel_identifier(
+            participant1=to_checksum_address(c1_client.address),
+            participant2=to_checksum_address(c2_client.address),
+            block_identifier="latest",
+        )
 
-    msg = "Zero is not a valid channel_identifier identifier, ValueError must be " "raised."
-    with pytest.raises(ValueError, message=msg):
+    msg = "Zero is not a valid channel_identifier identifier, an exception must be raised."
+    with pytest.raises(InvalidChannelID, message=msg):
         assert c1_token_network_proxy.channel_is_opened(
             participant1=c1_client.address,
             participant2=c2_client.address,
@@ -125,8 +127,8 @@ def test_token_network_proxy(
             channel_identifier=0,
         )
 
-    msg = "Zero is not a valid channel_identifier identifier. ValueError must be " "raised."
-    with pytest.raises(ValueError, message=msg):
+    msg = "Zero is not a valid channel_identifier identifier. an exception must be raised."
+    with pytest.raises(InvalidChannelID, message=msg):
         assert c1_token_network_proxy.channel_is_closed(
             participant1=c1_client.address,
             participant2=c2_client.address,
