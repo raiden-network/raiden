@@ -6,7 +6,7 @@ from gevent.event import AsyncResult
 
 from raiden.message_handler import MessageHandler
 from raiden.messages import Message
-from raiden.raiden_event_handler import RaidenEventHandler
+from raiden.raiden_event_handler import EventHandler
 from raiden.raiden_service import RaidenService
 from raiden.tests.utils.events import check_nested_attrs
 from raiden.transfer.architecture import Event as RaidenEvent, TransitionResult
@@ -53,7 +53,7 @@ class WaitForMessage(MessageHandler):
                 waiting.async_result.set(message)
 
 
-class HoldRaidenEvent(RaidenEventHandler):
+class HoldRaidenEventHandler(EventHandler):
     """ Use this handler to stop the node from processing an event.
 
     This is useful:
@@ -64,7 +64,8 @@ class HoldRaidenEvent(RaidenEventHandler):
       available.
     """
 
-    def __init__(self):
+    def __init__(self, wrapped_handler: EventHandler):
+        self.wrapped = wrapped_handler
         self.eventtype_to_holds = defaultdict(list)
 
     def on_raiden_event(self, raiden: RaidenService, chain_state: ChainState, event: RaidenEvent):
@@ -90,7 +91,7 @@ class HoldRaidenEvent(RaidenEventHandler):
             holds[found[0]] = found[1]
             hold.async_result.set(event)
         else:
-            super().on_raiden_event(raiden, chain_state, event)
+            self.wrapped.on_raiden_event(raiden, chain_state, event)
 
     def hold(self, event_type: type, attributes: typing.Dict) -> AsyncResult:
         hold = Hold(
@@ -121,7 +122,7 @@ class HoldRaidenEvent(RaidenEventHandler):
         assert found is not None, msg
 
         hold = holds.pop(found[0])
-        super().on_raiden_event(raiden, hold.chain_state, event)
+        self.wrapped.on_raiden_event(raiden, hold.chain_state, event)
         log.debug(f"{event} released.", node=pex(raiden.address))
 
     def hold_secretrequest_for(self, secrethash: typing.SecretHash) -> AsyncResult:
@@ -161,7 +162,3 @@ def dont_handle_node_change_network_state():
         return TransitionResult(chain_state, list())
 
     return patch("raiden.transfer.node.handle_node_change_network_state", empty_state_transition)
-
-
-# backwards compatibility
-HoldOffChainSecretRequest = HoldRaidenEvent

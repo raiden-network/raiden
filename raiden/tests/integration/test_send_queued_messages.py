@@ -9,11 +9,15 @@ from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import raiden_events_search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldRaidenEvent, dont_handle_node_change_network_state
+from raiden.tests.utils.protocol import (
+    HoldRaidenEventHandler,
+    dont_handle_node_change_network_state,
+)
 from raiden.tests.utils.transfer import assert_synced_channel_state
 from raiden.transfer import views
 from raiden.transfer.events import EventPaymentSentSuccess
 from raiden.transfer.mediated_transfer.events import SendSecretReveal
+from raiden.utils import BlockNumber
 
 
 @pytest.mark.parametrize("deposit", [10])
@@ -167,13 +171,13 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
         chain_state, payment_network_id, token_address
     )
 
-    app0.event_handler = HoldRaidenEvent()
+    raiden_event_handler = RaidenEventHandler()
+    app0.event_handler = HoldRaidenEventHandler(raiden_event_handler)
     app0.event_handler.hold(SendSecretReveal, {})
 
     # make a few transfers from app0 to app1
     amount = 1
     spent_amount = 7
-    identifier = 1
 
     for identifier in range(spent_amount):
         identifier = identifier + 1
@@ -191,7 +195,7 @@ def run_test_payment_statuses_are_restored(raiden_network, token_addresses, netw
     app0_restart = App(
         config=app0.config,
         chain=app0.raiden.chain,
-        query_start_block=0,
+        query_start_block=BlockNumber(0),
         default_registry=app0.raiden.default_registry,
         default_secret_registry=app0.raiden.default_secret_registry,
         default_service_registry=app0.raiden.default_service_registry,
