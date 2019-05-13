@@ -109,7 +109,7 @@ def raise_if_invalid_address_pair(address1: Address, address2: Address) -> None:
         raise InvalidAddress("The null address is not allowed as a channel participant.")
 
     if address1 == address2:
-        raise SamePeerAddress("Using the same addresss for both participants is forbiden.")
+        raise SamePeerAddress("Using the same address for both participants is forbiden.")
 
     if not (is_binary_address(address1) and is_binary_address(address2)):
         raise InvalidAddress("Addresses must be in binary")
