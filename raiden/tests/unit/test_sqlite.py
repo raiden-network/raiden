@@ -5,6 +5,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from raiden.messages import Lock
+from raiden.storage.restore import (
+    get_event_with_balance_proof_by_balance_hash,
+    get_state_change_with_balance_proof_by_balance_hash,
+)
 from raiden.storage.serialization import JSONSerializer
 from raiden.storage.sqlite import SerializedSQLiteStorage, SQLiteStorage
 from raiden.tests.utils import factories
@@ -23,10 +27,6 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.transfer.state import BalanceProofUnsignedState
 from raiden.transfer.state_change import ReceiveUnlock
-from raiden.transfer.utils import (
-    get_event_with_balance_proof_by_balance_hash,
-    get_state_change_with_balance_proof_by_balance_hash,
-)
 from raiden.utils import sha3
 
 
