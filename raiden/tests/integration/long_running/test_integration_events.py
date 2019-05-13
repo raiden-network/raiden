@@ -16,12 +16,10 @@ from raiden.blockchain.events import (
 )
 from raiden.constants import GENESIS_BLOCK_NUMBER
 from raiden.network.blockchain_service import BlockChainService
-from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import must_have_event, search_for_item, wait_for_state_change
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldRaidenEventHandler
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate
 from raiden.transfer import views
 from raiden.transfer.events import ContractSendChannelClose
@@ -476,9 +474,7 @@ def run_test_secret_revealed_on_chain(
     secrethash = sha3(secret)
 
     # Reveal the secret, but do not unlock it off-chain
-    raiden_event_handler = RaidenEventHandler()
-    app1_hold_event_handler = HoldRaidenEventHandler(raiden_event_handler)
-    app1.raiden.raiden_event_handler = app1_hold_event_handler
+    app1_hold_event_handler = app1.raiden.raiden_event_handler
     app1_hold_event_handler.hold_unlock_for(secrethash=secrethash)
 
     app0.raiden.start_mediated_transfer_with_secret(
@@ -549,9 +545,7 @@ def test_clear_closed_queue(raiden_network, token_addresses, network_wait):
 def run_test_clear_closed_queue(raiden_network, token_addresses, network_wait):
     app0, app1 = raiden_network
 
-    raiden_event_handler = RaidenEventHandler()
-    hold_event_handler = HoldRaidenEventHandler(raiden_event_handler)
-    app1.raiden.raiden_event_handler = hold_event_handler
+    hold_event_handler = app1.raiden.raiden_event_handler
 
     registry_address = app0.raiden.default_registry.address
     token_address = token_addresses[0]

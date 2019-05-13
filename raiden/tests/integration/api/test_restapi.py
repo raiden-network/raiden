@@ -22,13 +22,12 @@ from raiden.constants import (
     Environment,
 )
 from raiden.messages import LockedTransfer, Unlock
-from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.tests.integration.api.utils import create_api_server
 from raiden.tests.utils import factories
 from raiden.tests.utils.client import burn_eth
 from raiden.tests.utils.events import check_dict_nested_attrs, must_have_event, must_have_events
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
+from raiden.tests.utils.protocol import WaitForMessage
 from raiden.tests.utils.smartcontracts import deploy_contract_web3
 from raiden.transfer import views
 from raiden.transfer.state import CHANNEL_STATE_CLOSED, CHANNEL_STATE_OPENED
@@ -1798,8 +1797,6 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     mediator_server = create_api_server(mediator, 8576)
     target_server = create_api_server(target, 8577)
 
-    raiden_event_handler = RaidenEventHandler()
-    target.raiden.raiden_event_handler = target_hold = HoldRaidenEventHandler(raiden_event_handler)
     target.raiden.message_handler = target_wait = WaitForMessage()
     mediator.raiden.message_handler = mediator_wait = WaitForMessage()
 
@@ -1814,6 +1811,7 @@ def test_pending_transfers_endpoint(raiden_network, token_addresses):
     response = request.send().response
     assert response.status_code == 200 and response.content == b"[]"
 
+    target_hold = target.raiden.raiden_event_handler
     target_hold.hold_secretrequest_for(secrethash=secrethash)
 
     initiator.raiden.start_mediated_transfer_with_secret(
