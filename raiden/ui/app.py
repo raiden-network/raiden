@@ -1,6 +1,6 @@
 import os
 import sys
-from typing import TextIO
+from typing import Any, Callable, Dict, TextIO
 from urllib.parse import urlparse
 
 import click
@@ -14,6 +14,8 @@ from raiden.constants import (
     MONITORING_BROADCASTING_ROOM,
     PATH_FINDING_BROADCASTING_ROOM,
     RAIDEN_DB_VERSION,
+    Environment,
+    RoutingMode,
 )
 from raiden.exceptions import RaidenError
 from raiden.message_handler import MessageHandler
@@ -44,7 +46,7 @@ from raiden.ui.startup import (
     setup_proxies_or_exit,
     setup_udp_or_exit,
 )
-from raiden.utils import pex, split_endpoint
+from raiden.utils import BlockNumber, pex, split_endpoint
 from raiden.utils.cli import get_matrix_servers
 from raiden.utils.typing import Address, Optional, PrivateKey, Tuple
 from raiden_contracts.constants import ID_TO_NETWORKNAME
@@ -110,39 +112,37 @@ def rpc_normalized_endpoint(eth_rpc_endpoint: str) -> str:
 
 
 def run_app(
-    address,
-    keystore_path,
-    gas_price,
-    eth_rpc_endpoint,
-    tokennetwork_registry_contract_address,
-    secret_registry_contract_address,
-    service_registry_contract_address,
-    endpoint_registry_contract_address,
-    user_deposit_contract_address,
-    listen_address,
+    address: Address,
+    keystore_path: str,
+    gas_price: Callable,
+    eth_rpc_endpoint: str,
+    tokennetwork_registry_contract_address: Address,
+    secret_registry_contract_address: Address,
+    service_registry_contract_address: Address,
+    endpoint_registry_contract_address: Address,
+    user_deposit_contract_address: Address,
+    listen_address: str,
     mapped_socket,
-    max_unresponsive_time,
-    api_address,
-    rpc,
-    sync_check,
-    console,
-    password_file,
-    web_ui,
-    datadir,
-    transport,
-    matrix_server,
-    network_id,
-    environment_type,
-    unrecoverable_error_should_crash,
-    pathfinding_service_address,
-    pathfinding_eth_address,
-    pathfinding_max_paths,
-    enable_monitoring,
-    resolver_endpoint,
-    routing_mode,
-    config=None,
-    extra_config=None,
-    **kwargs,
+    max_unresponsive_time: int,
+    api_address: str,
+    rpc: bool,
+    sync_check: bool,
+    console: bool,
+    password_file: TextIO,
+    web_ui: bool,
+    datadir: str,
+    transport: str,
+    matrix_server: str,
+    network_id: int,
+    environment_type: Environment,
+    unrecoverable_error_should_crash: bool,
+    pathfinding_service_address: str,
+    pathfinding_eth_address: str,
+    pathfinding_max_paths: int,
+    enable_monitoring: bool,
+    resolver_endpoint: str,
+    routing_mode: RoutingMode,
+    config: Dict[str, Any],
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
@@ -261,7 +261,7 @@ def run_app(
         raiden_app = App(
             config=config,
             chain=blockchain_service,
-            query_start_block=start_block,
+            query_start_block=BlockNumber(start_block),
             default_registry=proxies.token_network_registry,
             default_secret_registry=proxies.secret_registry,
             default_service_registry=proxies.service_registry,
