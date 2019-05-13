@@ -143,6 +143,7 @@ def run_app(
     resolver_endpoint: str,
     routing_mode: RoutingMode,
     config: Dict[str, Any],
+    **kwargs: Dict,
 ):
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
