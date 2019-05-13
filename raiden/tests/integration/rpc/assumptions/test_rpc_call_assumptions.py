@@ -1,5 +1,6 @@
 import pytest
 from eth_utils import decode_hex, to_checksum_address
+from web3.exceptions import BadFunctionCallOutput
 
 from raiden.tests.utils.smartcontracts import deploy_rpc_test_contract, get_test_contract
 
@@ -55,8 +56,26 @@ def test_call_with_a_block_number_before_smart_contract_deployed(deploy_client):
     deploy_block = receipt["blockNumber"]
     assert contract_proxy.contract.functions.ret().call(block_identifier=deploy_block) == 1
 
-    with pytest.raises(Exception):
+    with pytest.raises(BadFunctionCallOutput):
         contract_proxy.contract.functions.ret().call(block_identifier=deploy_block - 1)
+
+
+def test_call_works_with_blockhash(deploy_client):
+    """ A JSON RPC call works with a block number or blockhash. """
+    contract_path, contracts = get_test_contract("RpcTest.sol")
+    contract_proxy, receipt = deploy_client.deploy_solidity_contract(
+        "RpcTest",
+        contracts,
+        libraries=dict(),
+        constructor_parameters=None,
+        contract_path=contract_path,
+    )
+
+    deploy_blockhash = receipt["blockHash"]
+    assert contract_proxy.contract.functions.ret().call(block_identifier=deploy_blockhash) == 1
+
+    deploy_block = receipt["blockNumber"]
+    assert contract_proxy.contract.functions.ret().call(block_identifier=deploy_block) == 1
 
 
 def test_call_throws(deploy_client):
