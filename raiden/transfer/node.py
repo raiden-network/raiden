@@ -464,6 +464,8 @@ def inplace_delete_message_queue(
     """ Filter messages from queue, if the queue becomes empty, cleanup the queue itself. """
     queue = chain_state.queueids_to_queues.get(queueid)
     if not queue:
+        if queueid in chain_state.queueids_to_queues:
+            chain_state.queueids_to_queues.pop(queueid)
         return
 
     inplace_delete_message(message_queue=queue, state_change=state_change)
