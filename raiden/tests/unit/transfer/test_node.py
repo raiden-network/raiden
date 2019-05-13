@@ -15,22 +15,26 @@ from raiden.tests.utils.factories import (
     UNIT_SECRETHASH,
     make_block_hash,
 )
-from raiden.transfer.architecture import TransitionResult
+from raiden.transfer.architecture import SendMessageEvent, TransitionResult
 from raiden.transfer.channel import compute_merkletree_with, get_status
 from raiden.transfer.events import (
     ContractSendChannelBatchUnlock,
     ContractSendChannelUpdateTransfer,
     ContractSendSecretReveal,
 )
-from raiden.transfer.identifiers import CanonicalIdentifier
+from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
+from raiden.transfer.mediated_transfer.events import CHANNEL_IDENTIFIER_GLOBAL_QUEUE
 from raiden.transfer.mediated_transfer.state import MediatorTransferState, TargetTransferState
 from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.node import (
     get_networks,
+    handle_delivered,
     handle_new_payment_network,
     handle_new_token_network,
     handle_node_change_network_state,
+    handle_processed,
+    inplace_delete_message_queue,
     is_transaction_effect_satisfied,
     is_transaction_expired,
     maybe_add_tokennetwork,
@@ -59,6 +63,8 @@ from raiden.transfer.state_change import (
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
     ContractReceiveNewPaymentNetwork,
+    ReceiveDelivered,
+    ReceiveProcessed,
 )
 
 
@@ -403,3 +409,45 @@ def test_handle_new_payment_network(chain_state, token_network_id):
     assert transition_result.new_state == chain_state
     msg = "handle_new_payment_network did not add to chain_state mapping"
     assert payment_network.address in chain_state.identifiers_to_paymentnetworks, msg
+
+
+def test_inplace_delete_message_queue(chain_state):
+    sender = factories.make_address()
+    channel_id = factories.make_channel_identifier()
+    message_id = factories.make_message_identifier()
+    delivered_state_change = ReceiveDelivered(sender=sender, message_identifier=message_id)
+    handle_delivered(chain_state=chain_state, state_change=delivered_state_change)
+
+    processed_state_change = ReceiveProcessed(sender=sender, message_identifier=message_id)
+    handle_processed(chain_state=chain_state, state_change=processed_state_change)
+
+    global_identifier = QueueIdentifier(
+        recipient=sender, channel_identifier=CHANNEL_IDENTIFIER_GLOBAL_QUEUE
+    )
+
+    chain_state.queueids_to_queues[global_identifier] = None
+    assert global_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
+    inplace_delete_message_queue(
+        chain_state=chain_state, state_change=delivered_state_change, queueid=global_identifier
+    )
+    assert global_identifier not in chain_state.queueids_to_queues, "did not clear queue"
+
+    chain_state.queueids_to_queues[global_identifier] = [
+        SendMessageEvent(
+            recipient=sender, channel_identifier=channel_id, message_identifier=message_id
+        )
+    ]
+    assert global_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
+    handle_delivered(chain_state=chain_state, state_change=delivered_state_change)
+    assert global_identifier not in chain_state.queueids_to_queues, "did not clear queue"
+
+    queue_identifier = QueueIdentifier(recipient=sender, channel_identifier=channel_id)
+    assert queue_identifier not in chain_state.queueids_to_queues, "queue not empty"
+    chain_state.queueids_to_queues[queue_identifier] = [
+        SendMessageEvent(
+            recipient=sender, channel_identifier=channel_id, message_identifier=message_id
+        )
+    ]
+    assert queue_identifier in chain_state.queueids_to_queues, "queue mapping not mutable"
+    handle_processed(chain_state=chain_state, state_change=processed_state_change)
+    assert queue_identifier not in chain_state.queueids_to_queues, "queue did not clear"
