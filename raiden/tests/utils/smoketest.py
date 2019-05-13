@@ -56,7 +56,7 @@ from raiden.tests.utils.smartcontracts import deploy_contract_web3, deploy_token
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.ui.app import run_app
-from raiden.utils import merge_dict, privatekey_to_address, split_endpoint
+from raiden.utils import privatekey_to_address, split_endpoint
 from raiden.utils.http import HTTPExecutor
 from raiden.utils.typing import Address, AddressHex, ChainID, Dict, Iterator
 from raiden.waiting import wait_for_block
@@ -420,14 +420,11 @@ def run_smoketest(
     print_step("Starting Raiden")
 
     config = deepcopy(App.DEFAULT_CONFIG)
-    extra_config = args.pop("extra_config", None)
-    if extra_config:
-        merge_dict(config, extra_config)
     args["config"] = config
     # Should use basic routing in the smoke test for now
     # TODO: If we ever utilize a PFS in the smoke test we
-    # need to use the deployed service registry, register the
-    # PFS service there and then change this argument.
+    #     need to use the deployed service registry, register the
+    #     PFS service there and then change this argument.
     args["routing_mode"] = RoutingMode.BASIC
 
     raiden_stdout = StringIO()
