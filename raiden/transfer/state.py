@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Tuple
 import networkx
 
 from raiden.constants import (
-    EMPTY_BALANCE_HASH,
     EMPTY_LOCK_HASH,
     EMPTY_MERKLE_ROOT,
     EMPTY_SECRETHASH,
@@ -17,16 +16,20 @@ from raiden.constants import (
 )
 from raiden.encoding import messages
 from raiden.encoding.format import buffer_for
-from raiden.transfer.architecture import ContractSendEvent, SendMessageEvent, State, TransferTask
+from raiden.transfer.architecture import (
+    BalanceProofSignedState,
+    BalanceProofUnsignedState,
+    ContractSendEvent,
+    SendMessageEvent,
+    State,
+    TransferTask,
+)
 from raiden.transfer.identifiers import CanonicalIdentifier, QueueIdentifier
-from raiden.transfer.utils import hash_balance_data
 from raiden.utils import lpex, pex, sha3
 from raiden.utils.typing import (
-    AdditionalHash,
     Address,
     Any,
     Balance,
-    BalanceHash,
     BlockExpiration,
     BlockHash,
     BlockNumber,
@@ -41,13 +44,11 @@ from raiden.utils.typing import (
     LockHash,
     Locksroot,
     MessageID,
-    Nonce,
     Optional,
     PaymentNetworkID,
     PaymentWithFeeAmount,
     Secret,
     SecretHash,
-    Signature,
     T_Address,
     T_BlockHash,
     T_BlockNumber,
@@ -56,7 +57,6 @@ from raiden.utils.typing import (
     T_Keccak256,
     T_PaymentWithFeeAmount,
     T_Secret,
-    T_Signature,
     T_TokenAmount,
     TokenAddress,
     TokenAmount,
@@ -182,146 +182,6 @@ class RouteState(State):
     def __post_init__(self) -> None:
         if not isinstance(self.node_address, T_Address):
             raise ValueError("node_address must be an address instance")
-
-
-@dataclass
-class BalanceProofUnsignedState(State):
-    """ Balance proof from the local node without the signature. """
-
-    nonce: Nonce
-    transferred_amount: TokenAmount
-    locked_amount: TokenAmount
-    locksroot: Locksroot
-    canonical_identifier: CanonicalIdentifier
-    balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.nonce, int):
-            raise ValueError("nonce must be int")
-
-        if not isinstance(self.transferred_amount, T_TokenAmount):
-            raise ValueError("transferred_amount must be a token_amount instance")
-
-        if not isinstance(self.locked_amount, T_TokenAmount):
-            raise ValueError("locked_amount must be a token_amount instance")
-
-        if not isinstance(self.locksroot, T_Keccak256):
-            raise ValueError("locksroot must be a keccak256 instance")
-
-        if self.nonce <= 0:
-            raise ValueError("nonce cannot be zero or negative")
-
-        if self.nonce > UINT64_MAX:
-            raise ValueError("nonce is too large")
-
-        if self.transferred_amount < 0:
-            raise ValueError("transferred_amount cannot be negative")
-
-        if self.transferred_amount > UINT256_MAX:
-            raise ValueError("transferred_amount is too large")
-
-        if len(self.locksroot) != 32:
-            raise ValueError("locksroot must have length 32")
-
-        self.canonical_identifier.validate()
-
-        self.balance_hash = hash_balance_data(
-            transferred_amount=self.transferred_amount,
-            locked_amount=self.locked_amount,
-            locksroot=self.locksroot,
-        )
-
-    @property
-    def chain_id(self) -> ChainID:
-        return self.canonical_identifier.chain_identifier
-
-    @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
-
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.canonical_identifier.channel_identifier
-
-
-@dataclass
-class BalanceProofSignedState(State):
-    """ Proof of a channel balance that can be used on-chain to resolve
-    disputes.
-    """
-
-    nonce: Nonce
-    transferred_amount: TokenAmount
-    locked_amount: TokenAmount
-    locksroot: Locksroot
-    message_hash: AdditionalHash
-    signature: Signature
-    sender: Address
-    canonical_identifier: CanonicalIdentifier
-    balance_hash: BalanceHash = field(default=EMPTY_BALANCE_HASH)
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.nonce, int):
-            raise ValueError("nonce must be int")
-
-        if not isinstance(self.transferred_amount, T_TokenAmount):
-            raise ValueError("transferred_amount must be a token_amount instance")
-
-        if not isinstance(self.locked_amount, T_TokenAmount):
-            raise ValueError("locked_amount must be a token_amount instance")
-
-        if not isinstance(self.locksroot, T_Keccak256):
-            raise ValueError("locksroot must be a keccak256 instance")
-
-        if not isinstance(self.message_hash, T_Keccak256):
-            raise ValueError("message_hash must be a keccak256 instance")
-
-        if not isinstance(self.signature, T_Signature):
-            raise ValueError("signature must be a signature instance")
-
-        if not isinstance(self.sender, T_Address):
-            raise ValueError("sender must be an address instance")
-
-        if self.nonce <= 0:
-            raise ValueError("nonce cannot be zero or negative")
-
-        if self.nonce > UINT64_MAX:
-            raise ValueError("nonce is too large")
-
-        if self.transferred_amount < 0:
-            raise ValueError("transferred_amount cannot be negative")
-
-        if self.transferred_amount > UINT256_MAX:
-            raise ValueError("transferred_amount is too large")
-
-        if len(self.locksroot) != 32:
-            raise ValueError("locksroot must have length 32")
-
-        if len(self.message_hash) != 32:
-            raise ValueError("message_hash is an invalid hash")
-
-        if len(self.signature) != 65:
-            raise ValueError("signature is an invalid signature")
-
-        self.canonical_identifier.validate()
-
-        self.balance_hash = hash_balance_data(
-            transferred_amount=self.transferred_amount,
-            locked_amount=self.locked_amount,
-            locksroot=self.locksroot,
-        )
-
-    @property
-    def chain_id(self) -> ChainID:
-        return self.canonical_identifier.chain_identifier
-
-    @property
-    def token_network_identifier(self) -> TokenNetworkAddress:
-        return TokenNetworkAddress(self.canonical_identifier.token_network_address)
-
-    @property
-    def channel_identifier(self) -> ChannelID:
-        return self.canonical_identifier.channel_identifier
 
 
 @dataclass
