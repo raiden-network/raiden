@@ -8,12 +8,13 @@ from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.exceptions import RaidenUnrecoverableError
 from raiden.messages import LockedTransfer, LockExpired, RevealSecret
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.storage.restore import channel_state_until_state_change
 from raiden.tests.utils import factories
 from raiden.tests.utils.detect_failure import raise_on_failure
 from raiden.tests.utils.events import search_for_item
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.utils.protocol import HoldOffChainSecretRequest, WaitForMessage
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.tests.utils.transfer import assert_synced_channel_state, get_channelstate, transfer
 from raiden.transfer import channel, views
 from raiden.transfer.state import UnlockProofState
@@ -431,7 +432,8 @@ def run_test_settled_lock(token_addresses, raiden_network, deposit):
         views.state_from_app(app0), app0.raiden.default_registry.address, token_address
     )
 
-    hold_event_handler = HoldOffChainSecretRequest()
+    raiden_event_handler = RaidenEventHandler()
+    hold_event_handler = HoldRaidenEventHandler(raiden_event_handler)
     app1.raiden.raiden_event_handler = hold_event_handler
 
     address0 = app0.raiden.address
@@ -527,7 +529,8 @@ def run_test_automatic_secret_registration(raiden_chain, token_addresses):
     amount = 100
     identifier = 1
 
-    hold_event_handler = HoldOffChainSecretRequest()
+    raiden_event_handler = RaidenEventHandler()
+    hold_event_handler = HoldRaidenEventHandler(raiden_event_handler)
     message_handler = WaitForMessage()
 
     app1.raiden.raiden_event_handler = hold_event_handler
@@ -604,7 +607,8 @@ def run_test_start_end_attack(token_addresses, raiden_chain, deposit):
         views.state_from_app(app0), app0.raiden.default_registry.address, token
     )
 
-    hold_event_handler = HoldOffChainSecretRequest()
+    raiden_event_handler = RaidenEventHandler()
+    hold_event_handler = HoldRaidenEventHandler(raiden_event_handler)
     app2.raiden.raiden_event_handler = hold_event_handler
 
     # the attacker owns app0 and app2 and creates a transfer through app1
@@ -802,7 +806,8 @@ def run_test_batch_unlock_after_restart(raiden_network, token_addresses, deposit
         token_address=token_address,
     )
 
-    hold_event_handler = HoldOffChainSecretRequest()
+    raiden_event_handler = RaidenEventHandler()
+    hold_event_handler = HoldRaidenEventHandler(raiden_event_handler)
     bob_app.raiden.raiden_event_handler = hold_event_handler
     alice_app.raiden.raiden_event_handler = hold_event_handler
 

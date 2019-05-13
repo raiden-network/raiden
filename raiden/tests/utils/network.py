@@ -11,13 +11,14 @@ from raiden.network.blockchain_service import BlockChainService
 from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.throttle import TokenBucket
 from raiden.network.transport import MatrixTransport, UDPTransport
+from raiden.raiden_event_handler import RaidenEventHandler
 from raiden.settings import DEFAULT_NUMBER_OF_BLOCK_CONFIRMATIONS, DEFAULT_RETRY_TIMEOUT
 from raiden.tests.utils.app import database_from_privatekey
 from raiden.tests.utils.factories import UNIT_CHAIN_ID
-from raiden.tests.utils.protocol import HoldRaidenEvent, WaitForMessage
+from raiden.tests.utils.protocol import HoldRaidenEventHandler, WaitForMessage
 from raiden.transfer.identifiers import CanonicalIdentifier
 from raiden.transfer.views import state_from_raiden
-from raiden.utils import merge_dict, pex
+from raiden.utils import BlockNumber, merge_dict, pex
 from raiden.waiting import wait_for_payment_network
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
@@ -372,18 +373,19 @@ def create_apps(
                 config["transport"]["udp"],
             )
 
-        raiden_event_handler = HoldRaidenEvent()
+        raiden_event_handler = RaidenEventHandler()
+        hold_handler = HoldRaidenEventHandler(raiden_event_handler)
         message_handler = WaitForMessage()
 
         app = App(
             config=config_copy,
             chain=blockchain,
-            query_start_block=0,
+            query_start_block=BlockNumber(0),
             default_registry=registry,
             default_secret_registry=secret_registry,
             default_service_registry=service_registry,
             transport=transport,
-            raiden_event_handler=raiden_event_handler,
+            raiden_event_handler=hold_handler,
             message_handler=message_handler,
             discovery=discovery,
             user_deposit=user_deposit,
