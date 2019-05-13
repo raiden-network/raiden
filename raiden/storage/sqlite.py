@@ -180,7 +180,7 @@ class SQLiteStorage:
         """
         with self.write_lock, self.conn:
             self.conn.executemany(
-                "DELETE FROM state_events WHERE identifier = ?", state_changes_to_delete
+                "DELETE FROM state_events WHERE identifier = ?", str(state_changes_to_delete)
             )
 
     def get_latest_state_snapshot(self) -> Optional[Tuple[int, Any]]:
