@@ -123,7 +123,7 @@ def initiator_init(
     transfer_fee: FeeAmount,
     token_network_identifier: TokenNetworkID,
     target_address: TargetAddress,
-):
+) -> ActionInitInitiator:
     assert transfer_secret != constants.EMPTY_HASH, f"Empty secret node:{raiden!r}"
 
     transfer_state = TransferDescriptionWithSecretState(
@@ -148,11 +148,10 @@ def initiator_init(
         config=raiden.config,
         privkey=raiden.privkey,
     )
-    init_initiator_statechange = ActionInitInitiator(transfer_state, routes)
-    return init_initiator_statechange
+    return ActionInitInitiator(transfer_state, routes)
 
 
-def mediator_init(raiden, transfer: LockedTransfer):
+def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
     from_transfer = lockedtransfersigned_from_message(transfer)
     routes = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
@@ -165,15 +164,13 @@ def mediator_init(raiden, transfer: LockedTransfer):
         privkey=raiden.privkey,
     )
     from_route = RouteState(transfer.sender, from_transfer.balance_proof.channel_identifier)
-    init_mediator_statechange = ActionInitMediator(routes, from_route, from_transfer)
-    return init_mediator_statechange
+    return ActionInitMediator(routes, from_route, from_transfer)
 
 
-def target_init(transfer: LockedTransfer):
+def target_init(transfer: LockedTransfer) -> ActionInitTarget:
     from_transfer = lockedtransfersigned_from_message(transfer)
     from_route = RouteState(transfer.sender, from_transfer.balance_proof.channel_identifier)
-    init_target_statechange = ActionInitTarget(from_route, from_transfer)
-    return init_target_statechange
+    return ActionInitTarget(from_route, from_transfer)
 
 
 class PaymentStatus(NamedTuple):

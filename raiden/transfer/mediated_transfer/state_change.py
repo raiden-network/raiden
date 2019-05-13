@@ -35,9 +35,8 @@ class ActionInitInitiator(StateChange):
     """ Initial state of a new mediated transfer.
 
     Args:
-        transfer: A state object containing the transfer details.
+        transfer_description: A state object containing the transfer details.
         routes: A list of possible routes provided by a routing service.
-        secret: The secret that must be used with the transfer.
     """
 
     def __init__(

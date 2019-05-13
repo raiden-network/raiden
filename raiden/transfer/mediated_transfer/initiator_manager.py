@@ -125,9 +125,7 @@ def maybe_try_new_route(
         new_transfer = sub_iteration.new_state.transfer
         payment_state.initiator_transfers[new_transfer.lock.secrethash] = sub_iteration.new_state
 
-    iteration = TransitionResult(payment_state, events)
-
-    return iteration
+    return TransitionResult(payment_state, events)
 
 
 def subdispatch_to_initiatortransfer(
@@ -200,7 +198,7 @@ def handle_init(
     pseudo_random_generator: random.Random,
     block_number: BlockNumber,
 ) -> TransitionResult[InitiatorPaymentState]:
-    events: List[Event]
+    events: List[Event] = list()
     if payment_state is None:
         sub_iteration = initiator.try_new_route(
             channelidentifiers_to_channels=channelidentifiers_to_channels,
@@ -217,11 +215,8 @@ def handle_init(
                     sub_iteration.new_state.transfer.lock.secrethash: sub_iteration.new_state
                 }
             )
-    else:
-        events = list()
 
-    iteration = TransitionResult(payment_state, events)
-    return iteration
+    return TransitionResult(payment_state, events)
 
 
 def handle_cancelpayment(
@@ -325,9 +320,7 @@ def handle_transferrefundcancelroute(
 
     events.extend(sub_iteration.events)
 
-    iteration = TransitionResult(payment_state, events)
-
-    return iteration
+    return TransitionResult(payment_state, events)
 
 
 def handle_lock_expired(
