@@ -776,7 +776,7 @@ def handle_update_transport_authdata(
 
 def handle_state_change(
     chain_state: ChainState, state_change: StateChange
-) -> TransitionResult[ChainState]:
+) -> TransitionResult[ChainState]:  # pragma: no cover
     if type(state_change) == Block:
         assert isinstance(state_change, Block), MYPY_ANNOTATION
         iteration = handle_block(chain_state, state_change)
