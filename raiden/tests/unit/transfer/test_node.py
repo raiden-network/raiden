@@ -28,6 +28,7 @@ from raiden.transfer.mediated_transfer.state_change import ReceiveLockExpired
 from raiden.transfer.merkle_tree import merkleroot
 from raiden.transfer.node import (
     get_networks,
+    handle_new_payment_network,
     handle_new_token_network,
     handle_node_change_network_state,
     is_transaction_effect_satisfied,
@@ -57,6 +58,7 @@ from raiden.transfer.state_change import (
     Block,
     ContractReceiveChannelBatchUnlock,
     ContractReceiveChannelSettled,
+    ContractReceiveNewPaymentNetwork,
 )
 
 
@@ -382,3 +384,22 @@ def test_handle_node_change_network_state(chain_state, netting_channel_state, mo
     transition_result = handle_node_change_network_state(chain_state, state_change)
 
     assert transition_result.events == [result]
+
+
+def test_handle_new_payment_network(chain_state, token_network_id):
+    token_address = factories.make_address()
+    token_network = TokenNetworkState(address=token_network_id, token_address=token_address)
+    payment_network = PaymentNetworkState(
+        address=factories.make_address(), token_network_list=[token_network]
+    )
+    state_change = ContractReceiveNewPaymentNetwork(
+        transaction_hash=factories.make_transaction_hash(),
+        payment_network=payment_network,
+        block_hash=make_block_hash(),
+        block_number=1,
+    )
+    assert payment_network.address not in chain_state.identifiers_to_paymentnetworks
+    transition_result = handle_new_payment_network(chain_state, state_change)
+    assert transition_result.new_state == chain_state
+    msg = "handle_new_payment_network did not add to chain_state mapping"
+    assert payment_network.address in chain_state.identifiers_to_paymentnetworks, msg
