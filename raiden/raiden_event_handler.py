@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import structlog
@@ -86,7 +87,13 @@ def unlock(
         log.error(str(e), node=pex(raiden.address))
 
 
-class RaidenEventHandler:
+class EventHandler(ABC):
+    @abstractmethod
+    def on_raiden_event(self, raiden: "RaidenService", chain_state: ChainState, event: Event):
+        pass
+
+
+class RaidenEventHandler(EventHandler):
     def on_raiden_event(self, raiden: "RaidenService", chain_state: ChainState, event: Event):
         # pylint: disable=too-many-branches
         if type(event) == SendLockExpired:
