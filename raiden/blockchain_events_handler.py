@@ -7,6 +7,10 @@ from raiden.blockchain.events import Event
 from raiden.blockchain.state import get_channel_state
 from raiden.connection_manager import ConnectionManager
 from raiden.network.proxies.utils import get_onchain_locksroots
+from raiden.storage.restore import (
+    get_event_with_balance_proof_by_locksroot,
+    get_state_change_with_balance_proof_by_locksroot,
+)
 from raiden.transfer import views
 from raiden.transfer.architecture import StateChange
 from raiden.transfer.identifiers import CanonicalIdentifier
@@ -26,10 +30,6 @@ from raiden.transfer.state_change import (
     ContractReceiveRouteNew,
     ContractReceiveSecretReveal,
     ContractReceiveUpdateTransfer,
-)
-from raiden.transfer.utils import (
-    get_event_with_balance_proof_by_locksroot,
-    get_state_change_with_balance_proof_by_locksroot,
 )
 from raiden.utils import pex, typing
 from raiden_contracts.constants import (
