@@ -10,7 +10,13 @@ from raiden.messages import message_from_sendevent
 from raiden.network.proxies.payment_channel import PaymentChannel
 from raiden.network.proxies.token_network import TokenNetwork
 from raiden.network.resolver.client import reveal_secret_with_resolver
-from raiden.storage.restore import channel_state_until_state_change
+from raiden.storage.restore import (
+    channel_state_until_state_change,
+    get_event_with_balance_proof_by_balance_hash,
+    get_event_with_balance_proof_by_locksroot,
+    get_state_change_with_balance_proof_by_balance_hash,
+    get_state_change_with_balance_proof_by_locksroot,
+)
 from raiden.transfer.architecture import Event
 from raiden.transfer.balance_proof import pack_balance_proof_update
 from raiden.transfer.channel import get_batch_unlock, get_batch_unlock_gain
@@ -43,12 +49,6 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretReveal,
 )
 from raiden.transfer.state import ChainState, NettingChannelEndState
-from raiden.transfer.utils import (
-    get_event_with_balance_proof_by_balance_hash,
-    get_event_with_balance_proof_by_locksroot,
-    get_state_change_with_balance_proof_by_balance_hash,
-    get_state_change_with_balance_proof_by_locksroot,
-)
 from raiden.transfer.views import get_channelstate_by_token_network_and_partner
 from raiden.utils import pex
 from raiden.utils.typing import MYPY_ANNOTATION, Address, Nonce, TokenNetworkID
