@@ -613,7 +613,7 @@ class RestAPI:
 
         result = self.channel_schema.dump(channel_state)
 
-        return api_response(result=result.data, status_code=HTTPStatus.CREATED)
+        return api_response(result=result, status_code=HTTPStatus.CREATED)
 
     def connect(
         self,
@@ -656,7 +656,7 @@ class RestAPI:
         )
         closed_channels = self.raiden_api.token_network_leave(registry_address, token_address)
         closed_channels = [
-            self.channel_schema.dump(channel_state).data for channel_state in closed_channels
+            self.channel_schema.dump(channel_state) for channel_state in closed_channels
         ]
         return api_response(result=closed_channels)
 
@@ -718,8 +718,7 @@ class RestAPI:
         )
         assert isinstance(raiden_service_result, list)
         result = [
-            self.channel_schema.dump(channel_schema).data
-            for channel_schema in raiden_service_result
+            self.channel_schema.dump(channel_schema) for channel_schema in raiden_service_result
         ]
         return api_response(result=result)
 
@@ -733,7 +732,7 @@ class RestAPI:
         assert isinstance(raiden_service_result, list)
         tokens_list = AddressList(raiden_service_result)
         result = self.address_list_schema.dump(tokens_list)
-        return api_response(result=result.data)
+        return api_response(result=result)
 
     def get_token_network_for_token(
         self, registry_address: typing.PaymentNetworkID, token_address: typing.TokenAddress
@@ -839,7 +838,7 @@ class RestAPI:
                     unexpected_event=event.wrapped_event,
                 )
 
-            result.append(serialized_event.data)
+            result.append(serialized_event)
         return api_response(result=result)
 
     def get_raiden_internal_events_with_timestamps(self, limit, offset):
@@ -898,7 +897,7 @@ class RestAPI:
                 partner_address=partner_address,
             )
             result = self.channel_schema.dump(channel_state)
-            return api_response(result=result.data)
+            return api_response(result=result)
         except ChannelNotFound as e:
             return api_error(errors=str(e), status_code=HTTPStatus.NOT_FOUND)
 
@@ -934,7 +933,7 @@ class RestAPI:
 
         schema_list = PartnersPerTokenList(return_list)
         result = self.partner_per_token_list_schema.dump(schema_list)
-        return api_response(result=result.data)
+        return api_response(result=result)
 
     def initiate_payment(
         self,
@@ -1003,7 +1002,7 @@ class RestAPI:
             "secret_hash": sha3(secret),
         }
         result = self.payment_schema.dump(payment)
-        return api_response(result=result.data)
+        return api_response(result=result)
 
     def _deposit(
         self,
@@ -1044,7 +1043,7 @@ class RestAPI:
         )
 
         result = self.channel_schema.dump(updated_channel_state)
-        return api_response(result=result.data)
+        return api_response(result=result)
 
     def _close(
         self, registry_address: typing.PaymentNetworkID, channel_state: NettingChannelState
@@ -1074,7 +1073,7 @@ class RestAPI:
         )
 
         result = self.channel_schema.dump(updated_channel_state)
-        return api_response(result=result.data)
+        return api_response(result=result)
 
     def patch_channel(
         self,
