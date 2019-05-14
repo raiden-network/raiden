@@ -1456,6 +1456,8 @@ class TokenNetwork:
                 msg = (
                     f"The provided locked amount on-chain is 0. This should "
                     f"never happen because a lock with an amount 0 is forbidden"
+                    f"{to_hex(sender_details.locksroot)} for sender "
+                    f"{to_checksum_address(sender)}."
                 )
                 raise RaidenUnrecoverableError(msg)
 
