@@ -19,7 +19,7 @@ def class_type(instance: Any) -> str:
     return f"{instance.__class__.__module__}.{instance.__class__.__name__}"
 
 
-def set_class_type(schema, data, instance):
+def set_class_type(schema, data, instance):  # pylint: disable=unused-argument
     data["_type"] = class_type(instance)
     return data
 
@@ -31,7 +31,7 @@ def remove_class_type(schema, data):
     return data
 
 
-def inject_type_resolver_hook(schema: Schema, clazz: type):
+def inject_type_resolver_hook(schema: Schema, clazz: type):  # pylint: disable=unused-argument
     key = ("post_dump", False)
     schema._hooks[key].append("set_class_type")
     setattr(set_class_type, "__marshmallow_hook__", {key: {"pass_original": True}})
