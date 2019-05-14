@@ -1,5 +1,5 @@
 import json
-from typing import cast
+from typing import Any, cast
 
 import networkx
 from eth_utils import to_bytes, to_canonical_address, to_checksum_address, to_hex
@@ -99,14 +99,14 @@ def serialize_participants_tuple(participants: Tuple[Address, Address],) -> List
 
 def deserialize_participants_tuple(data: List[str],) -> Tuple[Address, Address]:
     assert len(data) == 2
-    return (to_canonical_address(data[0]), to_canonical_address(data[1]))
+    return to_canonical_address(data[0]), to_canonical_address(data[1])
 
 
-def serialize_merkletree_layers(data) -> List[str]:
+def serialize_merkletree_layers(data: List[List[Keccak256]]) -> List[str]:
     return map_list(serialize_bytes, data[LEAVES])
 
 
-def deserialize_merkletree_layers(data: List[str]):
+def deserialize_merkletree_layers(data: List[str]) -> List[List[Keccak256]]:
     elements = cast(List[Keccak256], map_list(deserialize_bytes, data))
     if len(elements) == 0:
         from raiden.transfer.state import make_empty_merkle_tree
@@ -116,12 +116,12 @@ def deserialize_merkletree_layers(data: List[str]):
     return compute_layers(elements)
 
 
-def serialize_queueid_to_queue(data: Dict):
+def serialize_queueid_to_queue(data: Dict) -> Dict[str, Any]:
     # QueueId cannot be the key in a JSON dict, so make it a str
     return {str(queue_id): (queue_id, queue) for queue_id, queue in data.items()}
 
 
-def deserialize_queueid_to_queue(data: Dict):
+def deserialize_queueid_to_queue(data: Dict) -> Dict:
     return {queue_id: queue for queue_id, queue in data.values()}
 
 

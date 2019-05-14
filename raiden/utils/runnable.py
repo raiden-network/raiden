@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 import structlog
 from gevent import Greenlet
@@ -17,14 +17,14 @@ class Runnable:
     args: Sequence = tuple()  # args for _run()
     kwargs: dict = dict()  # kwargs for _run()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.args = args
         self.kwargs = kwargs
 
         self.greenlet = Greenlet(self._run, *self.args, **self.kwargs)
         self.greenlet.name = f"{self.__class__.__name__}|{self.greenlet.name}"
 
-    def start(self):
+    def start(self) -> None:
         """ Synchronously start task
 
         Reimplements in children an call super().start() at end to start _run()
@@ -42,14 +42,14 @@ class Runnable:
             self.greenlet.name = f"{self.__class__.__name__}|{self.greenlet.name}"
         self.greenlet.start()
 
-    def _run(self, *args, **kwargs):
+    def _run(self, *args: Any, **kwargs: Any) -> None:
         """ Reimplements in children to busy wait here
 
         This busy wait should be finished gracefully after stop(),
         or be killed and re-raise on subtasks exception """
         raise NotImplementedError
 
-    def stop(self):
+    def stop(self) -> None:
         """ Synchronous stop, gracefully tells _run() to exit
 
         Should wait subtasks to finish.
@@ -57,7 +57,7 @@ class Runnable:
         """
         raise NotImplementedError
 
-    def on_error(self, subtask: Greenlet):
+    def on_error(self, subtask: Greenlet) -> None:
         """ Default callback for substasks link_exception
 
         Default callback re-raises the exception inside _run() """
@@ -74,8 +74,8 @@ class Runnable:
 
     # redirect missing members to underlying greenlet for compatibility
     # but better use greenlet directly for now, to make use of the c extension optimizations
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         return getattr(self.greenlet, item)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return bool(self.greenlet)
