@@ -56,6 +56,7 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
         "message": "This is your favorite pathfinding service",
         "operator": "John Doe",
         "version": "0.0.1",
+        "payment_address": "0x2222222222222222222222222222222222222222",
     }
 
     response = Mock()
@@ -66,7 +67,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     with pytest.raises(AssertionError):
         config = configure_pfs_or_exit(
             pfs_address=None,
-            pfs_eth_address=None,
             routing_mode=RoutingMode.BASIC,
             service_registry=service_proxy,
         )
@@ -75,7 +75,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
             pfs_address="auto",
-            pfs_eth_address=None,
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
         )
@@ -88,12 +87,11 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
             pfs_address=given_address,
-            pfs_eth_address=given_eth_address,
             routing_mode=RoutingMode.PFS,
             service_registry=service_proxy,
         )
     assert config.url == given_address
-    assert config.eth_address == given_eth_address
+    assert config.eth_address == json_data['payment_address']
     assert config.fee == json_data["price_info"]
 
     # Bad address, should exit the program
@@ -106,7 +104,6 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
             # Configuring a given address
             config = configure_pfs_or_exit(
                 pfs_address=bad_address,
-                pfs_eth_address=pfs_eth_address,
                 routing_mode=RoutingMode.PFS,
                 service_registry=service_proxy,
             )

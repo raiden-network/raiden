@@ -8,7 +8,7 @@ from uuid import UUID
 import click
 import requests
 import structlog
-from eth_utils import to_canonical_address, to_checksum_address, to_hex
+from eth_utils import is_checksum_address, to_canonical_address, to_checksum_address, to_hex
 from web3 import Web3
 
 from raiden.constants import DEFAULT_HTTP_REQUEST_TIMEOUT, ZERO_TOKENS, RoutingMode
@@ -121,7 +121,6 @@ def configure_pfs_message(info: Dict[str, Any], url: str, eth_address: str) -> s
 
 def configure_pfs_or_exit(
     pfs_address: Optional[str],
-    pfs_eth_address: Optional[str],
     routing_mode: RoutingMode,
     service_registry,
 ) -> PFSConfiguration:
@@ -144,7 +143,7 @@ def configure_pfs_or_exit(
     if pfs_address == "auto":
         assert service_registry, "Should not get here without a service registry"
         block_hash = service_registry.client.get_confirmed_blockhash()
-        pfs_address, pfs_eth_address = get_random_service(
+        pfs_address, _ = get_random_service(
             service_registry=service_registry, block_identifier=block_hash
         )
         if pfs_address is None:
@@ -154,7 +153,6 @@ def configure_pfs_or_exit(
             )
             sys.exit(1)
 
-    assert pfs_eth_address, "At this point pfs_eth_address can't be none"
     pathfinding_service_info = get_pfs_info(pfs_address)
     if not pathfinding_service_info:
         click.secho(
@@ -163,6 +161,19 @@ def configure_pfs_or_exit(
         )
         sys.exit(1)
     else:
+        if 'payment_address' not in pathfinding_service_info:
+            click.secho(
+                f"The pathfinding service at {pfs_address} did not provide an eth address "
+                f"to pay it. Raiden will shut down."
+            )
+            sys.exit(1)
+        pfs_eth_address = pathfinding_service_info['payment_address']
+        if not is_checksum_address(pfs_eth_address):
+            click.secho(
+                f"Invalid reply from pathfinding service {pfs_address}: Payment address "
+                f"'{pfs_eth_address}' is not a valid EIP55 address. Raiden will shut down."
+            )
+            sys.exit(1)
         msg = configure_pfs_message(
             info=pathfinding_service_info, url=pfs_address, eth_address=pfs_eth_address
         )
