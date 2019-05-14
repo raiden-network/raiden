@@ -444,7 +444,7 @@ def test_routing_mocked_pfs_unavailable_peer(chain_state, token_network_state, o
                 "fees": 0,
             }
         ],
-        "feedback_token": "381e4a005a4d4687ac200fa1acd15c6f",
+        "feedback_token": DEFAULT_FEEDBACK_TOKEN.hex,
     }
 
     # test routing with node 2 unavailable
@@ -469,7 +469,7 @@ def test_routing_mocked_pfs_unavailable_peer(chain_state, token_network_state, o
         # is over address2, the internal routing does not provide
         assert routes[0].node_address == address2
         assert routes[0].channel_identifier == channel_state2.identifier
-        assert feedback_token is not None
+        assert feedback_token == DEFAULT_FEEDBACK_TOKEN
 
 
 def test_get_and_update_iou():
@@ -720,7 +720,7 @@ def query_paths_args(token_network_state, our_address, pfs_max_fee):
 
 @pytest.fixture
 def valid_response_json():
-    return dict(result="some result", feedback_token="381e4a005a4d4687ac200fa1acd15c6f")
+    return dict(result="some result", feedback_token=DEFAULT_FEEDBACK_TOKEN.hex)
 
 
 def test_query_paths_with_second_try(query_paths_args, valid_response_json):
