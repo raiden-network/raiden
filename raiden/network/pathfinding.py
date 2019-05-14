@@ -101,7 +101,7 @@ def get_random_service(
 
 class PFSConfiguration(NamedTuple):
     url: str
-    eth_address: str
+    eth_address: Optional[str]
     fee: int
 
 
@@ -119,7 +119,9 @@ def configure_pfs_message(info: Dict[str, Any], url: str, eth_address: str) -> s
 
 
 def configure_pfs_or_exit(
-    pfs_address: Optional[str], routing_mode: RoutingMode, service_registry
+    pfs_address: Optional[str],
+    routing_mode: RoutingMode,
+    service_registry: Optional[ServiceRegistry],
 ) -> PFSConfiguration:
     """
     Take in the given pfs_address argument, the service registry and find out a
@@ -158,17 +160,19 @@ def configure_pfs_or_exit(
         )
         sys.exit(1)
     else:
-        if "payment_address" not in pathfinding_service_info:
+        fee = pathfinding_service_info.get("price_info", 0)
+        pfs_eth_address = pathfinding_service_info.get("payment_address", None)
+        if fee > 0 and not pfs_eth_address:
             click.secho(
                 f"The pathfinding service at {pfs_address} did not provide an eth address "
-                f"to pay it. Raiden will shut down."
+                f"to pay it. Raiden will shut down. Please try a different PFS."
             )
             sys.exit(1)
-        pfs_eth_address = pathfinding_service_info["payment_address"]
-        if not is_checksum_address(pfs_eth_address):
+        if fee > 0 and not is_checksum_address(pfs_eth_address):
             click.secho(
                 f"Invalid reply from pathfinding service {pfs_address}: Payment address "
-                f"'{pfs_eth_address}' is not a valid EIP55 address. Raiden will shut down."
+                f"'{pfs_eth_address}' is not a valid EIP55 address. Raiden will shut "
+                f"down. Please choose a different PFS."
             )
             sys.exit(1)
         msg = configure_pfs_message(
@@ -177,11 +181,7 @@ def configure_pfs_or_exit(
         click.secho(msg)
         log.info("Using PFS", pfs_info=pathfinding_service_info)
 
-    return PFSConfiguration(
-        url=pfs_address,
-        eth_address=pfs_eth_address,
-        fee=pathfinding_service_info.get("price_info", 0),
-    )
+    return PFSConfiguration(url=pfs_address, eth_address=pfs_eth_address, fee=fee)
 
 
 def get_last_iou(
