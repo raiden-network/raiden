@@ -47,9 +47,9 @@ ONLY=${ONLY:-*}
 SHOW=${SHOW:-index.html}
 
 # how to display html
-if [[ "$(python -c 'import sys; print(sys.platform)')" = "Darwin" ]]
+if [[ "$(python -c 'import sys; print(sys.platform.lower())')" = "darwin" ]]
 then
-    if [[i -z ${OPEN} ]]
+    if [[ -z ${OPEN} ]]
     then
         OPEN=open
     fi
