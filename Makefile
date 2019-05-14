@@ -46,7 +46,7 @@ BLACK_PATHS = raiden/ tools/
 lint: mypy mypy-all
 	flake8 raiden/ tools/
 	isort $(ISORT_PARAMS) --diff --check-only
-	black --check $(BLACK_PATHS)
+	black --check --diff $(BLACK_PATHS)
 	pylint $(LINT_PATHS)
 	python setup.py check --restructuredtext --strict
 
