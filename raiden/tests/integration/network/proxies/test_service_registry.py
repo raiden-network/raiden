@@ -37,7 +37,7 @@ def test_service_registry_random_pfs(
     assert not c1_service_proxy.get_service_address("latest", 9999)
 
     # Test that getting a random service from the proxy works
-    assert get_random_service(c1_service_proxy, "latest") in zip(urls, addresses)
+    assert get_random_service(c1_service_proxy, "latest") in urls
 
 
 def test_configure_pfs(service_registry_address, private_keys, web3, contract_manager):
@@ -66,39 +66,31 @@ def test_configure_pfs(service_registry_address, private_keys, web3, contract_ma
     # With basic routing configure pfs should raise assertion
     with pytest.raises(AssertionError):
         config = configure_pfs_or_exit(
-            pfs_address=None,
-            routing_mode=RoutingMode.BASIC,
-            service_registry=service_proxy,
+            pfs_address=None, routing_mode=RoutingMode.BASIC, service_registry=service_proxy
         )
 
     # Asking for auto address
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
-            pfs_address="auto",
-            routing_mode=RoutingMode.PFS,
-            service_registry=service_proxy,
+            pfs_address="auto", routing_mode=RoutingMode.PFS, service_registry=service_proxy
         )
     assert config.url in urls
     assert is_checksum_address(config.eth_address)
 
     # Configuring a given address
     given_address = "http://ourgivenaddress"
-    given_eth_address = "0x22222222222222222222"
     with patch.object(requests, "get", return_value=response):
         config = configure_pfs_or_exit(
-            pfs_address=given_address,
-            routing_mode=RoutingMode.PFS,
-            service_registry=service_proxy,
+            pfs_address=given_address, routing_mode=RoutingMode.PFS, service_registry=service_proxy
         )
     assert config.url == given_address
-    assert config.eth_address == json_data['payment_address']
+    assert config.eth_address == json_data["payment_address"]
     assert config.fee == json_data["price_info"]
 
     # Bad address, should exit the program
     response = Mock()
     response.configure_mock(status_code=400)
     bad_address = "http://badaddress"
-    pfs_eth_address = "0x22222222222222222222"
     with pytest.raises(SystemExit):
         with patch.object(requests, "get", side_effect=requests.RequestException()):
             # Configuring a given address
