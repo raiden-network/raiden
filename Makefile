@@ -41,7 +41,7 @@ clean-test:
 
 LINT_PATHS = raiden/ tools/
 ISORT_PARAMS = --ignore-whitespace --settings-path ./ --skip-glob '*/node_modules/*' --recursive $(LINT_PATHS)
-BLACK_PATHS = raiden/ tools/
+BLACK_PATHS = raiden/ tools/ setup.py
 
 lint: mypy mypy-all
 	flake8 raiden/ tools/
