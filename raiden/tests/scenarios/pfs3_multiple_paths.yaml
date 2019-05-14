@@ -24,7 +24,6 @@ nodes:
     environment-type: development
     routing-mode: pfs
     pathfinding-max-paths: 5
-    pathfinding-eth-address: "0x0bae0289aaa26845224f528f9b9defe69e01606e"
     pathfinding-max-fee: 10
 
 ## This is the PFS3 scenario. It creates a network with topology A <-> B <-> C <-> D and A <-> E <-> D
