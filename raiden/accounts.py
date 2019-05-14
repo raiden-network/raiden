@@ -19,7 +19,7 @@ class InvalidAccountFile(Exception):
     pass
 
 
-def _find_datadir() -> Optional[str]:
+def _find_datadir() -> Optional[str]:  # pragma: no cover
     home = os.path.expanduser("~")
     if home == "~":  # Could not expand user path
         return None
@@ -38,7 +38,7 @@ def _find_datadir() -> Optional[str]:
     return datadir
 
 
-def _find_keystoredir() -> Optional[str]:
+def _find_keystoredir() -> Optional[str]:  # pragma: no cover
     datadir = _find_datadir()
     if datadir is None:
         # can't find a data directory in the system

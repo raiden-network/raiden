@@ -16,7 +16,7 @@ LOOPBACK = "127.0.0.1"
 
 # The solution based on psutils does not work on MacOS because it needs
 # root access
-if sys.platform == "darwin":
+if sys.platform == "darwin":  # pragma: no cover
 
     def _unused_ports(initial_port: Optional[int]) -> Iterable[Port]:
         socket_kind: SocketKind = SocketKind.SOCK_STREAM
