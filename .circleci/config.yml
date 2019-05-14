@@ -409,7 +409,9 @@ jobs:
       - conditional-skip
       - config-path
       - run:
-          command: "true"
+          command: |
+            pip install codecov
+            codecov
 
   build-binary-linux:
     parameters:
