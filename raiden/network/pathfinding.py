@@ -30,7 +30,6 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
-    Tuple,
     Union,
 )
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
@@ -79,7 +78,7 @@ def get_pfs_info(url: str) -> Optional[Dict]:
 
 def get_random_service(
     service_registry: ServiceRegistry, block_identifier: BlockSpecification
-) -> Tuple[Optional[str], Optional[str]]:
+) -> Optional[str]:
     """Selects a random PFS from service_registry.
 
     Returns a tuple of the chosen services url and eth address.
@@ -87,7 +86,7 @@ def get_random_service(
     """
     count = service_registry.service_count(block_identifier=block_identifier)
     if count == 0:
-        return None, None
+        return None
     index = random.SystemRandom().randint(0, count - 1)
     address = service_registry.get_service_address(block_identifier=block_identifier, index=index)
     # We are using the same blockhash for both blockchain queries so the address
@@ -97,7 +96,7 @@ def get_random_service(
     url = service_registry.get_service_url(
         block_identifier=block_identifier, service_hex_address=address
     )
-    return url, address
+    return url
 
 
 class PFSConfiguration(NamedTuple):
@@ -120,9 +119,7 @@ def configure_pfs_message(info: Dict[str, Any], url: str, eth_address: str) -> s
 
 
 def configure_pfs_or_exit(
-    pfs_address: Optional[str],
-    routing_mode: RoutingMode,
-    service_registry,
+    pfs_address: Optional[str], routing_mode: RoutingMode, service_registry
 ) -> PFSConfiguration:
     """
     Take in the given pfs_address argument, the service registry and find out a
@@ -143,7 +140,7 @@ def configure_pfs_or_exit(
     if pfs_address == "auto":
         assert service_registry, "Should not get here without a service registry"
         block_hash = service_registry.client.get_confirmed_blockhash()
-        pfs_address, _ = get_random_service(
+        pfs_address = get_random_service(
             service_registry=service_registry, block_identifier=block_hash
         )
         if pfs_address is None:
@@ -161,13 +158,13 @@ def configure_pfs_or_exit(
         )
         sys.exit(1)
     else:
-        if 'payment_address' not in pathfinding_service_info:
+        if "payment_address" not in pathfinding_service_info:
             click.secho(
                 f"The pathfinding service at {pfs_address} did not provide an eth address "
                 f"to pay it. Raiden will shut down."
             )
             sys.exit(1)
-        pfs_eth_address = pathfinding_service_info['payment_address']
+        pfs_eth_address = pathfinding_service_info["payment_address"]
         if not is_checksum_address(pfs_eth_address):
             click.secho(
                 f"Invalid reply from pathfinding service {pfs_address}: Payment address "
