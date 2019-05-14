@@ -1,3 +1,6 @@
+from typing import Any, Dict, Optional
+
+
 class RaidenError(Exception):
     """ Base exception, used to catch all raiden related exceptions. """
 
@@ -160,9 +163,8 @@ class EthNodeCommunicationError(RaidenError):
     """ Raised when something unexpected has happened during
     communication with the underlying ethereum node"""
 
-    def __init__(self, error_msg, error_code=None):
+    def __init__(self, error_msg: str) -> None:
         super().__init__(error_msg)
-        self.error_code = error_code
 
 
 class EthNodeInterfaceError(RaidenError):
@@ -196,7 +198,7 @@ class TransactionThrew(RaidenError):
     """Raised when, after waiting for a transaction to be mined,
     the receipt has a 0x0 status field"""
 
-    def __init__(self, txname, receipt):
+    def __init__(self, txname: str, receipt: Optional[Dict[str, Any]]) -> None:
         super().__init__("{} transaction threw. Receipt={}".format(txname, receipt))
 
 
@@ -263,6 +265,6 @@ class ServiceRequestFailed(RaidenError):
 class ServiceRequestIOURejected(ServiceRequestFailed):
     """ Raised when a service request fails due to a problem with the iou. """
 
-    def __init__(self, message, error_code):
+    def __init__(self, message: str, error_code: int) -> None:
         super().__init__(f"{message} ({error_code})")
         self.error_code = error_code
