@@ -138,24 +138,41 @@ def get_event_with_balance_proof_by_locksroot(
     happens after settle, so the channel has the unblinded version of the
     balance proof.
     """
-    filters = {
-        "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
-        "canonical_identifier.token_network_address": to_checksum_address(
-            canonical_identifier.token_network_address
-        ),
-        "canonical_identifier.channel_identifier": str(canonical_identifier.channel_identifier),
-        "locksroot": serialize_bytes(locksroot),
-        "recipient": to_checksum_address(recipient),
-    }
-    event = storage.get_latest_event_by_data_field(
-        balance_proof_query_from_keys(prefix="", filters=filters)
+    filters = {"recipient": to_checksum_address(recipient)}
+    balance_proof_filters = balance_proof_query_from_keys(
+        prefix="",
+        filters={
+            "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
+            "canonical_identifier.token_network_address": to_checksum_address(
+                canonical_identifier.token_network_address
+            ),
+            "canonical_identifier.channel_identifier": str(
+                canonical_identifier.channel_identifier
+            ),
+            "locksroot": serialize_bytes(locksroot),
+        },
     )
+    balance_proof_filters.update(filters)
+
+    event = storage.get_latest_event_by_data_field(balance_proof_filters)
     if event.data:
         return event
 
-    event = storage.get_latest_event_by_data_field(
-        balance_proof_query_from_keys(prefix="transfer.", filters=filters)
+    balance_proof_filters = balance_proof_query_from_keys(
+        prefix="transfer.",
+        filters={
+            "canonical_identifier.chain_identifier": str(canonical_identifier.chain_identifier),
+            "canonical_identifier.token_network_address": to_checksum_address(
+                canonical_identifier.token_network_address
+            ),
+            "canonical_identifier.channel_identifier": str(
+                canonical_identifier.channel_identifier
+            ),
+            "locksroot": serialize_bytes(locksroot),
+        },
     )
+    balance_proof_filters.update(filters)
+    event = storage.get_latest_event_by_data_field(balance_proof_filters)
     return event
 
 
