@@ -3,6 +3,7 @@ import random
 import sys
 from datetime import datetime
 from enum import IntEnum, unique
+from uuid import UUID
 
 import click
 import requests
@@ -304,7 +305,11 @@ def create_current_iou(
         return update_iou(iou=latest_iou, privkey=privkey, added_amount=added_amount)
 
 
-def post_pfs_paths(url, token_network_address, payload):
+def post_pfs_paths(
+    url: str,
+    token_network_address: Union[TokenNetworkAddress, TokenNetworkID],
+    payload: Dict[str, Any],
+) -> Tuple[List[Dict[str, Any]], UUID]:
     try:
         response = requests.post(
             f"{url}/api/v1/{to_checksum_address(token_network_address)}/paths",
@@ -334,7 +339,8 @@ def post_pfs_paths(url, token_network_address, payload):
         raise ServiceRequestFailed("Pathfinding service returned error code", info)
 
     try:
-        return response.json()["result"]
+        response_json = response.json()
+        return response_json["result"], UUID(response_json["feedback_token"])
     except KeyError:
         raise ServiceRequestFailed(
             "Answer from pathfinding service not understood ('result' field missing)",
@@ -356,7 +362,7 @@ def query_paths(
     route_from: InitiatorAddress,
     route_to: TargetAddress,
     value: PaymentAmount,
-) -> List[Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], Optional[UUID]]:
     """ Query paths from the PFS.
 
     Send a request to the /paths endpoint of the PFS specified in service_config, and
@@ -404,4 +410,4 @@ def query_paths(
             log.info(f"PFS rejected our IOU, reason: {error}. Attempting again.")
 
     # If we got no results after MAX_PATHS_QUERY_ATTEMPTS return empty list of paths
-    return list()
+    return list(), None
