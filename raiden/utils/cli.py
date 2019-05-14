@@ -15,7 +15,6 @@ import requests
 from click import BadParameter, Choice
 from click._compat import term_len
 from click.formatting import iter_rows, measure_table, wrap_text
-from eth_utils import is_checksum_address
 from pytoml import TomlError, load
 from web3.gas_strategies.time_based import fast_gas_price_strategy, medium_gas_price_strategy
 
@@ -443,17 +442,6 @@ def get_matrix_servers(url: str) -> List[str]:
     return available_servers
 
 
-def validate_pfs_options(options):
-    eth_address = options.get("pathfinding-eth-address")
-    if options.get("pathfinding-service-address") not in ("auto", None) and eth_address is None:
-        raise BadParameter(
-            '"--pathfinding-service-address" set manually '
-            'but no "--pathfinding-eth-address" given.'
-        )
-    if eth_address is not None and not is_checksum_address(eth_address):
-        raise BadParameter('"--pathfinding-eth-address" value is not a valid EIP55 address.')
-
-
 def validate_option_dependencies(
     command_function: Union[click.Command, click.Group],
     ctx,
@@ -486,8 +474,6 @@ def validate_option_dependencies(
                     ctx,
                     param,
                 )
-
-    validate_pfs_options(cli_params)
 
 
 ADDRESS_TYPE = AddressType()
