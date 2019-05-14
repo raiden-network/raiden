@@ -1,9 +1,14 @@
+from datetime import timedelta
+from unittest.mock import Mock, patch
+
 import pytest
+import requests
 from eth_keys.exceptions import BadSignature, ValidationError
 from eth_utils import decode_hex, to_canonical_address
 
 from raiden.constants import EMPTY_HASH
 from raiden.exceptions import InvalidSignature
+from raiden.network.utils import get_http_rtt
 from raiden.tests.utils.mocks import MockWeb3
 from raiden.utils import block_specification_to_number, privatekey_to_publickey, sha3
 from raiden.utils.signer import LocalSigner, Signer, recover
@@ -72,3 +77,18 @@ def test_block_speficiation_to_number():
 
     with pytest.raises(AssertionError):
         block_specification_to_number([1, 2], web3)
+
+
+def test_get_http_rtt():
+    with patch.object(requests, "request", side_effect=requests.RequestException):
+        assert get_http_rtt(url="url", method="get") is None
+
+    seconds = iter([0.2, 0.2, 0.5])
+
+    def request_mock(method, url, **_):
+        assert method == "get"
+        assert url == "url"
+        return Mock(elapsed=timedelta(seconds=next(seconds)))
+
+    with patch.object(requests, "request", side_effect=request_mock):
+        assert get_http_rtt(url="url", method="get") == 0.3
