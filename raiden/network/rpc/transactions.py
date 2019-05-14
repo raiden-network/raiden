@@ -1,9 +1,7 @@
-from typing import Any, Dict, Optional
-
 from raiden.constants import RECEIPT_FAILURE_CODE
 
 
-def check_transaction_threw(client, transaction_hash: bytes) -> Optional[Dict[str, Any]]:
+def check_transaction_threw(client, transaction_hash: bytes):
     """Check if the transaction threw/reverted or if it executed properly
        Returns None in case of success and the transaction receipt if the
        transaction's status indicator is 0x0.
