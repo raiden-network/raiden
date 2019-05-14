@@ -452,6 +452,11 @@ class TokenNetworkState(State):
         if not isinstance(self.token_address, T_Address):
             raise ValueError("token_address must be an address instance")
 
+        self.partneraddresses_to_channelidentifiers = defaultdict(
+            list,
+            self.partneraddresses_to_channelidentifiers
+        )
+
 
 @dataclass
 class PaymentNetworkState(State):
@@ -470,13 +475,15 @@ class PaymentNetworkState(State):
         if not isinstance(self.address, T_Address):
             raise ValueError("address must be an address instance")
 
-        self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = {
-            token_network.address: token_network for token_network in self.token_network_list
-        }
-        self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = {
-            token_network.token_address: token_network.address
-            for token_network in self.token_network_list
-        }
+        if not self.tokenidentifiers_to_tokennetworks:
+            self.tokenidentifiers_to_tokennetworks: Dict[TokenNetworkID, TokenNetworkState] = {
+                token_network.address: token_network for token_network in self.token_network_list
+            }
+        if not self.tokenaddresses_to_tokenidentifiers:
+            self.tokenaddresses_to_tokenidentifiers: Dict[TokenAddress, TokenNetworkID] = {
+                token_network.token_address: token_network.address
+                for token_network in self.token_network_list
+            }
 
 
 @dataclass(repr=False)
