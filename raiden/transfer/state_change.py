@@ -1,5 +1,5 @@
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
-from dataclasses import InitVar, dataclass, field
+from dataclasses import dataclass, field
 from random import Random
 
 from raiden.constants import EMPTY_SECRETHASH
@@ -394,17 +394,11 @@ class ReceiveUnlock(BalanceProofStateChange):
 
 @dataclass
 class ReceiveDelivered(AuthenticatedSenderStateChange):
-    sender: InitVar[Address]
+    sender: Address
     message_identifier: MessageID
-
-    def __post_init__(self, sender):
-        self.sender = sender
 
 
 @dataclass
 class ReceiveProcessed(AuthenticatedSenderStateChange):
-    sender: InitVar[Address]
+    sender: Address
     message_identifier: MessageID
-
-    def __post_init__(self, sender):
-        self.sender = sender

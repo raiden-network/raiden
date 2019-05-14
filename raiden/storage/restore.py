@@ -24,7 +24,6 @@ def channel_state_until_state_change(
     assert wal.state_manager.current_state is not None, msg
 
     chain_state = wal.state_manager.current_state
-    import pdb; pdb.set_trace()
 
     channel_state = views.get_channelstate_by_canonical_identifier(
         chain_state=chain_state, canonical_identifier=canonical_identifier
