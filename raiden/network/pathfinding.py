@@ -31,6 +31,7 @@ from raiden.utils.typing import (
     TokenAmount,
     TokenNetworkAddress,
     TokenNetworkID,
+    Tuple,
     Union,
 )
 from raiden_contracts.utils.proofs import sign_one_to_n_iou
