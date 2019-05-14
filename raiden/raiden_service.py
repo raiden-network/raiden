@@ -138,7 +138,7 @@ def initiator_init(
         secrethash=transfer_secrethash,
     )
     previous_address = None
-    routes = routing.get_best_routes(
+    routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         token_network_id=token_network_identifier,
         from_address=InitiatorAddress(raiden.address),
@@ -153,7 +153,8 @@ def initiator_init(
 
 def mediator_init(raiden, transfer: LockedTransfer) -> ActionInitMediator:
     from_transfer = lockedtransfersigned_from_message(transfer)
-    routes = routing.get_best_routes(
+    # Feedback token not used here, will be removed with source routing
+    routes, _ = routing.get_best_routes(
         chain_state=views.state_from_raiden(raiden),
         token_network_id=TokenNetworkID(from_transfer.balance_proof.token_network_identifier),
         from_address=raiden.address,

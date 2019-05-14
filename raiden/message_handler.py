@@ -112,7 +112,9 @@ class MessageHandler:
         from_transfer = lockedtransfersigned_from_message(message)
         chain_state = views.state_from_raiden(raiden)
 
-        routes = get_best_routes(
+        # FIXME: add return types
+        # FIXME: Shouldn't request routes here
+        routes, _ = get_best_routes(
             chain_state=chain_state,
             token_network_id=TokenNetworkID(token_network_address),
             from_address=InitiatorAddress(raiden.address),

@@ -1,15 +1,15 @@
 from heapq import heappop, heappush
 from typing import Any, Dict, List, Tuple
+from uuid import UUID
 
 import networkx
 import structlog
-from eth_utils import to_canonical_address
+from eth_utils import to_canonical_address, to_checksum_address
 
 from raiden.exceptions import ServiceRequestFailed
 from raiden.network.pathfinding import query_paths
 from raiden.transfer import channel, views
 from raiden.transfer.state import CHANNEL_STATE_OPENED, ChainState, RouteState
-from raiden.utils import pex
 from raiden.utils.typing import (
     Address,
     ChannelID,
@@ -33,7 +33,7 @@ def get_best_routes(
     previous_address: Optional[Address],
     config: Dict[str, Any],
     privkey: bytes,
-) -> List[RouteState]:
+) -> Tuple[List[RouteState], Optional[UUID]]:
     services_config = config.get("services", None)
 
     # the pfs should not be requested when the target is linked via a direct channel
@@ -61,10 +61,10 @@ def get_best_routes(
                 )
                 >= amount
             ):
-                return [route_state]
+                return [route_state], None
 
     if services_config and services_config["pathfinding_service_address"] is not None:
-        pfs_answer_ok, pfs_routes = get_best_routes_pfs(
+        pfs_answer_ok, pfs_routes, pfs_feedback_token = get_best_routes_pfs(
             chain_state=chain_state,
             token_network_id=token_network_id,
             from_address=from_address,
@@ -76,21 +76,26 @@ def get_best_routes(
         )
 
         if pfs_answer_ok:
-            log.info("Received route(s) from PFS", routes=pfs_routes)
-            return pfs_routes
+            log.info(
+                "Received route(s) from PFS", routes=pfs_routes, feedback_token=pfs_feedback_token
+            )
+            return pfs_routes, pfs_feedback_token
         else:
             log.warning(
                 "Request to Pathfinding Service was not successful, "
                 "falling back to internal routing."
             )
 
-    return get_best_routes_internal(
-        chain_state=chain_state,
-        token_network_id=token_network_id,
-        from_address=from_address,
-        to_address=to_address,
-        amount=amount,
-        previous_address=previous_address,
+    return (
+        get_best_routes_internal(
+            chain_state=chain_state,
+            token_network_id=token_network_id,
+            from_address=from_address,
+            to_address=to_address,
+            amount=amount,
+            previous_address=previous_address,
+        ),
+        None,
     )
 
 
@@ -148,8 +153,8 @@ def get_best_routes_internal(
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
-                from_address=pex(from_address),
-                partner_address=pex(partner_address),
+                from_address=to_checksum_address(from_address),
+                partner_address=to_checksum_address(partner_address),
                 routing_source="Internal Routing",
             )
             continue
@@ -174,7 +179,9 @@ def get_best_routes_internal(
 
     if not neighbors_heap:
         log.warning(
-            "No routes available", from_address=pex(from_address), to_address=pex(to_address)
+            "No routes available",
+            from_address=to_checksum_address(from_address),
+            to_address=to_checksum_address(to_address),
         )
         return list()
 
@@ -196,10 +203,9 @@ def get_best_routes_pfs(
     previous_address: Optional[Address],
     config: Dict[str, Any],
     privkey: bytes,
-) -> Tuple[bool, List[RouteState]]:
-
+) -> Tuple[bool, List[RouteState], Optional[UUID]]:
     try:
-        result = query_paths(
+        pfs_routes, feedback_token = query_paths(
             service_config=config,
             our_address=chain_state.our_address,
             privkey=privkey,
@@ -213,10 +219,10 @@ def get_best_routes_pfs(
         log_message = e.args[0]
         log_info = e.args[1] if len(e.args) > 1 else {}
         log.warning(log_message, **log_info)
-        return False, []
+        return False, [], None
 
     paths = []
-    for path_object in result:
+    for path_object in pfs_routes:
         path = path_object["path"]
 
         # get the second entry, as the first one is the node itself
@@ -240,8 +246,8 @@ def get_best_routes_pfs(
         if channel.get_status(channel_state) != CHANNEL_STATE_OPENED:
             log.info(
                 "Channel is not opened, ignoring",
-                from_address=pex(from_address),
-                partner_address=pex(partner_address),
+                from_address=to_checksum_address(from_address),
+                partner_address=to_checksum_address(partner_address),
                 routing_source="Pathfinding Service",
             )
             continue
@@ -250,4 +256,4 @@ def get_best_routes_pfs(
             RouteState(node_address=partner_address, channel_identifier=channel_state.identifier)
         )
 
-    return True, paths
+    return True, paths, feedback_token

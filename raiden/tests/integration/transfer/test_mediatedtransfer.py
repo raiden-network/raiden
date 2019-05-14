@@ -17,6 +17,7 @@ from raiden.transfer import views
 from raiden.transfer.mediated_transfer.state_change import ActionInitMediator, ActionInitTarget
 from raiden.transfer.state_change import ActionChannelSetFee
 from raiden.utils import sha3
+from raiden.utils.typing import TokenAmount
 from raiden.waiting import wait_for_block
 
 
@@ -342,7 +343,7 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
         chain_state, payment_network_id, token_address
     )
 
-    with patch("raiden.routing.query_paths", return_value=[]) as patched:
+    with patch("raiden.routing.query_paths", return_value=([], None)) as patched:
 
         app0.raiden.start_mediated_transfer_with_secret(
             token_network_identifier=token_network_id,
@@ -372,7 +373,7 @@ def run_test_mediated_transfer_calls_pfs(raiden_network, token_addresses):
 
             locked_transfer = factories.create(
                 factories.LockedTransferProperties(
-                    amount=5,
+                    amount=TokenAmount(5),
                     initiator=factories.HOP1,
                     target=factories.HOP2,
                     sender=factories.HOP1,

@@ -768,7 +768,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
         address4: NODE_NETWORK_REACHABLE,
     }
 
-    routes1 = get_best_routes(
+    routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -789,7 +789,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
         address4: NODE_NETWORK_REACHABLE,
     }
 
-    routes1 = get_best_routes(
+    routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -810,7 +810,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
         address4: NODE_NETWORK_REACHABLE,
     }
 
-    routes1 = get_best_routes(
+    routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -831,7 +831,7 @@ def test_routing_issue2663(chain_state, token_network_state, our_address):
         address4: NODE_NETWORK_REACHABLE,
     }
 
-    routes1 = get_best_routes(
+    routes1, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -990,7 +990,7 @@ def test_routing_priority(chain_state, token_network_state, our_address):
         address3: NODE_NETWORK_REACHABLE,
     }
 
-    routes = get_best_routes(
+    routes, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
@@ -1011,7 +1011,7 @@ def test_routing_priority(chain_state, token_network_state, our_address):
         address4: NODE_NETWORK_REACHABLE,
     }
 
-    routes = get_best_routes(
+    routes, _ = get_best_routes(
         chain_state=chain_state,
         token_network_id=token_network_state.address,
         from_address=our_address,
