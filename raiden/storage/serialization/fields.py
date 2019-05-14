@@ -62,13 +62,13 @@ class CallablePolyField(PolyField):
         serialization_schema_selector=None,
         deserialization_schema_selector=None,
         many=False,
-        **metadata
+        **metadata,
     ):
         super().__init__(
             serialization_schema_selector=serialization_schema_selector,
             deserialization_schema_selector=deserialization_schema_selector,
             many=many,
-            **metadata
+            **metadata,
         )
 
     def __call__(self, **metadata):
